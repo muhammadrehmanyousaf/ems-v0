@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { X } from "lucide-react"
 
 interface BookingModalProps {
   isOpen: boolean
@@ -47,15 +48,24 @@ export function BookingModal({ isOpen, onClose, vendorId, vendorName }: BookingM
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 0))
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={isOpen}>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Book {vendorName}</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>Book {vendorName}</DialogTitle>
+            <X onClick={onClose} className="size-7 p-1 hover:bg-gray-100 cursor-pointer" />
+          </div>
         </DialogHeader>
+
         <div className="mt-4">
           <div className="flex justify-between mb-4">
             {steps.map((s, i) => (
-              <div key={s} className={`text-sm ${i === step ? "text-primary font-bold" : "text-gray-500"}`}>
+              <div
+                key={s}
+                className={`text-sm ${
+                  i === step ? "text-primary font-bold" : "text-gray-500"
+                }`}
+              >
                 {s}
               </div>
             ))}
@@ -72,11 +82,23 @@ export function BookingModal({ isOpen, onClose, vendorId, vendorName }: BookingM
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="name">Full Name</Label>
-                    <Input id="name" name="name" value={formData.name} onChange={handleInputChange} required />
+                    <Input
+                      id="name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      required
+                    />
                   </div>
                   <div>
                     <Label htmlFor="phone">Phone Number</Label>
-                    <Input id="phone" name="phone" value={formData.phone} onChange={handleInputChange} required />
+                    <Input
+                      id="phone"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      required
+                    />
                   </div>
                 </div>
               )}
@@ -96,7 +118,10 @@ export function BookingModal({ isOpen, onClose, vendorId, vendorName }: BookingM
               {step === 2 && (
                 <div>
                   <Label>Select Package</Label>
-                  <RadioGroup value={formData.package} onValueChange={handlePackageSelection}>
+                  <RadioGroup
+                    value={formData.package}
+                    onValueChange={handlePackageSelection}
+                  >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="basic" id="basic" />
                       <Label htmlFor="basic">Basic Package</Label>
@@ -140,7 +165,8 @@ export function BookingModal({ isOpen, onClose, vendorId, vendorName }: BookingM
                     <strong>Package:</strong> {formData.package}
                   </p>
                   <p>
-                    <strong>Additional Info:</strong> {formData.additionalInfo || "N/A"}
+                    <strong>Additional Info:</strong>{" "}
+                    {formData.additionalInfo || "N/A"}
                   </p>
                 </div>
               )}
@@ -161,6 +187,6 @@ export function BookingModal({ isOpen, onClose, vendorId, vendorName }: BookingM
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
