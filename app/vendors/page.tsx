@@ -5,73 +5,55 @@ import { useSearchParams } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { VendorCard } from "@/components/vendor-card"
+import { vendors as allVendors } from "@/app/data/vendors"
+import { cities, vendorTypes } from "@/app/data/filters"
 
-// Mock data for vendors
-const allVendors = [
-  {
-    id: "1",
-    name: "Elegant Events",
-    city: "Lahore",
-    type: "Event Planner",
-    rating: 4.8,
-    reviews: 156,
-    image:
-      "https://images.pexels.com/photos/587741/pexels-photo-587741.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-    price: "₨₨₨",
-  },
-  {
-    id: "2",
-    name: "Capture Moments",
-    city: "Islamabad",
-    type: "Photographer",
-    rating: 4.9,
-    reviews: 203,
-    image:
-      "https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-    price: "₨₨",
-  },
-  {
-    id: "3",
-    name: "Delicious Delights",
-    city: "Karachi",
-    type: "Caterer",
-    rating: 4.7,
-    reviews: 178,
-    image:
-      "https://images.pexels.com/photos/5638527/pexels-photo-5638527.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-    price: "₨₨₨₨",
-  },
-  {
-    id: "4",
-    name: "Floral Fantasy",
-    city: "Peshawar",
-    type: "Decorator",
-    rating: 4.6,
-    reviews: 192,
-    image:
-      "https://images.pexels.com/photos/1616113/pexels-photo-1616113.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-    price: "₨₨",
-  },
-  {
-    id: "5",
-    name: "Melodic Tunes",
-    city: "Faisalabad",
-    type: "Music Band",
-    rating: 4.8,
-    reviews: 145,
-    image:
-      "https://images.pexels.com/photos/2747446/pexels-photo-2747446.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-    price: "₨₨",
-  },
-]
+const FilterInput = ({ searchTerm, setSearchTerm }: { searchTerm: string; setSearchTerm: (value: string) => void }) => (
+  <Input
+    type="text"
+    placeholder="Search vendors or cities..."
+    value={searchTerm}
+    onChange={(e) => setSearchTerm(e.target.value)}
+    className="max-w-xs"
+  />
+)
 
-const cities = ["Lahore", "Islamabad", "Karachi", "Peshawar", "Faisalabad"]
-const vendorTypes = ["Event Planner", "Photographer", "Caterer", "Decorator", "Music Band"]
+const CitySelect = ({ selectedCity, setSelectedCity }: { selectedCity: string; setSelectedCity: (value: string) => void }) => (
+  <Select value={selectedCity} onValueChange={setSelectedCity}>
+    <SelectTrigger className="w-[180px]">
+      <SelectValue placeholder="Select city" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="all">All Cities</SelectItem>
+      {cities.map((city) => (
+        <SelectItem key={city} value={city}>
+          {city}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+)
+
+const TypeSelect = ({ selectedType, setSelectedType }: { selectedType: string; setSelectedType: (value: string) => void }) => (
+  <Select value={selectedType} onValueChange={setSelectedType}>
+    <SelectTrigger className="w-[180px]">
+      <SelectValue placeholder="Vendor type" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="all">All Types</SelectItem>
+      {vendorTypes.map((type) => (
+        <SelectItem key={type} value={type}>
+          {type}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+)
 
 export default function VendorsPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCity, setSelectedCity] = useState("")
-  const [selectedType, setSelectedType] = useState("")
+  const [selectedCity, setSelectedCity] = useState("all")
+  const [selectedType, setSelectedType] = useState("all")
   const [vendors, setVendors] = useState(allVendors)
   const searchParams = useSearchParams()
 
@@ -84,11 +66,11 @@ export default function VendorsPage() {
 
   useEffect(() => {
     const filteredVendors = allVendors.filter((vendor) => {
-      return (
-        vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        (selectedCity === "" || vendor.city === selectedCity) &&
-        (selectedType === "" || vendor.type.toLowerCase() === selectedType.toLowerCase())
-      )
+      const matchesSearchTerm = vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) || vendor.city.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesCity = selectedCity === "all" || vendor.city === selectedCity
+      const matchesType = selectedType === "all" || vendor.type.toLowerCase() === selectedType.toLowerCase()
+
+      return matchesSearchTerm && matchesCity && matchesType
     })
     setVendors(filteredVendors)
   }, [searchTerm, selectedCity, selectedType])
@@ -99,39 +81,9 @@ export default function VendorsPage() {
 
       {/* Search and Filters */}
       <div className="mb-8 flex flex-wrap gap-4">
-        <Input
-          type="text"
-          placeholder="Search vendors..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-xs"
-        />
-        <Select value={selectedCity} onValueChange={setSelectedCity}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select city" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Cities</SelectItem>
-            {cities.map((city) => (
-              <SelectItem key={city} value={city}>
-                {city}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={selectedType} onValueChange={setSelectedType}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Vendor type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            {vendorTypes.map((type) => (
-              <SelectItem key={type} value={type}>
-                {type}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <FilterInput searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+        <CitySelect selectedCity={selectedCity} setSelectedCity={setSelectedCity} />
+        <TypeSelect selectedType={selectedType} setSelectedType={setSelectedType} />
       </div>
 
       {/* Filtered Vendors */}
