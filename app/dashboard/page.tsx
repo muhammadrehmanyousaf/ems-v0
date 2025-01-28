@@ -60,6 +60,12 @@ export default function DashboardPage() {
     checkAuth()
   }, [])
 
+  const handleLogout = () => {
+    localStorage.removeItem('isAuthenticated')
+    localStorage.removeItem('currentVendor')
+    window.location.replace('/vendor/login')
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -70,7 +76,10 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <h1 className="text-3xl font-bold mb-6">Welcome, {vendorData?.businessName}</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Welcome, {vendorData?.businessName}</h1>
+        <button onClick={handleLogout} className="btn btn-primary">Logout</button>
+      </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

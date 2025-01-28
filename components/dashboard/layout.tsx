@@ -66,12 +66,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <SidebarItem icon={<UserCircle size={20} />} label="Profile" href="/dashboard/profile" />
           <SidebarItem icon={<Settings size={20} />} label="Settings" href="/dashboard/settings" />
         </nav>
-        <div className="absolute bottom-4 left-4 right-4">
+        {/* <div className="absolute bottom-4 left-4 right-4">
           <Button variant="outline" className="w-full">
             <LogOut size={20} />
             <span className="ml-2">Logout</span>
           </Button>
-        </div>
+        </div> */}
       </aside>
       <main className="flex-1 overflow-y-auto p-8">{children}</main>
     </div>

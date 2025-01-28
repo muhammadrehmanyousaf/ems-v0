@@ -39,12 +39,19 @@ export function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const router = useRouter()
+  const isAuthenticated = typeof window !== 'undefined' && localStorage.getItem('isAuthenticated')
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const searchTerm = (e.target as HTMLFormElement).search.value
     router.push(`/search?q=${encodeURIComponent(searchTerm)}`)
     setIsSearchOpen(false)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('isAuthenticated')
+    localStorage.removeItem('currentVendor')
+    window.location.replace('/vendor/login')
   }
 
   return (
@@ -189,22 +196,15 @@ export function Header() {
               {/* <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsSearchOpen(!isSearchOpen)}>
                 <Search className="h-5 w-5" />
               </Button> */}
-            <Link href="/vendor/login">
-              <Button size="sm">Login</Button>
-            </Link>
-              <form
-                onSubmit={handleSearch}
-                className={`absolute right-0 top-full mt-2 transition-all duration-300 ease-in-out ${
-                  isSearchOpen ? "opacity-100 visible" : "opacity-0 invisible"
-                } md:opacity-100 md:visible md:static md:mt-0`}
-              >
-                {/* <div className="relative">
-                  <Input type="search" name="search" placeholder="Search..." className="w-full md:w-[200px] pr-8" />
-                  <Button type="submit" variant="ghost" size="icon" className="absolute right-0 top-0">
-                    <Search className="h-5 w-5" />
-                  </Button>
-                </div> */}
-              </form>
+              <Link href="/vendor/login">
+                <Button size="sm">Login</Button>
+              </Link>
+              
+              <Link href="/userLogin/register">
+                <Button className="mx-2" variant="outline" size="sm">
+                  Register
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
