@@ -196,14 +196,8 @@ export function Header() {
               {/* <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsSearchOpen(!isSearchOpen)}>
                 <Search className="h-5 w-5" />
               </Button> */}
-              <Link href="/vendor/login">
-                <Button size="sm">Login</Button>
-              </Link>
-              
-              <Link href="/userLogin/register">
-                <Button className="mx-2" variant="outline" size="sm">
-                  Register
-                </Button>
+              <Link href="/login">
+                <Button size="sm">List Your Buisness</Button>
               </Link>
             </div>
           </div>
