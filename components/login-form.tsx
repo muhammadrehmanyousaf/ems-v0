@@ -39,7 +39,7 @@ export function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className=" min-h-screen bg-gray-50 ">
       <div className="flex flex-col justify-center w-full max-w-md px-4 py-12 mx-auto sm:px-6 lg:px-8">
         <div className="flex justify-center mb-8">
           <Link href="/" className="flex items-center space-x-2">
