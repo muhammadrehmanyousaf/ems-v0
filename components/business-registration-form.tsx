@@ -57,7 +57,7 @@ export function BusinessRegistrationForm() {
         <div className="h-full flex flex-col md:flex-row">
           <div className="w-full md:w-1/3 p-6 hidden md:block">
             <Image
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-01-31%20160942-TSHdJ9MxIA4JE2A06m23iqAhZbPAf6.png"
+              src="https://img.freepik.com/free-vector/hospital-receptionist-pointing-man-without-mask-nurse-patient-quarantine-flat-vector-illustration_74855-11279.jpg?ga=GA1.1.851296793.1738481066&semt=ais_hybrid"
               alt="Illustration"
               width={400}
               height={400}
