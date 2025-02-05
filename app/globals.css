@@ -6,12 +6,24 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Ensure scrolling still works */
+.hide-scrollbar {
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  scrollbar-width: none; /* Firefox */
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+  .secondary_button {
+    @apply border border-gray-300 dark:border-gray-100 bg-white dark:bg-transparent text-black dark:text-gray-400
+  }
 }
-
 @layer base {
   :root {
     --background: 0 0% 100%;

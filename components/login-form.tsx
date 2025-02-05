@@ -41,12 +41,12 @@ export function LoginForm() {
   return (
     <div className=" min-h-screen bg-gray-50 ">
       <div className="flex flex-col justify-center w-full max-w-md px-4 py-12 mx-auto sm:px-6 lg:px-8">
-        <div className="flex justify-center mb-8">
+        {/* <div className="flex justify-center mb-8">
           <Link href="/" className="flex items-center space-x-2">
             <Image src="/placeholder.svg" alt="EMS Logo" width={48} height={48} className="w-12 h-12" />
             <span className="text-3xl font-bold text-gray-900">EMS</span>
           </Link>
-        </div>
+        </div> */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

@@ -46,9 +46,9 @@ export function BusinessTypeStep() {
   const { formData, updateFormData } = useFormContext()
 
   return (
-    <div className="space-y-6">
+    <div className="">
       <h2 className="text-lg font-medium">What is your line of business?</h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2">
         {businessTypes.map((type) => (
           <button
             key={type.id}

@@ -17,6 +17,7 @@ export function ContactDetailsStep() {
           value={formData.brandName}
           onChange={(e) => updateFormData({ brandName: e.target.value })}
           placeholder="Enter your brand name"
+          className="focus:ring-0"
         />
       </div>
 
