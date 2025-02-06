@@ -1,6 +1,6 @@
 "use client"
 
-import { VendorCard } from "./vendor-card"
+import { VendorCard } from "../vendor-card"
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
 
 const vendors = [
