@@ -1,7 +1,13 @@
-"use client"
+"use client";
 
-import { VendorCard } from "../vendor-card"
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
+import { VendorCard } from "../vendor-card";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 const vendors = [
   {
@@ -10,7 +16,8 @@ const vendors = [
     category: "Photographer",
     rating: 4.8,
     reviews: 156,
-    image: "https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
+    image:
+      "https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
     price: "₹25,000",
     location: "Mumbai",
     capacity: 0,
@@ -21,7 +28,8 @@ const vendors = [
     category: "Makeup Artist",
     rating: 4.9,
     reviews: 203,
-    image: "https://images.pexels.com/photos/457701/pexels-photo-457701.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
+    image:
+      "https://images.pexels.com/photos/457701/pexels-photo-457701.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
     price: "₹15,000",
     location: "Delhi",
     capacity: 0,
@@ -32,7 +40,8 @@ const vendors = [
     category: "Decorator",
     rating: 4.7,
     reviews: 178,
-    image: "https://images.pexels.com/photos/1616113/pexels-photo-1616113.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
+    image:
+      "https://images.pexels.com/photos/1616113/pexels-photo-1616113.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
     price: "₹45,000",
     location: "Bangalore",
     capacity: 0,
@@ -43,7 +52,8 @@ const vendors = [
     category: "Caterer",
     rating: 4.6,
     reviews: 192,
-    image: "https://images.pexels.com/photos/5638527/pexels-photo-5638527.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
+    image:
+      "https://images.pexels.com/photos/5638527/pexels-photo-5638527.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
     price: "₹850",
     location: "Chennai",
     capacity: 0,
@@ -54,12 +64,13 @@ const vendors = [
     category: "Bridal Wear",
     rating: 4.8,
     reviews: 145,
-    image: "https://images.pexels.com/photos/3775132/pexels-photo-3775132.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
+    image:
+      "https://images.pexels.com/photos/3775132/pexels-photo-3775132.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
     price: "₹50,000",
     location: "Kolkata",
     capacity: 0,
   },
-]
+];
 
 export function FeaturedVendors() {
   return (
@@ -67,26 +78,35 @@ export function FeaturedVendors() {
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-end mb-12">
           <div>
-            <h2 className="text-3xl font-bold mb-2">Featured Wedding Vendors</h2>
-            <p className="text-gray-600">Discover top-rated wedding professionals in your area</p>
+            <h2 className="text-3xl font-bold mb-2">
+              Featured Wedding Vendors
+            </h2>
+            <p className="text-gray-600">
+              Discover top-rated wedding professionals in your area
+            </p>
           </div>
-          <a href="/vendors" className="text-primary hover:underline hidden md:block">
+          <a
+            href="/vendors"
+            className="text-primary hover:underline hidden md:block"
+          >
             View all vendors →
           </a>
         </div>
 
         {/* ShadCN Carousel with Responsive Items Per Slide */}
-        <div className="relative">
-          <Carousel className="relative w-full">
+        <div className="relative w-full overflow-hidden">
+          <Carousel className="relative">
             {/* Bigger and Spaced Arrows */}
-            {/* <CarouselPrevious className="absolute left-[-60px] w-12 h-12 bg-gray-700 text-white rounded-full hover:bg-gray-900 transition" /> */}
-            {/* <CarouselNext className="absolute right-[-60px] w-12 h-12 bg-gray-700 text-white rounded-full hover:bg-gray-900 transition" /> */}
+            <CarouselPrevious className="hidden sm:flex absolute left-2 md:left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gray-700 text-white rounded-full hover:bg-gray-900 transition z-50 pointer-events-auto" />
+<CarouselNext className="hidden sm:flex absolute right-2 md:right-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gray-700 text-white rounded-full hover:bg-gray-900 transition z-50 pointer-events-auto" />
 
-            <CarouselContent className="flex gap-4" style={{ scrollSnapType: "x mandatory" }}>
+
+<CarouselContent className="flex gap-4 w-full pointer-events-none" style={{ scrollSnapType: "x mandatory" }}>
+
               {vendors.map((vendor) => (
                 <CarouselItem
                   key={vendor.id}
-                  className="sm:basis-full md:basis-1/2 lg:basis-1/4 flex-shrink-0 scroll-snap-start"
+                  className="sm:basis-[100%] sm:mx-auto md:basis-1/2 lg:basis-1/4 flex-shrink-0 scroll-snap-start"
                 >
                   <VendorCard
                     id={vendor.id}
@@ -112,5 +132,5 @@ export function FeaturedVendors() {
         </div>
       </div>
     </section>
-  )
+  );
 }
