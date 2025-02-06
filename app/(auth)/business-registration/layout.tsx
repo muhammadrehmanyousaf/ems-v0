@@ -1,5 +1,5 @@
 import type React from "react"
-import { FormProvider } from "@/context/form-context"
+import { FormProvider } from "@/lib/context/form-context"
 
 export default function BusinessRegistrationLayout({
   children,

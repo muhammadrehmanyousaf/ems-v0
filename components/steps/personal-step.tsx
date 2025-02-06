@@ -1,6 +1,6 @@
 "use client"
 
-import { useFormContext } from "@/context/form-context"
+import { useFormContext } from "@/lib/context/form-context"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
@@ -13,8 +13,8 @@ export function PersonalStep() {
         <Label htmlFor="name">Full Name</Label>
         <Input
           id="name"
-          value={formData.name}
-          onChange={(e) => updateFormData({ name: e.target.value })}
+          value={formData.fullName}
+          onChange={(e) => updateFormData({ fullName: e.target.value })}
           placeholder="Enter your full name"
         />
       </div>

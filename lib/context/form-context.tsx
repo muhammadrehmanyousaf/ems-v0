@@ -30,6 +30,7 @@ type FormData = {
   password: string
   confirmPassword: string
   agreeToTerms: boolean
+  phone: string
 
   // Step 3 - Business Details
   citiesCovered: string[]
@@ -74,6 +75,7 @@ const defaultFormData: FormData = {
   contactNumber: "",
   password: "",
   confirmPassword: "",
+  phone: "",
   agreeToTerms: false,
   citiesCovered: [],
   staffGender: [],
