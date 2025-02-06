@@ -112,7 +112,7 @@ export function Header() {
             </Sheet>
 
             <Link href="/" className="flex items-center">
-              <span className="text-2xl font-bold text-primary ml-2 md:ml-0">WeddingPlatform</span>
+            <span className="text-lg sm:text-xl md:text-2xl font-bold text-primary ml-1 md:ml-0">WeddingPlatform</span>
             </Link>
           </div>
 
@@ -188,7 +188,8 @@ export function Header() {
             </NavigationMenuList>
           </NavigationMenu>
 
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
+
             <Button variant="ghost" size="icon" className="hidden md:inline-flex">
               <Heart className="h-5 w-5" />
             </Button>
@@ -197,7 +198,9 @@ export function Header() {
                 <Search className="h-5 w-5" />
               </Button> */}
               <Link href="/login">
-                <Button size="sm">List Your Buisness</Button>
+              <Button className="px-1 py-0 sm:px-4 sm:py-2 md:px-5 md:py-3 text-xs sm:text-sm md:text-base">
+  List Your Business
+</Button>
               </Link>
             </div>
           </div>

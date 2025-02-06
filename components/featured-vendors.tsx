@@ -75,16 +75,19 @@ export function FeaturedVendors() {
           </a>
         </div>
 
-        {/* ShadCN Carousel with 4 Items Per Slide */}
+        {/* ShadCN Carousel with Responsive Items Per Slide */}
         <div className="relative">
           <Carousel className="relative w-full">
             {/* Bigger and Spaced Arrows */}
-            <CarouselPrevious className="absolute left-[-60px] w-12 h-12 bg-gray-700 text-white rounded-full hover:bg-gray-900 transition" />
-            <CarouselNext className="absolute right-[-60px] w-12 h-12 bg-gray-700 text-white rounded-full hover:bg-gray-900 transition" />
+            {/* <CarouselPrevious className="absolute left-[-60px] w-12 h-12 bg-gray-700 text-white rounded-full hover:bg-gray-900 transition" /> */}
+            {/* <CarouselNext className="absolute right-[-60px] w-12 h-12 bg-gray-700 text-white rounded-full hover:bg-gray-900 transition" /> */}
 
             <CarouselContent className="flex gap-4" style={{ scrollSnapType: "x mandatory" }}>
               {vendors.map((vendor) => (
-                <CarouselItem key={vendor.id} className="basis-1/4 flex-shrink-0 scroll-snap-start">
+                <CarouselItem
+                  key={vendor.id}
+                  className="sm:basis-full md:basis-1/2 lg:basis-1/4 flex-shrink-0 scroll-snap-start"
+                >
                   <VendorCard
                     id={vendor.id}
                     name={vendor.name}
