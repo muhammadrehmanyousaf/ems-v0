@@ -14,7 +14,6 @@ import {
   Settings,
   LogOut,
 } from "lucide-react"
-import { useEffect } from "react"
 
 interface SidebarItemProps {
   icon: ReactNode
@@ -42,15 +41,6 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const router = useRouter()
-
-  useEffect(() => {
-    const isAuthenticated = localStorage.getItem('isAuthenticated')
-    if (!isAuthenticated) {
-      window.location.replace('/vendor/login')
-    }
-  }, [])
-
   return (
     <div className="flex h-screen bg-gray-100">
       <aside className="w-64 bg-white shadow-md">

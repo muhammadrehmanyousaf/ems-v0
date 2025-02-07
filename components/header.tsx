@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/navigation-menu"
 import { Input } from "@/components/ui/input"
 import { Menu, Search, Heart } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 const categories = [
   {
@@ -38,8 +39,16 @@ const categories = [
 export function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [profile, setProfile] = useState<any>(null)
   const router = useRouter()
   const isAuthenticated = typeof window !== 'undefined' && localStorage.getItem('isAuthenticated')
+
+  useEffect(() => {
+    const storedProfile = localStorage.getItem('profile')
+    if (storedProfile) {
+      setProfile(JSON.parse(storedProfile))
+    }
+  }, [])
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -189,7 +198,19 @@ export function Header() {
           </NavigationMenu>
 
           <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
-
+            {profile ? (
+              <div className="flex items-center space-x-2">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={profile.avatar} alt={profile.fullName} />
+                  <AvatarFallback>{profile.fullName ? profile.fullName.charAt(0) : 'U'}</AvatarFallback>
+                </Avatar>
+                <span>{profile.fullName}</span>
+              </div>
+            ) : (
+              <Link href="/login" className="text-primary">
+                Login
+              </Link>
+            )}
             <Button variant="ghost" size="icon" className="hidden md:inline-flex">
               <Heart className="h-5 w-5" />
             </Button>

@@ -8,6 +8,10 @@ import { FeaturedVenues } from "@/components/homepage/FeaturedVenues"
 import { FeaturedMakeupArtists } from "@/components/homepage/FeaturedMakeupArtists"
 
 export default function Home() {
+  // const response = []
+  // const featuredVendors = []
+  // const featuredVenues = []
+  // const featuredMakeupArtists = []
   return (
     <>
       <HeroSection />

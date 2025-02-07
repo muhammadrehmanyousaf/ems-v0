@@ -101,13 +101,14 @@ export function FeaturedVendors() {
 <CarouselNext className="hidden sm:flex absolute right-2 md:right-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gray-700 text-white rounded-full hover:bg-gray-900 transition z-50 pointer-events-auto" />
 
 
-<CarouselContent className="flex gap-4 w-full pointer-events-none" style={{ scrollSnapType: "x mandatory" }}>
+<CarouselContent className=" flex sm:gap-4 w-full justify-center sm:justify-start pointer-events-none" style={{ scrollSnapType: "x mandatory" }}>
 
-              {vendors.map((vendor) => (
+              {vendors.map((vendor, index) => (
                 <CarouselItem
-                  key={vendor.id}
-                  className="sm:basis-[100%] sm:mx-auto md:basis-1/2 lg:basis-1/4 flex-shrink-0 scroll-snap-start"
-                >
+                key={index}
+                className={`sm:basis-[100%] md:basis-1/2 lg:basis-1/4 flex-shrink-0 scroll-snap-start`}
+              >
+              
                   <VendorCard
                     id={vendor.id}
                     name={vendor.name}

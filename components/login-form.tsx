@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
+import axios from 'axios';
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -12,11 +13,15 @@ import { Icons } from "@/components/ui/icons"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import Link from "next/link"
+import { BACKEND_URL } from "@/lib/backend-url"
+import { toast } from "./ui/use-toast"
+import { useRouter } from "next/navigation"
 
-const formSchema = z.object({
-  email: z.string().email({ message: "Invalid email address" }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters" }),
-})
+const formSchema = z
+  .object({
+    email: z.string().email({ message: "Invalid email address" }),
+    password: z.string().min(8, { message: "Password must be at least 8 characters" }),
+  })
 
 type FormData = z.infer<typeof formSchema>
 
@@ -30,23 +35,51 @@ export function LoginForm() {
     resolver: zodResolver(formSchema),
   })
 
+  const router = useRouter()
+
   async function onSubmit(data: FormData) {
-    setIsLoading(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setIsLoading(false)
-    console.log(data)
+    setIsLoading(true);
+    
+    try {
+      const response = await axios.post(`${BACKEND_URL}api/v1/auth/login`, data);
+      console.log('Login response:', response); // Log the response for debugging
+      if (response.status === 200) {
+        const userData = response.data;
+        console.log('User data:', userData); // Log the user data for debugging
+        localStorage.setItem('profile', JSON.stringify(userData));
+        console.log("User data saved to local storage:", userData.data.user.roles[0].id); // Log the user data for debugging
+        if ( userData.data.user.roles[0].id===3) {
+          router.push('/');
+          console.log('Login successful', userData);
+        } else {
+          toast({
+            title: "Login Failed",
+            description: "You do not have the required permissions.",
+            variant: 'destructive'
+          });
+        }
+      } else {
+        toast({
+          title: "Login Failed",
+          description: response.data.message || "Something went wrong. Please try again.",
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      console.error("Login error:", error); // Add this line to log the error
+      toast({
+        title: "Network Error",
+        description: "Check your internet connection and try again.",
+        variant: 'destructive'
+      });      
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
-    <div className=" min-h-screen bg-gray-50 ">
+    <div className="min-h-screen bg-gray-50">
       <div className="flex flex-col justify-center w-full max-w-md px-4 py-12 mx-auto sm:px-6 lg:px-8">
-        {/* <div className="flex justify-center mb-8">
-          <Link href="/" className="flex items-center space-x-2">
-            <Image src="/placeholder.svg" alt="EMS Logo" width={48} height={48} className="w-12 h-12" />
-            <span className="text-3xl font-bold text-gray-900">EMS</span>
-          </Link>
-        </div> */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -54,8 +87,8 @@ export function LoginForm() {
           className="w-full p-8 bg-white rounded-xl shadow-lg space-y-6"
         >
           <div className="space-y-2 text-center">
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Welcome to EMS</h1>
-            <p className="text-sm text-gray-500">Enter your email to sign in to your account</p>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Sign in to your account</h1>
+            <p className="text-sm text-gray-500">Enter your details to login</p>
           </div>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2">
@@ -73,12 +106,7 @@ export function LoginForm() {
               {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
             </div>
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link href="/forgot-password" className="text-sm text-rose-600 hover:underline">
-                  Forgot password?
-                </Link>
-              </div>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -118,11 +146,6 @@ export function LoginForm() {
               Sign up
             </Link>
           </p>
-          <div className="text-sm text-center">
-            <Link href="/business-registration" className="text-rose-600 hover:underline">
-              Register your business
-            </Link>
-          </div>
         </motion.div>
       </div>
       <div className="hidden lg:block relative w-0 flex-1">

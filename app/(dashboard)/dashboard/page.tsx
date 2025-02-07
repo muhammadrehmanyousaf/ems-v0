@@ -3,7 +3,7 @@
 import { DashboardLayout } from "@/components/dashboard/layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from 'next/navigation'
 
 const data = [
@@ -36,42 +36,11 @@ const data = [
 export default function DashboardPage() {
   const router = useRouter()
   const [vendorData, setVendorData] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const checkAuth = () => {
-      try {
-        const isAuthenticated = localStorage.getItem('isAuthenticated')
-        const currentVendor = localStorage.getItem('currentVendor')
-
-        if (!isAuthenticated || !currentVendor) {
-          throw new Error('Not authenticated')
-        }
-
-        const parsedVendor = JSON.parse(currentVendor)
-        setVendorData(parsedVendor)
-        setIsLoading(false)
-      } catch (error) {
-        console.error('Auth check failed:', error)
-        window.location.replace('/vendor/login')
-      }
-    }
-
-    checkAuth()
-  }, [])
 
   const handleLogout = () => {
     localStorage.removeItem('isAuthenticated')
     localStorage.removeItem('currentVendor')
     window.location.replace('/vendor/login')
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div>Loading...</div>
-      </div>
-    )
   }
 
   return (
