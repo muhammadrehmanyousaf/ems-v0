@@ -16,6 +16,7 @@ import Link from "next/link"
 import { BACKEND_URL } from "@/lib/backend-url"
 import { toast } from "./ui/use-toast"
 import { useRouter } from "next/navigation"
+import { useUser } from "@/context/UserContext"
 
 const formSchema = z
   .object({
@@ -27,6 +28,7 @@ type FormData = z.infer<typeof formSchema>
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
+  const { setUser } = useUser()
   const {
     register,
     handleSubmit,
@@ -47,6 +49,7 @@ export function LoginForm() {
         const userData = response.data;
         console.log('User data:', userData); // Log the user data for debugging
         localStorage.setItem('profile', JSON.stringify(userData));
+        setUser(userData.data.user); // Set user data in context
         console.log("User data saved to local storage:", userData.data.user.roles[0].id); // Log the user data for debugging
         if ( userData.data.user.roles[0].id===3) {
           router.push('/');

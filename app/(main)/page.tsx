@@ -6,14 +6,11 @@ import { RealWeddings } from "@/components/homepage/real-weddings"
 import { WeddingTips } from "@/components/homepage/wedding-tips"
 import { FeaturedVenues } from "@/components/homepage/FeaturedVenues"
 import { FeaturedMakeupArtists } from "@/components/homepage/FeaturedMakeupArtists"
+import { UserProvider } from "@/context/UserContext"
 
 export default function Home() {
-  // const response = []
-  // const featuredVendors = []
-  // const featuredVenues = []
-  // const featuredMakeupArtists = []
   return (
-    <>
+    <UserProvider>
       <HeroSection />
       <FeaturedCategories />
       <FeaturedVendors />
@@ -22,7 +19,7 @@ export default function Home() {
       <PlanningTools />
       <RealWeddings />
       <WeddingTips />
-    </>
+    </UserProvider>
   )
 }
 

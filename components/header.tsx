@@ -16,6 +16,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Menu, Search, Heart } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useUser } from "@/context/UserContext"
 
 const categories = [
   {
@@ -39,16 +41,10 @@ const categories = [
 export function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [profile, setProfile] = useState<any>(null)
+  const { user } = useUser()
+  console.log('User:', user)
   const router = useRouter()
   const isAuthenticated = typeof window !== 'undefined' && localStorage.getItem('isAuthenticated')
-
-  useEffect(() => {
-    const storedProfile = localStorage.getItem('profile')
-    if (storedProfile) {
-      setProfile(JSON.parse(storedProfile))
-    }
-  }, [])
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -59,8 +55,8 @@ export function Header() {
 
   const handleLogout = () => {
     localStorage.removeItem('isAuthenticated')
-    localStorage.removeItem('currentVendor')
-    window.location.replace('/vendor/login')
+    localStorage.removeItem('profile')
+    window.location.replace('/login')
   }
 
   return (
@@ -121,7 +117,7 @@ export function Header() {
             </Sheet>
 
             <Link href="/" className="flex items-center">
-            <span className="text-lg sm:text-xl md:text-2xl font-bold text-primary ml-1 md:ml-0">WeddingPlatform</span>
+              <span className="text-lg sm:text-xl md:text-2xl font-bold text-primary ml-1 md:ml-0">WeddingPlatform</span>
             </Link>
           </div>
 
@@ -198,19 +194,6 @@ export function Header() {
           </NavigationMenu>
 
           <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
-            {profile ? (
-              <div className="flex items-center space-x-2">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={profile.avatar} alt={profile.fullName} />
-                  <AvatarFallback>{profile.fullName ? profile.fullName.charAt(0) : 'U'}</AvatarFallback>
-                </Avatar>
-                <span>{profile.fullName}</span>
-              </div>
-            ) : (
-              <Link href="/login" className="text-primary">
-                Login
-              </Link>
-            )}
             <Button variant="ghost" size="icon" className="hidden md:inline-flex">
               <Heart className="h-5 w-5" />
             </Button>
@@ -219,11 +202,31 @@ export function Header() {
                 <Search className="h-5 w-5" />
               </Button> */}
               <Link href="/login">
-              <Button className="px-1 py-0 sm:px-4 sm:py-2 md:px-5 md:py-3 text-xs sm:text-sm md:text-base">
-  List Your Business
-</Button>
+                <Button className="px-1 py-0 sm:px-4 sm:py-2 md:px-5 md:py-3 text-xs sm:text-sm md:text-base">
+                  List Your Business
+                </Button>
               </Link>
             </div>
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div className="flex items-center space-x-2 cursor-pointer">
+                    <Avatar className="h-10 w-10">
+                      {/* <AvatarImage src={user.avatar} alt={user.fullName} /> */}
+                      <AvatarFallback>{user.fullName ? user.fullName.split(" ") : user.fullName}</AvatarFallback>
+                    </Avatar>
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => router.push('/profile')}>Profile</DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link href="/login" className="text-primary">
+                Login
+              </Link>
+            )}
           </div>
         </div>
       </div>
