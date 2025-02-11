@@ -1,6 +1,6 @@
 "use client"
 
-import { useFormContext } from "@/context/form-context"
+import { useFormContext } from "@/lib/context/form-context"
 import { Button } from "@/components/ui/button"
 import { useDropzone } from "react-dropzone"
 import Image from "next/image"

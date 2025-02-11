@@ -1,6 +1,6 @@
 "use client"
 
-import { useFormContext } from "@/context/form-context"
+import { useFormContext } from "@/lib/context/form-context"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Flag } from "lucide-react"

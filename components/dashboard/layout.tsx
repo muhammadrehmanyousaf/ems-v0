@@ -15,8 +15,6 @@ import {
   Settings,
   LogOut,
 } from "lucide-react"
-import { useEffect, useState } from "react"
-import { getUser } from "@/hooks/getLoggedinUser"
 import ProtectedRoutes from "@/lib/protected-routes"
 
 interface SidebarItemProps {
@@ -45,7 +43,6 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  
   return (
     <ProtectedRoutes>
     <div className="flex h-screen bg-gray-100">
@@ -74,4 +71,3 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     </ProtectedRoutes>
   )
 }
-

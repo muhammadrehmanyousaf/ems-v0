@@ -16,7 +16,7 @@ const weddings = [
     couple: "Sarah & Ahmed",
     location: "Taj Palace, Delhi",
     image:
-      "https://images.pexels.com/photos/2959192/pexels-photo-2959192.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
+      "https://images.pexels.com/photos/3014856/pexels-photo-3014856.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
     date: "February 28, 2024",
     story: "An elegant wedding celebration featuring stunning decor and memorable moments",
   },
@@ -25,7 +25,7 @@ const weddings = [
     couple: "Meera & Arun",
     location: "ITC Grand Chola, Chennai",
     image:
-      "https://images.pexels.com/photos/1114425/pexels-photo-1114425.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
+      "https://images.pexels.com/photos/3014856/pexels-photo-3014856.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
     date: "January 20, 2024",
     story: "A royal South Indian wedding with spectacular ceremonies and celebrations",
   },

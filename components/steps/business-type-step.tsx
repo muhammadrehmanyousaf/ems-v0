@@ -1,6 +1,6 @@
 "use client"
 
-import { useFormContext } from "@/context/form-context"
+import { useFormContext } from "@/lib/context/form-context"
 import { Camera, Heart, Home, Music, Car, Gift, Utensils } from "lucide-react"
 import { cn } from "@/lib/utils"
 

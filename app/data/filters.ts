@@ -1,3 +1,6 @@
 export const cities = ["Lahore", "Islamabad", "Karachi", "Peshawar", "Faisalabad"]
 export const venueTypes = ["Banquet Hall", "Outdoor", "Beach Resort", "Resort"]
 export const vendorTypes = ["Event Planner", "Photographer", "Caterer", "Decorator", "Music Band"]
+export const weddingTypes = ["Wedding", "Engagement", "Mehndi", "Barat", "Valima"]
+export const weddingThemes = ["Traditional", "Modern", "Vintage", "Rustic", "Bohemian"]
+export const venueCapacity = ["50", "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000", "1000+"]

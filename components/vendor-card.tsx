@@ -16,6 +16,7 @@ interface VendorCardProps {
   rating: number
   reviews: number
   image: string
+  capacity: number
   price: string
   city: string
 }

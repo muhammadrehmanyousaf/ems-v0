@@ -1,6 +1,6 @@
 "use client"
 
-import { useFormContext } from "@/context/form-context"
+import { useFormContext } from "@/lib/context/form-context"
 import { Button } from "@/components/ui/button"
 
 export function ReviewStep() {
