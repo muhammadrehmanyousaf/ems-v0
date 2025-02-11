@@ -12,6 +12,11 @@ import { Icons } from "@/components/ui/icons"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import Link from "next/link"
+import axios from "@/lib/axiosConfig"
+import { BACKEND_URL } from "@/lib/backend-url"
+import { useRouter } from "next/navigation"
+import { toast } from "./ui/use-toast"
+import Cookies from "js-cookie"
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -25,28 +30,63 @@ export function LoginForm() {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
   })
 
+  const router = useRouter()
+
   async function onSubmit(data: FormData) {
-    setIsLoading(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setIsLoading(false)
-    console.log(data)
-  }
+    setIsLoading(true);
+    try {
+      const response = await axios.post(`${BACKEND_URL}api/v1/auth/login`, data);
+      
+      if (response.status === 200) {
+        const resData = response.data;
+        const {user, token} = resData.data
+        
+        localStorage.setItem("user", JSON.stringify(user.id));
+        localStorage.setItem("token", token)
+        Cookies.set("user", user.id);
+        Cookies.set("token",token);
+        
+        toast({
+          title:'Logged in successfully',
+          description: 'You are logged in successfully'
+        });
+        reset()
+        if(user.roles[0].id === 1 || user.roles[0].id === 2) {
+          router.push('/dashboard')
+        }else if(user.roles[0].id === 3) {
+          router.push('/')
+        } else{
+          toast({
+            title: 'No role found'
+          })
+        }
+      }else{
+        toast({
+          title: 'Login failed',
+          description: `Error: ${response?.data.message}`
+        })
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message
+      console.error("Login error:", error);
+      toast({
+        title: 'Login failed',
+        description: `error: ${errorMessage || 'Something went wrong. Please try again later.'}`
+        });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className=" min-h-screen bg-gray-50 ">
       <div className="flex flex-col justify-center w-full max-w-md px-4 py-12 mx-auto sm:px-6 lg:px-8">
-        {/* <div className="flex justify-center mb-8">
-          <Link href="/" className="flex items-center space-x-2">
-            <Image src="/placeholder.svg" alt="EMS Logo" width={48} height={48} className="w-12 h-12" />
-            <span className="text-3xl font-bold text-gray-900">EMS</span>
-          </Link>
-        </div> */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

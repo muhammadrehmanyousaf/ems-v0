@@ -15,6 +15,19 @@ import {
 } from "@/components/ui/navigation-menu"
 import { Input } from "@/components/ui/input"
 import { Menu, Search, Heart } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { getLoggedInUser } from "@/lib/authFunction"
+import { getUser } from "@/hooks/getLoggedinUser"
+import { Spinner } from "./ui/spinner"
+import HeaderAvatar from "./header-avatar"
 
 const categories = [
   {
@@ -39,6 +52,7 @@ export function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const router = useRouter()
+  const { user, loading, error } = getUser();
   const isAuthenticated = typeof window !== 'undefined' && localStorage.getItem('isAuthenticated')
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
@@ -48,33 +62,9 @@ export function Header() {
     setIsSearchOpen(false)
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated')
-    localStorage.removeItem('currentVendor')
-    window.location.replace('/vendor/login')
-  }
-
   return (
     <header className="border-b sticky top-0 bg-white z-50">
-      <div className="container mx-auto px-4">
-        {/* Top Bar */}
-        {/* <div className="flex items-center justify-center md:justify-between py-2 border-b">
-          <div className="hidden md:flex items-center space-x-4 text-sm">
-            <Link href="/blog">Wedding Blog</Link>
-            <Link href="/deals">Wedding Deals</Link>
-            <Link href="/reviews">Real Wedding Reviews</Link>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Link href="/vendor/register">
-              <Button variant="outline" size="sm">
-                Register Business
-              </Button>
-            </Link>
-            <Link href="/vendor/login">
-              <Button size="sm">Vendor Login</Button>
-            </Link>
-          </div>
-        </div> */}
+      <div className="container mx-auto px-4 xl:px-[5%]">
 
         {/* Main Header */}
         <div className="flex items-center justify-between py-4">
@@ -196,9 +186,7 @@ export function Header() {
               {/* <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsSearchOpen(!isSearchOpen)}>
                 <Search className="h-5 w-5" />
               </Button> */}
-              <Link href="/login">
-                <Button size="sm">List Your Buisness</Button>
-              </Link>
+              <HeaderAvatar loading={loading} user={user}/>
             </div>
           </div>
         </div>

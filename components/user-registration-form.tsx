@@ -50,7 +50,7 @@ export function UserRegistrationForm() {
 
   async function onSubmit(data: FormData) {
     setIsLoading(true);
-    
+  
     try {
       const response = await axios.post(`${BACKEND_URL}api/v1/auth/signup`, {
         ...data,
@@ -65,26 +65,24 @@ export function UserRegistrationForm() {
           description: "Your account has been successfully registered. You can now log in.",
         });
         router.push('/login');
-
-      } else {
-        console.log("Error:", response.data.message);
-        toast({
-          title: "Sign-Up Failed",
-          description: response.data.message || "Something went wrong. Please try again.",
-          variant: 'destructive'
-        });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error:", error);
+  
+      // Extract error message from backend response
+      const errorMessage =
+        error.response?.data?.message || "Something went wrong. Please try again.";
+  
       toast({
-        title: "Network Error",
-        description: "Check your internet connection and try again.",
-        variant: 'destructive'
-      });      
+        title: "Sign-Up Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   }
+  
 
   return (
     <div className=" min-h-screen bg-gray-50">
