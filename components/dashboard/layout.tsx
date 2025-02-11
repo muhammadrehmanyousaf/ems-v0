@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import Cookies from 'js-cookie'
 import {
   LayoutDashboard,
   CalendarDays,
@@ -14,6 +15,7 @@ import {
   Settings,
   LogOut,
 } from "lucide-react"
+import ProtectedRoutes from "@/lib/protected-routes"
 
 interface SidebarItemProps {
   icon: ReactNode
@@ -42,6 +44,7 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
+    <ProtectedRoutes>
     <div className="flex h-screen bg-gray-100">
       <aside className="w-64 bg-white shadow-md">
         <div className="p-4">
@@ -65,5 +68,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </aside>
       <main className="flex-1 overflow-y-auto p-8">{children}</main>
     </div>
+    </ProtectedRoutes>
   )
 }

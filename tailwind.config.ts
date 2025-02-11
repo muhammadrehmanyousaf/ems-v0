@@ -11,9 +11,9 @@ const config: Config = {
   theme: {
   	extend: {
   		colors: {
-			roze: {
-				default: '#e11d48',
-			},
+  			roze: {
+  				default: '#e11d48'
+  			},
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {
@@ -86,11 +86,20 @@ const config: Config = {
   				to: {
   					height: '0'
   				}
+  			},
+  			'spinner-leaf-fade': {
+  				'0%, 100%': {
+  					opacity: '0'
+  				},
+  				'50%': {
+  					opacity: '1'
+  				}
   			}
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out'
+  			'accordion-up': 'accordion-up 0.2s ease-out',
+  			'spinner-leaf-fade': 'spinner-leaf-fade 800ms linear infinite'
   		}
   	}
   },

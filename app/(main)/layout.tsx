@@ -10,16 +10,17 @@ export const metadata: Metadata = {
   description: "Find and book the best wedding vendors in your city",
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  
   return (
     <div lang="en" suppressHydrationWarning>
       <div className={inter.className} suppressHydrationWarning>
         <Header />
-        <main>{children}</main>
+        <div>{children}</div>
         <Footer />
       </div>
     </div>
