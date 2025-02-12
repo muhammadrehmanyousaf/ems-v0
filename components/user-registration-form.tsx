@@ -56,7 +56,7 @@ export function UserRegistrationForm() {
         ...data,
         roleIds: [3],
       });
-  
+
       if (response.status === 200) {
         console.log("Success:", response.data);
         reset();
@@ -216,4 +216,3 @@ export function UserRegistrationForm() {
     </div>
   )
 }
-
