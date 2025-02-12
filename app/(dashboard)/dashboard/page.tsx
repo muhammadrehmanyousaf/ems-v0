@@ -3,8 +3,9 @@
 import { DashboardLayout } from "@/components/dashboard/layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
-import { useState } from "react"
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import Cookies from 'js-cookie'
 
 const data = [
   { name: "Jan", total: Math.floor(Math.random() * 5000) + 1000 },
@@ -16,15 +17,16 @@ const data = [
 ];
 
 export default function DashboardPage() {
-  const router = useRouter()
-  const [vendorData, setVendorData] = useState<any>(null)
-
+  const router = useRouter();
+  
   const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated')
-    localStorage.removeItem('currentVendor')
-    window.location.replace('/vendor/login')
-  }
-
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    Cookies.remove("token")
+    Cookies.remove("user")
+    router.replace("/login");
+  };
+  
   return (
     <DashboardLayout>
       <div className="flex justify-between items-center mb-6">
