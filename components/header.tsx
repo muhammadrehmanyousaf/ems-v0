@@ -102,7 +102,7 @@ export function Header() {
             </Sheet>
 
             <Link href="/" className="flex items-center">
-              <span className="text-2xl font-bold text-primary ml-2 md:ml-0">WeddingPlatform</span>
+              <span className="text-2xl font-bold text-primary ml-2 md:ml-0">wedZzz</span>
             </Link>
           </div>
 
