@@ -32,7 +32,7 @@ export default function VendorCard({
     // Implement the booking logic here
     alert(`Booking for ${name} initiated!`);
   }
-  console.log("vendor type ",vendorType)
+  // console.log("vendor type ",vendorType)
   return (
 
     <Link href={`/${vendorType}/${id}`} passHref>

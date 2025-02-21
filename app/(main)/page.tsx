@@ -1,3 +1,6 @@
+"use client";
+import { Provider } from "react-redux"
+import { store } from "@/store"
 import { HeroSection } from "@/components/homepage/hero-section"
 import { FeaturedCategories } from "@/components/homepage/featured-categories"
 import { FeaturedVendors } from "@/components/homepage/featured-vendors"
@@ -10,16 +13,18 @@ import { UserProvider } from "@/context/UserContext"
 
 export default function Home() {
   return (
-    <UserProvider>
-      <HeroSection />
-      <FeaturedCategories />
-      <FeaturedVendors />
-      <FeaturedVenues />
-      <FeaturedMakeupArtists />
-      <PlanningTools />
-      <RealWeddings />
-      <WeddingTips />
-    </UserProvider>
+    <Provider store={store}>
+      <UserProvider>
+        <HeroSection />
+        <FeaturedCategories />
+        <FeaturedVendors />
+        <FeaturedVenues />
+        <FeaturedMakeupArtists />
+        <PlanningTools />
+        <RealWeddings />
+        <WeddingTips />
+      </UserProvider>
+    </Provider>
   )
 }
 

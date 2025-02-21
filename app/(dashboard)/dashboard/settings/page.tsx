@@ -23,7 +23,7 @@ export default function SettingsPage() {
 
   const handleSave = () => {
     // Here you would typically send the updated settings to your backend
-    console.log("Saved settings:", settings)
+    // console.log("Saved settings:", settings)
     // Show a success message to the user
     alert("Settings saved successfully!")
   }

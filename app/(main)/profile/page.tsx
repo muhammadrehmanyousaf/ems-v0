@@ -26,7 +26,7 @@ export default function ProfilePage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Profile updated:", profile)
+    // console.log("Profile updated:", profile)
     // Here you would typically send the data to an API
   }
 

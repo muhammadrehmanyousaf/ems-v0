@@ -14,6 +14,7 @@ interface VendorSearchProps {
   vendorType: string
   title: string
   description: string
+  vendors: any[];
 }
 
 export default function VendorSearch({ vendorType, title, description }: VendorSearchProps) {

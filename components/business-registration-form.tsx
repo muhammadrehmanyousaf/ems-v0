@@ -44,7 +44,7 @@ const {
 
   function handleStepSubmit(data: Partial<FormData>) {
       const updatedValues = {...data };
-        console.log("Final Form Data:", updatedValues);
+        // console.log("Final Form Data:", updatedValues);
   }
 
   const handleNext = () => {

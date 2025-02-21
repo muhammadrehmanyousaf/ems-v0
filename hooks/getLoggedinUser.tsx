@@ -13,7 +13,7 @@ export function getUser() {
         setUser(userData.data);
       } catch (err) {
         setError("Failed to fetch user data.");
-        console.error("Error fetching user:", err);
+        // console.error("Error fetching user:", err);
       } finally {
         setLoading(false);
       }

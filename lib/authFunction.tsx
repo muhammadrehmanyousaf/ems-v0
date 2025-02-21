@@ -7,7 +7,7 @@ export async function getLoggedInUser(): Promise<any> {
 
     const userId = localStorage.getItem("user");
     if (!userId) {
-      console.error('Missing user ID in localStorage.');
+      // console.error('Missing user ID in localStorage.');
       return null;
     }
 
@@ -15,7 +15,7 @@ export async function getLoggedInUser(): Promise<any> {
 
     return response.data;
   } catch (error) {
-    console.error('Error fetching user details:', error);
+    // console.error('Error fetching user details:', error);
     return null;
   }
 }

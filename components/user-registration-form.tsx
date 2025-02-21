@@ -58,7 +58,7 @@ export function UserRegistrationForm() {
       });
 
       if (response.status === 200) {
-        console.log("Success:", response.data);
+        // console.log("Success:", response.data);
         reset();
         toast({
           title: "Account Created!",
@@ -67,7 +67,7 @@ export function UserRegistrationForm() {
         router.push('/login');
       }
     } catch (error: any) {
-      console.error("Error:", error);
+      // console.error("Error:", error);
   
       // Extract error message from backend response
       const errorMessage =

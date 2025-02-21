@@ -45,7 +45,7 @@ export function LoginForm() {
       if (response.status === 200) {
         const resData = response.data;
         const {user, token} = resData.data
-        console.log('response', response);
+        // console.log('response', response);
         
         
         localStorage.setItem("user", JSON.stringify(user.id));
@@ -75,7 +75,7 @@ export function LoginForm() {
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message
-      console.error("Login error:", error);
+      // console.error("Login error:", error);
       toast({
         title: 'Login failed',
         description: `error: ${errorMessage || 'Something went wrong. Please try again later.'}`
