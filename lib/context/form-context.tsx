@@ -1,8 +1,14 @@
 "use client"
 
-import { createContext, useContext, useState } from "react"
+import BusinessDetails from "@/components/VendorStepForms/business-details"
+import ContactDetails from "@/components/VendorStepForms/contact-details"
+import ImagesStep from "@/components/VendorStepForms/images-step"
+import Packages from "@/components/VendorStepForms/packages"
+import PersonalDetails from "@/components/VendorStepForms/personal-details"
+import Preview from "@/components/VendorStepForms/preview"
+import { createContext, ReactElement, useContext, useState } from "react"
 
-type BusinessType =
+export type BusinessType =
   | "PHOTOGRAPHER"
   | "MAKEUP_ARTIST"
   | "WEDDING_VENUE"
@@ -13,128 +19,67 @@ type BusinessType =
   | "BRIDAL_WEAR"
   | "WEDDING_INVITATIONS"
 
-type Package = {
-  name: string
-  price: number
-  services: string[]
-}
-
-type FormData = {
-  // Step 1 - Business Type
-  businessType: BusinessType | null
-
-  // Step 2 - Personal Details
-  fullName: string
-  email: string
-  contactNumber: string
-  password: string
-  confirmPassword: string
-  agreeToTerms: boolean
-  phone: string
-
-  // Step 3 - Business Details
-  citiesCovered: string[]
-  staffGender: ("MALE" | "FEMALE" | "TRANSGENDER")[]
-  minimumPrice: number
-  description: string
-  additionalInfo: string
-  paymentType: string
-  covidCompliant: boolean
-  cancellationPolicy: "REFUNDABLE" | "NON_REFUNDABLE" | "PARTIALLY_REFUNDABLE"
-  downPaymentPrice: number
-
-  // Step 4 - Packages
-  packages: Package[]
-
-  // Step 5 - Contact Details
-  brandName: string
-  secondaryContact: string
-  websiteUrl: string
-  instagramUrl: string
-  facebookUrl: string
-  bookingEmail: string
-  officeAddress: string
-  googleMapsLink: string
-
-  // Step 6 - Images
-  images: File[]
-}
-
 type FormContextType = {
-  formData: FormData
-  currentStep: number
-  setCurrentStep: (step: number) => void
-  updateFormData: (data: Partial<FormData>) => void
-  isValid: (step: number) => boolean
+  businessType: BusinessType | string,
+  setBusinessType: React.Dispatch<React.SetStateAction<BusinessType | string>>
+  steps: { title: string, description: string, form?: ReactElement }[]
 }
-
-const defaultFormData: FormData = {
-  businessType: null,
-  fullName: "",
-  email: "",
-  contactNumber: "",
-  password: "",
-  confirmPassword: "",
-  phone: "",
-  agreeToTerms: false,
-  citiesCovered: [],
-  staffGender: [],
-  minimumPrice: 0,
-  description: "",
-  additionalInfo: "",
-  paymentType: "",
-  covidCompliant: false,
-  cancellationPolicy: "REFUNDABLE",
-  packages: [
-    {
-      name: "Basic",
-      price: 2000,
-      services: [],
-    },
-  ],
-  brandName: "",
-  secondaryContact: "",
-  websiteUrl: "",
-  instagramUrl: "",
-  facebookUrl: "",
-  bookingEmail: "",
-  officeAddress: "",
-  googleMapsLink: "",
-  images: [],
-  downPaymentPrice: 0,
-}
-
 const FormContext = createContext<FormContextType | undefined>(undefined)
 
 export function FormProvider({ children }: { children: React.ReactNode }) {
-  const [formData, setFormData] = useState<FormData>(defaultFormData)
-  const [currentStep, setCurrentStep] = useState(0)
+  const [businessType, setBusinessType] = useState<BusinessType | string>('')
 
-  const updateFormData = (newData: Partial<FormData>) => {
-    setFormData((prev) => ({ ...prev, ...newData }))
-  }
-
-  const isValid = (step: number) => {
-    switch (step) {
-      case 0:
-        return formData.businessType !== null
-      case 1:
-        return (
-          formData.fullName !== "" &&
-          formData.email !== "" &&
-          formData.contactNumber !== "" &&
-          formData.password !== "" &&
-          formData.password === formData.confirmPassword &&
-          formData.agreeToTerms
-        )
-      // Add validation for other steps
-      default:
-        return true
+  const steps = [
+    {
+      title: "Business Type",
+      description: 'What is your line of business?'
+    },
+    {
+      title: "Personal Details",
+      description: 'Enter your personal details here.',
+      form: <>
+        <PersonalDetails />
+      </>
+    },
+    {
+      title: "Contact Details",
+      description: 'Enter your contact details here',
+      form: <>
+        <ContactDetails />
+      </>
+    },
+    {
+      title: 'Business Details',
+      description: 'Enter your business details here',
+      form: <>
+       <BusinessDetails/> 
+      </>
+    },
+    {
+      title: 'Package',
+      description: 'Enter the package and price',
+      form: <>
+        <Packages />
+      </>
+    },
+    {
+      title: 'Images',
+      description: 'You can upload up to 20 images',
+      form: <>
+        <ImagesStep />
+      </>
+    },
+    {
+      title: 'Preview',
+      description: 'Review and confirm your all details',
+      form: <>
+        <Preview/>
+      </>
     }
-  }
+  ];
 
   return (
-    <FormContext.Provider value={{ formData, currentStep, setCurrentStep, updateFormData, isValid }}>
+    <FormContext.Provider value={{ setBusinessType, businessType, steps }}>
       {children}
     </FormContext.Provider>
   )
