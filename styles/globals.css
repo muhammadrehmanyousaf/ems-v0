@@ -92,3 +92,25 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 12px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f9e8ec;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e11d48;
+  border-radius: 100px;
+}
+
+.hide_scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide_scrollbar {
+  -ms-overflow-style: none; 
+  scrollbar-width: none; 
+}

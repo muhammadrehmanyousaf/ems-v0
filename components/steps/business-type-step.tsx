@@ -1,8 +1,9 @@
 "use client"
 
-import { useFormContext } from "@/lib/context/form-context"
+import { BusinessType } from "@/lib/context/form-context"
 import { Camera, Heart, Home, Music, Car, Gift, Utensils } from "lucide-react"
 import { cn } from "@/lib/utils"
+import React from "react"
 
 const businessTypes = [
   {
@@ -42,31 +43,33 @@ const businessTypes = [
   },
 ]
 
-export function BusinessTypeStep() {
-  const { formData, updateFormData } = useFormContext()
+interface BussineTypeCompo {
+  setBusinessType: React.Dispatch<React.SetStateAction<BusinessType | string>>,
+  businessType: BusinessType | string
+}
+export function BusinessTypeStep({setBusinessType, businessType}: BussineTypeCompo) {
 
   return (
     <div className="">
-      <h2 className="text-lg font-medium">What is your line of business?</h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-2 md:gap-4 mt-3">
         {businessTypes.map((type) => (
           <button
             key={type.id}
-            onClick={() => updateFormData({ businessType: type.id as any })}
+            onClick={() => setBusinessType(type.id as BusinessType)}
             className={cn(
-              "flex items-center space-x-3 p-4 rounded-lg border transition-colors",
-              formData.businessType === type.id
+              "flex items-center space-x-2.5 md:space-x-3 p-3 sm:p-4 rounded-lg border transition-colors",
+              businessType === type.id
                 ? "border-rose-600 bg-rose-50"
                 : "border-gray-200 hover:border-rose-600",
             )}
           >
             <type.icon
-              className={cn("w-5 h-5", formData.businessType === type.id ? "text-rose-600" : "text-gray-500")}
+              className={cn("size-5", businessType === type.id ? "text-rose-600" : "text-gray-500")}
             />
             <span
               className={cn(
-                "text-sm font-medium",
-                formData.businessType === type.id ? "text-rose-600" : "text-gray-700",
+                "text-xs md:text-sm font-medium",
+                businessType === type.id ? "text-rose-600" : "text-gray-700",
               )}
             >
               {type.title}
