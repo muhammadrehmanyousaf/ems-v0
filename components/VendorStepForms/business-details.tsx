@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { IoMdMail } from "react-icons/io";
 import {
     Select,
@@ -21,17 +21,17 @@ import MultipleRadio from "./components/multiple-radio";
 import { useFormContext } from "@/lib/context/form-context";
 
 const BusinessDetails = () => {
-    const { businessType } = useFormContext()
+    const { businessType, setFormData, formData } = useFormContext()
     const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
     const [selectedTypeIndexes, setSelectedTypeIndexes] = useState<number[]>([]);
     const [selectedExpertise, setSelectedExpertise] = useState<string[]>([]);
     const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
     const [selectedstaff, setSelectedstaff] = useState<string[]>([]);
     const [selectedStaffIndexes, setSelectedStaffIndexes] = useState<number[]>([]);
-    const [selectedCatering, setSelectedCatering] = useState<string | null>('external');
-    const [parking, setParking] = useState<string | null>('no');
-    const [covid, setCovid] = useState<string | null>('no');
-    const [cancellation, setCancellation] = useState<string | null>('refundable');
+    const [selectedCatering, setSelectedCatering] = useState<string>('external');
+    const [parking, setParking] = useState<string>('no');
+    const [covid, setCovid] = useState<string>('no');
+    const [cancellation, setCancellation] = useState<string>('refundable');
     const [selectedCities, setSelectedCities] = useState<string[]>([]);
     const [selectServiceFor, setSelectedServiceFor] = useState<string[]>([]);
     const [selectServiceForIndex, setSelectedServiceForIndex] = useState<number[]>([]);
@@ -39,7 +39,38 @@ const BusinessDetails = () => {
     const [travelsToHome, setTravelsToHome] = useState<string>('no');
     const [sellMehndi, setSellMehndi] = useState<string>('no');
     const [decoritems, setDecoritems] = useState<string>('no');
-    const [salonType, setSalonType] = useState<string | null>('salon');
+    const [salonType, setSalonType] = useState<string>('salon');
+
+    useEffect(() => {
+        setFormData((prevData) => ({
+            ...prevData,
+            cityCovered: selectedCities,
+            staff: selectedstaff,
+            hasTeam: hasTeam === 'yes',
+            expertise: selectedExpertise,
+            serviceProvided: selectServiceFor,
+            subBusinessType: businessType === 'MAKEUP_ARTIST' ? [salonType] : selectedTypes,
+            cancelationPolicy: cancellation,
+            covidComplaint: covid === 'yes',
+            sellMehndi: sellMehndi === 'yes',
+            parking: parking === 'yes',
+            catering: selectedCatering,
+        }));
+    }, [
+        selectedCities,
+        selectedstaff,
+        selectServiceFor,
+        selectedExpertise,
+        hasTeam,
+        salonType,
+        cancellation,
+        covid,
+        parking,
+        businessType,
+        selectedCatering,
+        setFormData
+    ]);
+
 
     const types = [
         { value: 'Marquee', icon: <IoMdMail /> },
@@ -223,7 +254,9 @@ const BusinessDetails = () => {
                             decorExpertise :
                             businessType === 'CATERING' ?
                                 cateringExpertise :
-                                makeupExpertise
+                                businessType === 'MAKEUP_ARTIST' ?
+                                    makeupExpertise :
+                                    Expertise
                     }
                     handleSelectOption={handleSelectExpertise}
                     selectedOption={selectedExpertise}
@@ -237,48 +270,73 @@ const BusinessDetails = () => {
                         <Label>Do you provide food testing?</Label>
                         <RadioButton
                             data={covidCompliant}
-                            selectedOption={covid}
-                            setSelectedOption={setCovid}
+                            selectedOption={formData.provideFoodTesting ? "true" : "false"}
+                            setSelectedOption={(id) =>
+                                setFormData((previous) => ({
+                                    ...previous,
+                                    provideFoodTesting: id === "true",
+                                }))
+                            }
                         />
                     </section>
                     <section>
                         <Label>Do you provide decoration?</Label>
                         <RadioButton
                             data={covidCompliant}
-                            selectedOption={covid}
-                            setSelectedOption={setCovid}
+                            selectedOption={formData.provideDecorationItem ? "true" : "false"}
+                            setSelectedOption={(id) =>
+                                setFormData((previous) => ({
+                                    ...previous,
+                                    provideDecorationItem: id === "true",
+                                }))}
                         />
                     </section>
                     <section>
                         <Label>Do you provide sound system?</Label>
                         <RadioButton
                             data={covidCompliant}
-                            selectedOption={covid}
-                            setSelectedOption={setCovid}
+                            selectedOption={formData.provideSounSystem ? "true" : "false"}
+                            setSelectedOption={(id) =>
+                                setFormData((previous) => ({
+                                    ...previous,
+                                    provideSounSystem: id === "true",
+                                }))}
                         />
                     </section>
                     <section>
                         <Label>Do you provide seating arrangement?</Label>
                         <RadioButton
                             data={covidCompliant}
-                            selectedOption={covid}
-                            setSelectedOption={setCovid}
+                            selectedOption={formData.provideSeatingArrangement ? "true" : "false"}
+                            setSelectedOption={(id) =>
+                                setFormData((previous) => ({
+                                    ...previous,
+                                    provideSeatingArrangement: id === "true",
+                                }))}
                         />
                     </section>
                     <section>
                         <Label>Do you provide waiters?</Label>
                         <RadioButton
                             data={covidCompliant}
-                            selectedOption={covid}
-                            setSelectedOption={setCovid}
+                            selectedOption={formData.provideWaiter ? "true" : "false"}
+                            setSelectedOption={(id) =>
+                                setFormData((previous) => ({
+                                    ...previous,
+                                    provideWaiter: id === "true",
+                                }))}
                         />
                     </section>
                     <section>
                         <Label>Do you provide cutlery and plates?</Label>
                         <RadioButton
                             data={covidCompliant}
-                            selectedOption={covid}
-                            setSelectedOption={setCovid}
+                            selectedOption={formData.providePlate ? "true" : "false"}
+                            setSelectedOption={(id) =>
+                                setFormData((previous) => ({
+                                    ...previous,
+                                    providePlate: id === "true",
+                                }))}
                         />
                     </section>
                 </div>
@@ -307,6 +365,13 @@ const BusinessDetails = () => {
                         <Input
                             type="number"
                             placeholder="Enter maximum people capacity"
+                            value={formData.maxCapacity || ""}
+                            onChange={(e) =>
+                                setFormData((prevData) => ({
+                                    ...prevData,
+                                    maxCapacity: String(e.target.value),
+                                }))
+                            }
                         />
                     </section>
                     <section>
@@ -359,23 +424,23 @@ const BusinessDetails = () => {
             }
             {
                 (businessType === 'HENNA_ARTIST' || businessType === 'MAKEUP_ARTIST') &&
-                    <section className="space-y-4">
-                        <Label>Travels to Home?</Label>
-                        <RadioButton
-                            data={covidCompliant}
-                            selectedOption={travelsToHome}
-                            setSelectedOption={setTravelsToHome}
-                        />
-                    </section>}
-                    {businessType === 'HENNA_ARTIST' &&
-                    <section className="space-y-4">
-                        <Label>Sells Mehndi?</Label>
-                        <RadioButton
-                            data={covidCompliant}
-                            selectedOption={sellMehndi}
-                            setSelectedOption={setSellMehndi}
-                        />
-                    </section>
+                <section className="space-y-4">
+                    <Label>Travels to Home?</Label>
+                    <RadioButton
+                        data={covidCompliant}
+                        selectedOption={travelsToHome}
+                        setSelectedOption={setTravelsToHome}
+                    />
+                </section>}
+            {businessType === 'HENNA_ARTIST' &&
+                <section className="space-y-4">
+                    <Label>Sells Mehndi?</Label>
+                    <RadioButton
+                        data={covidCompliant}
+                        selectedOption={sellMehndi}
+                        setSelectedOption={setSellMehndi}
+                    />
+                </section>
             }
             {businessType === 'WEDDING_VENUE' &&
                 <section className="space-y-3">
@@ -383,6 +448,13 @@ const BusinessDetails = () => {
                     <Input
                         type="number"
                         placeholder="Enter Car Parking capacity"
+                        value={formData.carParkingCapacity || ""}
+                        onChange={(e) =>
+                            setFormData((prevData) => ({
+                                ...prevData,
+                                carParkingCapacity: String(e.target.value),
+                            }))
+                        }
                     />
                 </section>}
             <section className="space-y-3">
@@ -390,23 +462,50 @@ const BusinessDetails = () => {
                 <Input
                     type="number"
                     placeholder="Enter Minimum Price"
+                    value={formData.minimumPrice || ""}
+                    onChange={(e) =>
+                        setFormData((prevData) => ({
+                            ...prevData,
+                            minimumPrice: Number(e.target.value),
+                        }))
+                    }
                 />
+
             </section>
             <section className="space-y-3">
                 <Label>Description</Label>
                 <Textarea
                     placeholder="Enter Description"
+                    name="description"
+                    value={formData.description || ''}
+                    onChange={(e) =>
+                        setFormData((prevData) => ({
+                            ...prevData,
+                            description: e.target.value,
+                        }))
+                    }
                 />
             </section>
             <section className="space-y-3">
                 <Label>Aditional Information</Label>
                 <Textarea
                     placeholder="Enter Aditional Information"
+                    value={formData.additionalInfo || ''}
+                    name="additionalInfo"
+                    onChange={(e) =>
+                        setFormData((prevData) => ({
+                            ...prevData,
+                            additionalInfo: e.target.value,
+                        }))
+                    }
                 />
             </section>
             <section className="space-y-3">
                 <Label>Down Payment Type</Label>
-                <Select>
+                <Select onValueChange={(value) => setFormData((prevData) => ({
+                    ...prevData,
+                    downPaymentType: value,
+                }))}>
                     <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select Type" />
                     </SelectTrigger>
@@ -421,6 +520,14 @@ const BusinessDetails = () => {
                 <Input
                     type="number"
                     placeholder="Enter Down Payment"
+                    value={formData.downPayment || ''}
+                    name="downPayment"
+                    onChange={(e) =>
+                        setFormData((prevData) => ({
+                            ...prevData,
+                            downPayment: Number(e.target.value),
+                        }))
+                    }
                 />
             </section>
             <section>
