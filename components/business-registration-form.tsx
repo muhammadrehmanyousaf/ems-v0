@@ -6,7 +6,8 @@ import { BusinessTypeStep } from "./steps/business-type-step";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { FormData, formSchema } from "@/lib/formSchema/vendor-schema";
+import { formSchema } from "@/lib/formSchema/vendor-schema";
+
 import { Checkbox } from "./ui/checkbox";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
@@ -14,16 +15,47 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Flag } from "lucide-react";
 import { useFormContext } from "@/lib/context/form-context";
+import { toast } from "./ui/use-toast";
 
 export function BusinessRegistrationForm() {
-  const [currentStep, setCurrentStep] = useState(5);
-  const {businessType, setBusinessType, steps} = useFormContext()
-
+  const [currentStep, setCurrentStep] = useState(0);
+  const { businessType, setBusinessType, steps, setFormData, formData, setErrors, errors } = useFormContext()
+  console.log('formData', formData);
   console.log('businessType', businessType);
 
-  const handleNext = () => {
-    setCurrentStep((prev) => prev + 1);
+  const handleValidations = () => {
+    let currentErrors: { [key: string]: string } = {};
+
+    if (currentStep === 0) {
+      if (!formData.businessType) currentErrors.businessType = "Select Business Type";
+    } else if (currentStep === 1) {
+      if (!formData.fullName) currentErrors.fullName = "Full Name is required";
+      if (!formData.email) currentErrors.email = "Email is required";
+      if (!formData.phoneNumber) currentErrors.phoneNumber = "Phone number is required";
+      if (!formData.password) currentErrors.password = "Password is required";
+    }
+
+    setErrors(currentErrors);
+
+    return currentErrors;
   };
+
+  console.log('errors', errors);
+  
+  const handleNext = () => {
+    
+    const validationErrors = handleValidations();
+
+    if (Object.keys(validationErrors).length > 0) {
+      toast({
+        title: "Validation Error",
+        description: Object.values(validationErrors).join(", "),
+      });
+      return;
+    }
+
+    setCurrentStep((prev) => prev + 1);
+};
 
   const handleBack = () => {
     if (currentStep > 0) {
@@ -41,7 +73,7 @@ export function BusinessRegistrationForm() {
           <span className="text-lg lg:text-2xl font-semibold">Perfect Wedding</span>
         </Link>
         <Link href="/get-help" className="text-rose-600 text-sm hover:underline">
-        <span className="hidden md:inline">Having Trouble?</span>Get Help
+          <span className="hidden md:inline">Having Trouble?</span>Get Help
         </Link>
       </header>
 
@@ -67,8 +99,8 @@ export function BusinessRegistrationForm() {
                 <div>
                   {filteredSteps.form}
                 </div>
-              ): (
-                <BusinessTypeStep setBusinessType={setBusinessType} businessType={businessType}/>
+              ) : (
+                <BusinessTypeStep setBusinessType={setBusinessType} businessType={businessType} />
               )}
             </div>
           </section>
@@ -78,9 +110,9 @@ export function BusinessRegistrationForm() {
               Back
             </Button>
             <Button
-            type="submit"
-            disabled={currentStep === steps.length - 1}
-            onClick={handleNext}
+              type="submit"
+              disabled={currentStep === steps.length - 1}
+              onClick={handleNext}
               className="bg-roze-default hover:bg-roze-default/90 text-white"
             >
               {currentStep === steps.length - 1 ? "Submit" : "Next"}
@@ -91,3 +123,7 @@ export function BusinessRegistrationForm() {
     </div>
   );
 }
+function setErrors(currentErrors: { [key: string]: string; }) {
+  throw new Error("Function not implemented.");
+}
+

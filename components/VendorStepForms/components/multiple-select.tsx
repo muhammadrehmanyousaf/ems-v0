@@ -5,7 +5,6 @@ import { Check, X } from 'lucide-react'
 import React from 'react'
 
 interface MultipleSelectComponent {
-    // options: { value: string, label: string }[],
     label: string,
     data: { value: string, label: string }[],
     handleSelectOption: (id: string) => void,
@@ -42,8 +41,8 @@ const MultipleSelect:React.FC<MultipleSelectComponent> = ({label, data, handleSe
                 <div className="flex flex-wrap items-center gap-2">
                     {selectedOption.length > 0 &&
                         selectedOption.map((item, i) => (
-                            <span className="flex items-center gap-2 bg-[#e6e6e6] py-2 px-2">
-                                <p key={i} className="text-sm">{item}</p>
+                            <span key={i} className="flex items-center gap-2 bg-[#e6e6e6] py-2 px-2">
+                                <p className="text-sm">{item}</p>
                                 <Button size={'icon'} onClick={() => handleSelectOption(item)} className="size-4 bg-transparent text-black hover:text-white"><X /></Button>
                             </span>
                         ))}

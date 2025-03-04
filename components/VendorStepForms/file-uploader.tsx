@@ -6,10 +6,11 @@ import { MdCloudUpload } from "react-icons/md";
 
 interface FileUploaderProps {
   rounded?: boolean;
+  setFile: (file: File | null) => void;
+  file: File | null;
 }
 
-export default function FileUploader({ rounded = false }: FileUploaderProps) {
-  const [file, setFile] = useState<File | null>(null);
+export default function FileUploader({ rounded = false, setFile, file }: FileUploaderProps) {
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     setFile(acceptedFiles[0]);

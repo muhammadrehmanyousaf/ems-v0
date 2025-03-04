@@ -1,16 +1,17 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, SetStateAction } from "react";
 import { useDropzone } from "react-dropzone";
 import { Upload, X } from "lucide-react";
 import { MdCloudUpload } from "react-icons/md";
 
 interface FileUploaderProps {
   multiple?: boolean;
+  setFiles: React.Dispatch<SetStateAction<File[]>>;
+  files: File[]
 }
 
-export default function MultipleFileUploader({ multiple = true }: FileUploaderProps) {
-  const [files, setFiles] = useState<File[]>([]);
+export default function MultipleFileUploader({ setFiles, files, multiple = true }: FileUploaderProps) {
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {

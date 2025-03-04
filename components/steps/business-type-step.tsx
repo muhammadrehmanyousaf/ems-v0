@@ -1,6 +1,6 @@
 "use client"
 
-import { BusinessType } from "@/lib/context/form-context"
+import { BusinessType, useFormContext } from "@/lib/context/form-context"
 import { Camera, Heart, Home, Music, Car, Gift, Utensils } from "lucide-react"
 import { cn } from "@/lib/utils"
 import React from "react"
@@ -48,14 +48,15 @@ interface BussineTypeCompo {
   businessType: BusinessType | string
 }
 export function BusinessTypeStep({setBusinessType, businessType}: BussineTypeCompo) {
+  const { setFormData } = useFormContext()
 
   return (
     <div className="">
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-2 md:gap-4 mt-3">
+      <div className="flex flex-wrap gap-y-4 gap-x-2 md:gap-4 mt-3">
         {businessTypes.map((type) => (
           <button
             key={type.id}
-            onClick={() => setBusinessType(type.id as BusinessType)}
+            onClick={() => {setBusinessType(type.id as BusinessType); setFormData((prev) => ({ ...prev, businessType: type.id }))}}
             className={cn(
               "flex items-center space-x-2.5 md:space-x-3 p-3 sm:p-4 rounded-lg border transition-colors",
               businessType === type.id
