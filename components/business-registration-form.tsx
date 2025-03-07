@@ -6,13 +6,15 @@ import { BusinessTypeStep } from "./steps/business-type-step";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { FormData, formSchema } from "@/lib/formSchema/vendor-schema";
+import { formSchema } from "@/lib/formSchema/vendor-schema";
+
 import { Checkbox } from "./ui/checkbox";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Flag } from "lucide-react";
+<<<<<<< HEAD
 
 export function BusinessRegistrationForm() {
   const [currentStep, setCurrentStep] = useState(0);
@@ -46,10 +48,50 @@ const {
       const updatedValues = {...data };
         // console.log("Final Form Data:", updatedValues);
   }
+=======
+import { useFormContext } from "@/lib/context/form-context";
+import { toast } from "./ui/use-toast";
 
-  const handleNext = () => {
-    setCurrentStep((prev) => prev + 1);
+export function BusinessRegistrationForm() {
+  const [currentStep, setCurrentStep] = useState(0);
+  const { businessType, setBusinessType, steps, setFormData, formData, setErrors, errors } = useFormContext()
+  console.log('formData', formData);
+  console.log('businessType', businessType);
+>>>>>>> bb0c3f8c779eb6e986ec83307896091d2aa9c462
+
+  const handleValidations = () => {
+    let currentErrors: { [key: string]: string } = {};
+
+    if (currentStep === 0) {
+      if (!formData.businessType) currentErrors.businessType = "Select Business Type";
+    } else if (currentStep === 1) {
+      if (!formData.fullName) currentErrors.fullName = "Full Name is required";
+      if (!formData.email) currentErrors.email = "Email is required";
+      if (!formData.phoneNumber) currentErrors.phoneNumber = "Phone number is required";
+      if (!formData.password) currentErrors.password = "Password is required";
+    }
+
+    setErrors(currentErrors);
+
+    return currentErrors;
   };
+
+  console.log('errors', errors);
+  
+  const handleNext = () => {
+    
+    const validationErrors = handleValidations();
+
+    if (Object.keys(validationErrors).length > 0) {
+      toast({
+        title: "Validation Error",
+        description: Object.values(validationErrors).join(", "),
+      });
+      return;
+    }
+
+    setCurrentStep((prev) => prev + 1);
+};
 
   const handleBack = () => {
     if (currentStep > 0) {
@@ -65,7 +107,11 @@ const {
           <span className="text-2xl font-semibold">Perfect Wedding</span>
         </Link>
         <Link href="/get-help" className="text-rose-600 text-sm hover:underline">
+<<<<<<< HEAD
           Having Trouble? <span className="ml-1 text-rose-600">Get Help</span>
+=======
+          <span className="hidden md:inline">Having Trouble?</span>Get Help
+>>>>>>> bb0c3f8c779eb6e986ec83307896091d2aa9c462
         </Link>
       </header>
 
@@ -125,6 +171,7 @@ const {
                     className="rounded-l-none"
                   />
                 </div>
+<<<<<<< HEAD
                 {errors.phoneNumber && <p className="text-red-500 text-sm">{errors.phoneNumber.message}</p>}
               </div>
         
@@ -165,6 +212,10 @@ const {
               </div>
               ): (
                 <BusinessTypeStep/>
+=======
+              ) : (
+                <BusinessTypeStep setBusinessType={setBusinessType} businessType={businessType} />
+>>>>>>> bb0c3f8c779eb6e986ec83307896091d2aa9c462
               )}
             </div>
           </section>
@@ -174,8 +225,14 @@ const {
               Back
             </Button>
             <Button
+<<<<<<< HEAD
             type="submit"
             onClick={handleNext}
+=======
+              type="submit"
+              disabled={currentStep === steps.length - 1}
+              onClick={handleNext}
+>>>>>>> bb0c3f8c779eb6e986ec83307896091d2aa9c462
               className="bg-roze-default hover:bg-roze-default/90 text-white"
             >
               {currentStep === steps.length - 1 ? "Submit" : "Next"}
@@ -187,3 +244,7 @@ const {
     </div>
   );
 }
+function setErrors(currentErrors: { [key: string]: string; }) {
+  throw new Error("Function not implemented.");
+}
+
