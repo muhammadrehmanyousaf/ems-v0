@@ -9,8 +9,8 @@ interface VendorCardProps {
   name: string
   image: string
   location: string
-  rating: number
-  reviews: number
+  rating?: number
+  reviews?: number
   price: number
   type: string
   vendorType: string
@@ -38,7 +38,7 @@ export default function VendorCard({
     <Link href={`/${vendorType}/${id}`} passHref>
       <Card className="overflow-hidden h-full flex flex-col cursor-pointer transition-shadow hover:shadow-lg">
         <div className="relative h-48">
-          <Image src={image || "/placeholder.svg"} alt={name} layout="fill" objectFit="cover" />
+          <Image src={image || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT94cn1WbeqHekCixMvQfZIGwLp46-C4idwAw&s"} alt={'image'} layout="fill" objectFit="cover" />
         </div>
         <CardContent className="p-4 flex-grow">
           <h3 className="text-lg sm:text-xl font-bold mb-2">{name}</h3>
@@ -46,10 +46,10 @@ export default function VendorCard({
           <div className="flex items-center mb-2">
             <Star className="text-yellow-400 w-4 h-4 sm:w-5 sm:h-5 fill-current" />
             <span className="ml-1 text-sm sm:text-base">
-              {rating.toFixed(1)} ({reviews} reviews)
+               reviews
             </span>
           </div>
-          <p className="font-semibold text-sm sm:text-base">Starting at PKR {price.toLocaleString()}</p>
+          <p className="font-semibold text-sm sm:text-base">Starting at PKR {price}</p>
           <div className="mt-2">
             <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2 py-0.5 rounded">{type}</span>
           </div>
