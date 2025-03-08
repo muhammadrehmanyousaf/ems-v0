@@ -9,11 +9,11 @@ export function cn(...inputs: ClassValue[]) {
 export function sortVendors(vendors: Vendor[], sortOption: SortOption): Vendor[] {
   switch (sortOption) {
     case "price-low":
-      return [...vendors].sort((a, b) => a.price - b.price)
+      return [...vendors].sort((a, b) => a.minimumPrice - b.minimumPrice)
     case "price-high":
-      return [...vendors].sort((a, b) => b.price - a.price)
+      return [...vendors].sort((a, b) => b.minimumPrice - a.minimumPrice)
     case "rating":
-      return [...vendors].sort((a, b) => b.rating - a.rating)
+      return [...vendors].sort((a, b) => b.minimumPrice - a.minimumPrice)
     case "alphabetical":
       return [...vendors].sort((a, b) => a.name.localeCompare(b.name))
     default:

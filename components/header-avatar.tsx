@@ -63,7 +63,7 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
   // If no user is logged in
   return (
     <Link href="/login">
-      <Button size="sm">List Your Business</Button>
+      <Button size="sm" className="text-xs md:text-sm">List Your Business</Button>
     </Link>
   );
 };

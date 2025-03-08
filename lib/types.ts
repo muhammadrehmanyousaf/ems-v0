@@ -3,15 +3,17 @@ export interface Vendor {
   name: string
   images: string[]
   video?: string
-  location: string
-  rating: number
-  reviews: Review[]
-  price: number
+  location?: string
+  rating?: number
+  reviews?: Review[]
+  minimumPrice: number
   type: string
   capacity?: number
   amenities: string[]
   cancellationPolicy?: string
-  sponsored: boolean
+  sponsored: boolean;
+  city: string;
+  subBusinessType: string;
   packages: Package[]
   description: string
   staff: string[]

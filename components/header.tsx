@@ -114,7 +114,7 @@ export function Header() {
             </Sheet>
 
             <Link href="/" className="flex items-center">
-              <span className="text-2xl font-bold text-primary ml-2 md:ml-0">WeddingPlatform</span>
+              <span className="text-base md:text-2xl font-bold text-primary ml-2 md:ml-0">WeddingPlatform</span>
             </Link>
           </div>
 
@@ -194,7 +194,7 @@ export function Header() {
                     <li>
                       <NavigationMenuLink asChild>
                         <Link
-                          href="/photographers"
+                          href={`/vendors/photographers`}
                           className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
                           <Camera className="inline-block mr-2" />
@@ -205,7 +205,7 @@ export function Header() {
                     <li>
                       <NavigationMenuLink asChild>
                         <Link
-                          href="/catering"
+                          href="/vendors/catering"
                           className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
                           <Soup className="inline-block mr-2" />
@@ -216,7 +216,7 @@ export function Header() {
                     <li>
                       <NavigationMenuLink asChild>
                         <Link
-                          href="/makeup-artists"
+                          href="/vendors/makeup-artists"
                           className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
                           <Brush className="inline-block mr-2" />
@@ -227,7 +227,7 @@ export function Header() {
                     <li>
                       <NavigationMenuLink asChild>
                         <Link
-                          href="/venues"
+                          href="/vendors/venues"
                           className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
                           <Building className="inline-block mr-2" />
@@ -238,7 +238,7 @@ export function Header() {
                     <li>
                       <NavigationMenuLink asChild>
                         <Link
-                          href="/henna-artists"
+                          href="/vendors/henna-artists"
                           className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
                           <Paintbrush className="inline-block mr-2" />
@@ -249,7 +249,7 @@ export function Header() {
                     <li>
                       <NavigationMenuLink asChild>
                         <Link
-                          href="/decor"
+                          href="/vendors/decor"
                           className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
                           <Paintbrush className="inline-block mr-2" />
@@ -260,7 +260,7 @@ export function Header() {
                     <li>
                       <NavigationMenuLink asChild>
                         <Link
-                          href="/car-rental"
+                          href="/vendors/car-rental"
                           className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
                           <Car className="inline-block mr-2" />
@@ -271,7 +271,7 @@ export function Header() {
                     <li>
                       <NavigationMenuLink asChild>
                         <Link
-                          href="/wedding-stationery"
+                          href="/vendors/wedding-stationery"
                           className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
                           <PenTool className="inline-block mr-2" />
@@ -282,7 +282,7 @@ export function Header() {
                     <li>
                       <NavigationMenuLink asChild>
                         <Link
-                          href="/bridal-wear"
+                          href="/vendors/bridal-wear"
                           className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
                           <Signature className="inline-block mr-2" />
