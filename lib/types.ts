@@ -63,3 +63,62 @@ export type VendorType =
 
 export type StaffOption = "male" | "female" | "transgender" | "all"
 
+/////////////////////////////////////////
+
+export interface BookingFormData {
+  // User Info
+  username: string
+  phoneNumber: string
+  email: string
+  password: string
+
+  // Date & Time
+  bookingDate: Date | undefined
+  timeSlot: string
+  guestCount: number
+
+  // Package
+  selectedPackage: string
+
+  // Menu
+  selectedMenu: string
+  menuAddons: string[]
+
+  // Vendors
+  selectedVendors: string[]
+
+  // Pricing
+  totalPrice: number
+}
+
+export interface Package {
+  id: number
+  name: string
+  price: number
+  description: string
+  facilities: string[]
+}
+
+export interface Menu {
+  id: number
+  name: string
+  price: number
+  description: string
+  items: string[]
+}
+
+export interface MenuAddon {
+  id: number
+  name: string
+  price: number
+  description: string
+}
+
+export interface Vendors {
+  id: number
+  type: string
+  name: string
+  price: number
+  description: string
+}
+
