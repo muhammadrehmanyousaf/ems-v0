@@ -5,97 +5,81 @@ import { Label } from '../ui/label';
 import { Flag } from 'lucide-react';
 import { useFormContext } from '@/lib/context/form-context';
 
-const ContactDetails = () => {
+interface ContactDetailsProps {
+    setErrors: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>;
+    errors: { [key: string]: string };
+    setFile: React.Dispatch<React.SetStateAction<File | null>>;
+    file: File | null;
+};
+
+const ContactDetails = ({ setErrors, errors, setFile, file }: ContactDetailsProps) => {
     const { setFormData, formData } = useFormContext();
-    const [file, setFile] = useState<File | null>(null);
 
     const formFields = [
-        {
-            name: 'brandName',
-            label: 'Brand Name',
-            place: 'Enter your Brand Name'
-        },
-        {
-            name: 'secondaryContactNumber',
-            label: 'Secondary Contact Number',
-            place: 'Enter your Secondary Contact Number',
-            type: 'number'
-        },
-        {
-            name: 'instagram',
-            label: 'Instagram Link',
-            place: 'Enter your Instagram link',
-        },
-        {
-            name: 'facebook',
-            label: 'Facebook Link',
-            place: 'Enter your Facebook link',
-        },
-        {
-            name: 'city',
-            label: 'City',
-            place: 'Enter your city',
-        },
-        {
-            name: 'officeAddress',
-            label: 'Office Address',
-            place: 'Enter your office address here',
-        },
-        {
-            name: 'officeGoogleLink',
-            label: 'Office Google map link',
-            place: 'Enter here your Google map link',
-        },
+        { name: 'name', label: 'Brand Name', place: 'Enter your Brand Name' },
+        { name: 'secondaryContactNumber', label: 'Secondary Contact Number', place: 'Enter your Secondary Contact Number', type: 'number' },
+        { name: 'instagram', label: 'Instagram Link', place: 'Enter your Instagram link' },
+        { name: 'facebook', label: 'Facebook Link', place: 'Enter your Facebook link' },
+        { name: 'city', label: 'City', place: 'Enter your city' },
+        { name: 'officeAddress', label: 'Office Address', place: 'Enter your office address here' },
+        { name: 'officeGoogleLink', label: 'Office Google map link', place: 'Enter here your Google map link' },
     ];
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
         const { value } = e.target;
-        setFormData((prevData) => ({
-            ...prevData,
-            [fieldName]: value,
-        }));
+        setFormData((prevData) => ({ ...prevData, [fieldName]: value }));
+
+        setErrors((prevErrors) => ({ ...prevErrors, [fieldName]: "" }));
     };
 
     const handleFileUpload = (uploadedFile: File | null) => {
         setFile(uploadedFile);
         if (uploadedFile) {
             const fileUrl = URL.createObjectURL(uploadedFile);
-            setFormData((prevData) => ({
-                ...prevData,
-                profilePicture: fileUrl,
-            }));
+            setFormData((prevData) => ({ ...prevData, profilePicture: fileUrl }));
+
+            // ✅ Clear error when a file is uploaded
+            setErrors((prevErrors) => ({ ...prevErrors, profilePicture: "" }));
         }
     };
 
     return (
         <div className='space-y-6'>
             {formFields.slice(0, 2).map((field) => (
-                field.name === 'brandName' ? (
+                field.name === 'name' ? (
                     <div key={field.name} className='flex items-center gap-5'>
-                        <FileUploader setFile={handleFileUpload} file={file} />
+                        <div>
+                            <FileUploader setFile={handleFileUpload} file={file} />
+                            {errors.profilePicture && <p className="text-xs text-red-500">{errors.profilePicture}</p>}
+                        </div>
                         <div className='space-y-2 w-full'>
                             <Label>{field.label}</Label>
-                            <Input 
-                                placeholder={field.place} 
-                                className='w-full' 
+                            <Input
+                                placeholder={field.place}
+                                className='w-full'
+                                value={String(formData[field.name as keyof typeof formData]) ?? ''}
+                                onChange={(e) => handleChange(e, field.name)}
+                            />
+                            {errors[field.name] && <p className="text-xs text-red-500">{errors[field.name]}</p>}
+                        </div>
+                    </div>
+                ) : (
+                    <div key={field.name} className="space-y-2">
+                        <Label>{field.label}</Label>
+                        <div className="flex">
+                            <div className="flex items-center justify-center px-3 border border-r-0 rounded-l-md bg-gray-50">
+                                <Flag className="w-4 h-4 text-gray-500" />
+                                <span className="ml-2 text-sm text-gray-500">+92</span>
+                            </div>
+                            <Input
+                                type={field.type}
+                                placeholder={field.place}
+                                className="rounded-l-none"
                                 value={String(formData[field.name as keyof typeof formData]) ?? ''}
                                 onChange={(e) => handleChange(e, field.name)}
                             />
                         </div>
-                    </div>
-                ) : (
-                    <div key={field.name} className="flex">
-                        <div className="flex items-center justify-center px-3 border border-r-0 rounded-l-md bg-gray-50">
-                            <Flag className="w-4 h-4 text-gray-500" />
-                            <span className="ml-2 text-sm text-gray-500">+92</span>
-                        </div>
-                        <Input
-                            type={field.type}
-                            placeholder={field.place}
-                            className="rounded-l-none"
-                            value={String(formData[field.name as keyof typeof formData]) ?? ''}
-                            onChange={(e) => handleChange(e, field.name)}
-                        />
+                        {errors[field.name] && <p className="text-xs text-red-500">{errors[field.name]}</p>}
                     </div>
                 )
             ))}
@@ -112,14 +96,16 @@ const ContactDetails = () => {
             {formFields.slice(2).map((field, i) => (
                 <div key={i} className='space-y-2 w-full'>
                     <Label>{field.label}</Label>
-                    <Input 
-                        placeholder={field.place} 
-                        className='w-full' 
+                    <Input
+                        placeholder={field.place}
+                        className='w-full'
                         value={String(formData[field.name as keyof typeof formData]) ?? ''}
                         onChange={(e) => handleChange(e, field.name)}
                     />
+                    {errors[field.name] && <p className="text-xs text-red-500">{errors[field.name]}</p>}
                 </div>
             ))}
+
         </div>
     );
 };

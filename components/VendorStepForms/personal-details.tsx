@@ -43,7 +43,7 @@ const PersonalDetails = ({
       label: "Re-enter Password",
       place: "***********",
       type: "password",
-      name: "reEnterPassword",
+      name: "re_enterPassword",
     },
   ];
 
@@ -59,20 +59,6 @@ const PersonalDetails = ({
       ...prevErrors,
       [fieldName]: "",
     }));
-
-    if (fieldName === "reEnterPassword") {
-      if (value !== formData.password) {
-        setErrors((prevErrors) => ({
-          ...prevErrors,
-          reEnterPassword: "Passwords do not match",
-        }));
-      } else {
-        setErrors((prevErrors) => ({
-          ...prevErrors,
-          reEnterPassword: "",
-        }));
-      }
-    }
   };
 
   return (
@@ -90,7 +76,7 @@ const PersonalDetails = ({
                 type={field.type}
                 placeholder={field.place}
                 className="rounded-l-none"
-                value={String(formData[field.name as keyof typeof formData] ?? "")}
+                value={String(formData[field.name as keyof typeof formData]) ?? ''}
                 onChange={(e) => handleChange(e, field.name)}
               />
             </div>
@@ -103,7 +89,6 @@ const PersonalDetails = ({
             />
           )}
 
-          {/* ✅ Display error message if it exists */}
           {errors[field.name] && (
             <p className="text-xs text-red-500">{errors[field.name]}</p>
           )}
