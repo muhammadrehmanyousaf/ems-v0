@@ -44,17 +44,17 @@ const BusinessDetails = () => {
     useEffect(() => {
         setFormData((prevData) => ({
             ...prevData,
-            cityCovered: selectedCities,
+            // cityCovered: selectedCities,
             staff: selectedstaff,
-            hasTeam: hasTeam === 'yes',
+            // hasTeam: hasTeam === 'yes',
             expertise: selectedExpertise,
-            serviceProvided: selectServiceFor,
-            subBusinessType: businessType === 'MAKEUP_ARTIST' ? [salonType] : selectedTypes,
+            // serviceProvided: selectServiceFor,
+            // subBusinessType: businessType === 'MAKEUP_ARTIST' ? [salonType] : selectedTypes,
             cancelationPolicy: cancellation,
             covidComplaint: covid === 'yes',
-            sellMehndi: sellMehndi === 'yes',
+            // sellMehndi: sellMehndi === 'yes',
             parking: parking === 'yes',
-            catering: selectedCatering,
+            // catering: selectedCatering,
         }));
     }, [
         selectedCities,
@@ -266,7 +266,7 @@ const BusinessDetails = () => {
             {
                 businessType === 'CATERING' &&
                 <div className="space-y-8">
-                    <section>
+                    {/* <section>
                         <Label>Do you provide food testing?</Label>
                         <RadioButton
                             data={covidCompliant}
@@ -278,10 +278,10 @@ const BusinessDetails = () => {
                                 }))
                             }
                         />
-                    </section>
+                    </section> */}
                     <section>
                         <Label>Do you provide decoration?</Label>
-                        <RadioButton
+                        {/* <RadioButton
                             data={covidCompliant}
                             selectedOption={formData.provideDecorationItem ? "true" : "false"}
                             setSelectedOption={(id) =>
@@ -289,11 +289,11 @@ const BusinessDetails = () => {
                                     ...previous,
                                     provideDecorationItem: id === "true",
                                 }))}
-                        />
+                        /> */}
                     </section>
                     <section>
                         <Label>Do you provide sound system?</Label>
-                        <RadioButton
+                        {/* <RadioButton
                             data={covidCompliant}
                             selectedOption={formData.provideSounSystem ? "true" : "false"}
                             setSelectedOption={(id) =>
@@ -301,11 +301,11 @@ const BusinessDetails = () => {
                                     ...previous,
                                     provideSounSystem: id === "true",
                                 }))}
-                        />
+                        /> */}
                     </section>
                     <section>
                         <Label>Do you provide seating arrangement?</Label>
-                        <RadioButton
+                        {/* <RadioButton
                             data={covidCompliant}
                             selectedOption={formData.provideSeatingArrangement ? "true" : "false"}
                             setSelectedOption={(id) =>
@@ -313,11 +313,11 @@ const BusinessDetails = () => {
                                     ...previous,
                                     provideSeatingArrangement: id === "true",
                                 }))}
-                        />
+                        /> */}
                     </section>
                     <section>
                         <Label>Do you provide waiters?</Label>
-                        <RadioButton
+                        {/* <RadioButton
                             data={covidCompliant}
                             selectedOption={formData.provideWaiter ? "true" : "false"}
                             setSelectedOption={(id) =>
@@ -325,11 +325,11 @@ const BusinessDetails = () => {
                                     ...previous,
                                     provideWaiter: id === "true",
                                 }))}
-                        />
+                        /> */}
                     </section>
                     <section>
                         <Label>Do you provide cutlery and plates?</Label>
-                        <RadioButton
+                        {/* <RadioButton
                             data={covidCompliant}
                             selectedOption={formData.providePlate ? "true" : "false"}
                             setSelectedOption={(id) =>
@@ -337,7 +337,7 @@ const BusinessDetails = () => {
                                     ...previous,
                                     providePlate: id === "true",
                                 }))}
-                        />
+                        /> */}
                     </section>
                 </div>
             }
@@ -445,7 +445,7 @@ const BusinessDetails = () => {
             {businessType === 'WEDDING_VENUE' &&
                 <section className="space-y-3">
                     <Label>Car Parking Capacity</Label>
-                    <Input
+                    {/* <Input
                         type="number"
                         placeholder="Enter Car Parking capacity"
                         value={formData.carParkingCapacity || ""}
@@ -455,7 +455,7 @@ const BusinessDetails = () => {
                                 carParkingCapacity: String(e.target.value),
                             }))
                         }
-                    />
+                    /> */}
                 </section>}
             <section className="space-y-3">
                 <Label>Minimum Price</Label>

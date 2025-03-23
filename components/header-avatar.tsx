@@ -22,7 +22,7 @@ type AvatarComponent = {
 const HeaderAvatar = ({loading, user}: AvatarComponent) => {
 
     const handleLogout = () => {
-        logout(); // Call the logout function
+        logout();
       };
 
     let userRole = user?.roles[0].id;
@@ -30,8 +30,8 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
   if (loading) {
     return <Spinner size="sm" className="bg-black dark:bg-white mr-4" />;
   }
-
-  if (user) {
+const loggedIn = localStorage.getItem('user');
+  if (user && loggedIn) {
     if (userRole === 1 || userRole === 2) {
       return (
         <Link href="/dashboard">

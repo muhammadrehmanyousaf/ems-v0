@@ -6,26 +6,38 @@ import { Button } from "../ui/button";
 import { Trash, Plus } from "lucide-react";
 import { useFormContext } from "@/lib/context/form-context";
 
-const Packages = () => {
+interface PackagesProps {
+    setErrors: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>;
+    errors: { [key: string]: string };
+}
+
+const Packages = ({
+    setErrors,
+    errors
+}: PackagesProps) => {
     const { setFormData, formData } = useFormContext();
     const [id, setId] = useState(1);
 
-    const [packages, setPackages] = useState<{ id: number; name: string; price: string; services: string }[]>(
-        formData.packages?.length > 0 
-            ? formData.packages.map((pkg, index) => ({ id: index + 1, ...pkg })) 
-            : [{ id: 1, name: "", price: "", services: "" }]
+    const [packages, setPackages] = useState<{ id: number; name: string; price: number; services: string }[]>(
+        formData.packages?.length > 0
+            ? formData.packages.map((pkg, index) => ({ id: index + 1, ...pkg, price: pkg.price }))
+            : [{ id: 1, name: "", price: 0, services: "" }]
     );
 
     useEffect(() => {
         setFormData((prevData) => ({
             ...prevData,
-            packages: packages.map(({ id, ...rest }) => rest),
+            packages: packages.map(({ id, ...rest }) => ({
+                ...rest,
+                price: Number(rest.price),
+            })),
         }));
+        setErrors((prevErrors) => ({...prevErrors, packages: "" }));
     }, [packages, setFormData]);
 
     const addPackage = () => {
         const newId = id + 1;
-        setPackages([...packages, { id: newId, name: "", price: "", services: "" }]);
+        setPackages([...packages, { id: newId, name: "", price: 0, services: "" }]);
         setId(newId);
     };
 
@@ -90,6 +102,7 @@ const Packages = () => {
                 </div>
             ))}
 
+            {errors.packages && <p className="text-red-500 text-sm mt-1">{errors.packages}</p>}
             <Button
                 variant="outline"
                 onClick={addPackage}

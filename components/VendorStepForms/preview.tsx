@@ -46,13 +46,13 @@ const Preview = () => {
                         <div className='size-12 sm:size-14 rounded-full aspect-square bg-roze-default'></div>
                     }
                     <div>
-                        <h4 className='font-medium'>{formData.brandName || 'Brand'}</h4>
+                        <h4 className='font-medium'>{formData.name || 'Brand'}</h4>
                     </div>
                 </div>
             </section>
             <div className='w-full border-t border-[#d8d8d8]'></div>
             <section className='grid grid-cols-2'>
-                <div>
+                {/* {formData.businessType !== 'Wedding venue' && <div>
                     <span className='flex items-start gap-3'>
                         <BiMaleFemale className='text-[22px] text-roze-default' />
                         <span className='space-y-1.5'>
@@ -66,7 +66,7 @@ const Preview = () => {
                             </span>
                         </span>
                     </span>
-                </div>
+                </div>} */}
                 <div>
                     <span className='flex items-start gap-3'>
                         <FaVenusMars className='text-[22px] text-roze-default' />
@@ -84,16 +84,19 @@ const Preview = () => {
                 </div>
             </section>
             <section>
-            {formData.subBusinessType.length > 0 && <div className='flex items-start gap-3'>
+                {formData.subBusinessType.length > 0 && <div className='flex items-start gap-3'>
                     <FaGlobeAmericas className='text-[22px] text-roze-default' />
                     <div className='space-y-2'>
                         <h3 className='text-sm font-semibold uppercase'>Sub Business Type</h3>
-                        <div className='flex items-center gap-2'>
+                        {/* <div className='flex items-center gap-2'>
                             {formData.subBusinessType.map((data, i) => (
                                 <span key={i} className='p-2 min-w-20 bg-[#6b7983] text-white text-sm text-center rounded-md'>
                                     <p>{data}</p>
                                 </span>
                             ))}
+                        </div> */}
+                        <div className='p-2 min-w-20 bg-[#6b7983] text-white text-sm text-center rounded-md'>
+                            <p>{formData.subBusinessType}</p>
                         </div>
                     </div>
                 </div>}
@@ -112,7 +115,7 @@ const Preview = () => {
                         </span>
                     </div>
                 </div>
-                {formData.cityCovered.length > 0 && <div className='flex items-start gap-3'>
+                {/* {formData.cityCovered.length > 0 && <div className='flex items-start gap-3'>
                     <FaGlobeAmericas className='text-[22px] text-roze-default' />
                     <div className='space-y-2'>
                         <h3 className='text-sm font-semibold uppercase'>Cities</h3>
@@ -124,7 +127,7 @@ const Preview = () => {
                             ))}
                         </div>
                     </div>
-                </div>}
+                </div>} */}
                 <div className='flex items-start gap-3'>
                     <HiOutlineNewspaper className='text-[22px] text-roze-default' />
                     <div className='space-y-1.5'>

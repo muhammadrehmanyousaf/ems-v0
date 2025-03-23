@@ -19,66 +19,69 @@ export type BusinessType =
   | "BRIDAL_WEAR"
   | "WEDDING_INVITATIONS";
 
-  interface Package {
-    name: string;
-    price: string;
-    services: string;
-  };
+interface Package {
+  id?: number;
+  name: string;
+  price: number;
+  services: string;
+};
 
-  type FormType = {
-      fullName: string;
-      email: string;
-      phoneNumber: string;
-      password: string;
-      picture: string;
-      businessType: string;
-      brandName: string;
-      profilePicture: string;
-      city: string;
-      subArea: string;
-      secondaryContactNumber: string;
-      instagram: string;
-      facebook: string;
-      bookingEmail: string;
-      website: string;
-      officeAddress: string;
-      officeGoogleLink: string;
-      staff: string[];
-      minimumPrice: number;
-      description: string;
-      additionalInfo: string;
-      downPaymentType: string;
-      downPayment: number;
-      covidComplaint: boolean;
-      cancelationPolicy: string;
-      packageName: string[];
-      starterPrice: number;
-      services: string;
-      images: string[];
-      reviewProfile: boolean;
-      subBusinessType: string[];
-      cityCovered: string[];
-      travelToClientHome: string;
-      serviceProvided: string[];
-      expertise: string[];
-      packages: Package[]
-      amenities: string[];
-      maxCapacity: string;
-      minCapacity: string;
-      catering: string;
-      parking: boolean;
-      carParkingCapacity: string;
-      sellMehndi: boolean;
-      hasTeam: boolean;
-      instruction: string;
-      provideDecorationItem: boolean;
-      provideFoodTesting: boolean;
-      provideSounSystem: boolean;
-      provideSeatingArrangement: boolean;
-      provideWaiter: boolean;
-      providePlate: boolean;
-      active: boolean;
-  }
+export type FormType = {
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  password: string;
+  re_enterPassword: string;
+  // picture: string;
+  businessType: string;
+  name: string;
+  profilePicture: string;
+  city: string;
+  // subArea: string;
+  secondaryContactNumber: string;
+  instagram: string;
+  facebook: string;
+  bookingEmail: string;
+  website: string;
+  roleIds: number[];
+  officeAddress: string;
+  officeGoogleLink: string;
+  staff: string[];
+  minimumPrice: number;
+  description: string;
+  additionalInfo: string;
+  downPaymentType: string;
+  downPayment: number;
+  covidComplaint: boolean;
+  cancelationPolicy: string;
+  // packageName: string[];
+  starterPrice: number;
+  // services: string;
+  images: string[];
+  // reviewProfile: boolean;
+  subBusinessType: string;
+  // cityCovered: string[];
+  // travelToClientHome: string;
+  // serviceProvided: string[];
+  expertise: string[];
+  packages: Package[];
+  amenities: string[];
+  maxCapacity: string;
+  // minCapacity: string;
+  catering: string;
+  parking: boolean;
+  // carParkingCapacity: string;
+  // sellMehndi: boolean;
+  // hasTeam: boolean;
+  // instruction: string;
+  // provideDecorationItem: boolean;
+  // provideFoodTesting: boolean;
+  // provideSounSystem: boolean;
+  // provideSeatingArrangement: boolean;
+  // provideWaiter: boolean;
+  // providePlate: boolean;
+  // active: boolean;
+}
 type FormContextType = {
   businessType: BusinessType | string;
   setBusinessType: React.Dispatch<React.SetStateAction<BusinessType | string>>;
@@ -89,6 +92,11 @@ type FormContextType = {
   formData: FormType
   setErrors: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>
   errors: {};
+  setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
+  currentStep: number;
+  currentErrors: {
+    [key: string]: string;
+}
 };
 
 const FormContext = createContext<FormContextType | undefined>(undefined);
@@ -96,17 +104,20 @@ const FormContext = createContext<FormContextType | undefined>(undefined);
 export function FormProvider({ children }: { children: React.ReactNode }) {
   const [businessType, setBusinessType] = useState<BusinessType | string>("");
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
-  const [formData, setFormData] = useState({
+  const [currentStep, setCurrentStep] = useState(0);
+  const [formData, setFormData] = useState<FormType>({
     fullName: "",
     email: "",
     phoneNumber: "",
     password: "",
-    picture: "",
+    re_enterPassword: "",
+    // picture: "",
     businessType: "",
-    brandName: '',
+    name: "",
     profilePicture: "",
     city: "",
-    subArea: "",
+    roleIds: [2],
+    // subArea: "",
     secondaryContactNumber: "",
     instagram: "",
     facebook: "",
@@ -114,7 +125,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     website: "",
     officeAddress: "",
     officeGoogleLink: "",
-    staff: [""],
+    staff: [],
     minimumPrice: 0,
     description: "",
     additionalInfo: "",
@@ -122,51 +133,61 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     downPayment: 0,
     covidComplaint: false,
     cancelationPolicy: "",
-    packageName: [""],
+    // packageName: [],
     starterPrice: 0,
-    services: "",
-    images: [""],
-    reviewProfile: false,
-    subBusinessType: [""],
-    cityCovered: [""],
-    travelToClientHome: "",
-    serviceProvided: [""],
-    expertise: [""],
+    // services: "",
+    images: [],
+    // reviewProfile: false,
+    subBusinessType: '',
+    // cityCovered: [],
+    // travelToClientHome: "",
+    // serviceProvided: [],
+    expertise: [],
+    // packages: [
+    //   {
+    //     name: "",
+    //     price: "",
+    //     services: "",
+    //   },
+    // ],
     packages: [{
+      id: undefined,
       name: "",
-      price: '',
+      price: 0,
       services: "",
     }],
-    amenities: [""],
+    amenities: [],
     maxCapacity: "",
-    minCapacity: "",
-    catering: '',
+    // minCapacity: "",
+    catering: "",
     parking: false,
-    carParkingCapacity: "",
-    sellMehndi: false,
-    hasTeam: false,
-    instruction: "",
-    provideDecorationItem: false,
-    provideFoodTesting: false,
-    provideSounSystem: false,
-    provideSeatingArrangement: false,
-    provideWaiter: false,
-    providePlate: false,
-    active: true,
+    // carParkingCapacity: "",
+    // sellMehndi: false,
+    // hasTeam: false,
+    // instruction: "",
+    // provideDecorationItem: false,
+    // provideFoodTesting: false,
+    // provideSounSystem: false,
+    // provideSeatingArrangement: false,
+    // provideWaiter: false,
+    // providePlate: false,
+    // active: true,
   });
+
+  let currentErrors: { [key: string]: string } = {};
 
   const steps = [
     { title: "Business Type", description: "What is your line of business?" },
     { title: "Personal Details", description: "Enter your personal details here.", form: <PersonalDetails setErrors={setErrors} errors={errors} /> },
-    { title: "Contact Details", description: "Enter your contact details here", form: <ContactDetails /> },
+    // { title: "Contact Details", description: "Enter your contact details here", form: <ContactDetails /> },
     { title: "Business Details", description: "Enter your business details here", form: <BusinessDetails /> },
-    { title: "Package", description: "Enter the package and price", form: <Packages /> },
-    { title: "Images", description: "You can upload up to 20 images", form: <ImagesStep /> },
+    // { title: "Package", description: "Enter the package and price", form: <Packages /> },
+    // { title: "Images", description: "You can upload up to 20 images", form: <ImagesStep /> },
     { title: "Preview", description: "Review and confirm all details", form: <Preview /> },
   ];
 
   return (
-    <FormContext.Provider value={{ setBusinessType, businessType, steps, setFormData, formData, setErrors, errors }}>
+    <FormContext.Provider value={{ setBusinessType, businessType, steps, setFormData, formData, setErrors, errors, setCurrentStep, currentStep, currentErrors }}>
       {children}
     </FormContext.Provider>
   );

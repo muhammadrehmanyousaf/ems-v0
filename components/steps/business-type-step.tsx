@@ -7,38 +7,43 @@ import React from "react"
 
 const businessTypes = [
   {
-    id: "PHOTOGRAPHER",
+    id: "Photographer",
     title: "PHOTOGRAPHER",
     icon: Camera,
   },
   {
-    id: "MAKEUP_ARTIST",
+    id: "Makeup artist",
     title: "MAKEUP ARTIST",
     icon: Heart,
   },
   {
-    id: "WEDDING_VENUE",
+    id: "Wedding venue",
     title: "WEDDING VENUE",
     icon: Home,
   },
   {
-    id: "HENNA_ARTIST",
+    id: "Henna artist",
     title: "HENNA ARTIST",
     icon: Music,
   },
   {
-    id: "DECOR",
+    id: "Decorator",
     title: "DECOR",
     icon: Gift,
   },
   {
-    id: "CATERING",
+    id: "Catering",
     title: "CATERING",
     icon: Utensils,
   },
   {
-    id: "CAR_RENTAL",
+    id: "Car rental",
     title: "Car Rental",
+    icon: Car,
+  },
+  {
+    id: "Bridal wearing",
+    title: "BRIDAL WEARING",
     icon: Car,
   },
 ]
