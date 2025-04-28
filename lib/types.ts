@@ -86,39 +86,70 @@ export interface BookingFormData {
 
   // Vendors
   selectedVendors: string[]
+  selectedVendorPackages: string[] // New field for vendor packages
 
   // Pricing
   totalPrice: number
 }
 
-export interface Package {
-  id: number
+export interface EventBooking {
+  eventType: string
+  formData: BookingFormData
+  currentStep: number
+  isSubmitted: boolean
+}
+
+export interface MultiEventBookingState {
+  events: EventBooking[]
+  activeEventIndex: number
+}
+
+export interface BookingPackage {
+  id: string
   name: string
   price: number
   description: string
   facilities: string[]
 }
 
-export interface Menu {
-  id: number
+export interface BookingVendorPackage {
+  id: string
+  vendorId: string
+  name: string
+  price: number
+  description: string
+  features: string[]
+}
+
+export interface BookingMenu {
+  id: string
   name: string
   price: number
   description: string
   items: string[]
 }
 
-export interface MenuAddon {
-  id: number
+export interface BookingMenuAddon {
+  id: string
   name: string
   price: number
   description: string
 }
 
-export interface Vendors {
-  id: number
+export interface BookingVendor {
+  id: string
   type: string
   name: string
   price: number
   description: string
+  packages?: BookingVendorPackage[]
 }
+
+export interface BookingEventType {
+  id: string
+  name: string
+  icon: string
+  description: string
+}
+
 
