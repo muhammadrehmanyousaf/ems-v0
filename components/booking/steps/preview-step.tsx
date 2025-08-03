@@ -9,10 +9,12 @@ import { Badge } from "@/components/ui/badge"
 
 interface PreviewStepProps {
   formData: BookingFormData
+  selectedMenuObj: any;
+  selectedPackageObj: any;
 }
 
-export default function PreviewStep({ formData }: PreviewStepProps) {
-  const selectedPackage = bookingPackages.find((p) => p.id === formData.selectedPackage)
+export default function PreviewStep({ formData, selectedPackageObj, selectedMenuObj }: PreviewStepProps) {
+  // const selectedPackage = bookingPackages.find((p) => p.id === formData.selectedPackage)
   const selectedMenu = bookingMenus.find((m) => m.id === formData.selectedMenu)
 
   const selectedAddons = formData.menuAddons
@@ -36,11 +38,11 @@ export default function PreviewStep({ formData }: PreviewStepProps) {
   // Format time slot for display
   const getTimeSlotDisplay = (timeSlot: string) => {
     switch (timeSlot) {
-      case "morning":
+      case '9:00':
         return "Morning (9AM - 12PM)"
-      case "midday":
+      case "12:00":
         return "Midday (12PM - 4PM)"
-      case "evening":
+      case "17:00":
         return "Evening (5PM - 10PM)"
       default:
         return "Not selected"
@@ -100,7 +102,14 @@ export default function PreviewStep({ formData }: PreviewStepProps) {
                   Date
                 </div>
                 <p className="font-medium text-gray-800">
-                  {formData.bookingDate ? format(formData.bookingDate, "MMMM d, yyyy") : "Not selected"}
+                  {formData.bookingDate
+                    ? format(
+                      typeof formData.bookingDate === "string"
+                        ? new Date(formData.bookingDate)
+                        : formData.bookingDate,
+                      "MMMM d, yyyy"
+                    )
+                    : "Not selected"}
                 </p>
               </div>
               <div className="space-y-1">
@@ -127,20 +136,20 @@ export default function PreviewStep({ formData }: PreviewStepProps) {
           </div>
 
           <CardContent className="p-6">
-            {selectedPackage ? (
+            {selectedPackageObj ? (
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <h4 className="text-lg font-medium text-gray-800">{selectedPackage.name}</h4>
-                    <p className="text-sm text-gray-600">{selectedPackage.description}</p>
+                    <h4 className="text-lg font-medium text-gray-800">{selectedPackageObj.name}</h4>
+                    {/* <p className="text-sm text-gray-600">{selectedPackageObj.description}</p> */}
                   </div>
-                  <Badge className="bg-blue-100 text-blue-800 text-sm px-2 py-1">${selectedPackage.price}</Badge>
+                  <Badge className="bg-blue-100 text-blue-800 text-sm px-2 py-1">${selectedPackageObj.price}</Badge>
                 </div>
 
                 <div className="rounded-lg bg-gray-50 p-4">
                   <h5 className="mb-2 text-sm font-medium text-gray-700">Included Facilities:</h5>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {selectedPackage.facilities.map((facility, index) => (
+                    {selectedPackageObj.features.map((facility: string, index: number) => (
                       <div key={index} className="flex items-center text-sm">
                         <div className="mr-2 h-1.5 w-1.5 rounded-full bg-blue-500"></div>
                         <span className="text-gray-700">{facility}</span>
@@ -161,23 +170,33 @@ export default function PreviewStep({ formData }: PreviewStepProps) {
           </div>
 
           <CardContent className="p-6">
-            {selectedMenu ? (
+            {selectedMenuObj ? (
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <h4 className="text-lg font-medium text-gray-800">{selectedMenu.name}</h4>
-                    <p className="text-sm text-gray-600">{selectedMenu.description}</p>
+                    <h4 className="text-lg font-medium text-gray-800">{selectedMenuObj.name}</h4>
+                    {/* <p className="text-sm text-gray-600">{selectedMenuObj.description}</p> */}
                   </div>
-                  <Badge className="bg-blue-100 text-blue-800 text-sm px-2 py-1">${selectedMenu.price}</Badge>
+                  <Badge className="bg-blue-100 text-blue-800 text-sm px-2 py-1">${selectedMenuObj.price}</Badge>
                 </div>
 
                 <div className="rounded-lg bg-gray-50 p-4">
                   <h5 className="mb-2 text-sm font-medium text-gray-700">Menu Items:</h5>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {selectedMenu.items.map((item, index) => (
-                      <div key={index} className="flex items-center text-sm">
-                        <div className="mr-2 h-1.5 w-1.5 rounded-full bg-blue-500"></div>
-                        <span className="text-gray-700">{item}</span>
+                  <div className="space-y-4">
+                    {Object.entries(selectedMenuObj.data).map(([category, value]: [string, any]) => (
+                      <div key={category}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <img src={value.icon} alt={`${category} icon`} className="w-4 h-4" />
+                          <h6 className="text-sm font-semibold text-gray-800 capitalize">{category}</h6>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2 pl-6 sm:grid-cols-2">
+                          {value.items.map((item: string, idx: number) => (
+                            <div key={idx} className="flex items-center text-sm">
+                              <div className="mr-2 h-1.5 w-1.5 rounded-full bg-blue-500"></div>
+                              <span className="text-gray-700">{item}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -257,17 +276,17 @@ export default function PreviewStep({ formData }: PreviewStepProps) {
 
           <CardContent className="p-6">
             <div className="space-y-3">
-              {selectedPackage && (
+              {selectedPackageObj && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Venue Package ({selectedPackage.name})</span>
-                  <span className="font-medium text-gray-800">${selectedPackage.price}</span>
+                  <span className="text-gray-600">Venue Package ({selectedPackageObj.name})</span>
+                  <span className="font-medium text-gray-800">${selectedPackageObj.price}</span>
                 </div>
               )}
 
-              {selectedMenu && (
+              {selectedMenuObj && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Menu ({selectedMenu.name})</span>
-                  <span className="font-medium text-gray-800">${selectedMenu.price}</span>
+                  <span className="text-gray-600">Menu ({selectedMenuObj.name})</span>
+                  <span className="font-medium text-gray-800">${selectedMenuObj.price}</span>
                 </div>
               )}
 

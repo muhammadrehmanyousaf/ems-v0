@@ -73,13 +73,13 @@ export interface BookingFormData {
   password: string
 
   // Date & Time
-  bookingDate: Date | undefined
+  bookingDate: Date | string | undefined
   timeSlot: string
   guestCount: number
 
   // Package
   selectedPackage: string
-
+  eventType: string
   // Menu
   selectedMenu: string
   menuAddons: string[]
@@ -152,4 +152,51 @@ export interface BookingEventType {
   description: string
 }
 
+  export interface EventVenue {
+  id: number;
+  userId: number;
 
+  name: string;
+  description: string;
+  additionalInfo: string;
+  instruction: string;
+
+  city: string;
+  subArea: string;
+  cityCovered: string[];
+
+  subBusinessType: string;
+  menus: any[]
+  services: string;
+  serviceProvided: string[];
+  expertise: string[];
+
+  amenities: string[];
+  staff: string[];
+
+  minCapacity: number;
+  maxCapacity: number;
+  minimumPrice: number;
+  starterPrice: number;
+  downPayment: number;
+  downPaymentType: 'Percentage' | 'Fixed' | string;
+  cancelationPolicy: string;
+  vendor?: any;
+  parking: boolean;
+  carParkingCapacity: number;
+  catering: boolean;
+  provideDecorationItem: boolean;
+  provideFoodTesting: boolean;
+  providePlate: boolean;
+  provideSeatingArrangement: boolean;
+  provideSoundSystem: boolean;
+  provideWaiter: boolean;
+  sellMehndi: boolean;
+  travelToClientHome: boolean;
+  covidComplaint: boolean;
+
+  images: string[];
+  packages?: any[]
+  createdAt: string;
+  updatedAt: string;
+}

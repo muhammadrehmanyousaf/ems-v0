@@ -3,6 +3,19 @@ import { Button } from "@/components/ui/button"
 import { Star } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 
 interface VendorCardProps {
   id: number
@@ -13,7 +26,7 @@ interface VendorCardProps {
   reviews?: number
   price: number
   type: string
-  vendorType: string
+  vendorType: string;
 }
 
 export default function VendorCard({
@@ -32,11 +45,15 @@ export default function VendorCard({
     // Implement the booking logic here
     alert(`Booking for ${name} initiated!`);
   }
-  console.log("vendor type ",vendorType)
-  return (
+  console.log("vendor type ", vendorType)
+  const isLoggedin = localStorage.getItem('user') && localStorage.getItem('token')
+  const [openAlert, setOpenAlert] = useState(false)
+  const router = useRouter()
 
-    <Link href={`/${vendorType}/${id}`} passHref>
-      <Card className="overflow-hidden h-full flex flex-col cursor-pointer transition-shadow hover:shadow-lg">
+  return (
+    <>
+      {/* <Link href={`/${id}`} passHref> */}
+      <Card onClick={isLoggedin ? () => router.push(`/${id}`) : undefined} className="overflow-hidden h-full flex flex-col cursor-pointer transition-shadow hover:shadow-lg">
         <div className="relative h-48">
           <Image src={image || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT94cn1WbeqHekCixMvQfZIGwLp46-C4idwAw&s"} alt={'image'} layout="fill" objectFit="cover" />
         </div>
@@ -46,7 +63,7 @@ export default function VendorCard({
           <div className="flex items-center mb-2">
             <Star className="text-yellow-400 w-4 h-4 sm:w-5 sm:h-5 fill-current" />
             <span className="ml-1 text-sm sm:text-base">
-               reviews
+              reviews
             </span>
           </div>
           <p className="font-semibold text-sm sm:text-base">Starting at PKR {price}</p>
@@ -55,10 +72,39 @@ export default function VendorCard({
           </div>
         </CardContent>
         <CardFooter className="bg-gray-50 p-4">
-          <Button className="w-full text-sm sm:text-base" onClick={bookingForm}>Book Now</Button>
+            <Button
+              onClick={(e) => {
+                e.stopPropagation(); // prevent Card's onClick from firing
+                if (isLoggedin) {
+                  router.push(`/${id}/booking`);
+                } else {
+                  setOpenAlert(true);
+                }
+              }}
+              className="w-full text-sm sm:text-base"
+            >
+              Book Now
+            </Button>
         </CardFooter>
       </Card>
-    </Link>
+      {/* </Link> */}
+      <AlertDialog open={openAlert} onOpenChange={setOpenAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Login Required to Book</AlertDialogTitle>
+            <AlertDialogDescription>
+              You must be logged in to book a venue/vendor. Please sign in to continue with your booking.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setOpenAlert(false)}>Close</AlertDialogCancel>
+            <AlertDialogAction onClick={() => router.push('/login')}>
+              Login Now
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
 

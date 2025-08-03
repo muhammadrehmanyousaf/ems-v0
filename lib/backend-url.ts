@@ -1,2 +1,2 @@
-// export const BACKEND_URL = 'http://emsbackend-env.eba-57wfdsth.ap-south-1.elasticbeanstalk.com/'
-export const BACKEND_URL = 'http://localhost:3000/'
+export const BACKEND_URL = 'http://emsbackend-env.eba-57wfdsth.ap-south-1.elasticbeanstalk.com/'
+// export const BACKEND_URL = 'http://localhost:3000/'
