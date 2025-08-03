@@ -8,11 +8,11 @@ import { useEffect } from "react"
 
 interface SuccessStepProps {
   formData: BookingFormData
-  bookingReference: string | null
+  // bookingReference: string | null
 }
 
-export default function SuccessStep({ formData, bookingReference }: SuccessStepProps) {
-  const reference = bookingReference || `VB-${Math.floor(100000 + Math.random() * 900000)}`
+export default function SuccessStep({ formData }: SuccessStepProps) {
+  // const reference = bookingReference || `VB-${Math.floor(100000 + Math.random() * 900000)}`
 
   useEffect(() => {
     // Trigger confetti animation on component mount
@@ -67,10 +67,10 @@ export default function SuccessStep({ formData, bookingReference }: SuccessStepP
           <h3 className="text-lg font-medium text-white">Booking Information</h3>
         </div>
         <div className="p-6 text-left">
-          <div className="mb-4 flex items-center justify-between border-b border-dashed border-gray-200 pb-4">
+          {/* <div className="mb-4 flex items-center justify-between border-b border-dashed border-gray-200 pb-4">
             <span className="text-gray-600">Booking Reference:</span>
             <span className="font-mono text-lg font-bold text-indigo-600">{reference}</span>
-          </div>
+          </div> */}
           <div className="mb-4 flex items-center justify-between border-b border-dashed border-gray-200 pb-4">
             <span className="text-gray-600">Event Date:</span>
             <span className="font-medium text-gray-800">
