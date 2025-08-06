@@ -34,8 +34,8 @@ export function FeaturedVenues() {
             <h2 className="text-3xl font-bold mb-2">Featured Wedding Venues</h2>
             <p className="text-gray-600">Discover top-rated wedding Venues in your area</p>
           </div>
-          <a href="/vendors" className="text-primary hover:underline hidden md:block">
-            View all vendors →
+          <a href="/venues" className="text-primary hover:underline hidden md:block">
+            View all venues →
           </a>
         </div>
 
@@ -90,8 +90,8 @@ export function FeaturedVenues() {
         </div>
 
         <div className="text-center mt-8 md:hidden">
-          <a href="/vendors" className="text-primary hover:underline">
-            View all vendors →
+          <a href="/venues" className="text-primary hover:underline">
+            View all venues →
           </a>
         </div>
       </div>
