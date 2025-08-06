@@ -80,9 +80,9 @@ export default function SuccessStep({ formData }: SuccessStepProps) {
           <div className="mb-4 flex items-center justify-between border-b border-dashed border-gray-200 pb-4">
             <span className="text-gray-600">Time Slot:</span>
             <span className="font-medium text-gray-800">
-              {formData.timeSlot === "morning" && "Morning (9AM - 12PM)"}
-              {formData.timeSlot === "midday" && "Midday (12PM - 4PM)"}
-              {formData.timeSlot === "evening" && "Evening (5PM - 10PM)"}
+              {formData.timeSlot === "9:00" && "Morning (9AM - 12PM)"}
+              {formData.timeSlot === "12:00" && "Midday (12PM - 4PM)"} 
+              {formData.timeSlot === "17:00" && "Evening (5PM - 10PM)"}
             </span>
           </div>
           <div className="flex items-center justify-between">

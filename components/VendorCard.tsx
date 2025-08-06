@@ -62,14 +62,14 @@ export default function VendorCard({
 
   const handleCardClick = () => {
     if (isLoggedIn) {
-      router.push(`/vendors/${id}`)
+      router.push(`/${id}`)
     }
   }
 
   const handleBookNow = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (isLoggedIn) {
-      router.push(`/vendors/${id}/booking`)
+      router.push(`/${id}/booking`)
     } else {
       setOpenAlert(true)
     }

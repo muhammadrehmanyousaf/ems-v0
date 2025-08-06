@@ -34,8 +34,8 @@ export function FeaturedMakeupArtists() {
             <h2 className="text-3xl font-bold mb-2">Featured Makeup Artist</h2>
             <p className="text-gray-600">Discover top-rated Makeup Artist in your area</p>
           </div>
-          <a href="/vendors" className="text-primary hover:underline hidden md:block">
-            View all vendors →
+          <a href="/makeup-artists" className="text-primary hover:underline hidden md:block">
+            View all makeup artists →
           </a>
         </div>
 
@@ -90,8 +90,8 @@ export function FeaturedMakeupArtists() {
         </div>
 
         <div className="text-center mt-8 md:hidden">
-          <a href="/vendors" className="text-primary hover:underline">
-            View all vendors →
+          <a href="/makeup-artists" className="text-primary hover:underline">
+            View all makeup artists →
           </a>
         </div>
       </div>
