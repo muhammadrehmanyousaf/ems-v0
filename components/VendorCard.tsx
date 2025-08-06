@@ -62,13 +62,31 @@ export default function VendorCard({
 
   const handleCardClick = () => {
     if (isLoggedIn) {
-      router.push(`/${id}`)
+      // Map vendor type to URL path
+      const getVendorTypePath = (vendorType: string) => {
+        const typeMap: { [key: string]: string } = {
+          'Photographer': 'photographers',
+          'Decorator': 'decor',
+          'Hena artist': 'henna-artists',
+          'Makeup artist': 'makeup-artists',
+          'Wedding venue': 'venues',
+          'Car rental': 'car-rental',
+          'Catering': 'catering',
+          'Bridal wearing': 'bridal-wear',
+          'Wedding Invitations and Stationery': 'wedding-stationery'
+        }
+        return typeMap[vendorType] || vendorType.toLowerCase().replace(/\s+/g, '-')
+      }
+      
+      const vendorTypePath = getVendorTypePath(type)
+      router.push(`/${vendorTypePath}/${id}`)
     }
   }
 
   const handleBookNow = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (isLoggedIn) {
+      // Route to the main booking page
       router.push(`/${id}/booking`)
     } else {
       setOpenAlert(true)

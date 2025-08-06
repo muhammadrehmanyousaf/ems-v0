@@ -22,17 +22,17 @@ import {
   Award,
   Shield,
   CheckCircle,
-  Info
+  Info,
+  Camera,
+  Palette,
+  Utensils
 } from "lucide-react"
 import type { Vendor, Review } from "@/lib/types"
-import VenueGallery from "./VenueGallery"
-import VenuePackages from "./VenuePackages"
-import VenueMenus from "./VenueMenus"
-import VenueReviews from "./VenueReviews"
-import AddReview from "./AddReview"
+import Image from "next/image"
+import { useRouter } from "next/navigation"
 
-interface VenueDetailsProps {
-  venue: Vendor
+interface VendorDetailsProps {
+  vendor: Vendor
 }
 
 const dummyReviews: Review[] = [
@@ -41,7 +41,7 @@ const dummyReviews: Review[] = [
     vendorId: 1,
     userName: "Hira Sayyid",
     rating: 4,
-    comment: "Great experience overall. The venue was beautiful and the staff was very helpful.",
+    comment: "Great experience overall. The service was excellent and very professional.",
     date: "2024-02-10",
   },
   {
@@ -49,18 +49,40 @@ const dummyReviews: Review[] = [
     vendorId: 1,
     userName: "Awais Ahmed",
     rating: 5,
-    comment: "Professional Staff & Services. Food Quality is awesome. Highly recommended",
+    comment: "Professional Staff & Services. Quality is awesome. Highly recommended",
     date: "2024-02-08",
   },
 ]
 
-export default function VenueDetails({ venue }: VenueDetailsProps) {
+export default function VendorDetails({ vendor }: VendorDetailsProps) {
   const [reviews, setReviews] = useState<Review[]>(dummyReviews)
   const [date, setDate] = useState<Date | undefined>(undefined)
   const [isFavorite, setIsFavorite] = useState(false)
+  const router = useRouter()
+  const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('user') && localStorage.getItem('token')
 
   const addReview = (newReview: Review) => {
     setReviews([...reviews, newReview])
+  }
+
+  const handleBookNow = () => {
+    if (isLoggedIn) {
+      // Route to the simple booking page with just the ID
+      router.push(`/${vendor.id}/booking`)
+    } else {
+      // Redirect to login if not logged in
+      router.push('/login')
+    }
+  }
+
+  const handleGetQuote = () => {
+    if (isLoggedIn) {
+      // Route to the simple booking page with just the ID
+      router.push(`/${vendor.id}/booking`)
+    } else {
+      // Redirect to login if not logged in
+      router.push('/login')
+    }
   }
 
   const formatPrice = (price: number | string) => {
@@ -70,10 +92,35 @@ export default function VenueDetails({ venue }: VenueDetailsProps) {
     return `PKR ${price}`
   }
 
+  const getVendorIcon = (type: string) => {
+    const typeMap: { [key: string]: any } = {
+      'Photographer': Camera,
+      'Decorator': Palette,
+      'Catering': Utensils,
+      'Wedding venue': Shield,
+      'Makeup artist': Palette,
+      'Henna artist': Palette,
+      'Car rental': Car,
+      'Bridal wearing': Shield,
+      'Wedding Invitations and Stationery': Shield
+    }
+    return typeMap[type] || Shield
+  }
+
+  const VendorIcon = getVendorIcon(vendor.type)
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hero Section with Gallery */}
-      <VenueGallery images={venue.images} video={venue.video} />
+      {/* Hero Section */}
+      <div className="relative h-96 bg-gradient-to-r from-pink-500 to-purple-600">
+        <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+        <div className="relative h-full flex items-center justify-center">
+          <div className="text-center text-white">
+            <h1 className="text-4xl md:text-6xl font-bold mb-4">{vendor.name}</h1>
+            <p className="text-xl md:text-2xl opacity-90">{vendor.location || vendor.city}</p>
+          </div>
+        </div>
+      </div>
 
       <div className="container mx-auto px-4 py-8">
         {/* Vendor Header */}
@@ -84,8 +131,8 @@ export default function VenueDetails({ venue }: VenueDetailsProps) {
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
-                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">{venue.name}</h1>
-                    {venue.sponsored && (
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">{vendor.name}</h1>
+                    {vendor.sponsored && (
                       <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0">
                         Sponsored
                       </Badge>
@@ -93,12 +140,12 @@ export default function VenueDetails({ venue }: VenueDetailsProps) {
                   </div>
                   <div className="flex items-center text-gray-600">
                     <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
-                    <p className="text-sm sm:text-base">{venue.location || venue.city}</p>
+                    <p className="text-sm sm:text-base">{vendor.location || vendor.city}</p>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center">
                       <Star className="w-5 h-5 text-yellow-400 fill-current" />
-                      <span className="ml-1 font-semibold">{venue.rating}</span>
+                      <span className="ml-1 font-semibold">{vendor.rating}</span>
                       <span className="ml-1 text-gray-600 text-sm">({reviews.length} reviews)</span>
                     </div>
                     <div className="flex items-center gap-1">
@@ -120,19 +167,21 @@ export default function VenueDetails({ venue }: VenueDetailsProps) {
               {/* Quick Stats */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t">
                 <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-primary" />
+                  <VendorIcon className="w-5 h-5 text-primary" />
                   <div>
-                    <p className="text-xs font-medium text-gray-900">Capacity</p>
-                    <p className="text-xs text-gray-600">{venue.capacity} Guests</p>
+                    <p className="text-xs font-medium text-gray-900">Type</p>
+                    <p className="text-xs text-gray-600">{vendor.type}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Car className="w-5 h-5 text-primary" />
-                  <div>
-                    <p className="text-xs font-medium text-gray-900">Parking</p>
-                    <p className="text-xs text-gray-600">Available</p>
+                {vendor.capacity && (
+                  <div className="flex items-center gap-2">
+                    <Users className="w-5 h-5 text-primary" />
+                    <div>
+                      <p className="text-xs font-medium text-gray-900">Capacity</p>
+                      <p className="text-xs text-gray-600">{vendor.capacity} Guests</p>
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="flex items-center gap-2">
                   <Clock className="w-5 h-5 text-primary" />
                   <div>
@@ -143,8 +192,8 @@ export default function VenueDetails({ venue }: VenueDetailsProps) {
                 <div className="flex items-center gap-2">
                   <Shield className="w-5 h-5 text-primary" />
                   <div>
-                    <p className="text-xs font-medium text-gray-900">Type</p>
-                    <p className="text-xs text-gray-600">{venue.type}</p>
+                    <p className="text-xs font-medium text-gray-900">Starting Price</p>
+                    <p className="text-xs text-gray-600">{formatPrice(vendor.minimumPrice || vendor.price)}</p>
                   </div>
                 </div>
               </div>
@@ -160,7 +209,11 @@ export default function VenueDetails({ venue }: VenueDetailsProps) {
                 <MessageCircle className="w-4 h-4" />
                 Contact
               </Button>
-              <Button size="sm" className="flex items-center gap-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700">
+              <Button 
+                onClick={handleBookNow}
+                size="sm" 
+                className="flex items-center gap-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
+              >
                 <CalendarCheck className="w-4 h-4" />
                 Book Now
               </Button>
@@ -188,12 +241,6 @@ export default function VenueDetails({ venue }: VenueDetailsProps) {
                     Pricing
                   </TabsTrigger>
                   <TabsTrigger
-                    value="menus"
-                    className="flex-1 rounded-none border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
-                  >
-                    Menus
-                  </TabsTrigger>
-                  <TabsTrigger
                     value="reviews"
                     className="flex-1 rounded-none border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary"
                   >
@@ -210,25 +257,27 @@ export default function VenueDetails({ venue }: VenueDetailsProps) {
                         Description
                       </h2>
                       <p className="text-gray-600 leading-relaxed">
-                        {venue.description || `${venue.name} is a premier wedding venue offering exceptional services and beautiful surroundings for your special day. Our dedicated team ensures every detail is perfect for your celebration.`}
+                        {vendor.description || `${vendor.name} is a premier ${vendor.type.toLowerCase()} offering exceptional services for your special day. Our dedicated team ensures every detail is perfect for your celebration.`}
                       </p>
                     </div>
 
                     {/* Amenities */}
-                    <div>
-                      <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                        <CheckCircle className="w-5 h-5 text-primary" />
-                        Amenities & Services
-                      </h2>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        {venue.amenities?.map((amenity, index) => (
-                          <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                            <div className="w-2 h-2 bg-primary rounded-full" />
-                            <span className="text-gray-700 font-medium">{amenity}</span>
-                          </div>
-                        ))}
+                    {vendor.amenities && vendor.amenities.length > 0 && (
+                      <div>
+                        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                          <CheckCircle className="w-5 h-5 text-primary" />
+                          Services & Amenities
+                        </h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                          {vendor.amenities.map((amenity, index) => (
+                            <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                              <div className="w-2 h-2 bg-primary rounded-full" />
+                              <span className="text-gray-700 font-medium">{amenity}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Additional Information */}
                     <div>
@@ -236,22 +285,24 @@ export default function VenueDetails({ venue }: VenueDetailsProps) {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div className="space-y-3">
                           <div className="flex justify-between py-2 border-b">
-                            <span className="font-medium text-gray-700">Venue Type</span>
-                            <span className="text-gray-600">{venue.type}</span>
+                            <span className="font-medium text-gray-700">Service Type</span>
+                            <span className="text-gray-600">{vendor.type}</span>
                           </div>
-                          <div className="flex justify-between py-2 border-b">
-                            <span className="font-medium text-gray-700">Capacity</span>
-                            <span className="text-gray-600">{venue.capacity} guests</span>
-                          </div>
+                          {vendor.capacity && (
+                            <div className="flex justify-between py-2 border-b">
+                              <span className="font-medium text-gray-700">Capacity</span>
+                              <span className="text-gray-600">{vendor.capacity} guests</span>
+                            </div>
+                          )}
                           <div className="flex justify-between py-2 border-b">
                             <span className="font-medium text-gray-700">Starting Price</span>
-                            <span className="text-gray-600 font-semibold">{formatPrice(venue.minimumPrice || venue.price)}</span>
+                            <span className="text-gray-600 font-semibold">{formatPrice(vendor.minimumPrice || vendor.price)}</span>
                           </div>
                         </div>
                         <div className="space-y-3">
                           <div className="flex justify-between py-2 border-b">
                             <span className="font-medium text-gray-700">Rating</span>
-                            <span className="text-gray-600">{venue.rating}/5</span>
+                            <span className="text-gray-600">{vendor.rating}/5</span>
                           </div>
                           <div className="flex justify-between py-2 border-b">
                             <span className="font-medium text-gray-700">Reviews</span>
@@ -259,7 +310,7 @@ export default function VenueDetails({ venue }: VenueDetailsProps) {
                           </div>
                           <div className="flex justify-between py-2 border-b">
                             <span className="font-medium text-gray-700">Location</span>
-                            <span className="text-gray-600">{venue.location || venue.city}</span>
+                            <span className="text-gray-600">{vendor.location || vendor.city}</span>
                           </div>
                         </div>
                       </div>
@@ -268,16 +319,47 @@ export default function VenueDetails({ venue }: VenueDetailsProps) {
                 </TabsContent>
 
                 <TabsContent value="pricing" className="p-6">
-                  <VenuePackages packages={venue.packages} />
-                </TabsContent>
-
-                <TabsContent value="menus" className="p-6">
-                  <VenueMenus venue={venue} />
+                  <div className="space-y-6">
+                    <h3 className="text-lg font-semibold">Pricing Information</h3>
+                    <div className="bg-gray-50 p-6 rounded-lg">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-primary mb-2">
+                          {formatPrice(vendor.minimumPrice || vendor.price)}
+                        </div>
+                        <p className="text-gray-600">Starting price</p>
+                      </div>
+                    </div>
+                    <p className="text-gray-600 text-center">
+                      Contact us for detailed pricing and package information tailored to your specific needs.
+                    </p>
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="reviews" className="p-6">
-                  <VenueReviews reviews={reviews} />
-                  <AddReview venueId={venue.id} onAddReview={addReview} />
+                  <div className="space-y-6">
+                    <h3 className="text-lg font-semibold">Customer Reviews</h3>
+                    <div className="space-y-4">
+                      {reviews.map((review) => (
+                        <div key={review.id} className="bg-gray-50 p-4 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{review.userName}</span>
+                              <div className="flex items-center">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`w-4 h-4 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                            <span className="text-sm text-gray-500">{review.date}</span>
+                          </div>
+                          <p className="text-gray-600">{review.comment}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </TabsContent>
               </Tabs>
             </Card>
@@ -290,9 +372,9 @@ export default function VenueDetails({ venue }: VenueDetailsProps) {
               <CardContent>
                 <Accordion type="single" collapsible className="w-full">
                   <AccordionItem value="booking">
-                    <AccordionTrigger>How can I book this venue?</AccordionTrigger>
+                    <AccordionTrigger>How can I book this service?</AccordionTrigger>
                     <AccordionContent>
-                      You can book this venue by contacting us directly or using our online booking system. We'll guide
+                      You can book this service by contacting us directly or using our online booking system. We'll guide
                       you through the process and help you select the perfect package for your event.
                     </AccordionContent>
                   </AccordionItem>
@@ -306,15 +388,15 @@ export default function VenueDetails({ venue }: VenueDetailsProps) {
                   <AccordionItem value="cancellation">
                     <AccordionTrigger>What is the cancellation policy?</AccordionTrigger>
                     <AccordionContent>
-                      Our venue follows a flexible cancellation policy. Please contact us for specific details about
+                      Our service follows a flexible cancellation policy. Please contact us for specific details about
                       refunds and rescheduling.
                     </AccordionContent>
                   </AccordionItem>
-                  <AccordionItem value="amenities">
-                    <AccordionTrigger>What amenities are included?</AccordionTrigger>
+                  <AccordionItem value="services">
+                    <AccordionTrigger>What services are included?</AccordionTrigger>
                     <AccordionContent>
-                      Our venue includes parking, catering services, decoration, sound system, and professional staff.
-                      Additional services can be arranged upon request.
+                      Our service includes professional equipment, experienced staff, and quality materials. Additional
+                      services can be arranged upon request.
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
@@ -353,7 +435,7 @@ export default function VenueDetails({ venue }: VenueDetailsProps) {
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
                     <MapPin className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm text-gray-600">{venue.location || venue.city}</span>
+                    <span className="text-sm text-gray-600">{vendor.location || vendor.city}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <Phone className="w-4 h-4 text-gray-500" />
@@ -375,10 +457,14 @@ export default function VenueDetails({ venue }: VenueDetailsProps) {
               <CardContent>
                 <div className="text-center">
                   <div className="text-3xl font-bold text-primary mb-2">
-                    {formatPrice(venue.minimumPrice || venue.price)}
+                    {formatPrice(vendor.minimumPrice || vendor.price)}
                   </div>
-                  <p className="text-sm text-gray-600 mb-4">per event</p>
-                  <Button className="w-full" size="lg">
+                  <p className="text-sm text-gray-600 mb-4">per service</p>
+                  <Button 
+                    onClick={handleGetQuote}
+                    className="w-full" 
+                    size="lg"
+                  >
                     Get Quote
                   </Button>
                 </div>
@@ -389,5 +475,4 @@ export default function VenueDetails({ venue }: VenueDetailsProps) {
       </div>
     </div>
   )
-}
-
+} 
