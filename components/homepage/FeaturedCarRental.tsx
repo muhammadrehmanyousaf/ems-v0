@@ -1,53 +1,42 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import VendorCard from "@/components/VendorCard";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
-import { VendorAPI } from "@/lib/api/vendors";
-import type { Vendor } from "@/lib/types";
+import { useState, useEffect } from "react"
+import VendorCard from "@/components/VendorCard"
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
+import { VendorAPI } from "@/lib/api/vendors"
+import { getVendorTypeFromPath } from "@/lib/vendor-types"
+import type { Vendor } from "@/lib/types"
 
-export function FeaturedVendors() {
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+export function FeaturedCarRental() {
+  const [vendors, setVendors] = useState<Vendor[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const fetchFeaturedVendors = async () => {
+    const fetchFeaturedCarRental = async () => {
       try {
-        const featuredVendors = await VendorAPI.getFeaturedBusinesses();
-        setVendors(featuredVendors);
+        const vendorType = getVendorTypeFromPath('car-rental')
+        const featuredCarRental = await VendorAPI.getBusinessesByVendorType(vendorType)
+        setVendors(featuredCarRental.slice(0, 8)) // Limit to 8 featured
       } catch (error) {
-        console.error('Error fetching featured vendors:', error);
+        console.error('Error fetching featured car rental:', error)
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
+    }
 
-    fetchFeaturedVendors();
-  }, []);
+    fetchFeaturedCarRental()
+  }, [])
 
   return (
     <section className="py-16 bg-gray-50">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-end mb-12">
           <div>
-            <h2 className="text-3xl font-bold mb-2">
-              Featured Wedding Vendors
-            </h2>
-            <p className="text-gray-600">
-              Discover top-rated wedding professionals in your area
-            </p>
+            <h2 className="text-3xl font-bold mb-2">Featured Car Rental</h2>
+            <p className="text-gray-600">Luxury cars and transportation for your wedding day</p>
           </div>
-          <a
-            href="/vendors"
-            className="text-primary hover:underline hidden md:block"
-          >
-            View all vendors →
+          <a href="/car-rental" className="text-primary hover:underline hidden md:block">
+            View all car rental →
           </a>
         </div>
 
@@ -81,19 +70,19 @@ export function FeaturedVendors() {
                     key={vendor.id}
                     className={`basis-[85%] sm:basis-[70%] md:basis-1/2 lg:basis-1/3 xl:basis-1/4 flex-shrink-0 scroll-snap-start`}
                   >
-                    <VendorCard
-                      id={vendor.id}
-                      name={vendor.name}
-                      image={vendor.images?.[0] || "/placeholder.svg"}
-                      location={vendor.location || vendor.city}
-                      rating={vendor.rating}
-                      reviews={vendor.reviews?.length || 0}
-                      price={vendor.minimumPrice || vendor.price}
-                      type={vendor.subBusinessType || vendor.type}
-                      capacity={vendor.capacity}
-                      amenities={vendor.amenities}
-                      sponsored={vendor.sponsored}
-                    />
+                                         <VendorCard
+                       id={vendor.id}
+                       name={vendor.name}
+                       image={vendor.images?.[0] || "/placeholder.svg"}
+                       location={vendor.location || vendor.city}
+                       rating={vendor.rating}
+                       reviews={vendor.reviews?.length || 0}
+                       price={vendor.minimumPrice || vendor.price}
+                       type={vendor.subBusinessType || vendor.type}
+                       capacity={vendor.capacity}
+                       amenities={vendor.amenities}
+                       sponsored={vendor.sponsored}
+                     />
                   </CarouselItem>
                 ))
               )}
@@ -102,11 +91,11 @@ export function FeaturedVendors() {
         </div>
 
         <div className="text-center mt-8 md:hidden">
-          <a href="/vendors" className="text-primary hover:underline">
-            View all vendors →
+          <a href="/car-rental" className="text-primary hover:underline">
+            View all car rental →
           </a>
         </div>
       </div>
     </section>
-  );
-}
+  )
+} 

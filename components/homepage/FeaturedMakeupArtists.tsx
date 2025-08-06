@@ -1,67 +1,31 @@
 "use client"
 
-import { VendorCard } from "../vendor-card"
+import { useState, useEffect } from "react"
+import VendorCard from "@/components/VendorCard"
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
-
-const vendors = [
-  {
-    id: "1",
-    name: "Royal Wedding Photography",
-    category: "Photographer",
-    rating: 4.8,
-    reviews: 156,
-    image: "https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-    price: "₹25,000",
-    location: "Mumbai",
-    capacity: 0,
-  },
-  {
-    id: "2",
-    name: "Glamour Makeup Studio",
-    category: "Makeup Artist",
-    rating: 4.9,
-    reviews: 203,
-    image: "https://images.pexels.com/photos/457701/pexels-photo-457701.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-    price: "₹15,000",
-    location: "Delhi",
-    capacity: 0,
-  },
-  {
-    id: "3",
-    name: "Divine Decor Events",
-    category: "Decorator",
-    rating: 4.7,
-    reviews: 178,
-    image: "https://images.pexels.com/photos/1616113/pexels-photo-1616113.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-    price: "₹45,000",
-    location: "Bangalore",
-    capacity: 0,
-  },
-  {
-    id: "4",
-    name: "Taste of Joy Catering",
-    category: "Caterer",
-    rating: 4.6,
-    reviews: 192,
-    image: "https://images.pexels.com/photos/5638527/pexels-photo-5638527.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-    price: "₹850",
-    location: "Chennai",
-    capacity: 0,
-  },
-  {
-    id: "5",
-    name: "Elegant Bridal Boutique",
-    category: "Bridal Wear",
-    rating: 4.8,
-    reviews: 145,
-    image: "https://images.pexels.com/photos/3775132/pexels-photo-3775132.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-    price: "₹50,000",
-    location: "Kolkata",
-    capacity: 0,
-  },
-]
+import { VendorAPI } from "@/lib/api/vendors"
+import { getVendorTypeFromPath } from "@/lib/vendor-types"
+import type { Vendor } from "@/lib/types"
 
 export function FeaturedMakeupArtists() {
+  const [vendors, setVendors] = useState<Vendor[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchFeaturedMakeupArtists = async () => {
+      try {
+        const vendorType = getVendorTypeFromPath('makeup-artists')
+        const featuredMakeupArtists = await VendorAPI.getBusinessesByVendorType(vendorType)
+        setVendors(featuredMakeupArtists.slice(0, 8)) // Limit to 8 featured
+      } catch (error) {
+        console.error('Error fetching featured makeup artists:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchFeaturedMakeupArtists()
+  }, [])
   return (
     <section className="py-16 bg-gray-50">
       <div className="container mx-auto px-4">
@@ -76,31 +40,51 @@ export function FeaturedMakeupArtists() {
         </div>
 
         {/* ShadCN Carousel with Responsive Items Per Slide */}
-        <div className="relative">
-          <Carousel className="relative w-full">
+        <div className="relative w-full overflow-hidden">
+          <Carousel className="relative">
             {/* Bigger and Spaced Arrows */}
-            {/* <CarouselPrevious className="absolute left-[-60px] w-12 h-12 bg-gray-700 text-white rounded-full hover:bg-gray-900 transition" /> */}
-            {/* <CarouselNext className="absolute right-[-60px] w-12 h-12 bg-gray-700 text-white rounded-full hover:bg-gray-900 transition" /> */}
+            <CarouselPrevious className="hidden sm:flex absolute left-2 md:left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gray-700 text-white rounded-full hover:bg-gray-900 transition z-50 pointer-events-auto" />
+            <CarouselNext className="hidden sm:flex absolute right-2 md:right-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gray-700 text-white rounded-full hover:bg-gray-900 transition z-50 pointer-events-auto" />
 
-            <CarouselContent className="flex gap-4" style={{ scrollSnapType: "x mandatory" }}>
-              {vendors.map((vendor) => (
-                <CarouselItem
-                  key={vendor.id}
-                  className="sm:basis-full md:basis-1/2 lg:basis-1/4 flex-shrink-0 scroll-snap-start"
-                >
-                  <VendorCard
-                    id={vendor.id}
-                    name={vendor.name}
-                    type={vendor.category}
-                    rating={vendor.rating}
-                    reviews={vendor.reviews}
-                    image={vendor.image}
-                    price={vendor.price}
-                    city={vendor.location}
-                    capacity={vendor.capacity}
-                  />
-                </CarouselItem>
-              ))}
+            <CarouselContent className="flex gap-2 sm:gap-4 w-full justify-start" style={{ scrollSnapType: "x mandatory" }}>
+              {isLoading ? (
+                // Loading skeleton
+                Array.from({ length: 4 }).map((_, index) => (
+                  <CarouselItem
+                    key={index}
+                    className={`basis-[85%] sm:basis-[70%] md:basis-1/2 lg:basis-1/3 xl:basis-1/4 flex-shrink-0 scroll-snap-start`}
+                  >
+                    <div className="animate-pulse">
+                      <div className="bg-gray-300 h-48 rounded-t-lg"></div>
+                      <div className="bg-white p-4 rounded-b-lg">
+                        <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+                        <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+                      </div>
+                    </div>
+                  </CarouselItem>
+                ))
+              ) : (
+                vendors.map((vendor) => (
+                  <CarouselItem
+                    key={vendor.id}
+                    className={`basis-[85%] sm:basis-[70%] md:basis-1/2 lg:basis-1/3 xl:basis-1/4 flex-shrink-0 scroll-snap-start`}
+                  >
+                                         <VendorCard
+                       id={vendor.id}
+                       name={vendor.name}
+                       image={vendor.images?.[0] || "/placeholder.svg"}
+                       location={vendor.location || vendor.city}
+                       rating={vendor.rating}
+                       reviews={vendor.reviews?.length || 0}
+                       price={vendor.minimumPrice || vendor.price}
+                       type={vendor.subBusinessType || vendor.type}
+                       capacity={vendor.capacity}
+                       amenities={vendor.amenities}
+                       sponsored={vendor.sponsored}
+                     />
+                  </CarouselItem>
+                ))
+              )}
             </CarouselContent>
           </Carousel>
         </div>

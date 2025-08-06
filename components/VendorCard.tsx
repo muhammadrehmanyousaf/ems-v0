@@ -1,8 +1,13 @@
-import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Star } from "lucide-react"
-import Image from "next/image"
+"use client"
+
+import { useState } from "react"
+import { motion } from "framer-motion"
 import Link from "next/link"
+import { Card, CardContent, CardFooter } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Star, MapPin, Users, Heart } from "lucide-react"
+import Image from "next/image"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,21 +17,25 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { useState } from "react"
 import { useRouter } from "next/navigation"
 
 interface VendorCardProps {
-  id: number
+  id: string | number
   name: string
   image: string
   location: string
   rating?: number
   reviews?: number
-  price: number
+  price: number | string
   type: string
-  vendorType: string;
+  vendorType?: string
+  capacity?: number
+  amenities?: string[]
+  sponsored?: boolean
+  showBookButton?: boolean
+  showDetails?: boolean
+  className?: string
 }
 
 export default function VendorCard({
@@ -34,70 +43,184 @@ export default function VendorCard({
   name,
   image,
   location,
-  rating,
-  reviews,
+  rating = 0,
+  reviews = 0,
   price,
   type,
   vendorType,
+  capacity,
+  amenities = [],
+  sponsored = false,
+  showBookButton = true,
+  showDetails = true,
+  className = "",
 }: VendorCardProps) {
-  function bookingForm(event: React.MouseEvent<HTMLButtonElement, MouseEvent>): void {
-    event.preventDefault();
-    // Implement the booking logic here
-    alert(`Booking for ${name} initiated!`);
-  }
-  console.log("vendor type ", vendorType)
-  const isLoggedin = localStorage.getItem('user') && localStorage.getItem('token')
+  const [isFavorite, setIsFavorite] = useState(false)
   const [openAlert, setOpenAlert] = useState(false)
   const router = useRouter()
+  const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('user') && localStorage.getItem('token')
+
+  const handleCardClick = () => {
+    if (isLoggedIn) {
+      router.push(`/vendors/${id}`)
+    }
+  }
+
+  const handleBookNow = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (isLoggedIn) {
+      router.push(`/vendors/${id}/booking`)
+    } else {
+      setOpenAlert(true)
+    }
+  }
+
+  const formatPrice = (price: number | string) => {
+    if (typeof price === 'number') {
+      return `PKR ${price.toLocaleString()}`
+    }
+    return `PKR ${price}`
+  }
 
   return (
     <>
-      {/* <Link href={`/${id}`} passHref> */}
-      <Card onClick={isLoggedin ? () => router.push(`/${id}`) : undefined} className="overflow-hidden h-full flex flex-col cursor-pointer transition-shadow hover:shadow-lg">
-        <div className="relative h-48">
-          <Image src={image || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT94cn1WbeqHekCixMvQfZIGwLp46-C4idwAw&s"} alt={'image'} layout="fill" objectFit="cover" />
-        </div>
-        <CardContent className="p-4 flex-grow">
-          <h3 className="text-lg sm:text-xl font-bold mb-2">{name}</h3>
-          <p className="text-sm sm:text-base text-gray-600 mb-2">{location}</p>
-          <div className="flex items-center mb-2">
-            <Star className="text-yellow-400 w-4 h-4 sm:w-5 sm:h-5 fill-current" />
-            <span className="ml-1 text-sm sm:text-base">
-              reviews
-            </span>
-          </div>
-          <p className="font-semibold text-sm sm:text-base">Starting at PKR {price}</p>
-          <div className="mt-2">
-            <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2 py-0.5 rounded">{type}</span>
-          </div>
-        </CardContent>
-        <CardFooter className="bg-gray-50 p-4">
+      <motion.div
+        whileHover={{ y: -4 }}
+        transition={{ duration: 0.2 }}
+        className={`h-full ${className}`}
+      >
+        <Card 
+          onClick={handleCardClick}
+          className="group h-full cursor-pointer overflow-hidden border-0 shadow-sm hover:shadow-lg transition-all duration-300 bg-white"
+        >
+          {/* Image Section */}
+          <div className="relative aspect-[4/3] overflow-hidden">
+            <Image
+              src={image || "/placeholder.svg"}
+              alt={name}
+              fill
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            />
+            
+            {/* Sponsored Badge */}
+            {sponsored && (
+              <Badge className="absolute top-3 left-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0">
+                Sponsored
+              </Badge>
+            )}
+            
+            {/* Favorite Button */}
             <Button
+              variant="ghost"
+              size="sm"
               onClick={(e) => {
-                e.stopPropagation(); // prevent Card's onClick from firing
-                if (isLoggedin) {
-                  router.push(`/${id}/booking`);
-                } else {
-                  setOpenAlert(true);
-                }
+                e.stopPropagation()
+                setIsFavorite(!isFavorite)
               }}
-              className="w-full text-sm sm:text-base"
+              className="absolute top-3 right-3 h-8 w-8 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white p-0"
             >
-              Book Now
+              <Heart 
+                className={`h-4 w-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} 
+              />
             </Button>
-        </CardFooter>
-      </Card>
-      {/* </Link> */}
+
+            {/* Type Badge */}
+            <Badge className="absolute bottom-3 left-3 bg-white/90 text-gray-800 border-0">
+              {type}
+            </Badge>
+          </div>
+
+          {/* Content Section */}
+          <CardContent className="p-4 space-y-3">
+            {/* Title and Location */}
+            <div className="space-y-1">
+              <h3 className="font-semibold text-lg leading-tight group-hover:text-primary transition-colors">
+                {name}
+              </h3>
+              <div className="flex items-center text-gray-600 text-sm">
+                <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
+                <span className="truncate">{location}</span>
+              </div>
+            </div>
+
+            {/* Rating */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center">
+                <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                <span className="ml-1 text-sm font-medium">{rating.toFixed(1)}</span>
+                <span className="ml-1 text-sm text-gray-500">({reviews})</span>
+              </div>
+            </div>
+
+            {/* Price */}
+            <div className="text-lg font-bold text-primary">
+              Starting from {formatPrice(price)}
+            </div>
+
+            {/* Additional Info */}
+            {showDetails && (
+              <div className="space-y-2">
+                {/* Capacity */}
+                {capacity && (
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Users className="w-4 h-4 mr-1" />
+                    <span>Capacity: {capacity} guests</span>
+                  </div>
+                )}
+                
+                {/* Amenities */}
+                {amenities.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {amenities.slice(0, 2).map((amenity, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        {amenity}
+                      </Badge>
+                    ))}
+                    {amenities.length > 2 && (
+                      <Badge variant="secondary" className="text-xs">
+                        +{amenities.length - 2} more
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+
+          {/* Footer with Book Button */}
+          {showBookButton && (
+            <CardFooter className="p-4 pt-0">
+              <motion.div 
+                whileHover={{ scale: 1.02 }} 
+                whileTap={{ scale: 0.98 }} 
+                className="w-full"
+              >
+                <Button
+                  onClick={handleBookNow}
+                  className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold py-2.5 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+                >
+                  Book Now
+                </Button>
+              </motion.div>
+            </CardFooter>
+          )}
+        </Card>
+      </motion.div>
+
+      {/* Login Alert Dialog */}
       <AlertDialog open={openAlert} onOpenChange={setOpenAlert}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Login Required to Book</AlertDialogTitle>
+            <AlertDialogTitle>Login Required</AlertDialogTitle>
             <AlertDialogDescription>
-              You must be logged in to book a venue/vendor. Please sign in to continue with your booking.
+              You must be logged in to book this vendor. Please sign in to continue with your booking.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setOpenAlert(false)}>Close</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setOpenAlert(false)}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction onClick={() => router.push('/login')}>
               Login Now
             </AlertDialogAction>

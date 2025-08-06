@@ -87,7 +87,7 @@ export default function PackageSelectionStep({ formData, updateFormData, venue }
                           </div>
                         ))}
                         {pkg.features.length > 4 && (
-                          <div className="text-sm text-blue-600">+{pkg.facilities.length - 4} more features</div>
+                          <div className="text-sm text-blue-600">+{pkg.features.length - 4} more features</div>
                         )}
                       </div>
                     </div>

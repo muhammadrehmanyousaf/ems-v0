@@ -1,39 +1,57 @@
 export interface Vendor {
-  id: number
+  id: string | number
   name: string
   images: string[]
-  video?: string
-  location?: string
-  rating?: number
-  reviews?: Review[]
+  location: string
+  city: string
+  rating: number
+  reviews: Review[]
+  price: number
   minimumPrice: number
   type: string
+  subBusinessType: string
   capacity?: number
   amenities: string[]
-  cancellationPolicy?: string
-  sponsored: boolean;
-  city: string;
-  subBusinessType: string;
-  packages: Package[]
-  description: string
+  cancellationPolicy: string
+  sponsored: boolean
   staff: string[]
-}
-
-export interface Package {
-  id: number
-  name: string
-  price: number
   description: string
-  items: string[]
+  packages: Package[]
+  video?: string
 }
 
 export interface Review {
-  id: number
-  vendorId: number
+  id: string
+  userId: string
   userName: string
   rating: number
   comment: string
   date: string
+  images?: string[]
+}
+
+export interface Package {
+  id: string
+  name: string
+  description: string
+  price: number
+  features: string[]
+  duration?: string
+}
+
+export interface Venue {
+  id: number
+  name: string
+  image: string
+  location: string
+  rating: number
+  reviews: number
+  price: number
+  type: string
+  capacity: number
+  amenities: string[]
+  cancellationPolicy: string
+  sponsored: boolean
 }
 
 export interface Filters {
@@ -42,26 +60,32 @@ export interface Filters {
   minPrice: string
   maxPrice: string
   type: string
-  capacity?: string
+  capacity: string
   amenities: string[]
-  cancellationPolicy?: string
-  staff: StaffOption[]
+  cancellationPolicy: string
+  staff: string[]
 }
 
 export type SortOption = "default" | "price-low" | "price-high" | "rating" | "alphabetical"
+export type StaffOption = "Male" | "Female" | "Transgender"
 
-export type VendorType =
-  | "venues"
-  | "photographers"
-  | "makeupArtists"
-  | "decor"
-  | "catering"
-  | "hennaArtists"
-  | "weddingStationery"
-  | "bridalWear"
-  | "carRental"
-
-export type StaffOption = "male" | "female" | "transgender" | "all"
+export interface VendorCardProps {
+  id: string | number
+  name: string
+  image: string
+  location: string
+  rating?: number
+  reviews?: number
+  price: number | string
+  type: string
+  vendorType?: string
+  capacity?: number
+  amenities?: string[]
+  sponsored?: boolean
+  showBookButton?: boolean
+  showDetails?: boolean
+  className?: string
+}
 
 /////////////////////////////////////////
 
