@@ -1,4 +1,4 @@
-import { Camera, Home, Palette, Utensils, Car, Music, Cake } from "lucide-react"
+import { Camera, Home, Palette, Utensils, Car, Music, Cake, Heart, Scissors, FileText } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -13,42 +13,56 @@ const categories = [
   {
     name: "Photographers",
     icon: Camera,
-    href: "/vendors?category=photographer",
+    href: "/photographers",
     image:
       "https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
   },
   {
+    name: "Makeup Artists",
+    icon: Heart,
+    href: "/makeup-artists",
+    image:
+      "https://images.pexels.com/photos/457701/pexels-photo-457701.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
+  },
+  {
     name: "Decorators",
     icon: Palette,
-    href: "/vendors?category=decorator",
+    href: "/decor",
     image:
       "https://images.pexels.com/photos/1616113/pexels-photo-1616113.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
   },
   {
+    name: "Henna Artists",
+    icon: Scissors,
+    href: "/henna-artists",
+    image:
+      "https://images.pexels.com/photos/3775132/pexels-photo-3775132.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
+  },
+  {
     name: "Catering",
     icon: Utensils,
-    href: "/vendors?category=catering",
+    href: "/catering",
     image:
       "https://images.pexels.com/photos/5638527/pexels-photo-5638527.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
   },
   {
     name: "Car Rental",
     icon: Car,
-    href: "/vendors?category=car-rental",
+    href: "/car-rental",
     image:
       "https://images.pexels.com/photos/2526128/pexels-photo-2526128.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
   },
   {
-    name: "Music",
-    icon: Music,
-    href: "/vendors?category=music",
+    name: "Bridal Wear",
+    icon: Heart,
+    href: "/bridal-wear",
     image:
-      "https://images.pexels.com/photos/2747446/pexels-photo-2747446.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
+      "https://images.pexels.com/photos/3775132/pexels-photo-3775132.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
   },
   {
-    name: "Cake",
-    icon: Cake,
-    href: "/vendors?category=cake",
+    name: "Wedding Stationery",
+    icon: FileText,
+    href: "/wedding-stationery",
     image:
       "https://images.pexels.com/photos/1702373/pexels-photo-1702373.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
   },
@@ -56,18 +70,18 @@ const categories = [
 
 export function FeaturedCategories() {
   return (
-    <section className="py-16 bg-gray-50">
+    <section className="py-8 lg:py-12 bg-gray-50">
       <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-bold text-center mb-12">Find Every Wedding Vendor You Need</h2>
+        <h2 className="text-2xl lg:text-3xl font-bold text-center mb-8 lg:mb-12">Find Every Wedding Vendor You Need</h2>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-9 gap-4 lg:gap-6">
           {categories.map((category) => (
             <Link
               key={category.name}
               href={category.href}
-              className="group flex flex-col items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
+              className="group flex flex-col items-center p-3 lg:p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 hover:scale-105"
             >
-              <div className="relative w-full aspect-square mb-4 overflow-hidden rounded-lg">
+              <div className="relative w-full aspect-square mb-3 lg:mb-4 overflow-hidden rounded-lg">
                 <Image
                   src={category.image || "/placeholder.svg"}
                   alt={category.name}
@@ -76,9 +90,9 @@ export function FeaturedCategories() {
                   className="group-hover:scale-110 transition-transform duration-300"
                 />
                 <div className="absolute inset-0 bg-black bg-opacity-40 group-hover:bg-opacity-30 transition-opacity duration-300" />
-                <category.icon className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 text-white" />
+                <category.icon className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 lg:w-12 lg:h-12 text-white" />
               </div>
-              <span className="text-sm font-medium group-hover:text-primary transition-colors duration-300">
+              <span className="text-xs lg:text-sm font-medium group-hover:text-primary transition-colors duration-300 text-center">
                 {category.name}
               </span>
             </Link>

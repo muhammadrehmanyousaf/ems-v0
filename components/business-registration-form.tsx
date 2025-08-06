@@ -17,6 +17,11 @@ import { Flag, Loader2 } from "lucide-react";
 import { FormType, useFormContext } from "@/lib/context/form-context";
 import { toast } from "./ui/use-toast";
 import VenueSteps from "./VendorStepForms/newVendorRegisterationForm/venueSteps/venue-steps";
+import PhotographerSteps from "./VendorStepForms/newVendorRegisterationForm/Photographer/photographer-steps";
+import MakeupArtistSteps from "./VendorStepForms/newVendorRegisterationForm/MakeupArtist/makeup-artist-steps";
+import HennaArtistSteps from "./VendorStepForms/newVendorRegisterationForm/HennaArtist/henna-artist-steps";
+import DecoratorSteps from "./VendorStepForms/newVendorRegisterationForm/Decorator/decorator-steps";
+import CateringSteps from "./VendorStepForms/newVendorRegisterationForm/Catering/catering-steps";
 import axios from "axios";
 import { BACKEND_URL } from "@/lib/backend-url";
 import { vanueValidations } from "./VendorStepForms/newVendorRegisterationForm/venueSteps/vanueComponents/vanueValidations";
@@ -31,6 +36,11 @@ export function BusinessRegistrationForm() {
   const [openModal, setOpenModal] = useState(false);
 
   const carRentalOrBridleWear = businessType === 'Car rental' || businessType === 'Bridal wearing';
+  const photographer = businessType === 'Photographer';
+  const makeupArtist = businessType === 'Makeup artist';
+  const hennaArtist = businessType === 'Henna artist';
+  const decorator = businessType === 'Decorator';
+  const catering = businessType === 'Catering';
 
   const handleValidations = () => {
     let currentErrors: { [key: string]: string } = {};
@@ -45,6 +55,26 @@ export function BusinessRegistrationForm() {
       };
     if (carRentalOrBridleWear) {
       CarRentalOrBridleWearValidations({ currentStep, formData, currentErrors })
+      setErrors(currentErrors);
+      return currentErrors;
+    };
+    if (photographer || makeupArtist || hennaArtist || decorator || catering) {
+      // For now, use basic validation for new business types
+      if (currentStep === 1) {
+        if (!formData.fullName) currentErrors.fullName = "Full name is required";
+        if (!formData.email) currentErrors.email = "Email is required";
+        if (!formData.phoneNumber) currentErrors.phoneNumber = "Phone number is required";
+        if (!formData.password) currentErrors.password = "Password is required";
+      }
+      if (currentStep === 2) {
+        if (!formData.name) currentErrors.name = "Business name is required";
+        if (!formData.city) currentErrors.city = "City is required";
+      }
+      if (currentStep === 3) {
+        if (!formData.description) currentErrors.description = "Business description is required";
+        if (!formData.minimumPrice) currentErrors.minimumPrice = "Starting price is required";
+        if (!formData.subBusinessType) currentErrors.subBusinessType = "Business type is required";
+      }
       setErrors(currentErrors);
       return currentErrors;
     };
@@ -298,7 +328,22 @@ export function BusinessRegistrationForm() {
                     carRentalOrBridleWear ?
                       <FormSteps setFile={setFile} file={file} error={errors} setErrors={setErrors} currentStep={currentStep} />
                       :
-                      <div></div>
+                      photographer ?
+                        <PhotographerSteps setFile={setFile} file={file} error={errors} setErrors={setErrors} currentStep={currentStep} />
+                        :
+                        makeupArtist ?
+                          <MakeupArtistSteps setFile={setFile} file={file} error={errors} setErrors={setErrors} currentStep={currentStep} />
+                          :
+                          hennaArtist ?
+                            <HennaArtistSteps setFile={setFile} file={file} error={errors} setErrors={setErrors} currentStep={currentStep} />
+                            :
+                            decorator ?
+                              <DecoratorSteps setFile={setFile} file={file} error={errors} setErrors={setErrors} currentStep={currentStep} />
+                              :
+                              catering ?
+                                <CateringSteps setFile={setFile} file={file} error={errors} setErrors={setErrors} currentStep={currentStep} />
+                                :
+                                <div></div>
                   }
                 </div>
               }
@@ -311,10 +356,10 @@ export function BusinessRegistrationForm() {
             </Button>
             <Button
               type="button"
-              onClick={(carRentalOrBridleWear && currentStep === 2) ? handleSubmit : currentStep === 6 ? handleSubmit : handleNext}
+              onClick={(carRentalOrBridleWear && currentStep === 2) || (photographer && currentStep === 6) || (makeupArtist && currentStep === 6) || (hennaArtist && currentStep === 6) || (decorator && currentStep === 6) || (catering && currentStep === 6) ? handleSubmit : currentStep === 6 ? handleSubmit : handleNext}
               className="bg-roze-default hover:bg-roze-default/90 text-white"
             >
-              {(carRentalOrBridleWear && currentStep === 2) ? 'Submit' : currentStep === 6 ? "Submit" : "Next"}
+              {(carRentalOrBridleWear && currentStep === 2) || (photographer && currentStep === 6) || (makeupArtist && currentStep === 6) || (hennaArtist && currentStep === 6) || (decorator && currentStep === 6) || (catering && currentStep === 6) ? 'Submit' : currentStep === 6 ? "Submit" : "Next"}
             </Button>
 
           </div>

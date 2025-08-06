@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation"
 import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { VendorCard } from "@/components/vendor-card"
+import VendorCard from "@/components/VendorCard"
 import { vendors as allVendors } from "@/app/data/vendors"
 import { cities, vendorTypes } from "@/app/data/filters"
 
@@ -100,7 +100,7 @@ export default function VendorsComponent() {
             reviews={vendor.reviews}
             image={vendor.image}
             price={vendor.price}
-            city={vendor.city}
+            location={vendor.city}
           />
         ))}
       </div>
