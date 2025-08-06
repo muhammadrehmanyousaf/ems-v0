@@ -122,6 +122,7 @@ export default function BookingForm() {
       if (response.status === 201 || response.status === 200) {
         toast({ title: 'Booking Confirmed', description: 'Your booking has been submitted successfully.' });
         // Optional: reset form or redirect
+        setStep(6)
       } else {
         throw new Error('Unexpected response');
       }
@@ -133,7 +134,6 @@ export default function BookingForm() {
         variant: 'destructive'
       });
     } finally {
-      setStep(6)
       setIsSubmitting(false); // Turn off loading indicator
     }
   };
