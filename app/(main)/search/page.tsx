@@ -91,7 +91,7 @@ function SearchContent() {
                vendorName.includes('professional beauty') || 
                vendorName.includes('gorgeous')
       
-      case 'decorators':
+      case 'decor':
         return vendorType === VENDOR_TYPES.DECORATOR || 
                vendorName.includes('decor') || 
                vendorName.includes('sajawat') || 
@@ -100,7 +100,7 @@ function SearchContent() {
                vendorName.includes('settings') || 
                vendorName.includes('affairs')
       
-      case 'caterers':
+      case 'catering':
         return vendorType === VENDOR_TYPES.CATERING || 
                vendorName.includes('catering') || 
                vendorName.includes('food') || 
@@ -243,12 +243,12 @@ function SearchContent() {
     
     if (vendorType === VENDOR_TYPES.DECORATOR || vendorName.includes('decor') || vendorName.includes('sajawat') || vendorName.includes('event') || vendorName.includes('styling') || vendorName.includes('settings') || vendorName.includes('affairs')) {
       console.log(`🌸 Detected as Decorator`)
-      return 'decorators'
+      return 'decor'
     }
     
     if (vendorType === VENDOR_TYPES.CATERING || vendorName.includes('catering') || vendorName.includes('food') || vendorName.includes('kitchen') || vendorName.includes('cuisine') || vendorName.includes('taste')) {
       console.log(`🍽️ Detected as Caterer`)
-      return 'caterers'
+      return 'catering'
     }
     
     if (vendorType === VENDOR_TYPES.WEDDING_VENUE || vendorName.includes('venue') || vendorName.includes('hall') || vendorName.includes('palace') || vendorName.includes('banquet') || vendorName.includes('marriage') || vendorName.includes('wedding hall') || vendorName.includes('garden')) {
@@ -301,8 +301,14 @@ function SearchContent() {
   }
 
   const vendorCategories = [
-    "Photographers", "Makeup Artists", "Decorators", "Caterers", 
-    "Wedding Venues", "Bridal Wear", "Car Rental", "Henna Artists"
+    { display: "Photographers", value: "photographers" },
+    { display: "Makeup Artists", value: "makeup-artists" },
+    { display: "Decorators", value: "decor" },
+    { display: "Caterers", value: "catering" },
+    { display: "Wedding Venues", value: "venues" },
+    { display: "Bridal Wear", value: "bridal-wear" },
+    { display: "Car Rental", value: "car-rental" },
+    { display: "Henna Artists", value: "henna-artists" }
   ]
 
   const priceRanges = [
@@ -372,8 +378,8 @@ function SearchContent() {
                     <SelectContent>
                       <SelectItem value="all">All categories</SelectItem>
                       {vendorCategories.map((category) => (
-                        <SelectItem key={category} value={category.toLowerCase()}>
-                          {category}
+                        <SelectItem key={category.value} value={category.value}>
+                          {category.display}
                         </SelectItem>
                       ))}
                     </SelectContent>

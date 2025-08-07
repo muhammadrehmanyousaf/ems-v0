@@ -20,8 +20,8 @@ import { VENDOR_TYPES, VENDOR_TYPE_DISPLAY_NAMES, VENDOR_TYPE_DESCRIPTIONS, getA
 const vendorCategories = [
   { value: "photographers", label: "Photographers", icon: "📸", description: "Capture your special moments" },
   { value: "makeup-artists", label: "Makeup Artists", icon: "💄", description: "Look stunning on your big day" },
-  { value: "decorators", label: "Decorators", icon: "🌸", description: "Transform your venue beautifully" },
-  { value: "caterers", label: "Caterers", icon: "🍽️", description: "Delicious food for your guests" },
+  { value: "decor", label: "Decorators", icon: "🌸", description: "Transform your venue beautifully" },
+  { value: "catering", label: "Caterers", icon: "🍽️", description: "Delicious food for your guests" },
   { value: "venues", label: "Wedding Venues", icon: "🏰", description: "Perfect locations for your ceremony" },
   { value: "bridal-wear", label: "Bridal Wear", icon: "👗", description: "Find your dream wedding dress" },
   { value: "car-rental", label: "Car Rental", icon: "🚗", description: "Elegant transportation" },
@@ -137,7 +137,7 @@ export function HeroSection() {
                vendorName.includes('professional beauty') || 
                vendorName.includes('gorgeous')
       
-      case 'decorators':
+      case 'decor':
         return vendorType === VENDOR_TYPES.DECORATOR || 
                vendorName.includes('decor') || 
                vendorName.includes('sajawat') || 
@@ -146,7 +146,7 @@ export function HeroSection() {
                vendorName.includes('settings') || 
                vendorName.includes('affairs')
       
-      case 'caterers':
+      case 'catering':
         return vendorType === VENDOR_TYPES.CATERING || 
                vendorName.includes('catering') || 
                vendorName.includes('food') || 
@@ -258,12 +258,12 @@ export function HeroSection() {
     
     if (vendorType === VENDOR_TYPES.DECORATOR || vendorName.includes('decor') || vendorName.includes('sajawat') || vendorName.includes('event') || vendorName.includes('styling') || vendorName.includes('settings') || vendorName.includes('affairs')) {
       console.log(`🌸 Detected as Decorator`)
-      return 'decorators'
+      return 'decor'
     }
     
     if (vendorType === VENDOR_TYPES.CATERING || vendorName.includes('catering') || vendorName.includes('food') || vendorName.includes('kitchen') || vendorName.includes('cuisine') || vendorName.includes('taste')) {
       console.log(`🍽️ Detected as Caterer`)
-      return 'caterers'
+      return 'catering'
     }
     
     if (vendorType === VENDOR_TYPES.WEDDING_VENUE || vendorName.includes('venue') || vendorName.includes('hall') || vendorName.includes('palace') || vendorName.includes('banquet') || vendorName.includes('marriage') || vendorName.includes('wedding hall') || vendorName.includes('garden')) {
