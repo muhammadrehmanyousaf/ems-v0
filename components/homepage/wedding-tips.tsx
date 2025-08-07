@@ -1,28 +1,447 @@
+"use client"
+
+import { useState } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Calendar, Clock, Users, Camera } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
+import { Calendar, Clock, Users, Camera, Heart, Share2, Bookmark, ArrowRight, CheckCircle, AlertCircle, Info } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 const tips = [
   {
     icon: Calendar,
     title: "When to Start Planning",
     description: "Ideal timeline for wedding planning and important milestones",
+    color: "text-blue-600",
+    bgColor: "bg-blue-50",
+    content: {
+      timeline: [
+        { month: "12-18 months before", tasks: ["Set budget", "Choose wedding style", "Book venue", "Hire photographer"] },
+        { month: "10-12 months before", tasks: ["Choose wedding party", "Book caterer", "Start dress shopping", "Plan honeymoon"] },
+        { month: "8-10 months before", tasks: ["Book entertainment", "Choose florist", "Plan ceremony details", "Book transportation"] },
+        { month: "6-8 months before", tasks: ["Send invitations", "Book hotel blocks", "Schedule tastings", "Plan rehearsal dinner"] },
+        { month: "4-6 months before", tasks: ["Buy wedding rings", "Schedule hair/makeup", "Plan ceremony music", "Book officiant"] },
+        { month: "2-4 months before", tasks: ["Finalize details", "Schedule rehearsal", "Plan day-of timeline", "Get marriage license"] },
+        { month: "1-2 months before", tasks: ["Final fittings", "Confirm all vendors", "Plan seating chart", "Write vows"] },
+        { month: "1 week before", tasks: ["Final vendor meetings", "Pack for honeymoon", "Relax and enjoy!"] }
+      ],
+      tips: [
+        "Start with the big decisions first - venue and date",
+        "Create a detailed budget spreadsheet",
+        "Use a wedding planning app or binder",
+        "Delegate tasks to trusted family/friends",
+        "Don't forget to enjoy the process!"
+      ],
+      checklist: [
+        "Set realistic budget",
+        "Choose wedding date",
+        "Book ceremony venue",
+        "Book reception venue",
+        "Hire photographer",
+        "Hire videographer",
+        "Choose wedding dress",
+        "Book caterer",
+        "Choose florist",
+        "Book entertainment",
+        "Send invitations",
+        "Plan honeymoon"
+      ]
+    }
   },
   {
     icon: Clock,
     title: "Wedding Day Timeline",
     description: "How to create the perfect schedule for your big day",
+    color: "text-green-600",
+    bgColor: "bg-green-50",
+    content: {
+      timeline: [
+        { time: "6:00 AM", event: "Bride & Bridesmaids Hair & Makeup", duration: "3 hours", notes: "Start early to avoid stress" },
+        { time: "9:00 AM", event: "Photographer Arrives", duration: "30 min", notes: "Getting ready photos" },
+        { time: "10:00 AM", event: "Groom & Groomsmen Prep", duration: "1 hour", notes: "Include getting ready photos" },
+        { time: "11:00 AM", event: "First Look (Optional)", duration: "30 min", notes: "Private moment before ceremony" },
+        { time: "12:00 PM", event: "Ceremony", duration: "1 hour", notes: "Main wedding ceremony" },
+        { time: "1:00 PM", event: "Cocktail Hour", duration: "1 hour", notes: "Photos and mingling" },
+        { time: "2:00 PM", event: "Reception", duration: "4-5 hours", notes: "Dinner, dancing, celebrations" },
+        { time: "7:00 PM", event: "Grand Exit", duration: "30 min", notes: "Sparklers, bubbles, or confetti" }
+      ],
+      tips: [
+        "Build in buffer time between events",
+        "Consider travel time between venues",
+        "Plan for weather contingencies",
+        "Assign a timeline manager",
+        "Share timeline with all vendors"
+      ],
+      checklist: [
+        "Create detailed timeline",
+        "Share with wedding party",
+        "Share with vendors",
+        "Plan transportation",
+        "Prepare emergency kit",
+        "Assign timeline manager",
+        "Plan backup for weather",
+        "Practice ceremony timing"
+      ]
+    }
   },
   {
     icon: Users,
     title: "Guest List Tips",
     description: "Managing your guest list and seating arrangements",
+    color: "text-purple-600",
+    bgColor: "bg-purple-50",
+    content: {
+      categories: [
+        { name: "Family", percentage: 40, description: "Immediate and extended family members" },
+        { name: "Friends", percentage: 35, description: "Close friends and social circle" },
+        { name: "Colleagues", percentage: 15, description: "Work friends and professional contacts" },
+        { name: "Vendors", percentage: 10, description: "Photographer, planner, etc." }
+      ],
+      tips: [
+        "Start with must-have guests",
+        "Consider venue capacity",
+        "Plan for plus-ones carefully",
+        "Use digital RSVP system",
+        "Track dietary restrictions"
+      ],
+      seating: [
+        "Front rows for immediate family",
+        "Close friends near the couple",
+        "Group similar people together",
+        "Consider family dynamics",
+        "Plan for singles and couples"
+      ],
+      checklist: [
+        "Create initial guest list",
+        "Categorize by priority",
+        "Check venue capacity",
+        "Plan plus-one policy",
+        "Create RSVP system",
+        "Track responses",
+        "Plan seating chart",
+        "Consider dietary needs"
+      ]
+    }
   },
   {
     icon: Camera,
     title: "Photography Guide",
     description: "Essential shots and styles for your wedding album",
-  },
+    color: "text-orange-600",
+    bgColor: "bg-orange-50",
+    content: {
+      styles: [
+        { name: "Traditional", description: "Classic posed portraits and formal shots", pros: "Timeless, family-friendly", cons: "Less candid moments" },
+        { name: "Photojournalistic", description: "Documentary style capturing natural moments", pros: "Authentic, emotional", cons: "Less control over poses" },
+        { name: "Fine Art", description: "Creative, artistic approach with unique angles", pros: "Unique, artistic", cons: "May miss traditional shots" },
+        { name: "Contemporary", description: "Modern, trendy style with current aesthetics", pros: "Current, stylish", cons: "May date quickly" }
+      ],
+      shots: [
+        "Getting ready photos",
+        "First look",
+        "Ceremony moments",
+        "Family portraits",
+        "Wedding party shots",
+        "Reception highlights",
+        "Detail shots",
+        "Candid moments"
+      ],
+      tips: [
+        "Meet photographer before booking",
+        "Create shot list",
+        "Plan for lighting conditions",
+        "Consider second shooter",
+        "Discuss editing style"
+      ],
+      checklist: [
+        "Research photographers",
+        "View full galleries",
+        "Check references",
+        "Discuss package options",
+        "Sign contract",
+        "Create shot list",
+        "Plan timeline",
+        "Discuss backup plan"
+      ]
+    }
+  }
 ]
+
+function TipDetailModal({ tip }: { tip: any }) {
+  const { toast } = useToast()
+
+  const handleShare = () => {
+    navigator.share?.({
+      title: tip.title,
+      text: tip.description,
+      url: window.location.href
+    }).catch(() => {
+      navigator.clipboard.writeText(window.location.href)
+      toast({
+        title: "Link copied!",
+        description: "Tip link has been copied to clipboard.",
+      })
+    })
+  }
+
+  const handleSave = () => {
+    toast({
+      title: "Tip saved!",
+      description: "This tip has been added to your favorites.",
+    })
+  }
+
+  return (
+    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-3 text-2xl">
+          <div className={`w-10 h-10 ${tip.bgColor} rounded-lg flex items-center justify-center`}>
+            <tip.icon className={`w-6 h-6 ${tip.color}`} />
+          </div>
+          {tip.title}
+        </DialogTitle>
+        <DialogDescription className="text-lg">
+          {tip.description}
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="space-y-6">
+        {tip.title === "When to Start Planning" && (
+          <>
+            <div className="space-y-4">
+              <h3 className="text-xl font-semibold">Planning Timeline</h3>
+              <div className="space-y-3">
+                {tip.content.timeline.map((item: any, index: number) => (
+                  <div key={index} className="p-4 border rounded-lg">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Badge variant="outline">{item.month}</Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {item.tasks.map((task: string, taskIndex: number) => (
+                        <div key={taskIndex} className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                          <span className="text-sm">{task}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Pro Tips</h3>
+                <div className="space-y-2">
+                  {tip.content.tips.map((tipText: string, index: number) => (
+                    <div key={index} className="flex items-start gap-2">
+                      <Info className="w-4 h-4 text-blue-600 mt-0.5" />
+                      <span className="text-sm">{tipText}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Essential Checklist</h3>
+                <div className="space-y-2">
+                  {tip.content.checklist.map((item: string, index: number) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-gray-300 rounded" />
+                      <span className="text-sm">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {tip.title === "Wedding Day Timeline" && (
+          <>
+            <div className="space-y-4">
+              <h3 className="text-xl font-semibold">Sample Timeline</h3>
+              <div className="space-y-3">
+                {tip.content.timeline.map((item: any, index: number) => (
+                  <div key={index} className="flex items-center gap-4 p-3 border rounded-lg">
+                    <div className="flex-shrink-0 w-20 text-center">
+                      <div className="text-lg font-bold">{item.time}</div>
+                      <div className="text-xs text-muted-foreground">{item.duration}</div>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold">{item.event}</h4>
+                      <p className="text-sm text-muted-foreground">{item.notes}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Timeline Tips</h3>
+                <div className="space-y-2">
+                  {tip.content.tips.map((tipText: string, index: number) => (
+                    <div key={index} className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-orange-600 mt-0.5" />
+                      <span className="text-sm">{tipText}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Timeline Checklist</h3>
+                <div className="space-y-2">
+                  {tip.content.checklist.map((item: string, index: number) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-gray-300 rounded" />
+                      <span className="text-sm">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {tip.title === "Guest List Tips" && (
+          <>
+            <div className="space-y-4">
+              <h3 className="text-xl font-semibold">Guest List Breakdown</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                {tip.content.categories.map((category: any, index: number) => (
+                  <div key={index} className="p-4 border rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold">{category.name}</h4>
+                      <Badge variant="secondary">{category.percentage}%</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{category.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Guest List Tips</h3>
+                <div className="space-y-2">
+                  {tip.content.tips.map((tipText: string, index: number) => (
+                    <div key={index} className="flex items-start gap-2">
+                      <Info className="w-4 h-4 text-blue-600 mt-0.5" />
+                      <span className="text-sm">{tipText}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Seating Tips</h3>
+                <div className="space-y-2">
+                  {tip.content.seating.map((tipText: string, index: number) => (
+                    <div key={index} className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600 mt-0.5" />
+                      <span className="text-sm">{tipText}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Guest List Checklist</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {tip.content.checklist.map((item: string, index: number) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-gray-300 rounded" />
+                    <span className="text-sm">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {tip.title === "Photography Guide" && (
+          <>
+            <div className="space-y-4">
+              <h3 className="text-xl font-semibold">Photography Styles</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                {tip.content.styles.map((style: any, index: number) => (
+                  <div key={index} className="p-4 border rounded-lg">
+                    <h4 className="font-semibold mb-2">{style.name}</h4>
+                    <p className="text-sm text-muted-foreground mb-3">{style.description}</p>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <span className="text-xs">Pros: {style.pros}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-orange-600" />
+                        <span className="text-xs">Cons: {style.cons}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Essential Shots</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {tip.content.shots.map((shot: string, index: number) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <Camera className="w-4 h-4 text-primary" />
+                      <span className="text-sm">{shot}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Photography Tips</h3>
+                <div className="space-y-2">
+                  {tip.content.tips.map((tipText: string, index: number) => (
+                    <div key={index} className="flex items-start gap-2">
+                      <Info className="w-4 h-4 text-blue-600 mt-0.5" />
+                      <span className="text-sm">{tipText}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Photography Checklist</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {tip.content.checklist.map((item: string, index: number) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-gray-300 rounded" />
+                    <span className="text-sm">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex gap-3 pt-4 border-t">
+          <Button onClick={handleSave} variant="outline" className="flex-1">
+            <Bookmark className="w-4 h-4 mr-2" />
+            Save Tip
+          </Button>
+          <Button onClick={handleShare} variant="outline" className="flex-1">
+            <Share2 className="w-4 h-4 mr-2" />
+            Share Tip
+          </Button>
+        </div>
+      </div>
+    </DialogContent>
+  )
+}
 
 export function WeddingTips() {
   return (
@@ -35,30 +454,40 @@ export function WeddingTips() {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {tips.map((tip) => (
-            <Card key={tip.title} className="hover:shadow-lg transition-shadow">
+            <Dialog key={tip.title}>
+              <DialogTrigger asChild>
+                <Card className="hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer group">
               <CardHeader className="pt-6 px-6">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                  <tip.icon className="w-6 h-6 text-primary" />
+                    <div className={`w-12 h-12 rounded-full ${tip.bgColor} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                      <tip.icon className={`w-6 h-6 ${tip.color}`} />
                 </div>
                 <h3 className="font-semibold text-lg">{tip.title}</h3>
               </CardHeader>
               <CardContent className="px-6 pb-6">
-                <p className="text-gray-600">{tip.description}</p>
-                <a
-                  href={`/tips/${tip.title.toLowerCase().replace(/\s+/g, "-")}`}
-                  className="text-primary text-sm hover:underline mt-4 inline-block"
-                >
-                  Read more →
-                </a>
+                    <p className="text-gray-600 mb-4">{tip.description}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-primary text-sm font-medium">Read more →</span>
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Heart className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Share2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
               </CardContent>
             </Card>
+              </DialogTrigger>
+              <TipDetailModal tip={tip} />
+            </Dialog>
           ))}
         </div>
 
         <div className="text-center mt-12">
-          <a href="/wedding-tips" className="text-primary hover:underline">
+          <Button variant="outline" size="lg" className="text-primary hover:text-primary">
             View all planning tips →
-          </a>
+          </Button>
         </div>
       </div>
     </section>
