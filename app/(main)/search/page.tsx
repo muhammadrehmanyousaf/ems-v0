@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Search, MapPin, Star, Users, Filter, SortAsc, SortDesc } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -14,10 +14,10 @@ import type { Vendor } from "@/lib/types"
 import { VENDOR_TYPES, VENDOR_TYPE_DISPLAY_NAMES, VENDOR_TYPE_DESCRIPTIONS, getAllVendorPaths } from "@/lib/vendor-types"
 import { useRouter } from "next/navigation"
 
-export default function SearchPage() {
-  const searchParams = useSearchParams()
+function SearchContent() {
   const router = useRouter()
   const { toast } = useToast()
+  const searchParams = useSearchParams()
   
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [filteredVendors, setFilteredVendors] = useState<Vendor[]>([])
@@ -30,9 +30,9 @@ export default function SearchPage() {
   const [showFilters, setShowFilters] = useState(false)
 
   // Get search parameters from URL
-  const query = searchParams.get('q') || ""
-  const category = searchParams.get('category') || ""
-  const location = searchParams.get('location') || ""
+  const query = searchParams?.get('q') || ""
+  const category = searchParams?.get('category') || ""
+  const location = searchParams?.get('location') || ""
 
   useEffect(() => {
     setSearchQuery(query)
@@ -507,8 +507,22 @@ export default function SearchPage() {
             )}
           </div>
         </div>
+             </div>
+     </div>
+   )
+ }
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center gap-2">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          <span>Loading search page...</span>
+        </div>
       </div>
-    </div>
+    }>
+      <SearchContent />
+    </Suspense>
   )
 }
-
