@@ -33,7 +33,7 @@ export function FeaturedWeddingStationery() {
         <div className="flex justify-between items-end mb-12">
           <div>
             <h2 className="text-3xl font-bold mb-2">Featured Wedding Stationery</h2>
-            <p className="text-gray-600">Beautiful wedding invitations and stationery</p>
+            <p className="text-gray-600">Beautiful invitations and wedding stationery</p>
           </div>
           <a href="/wedding-stationery" className="text-primary hover:underline hidden md:block">
             View all wedding stationery →
@@ -47,13 +47,13 @@ export function FeaturedWeddingStationery() {
             <CarouselPrevious className="hidden sm:flex absolute left-2 md:left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gray-700 text-white rounded-full hover:bg-gray-900 transition z-50 pointer-events-auto" />
             <CarouselNext className="hidden sm:flex absolute right-2 md:right-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gray-700 text-white rounded-full hover:bg-gray-900 transition z-50 pointer-events-auto" />
 
-            <CarouselContent className="flex gap-2 sm:gap-4 w-full justify-start" style={{ scrollSnapType: "x mandatory" }}>
+            <CarouselContent className="flex gap-2 sm:gap-4 w-full justify-start pb-8" style={{ scrollSnapType: "x mandatory" }}>
               {isLoading ? (
                 // Loading skeleton
                 Array.from({ length: 4 }).map((_, index) => (
                   <CarouselItem
                     key={index}
-                    className={`basis-[85%] sm:basis-[70%] md:basis-1/2 lg:basis-1/3 xl:basis-1/4 flex-shrink-0 scroll-snap-start`}
+                    className={`basis-[85%] sm:basis-[70%] md:basis-1/2 lg:basis-1/3 xl:basis-1/4 flex-shrink-0 scroll-snap-start p-2`}
                   >
                     <div className="animate-pulse">
                       <div className="bg-gray-300 h-48 rounded-t-lg"></div>
@@ -68,21 +68,21 @@ export function FeaturedWeddingStationery() {
                 vendors.map((vendor) => (
                   <CarouselItem
                     key={vendor.id}
-                    className={`basis-[85%] sm:basis-[70%] md:basis-1/2 lg:basis-1/3 xl:basis-1/4 flex-shrink-0 scroll-snap-start`}
+                    className={`basis-[85%] sm:basis-[70%] md:basis-1/2 lg:basis-1/3 xl:basis-1/4 flex-shrink-0 scroll-snap-start p-2`}
                   >
-                                         <VendorCard
-                       id={vendor.id}
-                       name={vendor.name}
-                       image={vendor.images?.[0] || "/placeholder.svg"}
-                       location={vendor.location || vendor.city}
-                       rating={vendor.rating}
-                       reviews={vendor.reviews?.length || 0}
-                       price={vendor.minimumPrice || vendor.price}
-                       type={vendor.subBusinessType || vendor.type}
-                       capacity={vendor.capacity}
-                       amenities={vendor.amenities}
-                       sponsored={vendor.sponsored}
-                     />
+                    <VendorCard
+                      id={vendor.id}
+                      name={vendor.name}
+                      image={vendor.images?.[0] || "/placeholder.svg"}
+                      location={vendor.location || vendor.city}
+                      rating={vendor.rating}
+                      reviews={vendor.reviews?.length || 0}
+                      price={vendor.minimumPrice || vendor.price}
+                      type={vendor.subBusinessType || vendor.type}
+                      capacity={vendor.capacity}
+                      amenities={vendor.amenities}
+                      sponsored={vendor.sponsored}
+                    />
                   </CarouselItem>
                 ))
               )}

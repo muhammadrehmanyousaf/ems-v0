@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Search, MapPin, Star, Users, Calendar, ArrowRight, X, Loader2 } from "lucide-react"
+import { Search, MapPin, Star, Users, Calendar, ArrowRight, X, Loader2, Heart, Award } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -14,7 +14,7 @@ import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { VendorAPI } from "@/lib/api/vendors"
 import type { Vendor } from "@/lib/types"
-import { VENDOR_TYPES, VENDOR_TYPE_DISPLAY_NAMES, VENDOR_TYPE_DESCRIPTIONS, getAllVendorPaths } from "@/lib/vendor-types"
+import { VENDOR_TYPES, VENDOR_TYPE_DISPLAY_NAMES, VENDOR_TYPE_DESCRIPTIONS, getAllVendorPaths, VENDOR_TYPE_PATHS } from "@/lib/vendor-types"
 
 // Vendor categories with icons and descriptions
 const vendorCategories = [
@@ -29,21 +29,38 @@ const vendorCategories = [
   { value: "wedding-stationery", label: "Wedding Stationery", icon: "📝", description: "Invitations and cards" },
 ]
 
-// Popular cities will be dynamically generated from vendor data
+// Venue types for venue search
+const venueTypes = [
+  { value: "all", label: "All Venues", icon: "🏰" },
+  { value: "banquet", label: "Banquet Halls", icon: "🏛️" },
+  { value: "hotel", label: "Hotel Venues", icon: "🏨" },
+  { value: "resort", label: "Resorts", icon: "🌴" },
+  { value: "garden", label: "Garden Venues", icon: "🌺" },
+  { value: "palace", label: "Palaces", icon: "👑" },
+  { value: "beach", label: "Beach Venues", icon: "🏖️" },
+  { value: "farmhouse", label: "Farmhouses", icon: "🏡" },
+  { value: "outdoor", label: "Outdoor Venues", icon: "🌳" },
+]
 
 export function HeroSection() {
   const router = useRouter()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("vendors")
   const [selectedCategory, setSelectedCategory] = useState("all")
+  const [selectedVenueType, setSelectedVenueType] = useState("all")
   const [location, setLocation] = useState("")
+  const [venueLocation, setVenueLocation] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [vendors, setVendors] = useState<Vendor[]>([])
+  const [venues, setVenues] = useState<Vendor[]>([])
   const [filteredVendors, setFilteredVendors] = useState<Vendor[]>([])
+  const [filteredVenues, setFilteredVenues] = useState<Vendor[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [showLocationDropdown, setShowLocationDropdown] = useState(false)
+  const [showVenueLocationDropdown, setShowVenueLocationDropdown] = useState(false)
   const [showVendorDropdown, setShowVendorDropdown] = useState(false)
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
+  const [selectedVenue, setSelectedVenue] = useState<Vendor | null>(null)
   const [popularCities, setPopularCities] = useState<string[]>([])
   const searchRef = useRef<HTMLDivElement>(null)
 
@@ -56,15 +73,11 @@ export function HeroSection() {
   const getPopularCities = (vendorList: Vendor[]): string[] => {
     const cityCounts: { [key: string]: number } = {}
     
-    console.log('🔍 Extracting cities from vendors...')
-    vendorList.forEach((vendor, index) => {
-      console.log(`Vendor ${index + 1}: "${vendor.name}" - City: "${vendor.city}"`)
+    vendorList.forEach((vendor) => {
       if (vendor.city) {
         cityCounts[vendor.city] = (cityCounts[vendor.city] || 0) + 1
       }
     })
-    
-    console.log('📊 City counts:', cityCounts)
     
     // Sort by count and get top 10 cities
     const sortedCities = Object.entries(cityCounts)
@@ -72,7 +85,6 @@ export function HeroSection() {
       .slice(0, 10)
       .map(([city]) => city)
     
-    console.log('🏙️ Final popular cities:', sortedCities)
     return sortedCities
   }
 
@@ -82,16 +94,23 @@ export function HeroSection() {
       setIsLoading(true)
       const allVendors = await VendorAPI.getAllBusinesses()
       setVendors(allVendors)
-      console.log(`Loaded ${allVendors.length} vendors`)
+      
+      // Filter venues from all vendors
+      const venueVendors = allVendors.filter(vendor => 
+        vendor.type === VENDOR_TYPES.WEDDING_VENUE || 
+        vendor.name?.toLowerCase().includes('venue') ||
+        vendor.name?.toLowerCase().includes('hall') ||
+        vendor.name?.toLowerCase().includes('palace') ||
+        vendor.name?.toLowerCase().includes('banquet') ||
+        vendor.name?.toLowerCase().includes('marriage') ||
+        vendor.name?.toLowerCase().includes('wedding hall') ||
+        vendor.name?.toLowerCase().includes('garden')
+      )
+      setVenues(venueVendors)
       
       // Get popular cities from vendor data
       const cities = getPopularCities(allVendors)
       setPopularCities(cities)
-      console.log('🏙️ Popular cities from vendors:', cities)
-      
-      // Log all unique vendor types to see what we're working with
-      const vendorTypes = [...new Set(allVendors.map(v => v.type).filter(Boolean))]
-      console.log('📋 All vendor types from API:', vendorTypes)
       
     } catch (error) {
       console.error("Error loading vendors:", error)
@@ -109,91 +128,88 @@ export function HeroSection() {
   const vendorMatchesCategory = (vendor: Vendor, category: string): boolean => {
     const vendorName = vendor.name?.toLowerCase() || ''
     const vendorType = vendor.type || ''
-    const subBusinessType = vendor.subBusinessType || ''
     
     switch (category) {
       case 'photographers':
         return vendorType === VENDOR_TYPES.PHOTOGRAPHER || 
                vendorName.includes('photography') || 
                vendorName.includes('studio') || 
-               vendorName.includes('camera') || 
-               vendorName.includes('lens') || 
-               vendorName.includes('shutter') || 
-               vendorName.includes('pixel') || 
-               vendorName.includes('frame') || 
-               vendorName.includes('capture') || 
-               vendorName.includes('moments') || 
-               vendorName.includes('shots')
+               vendorName.includes('camera')
       
       case 'makeup-artists':
         return vendorType === VENDOR_TYPES.MAKEUP_ARTIST || 
                vendorName.includes('makeup') || 
                vendorName.includes('beauty') || 
-               vendorName.includes('glamour') || 
-               vendorName.includes('bridal beauty') || 
-               vendorName.includes('makeover') || 
-               vendorName.includes('beauty expert') || 
-               vendorName.includes('stylish') || 
-               vendorName.includes('professional beauty') || 
-               vendorName.includes('gorgeous')
+               vendorName.includes('glamour')
       
       case 'decor':
         return vendorType === VENDOR_TYPES.DECORATOR || 
                vendorName.includes('decor') || 
                vendorName.includes('sajawat') || 
-               vendorName.includes('event') || 
-               vendorName.includes('styling') || 
-               vendorName.includes('settings') || 
-               vendorName.includes('affairs')
+               vendorName.includes('event')
       
       case 'catering':
         return vendorType === VENDOR_TYPES.CATERING || 
                vendorName.includes('catering') || 
                vendorName.includes('food') || 
-               vendorName.includes('kitchen') || 
-               vendorName.includes('cuisine') || 
-               vendorName.includes('taste')
+               vendorName.includes('kitchen')
       
       case 'venues':
         return vendorType === VENDOR_TYPES.WEDDING_VENUE || 
                vendorName.includes('venue') || 
                vendorName.includes('hall') || 
-               vendorName.includes('palace') || 
-               vendorName.includes('banquet') || 
-               vendorName.includes('marriage') || 
-               vendorName.includes('wedding hall') || 
-               vendorName.includes('garden')
+               vendorName.includes('palace')
       
       case 'car-rental':
         return vendorType === VENDOR_TYPES.CAR_RENTAL || 
                vendorName.includes('car') || 
                vendorName.includes('rental') || 
-               vendorName.includes('drive') || 
-               vendorName.includes('ride') || 
-               vendorName.includes('motor')
+               vendorName.includes('drive')
       
       case 'henna-artists':
         return vendorType === VENDOR_TYPES.HENNA_ARTIST || 
                vendorName.includes('henna') || 
-               vendorName.includes('mehndi') || 
-               vendorName.includes('bridal henna')
+               vendorName.includes('mehndi')
       
       case 'bridal-wear':
         return vendorType === VENDOR_TYPES.BRIDAL_WEAR || 
                vendorName.includes('bridal') || 
                vendorName.includes('couture') || 
-               vendorName.includes('fashion') || 
-               vendorName.includes('attire') || 
-               vendorName.includes('wear')
+               vendorName.includes('fashion')
       
       case 'wedding-stationery':
         return vendorType === VENDOR_TYPES.WEDDING_STATIONERY || 
                vendorName.includes('card') || 
                vendorName.includes('invitation') || 
-               vendorName.includes('print') || 
-               vendorName.includes('stationery') || 
-               vendorName.includes('invite')
+               vendorName.includes('print')
       
+      default:
+        return true
+    }
+  }
+
+  // Helper function to check if venue matches type
+  const venueMatchesType = (venue: Vendor, venueType: string): boolean => {
+    const venueName = venue.name?.toLowerCase() || ''
+    const venueDescription = venue.description?.toLowerCase() || ''
+    
+    switch (venueType) {
+      case 'banquet':
+        return venueName.includes('banquet') || venueName.includes('hall') || venueDescription.includes('banquet')
+      case 'hotel':
+        return venueName.includes('hotel') || venueName.includes('resort') || venueDescription.includes('hotel')
+      case 'resort':
+        return venueName.includes('resort') || venueName.includes('spa') || venueDescription.includes('resort')
+      case 'garden':
+        return venueName.includes('garden') || venueName.includes('lawn') || venueDescription.includes('garden')
+      case 'palace':
+        return venueName.includes('palace') || venueName.includes('royal') || venueDescription.includes('palace')
+      case 'beach':
+        return venueName.includes('beach') || venueName.includes('seaside') || venueDescription.includes('beach')
+      case 'farmhouse':
+        return venueName.includes('farm') || venueName.includes('villa') || venueDescription.includes('farm')
+      case 'outdoor':
+        return venueName.includes('outdoor') || venueName.includes('open') || venueDescription.includes('outdoor')
       default:
         return true
     }
@@ -229,91 +245,146 @@ export function HeroSection() {
         return vendorName.includes(query) || vendorDescription.includes(query)
       })
     }
-
-    console.log(`🔍 Filtering results: Category=${selectedCategory}, Location=${location}, Query=${searchQuery}`)
-    console.log(`📊 Found ${filtered.length} vendors after filtering`)
     
     setFilteredVendors(filtered.slice(0, 10)) // Limit to 10 for dropdown
   }, [vendors, selectedCategory, location, searchQuery])
 
-  // Map vendor types to URL slugs based on centralized vendor types
+  // Filter venues based on search query and type
+  useEffect(() => {
+    let filtered = venues
+
+    // Filter by venue type
+    if (selectedVenueType && selectedVenueType !== 'all') {
+      filtered = filtered.filter(venue => venueMatchesType(venue, selectedVenueType))
+    }
+
+    // Filter by location
+    if (venueLocation) {
+      filtered = filtered.filter(venue => {
+        const venueCity = venue.city?.toLowerCase() || ''
+        const venueLocationText = venue.location?.toLowerCase() || ''
+        const searchLocation = venueLocation.toLowerCase()
+        
+        return venueCity.includes(searchLocation) || venueLocationText.includes(searchLocation)
+      })
+    }
+
+    setFilteredVenues(filtered.slice(0, 10)) // Limit to 10 for dropdown
+  }, [venues, selectedVenueType, venueLocation])
+
+  // Create reverse mapping from vendor type to path
+  const getVendorTypeToPath = (vendorType: string): string => {
+    console.log('🔍 Looking for vendor type:', vendorType)
+    
+    // First try exact match
+    for (const [path, type] of Object.entries(VENDOR_TYPE_PATHS)) {
+      if (type === vendorType) {
+        console.log('✅ Exact match found:', path)
+        return path
+      }
+    }
+    
+    // Try case-insensitive match
+    const lowerVendorType = vendorType.toLowerCase()
+    for (const [path, type] of Object.entries(VENDOR_TYPE_PATHS)) {
+      if (type.toLowerCase() === lowerVendorType) {
+        console.log('✅ Case-insensitive match found:', path)
+        return path
+      }
+    }
+    
+    // Try partial match
+    for (const [path, type] of Object.entries(VENDOR_TYPE_PATHS)) {
+      if (type.toLowerCase().includes(lowerVendorType) || lowerVendorType.includes(type.toLowerCase())) {
+        console.log('✅ Partial match found:', path)
+        return path
+      }
+    }
+    
+    console.log('❌ No match found, using fallback')
+    return 'vendor' // fallback
+  }
+
+  // Map vendor types to URL slugs using VENDOR_TYPE_PATHS from vendor-types.ts
   const getVendorSlug = (vendor: Vendor): string => {
-    const vendorName = vendor.name?.toLowerCase() || ''
+    console.log('🎯 Getting slug for vendor:', vendor.name, 'Type:', vendor.type)
+    
     const vendorType = vendor.type || ''
-    const subBusinessType = vendor.subBusinessType || ''
     
-    console.log(`🔍 Vendor: "${vendor.name}"`)
-    console.log(`📝 Type: "${vendorType}", SubType: "${subBusinessType}"`)
+    // Use the reverse mapping to get the correct path
+    const path = getVendorTypeToPath(vendorType)
+    if (path !== 'vendor') {
+      console.log('✅ Using path from type mapping:', path)
+      return path
+    }
     
-    // Check against centralized vendor types first
-    if (vendorType === VENDOR_TYPES.PHOTOGRAPHER || vendorName.includes('photography') || vendorName.includes('studio') || vendorName.includes('camera') || vendorName.includes('lens') || vendorName.includes('shutter') || vendorName.includes('pixel') || vendorName.includes('frame') || vendorName.includes('capture') || vendorName.includes('moments') || vendorName.includes('shots')) {
-      console.log(`📸 Detected as Photographer`)
+    // Fallback: try to determine from vendor name
+    const vendorName = vendor.name?.toLowerCase() || ''
+    console.log('🔍 Trying name-based fallback for:', vendorName)
+    
+    if (vendorName.includes('photography') || vendorName.includes('photographer') || vendorName.includes('camera')) {
+      console.log('✅ Name-based match: photographers')
       return 'photographers'
     }
-    
-    if (vendorType === VENDOR_TYPES.MAKEUP_ARTIST || vendorName.includes('makeup') || vendorName.includes('beauty') || vendorName.includes('glamour') || vendorName.includes('bridal beauty') || vendorName.includes('makeover') || vendorName.includes('beauty expert') || vendorName.includes('stylish') || vendorName.includes('professional beauty') || vendorName.includes('gorgeous')) {
-      console.log(`💄 Detected as Makeup Artist`)
+    if (vendorName.includes('makeup') || vendorName.includes('beauty') || vendorName.includes('glamour')) {
+      console.log('✅ Name-based match: makeup-artists')
       return 'makeup-artists'
     }
-    
-    if (vendorType === VENDOR_TYPES.DECORATOR || vendorName.includes('decor') || vendorName.includes('sajawat') || vendorName.includes('event') || vendorName.includes('styling') || vendorName.includes('settings') || vendorName.includes('affairs')) {
-      console.log(`🌸 Detected as Decorator`)
+    if (vendorName.includes('decor') || vendorName.includes('sajawat') || vendorName.includes('event')) {
+      console.log('✅ Name-based match: decor')
       return 'decor'
     }
-    
-    if (vendorType === VENDOR_TYPES.CATERING || vendorName.includes('catering') || vendorName.includes('food') || vendorName.includes('kitchen') || vendorName.includes('cuisine') || vendorName.includes('taste')) {
-      console.log(`🍽️ Detected as Caterer`)
+    if (vendorName.includes('catering') || vendorName.includes('food') || vendorName.includes('kitchen')) {
+      console.log('✅ Name-based match: catering')
       return 'catering'
     }
-    
-    if (vendorType === VENDOR_TYPES.WEDDING_VENUE || vendorName.includes('venue') || vendorName.includes('hall') || vendorName.includes('palace') || vendorName.includes('banquet') || vendorName.includes('marriage') || vendorName.includes('wedding hall') || vendorName.includes('garden')) {
-      console.log(`🏰 Detected as Venue`)
+    if (vendorName.includes('venue') || vendorName.includes('hall') || vendorName.includes('palace') || vendorName.includes('banquet')) {
+      console.log('✅ Name-based match: venues')
       return 'venues'
     }
-    
-    if (vendorType === VENDOR_TYPES.CAR_RENTAL || vendorName.includes('car') || vendorName.includes('rental') || vendorName.includes('drive') || vendorName.includes('ride') || vendorName.includes('motor')) {
-      console.log(`🚗 Detected as Car Rental`)
+    if (vendorName.includes('car') || vendorName.includes('rental') || vendorName.includes('drive')) {
+      console.log('✅ Name-based match: car-rental')
       return 'car-rental'
     }
-    
-    if (vendorType === VENDOR_TYPES.HENNA_ARTIST || vendorName.includes('henna') || vendorName.includes('mehndi') || vendorName.includes('bridal henna')) {
-      console.log(`🎨 Detected as Henna Artist`)
+    if (vendorName.includes('henna') || vendorName.includes('mehndi')) {
+      console.log('✅ Name-based match: henna-artists')
       return 'henna-artists'
     }
-    
-    if (vendorType === VENDOR_TYPES.BRIDAL_WEAR || vendorName.includes('bridal') || vendorName.includes('couture') || vendorName.includes('fashion') || vendorName.includes('attire') || vendorName.includes('wear')) {
-      console.log(`👗 Detected as Bridal Wear`)
+    if (vendorName.includes('bridal') || vendorName.includes('couture') || vendorName.includes('fashion')) {
+      console.log('✅ Name-based match: bridal-wear')
       return 'bridal-wear'
     }
-    
-    if (vendorType === VENDOR_TYPES.WEDDING_STATIONERY || vendorName.includes('card') || vendorName.includes('invitation') || vendorName.includes('print') || vendorName.includes('stationery') || vendorName.includes('invite')) {
-      console.log(`📝 Detected as Wedding Stationery`)
+    if (vendorName.includes('card') || vendorName.includes('invitation') || vendorName.includes('print')) {
+      console.log('✅ Name-based match: wedding-stationery')
       return 'wedding-stationery'
     }
     
-    console.log(`❓ Could not determine type, using 'vendor'`)
-    return 'vendor'
+    console.log('❌ No match found, using vendor fallback')
+    return 'vendor' // final fallback
   }
 
   // Handle vendor selection
   const handleVendorSelect = (vendor: Vendor) => {
-    console.log(`🚀 Vendor selected:`, vendor)
-    console.log(`📝 Vendor type: "${vendor.type}"`)
-    console.log(`🆔 Vendor ID: ${vendor.id}`)
-    
     setSelectedVendor(vendor)
     setSearchQuery(vendor.name)
     setShowVendorDropdown(false)
     
-    // Navigate to vendor detail page with proper vendor type slug
     const vendorSlug = getVendorSlug(vendor)
     const finalUrl = `/${vendorSlug}/${vendor.id}`
-    console.log(`🌐 Navigating to: ${finalUrl}`)
     router.push(finalUrl)
   }
 
-  // Handle search submission
-  const handleSearch = () => {
+  // Handle venue selection
+  const handleVenueSelect = (venue: Vendor) => {
+    setSelectedVenue(venue)
+    setShowVendorDropdown(false)
+    
+    const finalUrl = `/venues/${venue.id}`
+    router.push(finalUrl)
+  }
+
+  // Handle vendor search submission
+  const handleVendorSearch = () => {
     if (!searchQuery.trim() && !selectedCategory && !location) {
       toast({
         title: "Search Required",
@@ -323,13 +394,31 @@ export function HeroSection() {
       return
     }
 
-    // Build search URL
     const searchParams = new URLSearchParams()
     if (searchQuery) searchParams.set('q', searchQuery)
     if (selectedCategory) searchParams.set('category', selectedCategory)
     if (location) searchParams.set('location', location)
 
     const searchUrl = `/search?${searchParams.toString()}`
+    router.push(searchUrl)
+  }
+
+  // Handle venue search submission
+  const handleVenueSearch = () => {
+    if (!selectedVenueType && !venueLocation) {
+      toast({
+        title: "Search Required",
+        description: "Please select a venue type or choose a location.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    const searchParams = new URLSearchParams()
+    if (selectedVenueType && selectedVenueType !== 'all') searchParams.set('type', selectedVenueType)
+    if (venueLocation) searchParams.set('location', venueLocation)
+
+    const searchUrl = `/venues?${searchParams.toString()}`
     router.push(searchUrl)
   }
 
@@ -340,60 +429,91 @@ export function HeroSection() {
     setSelectedVendor(null)
   }
 
+  // Handle venue type selection
+  const handleVenueTypeSelect = (venueType: string) => {
+    setSelectedVenueType(venueType)
+    setSelectedVenue(null)
+  }
+
   // Handle location selection
   const handleLocationSelect = (city: string) => {
     setLocation(city)
     setShowLocationDropdown(false)
   }
 
-  // Clear search
-  const clearSearch = () => {
+  // Handle venue location selection
+  const handleVenueLocationSelect = (city: string) => {
+    setVenueLocation(city)
+    setShowVenueLocationDropdown(false)
+  }
+
+  // Clear vendor search
+  const clearVendorSearch = () => {
     setSearchQuery("")
     setSelectedVendor(null)
     setSelectedCategory("all")
     setLocation("")
   }
 
+  // Clear venue search
+  const clearVenueSearch = () => {
+    setSelectedVenue(null)
+    setSelectedVenueType("all")
+    setVenueLocation("")
+  }
+
   return (
-    <section className="relative min-h-[600px] flex items-center">
-      {/* Background Image */}
+    <section className="relative min-h-screen flex items-center justify-center">
+      {/* Background Image with Enhanced Overlay */}
       <div className="absolute inset-0">
         <img
           src="https://images.pexels.com/photos/1779414/pexels-photo-1779414.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
           alt="Wedding couple"
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/30" />
+        <div className="absolute inset-0 bg-gradient-to-br from-rose-900/80 via-rose-800/60 to-pink-900/40" />
       </div>
 
-      <div className="relative container mx-auto px-4 py-24">
-        <div className="max-w-4xl mx-auto text-center text-white">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+      <div className="relative container mx-auto px-4 py-12">
+        <div className="max-w-5xl mx-auto text-center text-white">
+          {/* Enhanced Hero Content */}
+          <div className="mb-12">
+            <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight bg-gradient-to-r from-white to-rose-100 bg-clip-text text-transparent">
             Find Your Perfect Wedding Vendors
           </h1>
-          <p className="text-xl mb-8 text-gray-100 max-w-2xl mx-auto">
+            <p className="text-xl md:text-2xl mb-8 text-rose-100 max-w-3xl mx-auto leading-relaxed">
             Discover and book the best wedding vendors in your city. From photographers to venues, 
             we've got everything you need for your special day.
           </p>
+          </div>
 
-          {/* Search Card */}
-          <Card className="bg-white/95 backdrop-blur shadow-2xl">
-            <CardContent className="p-6">
+          {/* Enhanced Search Card */}
+          <Card className="bg-white/95 backdrop-blur-md shadow-2xl border-0 rounded-2xl overflow-hidden">
+            <CardContent className="p-8">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="vendors" className="text-sm font-medium">
+                <TabsList className="grid w-full grid-cols-2 mb-8 bg-gray-100 p-1 rounded-xl">
+                  <TabsTrigger 
+                    value="vendors" 
+                    className="text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-rose-600 data-[state=active]:shadow-md rounded-lg transition-all duration-200"
+                  >
+                    <Search className="w-4 h-4 mr-2" />
                     Find Vendors
                   </TabsTrigger>
-                  <TabsTrigger value="venues" className="text-sm font-medium">
+                  <TabsTrigger 
+                    value="venues" 
+                    className="text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-rose-600 data-[state=active]:shadow-md rounded-lg transition-all duration-200"
+                  >
+                    <MapPin className="w-4 h-4 mr-2" />
                     Find Venues
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="vendors" className="space-y-4">
+                {/* Vendors Tab */}
+                <TabsContent value="vendors" className="space-y-6">
                   {/* Category Selection */}
                   <div className="flex flex-col md:flex-row gap-4">
                     <Select value={selectedCategory} onValueChange={handleCategorySelect}>
-                      <SelectTrigger className="w-full md:w-[200px]">
+                      <SelectTrigger className="w-full md:w-[220px] h-12 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
@@ -419,13 +539,13 @@ export function HeroSection() {
                       <Popover open={showLocationDropdown} onOpenChange={setShowLocationDropdown}>
                         <PopoverTrigger asChild>
                           <div className="relative">
-                            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                            <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-400 w-5 h-5" />
                             <Input
                               type="text"
                               placeholder="Enter your city"
                               value={location}
                               onChange={(e) => setLocation(e.target.value)}
-                              className="pl-10"
+                              className="pl-12 h-12 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
                             />
                           </div>
                         </PopoverTrigger>
@@ -444,7 +564,7 @@ export function HeroSection() {
                                            key={city}
                                            variant="ghost"
                                            size="sm"
-                                           className="justify-start text-left"
+                                          className="justify-start text-left hover:bg-rose-50"
                                            onClick={() => handleLocationSelect(city)}
                                          >
                                            {city}
@@ -466,17 +586,16 @@ export function HeroSection() {
 
                     {/* Search Button */}
                     <Button 
-                      onClick={handleSearch} 
-                      className="w-full md:w-auto" 
-                      size="lg"
+                      onClick={handleVendorSearch} 
+                      className="w-full md:w-auto h-12 px-8 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl" 
                       disabled={isLoading}
                     >
                       {isLoading ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                       ) : (
-                        <Search className="w-4 h-4 mr-2" />
+                        <Search className="w-5 h-5 mr-2" />
                       )}
-                      Search
+                      Search Vendors
                     </Button>
                   </div>
 
@@ -485,7 +604,7 @@ export function HeroSection() {
                     <Popover open={showVendorDropdown} onOpenChange={setShowVendorDropdown}>
                       <PopoverTrigger asChild>
                         <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-400 w-5 h-5" />
                           <Input
                             type="text"
                             placeholder="Search for specific vendors..."
@@ -494,21 +613,21 @@ export function HeroSection() {
                               setSearchQuery(e.target.value)
                               setShowVendorDropdown(true)
                             }}
-                            className="pl-10 pr-10"
+                            className="pl-12 pr-12 h-12 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
                           />
                           {searchQuery && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-                              onClick={clearSearch}
+                              className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-rose-50"
+                              onClick={clearVendorSearch}
                             >
-                              <X className="w-3 h-3" />
+                              <X className="w-4 h-4" />
                             </Button>
                           )}
                         </div>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[400px] p-0" align="start">
+                      <PopoverContent className="w-[500px] p-0" align="start">
                         <Command>
                           <CommandInput placeholder="Search vendors..." />
                           <CommandList>
@@ -518,36 +637,45 @@ export function HeroSection() {
                                 <CommandItem
                                   key={vendor.id}
                                   onSelect={() => handleVendorSelect(vendor)}
-                                  className="cursor-pointer"
+                                  className="cursor-pointer hover:bg-rose-50"
                                 >
-                                  <div className="flex items-center gap-3 w-full">
-                                    <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                                  <div className="flex items-center gap-4 w-full p-2">
+                                    <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0">
                                       <img
-                                        src={vendor.images[0] || "/placeholder.jpg"}
+                                        src={vendor.images?.[0] || "/placeholder.jpg"}
                                         alt={vendor.name}
                                         className="w-full h-full object-cover"
                                       />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2">
-                                        <h4 className="font-medium truncate">{vendor.name}</h4>
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <h4 className="font-semibold truncate">{vendor.name}</h4>
                                         {vendor.sponsored && (
-                                          <Badge variant="secondary" className="text-xs">Sponsored</Badge>
+                                          <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-0 text-xs">
+                                            <Award className="w-3 h-3 mr-1" />
+                                            Featured
+                                          </Badge>
                                         )}
                                       </div>
-                                                                             <div className="flex items-center gap-2 text-sm text-gray-500">
-                                         <MapPin className="w-3 h-3" />
+                                      <div className="flex items-center gap-3 text-sm text-gray-600 mb-1">
+                                        <div className="flex items-center gap-1">
+                                          <MapPin className="w-3 h-3 text-rose-500" />
                                          <span>{vendor.city || 'Location not specified'}</span>
-                                         <Star className="w-3 h-3" />
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                          <Star className="w-3 h-3 text-yellow-500" />
                                          <span>{vendor.rating || 0}</span>
-                                         <Users className="w-3 h-3" />
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                          <Users className="w-3 h-3 text-blue-500" />
                                          <span>{vendor.reviews?.length || 0} reviews</span>
                                        </div>
-                                       <div className="text-sm text-gray-600">
+                                      </div>
+                                      <div className="text-sm font-semibold text-rose-600">
                                          Starting from ₹{(vendor.minimumPrice || vendor.price || 0).toLocaleString()}
                                        </div>
                                     </div>
-                                    <ArrowRight className="w-4 h-4 text-gray-400" />
+                                    <ArrowRight className="w-5 h-5 text-gray-400" />
                                   </div>
                                 </CommandItem>
                               ))}
@@ -559,71 +687,195 @@ export function HeroSection() {
                   </div>
 
                   {/* Quick Stats */}
-                  <div className="flex items-center justify-center gap-6 text-sm text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
-                      <span>{vendors.length}+ Vendors</span>
+                  <div className="flex items-center justify-center gap-8 text-sm text-gray-600 pt-4 border-t border-neutral-200">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-5 h-5 text-rose-500" />
+                      <span className="font-semibold">{vendors.length}+ Vendors</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <MapPin className="w-4 h-4" />
-                      <span>50+ Cities</span>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-5 h-5 text-rose-500" />
+                      <span className="font-semibold">50+ Cities</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4" />
-                      <span>4.5+ Avg Rating</span>
+                    <div className="flex items-center gap-2">
+                      <Star className="w-5 h-5 text-yellow-500" />
+                      <span className="font-semibold">4.5+ Avg Rating</span>
                     </div>
                   </div>
                 </TabsContent>
 
-                <TabsContent value="venues" className="space-y-4">
+                {/* Venues Tab */}
+                <TabsContent value="venues" className="space-y-6">
                   <div className="flex flex-col md:flex-row gap-4">
-                    <Select>
-                      <SelectTrigger className="w-full md:w-[200px]">
+                    {/* Venue Type Selection */}
+                    <Select value={selectedVenueType} onValueChange={handleVenueTypeSelect}>
+                      <SelectTrigger className="w-full md:w-[220px] h-12 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
                         <SelectValue placeholder="Venue type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="banquet">Banquet Halls</SelectItem>
-                        <SelectItem value="hotels">Hotels</SelectItem>
-                        <SelectItem value="resorts">Resorts</SelectItem>
-                        <SelectItem value="gardens">Gardens</SelectItem>
-                        <SelectItem value="palaces">Palaces</SelectItem>
-                        <SelectItem value="beach">Beach Venues</SelectItem>
+                        {venueTypes.map((venueType) => (
+                          <SelectItem key={venueType.value} value={venueType.value}>
+                            <div className="flex items-center gap-2">
+                              <span>{venueType.icon}</span>
+                              <span>{venueType.label}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
 
+                    {/* Venue Location Input */}
                     <div className="relative flex-1">
-                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      <Input type="text" placeholder="Enter your city" className="pl-10" />
+                      <Popover open={showVenueLocationDropdown} onOpenChange={setShowVenueLocationDropdown}>
+                        <PopoverTrigger asChild>
+                          <div className="relative">
+                            <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-400 w-5 h-5" />
+                            <Input
+                              type="text"
+                              placeholder="Enter your city"
+                              value={venueLocation}
+                              onChange={(e) => setVenueLocation(e.target.value)}
+                              className="pl-12 h-12 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
+                            />
+                          </div>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search cities..." />
+                            <CommandList>
+                              <CommandEmpty>No cities found.</CommandEmpty>
+                              <CommandGroup>
+                                <div className="p-2">
+                                  <h4 className="text-sm font-medium mb-2">Popular Cities ({popularCities.length})</h4>
+                                  <div className="grid grid-cols-2 gap-1">
+                                    {popularCities.length > 0 ? (
+                                      popularCities.map((city) => (
+                                        <Button
+                                          key={city}
+                                          variant="ghost"
+                                          size="sm"
+                                          className="justify-start text-left hover:bg-rose-50"
+                                          onClick={() => handleVenueLocationSelect(city)}
+                                        >
+                                          {city}
+                                        </Button>
+                                      ))
+                                    ) : (
+                                      <div className="text-sm text-gray-500 p-2">
+                                        Loading cities...
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
 
-                    <Button className="w-full md:w-auto" size="lg">
-                      <Search className="w-4 h-4 mr-2" />
+                    {/* Venue Search Button */}
+                    <Button 
+                      onClick={handleVenueSearch} 
+                      className="w-full md:w-auto h-12 px-8 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl" 
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      ) : (
+                        <Search className="w-5 h-5 mr-2" />
+                      )}
                       Search Venues
                     </Button>
+                  </div>
+
+                  {/* Venue Results Preview */}
+                  {filteredVenues.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold text-gray-700">Popular Venues</h4>
+                      <div className="space-y-2">
+                        {filteredVenues.slice(0, 3).map((venue) => (
+                          <div
+                            key={venue.id}
+                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-rose-50 cursor-pointer transition-colors duration-200"
+                            onClick={() => handleVenueSelect(venue)}
+                          >
+                            <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                              <img
+                                src={venue.images?.[0] || "/placeholder.jpg"}
+                                alt={venue.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h5 className="font-semibold truncate">{venue.name}</h5>
+                                {venue.sponsored && (
+                                  <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-0 text-xs">
+                                    <Award className="w-3 h-3 mr-1" />
+                                    Featured
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 text-sm text-gray-600">
+                                <div className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3 text-rose-500" />
+                                  <span>{venue.city || 'Location not specified'}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Star className="w-3 h-3 text-yellow-500" />
+                                  <span>{venue.rating || 0}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Users className="w-3 h-3 text-blue-500" />
+                                  <span>{venue.capacity || 0} guests</span>
+                                </div>
+                              </div>
+                            </div>
+                            <ArrowRight className="w-4 h-4 text-gray-400" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Venue Stats */}
+                  <div className="flex items-center justify-center gap-8 text-sm text-gray-600 pt-4 border-t border-neutral-200">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-5 h-5 text-rose-500" />
+                      <span className="font-semibold">{venues.length}+ Venues</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Star className="w-5 h-5 text-yellow-500" />
+                      <span className="font-semibold">4.8+ Avg Rating</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Heart className="w-5 h-5 text-rose-500" />
+                      <span className="font-semibold">Premium Locations</span>
+                    </div>
                   </div>
                 </TabsContent>
               </Tabs>
             </CardContent>
           </Card>
 
-          {/* Popular Categories */}
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
+          {/* Enhanced Popular Categories */}
+          {/* <div className="mt-12 flex flex-wrap justify-center gap-4">
             {vendorCategories.slice(0, 6).map((category) => (
               <Button
                 key={category.value}
                 variant="outline"
-                size="sm"
-                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                size="lg"
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30 backdrop-blur-sm transition-all duration-200 font-semibold rounded-xl px-6 py-3"
                 onClick={() => {
-                  setActiveTab("vendors")
-                  handleCategorySelect(category.value)
+                  // Navigate directly to the category page
+                  router.push(`/${category.value}`)
                 }}
               >
-                <span className="mr-2">{category.icon}</span>
+                <span className="mr-2 text-lg">{category.icon}</span>
                 {category.label}
               </Button>
             ))}
-          </div>
+          </div> */}
         </div>
       </div>
     </section>

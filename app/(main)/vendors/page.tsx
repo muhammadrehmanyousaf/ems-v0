@@ -1,14 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Slider } from "@/components/ui/slider"
-import { Search, Filter, MapPin, Star, Users, Calendar } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
+import { Search, Filter, MapPin, Star, Users, Calendar, ChevronLeft, ChevronRight, X, Award, Heart, DollarSign } from "lucide-react"
 import VendorCard from "@/components/VendorCard"
 import { VendorAPI } from "@/lib/api/vendors"
 import { getAllVendorTypes, getVendorTypeDisplayName } from "@/lib/vendor-types"
@@ -98,10 +99,9 @@ export default function VendorsPage() {
     if (filters.vendorType && filters.vendorType !== "all") {
       filtered = filtered.filter(vendor => {
         const typeMatch = vendor.type === filters.vendorType
-        const subTypeMatch = vendor.subBusinessType === filters.vendorType
-        return typeMatch || subTypeMatch
+        return typeMatch
       })
-      console.log('🏷️ After vendor type filter:', filtered.length, 'vendors')
+      console.log('🔍 After vendor type filter:', filtered.length, 'vendors')
     }
 
     // Location filter
@@ -112,7 +112,7 @@ export default function VendorsPage() {
         const cityMatch = vendor.city?.toLowerCase().includes(locationTerm)
         return locationMatch || cityMatch
       })
-      console.log('📍 After location filter:', filtered.length, 'vendors')
+      console.log('🔍 After location filter:', filtered.length, 'vendors')
     }
 
     // Price range filter
@@ -122,7 +122,7 @@ export default function VendorsPage() {
       const maxPrice = filters.priceRange[1]
       return price >= minPrice && price <= maxPrice
     })
-    console.log('💰 After price filter:', filtered.length, 'vendors')
+    console.log('🔍 After price filter:', filtered.length, 'vendors')
 
     // Rating filter
     if (filters.rating > 0) {
@@ -130,7 +130,7 @@ export default function VendorsPage() {
         const rating = Number(vendor.rating || 0)
         return rating >= filters.rating
       })
-      console.log('⭐ After rating filter:', filtered.length, 'vendors')
+      console.log('🔍 After rating filter:', filtered.length, 'vendors')
     }
 
     // Capacity filter
@@ -139,7 +139,7 @@ export default function VendorsPage() {
         const capacity = Number(vendor.capacity || 0)
         return capacity >= filters.capacity
       })
-      console.log('👥 After capacity filter:', filtered.length, 'vendors')
+      console.log('🔍 After capacity filter:', filtered.length, 'vendors')
     }
 
     // Amenities filter
@@ -153,7 +153,7 @@ export default function VendorsPage() {
           )
         })
       })
-      console.log('🏠 After amenities filter:', filtered.length, 'vendors')
+      console.log('🔍 After amenities filter:', filtered.length, 'vendors')
     }
 
     // Sort
@@ -187,7 +187,6 @@ export default function VendorsPage() {
         break
     }
 
-    console.log('📊 Final filtered results:', filtered.length, 'vendors')
     setFilteredVendors(filtered)
     setTotalPages(Math.ceil(filtered.length / 12))
     setCurrentPage(1)
@@ -213,38 +212,42 @@ export default function VendorsPage() {
   const paginatedVendors = filteredVendors.slice((currentPage - 1) * 12, currentPage * 12)
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-rose-50">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">All Wedding Vendors</h1>
-          <p className="text-gray-600">Discover the best wedding vendors for your special day</p>
+        {/* Header Section */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-neutral-900 mb-3">All Wedding Vendors</h1>
+          <p className="text-lg text-neutral-600 max-w-3xl mx-auto">Discover the best wedding vendors for your special day. From photographers to venues, find everything you need.</p>
         </div>
 
         {/* Search and Filters */}
-        <div className="mb-6">
-          <div className="flex flex-col lg:flex-row gap-4 mb-4">
+        <div className="mb-8">
+          <div className="flex flex-col lg:flex-row gap-4 mb-6">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 h-5 w-5" />
                 <Input
                   placeholder="Search vendors, locations..."
                   value={filters.search}
                   onChange={(e) => handleFilterChange("search", e.target.value)}
-                  className="pl-10"
+                  className="pl-12 h-12 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 rounded-lg transition-all duration-200"
                 />
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <Button
                 variant="outline"
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 h-12 border-neutral-200 hover:border-rose-500 hover:text-rose-600 transition-all duration-200"
               >
                 <Filter className="h-4 w-4" />
                 Filters
               </Button>
-              <Button variant="outline" onClick={clearFilters}>
+              <Button 
+                variant="outline" 
+                onClick={clearFilters}
+                className="h-12 border-neutral-200 hover:border-rose-500 hover:text-rose-600 transition-all duration-200"
+              >
                 Clear All
               </Button>
             </div>
@@ -252,41 +255,57 @@ export default function VendorsPage() {
 
           {/* Advanced Filters */}
           {showFilters && (
-            <Card className="mb-4">
+            <Card className="mb-6 shadow-lg border-0 bg-white/95 backdrop-blur-sm">
+              <CardHeader className="pb-4 border-b border-neutral-100 bg-gradient-to-r from-rose-50 to-pink-50">
+                <CardTitle className="text-xl font-bold text-neutral-900 flex items-center gap-2">
+                  <Filter className="w-5 h-5 text-rose-500" />
+                  Advanced Filters
+                </CardTitle>
+              </CardHeader>
               <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {/* Vendor Type */}
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Vendor Type</label>
-                                         <Select value={filters.vendorType} onValueChange={(value) => handleFilterChange("vendorType", value)}>
-                       <SelectTrigger>
-                         <SelectValue placeholder="All types" />
-                       </SelectTrigger>
-                       <SelectContent>
-                         <SelectItem value="all">All types</SelectItem>
-                         {vendorTypes.map((type) => (
-                           <SelectItem key={type} value={type}>
-                             {getVendorTypeDisplayName(type)}
-                           </SelectItem>
-                         ))}
-                       </SelectContent>
-                     </Select>
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
+                      <Award className="w-4 h-4 text-rose-500" />
+                      Vendor Type
+                    </label>
+                    <Select value={filters.vendorType} onValueChange={(value) => handleFilterChange("vendorType", value)}>
+                      <SelectTrigger className="h-11 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 rounded-lg transition-all duration-200">
+                        <SelectValue placeholder="All types" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all" className="hover:bg-rose-50">All types</SelectItem>
+                        {vendorTypes.map((type) => (
+                          <SelectItem key={type} value={type} className="hover:bg-rose-50">
+                            {getVendorTypeDisplayName(type)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Location */}
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Location</label>
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-rose-500" />
+                      Location
+                    </label>
                     <Input
                       placeholder="Enter location"
                       value={filters.location}
                       onChange={(e) => handleFilterChange("location", e.target.value)}
+                      className="h-11 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 rounded-lg transition-all duration-200"
                     />
                   </div>
 
                   {/* Price Range */}
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Price Range</label>
-                    <div className="space-y-2">
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-rose-500" />
+                      Price Range
+                    </label>
+                    <div className="px-2">
                       <Slider
                         value={filters.priceRange}
                         onValueChange={(value) => handleFilterChange("priceRange", value)}
@@ -294,53 +313,64 @@ export default function VendorsPage() {
                         step={10000}
                         className="w-full"
                       />
-                      <div className="flex justify-between text-xs text-gray-500">
-                        <span>PKR {filters.priceRange[0].toLocaleString()}</span>
-                        <span>PKR {filters.priceRange[1].toLocaleString()}</span>
+                      <div className="flex justify-between text-xs text-neutral-500 mt-3">
+                        <span className="font-medium">₹{filters.priceRange[0].toLocaleString()}</span>
+                        <span className="font-medium">₹{filters.priceRange[1].toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
 
-                                     {/* Rating */}
-                   <div>
-                     <label className="text-sm font-medium mb-2 block">Minimum Rating</label>
-                     <Select value={filters.rating.toString()} onValueChange={(value) => handleFilterChange("rating", parseInt(value))}>
-                       <SelectTrigger>
-                         <SelectValue placeholder="Any rating" />
-                       </SelectTrigger>
-                       <SelectContent>
-                         <SelectItem value="0">Any rating</SelectItem>
-                         <SelectItem value="3">3+ stars</SelectItem>
-                         <SelectItem value="4">4+ stars</SelectItem>
-                         <SelectItem value="4.5">4.5+ stars</SelectItem>
-                       </SelectContent>
-                     </Select>
-                   </div>
-
-                   {/* Capacity */}
-                   <div>
-                     <label className="text-sm font-medium mb-2 block">Minimum Capacity</label>
-                     <Select value={filters.capacity.toString()} onValueChange={(value) => handleFilterChange("capacity", parseInt(value))}>
-                       <SelectTrigger>
-                         <SelectValue placeholder="Any capacity" />
-                       </SelectTrigger>
-                       <SelectContent>
-                         <SelectItem value="0">Any capacity</SelectItem>
-                         <SelectItem value="50">50+ guests</SelectItem>
-                         <SelectItem value="100">100+ guests</SelectItem>
-                         <SelectItem value="200">200+ guests</SelectItem>
-                         <SelectItem value="500">500+ guests</SelectItem>
-                       </SelectContent>
-                     </Select>
-                   </div>
+                  {/* Rating */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
+                      <Star className="w-4 h-4 text-rose-500" />
+                      Minimum Rating
+                    </label>
+                    <Select value={filters.rating.toString()} onValueChange={(value) => handleFilterChange("rating", parseInt(value))}>
+                      <SelectTrigger className="h-11 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 rounded-lg transition-all duration-200">
+                        <SelectValue placeholder="Any rating" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0" className="hover:bg-rose-50">Any rating</SelectItem>
+                        <SelectItem value="3" className="hover:bg-rose-50">3+ stars</SelectItem>
+                        <SelectItem value="4" className="hover:bg-rose-50">4+ stars</SelectItem>
+                        <SelectItem value="4.5" className="hover:bg-rose-50">4.5+ stars</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
+                {/* Capacity */}
+                <div className="mt-6">
+                  <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2 mb-3">
+                    <Users className="w-4 h-4 text-rose-500" />
+                    Minimum Capacity
+                  </label>
+                  <Select value={filters.capacity.toString()} onValueChange={(value) => handleFilterChange("capacity", parseInt(value))}>
+                    <SelectTrigger className="w-full md:w-[200px] h-11 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 rounded-lg transition-all duration-200">
+                      <SelectValue placeholder="Any capacity" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0" className="hover:bg-rose-50">Any capacity</SelectItem>
+                      <SelectItem value="50" className="hover:bg-rose-50">50+ guests</SelectItem>
+                      <SelectItem value="100" className="hover:bg-rose-50">100+ guests</SelectItem>
+                      <SelectItem value="200" className="hover:bg-rose-50">200+ guests</SelectItem>
+                      <SelectItem value="500" className="hover:bg-rose-50">500+ guests</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Separator className="my-6 bg-neutral-200" />
+
                 {/* Amenities */}
-                <div className="mt-4">
-                  <label className="text-sm font-medium mb-2 block">Amenities</label>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                <div>
+                  <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2 mb-4">
+                    <Heart className="w-4 h-4 text-rose-500" />
+                    Amenities
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     {amenities.map((amenity) => (
-                      <div key={amenity} className="flex items-center space-x-2">
+                      <div key={amenity} className="flex items-center space-x-3">
                         <Checkbox
                           id={amenity}
                           checked={filters.amenities.includes(amenity)}
@@ -351,8 +381,9 @@ export default function VendorsPage() {
                               handleFilterChange("amenities", filters.amenities.filter(a => a !== amenity))
                             }
                           }}
+                          className="text-rose-600 border-neutral-300 hover:border-rose-500 transition-colors duration-200"
                         />
-                        <label htmlFor={amenity} className="text-sm">{amenity}</label>
+                        <label htmlFor={amenity} className="text-sm text-neutral-600 cursor-pointer hover:text-neutral-800 transition-colors duration-200">{amenity}</label>
                       </div>
                     ))}
                   </div>
@@ -361,66 +392,76 @@ export default function VendorsPage() {
             </Card>
           )}
 
-                     {/* Active Filters Display */}
-           {(filters.search || filters.vendorType || filters.location || filters.rating > 0 || filters.capacity > 0 || filters.amenities.length > 0) && (
-             <div className="mb-4">
-               <div className="flex flex-wrap gap-2 items-center">
-                 <span className="text-sm font-medium text-gray-600">Active filters:</span>
-                 {filters.search && (
-                   <Badge variant="secondary" className="text-xs">
-                     Search: {filters.search}
-                   </Badge>
-                 )}
-                                   {filters.vendorType && filters.vendorType !== "all" && (
-                    <Badge variant="secondary" className="text-xs">
-                      Type: {getVendorTypeDisplayName(filters.vendorType)}
-                    </Badge>
-                  )}
-                 {filters.location && (
-                   <Badge variant="secondary" className="text-xs">
-                     Location: {filters.location}
-                   </Badge>
-                 )}
-                 {filters.rating > 0 && (
-                   <Badge variant="secondary" className="text-xs">
-                     Rating: {filters.rating}+ stars
-                   </Badge>
-                 )}
-                 {filters.capacity > 0 && (
-                   <Badge variant="secondary" className="text-xs">
-                     Capacity: {filters.capacity}+ guests
-                   </Badge>
-                 )}
-                 {filters.amenities.map((amenity) => (
-                   <Badge key={amenity} variant="secondary" className="text-xs">
-                     {amenity}
-                   </Badge>
-                 ))}
-               </div>
-             </div>
-           )}
+          {/* Active Filters Display */}
+          {(filters.search || filters.vendorType !== "all" || filters.location || filters.rating > 0 || filters.capacity > 0 || filters.amenities.length > 0) && (
+            <div className="mb-6">
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-sm font-semibold text-neutral-700">Active filters:</span>
+                {filters.search && (
+                  <Badge variant="secondary" className="bg-rose-100 text-rose-700 border-0">
+                    Search: {filters.search}
+                  </Badge>
+                )}
+                {filters.vendorType && filters.vendorType !== "all" && (
+                  <Badge variant="secondary" className="bg-rose-100 text-rose-700 border-0">
+                    Type: {getVendorTypeDisplayName(filters.vendorType)}
+                  </Badge>
+                )}
+                {filters.location && (
+                  <Badge variant="secondary" className="bg-rose-100 text-rose-700 border-0">
+                    Location: {filters.location}
+                  </Badge>
+                )}
+                {filters.rating > 0 && (
+                  <Badge variant="secondary" className="bg-rose-100 text-rose-700 border-0">
+                    Rating: {filters.rating}+ stars
+                  </Badge>
+                )}
+                {filters.capacity > 0 && (
+                  <Badge variant="secondary" className="bg-rose-100 text-rose-700 border-0">
+                    Capacity: {filters.capacity}+ guests
+                  </Badge>
+                )}
+                {filters.amenities.map((amenity) => (
+                  <Badge key={amenity} variant="secondary" className="bg-rose-100 text-rose-700 border-0">
+                    {amenity}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
 
-           {/* Results and Sort */}
-           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-             <p className="text-gray-600">
-               {isLoading ? "Loading..." : `${filteredVendors.length} OF ${totalVendors} RESULTS`}
-             </p>
-             <div className="flex items-center gap-2">
-               <span className="text-sm text-gray-600">Sort by:</span>
-               <Select value={sortOption} onValueChange={setSortOption}>
-                 <SelectTrigger className="w-[180px]">
-                   <SelectValue />
-                 </SelectTrigger>
-                 <SelectContent>
-                   <SelectItem value="default">Relevance</SelectItem>
-                   <SelectItem value="price-low">Price: Low to High</SelectItem>
-                   <SelectItem value="price-high">Price: High to Low</SelectItem>
-                   <SelectItem value="rating">Rating</SelectItem>
-                   <SelectItem value="alphabetical">Alphabetical</SelectItem>
-                 </SelectContent>
-               </Select>
-             </div>
-           </div>
+          {/* Results and Sort */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 bg-white rounded-xl shadow-sm border border-neutral-100">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-rose-500" />
+                <span className="text-sm font-semibold text-neutral-700">
+                  {isLoading ? "Loading..." : `${filteredVendors.length} of ${totalVendors} results`}
+                </span>
+              </div>
+              {(filters.search || filters.vendorType !== "all" || filters.location || filters.rating > 0 || filters.capacity > 0 || filters.amenities.length > 0) && (
+                <Badge variant="secondary" className="bg-rose-100 text-rose-700 border-0">
+                  Filtered
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-neutral-700">Sort by:</span>
+              <Select value={sortOption} onValueChange={setSortOption}>
+                <SelectTrigger className="w-[180px] h-10 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 rounded-lg transition-all duration-200">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default" className="hover:bg-rose-50">Relevance</SelectItem>
+                  <SelectItem value="price-low" className="hover:bg-rose-50">Price: Low to High</SelectItem>
+                  <SelectItem value="price-high" className="hover:bg-rose-50">Price: High to Low</SelectItem>
+                  <SelectItem value="rating" className="hover:bg-rose-50">Rating</SelectItem>
+                  <SelectItem value="alphabetical" className="hover:bg-rose-50">Alphabetical</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
 
         {/* Vendors Grid */}
@@ -457,7 +498,7 @@ export default function VendorsPage() {
               ))}
             </div>
 
-            {/* Pagination */}
+            {/* Enhanced Pagination */}
             {totalPages > 1 && (
               <div className="flex justify-center mt-8">
                 <div className="flex gap-2">
@@ -465,7 +506,9 @@ export default function VendorsPage() {
                     variant="outline"
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
+                    className="border-neutral-200 hover:border-rose-500 hover:text-rose-600 transition-all duration-200"
                   >
+                    <ChevronLeft className="w-4 h-4 mr-2" />
                     Previous
                   </Button>
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -475,6 +518,7 @@ export default function VendorsPage() {
                         key={page}
                         variant={currentPage === page ? "default" : "outline"}
                         onClick={() => setCurrentPage(page)}
+                        className={`${currentPage === page ? 'bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700' : 'border-neutral-200 hover:border-rose-500 hover:text-rose-600'} transition-all duration-200`}
                       >
                         {page}
                       </Button>
@@ -484,8 +528,10 @@ export default function VendorsPage() {
                     variant="outline"
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
+                    className="border-neutral-200 hover:border-rose-500 hover:text-rose-600 transition-all duration-200"
                   >
                     Next
+                    <ChevronRight className="w-4 h-4 ml-2" />
                   </Button>
                 </div>
               </div>
@@ -493,12 +539,14 @@ export default function VendorsPage() {
           </>
         ) : (
           <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">
-              <Search className="h-16 w-16 mx-auto" />
+            <div className="max-w-md mx-auto">
+              <Search className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-neutral-900 mb-2">No vendors found</h3>
+              <p className="text-neutral-600 mb-6">Try adjusting your filters or search terms</p>
+              <Button onClick={clearFilters} className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700">
+                Clear All Filters
+              </Button>
             </div>
-            <h3 className="text-lg font-semibold mb-2">No vendors found</h3>
-            <p className="text-gray-600 mb-4">Try adjusting your filters or search terms</p>
-            <Button onClick={clearFilters}>Clear All Filters</Button>
           </div>
         )}
       </div>

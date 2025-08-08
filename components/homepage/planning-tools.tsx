@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { CalendarDays, Calculator, Users, Clock, Plus, Trash2, CheckCircle, Circle, Save, Download, Share2 } from "lucide-react"
+import { CalendarDays, Calculator, Users, Clock, Plus, Trash2, CheckCircle, Circle, Save, Download, Share2, Heart, Star, Award, ArrowRight } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -56,8 +56,9 @@ const tools = [
     title: "Wedding Checklist",
     description: "Stay organized with our comprehensive wedding planning checklist",
     icon: CalendarDays,
-    color: "text-blue-600",
-    bgColor: "bg-blue-50",
+    color: "text-rose-600",
+    bgColor: "bg-rose-50",
+    gradient: "from-rose-500 to-pink-600",
   },
   {
     title: "Budget Calculator",
@@ -65,20 +66,23 @@ const tools = [
     icon: Calculator,
     color: "text-green-600",
     bgColor: "bg-green-50",
+    gradient: "from-green-500 to-emerald-600",
   },
   {
     title: "Guest List Manager",
     description: "Organize your guest list and track RSVPs in one place",
     icon: Users,
-    color: "text-purple-600",
-    bgColor: "bg-purple-50",
+    color: "text-blue-600",
+    bgColor: "bg-blue-50",
+    gradient: "from-blue-500 to-indigo-600",
   },
   {
     title: "Timeline Creator",
     description: "Create a detailed timeline for your wedding day",
     icon: Clock,
-    color: "text-orange-600",
-    bgColor: "bg-orange-50",
+    color: "text-purple-600",
+    bgColor: "bg-purple-50",
+    gradient: "from-purple-500 to-violet-600",
   },
 ]
 
@@ -131,59 +135,66 @@ function ChecklistTool() {
   const progress = items.length > 0 ? (completedCount / items.length) * 100 : 0
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Wedding Checklist</h3>
-          <p className="text-sm text-muted-foreground">
+          <h3 className="text-xl font-bold text-neutral-900">Wedding Checklist</h3>
+          <p className="text-sm text-neutral-600">
             {completedCount} of {items.length} tasks completed
           </p>
         </div>
-        <Progress value={progress} className="w-32" />
+        <div className="flex items-center gap-3">
+          <Progress value={progress} className="w-32 h-2" />
+          <Badge className="bg-gradient-to-r from-rose-500 to-pink-600 text-white border-0">
+            {Math.round(progress)}%
+          </Badge>
+        </div>
       </div>
 
-      <div className="space-y-2">
-        <div className="flex gap-2">
+      <div className="space-y-4">
+        <div className="flex gap-3">
           <Input
             placeholder="Add new task..."
             value={newItem}
             onChange={(e) => setNewItem(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && addItem()}
+            className="flex-1 h-12 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
           />
           <select
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value)}
-            className="px-3 py-2 border rounded-md"
+            className="px-4 py-3 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 h-12"
           >
             <option value="">Select category</option>
             {categories.map(cat => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
-          <Button onClick={addItem} size="sm">
-            <Plus className="w-4 h-4" />
+          <Button onClick={addItem} size="sm" className="h-12 px-6 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+            <Plus className="w-4 h-4 mr-2" />
+            Add
           </Button>
         </div>
       </div>
 
-      <div className="space-y-2 max-h-64 overflow-y-auto">
+      <div className="space-y-3 max-h-64 overflow-y-auto">
         {items.map(item => (
-          <div key={item.id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+          <div key={item.id} className="flex items-center gap-4 p-4 bg-white border border-neutral-200 rounded-xl hover:shadow-md transition-all duration-200">
             <button
               onClick={() => toggleItem(item.id)}
-              className="flex-shrink-0"
+              className="flex-shrink-0 hover:scale-110 transition-transform duration-200"
             >
               {item.completed ? (
-                <CheckCircle className="w-5 h-5 text-green-600" />
+                <CheckCircle className="w-6 h-6 text-green-600" />
               ) : (
-                <Circle className="w-5 h-5 text-gray-400" />
+                <Circle className="w-6 h-6 text-neutral-400 hover:text-rose-500" />
               )}
             </button>
             <div className="flex-1">
-              <p className={`${item.completed ? 'line-through text-muted-foreground' : ''}`}>
+              <p className={`font-medium ${item.completed ? 'line-through text-neutral-500' : 'text-neutral-900'}`}>
                 {item.title}
               </p>
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="mt-1 bg-rose-100 text-rose-700 border-0">
                 {item.category}
               </Badge>
             </div>
@@ -191,7 +202,7 @@ function ChecklistTool() {
               variant="ghost"
               size="sm"
               onClick={() => deleteItem(item.id)}
-              className="text-red-500 hover:text-red-700"
+              className="text-red-500 hover:text-red-700 hover:bg-red-50"
             >
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -199,12 +210,12 @@ function ChecklistTool() {
         ))}
       </div>
 
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm">
+      <div className="flex gap-3 pt-4 border-t border-neutral-200">
+        <Button variant="outline" size="sm" className="border-neutral-200 hover:border-rose-500 hover:text-rose-600">
           <Download className="w-4 h-4 mr-2" />
           Export
         </Button>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className="border-neutral-200 hover:border-rose-500 hover:text-rose-600">
           <Share2 className="w-4 h-4 mr-2" />
           Share
         </Button>
@@ -253,56 +264,54 @@ function BudgetCalculator() {
   const overBudget = remaining < 0
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 bg-green-50 rounded-lg">
-          <h4 className="font-semibold text-green-800">Total Budget</h4>
-          <p className="text-2xl font-bold text-green-600">${totalBudget.toLocaleString()}</p>
+        <div className="p-6 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl text-white shadow-lg">
+          <h4 className="font-semibold text-green-100">Total Budget</h4>
+          <p className="text-3xl font-bold">₹{totalBudget.toLocaleString()}</p>
         </div>
-        <div className="p-4 bg-blue-50 rounded-lg">
-          <h4 className="font-semibold text-blue-800">Estimated</h4>
-          <p className="text-2xl font-bold text-blue-600">${totalEstimated.toLocaleString()}</p>
+        <div className="p-6 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl text-white shadow-lg">
+          <h4 className="font-semibold text-blue-100">Estimated</h4>
+          <p className="text-3xl font-bold">₹{totalEstimated.toLocaleString()}</p>
         </div>
-        <div className={`p-4 rounded-lg ${overBudget ? 'bg-red-50' : 'bg-orange-50'}`}>
-          <h4 className={`font-semibold ${overBudget ? 'text-red-800' : 'text-orange-800'}`}>Remaining</h4>
-          <p className={`text-2xl font-bold ${overBudget ? 'text-red-600' : 'text-orange-600'}`}>
-            ${remaining.toLocaleString()}
-          </p>
+        <div className={`p-6 rounded-xl text-white shadow-lg ${overBudget ? 'bg-gradient-to-br from-red-500 to-pink-600' : 'bg-gradient-to-br from-orange-500 to-amber-600'}`}>
+          <h4 className="font-semibold">Remaining</h4>
+          <p className="text-3xl font-bold">₹{remaining.toLocaleString()}</p>
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <Label htmlFor="total-budget">Total Budget</Label>
+          <Label htmlFor="total-budget" className="text-lg font-semibold">Total Budget</Label>
           <Input
             id="total-budget"
             type="number"
             value={totalBudget}
             onChange={(e) => setTotalBudget(Number(e.target.value))}
-            className="w-32"
+            className="w-40 h-12 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
           />
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h4 className="font-semibold">Budget Items</h4>
-          <Button onClick={addBudgetItem} size="sm">
+          <h4 className="text-lg font-semibold">Budget Items</h4>
+          <Button onClick={addBudgetItem} size="sm" className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
             <Plus className="w-4 h-4 mr-2" />
             Add Item
           </Button>
         </div>
 
-        <div className="space-y-2 max-h-64 overflow-y-auto">
+        <div className="space-y-4 max-h-64 overflow-y-auto">
           {items.map(item => (
-            <div key={item.id} className="p-3 border rounded-lg space-y-2">
-              <div className="grid grid-cols-2 gap-2">
+            <div key={item.id} className="p-4 border border-neutral-200 rounded-xl space-y-4 bg-white hover:shadow-md transition-all duration-200">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-xs">Category</Label>
+                  <Label className="text-sm font-medium text-neutral-700">Category</Label>
                   <select
                     value={item.category}
                     onChange={(e) => updateItem(item.id, 'category', e.target.value)}
-                    className="w-full px-2 py-1 text-sm border rounded"
+                    className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 mt-1"
                   >
                     {categories.map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
@@ -310,32 +319,32 @@ function BudgetCalculator() {
                   </select>
                 </div>
                 <div>
-                  <Label className="text-xs">Item</Label>
+                  <Label className="text-sm font-medium text-neutral-700">Item</Label>
                   <Input
                     value={item.item}
                     onChange={(e) => updateItem(item.id, 'item', e.target.value)}
                     placeholder="Item name"
-                    className="text-sm"
+                    className="text-sm mt-1 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label className="text-xs">Estimated</Label>
+                  <Label className="text-sm font-medium text-neutral-700">Estimated</Label>
                   <Input
                     type="number"
                     value={item.estimated}
                     onChange={(e) => updateItem(item.id, 'estimated', Number(e.target.value))}
-                    className="text-sm"
+                    className="text-sm mt-1 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Actual</Label>
+                  <Label className="text-sm font-medium text-neutral-700">Actual</Label>
                   <Input
                     type="number"
                     value={item.actual}
                     onChange={(e) => updateItem(item.id, 'actual', Number(e.target.value))}
-                    className="text-sm"
+                    className="text-sm mt-1 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
                   />
                 </div>
                 <div className="flex items-end">
@@ -343,19 +352,19 @@ function BudgetCalculator() {
                     variant="ghost"
                     size="sm"
                     onClick={() => deleteItem(item.id)}
-                    className="text-red-500 hover:text-red-700"
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
               <div>
-                <Label className="text-xs">Notes</Label>
+                <Label className="text-sm font-medium text-neutral-700">Notes</Label>
                 <Textarea
                   value={item.notes}
                   onChange={(e) => updateItem(item.id, 'notes', e.target.value)}
                   placeholder="Add notes..."
-                  className="text-sm"
+                  className="text-sm mt-1 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
                   rows={2}
                 />
               </div>
@@ -364,12 +373,12 @@ function BudgetCalculator() {
         </div>
       </div>
 
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm">
+      <div className="flex gap-3 pt-4 border-t border-neutral-200">
+        <Button variant="outline" size="sm" className="border-neutral-200 hover:border-rose-500 hover:text-rose-600">
           <Download className="w-4 h-4 mr-2" />
           Export Report
         </Button>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className="border-neutral-200 hover:border-rose-500 hover:text-rose-600">
           <Share2 className="w-4 h-4 mr-2" />
           Share Budget
         </Button>
@@ -423,47 +432,51 @@ function GuestListManager() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="grid grid-cols-3 gap-4">
-        <div className="p-3 bg-green-50 rounded-lg text-center">
-          <p className="text-2xl font-bold text-green-600">{rsvpStats.confirmed}</p>
-          <p className="text-sm text-green-800">Confirmed</p>
+        <div className="p-4 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl text-white text-center shadow-lg">
+          <p className="text-3xl font-bold">{rsvpStats.confirmed}</p>
+          <p className="text-sm text-green-100">Confirmed</p>
         </div>
-        <div className="p-3 bg-yellow-50 rounded-lg text-center">
-          <p className="text-2xl font-bold text-yellow-600">{rsvpStats.pending}</p>
-          <p className="text-sm text-yellow-800">Pending</p>
+        <div className="p-4 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-xl text-white text-center shadow-lg">
+          <p className="text-3xl font-bold">{rsvpStats.pending}</p>
+          <p className="text-sm text-yellow-100">Pending</p>
         </div>
-        <div className="p-3 bg-red-50 rounded-lg text-center">
-          <p className="text-2xl font-bold text-red-600">{rsvpStats.declined}</p>
-          <p className="text-sm text-red-800">Declined</p>
+        <div className="p-4 bg-gradient-to-br from-red-500 to-pink-600 rounded-xl text-white text-center shadow-lg">
+          <p className="text-3xl font-bold">{rsvpStats.declined}</p>
+          <p className="text-sm text-red-100">Declined</p>
         </div>
       </div>
 
-      <div className="space-y-2">
-        <h4 className="font-semibold">Add New Guest</h4>
-        <div className="grid grid-cols-2 gap-2">
+      <div className="space-y-4">
+        <h4 className="text-lg font-semibold">Add New Guest</h4>
+        <div className="grid grid-cols-2 gap-4">
           <Input
             placeholder="Full name"
             value={newGuest.name || ''}
             onChange={(e) => setNewGuest({...newGuest, name: e.target.value})}
+            className="h-12 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
           />
           <Input
             placeholder="Email"
             type="email"
             value={newGuest.email || ''}
             onChange={(e) => setNewGuest({...newGuest, email: e.target.value})}
+            className="h-12 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
           />
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-4">
           <Input
             placeholder="Phone"
             value={newGuest.phone || ''}
             onChange={(e) => setNewGuest({...newGuest, phone: e.target.value})}
+            className="h-12 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
           />
           <Input
             placeholder="Dietary restrictions"
             value={newGuest.dietaryRestrictions || ''}
             onChange={(e) => setNewGuest({...newGuest, dietaryRestrictions: e.target.value})}
+            className="h-12 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
           />
         </div>
         <div className="flex items-center gap-4">
@@ -472,29 +485,30 @@ function GuestListManager() {
               type="checkbox"
               checked={newGuest.plusOne || false}
               onChange={(e) => setNewGuest({...newGuest, plusOne: e.target.checked})}
+              className="w-4 h-4 text-rose-600 border-neutral-300 rounded focus:ring-rose-500"
             />
             Plus One
           </label>
-          <Button onClick={addGuest} size="sm">
+          <Button onClick={addGuest} size="sm" className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
             <Plus className="w-4 h-4 mr-2" />
             Add Guest
           </Button>
         </div>
       </div>
 
-      <div className="space-y-2 max-h-64 overflow-y-auto">
+      <div className="space-y-3 max-h-64 overflow-y-auto">
         {guests.map(guest => (
-          <div key={guest.id} className="p-3 border rounded-lg space-y-2">
+          <div key={guest.id} className="p-4 border border-neutral-200 rounded-xl space-y-3 bg-white hover:shadow-md transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">{guest.name}</p>
-                <p className="text-sm text-muted-foreground">{guest.email}</p>
+                <p className="font-semibold text-neutral-900">{guest.name}</p>
+                <p className="text-sm text-neutral-600">{guest.email}</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <select
                   value={guest.rsvp}
                   onChange={(e) => updateGuest(guest.id, 'rsvp', e.target.value)}
-                  className="px-2 py-1 text-sm border rounded"
+                  className="px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
                 >
                   <option value="pending">Pending</option>
                   <option value="confirmed">Confirmed</option>
@@ -504,33 +518,33 @@ function GuestListManager() {
                   variant="ghost"
                   size="sm"
                   onClick={() => deleteGuest(guest.id)}
-                  className="text-red-500 hover:text-red-700"
+                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="font-medium">Phone:</span> {guest.phone}
+                <span className="font-medium text-neutral-700">Phone:</span> {guest.phone}
               </div>
               <div>
-                <span className="font-medium">Plus One:</span> {guest.plusOne ? 'Yes' : 'No'}
+                <span className="font-medium text-neutral-700">Plus One:</span> {guest.plusOne ? 'Yes' : 'No'}
               </div>
             </div>
             <div>
-              <span className="font-medium text-sm">Dietary:</span> {guest.dietaryRestrictions}
+              <span className="font-medium text-sm text-neutral-700">Dietary:</span> {guest.dietaryRestrictions}
             </div>
           </div>
         ))}
       </div>
 
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm">
+      <div className="flex gap-3 pt-4 border-t border-neutral-200">
+        <Button variant="outline" size="sm" className="border-neutral-200 hover:border-rose-500 hover:text-rose-600">
           <Download className="w-4 h-4 mr-2" />
           Export List
         </Button>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className="border-neutral-200 hover:border-rose-500 hover:text-rose-600">
           <Share2 className="w-4 h-4 mr-2" />
           Share List
         </Button>
@@ -574,67 +588,71 @@ function TimelineCreator() {
   const sortedTimeline = [...timeline].sort((a, b) => a.time.localeCompare(b.time))
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <h4 className="font-semibold">Add New Event</h4>
-        <div className="grid grid-cols-2 gap-2">
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <h4 className="text-lg font-semibold">Add New Event</h4>
+        <div className="grid grid-cols-2 gap-4">
           <Input
             type="time"
             value={newEvent.time || ''}
             onChange={(e) => setNewEvent({...newEvent, time: e.target.value})}
+            className="h-12 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
           />
           <Input
             placeholder="Event name"
             value={newEvent.event || ''}
             onChange={(e) => setNewEvent({...newEvent, event: e.target.value})}
+            className="h-12 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
           />
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-4">
           <Input
             placeholder="Duration"
             value={newEvent.duration || ''}
             onChange={(e) => setNewEvent({...newEvent, duration: e.target.value})}
+            className="h-12 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
           />
           <Input
             placeholder="Responsible person"
             value={newEvent.responsible || ''}
             onChange={(e) => setNewEvent({...newEvent, responsible: e.target.value})}
+            className="h-12 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-4">
           <Textarea
             placeholder="Notes"
             value={newEvent.notes || ''}
             onChange={(e) => setNewEvent({...newEvent, notes: e.target.value})}
-            className="flex-1"
+            className="flex-1 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
             rows={2}
           />
-          <Button onClick={addEvent} size="sm">
+          <Button onClick={addEvent} size="sm" className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 h-12 px-6">
             <Plus className="w-4 h-4 mr-2" />
             Add Event
           </Button>
         </div>
       </div>
 
-      <div className="space-y-2 max-h-64 overflow-y-auto">
+      <div className="space-y-3 max-h-64 overflow-y-auto">
         {sortedTimeline.map((event, index) => (
-          <div key={event.id} className="flex gap-4 p-3 border rounded-lg">
-            <div className="flex-shrink-0 w-16 text-center">
-              <div className="text-lg font-bold">{event.time}</div>
-              <div className="text-xs text-muted-foreground">{event.duration}</div>
+          <div key={event.id} className="flex gap-4 p-4 border border-neutral-200 rounded-xl bg-white hover:shadow-md transition-all duration-200">
+            <div className="flex-shrink-0 w-20 text-center">
+              <div className="text-xl font-bold text-rose-600">{event.time}</div>
+              <div className="text-xs text-neutral-500">{event.duration}</div>
             </div>
             <div className="flex-1">
-              <h5 className="font-semibold">{event.event}</h5>
-              <p className="text-sm text-muted-foreground">Responsible: {event.responsible}</p>
+              <h5 className="font-semibold text-neutral-900">{event.event}</h5>
+              <p className="text-sm text-neutral-600">Responsible: {event.responsible}</p>
               {event.notes && (
-                <p className="text-sm text-muted-foreground mt-1">{event.notes}</p>
+                <p className="text-sm text-neutral-500 mt-1">{event.notes}</p>
               )}
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => deleteEvent(event.id)}
-              className="text-red-500 hover:text-red-700"
+              className="text-red-500 hover:text-red-700 hover:bg-red-50"
             >
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -642,12 +660,12 @@ function TimelineCreator() {
         ))}
       </div>
 
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm">
+      <div className="flex gap-3 pt-4 border-t border-neutral-200">
+        <Button variant="outline" size="sm" className="border-neutral-200 hover:border-rose-500 hover:text-rose-600">
           <Download className="w-4 h-4 mr-2" />
           Export Timeline
         </Button>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className="border-neutral-200 hover:border-rose-500 hover:text-rose-600">
           <Share2 className="w-4 h-4 mr-2" />
           Share Timeline
         </Button>
@@ -675,33 +693,50 @@ export function PlanningTools() {
   }
 
   return (
-    <section className="py-16">
+    <section className="py-16 bg-gradient-to-br from-rose-50 via-white to-pink-50">
       <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-bold text-center mb-12">Essential Planning Tools</h2>
+        <div className="text-center mb-12">
+          <h2 className="text-4xl font-bold text-neutral-900 mb-4">Essential Planning Tools</h2>
+          <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
+            Everything you need to plan your perfect wedding. From checklists to budgets, 
+            we've got all the tools to make your planning journey smooth and stress-free.
+          </p>
+        </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {tools.map((tool) => (
             <Dialog key={tool.title}>
               <DialogTrigger asChild>
-                <Card className="cursor-pointer hover:shadow-lg transition-shadow duration-200 hover:scale-105">
-                  <CardHeader className="text-center">
-                    <div className={`w-12 h-12 ${tool.bgColor} rounded-lg flex items-center justify-center mx-auto mb-4`}>
-                      <tool.icon className={`w-6 h-6 ${tool.color}`} />
+                <Card className="cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105 group border-0 shadow-lg bg-white flex flex-col h-full">
+                  <CardHeader className="text-center p-6 flex-1">
+                    <div className={`w-16 h-16 ${tool.bgColor} rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+                      <tool.icon className={`w-8 h-8 ${tool.color}`} />
                     </div>
-                    <CardTitle className="text-lg">{tool.title}</CardTitle>
-                <CardDescription>{tool.description}</CardDescription>
-              </CardHeader>
-            </Card>
+                    <CardTitle className="text-xl font-bold text-neutral-900">{tool.title}</CardTitle>
+                    <CardDescription className="text-neutral-600">{tool.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-6 pt-0 mt-auto">
+                    <div className="flex items-center justify-center">
+                      <Button 
+                        variant="outline" 
+                        className="border-neutral-200 hover:border-rose-500 hover:text-rose-600 group-hover:bg-gradient-to-r group-hover:from-rose-500 group-hover:to-pink-600 group-hover:text-white group-hover:border-0 transition-all duration-300 w-full"
+                      >
+                        Open Tool
+                        <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               </DialogTrigger>
               <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <div className={`w-8 h-8 ${tool.bgColor} rounded-lg flex items-center justify-center`}>
-                      <tool.icon className={`w-5 h-5 ${tool.color}`} />
+                  <DialogTitle className="flex items-center gap-3 text-2xl">
+                    <div className={`w-10 h-10 ${tool.bgColor} rounded-xl flex items-center justify-center shadow-lg`}>
+                      <tool.icon className={`w-6 h-6 ${tool.color}`} />
                     </div>
                     {tool.title}
                   </DialogTitle>
-                  <DialogDescription>
+                  <DialogDescription className="text-lg text-neutral-600">
                     {tool.description}
                   </DialogDescription>
                 </DialogHeader>

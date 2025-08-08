@@ -1,4 +1,6 @@
-import { Camera, Home, Palette, Utensils, Car, Music, Cake, Heart, Scissors, FileText } from "lucide-react"
+"use client"
+
+import { Camera, Home, Palette, Utensils, Car, Music, Cake, Heart, Scissors, FileText, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -70,33 +72,47 @@ const categories = [
 
 export function FeaturedCategories() {
   return (
-    <section className="py-8 lg:py-12 bg-gray-50">
+    <section className="py-12 bg-gradient-to-br from-neutral-50 via-white to-rose-50">
       <div className="container mx-auto px-4">
-        <h2 className="text-2xl lg:text-3xl font-bold text-center mb-8 lg:mb-12">Find Every Wedding Vendor You Need</h2>
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-neutral-900 mb-3">Find Every Wedding Vendor You Need</h2>
+          <p className="text-neutral-600 max-w-2xl mx-auto">
+            Discover the perfect vendors for your special day
+          </p>
+        </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-9 gap-4 lg:gap-6">
+        <div className="flex flex-wrap justify-center gap-4">
           {categories.map((category) => (
             <Link
               key={category.name}
               href={category.href}
-              className="group flex flex-col items-center p-3 lg:p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 hover:scale-105"
+              className="group flex flex-col items-center p-3 bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 border border-neutral-100 min-w-[120px]"
             >
-              <div className="relative w-full aspect-square mb-3 lg:mb-4 overflow-hidden rounded-lg">
+              <div className="relative w-16 h-16 mb-2 overflow-hidden rounded-lg">
                 <Image
                   src={category.image || "/placeholder.svg"}
                   alt={category.name}
-                  layout="fill"
-                  objectFit="cover"
-                  className="group-hover:scale-110 transition-transform duration-300"
+                  fill
+                  className="object-cover group-hover:scale-110 transition-transform duration-300"
                 />
-                <div className="absolute inset-0 bg-black bg-opacity-40 group-hover:bg-opacity-30 transition-opacity duration-300" />
-                <category.icon className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 lg:w-12 lg:h-12 text-white" />
+                <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-opacity duration-300" />
+                <category.icon className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-white" />
               </div>
-              <span className="text-xs lg:text-sm font-medium group-hover:text-primary transition-colors duration-300 text-center">
+              <span className="text-xs font-medium text-neutral-700 group-hover:text-rose-600 transition-colors duration-200 text-center">
                 {category.name}
               </span>
             </Link>
           ))}
+        </div>
+
+        <div className="text-center mt-6">
+          <Link 
+            href="/vendors"
+            className="inline-flex items-center gap-2 text-rose-600 hover:text-rose-700 font-semibold transition-colors duration-200"
+          >
+            View All Categories
+            <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
       </div>
     </section>

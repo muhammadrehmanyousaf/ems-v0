@@ -14,7 +14,7 @@ import {
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu"
 import { Input } from "@/components/ui/input"
-import { Menu, Search, Heart, Camera, Soup, Brush, Building, Paintbrush, Car, PenTool, Signature } from "lucide-react"
+import { Menu, Search, Heart, Camera, Soup, Brush, Building, Paintbrush, Car, PenTool, Signature, MapPin, Star, Users, Calendar, Award } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -75,7 +75,7 @@ export function Header() {
   }
 
   return (
-    <header className="border-b sticky top-0 bg-white z-50">
+    <header className="border-b border-neutral-200 sticky top-0 bg-white/95 backdrop-blur-md shadow-lg z-50">
       <div className="container mx-auto px-4 xl:px-[5%]">
 
         {/* Main Header */}
@@ -83,21 +83,21 @@ export function Header() {
           <div className="flex items-center">
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden">
+                <Button variant="ghost" size="icon" className="md:hidden hover:bg-rose-50 hover:text-rose-600 transition-colors duration-200">
                   <Menu className="h-6 w-6" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[300px] sm:w-[400px]">
-                <nav className="flex flex-col gap-4">
+              <SheetContent side="left" className="w-[300px] sm:w-[400px] bg-white border-r border-neutral-200">
+                <nav className="flex flex-col gap-6 mt-8">
                   {categories.map((category) => (
-                    <div key={category.title} className="space-y-3">
-                      <h2 className="font-semibold">{category.title}</h2>
-                      <div className="flex flex-col space-y-2">
+                    <div key={category.title} className="space-y-4">
+                      <h2 className="font-semibold text-lg text-neutral-900 border-b border-neutral-100 pb-2">{category.title}</h2>
+                      <div className="flex flex-col space-y-3">
                         {category.items.map((item) => (
                           <Link
                             key={item}
                             href={`/${category.title.toLowerCase().replace(" ", "-")}/${item.toLowerCase().replace(" ", "-")}`}
-                            className="text-sm hover:text-primary"
+                            className="text-sm text-neutral-600 hover:text-rose-600 hover:bg-rose-50 px-3 py-2 rounded-lg transition-all duration-200 font-medium"
                             onClick={() => setIsOpen(false)}
                           >
                             {item}
@@ -106,31 +106,51 @@ export function Header() {
                       </div>
                     </div>
                   ))}
-                  <Link href="/events" className="text-sm hover:text-primary" onClick={() => setIsOpen(false)}>
+                  <Link 
+                    href="/events" 
+                    className="text-sm text-neutral-600 hover:text-rose-600 hover:bg-rose-50 px-3 py-2 rounded-lg transition-all duration-200 font-medium" 
+                    onClick={() => setIsOpen(false)}
+                  >
                     Events
                   </Link>
                 </nav>
               </SheetContent>
             </Sheet>
 
-            <Link href="/" className="flex items-center">
-              <span className="text-base md:text-2xl font-bold text-primary ml-2 md:ml-0">WeddingPlatform</span>
+            <Link href="/" className="flex items-center group">
+              <div className="w-10 h-10 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl flex items-center justify-center mr-3 shadow-lg group-hover:shadow-xl transition-all duration-300">
+                <Heart className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-xl md:text-2xl font-bold bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent group-hover:from-rose-700 group-hover:to-pink-700 transition-all duration-300">
+                WeddingPlatform
+              </span>
             </Link>
           </div>
 
           <NavigationMenu className="hidden md:flex">
-            <NavigationMenuList>
+            <NavigationMenuList className="space-x-2">
               <NavigationMenuItem>
-                <NavigationMenuTrigger>Planning Tools</NavigationMenuTrigger>
-                <NavigationMenuContent>
-                  <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2">
+                <NavigationMenuTrigger className="text-neutral-700 hover:text-rose-600 hover:bg-rose-50 data-[state=open]:text-rose-600 data-[state=open]:bg-rose-50 transition-all duration-200 font-medium">
+                  <Calendar className="w-4 h-4 mr-2" />
+                  Planning Tools
+                </NavigationMenuTrigger>
+                <NavigationMenuContent className="bg-white border border-neutral-200 shadow-xl rounded-xl">
+                  <ul className="grid w-[400px] gap-3 p-6 md:w-[500px] md:grid-cols-2">
                     <li>
                       <NavigationMenuLink asChild>
                         <Link
                           href="/planning-tools/checklist"
-                          className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          className="block select-none space-y-1 rounded-lg p-4 leading-none no-underline outline-none transition-all duration-200 hover:bg-rose-50 hover:text-rose-600 focus:bg-rose-50 focus:text-rose-600 border border-transparent hover:border-rose-200"
                         >
-                          Checklist
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-rose-100 rounded-lg flex items-center justify-center">
+                              <Calendar className="w-4 h-4 text-rose-600" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-neutral-900">Checklist</div>
+                              <div className="text-sm text-neutral-500">Stay organized</div>
+                            </div>
+                          </div>
                         </Link>
                       </NavigationMenuLink>
                     </li>
@@ -138,9 +158,17 @@ export function Header() {
                       <NavigationMenuLink asChild>
                         <Link
                           href="/planning-tools/budget"
-                          className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          className="block select-none space-y-1 rounded-lg p-4 leading-none no-underline outline-none transition-all duration-200 hover:bg-rose-50 hover:text-rose-600 focus:bg-rose-50 focus:text-rose-600 border border-transparent hover:border-rose-200"
                         >
-                          Budget
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                              <div className="w-4 h-4 text-green-600 font-bold">₹</div>
+                            </div>
+                            <div>
+                              <div className="font-semibold text-neutral-900">Budget</div>
+                              <div className="text-sm text-neutral-500">Track expenses</div>
+                            </div>
+                          </div>
                         </Link>
                       </NavigationMenuLink>
                     </li>
@@ -148,9 +176,17 @@ export function Header() {
                       <NavigationMenuLink asChild>
                         <Link
                           href="/planning-tools/guest-list"
-                          className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          className="block select-none space-y-1 rounded-lg p-4 leading-none no-underline outline-none transition-all duration-200 hover:bg-rose-50 hover:text-rose-600 focus:bg-rose-50 focus:text-rose-600 border border-transparent hover:border-rose-200"
                         >
-                          Guest List
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <Users className="w-4 h-4 text-blue-600" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-neutral-900">Guest List</div>
+                              <div className="text-sm text-neutral-500">Manage invites</div>
+                            </div>
+                          </div>
                         </Link>
                       </NavigationMenuLink>
                     </li>
@@ -158,9 +194,17 @@ export function Header() {
                       <NavigationMenuLink asChild>
                         <Link
                           href="/planning-tools/timeline"
-                          className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          className="block select-none space-y-1 rounded-lg p-4 leading-none no-underline outline-none transition-all duration-200 hover:bg-rose-50 hover:text-rose-600 focus:bg-rose-50 focus:text-rose-600 border border-transparent hover:border-rose-200"
                         >
-                          Timeline
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                              <Calendar className="w-4 h-4 text-purple-600" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-neutral-900">Timeline</div>
+                              <div className="text-sm text-neutral-500">Plan your day</div>
+                            </div>
+                          </div>
                         </Link>
                       </NavigationMenuLink>
                     </li>
@@ -171,8 +215,9 @@ export function Header() {
                 <NavigationMenuLink asChild>
                   <Link
                     href="/venues"
-                    className="group inline-flex h-9 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50"
+                    className="group inline-flex h-10 w-max items-center justify-center rounded-lg bg-white px-4 py-2 text-sm font-medium transition-all duration-200 hover:bg-rose-50 hover:text-rose-600 focus:bg-rose-50 focus:text-rose-600 focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-rose-50 data-[state=open]:bg-rose-50 border border-transparent hover:border-rose-200"
                   >
+                    <Building className="w-4 h-4 mr-2" />
                     Venues
                   </Link>
                 </NavigationMenuLink>
@@ -181,24 +226,35 @@ export function Header() {
                 <NavigationMenuLink asChild>
                   <Link
                     href="/vendors"
-                    className="group inline-flex h-9 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50"
+                    className="group inline-flex h-10 w-max items-center justify-center rounded-lg bg-white px-4 py-2 text-sm font-medium transition-all duration-200 hover:bg-rose-50 hover:text-rose-600 focus:bg-rose-50 focus:text-rose-600 focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-rose-50 data-[state=open]:bg-rose-50 border border-transparent hover:border-rose-200"
                   >
+                    <Star className="w-4 h-4 mr-2" />
                     Vendors
                   </Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
               <NavigationMenuItem>
-                <NavigationMenuTrigger>Vendor List</NavigationMenuTrigger>
-                <NavigationMenuContent>
-                  <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2">
+                <NavigationMenuTrigger className="text-neutral-700 hover:text-rose-600 hover:bg-rose-50 data-[state=open]:text-rose-600 data-[state=open]:bg-rose-50 transition-all duration-200 font-medium">
+                  <Camera className="w-4 h-4 mr-2" />
+                  Vendor List
+                </NavigationMenuTrigger>
+                <NavigationMenuContent className="bg-white border border-neutral-200 shadow-xl rounded-xl">
+                  <ul className="grid w-[400px] gap-3 p-6 md:w-[500px] md:grid-cols-2">
                     <li>
                       <NavigationMenuLink asChild>
                         <Link
                           href={`/vendors/photographers`}
-                          className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          className="block select-none space-y-1 rounded-lg p-4 leading-none no-underline outline-none transition-all duration-200 hover:bg-rose-50 hover:text-rose-600 focus:bg-rose-50 focus:text-rose-600 border border-transparent hover:border-rose-200"
                         >
-                          <Camera className="inline-block mr-2" />
-                          Photographers
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <Camera className="w-4 h-4 text-blue-600" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-neutral-900">Photographers</div>
+                              <div className="text-sm text-neutral-500">Capture memories</div>
+                            </div>
+                          </div>
                         </Link>
                       </NavigationMenuLink>
                     </li>
@@ -206,10 +262,17 @@ export function Header() {
                       <NavigationMenuLink asChild>
                         <Link
                           href="/vendors/catering"
-                          className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          className="block select-none space-y-1 rounded-lg p-4 leading-none no-underline outline-none transition-all duration-200 hover:bg-rose-50 hover:text-rose-600 focus:bg-rose-50 focus:text-rose-600 border border-transparent hover:border-rose-200"
                         >
-                          <Soup className="inline-block mr-2" />
-                          Caterer
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                              <Soup className="w-4 h-4 text-orange-600" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-neutral-900">Caterer</div>
+                              <div className="text-sm text-neutral-500">Delicious food</div>
+                            </div>
+                          </div>
                         </Link>
                       </NavigationMenuLink>
                     </li>
@@ -217,10 +280,17 @@ export function Header() {
                       <NavigationMenuLink asChild>
                         <Link
                           href="/vendors/makeup-artists"
-                          className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          className="block select-none space-y-1 rounded-lg p-4 leading-none no-underline outline-none transition-all duration-200 hover:bg-rose-50 hover:text-rose-600 focus:bg-rose-50 focus:text-rose-600 border border-transparent hover:border-rose-200"
                         >
-                          <Brush className="inline-block mr-2" />
-                          Makeup Artists
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center">
+                              <Brush className="w-4 h-4 text-pink-600" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-neutral-900">Makeup Artists</div>
+                              <div className="text-sm text-neutral-500">Look stunning</div>
+                            </div>
+                          </div>
                         </Link>
                       </NavigationMenuLink>
                     </li>
@@ -228,10 +298,17 @@ export function Header() {
                       <NavigationMenuLink asChild>
                         <Link
                           href="/vendors/venues"
-                          className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          className="block select-none space-y-1 rounded-lg p-4 leading-none no-underline outline-none transition-all duration-200 hover:bg-rose-50 hover:text-rose-600 focus:bg-rose-50 focus:text-rose-600 border border-transparent hover:border-rose-200"
                         >
-                          <Building className="inline-block mr-2" />
-                          Wedding Venues
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                              <Building className="w-4 h-4 text-green-600" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-neutral-900">Wedding Venues</div>
+                              <div className="text-sm text-neutral-500">Perfect locations</div>
+                            </div>
+                          </div>
                         </Link>
                       </NavigationMenuLink>
                     </li>
@@ -239,10 +316,17 @@ export function Header() {
                       <NavigationMenuLink asChild>
                         <Link
                           href="/vendors/henna-artists"
-                          className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          className="block select-none space-y-1 rounded-lg p-4 leading-none no-underline outline-none transition-all duration-200 hover:bg-rose-50 hover:text-rose-600 focus:bg-rose-50 focus:text-rose-600 border border-transparent hover:border-rose-200"
                         >
-                          <Paintbrush className="inline-block mr-2" />
-                          Henna Artists
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                              <Paintbrush className="w-4 h-4 text-amber-600" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-neutral-900">Henna Artists</div>
+                              <div className="text-sm text-neutral-500">Beautiful designs</div>
+                            </div>
+                          </div>
                         </Link>
                       </NavigationMenuLink>
                     </li>
@@ -250,10 +334,17 @@ export function Header() {
                       <NavigationMenuLink asChild>
                         <Link
                           href="/vendors/decor"
-                          className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          className="block select-none space-y-1 rounded-lg p-4 leading-none no-underline outline-none transition-all duration-200 hover:bg-rose-50 hover:text-rose-600 focus:bg-rose-50 focus:text-rose-600 border border-transparent hover:border-rose-200"
                         >
-                          <Paintbrush className="inline-block mr-2" />
-                          Decorators
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                              <Paintbrush className="w-4 h-4 text-purple-600" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-neutral-900">Decorators</div>
+                              <div className="text-sm text-neutral-500">Transform venues</div>
+                            </div>
+                          </div>
                         </Link>
                       </NavigationMenuLink>
                     </li>
@@ -261,10 +352,17 @@ export function Header() {
                       <NavigationMenuLink asChild>
                         <Link
                           href="/vendors/car-rental"
-                          className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          className="block select-none space-y-1 rounded-lg p-4 leading-none no-underline outline-none transition-all duration-200 hover:bg-rose-50 hover:text-rose-600 focus:bg-rose-50 focus:text-rose-600 border border-transparent hover:border-rose-200"
                         >
-                          <Car className="inline-block mr-2" />
-                          Car Rental
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                              <Car className="w-4 h-4 text-gray-600" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-neutral-900">Car Rental</div>
+                              <div className="text-sm text-neutral-500">Elegant transport</div>
+                            </div>
+                          </div>
                         </Link>
                       </NavigationMenuLink>
                     </li>
@@ -272,10 +370,17 @@ export function Header() {
                       <NavigationMenuLink asChild>
                         <Link
                           href="/vendors/wedding-stationery"
-                          className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          className="block select-none space-y-1 rounded-lg p-4 leading-none no-underline outline-none transition-all duration-200 hover:bg-rose-50 hover:text-rose-600 focus:bg-rose-50 focus:text-rose-600 border border-transparent hover:border-rose-200"
                         >
-                          <PenTool className="inline-block mr-2" />
-                          Wedding Stationery
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                              <PenTool className="w-4 h-4 text-indigo-600" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-neutral-900">Wedding Stationery</div>
+                              <div className="text-sm text-neutral-500">Beautiful invites</div>
+                            </div>
+                          </div>
                         </Link>
                       </NavigationMenuLink>
                     </li>
@@ -283,10 +388,17 @@ export function Header() {
                       <NavigationMenuLink asChild>
                         <Link
                           href="/vendors/bridal-wear"
-                          className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          className="block select-none space-y-1 rounded-lg p-4 leading-none no-underline outline-none transition-all duration-200 hover:bg-rose-50 hover:text-rose-600 focus:bg-rose-50 focus:text-rose-600 border border-transparent hover:border-rose-200"
                         >
-                          <Signature className="inline-block mr-2" />
-                          Bridal Wear
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-rose-100 rounded-lg flex items-center justify-center">
+                              <Signature className="w-4 h-4 text-rose-600" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-neutral-900">Bridal Wear</div>
+                              <div className="text-sm text-neutral-500">Dream dresses</div>
+                            </div>
+                          </div>
                         </Link>
                       </NavigationMenuLink>
                     </li>
@@ -296,14 +408,16 @@ export function Header() {
             </NavigationMenuList>
           </NavigationMenu>
 
-          <div className="flex items-center gap-2 md:gap-4">
-            <Button variant="ghost" size="icon" className="hidden md:inline-flex">
-              <Heart className="h-5 w-5" />
+          <div className="flex items-center gap-3 md:gap-4">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="hidden md:inline-flex hover:bg-rose-50 hover:text-rose-600 transition-all duration-200 relative group"
+            >
+              <Heart className="h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full"></div>
             </Button>
             <div className="relative">
-              {/* <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsSearchOpen(!isSearchOpen)}>
-                <Search className="h-5 w-5" />
-              </Button> */}
               <HeaderAvatar loading={loading} user={user}/>
             </div>
           </div>

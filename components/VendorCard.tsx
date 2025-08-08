@@ -6,7 +6,7 @@ import Link from "next/link"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Star, MapPin, Users, Heart } from "lucide-react"
+import { Star, MapPin, Users, Heart, Calendar, Clock, Award } from "lucide-react"
 import Image from "next/image"
 import {
   AlertDialog,
@@ -95,21 +95,35 @@ export default function VendorCard({
 
   const formatPrice = (price: number | string) => {
     if (typeof price === 'number') {
-      return `PKR ${price.toLocaleString()}`
+      return `₹${price.toLocaleString()}`
     }
-    return `PKR ${price}`
+    return `₹${price}`
+  }
+
+  const getRatingColor = (rating: number) => {
+    if (rating >= 4.5) return "text-emerald-600"
+    if (rating >= 4.0) return "text-green-600"
+    if (rating >= 3.5) return "text-yellow-600"
+    return "text-gray-600"
   }
 
   return (
     <>
       <motion.div
-        whileHover={{ y: -4 }}
-        transition={{ duration: 0.2 }}
+        whileHover={{ y: -8, scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        transition={{ 
+          duration: 0.3, 
+          ease: "easeOut",
+          type: "spring",
+          stiffness: 300,
+          damping: 20
+        }}
         className={`h-full ${className}`}
       >
         <Card 
           onClick={handleCardClick}
-          className="group h-full cursor-pointer overflow-hidden border-0 shadow-sm hover:shadow-lg transition-all duration-300 bg-white"
+          className="group h-full cursor-pointer overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-500 bg-white rounded-2xl relative flex flex-col"
         >
           {/* Image Section */}
           <div className="relative aspect-[4/3] overflow-hidden">
@@ -117,98 +131,144 @@ export default function VendorCard({
               src={image || "/placeholder.svg"}
               alt={name}
               fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              className="object-cover transition-transform duration-700 group-hover:scale-110"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
             
-            {/* Sponsored Badge */}
-            {sponsored && (
-              <Badge className="absolute top-3 left-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0">
-                Sponsored
-              </Badge>
-            )}
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             
-            {/* Favorite Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation()
-                setIsFavorite(!isFavorite)
-              }}
-              className="absolute top-3 right-3 h-8 w-8 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white p-0"
-            >
-              <Heart 
-                className={`h-4 w-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} 
-              />
-            </Button>
+            {/* Top Badges */}
+            <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
+              {/* Sponsored Badge */}
+              {sponsored && (
+                <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-0 shadow-lg font-semibold text-xs px-3 py-1">
+                  <Award className="w-3 h-3 mr-1" />
+                  Featured
+                </Badge>
+              )}
+              
+              {/* Favorite Button */}
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setIsFavorite(!isFavorite)
+                  }}
+                  className="h-10 w-10 rounded-full bg-white/90 backdrop-blur-md hover:bg-white shadow-lg hover:shadow-xl p-0 transition-all duration-200"
+                >
+                  <Heart 
+                    className={`h-5 w-5 ${isFavorite ? 'fill-rose-500 text-rose-500' : 'text-gray-600'}`} 
+                  />
+                </Button>
+              </motion.div>
+            </div>
 
-            {/* Type Badge */}
-            <Badge className="absolute bottom-3 left-3 bg-white/90 text-gray-800 border-0">
-              {type}
-            </Badge>
+            {/* Bottom Badge */}
+            <div className="absolute bottom-4 left-4">
+              <Badge className="bg-white/95 backdrop-blur-sm text-gray-800 border-0 shadow-md font-medium text-xs px-3 py-1.5">
+                {type}
+              </Badge>
+            </div>
           </div>
 
-          {/* Content Section */}
-          <CardContent className="p-4 space-y-3">
+          {/* Content Section - Flex-1 to take remaining space */}
+          <CardContent className="p-6 space-y-4 flex-1 flex flex-col">
             {/* Title and Location */}
-            <div className="space-y-1">
-              <h3 className="font-semibold text-lg leading-tight group-hover:text-primary transition-colors">
+            <div className="space-y-2">
+              <h3 className="font-bold text-xl leading-tight group-hover:text-rose-600 transition-colors duration-300 line-clamp-2">
                 {name}
               </h3>
               <div className="flex items-center text-gray-600 text-sm">
-                <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
-                <span className="truncate">{location}</span>
+                <MapPin className="w-4 h-4 mr-2 flex-shrink-0 text-rose-500" />
+                <span className="truncate font-medium">{location}</span>
               </div>
             </div>
 
-            {/* Rating */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center">
-                <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                <span className="ml-1 text-sm font-medium">{rating.toFixed(1)}</span>
-                <span className="ml-1 text-sm text-gray-500">({reviews})</span>
+            {/* Rating and Reviews */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center">
+                  <Star className={`w-5 h-5 ${getRatingColor(rating)} fill-current`} />
+                  <span className="ml-1 text-sm font-bold">{rating.toFixed(1)}</span>
+                </div>
+                <span className="text-sm text-gray-500 font-medium">({reviews} reviews)</span>
               </div>
+              
+              {/* Quick Info */}
+              {capacity && (
+                <div className="flex items-center text-xs text-gray-500">
+                  <Users className="w-4 h-4 mr-1" />
+                  <span>{capacity} guests</span>
+                </div>
+              )}
             </div>
 
             {/* Price */}
-            <div className="text-lg font-bold text-primary">
-              Starting from {formatPrice(price)}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Starting from</p>
+                <p className="text-2xl font-bold text-rose-600">
+                  {formatPrice(price)}
+                </p>
+              </div>
+              
+              {/* Availability Indicator */}
+              <div className="flex items-center text-xs text-green-600 font-medium">
+                <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                Available
+              </div>
             </div>
 
-            {/* Additional Info */}
+            {/* Additional Info - Flex-1 to push button to bottom */}
             {showDetails && (
-              <div className="space-y-2">
-                {/* Capacity */}
-                {capacity && (
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Users className="w-4 h-4 mr-1" />
-                    <span>Capacity: {capacity} guests</span>
-                  </div>
-                )}
-                
+              <div className="space-y-3 pt-2 border-t border-gray-100 flex-1">
                 {/* Amenities */}
                 {amenities.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {amenities.slice(0, 2).map((amenity, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
+                  <div className="flex flex-wrap gap-1.5">
+                    {amenities.slice(0, 3).map((amenity, index) => (
+                      <Badge 
+                        key={index} 
+                        variant="secondary" 
+                        className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors duration-200"
+                      >
                         {amenity}
                       </Badge>
                     ))}
-                    {amenities.length > 2 && (
-                      <Badge variant="secondary" className="text-xs">
-                        +{amenities.length - 2} more
+                    {amenities.length > 3 && (
+                      <Badge 
+                        variant="secondary" 
+                        className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors duration-200"
+                      >
+                        +{amenities.length - 3} more
                       </Badge>
                     )}
                   </div>
                 )}
+                
+                {/* Quick Stats */}
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <div className="flex items-center">
+                    <Clock className="w-3 h-3 mr-1" />
+                    <span>Quick Response</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Calendar className="w-3 h-3 mr-1" />
+                    <span>Flexible Booking</span>
+                  </div>
+                </div>
               </div>
             )}
           </CardContent>
 
-          {/* Footer with Book Button */}
+          {/* Footer with Book Button - Fixed at bottom */}
           {showBookButton && (
-            <CardFooter className="p-4 pt-0">
+            <CardFooter className="p-6 pt-0 mt-auto">
               <motion.div 
                 whileHover={{ scale: 1.02 }} 
                 whileTap={{ scale: 0.98 }} 
@@ -216,8 +276,9 @@ export default function VendorCard({
               >
                 <Button
                   onClick={handleBookNow}
-                  className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold py-2.5 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+                  className="w-full bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-bold py-3 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                 >
+                  <Calendar className="w-4 h-4 mr-2" />
                   Book Now
                 </Button>
               </motion.div>
@@ -228,18 +289,24 @@ export default function VendorCard({
 
       {/* Login Alert Dialog */}
       <AlertDialog open={openAlert} onOpenChange={setOpenAlert}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Login Required</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-xl font-bold">Login Required</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600">
               You must be logged in to book this vendor. Please sign in to continue with your booking.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setOpenAlert(false)}>
+            <AlertDialogCancel 
+              onClick={() => setOpenAlert(false)}
+              className="rounded-lg"
+            >
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction onClick={() => router.push('/login')}>
+            <AlertDialogAction 
+              onClick={() => router.push('/login')}
+              className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 rounded-lg"
+            >
               Login Now
             </AlertDialogAction>
           </AlertDialogFooter>
