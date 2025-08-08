@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Clock, Users, Camera, Heart, Share2, Bookmark, ArrowRight, CheckCircle, AlertCircle, Info } from "lucide-react"
+import { Calendar, Clock, Users, Camera, Heart, Share2, Bookmark, ArrowRight, CheckCircle, AlertCircle, Info, Star, Award } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 const tips = [
@@ -13,8 +13,9 @@ const tips = [
     icon: Calendar,
     title: "When to Start Planning",
     description: "Ideal timeline for wedding planning and important milestones",
-    color: "text-blue-600",
-    bgColor: "bg-blue-50",
+    color: "text-rose-600",
+    bgColor: "bg-rose-50",
+    gradient: "from-rose-500 to-pink-600",
     content: {
       timeline: [
         { month: "12-18 months before", tasks: ["Set budget", "Choose wedding style", "Book venue", "Hire photographer"] },
@@ -55,6 +56,7 @@ const tips = [
     description: "How to create the perfect schedule for your big day",
     color: "text-green-600",
     bgColor: "bg-green-50",
+    gradient: "from-green-500 to-emerald-600",
     content: {
       timeline: [
         { time: "6:00 AM", event: "Bride & Bridesmaids Hair & Makeup", duration: "3 hours", notes: "Start early to avoid stress" },
@@ -89,8 +91,9 @@ const tips = [
     icon: Users,
     title: "Guest List Tips",
     description: "Managing your guest list and seating arrangements",
-    color: "text-purple-600",
-    bgColor: "bg-purple-50",
+    color: "text-blue-600",
+    bgColor: "bg-blue-50",
+    gradient: "from-blue-500 to-indigo-600",
     content: {
       categories: [
         { name: "Family", percentage: 40, description: "Immediate and extended family members" },
@@ -128,8 +131,9 @@ const tips = [
     icon: Camera,
     title: "Photography Guide",
     description: "Essential shots and styles for your wedding album",
-    color: "text-orange-600",
-    bgColor: "bg-orange-50",
+    color: "text-purple-600",
+    bgColor: "bg-purple-50",
+    gradient: "from-purple-500 to-violet-600",
     content: {
       styles: [
         { name: "Traditional", description: "Classic posed portraits and formal shots", pros: "Timeless, family-friendly", cons: "Less candid moments" },
@@ -196,32 +200,34 @@ function TipDetailModal({ tip }: { tip: any }) {
     <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle className="flex items-center gap-3 text-2xl">
-          <div className={`w-10 h-10 ${tip.bgColor} rounded-lg flex items-center justify-center`}>
-            <tip.icon className={`w-6 h-6 ${tip.color}`} />
+          <div className={`w-12 h-12 ${tip.bgColor} rounded-xl flex items-center justify-center shadow-lg`}>
+            <tip.icon className={`w-7 h-7 ${tip.color}`} />
           </div>
           {tip.title}
         </DialogTitle>
-        <DialogDescription className="text-lg">
+        <DialogDescription className="text-lg text-neutral-600">
           {tip.description}
         </DialogDescription>
       </DialogHeader>
 
-      <div className="space-y-6">
+      <div className="space-y-8">
         {tip.title === "When to Start Planning" && (
           <>
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold">Planning Timeline</h3>
-              <div className="space-y-3">
+            <div className="space-y-6">
+              <h3 className="text-2xl font-bold text-neutral-900">Planning Timeline</h3>
+              <div className="space-y-4">
                 {tip.content.timeline.map((item: any, index: number) => (
-                  <div key={index} className="p-4 border rounded-lg">
-                    <div className="flex items-center gap-3 mb-2">
-                      <Badge variant="outline">{item.month}</Badge>
+                  <div key={index} className="p-6 border border-neutral-200 rounded-xl bg-white hover:shadow-lg transition-all duration-200">
+                    <div className="flex items-center gap-4 mb-4">
+                      <Badge className="bg-gradient-to-r from-rose-500 to-pink-600 text-white border-0">
+                        {item.month}
+                      </Badge>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-4">
                       {item.tasks.map((task: string, taskIndex: number) => (
-                        <div key={taskIndex} className="flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                          <span className="text-sm">{task}</span>
+                        <div key={taskIndex} className="flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                          <span className="font-medium text-neutral-900">{task}</span>
                         </div>
                       ))}
                     </div>
@@ -230,26 +236,26 @@ function TipDetailModal({ tip }: { tip: any }) {
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Pro Tips</h3>
-                <div className="space-y-2">
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <h3 className="text-xl font-bold text-neutral-900">Pro Tips</h3>
+                <div className="space-y-4">
                   {tip.content.tips.map((tipText: string, index: number) => (
-                    <div key={index} className="flex items-start gap-2">
-                      <Info className="w-4 h-4 text-blue-600 mt-0.5" />
-                      <span className="text-sm">{tipText}</span>
+                    <div key={index} className="flex items-start gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
+                      <Info className="w-5 h-5 text-blue-600 mt-0.5" />
+                      <span className="font-medium text-neutral-900">{tipText}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Essential Checklist</h3>
-                <div className="space-y-2">
+              <div className="space-y-6">
+                <h3 className="text-xl font-bold text-neutral-900">Essential Checklist</h3>
+                <div className="space-y-3">
                   {tip.content.checklist.map((item: string, index: number) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-gray-300 rounded" />
-                      <span className="text-sm">{item}</span>
+                    <div key={index} className="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-lg hover:shadow-md transition-all duration-200">
+                      <div className="w-5 h-5 border-2 border-neutral-300 rounded" />
+                      <span className="font-medium text-neutral-900">{item}</span>
                     </div>
                   ))}
                 </div>
@@ -260,44 +266,44 @@ function TipDetailModal({ tip }: { tip: any }) {
 
         {tip.title === "Wedding Day Timeline" && (
           <>
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold">Sample Timeline</h3>
-              <div className="space-y-3">
+            <div className="space-y-6">
+              <h3 className="text-2xl font-bold text-neutral-900">Sample Timeline</h3>
+              <div className="space-y-4">
                 {tip.content.timeline.map((item: any, index: number) => (
-                  <div key={index} className="flex items-center gap-4 p-3 border rounded-lg">
-                    <div className="flex-shrink-0 w-20 text-center">
-                      <div className="text-lg font-bold">{item.time}</div>
-                      <div className="text-xs text-muted-foreground">{item.duration}</div>
+                  <div key={index} className="flex items-center gap-6 p-6 border border-neutral-200 rounded-xl bg-white hover:shadow-lg transition-all duration-200">
+                    <div className="flex-shrink-0 w-24 text-center">
+                      <div className="text-2xl font-bold text-green-600">{item.time}</div>
+                      <div className="text-sm text-neutral-500">{item.duration}</div>
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-semibold">{item.event}</h4>
-                      <p className="text-sm text-muted-foreground">{item.notes}</p>
+                      <h4 className="text-xl font-bold text-neutral-900">{item.event}</h4>
+                      <p className="text-neutral-600">{item.notes}</p>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Timeline Tips</h3>
-                <div className="space-y-2">
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <h3 className="text-xl font-bold text-neutral-900">Timeline Tips</h3>
+                <div className="space-y-4">
                   {tip.content.tips.map((tipText: string, index: number) => (
-                    <div key={index} className="flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 text-orange-600 mt-0.5" />
-                      <span className="text-sm">{tipText}</span>
+                    <div key={index} className="flex items-start gap-3 p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl">
+                      <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5" />
+                      <span className="font-medium text-neutral-900">{tipText}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Timeline Checklist</h3>
-                <div className="space-y-2">
+              <div className="space-y-6">
+                <h3 className="text-xl font-bold text-neutral-900">Timeline Checklist</h3>
+                <div className="space-y-3">
                   {tip.content.checklist.map((item: string, index: number) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-gray-300 rounded" />
-                      <span className="text-sm">{item}</span>
+                    <div key={index} className="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-lg hover:shadow-md transition-all duration-200">
+                      <div className="w-5 h-5 border-2 border-neutral-300 rounded" />
+                      <span className="font-medium text-neutral-900">{item}</span>
                     </div>
                   ))}
                 </div>
@@ -308,54 +314,56 @@ function TipDetailModal({ tip }: { tip: any }) {
 
         {tip.title === "Guest List Tips" && (
           <>
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold">Guest List Breakdown</h3>
-              <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-6">
+              <h3 className="text-2xl font-bold text-neutral-900">Guest List Breakdown</h3>
+              <div className="grid md:grid-cols-2 gap-6">
                 {tip.content.categories.map((category: any, index: number) => (
-                  <div key={index} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold">{category.name}</h4>
-                      <Badge variant="secondary">{category.percentage}%</Badge>
+                  <div key={index} className="p-6 border border-neutral-200 rounded-xl bg-white hover:shadow-lg transition-all duration-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-xl font-bold text-neutral-900">{category.name}</h4>
+                      <Badge className="bg-gradient-to-r from-purple-500 to-violet-600 text-white border-0">
+                        {category.percentage}%
+                      </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">{category.description}</p>
+                    <p className="text-neutral-600">{category.description}</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Guest List Tips</h3>
-                <div className="space-y-2">
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <h3 className="text-xl font-bold text-neutral-900">Guest List Tips</h3>
+                <div className="space-y-4">
                   {tip.content.tips.map((tipText: string, index: number) => (
-                    <div key={index} className="flex items-start gap-2">
-                      <Info className="w-4 h-4 text-blue-600 mt-0.5" />
-                      <span className="text-sm">{tipText}</span>
+                    <div key={index} className="flex items-start gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
+                      <Info className="w-5 h-5 text-blue-600 mt-0.5" />
+                      <span className="font-medium text-neutral-900">{tipText}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Seating Tips</h3>
-                <div className="space-y-2">
+              <div className="space-y-6">
+                <h3 className="text-xl font-bold text-neutral-900">Seating Tips</h3>
+                <div className="space-y-4">
                   {tip.content.seating.map((tipText: string, index: number) => (
-                    <div key={index} className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-600 mt-0.5" />
-                      <span className="text-sm">{tipText}</span>
+                    <div key={index} className="flex items-start gap-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl">
+                      <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                      <span className="font-medium text-neutral-900">{tipText}</span>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Guest List Checklist</h3>
-              <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-6">
+              <h3 className="text-xl font-bold text-neutral-900">Guest List Checklist</h3>
+              <div className="grid grid-cols-2 gap-3">
                 {tip.content.checklist.map((item: string, index: number) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-gray-300 rounded" />
-                    <span className="text-sm">{item}</span>
+                  <div key={index} className="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-lg hover:shadow-md transition-all duration-200">
+                    <div className="w-5 h-5 border-2 border-neutral-300 rounded" />
+                    <span className="font-medium text-neutral-900">{item}</span>
                   </div>
                 ))}
               </div>
@@ -365,21 +373,21 @@ function TipDetailModal({ tip }: { tip: any }) {
 
         {tip.title === "Photography Guide" && (
           <>
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold">Photography Styles</h3>
-              <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-6">
+              <h3 className="text-2xl font-bold text-neutral-900">Photography Styles</h3>
+              <div className="grid md:grid-cols-2 gap-6">
                 {tip.content.styles.map((style: any, index: number) => (
-                  <div key={index} className="p-4 border rounded-lg">
-                    <h4 className="font-semibold mb-2">{style.name}</h4>
-                    <p className="text-sm text-muted-foreground mb-3">{style.description}</p>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
+                  <div key={index} className="p-6 border border-neutral-200 rounded-xl bg-white hover:shadow-lg transition-all duration-200">
+                    <h4 className="text-xl font-bold text-neutral-900 mb-3">{style.name}</h4>
+                    <p className="text-neutral-600 mb-4">{style.description}</p>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
                         <CheckCircle className="w-4 h-4 text-green-600" />
-                        <span className="text-xs">Pros: {style.pros}</span>
+                        <span className="text-sm font-medium">Pros: {style.pros}</span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg">
                         <AlertCircle className="w-4 h-4 text-orange-600" />
-                        <span className="text-xs">Cons: {style.cons}</span>
+                        <span className="text-sm font-medium">Cons: {style.cons}</span>
                       </div>
                     </div>
                   </div>
@@ -387,39 +395,39 @@ function TipDetailModal({ tip }: { tip: any }) {
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Essential Shots</h3>
-                <div className="grid grid-cols-2 gap-2">
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <h3 className="text-xl font-bold text-neutral-900">Essential Shots</h3>
+                <div className="grid grid-cols-2 gap-3">
                   {tip.content.shots.map((shot: string, index: number) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <Camera className="w-4 h-4 text-primary" />
-                      <span className="text-sm">{shot}</span>
+                    <div key={index} className="flex items-center gap-3 p-3 bg-gradient-to-r from-purple-50 to-violet-50 rounded-lg">
+                      <Camera className="w-4 h-4 text-purple-600" />
+                      <span className="font-medium text-neutral-900">{shot}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Photography Tips</h3>
-                <div className="space-y-2">
+              <div className="space-y-6">
+                <h3 className="text-xl font-bold text-neutral-900">Photography Tips</h3>
+                <div className="space-y-4">
                   {tip.content.tips.map((tipText: string, index: number) => (
-                    <div key={index} className="flex items-start gap-2">
-                      <Info className="w-4 h-4 text-blue-600 mt-0.5" />
-                      <span className="text-sm">{tipText}</span>
+                    <div key={index} className="flex items-start gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
+                      <Info className="w-5 h-5 text-blue-600 mt-0.5" />
+                      <span className="font-medium text-neutral-900">{tipText}</span>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Photography Checklist</h3>
-              <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-6">
+              <h3 className="text-xl font-bold text-neutral-900">Photography Checklist</h3>
+              <div className="grid grid-cols-2 gap-3">
                 {tip.content.checklist.map((item: string, index: number) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-gray-300 rounded" />
-                    <span className="text-sm">{item}</span>
+                  <div key={index} className="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-lg hover:shadow-md transition-all duration-200">
+                    <div className="w-5 h-5 border-2 border-neutral-300 rounded" />
+                    <span className="font-medium text-neutral-900">{item}</span>
                   </div>
                 ))}
               </div>
@@ -428,13 +436,13 @@ function TipDetailModal({ tip }: { tip: any }) {
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-3 pt-4 border-t">
-          <Button onClick={handleSave} variant="outline" className="flex-1">
-            <Bookmark className="w-4 h-4 mr-2" />
+        <div className="flex gap-4 pt-6 border-t border-neutral-200">
+          <Button onClick={handleSave} variant="outline" className="flex-1 h-12 border-neutral-200 hover:border-rose-500 hover:text-rose-600">
+            <Bookmark className="w-5 h-5 mr-2" />
             Save Tip
           </Button>
-          <Button onClick={handleShare} variant="outline" className="flex-1">
-            <Share2 className="w-4 h-4 mr-2" />
+          <Button onClick={handleShare} variant="outline" className="flex-1 h-12 border-neutral-200 hover:border-rose-500 hover:text-rose-600">
+            <Share2 className="w-5 h-5 mr-2" />
             Share Tip
           </Button>
         </div>
@@ -445,39 +453,44 @@ function TipDetailModal({ tip }: { tip: any }) {
 
 export function WeddingTips() {
   return (
-    <section className="py-16 bg-gray-50">
+    <section className="py-16 bg-gradient-to-br from-neutral-50 via-white to-rose-50">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-2">Wedding Planning Tips</h2>
-          <p className="text-gray-600">Expert advice to help you plan your perfect day</p>
+          <h2 className="text-4xl font-bold text-neutral-900 mb-4">Wedding Planning Tips</h2>
+          <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
+            Expert advice to help you plan your perfect day. From timelines to photography, 
+            we've got all the tips you need for a stress-free wedding planning experience.
+          </p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {tips.map((tip) => (
             <Dialog key={tip.title}>
               <DialogTrigger asChild>
-                <Card className="hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer group">
-              <CardHeader className="pt-6 px-6">
-                    <div className={`w-12 h-12 rounded-full ${tip.bgColor} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                      <tip.icon className={`w-6 h-6 ${tip.color}`} />
-                </div>
-                <h3 className="font-semibold text-lg">{tip.title}</h3>
-              </CardHeader>
-              <CardContent className="px-6 pb-6">
-                    <p className="text-gray-600 mb-4">{tip.description}</p>
+                <Card className="hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group border-0 shadow-lg bg-white">
+                  <CardHeader className="pt-8 px-6">
+                    <div className={`w-16 h-16 rounded-2xl ${tip.bgColor} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+                      <tip.icon className={`w-8 h-8 ${tip.color}`} />
+                    </div>
+                    <h3 className="font-bold text-xl text-neutral-900">{tip.title}</h3>
+                  </CardHeader>
+                  <CardContent className="px-6 pb-6">
+                    <p className="text-neutral-600 mb-6 leading-relaxed">{tip.description}</p>
                     <div className="flex items-center justify-between">
-                      <span className="text-primary text-sm font-medium">Read more →</span>
+                      <span className="text-rose-600 text-sm font-semibold group-hover:text-rose-700 transition-colors duration-200">
+                        Read more →
+                      </span>
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-rose-50 hover:text-rose-600">
                           <Heart className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-rose-50 hover:text-rose-600">
                           <Share2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </div>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
               </DialogTrigger>
               <TipDetailModal tip={tip} />
             </Dialog>
@@ -485,8 +498,13 @@ export function WeddingTips() {
         </div>
 
         <div className="text-center mt-12">
-          <Button variant="outline" size="lg" className="text-primary hover:text-primary">
-            View all planning tips →
+          <Button 
+            variant="outline" 
+            size="lg" 
+            className="text-rose-600 hover:text-rose-700 border-rose-200 hover:border-rose-300 bg-white hover:bg-rose-50 transition-all duration-300 px-8 py-3"
+          >
+            View all planning tips
+            <ArrowRight className="w-5 h-5 ml-2" />
           </Button>
         </div>
       </div>
