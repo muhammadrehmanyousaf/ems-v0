@@ -1,19 +1,20 @@
 "use client"
 
 import { format } from "date-fns"
-import type { BookingFormData } from "@/lib/types"
-import { bookingPackages, bookingMenus, menuAddons, vendors, vendorPackages } from "@/lib/data"
+import type { BookingFormData, Vendor } from "@/lib/types"
+import { bookingPackages, bookingMenus, menuAddons } from "@/lib/data"
 import { Card, CardContent } from "@/components/ui/card"
 import { CalendarDays, Users, User, Clock, MapPin } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
 interface PreviewStepProps {
   formData: BookingFormData
-  selectedMenuObj: any;
-  selectedPackageObj: any;
+  selectedMenuObj: any
+  selectedPackageObj: any
+  vendorDetails?: Vendor[]
 }
 
-export default function PreviewStep({ formData, selectedPackageObj, selectedMenuObj }: PreviewStepProps) {
+export default function PreviewStep({ formData, selectedPackageObj, selectedMenuObj, vendorDetails = [] }: PreviewStepProps) {
   // const selectedPackage = bookingPackages.find((p) => p.id === formData.selectedPackage)
   const selectedMenu = bookingMenus.find((m) => m.id === formData.selectedMenu)
 
@@ -22,16 +23,15 @@ export default function PreviewStep({ formData, selectedPackageObj, selectedMenu
     .filter(Boolean)
 
   const selectedVendors = formData.selectedVendors
-    .map((vendorId) => vendors.find((vendor) => vendor.id === vendorId))
+    .map((vendorId) => vendorDetails.find((vendor) => String(vendor.id) === String(vendorId)))
     .filter(Boolean)
 
   const selectedVendorPackages = formData.selectedVendorPackages
     .map((packageId) => {
-      const vendorPackage = vendorPackages.find((pkg) => pkg.id === packageId)
-      if (!vendorPackage) return null
-
-      const vendor = vendors.find((v) => v.id === vendorPackage.vendorId)
-      return { ...vendorPackage, vendorName: vendor?.name || "" }
+      const ownerVendor = vendorDetails.find(v => (v as any).packages?.some((p: any) => String(p.id) === String(packageId)))
+      const pkg = ownerVendor ? (ownerVendor as any).packages.find((p: any) => String(p.id) === String(packageId)) : null
+      if (!pkg) return null
+      return { ...pkg, vendorName: ownerVendor?.name || "" }
     })
     .filter(Boolean)
 
@@ -58,7 +58,7 @@ export default function PreviewStep({ formData, selectedPackageObj, selectedMenu
 
       <div className="space-y-6">
         <Card className="overflow-hidden rounded-lg border-gray-200 shadow-md">
-          <div className="bg-blue-500 px-6 py-4">
+           <div className="bg-blue-500 px-6 py-4">
             <h3 className="text-lg font-medium text-white">Personal Information</h3>
           </div>
 
@@ -143,7 +143,7 @@ export default function PreviewStep({ formData, selectedPackageObj, selectedMenu
                     <h4 className="text-lg font-medium text-gray-800">{selectedPackageObj.name}</h4>
                     {/* <p className="text-sm text-gray-600">{selectedPackageObj.description}</p> */}
                   </div>
-                  <Badge className="bg-blue-100 text-blue-800 text-sm px-2 py-1">${selectedPackageObj.price}</Badge>
+                   <Badge className="bg-blue-100 text-blue-800 text-sm px-2 py-1">₹{selectedPackageObj.price}</Badge>
                 </div>
 
                 <div className="rounded-lg bg-gray-50 p-4">
@@ -177,7 +177,7 @@ export default function PreviewStep({ formData, selectedPackageObj, selectedMenu
                     <h4 className="text-lg font-medium text-gray-800">{selectedMenuObj.name}</h4>
                     {/* <p className="text-sm text-gray-600">{selectedMenuObj.description}</p> */}
                   </div>
-                  <Badge className="bg-blue-100 text-blue-800 text-sm px-2 py-1">${selectedMenuObj.price}</Badge>
+                   <Badge className="bg-blue-100 text-blue-800 text-sm px-2 py-1">₹{selectedMenuObj.price}</Badge>
                 </div>
 
                 <div className="rounded-lg bg-gray-50 p-4">
@@ -238,11 +238,9 @@ export default function PreviewStep({ formData, selectedPackageObj, selectedMenu
                     >
                       <div>
                         <p className="font-medium text-gray-800">{vendor?.name}</p>
-                        <Badge variant="outline" className="mt-1 bg-blue-50 text-xs text-blue-700">
-                          {vendor?.type}
-                        </Badge>
+                          <Badge variant="outline" className="mt-1 bg-blue-50 text-xs text-blue-700">{(vendor as any)?.type || (vendor as any)?.subBusinessType}</Badge>
                       </div>
-                      <span className="font-medium text-blue-600">${vendor?.price}</span>
+                          <span className="font-medium text-blue-600">₹{(vendor as any)?.minimumPrice || (vendor as any)?.price || 0}</span>
                     </div>
                   ))}
                 </div>
@@ -259,7 +257,7 @@ export default function PreviewStep({ formData, selectedPackageObj, selectedMenu
                           <p className="font-medium text-gray-800">{pkg?.name || "Unknown Package"}</p>
                           <p className="text-xs text-gray-600">{pkg?.vendorName || "Unknown Vendor"}</p>
                         </div>
-                        <span className="font-medium text-blue-600">${pkg?.price || 0}</span>
+                         <span className="font-medium text-blue-600">₹{pkg?.price || 0}</span>
                       </div>
                     ))}
                   </div>
@@ -279,28 +277,28 @@ export default function PreviewStep({ formData, selectedPackageObj, selectedMenu
               {selectedPackageObj && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Venue Package ({selectedPackageObj.name})</span>
-                  <span className="font-medium text-gray-800">${selectedPackageObj.price}</span>
+                   <span className="font-medium text-gray-800">₹{selectedPackageObj.price}</span>
                 </div>
               )}
 
               {selectedMenuObj && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Menu ({selectedMenuObj.name})</span>
-                  <span className="font-medium text-gray-800">${selectedMenuObj.price}</span>
+                   <span className="font-medium text-gray-800">₹{selectedMenuObj.price}</span>
                 </div>
               )}
 
               {selectedAddons.length > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Menu Add-ons ({selectedAddons.length})</span>
-                  <span className="font-medium text-gray-800">${selectedAddons.length * 100}</span>
+                   <span className="font-medium text-gray-800">₹{selectedAddons.length * 100}</span>
                 </div>
               )}
 
               {selectedVendors.length > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Vendors ({selectedVendors.length})</span>
-                  <span className="font-medium text-gray-800">${selectedVendors.length * 300}</span>
+                   <span className="font-medium text-gray-800">₹{selectedVendors.length * 300}</span>
                 </div>
               )}
 
@@ -308,8 +306,8 @@ export default function PreviewStep({ formData, selectedPackageObj, selectedMenu
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Vendor Packages ({selectedVendorPackages.length})</span>
                   <span className="font-medium text-gray-800">
-                    $
-                    {selectedVendorPackages.reduce((total, pkg) => {
+                     ₹
+                     {selectedVendorPackages.reduce((total, pkg) => {
                       return total + (pkg?.price || 0)
                     }, 0)}
                   </span>
@@ -318,7 +316,7 @@ export default function PreviewStep({ formData, selectedPackageObj, selectedMenu
 
               <div className="border-t border-gray-200 pt-3 flex justify-between">
                 <span className="text-base font-medium text-gray-800">Total</span>
-                <span className="text-lg font-bold text-blue-600">${formData.totalPrice}</span>
+                <span className="text-lg font-bold text-blue-600">₹{formData.totalPrice}</span>
               </div>
             </div>
           </CardContent>

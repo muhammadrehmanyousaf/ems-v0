@@ -37,10 +37,10 @@ export default function PhotographerDetailsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-rose-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading vendor details...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-500 mx-auto mb-4"></div>
+          <p className="text-neutral-600 text-lg">Loading vendor details...</p>
         </div>
       </div>
     )
@@ -48,12 +48,12 @@ export default function PhotographerDetailsPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-rose-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
+          <p className="text-red-600 mb-4 text-lg">{error}</p>
           <button 
             onClick={() => window.location.reload()} 
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+            className="px-6 py-3 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white rounded-xl hover:shadow-lg transition-all duration-200"
           >
             Try Again
           </button>
@@ -64,9 +64,9 @@ export default function PhotographerDetailsPage() {
 
   if (!vendor) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-rose-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600">Vendor not found</p>
+          <p className="text-neutral-600 text-lg">Vendor not found</p>
         </div>
       </div>
     )
