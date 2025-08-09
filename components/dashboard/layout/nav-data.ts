@@ -130,7 +130,7 @@ export const data = {
   static: [
     {
       name: "Dashboard",
-      url: "/",
+      url: "/dashboard",
       icon: LayoutDashboard,
     },
     {
@@ -145,27 +145,27 @@ export const data = {
     },
     {
       name: "Calendar",
-      url: "#",
+      url: "/dashboard/calendar",
       icon: CalendarDays,
     },
     {
       name: "Packages",
-      url: "#",
+      url: "/dashboard/packages",
       icon: Package,
     },
     {
       name: "Conversations",
-      url: "#",
+      url: "/dashboard/conversations",
       icon: MessageSquareText,
     },
     {
       name: "Payments",
-      url: "#",
+      url: "/dashboard/payments",
       icon: CircleDollarSign,
     },
     {
       name: "Reviews",
-      url: "#",
+      url: "/dashboard/reviews",
       icon: Smile,
     },
   ],

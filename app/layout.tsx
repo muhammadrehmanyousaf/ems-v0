@@ -1,4 +1,3 @@
-import "../styles/globals.css"
 import { Toaster } from "@/components/ui/toaster"
 import { UserProvider } from "@/context/UserContext"
 import { Inter } from "next/font/google";
