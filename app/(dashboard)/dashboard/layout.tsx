@@ -6,29 +6,37 @@ import {
     SidebarProvider,
 } from "@/components/ui/sidebar"
 import Header from '@/components/dashboard/layout/header'
-import { Separator } from '@/components/ui/separator'
 import ProtectedRoutes from "@/lib/protected-routes"
 import { ThemeProvider } from "@/components/dashboard/layout/ThemeToggle/theme-provider"
+import { Metadata } from "next"
+import NextTopLoader from 'nextjs-toploader';
+
+export const metadata: Metadata = {
+    title: 'EMS : Dashboard',
+    description: 'Basic dashboard with Next.js and Shadcn'
+};
 
 const layout = ({ children }: { children: React.ReactNode }) => {
     return (
-        <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-        >
-            <ProtectedRoutes>
+        <main>
+            <NextTopLoader color="hsl(var(--primary))" showSpinner={false} />
+            <ThemeProvider
+                attribute="class"
+                defaultTheme="system"
+                enableSystem
+                disableTransitionOnChange
+            >
+                <ProtectedRoutes>
                 <SidebarProvider>
                     <AppSidebar />
                     <SidebarInset>
                         <Header />
-                        <Separator />
                         {children}
                     </SidebarInset>
                 </SidebarProvider>
-            </ProtectedRoutes>
-        </ThemeProvider>
+                </ProtectedRoutes>
+            </ThemeProvider>
+        </main>
     )
 }
 
