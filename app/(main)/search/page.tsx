@@ -153,7 +153,7 @@ function SearchContent() {
                vendorName.includes('theme')
       
       case 'catering':
-        return vendorType === VENDOR_TYPES.CATERER || 
+        return vendorType === VENDOR_TYPES.CATERING || 
                vendorName.includes('catering') || 
                vendorName.includes('food') || 
                vendorName.includes('restaurant') || 
@@ -166,7 +166,7 @@ function SearchContent() {
                vendorName.includes('chef')
       
       case 'venues':
-        return vendorType === VENDOR_TYPES.VENUE || 
+        return vendorType === VENDOR_TYPES.WEDDING_VENUE || 
                vendorName.includes('venue') || 
                vendorName.includes('hall') || 
                vendorName.includes('resort') || 

@@ -13,7 +13,7 @@ interface EventSelectionStepProps {
   venue: EventVenue | null;
 }
 
-export default function EventSelectionStep({ selectedEvents, onEventToggle, setFormData, formData, venue }: EventSelectionStepProps) {
+export default function EventSelectionStep({ selectedEvents = [], onEventToggle, setFormData, formData, venue }: EventSelectionStepProps) {
   // Function to get the appropriate icon component
   const getIconComponent = (event: string) => {
     switch (event) {
@@ -47,12 +47,9 @@ export default function EventSelectionStep({ selectedEvents, onEventToggle, setF
             <div
               key={event}
               className={`cursor-pointer rounded-lg border p-4 transition-all hover:shadow-md ${
-                formData.eventType === event ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"
+                selectedEvents?.includes(event) ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"
               }`}
-              onClick={()=> setFormData({
-                ...formData,
-                eventType: event,
-              })}
+              onClick={()=> onEventToggle && onEventToggle(event)}
             >
               <div className="flex flex-col items-center text-center">
                 <div
