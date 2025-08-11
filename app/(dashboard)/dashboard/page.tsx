@@ -1,3 +1,5 @@
+import DashboardView from "@/components/dashboard/mainScreens/dashboard/dashboard-view";
+
 export default function DashboardPage() {
 
   //   localStorage.removeItem("token");
@@ -9,7 +11,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      Home
+      <DashboardView/>
     </div>
   );
 }

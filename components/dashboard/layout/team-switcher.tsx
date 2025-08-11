@@ -44,7 +44,7 @@ export function TeamSwitcher({
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground focus:ring-0 focus:outline-none focus:border-none"
             >
-              <span className="h-full w-1 bg-primary rounded-lg"></span>
+              <div className="h-full w-1 bg-primary rounded-lg"></div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{activeTeam.name}</span>
                 <span className="truncate text-xs">{'Wedding Venue'}</span>

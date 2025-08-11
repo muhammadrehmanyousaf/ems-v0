@@ -5,7 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Booking } from '@/lib/dashboard-types';
 import { cn } from '@/lib/utils';
 
-const formatDate = (iso?: string) =>
+export const formatDate = (iso?: string) =>
   iso ? new Date(iso).toLocaleDateString() : ""
 
 export const columns: ColumnDef<Booking>[] = [
@@ -41,14 +41,14 @@ export const columns: ColumnDef<Booking>[] = [
     header: "Booking Status",
     cell: ({ row }) => {
       const status = row.original.status
+      const color = status === 'pending' ?
+        'border-amber-500 text-amber-800 bg-amber-50' : status === 'confirmed' ?
+          'border-green-500 text-green-600 bg-green-50' : 'border-red-500 text-red-600 bg-red-50'
       return (
-        <div className="flex items-center gap-2.5 py-1.5">
-          <span className={cn("h-[5px] w-[5px] rounded-full", status === 'pending' ?
-            'bg-amber-500' : status === 'confirmed' ?
-              'bg-green-500' : 'bg-red-500')}></span>{' '}
+        <span className={cn('px-3 border h-7 flex items-center justify-center rounded-md font-medium dark:bg-transparent', color)}>
           {status.charAt(0).toUpperCase() +
             status.slice(1)}
-        </div>
+        </span>
       )
     }
   },
