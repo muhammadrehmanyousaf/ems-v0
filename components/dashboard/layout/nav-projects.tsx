@@ -44,7 +44,7 @@ export function NavProjects({ projects }: { projects: ProjectItem[] }) {
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Projects</SidebarGroupLabel>
+      <SidebarGroupLabel>Main Navigations</SidebarGroupLabel>
       <SidebarMenu>
         {projects.map((item) => (
           <SidebarMenuItem key={item.name}>

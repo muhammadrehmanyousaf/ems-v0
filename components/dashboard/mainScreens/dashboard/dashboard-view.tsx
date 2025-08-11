@@ -19,7 +19,7 @@ const DashboardView = () => {
                     <Button>Today's Bookings</Button>
                 </span>
             </div>
-            <ScrollArea className='h-[calc(100dvh-140px)] overflow-auto px-4 md:px-6'>
+            <ScrollArea className='h-[calc(100dvh-200px)] md:h-[calc(100dvh-140px)] overflow-auto px-4 md:px-6'>
                 <div className='space-y-4'>
                     <CardsSection />
                     <ChartsSections />

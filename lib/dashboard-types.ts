@@ -19,3 +19,15 @@ export type Booking = {
   createdAt?: string
   updatedAt?: string
 }
+
+export type CustomersType = {
+  _id: string;
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  total_booking: number;
+  last_booking: string
+  createdAt?: string
+  updatedAt?: string
+}
