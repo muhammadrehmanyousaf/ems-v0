@@ -15,9 +15,7 @@ export function FeaturedHennaArtists() {
     const fetchFeaturedHennaArtists = async () => {
       try {
         const vendorType = getVendorTypeFromPath('henna-artists')
-        console.log('🔍 Henna Artist - Vendor Type:', vendorType)
         const featuredHennaArtists = await VendorAPI.getBusinessesByVendorType(vendorType)
-        console.log('📊 Henna Artist - Found:', featuredHennaArtists.length, 'vendors')
         setVendors(featuredHennaArtists.slice(0, 8)) // Limit to 8 featured
       } catch (error) {
         console.error('Error fetching featured henna artists:', error)
@@ -35,7 +33,7 @@ export function FeaturedHennaArtists() {
         <div className="flex justify-between items-end mb-12">
           <div>
             <h2 className="text-3xl font-bold mb-2">Featured Henna Artists</h2>
-            <p className="text-gray-600">Beautiful henna designs for your special day</p>
+            <p className="text-gray-600">Beautiful henna designs for your wedding celebrations</p>
           </div>
           <a href="/henna-artists" className="text-primary hover:underline hidden md:block">
             View all henna artists →
@@ -100,4 +98,4 @@ export function FeaturedHennaArtists() {
       </div>
     </section>
   )
-} 
+}

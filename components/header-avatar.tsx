@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Spinner } from "./ui/spinner"
 import { Button } from "@/components/ui/button";
@@ -34,12 +34,48 @@ type AvatarComponent = {
 }
 
 const HeaderAvatar = ({loading, user}: AvatarComponent) => {
+    const [localUser, setLocalUser] = useState<any>(user);
+
+    // Update localUser when user prop changes
+    useEffect(() => {
+        console.log('Header: user prop changed, updating localUser:', user);
+        setLocalUser(user);
+    }, [user]);
+
+    // Listen for profile updates from the profile page
+    useEffect(() => {
+        const handleProfileUpdate = (event: CustomEvent) => {
+            console.log('Header received profile update:', event.detail);
+            setLocalUser((prev: any) => ({
+                ...prev,
+                ...event.detail
+            }));
+        };
+
+        // Add event listener
+        window.addEventListener('profileUpdated', handleProfileUpdate as EventListener);
+        
+        // Cleanup
+        return () => {
+            window.removeEventListener('profileUpdated', handleProfileUpdate as EventListener);
+        };
+    }, []);
+
+    // Use localUser state for display, fallback to prop user
+    const displayUser = localUser || user;
 
     const handleLogout = () => {
         logout();
     };
 
-    let userRole = user?.roles[0].id;
+    // Safely get user role with proper null checks
+    let userRole;
+    try {
+        userRole = displayUser?.roles?.[0]?.id;
+    } catch (error) {
+        console.warn('Could not get user role:', error);
+        userRole = null;
+    }
 
     if (loading) {
         return (
@@ -51,7 +87,13 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
 
     const loggedIn = localStorage.getItem('user');
     
-    if (user && loggedIn) {
+    if (displayUser && loggedIn) {
+        // If we can't determine the role, treat as regular user
+        if (!userRole) {
+            console.log('User role not found, treating as regular user');
+            userRole = 3; // Default to regular user
+        }
+        
         if (userRole === 1 || userRole === 2) {
             // Admin/Manager Dashboard
             return (
@@ -122,9 +164,9 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
                             className="p-0 h-auto hover:bg-rose-50 transition-all duration-200 group"
                         >
                             <Avatar className="w-10 h-10 border-2 border-rose-200 group-hover:border-rose-400 transition-all duration-200 shadow-lg group-hover:shadow-xl">
-                                <AvatarImage src={user.profileImage} alt={user.fullName} />
+                                <AvatarImage src={displayUser.profileImage} alt={displayUser.fullName} />
                                 <AvatarFallback className="bg-gradient-to-br from-rose-500 to-pink-600 text-white font-semibold text-lg group-hover:scale-110 transition-transform duration-200">
-                                    {user.fullName?.charAt(0).toUpperCase()}
+                                    {displayUser.fullName?.charAt(0).toUpperCase()}
                                 </AvatarFallback>
                             </Avatar>
                         </Button>
@@ -132,20 +174,20 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
                     <DropdownMenuContent className="w-64 bg-white border border-neutral-200 shadow-xl rounded-xl">
                         <DropdownMenuLabel className="flex items-center gap-3 p-4 border-b border-neutral-100">
                             <Avatar className="w-12 h-12 border-2 border-rose-200">
-                                <AvatarImage src={user.profileImage} alt={user.fullName} />
+                                <AvatarImage src={displayUser.profileImage} alt={displayUser.fullName} />
                                 <AvatarFallback className="bg-gradient-to-br from-rose-500 to-pink-600 text-white font-semibold text-xl">
-                                    {user.fullName?.charAt(0).toUpperCase()}
+                                    {displayUser.fullName?.charAt(0).toUpperCase()}
                                 </AvatarFallback>
                             </Avatar>
                             <div>
-                                <div className="font-bold text-neutral-900 text-lg">{user.fullName}</div>
-                                <div className="text-sm text-neutral-500">{user.email}</div>
+                                <div className="font-bold text-neutral-900 text-lg">{displayUser.fullName}</div>
+                                <div className="text-sm text-neutral-500">{displayUser.email}</div>
                             </div>
                         </DropdownMenuLabel>
                         
                         <div className="p-2 space-y-1">
                             <DropdownMenuItem asChild>
-                                <Link href="/profile" className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all duration-200">
+                                <Link href="/user/profile" className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all duration-200">
                                     <div className="w-8 h-8 bg-rose-100 rounded-lg flex items-center justify-center">
                                         <User className="w-4 h-4 text-rose-600" />
                                     </div>
@@ -157,7 +199,7 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
                             </DropdownMenuItem>
                             
                             <DropdownMenuItem asChild>
-                                <Link href="/favorites" className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all duration-200">
+                                <Link href="/user/favorites" className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all duration-200">
                                     <div className="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center">
                                         <Heart className="w-4 h-4 text-pink-600" />
                                     </div>
@@ -169,7 +211,7 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
                             </DropdownMenuItem>
                             
                             <DropdownMenuItem asChild>
-                                <Link href="/bookings" className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all duration-200">
+                                <Link href="/user/bookings" className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all duration-200">
                                     <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
                                         <Calendar className="w-4 h-4 text-blue-600" />
                                     </div>
@@ -181,7 +223,7 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
                             </DropdownMenuItem>
                             
                             <DropdownMenuItem asChild>
-                                <Link href="/reviews" className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all duration-200">
+                                <Link href="/user/reviews" className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all duration-200">
                                     <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
                                         <Star className="w-4 h-4 text-yellow-600" />
                                     </div>
@@ -193,7 +235,7 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
                             </DropdownMenuItem>
                             
                             <DropdownMenuItem asChild>
-                                <Link href="/settings" className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all duration-200">
+                                <Link href="/user/settings" className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all duration-200">
                                     <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
                                         <Settings className="w-4 h-4 text-gray-600" />
                                     </div>

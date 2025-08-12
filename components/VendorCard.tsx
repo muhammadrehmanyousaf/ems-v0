@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
@@ -19,6 +19,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useRouter } from "next/navigation"
+import { useFavoritesContext } from "@/contexts/FavoritesContext"
+import { CreateFavoriteRequest } from "@/lib/api/favorites"
 
 interface VendorCardProps {
   id: string | number
@@ -55,25 +57,44 @@ export default function VendorCard({
   showDetails = true,
   className = "",
 }: VendorCardProps) {
-  const [isFavorite, setIsFavorite] = useState(false)
   const [openAlert, setOpenAlert] = useState(false)
   const router = useRouter()
   const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('user') && localStorage.getItem('token')
+  
+  // Use the favorites context
+  const { isFavorited, toggleFavorite, state: { isLoading: isFavoritesLoading } } = useFavoritesContext()
+  
+  // Check if this vendor is favorited (no API call needed)
+  const isFavorite = isFavorited(id.toString())
 
-  const handleCardClick = () => {
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't navigate if clicking on interactive elements
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('a') || target.closest('[data-no-navigate]')) {
+      return;
+    }
+    
     if (isLoggedIn) {
-      // Map vendor type to URL path
+      // Map vendor type to URL path - Support ALL vendor types
       const getVendorTypePath = (vendorType: string) => {
         const typeMap: { [key: string]: string } = {
           'Photographer': 'photographers',
           'Decorator': 'decor',
+          'Henna artist': 'henna-artists',
           'Hena artist': 'henna-artists',
           'Makeup artist': 'makeup-artists',
           'Wedding venue': 'venues',
           'Car rental': 'car-rental',
           'Catering': 'catering',
           'Bridal wearing': 'bridal-wear',
-          'Wedding Invitations and Stationery': 'wedding-stationery'
+          'Wedding Invitations and Stationery': 'wedding-stationery',
+          'Venue': 'venues',
+          'Caterer': 'catering',
+          'Makeup Artist': 'makeup-artists',
+          'Henna Artist': 'henna-artists',
+          'Car Rental': 'car-rental',
+          'Wedding Stationery': 'wedding-stationery',
+          'Bridal Wear': 'bridal-wear'
         }
         return typeMap[vendorType] || vendorType.toLowerCase().replace(/\s+/g, '-')
       }
@@ -148,25 +169,48 @@ export default function VendorCard({
                 </Badge>
               )}
               
-              {/* Favorite Button */}
-              <motion.div
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setIsFavorite(!isFavorite)
-                  }}
-                  className="h-10 w-10 rounded-full bg-white/90 backdrop-blur-md hover:bg-white shadow-lg hover:shadow-xl p-0 transition-all duration-200"
-                >
-                  <Heart 
-                    className={`h-5 w-5 ${isFavorite ? 'fill-rose-500 text-rose-500' : 'text-gray-600'}`} 
-                  />
-                </Button>
-              </motion.div>
+                             {/* Favorite Button - Completely isolated from card click */}
+               <motion.div
+                 whileHover={{ scale: 1.1 }}
+                 whileTap={{ scale: 0.9 }}
+                 onClick={(e) => e.stopPropagation()}
+                 onMouseDown={(e) => e.stopPropagation()}
+                 onMouseUp={(e) => e.stopPropagation()}
+                 onTouchStart={(e) => e.stopPropagation()}
+                 onTouchEnd={(e) => e.stopPropagation()}
+               >
+                 <Button
+                   variant="ghost"
+                   size="sm"
+                   disabled={isFavoritesLoading}
+                   data-no-navigate="true"
+                   onClick={async (e) => {
+                     e.preventDefault()
+                     e.stopPropagation()
+                     e.nativeEvent.stopImmediatePropagation()
+                     
+                     if (!isLoggedIn) {
+                       setOpenAlert(true)
+                       return
+                     }
+                     
+                     try {
+                       const favoriteData: CreateFavoriteRequest = {
+                         businessId: id.toString(),
+                       }
+                       
+                                               await toggleFavorite(favoriteData)
+                     } catch (error) {
+                       console.error('Error toggling favorite:', error)
+                     }
+                   }}
+                   className="h-10 w-10 rounded-full bg-white/90 backdrop-blur-md hover:bg-white shadow-lg hover:shadow-xl p-0 transition-all duration-200 disabled:opacity-50 relative z-10"
+                 >
+                   <Heart 
+                     className={`h-5 w-5 ${isFavorited(id.toString()) ? 'fill-rose-500 text-rose-500' : 'text-gray-600'}`} 
+                   />
+                 </Button>
+               </motion.div>
             </div>
 
             {/* Bottom Badge */}

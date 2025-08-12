@@ -32,11 +32,11 @@ export function FeaturedCatering() {
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-end mb-12">
           <div>
-            <h2 className="text-3xl font-bold mb-2">Featured Catering Services</h2>
-            <p className="text-gray-600">Delicious food and exceptional service for your wedding</p>
+            <h2 className="text-3xl font-bold mb-2">Featured Catering</h2>
+            <p className="text-gray-600">Delicious catering services for your wedding reception</p>
           </div>
           <a href="/catering" className="text-primary hover:underline hidden md:block">
-            View all catering services →
+            View all catering →
           </a>
         </div>
 
@@ -92,10 +92,10 @@ export function FeaturedCatering() {
 
         <div className="text-center mt-8 md:hidden">
           <a href="/catering" className="text-primary hover:underline">
-            View all catering services →
+            View all catering →
           </a>
         </div>
       </div>
     </section>
   )
-} 
+}
