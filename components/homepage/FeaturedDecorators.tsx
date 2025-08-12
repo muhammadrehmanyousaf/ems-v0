@@ -98,4 +98,4 @@ export function FeaturedDecorators() {
       </div>
     </section>
   )
-} 
+}

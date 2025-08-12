@@ -33,7 +33,7 @@ export function FeaturedMakeupArtists() {
         <div className="flex justify-between items-end mb-12">
           <div>
             <h2 className="text-3xl font-bold mb-2">Featured Makeup Artists</h2>
-            <p className="text-gray-600">Look stunning on your special day with professional makeup artists</p>
+            <p className="text-gray-600">Professional makeup artists for your perfect wedding look</p>
           </div>
           <a href="/makeup-artists" className="text-primary hover:underline hidden md:block">
             View all makeup artists →

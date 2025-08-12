@@ -33,7 +33,7 @@ export function FeaturedWeddingStationery() {
         <div className="flex justify-between items-end mb-12">
           <div>
             <h2 className="text-3xl font-bold mb-2">Featured Wedding Stationery</h2>
-            <p className="text-gray-600">Beautiful invitations and wedding stationery</p>
+            <p className="text-gray-600">Beautiful wedding invitations and stationery for your special day</p>
           </div>
           <a href="/wedding-stationery" className="text-primary hover:underline hidden md:block">
             View all wedding stationery →
@@ -98,4 +98,4 @@ export function FeaturedWeddingStationery() {
       </div>
     </section>
   )
-} 
+}

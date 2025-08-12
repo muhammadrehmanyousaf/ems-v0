@@ -33,7 +33,7 @@ export function FeaturedBridalWear() {
         <div className="flex justify-between items-end mb-12">
           <div>
             <h2 className="text-3xl font-bold mb-2">Featured Bridal Wear</h2>
-            <p className="text-gray-600">Stunning bridal dresses and traditional attire</p>
+            <p className="text-gray-600">Stunning bridal dresses and wedding attire</p>
           </div>
           <a href="/bridal-wear" className="text-primary hover:underline hidden md:block">
             View all bridal wear →
@@ -98,4 +98,4 @@ export function FeaturedBridalWear() {
       </div>
     </section>
   )
-} 
+}

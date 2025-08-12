@@ -28,6 +28,7 @@ import { getLoggedInUser } from "@/lib/authFunction"
 import { getUser } from "@/hooks/getLoggedinUser"
 import { Spinner } from "./ui/spinner"
 import HeaderAvatar from "./header-avatar"
+import { useFavoritesContext } from "@/contexts/FavoritesContext"
 
 const categories = [
   {
@@ -66,6 +67,9 @@ export function Header() {
   const router = useRouter()
   const { user, loading, error } = getUser();
   const isAuthenticated = typeof window !== 'undefined' && localStorage.getItem('isAuthenticated')
+
+  // Use the favorites context
+  const { state: { favorites } } = useFavoritesContext()
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -409,14 +413,23 @@ export function Header() {
           </NavigationMenu>
 
           <div className="flex items-center gap-3 md:gap-4">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="hidden md:inline-flex hover:bg-rose-50 hover:text-rose-600 transition-all duration-200 relative group"
-            >
-              <Heart className="h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full"></div>
-            </Button>
+            {/* Search Button */}
+            <Link href="/user/favorites">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="hidden md:inline-flex hover:bg-rose-50 hover:text-rose-600 transition-all duration-200 relative group"
+              >
+                <Heart className="h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
+                {favorites.length > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white animate-pulse">
+                    {favorites.length}
+                  </span>
+                )}
+              </Button>
+            </Link>
+            
+            {/* Profile Avatar */}
             <div className="relative">
               <HeaderAvatar loading={loading} user={user}/>
             </div>

@@ -32,11 +32,11 @@ export function FeaturedCarRental() {
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-end mb-12">
           <div>
-            <h2 className="text-3xl font-bold mb-2">Featured Car Rental Services</h2>
-            <p className="text-gray-600">Luxury vehicles for your special wedding day</p>
+            <h2 className="text-3xl font-bold mb-2">Featured Car Rental</h2>
+            <p className="text-gray-600">Luxury cars and transportation for your wedding day</p>
           </div>
           <a href="/car-rental" className="text-primary hover:underline hidden md:block">
-            View all car rental services →
+            View all car rental →
           </a>
         </div>
 
@@ -92,10 +92,10 @@ export function FeaturedCarRental() {
 
         <div className="text-center mt-8 md:hidden">
           <a href="/car-rental" className="text-primary hover:underline">
-            View all car rental services →
+            View all car rental →
           </a>
         </div>
       </div>
     </section>
   )
-} 
+}

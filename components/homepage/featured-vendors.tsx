@@ -1,52 +1,39 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import VendorCard from "@/components/VendorCard";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
-import { VendorAPI } from "@/lib/api/vendors";
-import type { Vendor } from "@/lib/types";
+import { useState, useEffect } from "react"
+import VendorCard from "@/components/VendorCard"
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
+import { VendorAPI } from "@/lib/api/vendors"
+import type { Vendor } from "@/lib/types"
 
 export function FeaturedVendors() {
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [vendors, setVendors] = useState<Vendor[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const fetchFeaturedVendors = async () => {
       try {
-        const featuredVendors = await VendorAPI.getFeaturedBusinesses();
-        setVendors(featuredVendors);
+        const featuredVendors = await VendorAPI.getAllBusinesses()
+        setVendors(featuredVendors.slice(0, 8)) // Limit to 8 featured
       } catch (error) {
-        console.error('Error fetching featured vendors:', error);
+        console.error('Error fetching featured vendors:', error)
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
+    }
 
-    fetchFeaturedVendors();
-  }, []);
+    fetchFeaturedVendors()
+  }, [])
 
   return (
     <section className="py-16 bg-gray-50">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-end mb-12">
           <div>
-            <h2 className="text-3xl font-bold mb-2">
-              Featured Wedding Vendors
-            </h2>
-            <p className="text-gray-600">
-              Discover top-rated wedding professionals in your area
-            </p>
+            <h2 className="text-3xl font-bold mb-2">Featured Vendors</h2>
+            <p className="text-gray-600">Discover amazing wedding vendors for your special day</p>
           </div>
-          <a
-            href="/vendors"
-            className="text-primary hover:underline hidden md:block"
-          >
+          <a href="/vendors" className="text-primary hover:underline hidden md:block">
             View all vendors →
           </a>
         </div>
@@ -108,5 +95,5 @@ export function FeaturedVendors() {
         </div>
       </div>
     </section>
-  );
+  )
 }
