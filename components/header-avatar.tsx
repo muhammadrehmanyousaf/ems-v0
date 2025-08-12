@@ -109,7 +109,7 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
                             <ChevronDown className="w-4 h-4 ml-2 group-hover:scale-110 transition-transform duration-200" />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56 bg-white border border-neutral-200 shadow-xl rounded-xl">
+                    <DropdownMenuContent className="w-56 bg-white border border-neutral-200 shadow-xl rounded-xl mr-8">
                         <DropdownMenuLabel className="flex items-center gap-2 text-neutral-900 font-semibold">
                             <Shield className="w-4 h-4 text-rose-500" />
                             Admin Panel
@@ -171,17 +171,17 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
                             </Avatar>
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-64 bg-white border border-neutral-200 shadow-xl rounded-xl">
-                        <DropdownMenuLabel className="flex items-center gap-3 p-4 border-b border-neutral-100">
-                            <Avatar className="w-12 h-12 border-2 border-rose-200">
+                    <DropdownMenuContent className="w-64 bg-white border border-neutral-200 shadow-xl rounded-xl mr-8">
+                        <DropdownMenuLabel className="flex items-start gap-3 p-4 border-b border-neutral-100">
+                            <Avatar className="w-12 h-12 border-2 border-rose-200 flex-shrink-0">
                                 <AvatarImage src={displayUser.profileImage} alt={displayUser.fullName} />
                                 <AvatarFallback className="bg-gradient-to-br from-rose-500 to-pink-600 text-white font-semibold text-xl">
                                     {displayUser.fullName?.charAt(0).toUpperCase()}
                                 </AvatarFallback>
                             </Avatar>
-                            <div>
-                                <div className="font-bold text-neutral-900 text-lg">{displayUser.fullName}</div>
-                                <div className="text-sm text-neutral-500">{displayUser.email}</div>
+                            <div className="min-w-0 flex-1">
+                                <div className="font-bold text-neutral-900 text-lg truncate">{displayUser.fullName}</div>
+                                <div className="text-sm text-neutral-500 break-words leading-tight">{displayUser.email}</div>
                             </div>
                         </DropdownMenuLabel>
                         
@@ -282,7 +282,7 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
                     <ChevronDown className="w-4 h-4 ml-2 group-hover:scale-110 transition-transform duration-200" />
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-64 bg-white border border-neutral-200 shadow-xl rounded-xl">
+            <DropdownMenuContent className="w-64 bg-white border border-neutral-200 shadow-xl rounded-xl mr-8">
                 <DropdownMenuLabel className="flex items-center gap-3 p-4 border-b border-neutral-100">
                     <div className="w-12 h-12 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
                         <Award className="w-6 h-6 text-white" />

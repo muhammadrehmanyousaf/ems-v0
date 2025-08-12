@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import VendorCard from "@/components/VendorCard"
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
 import { VendorAPI } from "@/lib/api/vendors"
@@ -33,9 +34,9 @@ export function FeaturedVendors() {
             <h2 className="text-3xl font-bold mb-2">Featured Vendors</h2>
             <p className="text-gray-600">Discover amazing wedding vendors for your special day</p>
           </div>
-          <a href="/vendors" className="text-primary hover:underline hidden md:block">
+          <Link href="/vendors" className="text-primary hover:underline hidden md:block">
             View all vendors →
-          </a>
+          </Link>
         </div>
 
         {/* ShadCN Carousel with Responsive Items Per Slide */}
@@ -89,9 +90,9 @@ export function FeaturedVendors() {
         </div>
 
         <div className="text-center mt-8 md:hidden">
-          <a href="/vendors" className="text-primary hover:underline">
+          <Link href="/vendors" className="text-primary hover:underline">
             View all vendors →
-          </a>
+          </Link>
         </div>
       </div>
     </section>

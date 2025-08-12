@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import VendorCard from "@/components/VendorCard"
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
 import { VendorAPI } from "@/lib/api/vendors"
@@ -35,9 +36,9 @@ export function FeaturedMakeupArtists() {
             <h2 className="text-3xl font-bold mb-2">Featured Makeup Artists</h2>
             <p className="text-gray-600">Professional makeup artists for your perfect wedding look</p>
           </div>
-          <a href="/makeup-artists" className="text-primary hover:underline hidden md:block">
+          <Link href="/vendors/makeup-artists" className="text-primary hover:underline hidden md:block">
             View all makeup artists →
-          </a>
+          </Link>
         </div>
 
         {/* ShadCN Carousel with Responsive Items Per Slide */}
@@ -91,9 +92,9 @@ export function FeaturedMakeupArtists() {
         </div>
 
         <div className="text-center mt-8 md:hidden">
-          <a href="/makeup-artists" className="text-primary hover:underline">
+          <Link href="/vendors/makeup-artists" className="text-primary hover:underline">
             View all makeup artists →
-          </a>
+          </Link>
         </div>
       </div>
     </section>
