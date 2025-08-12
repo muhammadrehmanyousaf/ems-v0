@@ -108,7 +108,7 @@ const RecentBookingTable: React.FC<RecentBookingTableProps> = ({
   const topRows = rows?.slice(0, 10) ?? [];
 
   return (
-    <Card className={cn('flex h-full min-h-[420px] flex-col', className)}>
+    <Card className={cn('flex h-full xlarge:h-auto min-h-[420px] xlarge:min-h-[685px] flex-col', className)}>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Recent Bookings</CardTitle>
         {onViewAll && (

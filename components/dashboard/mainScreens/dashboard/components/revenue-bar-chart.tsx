@@ -36,7 +36,7 @@ const chartConfig = {
 
 export function RevenueBarChart({chartHeight}: {chartHeight?: number}) {
   return (
-    <Card className="flex h-full flex-col">
+    <Card className="flex h-full xlarge:h-auto flex-col">
       <CardHeader>
         <CardTitle>Total Revenue</CardTitle>
         <CardDescription>January - June 2024</CardDescription>

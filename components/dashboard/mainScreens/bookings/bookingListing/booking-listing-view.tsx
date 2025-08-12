@@ -1,11 +1,9 @@
-'use client'
 import React from 'react'
 import PageContainer from '@/components/dashboard/layout/page-container'
 import { Heading } from '@/components/heading'
 import BookingTable from './components/booking-table'
 import { Separator } from '@/components/ui/separator'
-import { Button } from '@/components/ui/button'
-import { Download, Plus } from 'lucide-react'
+import CreationsButtons from './components/creations-buttons'
 
 const BookingListingView = () => {
 
@@ -17,16 +15,7 @@ const BookingListingView = () => {
             <Heading
               title='Bookings'
             />
-            <span className='flex items-center gap-2'>
-              <Button variant={'outline'} className='gap-2 hidden md:flex'>
-                <Download className='size-4' />
-                Export
-              </Button>
-              <Button className='gap-2'>
-                <Plus className='size-4' />
-                Add New
-              </Button>
-            </span>
+            <CreationsButtons />
           </div>
           <Separator />
           <BookingTable />

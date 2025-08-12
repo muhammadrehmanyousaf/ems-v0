@@ -78,7 +78,7 @@ export default function CustomerReviews({
   );
 
   return (
-    <Card className={cn("h-full", className)}>
+    <Card className={cn("h-full xlarge:h-auto", className)}>
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <div>
           <CardTitle>Customer Reviews</CardTitle>
