@@ -6,7 +6,7 @@ import Link from "next/link"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Star, MapPin, Users, Heart, Calendar, Clock, Award } from "lucide-react"
+import { Star, MapPin, Users, Calendar, Clock, Award } from "lucide-react"
 import Image from "next/image"
 import {
   AlertDialog,
@@ -19,8 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useRouter } from "next/navigation"
-import { useFavoritesContext } from "@/contexts/FavoritesContext"
-import { CreateFavoriteRequest } from "@/lib/api/favorites"
+
 
 interface VendorCardProps {
   id: string | number
@@ -59,13 +58,9 @@ export default function VendorCard({
 }: VendorCardProps) {
   const [openAlert, setOpenAlert] = useState(false)
   const router = useRouter()
-  const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('user') && localStorage.getItem('token')
+  const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('user_id') && localStorage.getItem('auth_token')
   
-  // Use the favorites context
-  const { isFavorited, toggleFavorite, state: { isLoading: isFavoritesLoading } } = useFavoritesContext()
-  
-  // Check if this vendor is favorited (no API call needed)
-  const isFavorite = isFavorited(id.toString())
+
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't navigate if clicking on interactive elements
@@ -169,48 +164,7 @@ export default function VendorCard({
                 </Badge>
               )}
               
-                             {/* Favorite Button - Completely isolated from card click */}
-               <motion.div
-                 whileHover={{ scale: 1.1 }}
-                 whileTap={{ scale: 0.9 }}
-                 onClick={(e) => e.stopPropagation()}
-                 onMouseDown={(e) => e.stopPropagation()}
-                 onMouseUp={(e) => e.stopPropagation()}
-                 onTouchStart={(e) => e.stopPropagation()}
-                 onTouchEnd={(e) => e.stopPropagation()}
-               >
-                 <Button
-                   variant="ghost"
-                   size="sm"
-                   disabled={isFavoritesLoading}
-                   data-no-navigate="true"
-                   onClick={async (e) => {
-                     e.preventDefault()
-                     e.stopPropagation()
-                     e.nativeEvent.stopImmediatePropagation()
-                     
-                     if (!isLoggedIn) {
-                       setOpenAlert(true)
-                       return
-                     }
-                     
-                     try {
-                       const favoriteData: CreateFavoriteRequest = {
-                         businessId: id.toString(),
-                       }
-                       
-                                               await toggleFavorite(favoriteData)
-                     } catch (error) {
-                       console.error('Error toggling favorite:', error)
-                     }
-                   }}
-                   className="h-10 w-10 rounded-full bg-white/90 backdrop-blur-md hover:bg-white shadow-lg hover:shadow-xl p-0 transition-all duration-200 disabled:opacity-50 relative z-10"
-                 >
-                   <Heart 
-                     className={`h-5 w-5 ${isFavorited(id.toString()) ? 'fill-rose-500 text-rose-500' : 'text-gray-600'}`} 
-                   />
-                 </Button>
-               </motion.div>
+
             </div>
 
             {/* Bottom Badge */}

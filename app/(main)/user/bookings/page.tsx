@@ -6,240 +6,166 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, User, Package, Eye, Edit, Trash2, RefreshCw } from "lucide-react";
-import { getUser } from "@/hooks/getLoggedinUser";
+import { Calendar, Clock, MapPin, User, Phone, Mail, Star, Eye, Trash2, Edit, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useUser } from "@/context/UserContext";
 
 interface Booking {
-  id: number;
+  id: string;
+  userId: string;
+  vendorId: string;
+  vendorName: string;
+  vendorType: string;
+  eventDate: string;
+  eventTime: string;
+  location: string;
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  totalAmount: number;
+  createdAt: string;
+  updatedAt: string;
   customerName: string;
   customerEmail: string;
   customerPhone: string;
-  bookingDate: string;
-  bookingTime: string;
-  totalAmount: number;
-  downPayment: number;
-  status: string;
-  paymentStatus: string;
-  createdAt: string;
-  updatedAt: string;
-  vendorId: number;
-  additionalRequests?: string;
-  cancellationReason?: string;
-  paymentMethod?: string;
-  bookingDetails: Array<{
-    id: number;
-    bookingId: number;
-    businessId: number;
-    packageId: number;
-    menuId?: number;
-  }>;
+  specialRequirements?: string;
+  packageDetails?: string;
 }
 
 const BookingsPage = () => {
-  const { user, loading } = getUser();
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
+  console.log('🔍 BookingsPage - Component rendered!');
+  
+  const { user, isAuthenticated, isLoading } = useUser();
+  
+  // Debug logging
+  console.log('🔍 BookingsPage - Auth state:', { user: !!user, isAuthenticated, isLoading });
+  console.log('🔍 BookingsPage - User data:', user);
+  
   // Helper function to get auth token
   const getAuthToken = () => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('token') || '';
-    }
-    return '';
+    return localStorage.getItem('auth_token') || '';
   };
+  
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [isLoadingBookings, setIsLoadingBookings] = useState(true);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
+  const router = useRouter();
 
-  // Fetch user bookings from API
-  const fetchUserBookings = async () => {
+  // Fetch bookings on component mount
+  useEffect(() => {
+    console.log('🔍 BookingsPage - useEffect triggered:', { user: !!user, isLoading });
+    if (user && !isLoading) {
+      console.log('🔍 BookingsPage - Loading user bookings...');
+      fetchBookings();
+    } else if (!isLoading && !user) {
+      console.log('🔍 BookingsPage - No user found, stopping loading');
+      setIsLoadingBookings(false);
+    }
+  }, [user, isLoading]);
+
+  const fetchBookings = async () => {
     try {
-      setIsLoading(true);
+      console.log('🔍 BookingsPage - fetchBookings called');
+      setIsLoadingBookings(true);
       
       if (!user || !user.id) {
-        throw new Error('User not found');
+        console.log('🔍 BookingsPage - No user ID found');
+        throw new Error('User ID not found');
       }
 
-      const response = await fetch(`http://localhost:3000/api/v1/bookings/simple-user-bookings`, {
+      console.log('🔍 BookingsPage - Fetching bookings for user:', user.id);
+      const response = await fetch(`http://localhost:3000/api/v1/bookings?userId=${user.id}`, {
         headers: {
           'Authorization': `Bearer ${getAuthToken()}`,
           'Content-Type': 'application/json'
         }
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch bookings: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      console.log('Raw API response:', data);
-      
-      // Handle different response structures
-      let bookingsData: Booking[] = [];
-      if (data.data && Array.isArray(data.data)) {
-        bookingsData = data.data;
-        console.log('Using data.data array:', bookingsData);
-      } else if (Array.isArray(data)) {
-        bookingsData = data;
-        console.log('Using direct array:', bookingsData);
-      } else if (data.bookings && Array.isArray(data.bookings)) {
-        bookingsData = data.bookings;
-        console.log('Using data.bookings array:', bookingsData);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('🔍 BookingsPage - Bookings data received:', data);
+        setBookings(data.data || []);
       } else {
-        console.log('No valid array found in response');
+        console.error('🔍 BookingsPage - Failed to fetch bookings:', response.status);
+        setBookings([]);
       }
-
-      // Log first booking to see structure
-      if (bookingsData.length > 0) {
-        console.log('First booking structure:', bookingsData[0]);
-        console.log('Sample date field:', bookingsData[0].bookingDate);
-        console.log('Sample time field:', bookingsData[0].bookingTime);
-      }
-
-      setBookings(bookingsData);
     } catch (error) {
-      console.error('Error fetching bookings:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load your bookings. Please try again.",
-        variant: "destructive",
-      });
+      console.error('🔍 BookingsPage - Error fetching bookings:', error);
+      setBookings([]);
     } finally {
-      setIsLoading(false);
+      setIsLoadingBookings(false);
     }
   };
 
-  // Refresh bookings
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await fetchUserBookings();
-    setIsRefreshing(false);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'confirmed':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'completed':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800 border-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
   };
 
-  // Handle booking actions (non-functional for now)
-  const handleViewBooking = (booking: Booking) => {
-    toast({
-      title: "View Booking",
-      description: `Viewing details for ${booking.customerName}`,
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
+  };
+
+  const formatTime = (timeString: string) => {
+    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const handleViewDetails = (booking: Booking) => {
+    setSelectedBooking(booking);
+    setShowDetails(true);
   };
 
   const handleEditBooking = (booking: Booking) => {
-    toast({
-      title: "Edit Booking",
-      description: `Edit functionality will be implemented later for ${booking.customerName}`,
-    });
+    // Navigate to booking edit page
+    router.push(`/booking/${booking.id}/edit`);
   };
 
-  const handleCancelBooking = (booking: Booking) => {
-    toast({
-      title: "Cancel Booking",
-      description: `Cancel functionality will be implemented later for ${booking.customerName}`,
-    });
-  };
-
-  // Get status badge variant
-  const getStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'confirmed':
-      case 'approved':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Confirmed</Badge>;
-      case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Pending</Badge>;
-      case 'cancelled':
-        return <Badge className="bg-red-100 text-red-800 border-red-200">Cancelled</Badge>;
-      case 'completed':
-      case 'finished':
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Completed</Badge>;
-      default:
-        return <Badge variant="secondary" className="capitalize">{status}</Badge>;
-    }
-  };
-
-  // Get payment status badge
-  const getPaymentStatusBadge = (paymentStatus: string) => {
-    switch (paymentStatus.toLowerCase()) {
-      case 'paid':
-      case 'completed':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Paid</Badge>;
-      case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Pending</Badge>;
-      case 'failed':
-      case 'cancelled':
-        return <Badge className="bg-red-100 text-red-800 border-red-200">Failed</Badge>;
-      case 'partial':
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Partial</Badge>;
-      default:
-        return <Badge className="bg-gray-100 text-gray-800 border-gray-200 capitalize">{paymentStatus}</Badge>;
-    }
-  };
-
-  // Format date with proper error handling
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'Date not specified';
-    
+  const handleCancelBooking = async (booking: Booking) => {
     try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        return 'Invalid date';
-      }
-      return date.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+      const response = await fetch(`http://localhost:3000/api/v1/bookings/${booking.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: 'cancelled' })
       });
-    } catch (error) {
-      return 'Date not available';
-    }
-  };
 
-  // Format time with proper error handling
-  const formatTime = (timeString: string) => {
-    if (!timeString) return 'Time not specified';
-    
-    try {
-      // Handle different time formats
-      let time;
-      if (timeString.includes('T')) {
-        // ISO format like "2024-01-01T14:30:00"
-        time = new Date(timeString);
-      } else if (timeString.includes(':')) {
-        // Time format like "14:30" or "14:30:00"
-        time = new Date(`2000-01-01T${timeString}`);
+      if (response.ok) {
+        toast({
+          title: "Booking Cancelled",
+          description: "Your booking has been cancelled successfully.",
+        });
+        fetchBookings(); // Refresh the list
       } else {
-        return 'Invalid time format';
+        throw new Error('Failed to cancel booking');
       }
-      
-      if (isNaN(time.getTime())) {
-        return 'Invalid time';
-      }
-      
-      return time.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      });
     } catch (error) {
-      return 'Time not available';
+      toast({
+        title: "Error",
+        description: "Failed to cancel booking. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
-
-  // Load bookings on component mount
-  useEffect(() => {
-    if (user && !loading) {
-      fetchUserBookings();
-    }
-  }, [user, loading]);
-
-  if (loading || isLoading) {
+  if (isLoading || isLoadingBookings) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 flex items-center justify-center">
         <div className="text-center">
@@ -250,7 +176,7 @@ const BookingsPage = () => {
     );
   }
 
-  if (!user) {
+  if (!user || !isAuthenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 flex items-center justify-center">
         <div className="text-center">
@@ -291,7 +217,7 @@ const BookingsPage = () => {
                 <div>
                   <p className="text-sm font-medium text-neutral-600">Confirmed</p>
                   <p className="text-2xl font-bold text-green-600">
-                    {bookings.filter(b => b.status.toLowerCase() === 'confirmed' || b.status.toLowerCase() === 'approved').length}
+                    {bookings.filter(b => b.status === 'confirmed').length}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
@@ -307,7 +233,7 @@ const BookingsPage = () => {
                 <div>
                   <p className="text-sm font-medium text-neutral-600">Pending</p>
                   <p className="text-2xl font-bold text-yellow-600">
-                    {bookings.filter(b => b.status.toLowerCase() === 'pending').length}
+                    {bookings.filter(b => b.status === 'pending').length}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
@@ -323,11 +249,12 @@ const BookingsPage = () => {
                 <div>
                   <p className="text-sm font-medium text-neutral-600">Total Spent</p>
                   <p className="text-2xl font-bold text-blue-600">
-                    {formatCurrency(bookings.reduce((sum, b) => sum + b.totalAmount, 0))}
+                    {/* Assuming totalAmount is the correct field for total spent */}
+                    {bookings.reduce((sum, b) => sum + b.totalAmount, 0)}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Package className="w-6 h-6 text-blue-600" />
+                  <Star className="w-6 h-6 text-blue-600" />
                 </div>
               </div>
             </CardContent>
@@ -341,15 +268,15 @@ const BookingsPage = () => {
             <p className="text-sm text-neutral-600">Your latest event bookings and reservations</p>
           </div>
           <Button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
+            onClick={fetchBookings}
+            disabled={isLoadingBookings}
             variant="outline"
             className="border-rose-200 text-rose-600 hover:bg-rose-50"
           >
-            {isRefreshing ? (
+            {isLoadingBookings ? (
               <Spinner size="sm" className="mr-2" />
             ) : (
-              <RefreshCw className="w-4 h-4 mr-2" />
+              <Plus className="w-4 h-4 mr-2" />
             )}
             Refresh
           </Button>
@@ -383,17 +310,11 @@ const BookingsPage = () => {
                           <div className="flex items-center gap-4 text-sm text-neutral-600">
                             <span className="flex items-center gap-1">
                               <Calendar className="w-4 h-4" />
-                              {formatDate(booking.bookingDate)}
-                              {formatDate(booking.bookingDate) === 'Invalid date' && (
-                                <span className="text-xs text-red-500 ml-1">({booking.bookingDate})</span>
-                              )}
+                              {formatDate(booking.eventDate)}
                             </span>
                             <span className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
-                              {formatTime(booking.bookingTime)}
-                              {formatTime(booking.bookingTime) === 'Invalid time' && (
-                                <span className="text-xs text-red-500 ml-1">({booking.bookingTime})</span>
-                              )}
+                              {formatTime(booking.eventTime)}
                             </span>
                             <span className="flex items-center gap-1">
                               <User className="w-4 h-4" />
@@ -403,16 +324,13 @@ const BookingsPage = () => {
                         </div>
                                                  <div className="text-right">
                            <div className="space-y-2">
-                             {getStatusBadge(booking.status)}
+                             <Badge className={`capitalize ${getStatusColor(booking.status)}`}>
+                               {booking.status}
+                             </Badge>
                            </div>
                            <p className="text-lg font-bold text-rose-600 mt-2">
-                             {formatCurrency(booking.totalAmount)}
+                             {booking.totalAmount}
                            </p>
-                           {booking.downPayment > 0 && (
-                             <p className="text-sm text-blue-600">
-                               Down Payment: {formatCurrency(booking.downPayment)}
-                             </p>
-                           )}
                          </div>
                       </div>
 
@@ -423,19 +341,19 @@ const BookingsPage = () => {
                           <span>Phone: {booking.customerPhone}</span>
                         </div>
                         <div className="flex items-center gap-2 text-neutral-600">
-                          <Package className="w-4 h-4" />
-                          <span>Vendor ID: {booking.vendorId}</span>
+                          <MapPin className="w-4 h-4" />
+                          <span>Location: {booking.location}</span>
                         </div>
-                        {booking.additionalRequests && (
+                        {booking.specialRequirements && (
                           <div className="flex items-center gap-2 text-neutral-600 md:col-span-2">
-                            <Calendar className="w-4 h-4" />
-                            <span>Requests: {booking.additionalRequests}</span>
+                            <Eye className="w-4 h-4" />
+                            <span>Requirements: {booking.specialRequirements}</span>
                           </div>
                         )}
-                        {booking.cancellationReason && (
+                        {booking.packageDetails && (
                           <div className="flex items-center gap-2 text-neutral-600 md:col-span-2">
-                            <Calendar className="w-4 h-4" />
-                            <span>Cancellation: {booking.cancellationReason}</span>
+                            <Star className="w-4 h-4" />
+                            <span>Package: {booking.packageDetails}</span>
                           </div>
                         )}
                       </div>
@@ -448,7 +366,7 @@ const BookingsPage = () => {
                     {/* Action Buttons */}
                     <div className="flex flex-col sm:flex-row gap-2 lg:flex-col">
                       <Button
-                        onClick={() => handleViewBooking(booking)}
+                        onClick={() => handleViewDetails(booking)}
                         variant="outline"
                         size="sm"
                         className="border-blue-200 text-blue-600 hover:bg-blue-50"
@@ -461,7 +379,7 @@ const BookingsPage = () => {
                         variant="outline"
                         size="sm"
                         className="border-green-200 text-green-600 hover:bg-green-50"
-                        disabled={booking.status.toLowerCase() === 'cancelled' || booking.status.toLowerCase() === 'completed'}
+                        disabled={booking.status === 'cancelled' || booking.status === 'completed'}
                       >
                         <Edit className="w-4 h-4 mr-2" />
                         Edit
@@ -471,7 +389,7 @@ const BookingsPage = () => {
                         variant="outline"
                         size="sm"
                         className="border-red-200 text-red-600 hover:bg-red-50"
-                        disabled={booking.status.toLowerCase() === 'cancelled' || booking.status.toLowerCase() === 'completed'}
+                        disabled={booking.status === 'cancelled' || booking.status === 'completed'}
                       >
                         <Trash2 className="w-4 h-4 mr-2" />
                         Cancel

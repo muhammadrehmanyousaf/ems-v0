@@ -119,7 +119,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
   const [selectedImage, setSelectedImage] = useState(0)
   const router = useRouter()
   const { toast } = useToast()
-  const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('user') && localStorage.getItem('token')
+  const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('user_id') && localStorage.getItem('auth_token')
 
   const primaryImage = useMemo(() => vendor.images?.[0] || "/placeholder.jpg", [vendor.images])
 
