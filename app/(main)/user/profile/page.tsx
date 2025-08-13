@@ -9,14 +9,13 @@ import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/hooks/use-toast";
 import { User, Mail, Phone, Save, Edit3, CheckCircle, AlertCircle, Shield, Lock, Key } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { getUser } from "@/hooks/getLoggedinUser";
-import { logout } from "@/lib/authFunction";
+import { useUser } from "@/context/UserContext";
 
 interface UserProfile {
   fullName: string;
   email: string;
   phoneNumber: string;
-  roleIds: number[];
+  roles: Array<{ id: number; name: string }>;
 }
 
 interface PasswordForm {
@@ -26,14 +25,17 @@ interface PasswordForm {
 }
 
 const ProfilePage = () => {
-  const { user, loading } = getUser();
+  console.log('🔍 ProfilePage - Component rendered!');
+  
+  const { user, isAuthenticated, isLoading, logout } = useUser();
+  
+  // Debug logging
+  console.log('🔍 ProfilePage - Auth state:', { user: !!user, isAuthenticated, isLoading });
+  console.log('🔍 ProfilePage - User data:', user);
   
   // Helper function to get auth token
   const getAuthToken = () => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('token') || '';
-    }
-    return '';
+    return localStorage.getItem('auth_token') || '';
   };
   
   // Function to update header in real-time without reload
@@ -55,7 +57,7 @@ const ProfilePage = () => {
     fullName: "",
     email: "",
     phoneNumber: "",
-    roleIds: [3]
+    roles: []
   });
   
   // Ensure all profile values are always strings to prevent controlled/uncontrolled warnings
@@ -63,14 +65,14 @@ const ProfilePage = () => {
     fullName: String(profile.fullName || ""),
     email: String(profile.email || ""),
     phoneNumber: String(profile.phoneNumber || ""),
-    roleIds: profile.roleIds || [3]
+    roles: profile.roles || []
   };
   const [passwordForm, setPasswordForm] = useState<PasswordForm>({
     oldPassword: "",
     newPassword: "",
     repeatPassword: ""
   });
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isPasswordChanging, setIsPasswordChanging] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -80,38 +82,49 @@ const ProfilePage = () => {
 
   // Fetch user profile on component mount
   useEffect(() => {
-    if (user && !loading) {
+    console.log('🔍 ProfilePage - useEffect triggered:', { user: !!user, isLoading });
+    if (user && !isLoading) {
+      console.log('🔍 ProfilePage - Loading user profile...');
       loadUserProfile();
+    } else if (!isLoading && !user) {
+      console.log('🔍 ProfilePage - No user found, stopping loading');
+      setIsLoadingProfile(false);
     }
-  }, [user, loading]);
+  }, [user, isLoading]);
 
   const loadUserProfile = () => {
     try {
-      setIsLoading(true);
+      console.log('🔍 ProfilePage - loadUserProfile called');
+      setIsLoadingProfile(true);
       
       if (user) {
-        // Set profile from the user data fetched by the hook
+        console.log('🔍 ProfilePage - Setting initial profile from user data');
+        // Set profile from the user data fetched by the context
         const initialProfile = {
           fullName: user.fullName || "",
           email: user.email || "",
           phoneNumber: user.phoneNumber || "",
-          roleIds: user.roleIds || [3]
+          roles: user.roles || []
         };
         
+        console.log('🔍 ProfilePage - Initial profile:', initialProfile);
         setProfile(initialProfile);
         setOriginalProfile(initialProfile);
+        setIsLoadingProfile(false); // Stop loading immediately since we have user data
         
         // Then fetch fresh data from API in background
         fetchProfileFromAPI(user.id);
       } else {
-        setIsLoading(false);
+        console.log('🔍 ProfilePage - No user data available');
+        setIsLoadingProfile(false);
       }
     } catch (error) {
-      setIsLoading(false);
+      console.error('🔍 ProfilePage - Error in loadUserProfile:', error);
+      setIsLoadingProfile(false);
     }
   };
 
-    const fetchProfileFromAPI = async (userId: number) => {
+    const fetchProfileFromAPI = async (userId: string) => {
     try {
       // Try the authenticated endpoint first
       const response = await fetch(`http://localhost:3000/api/v1/users?id=${userId}`, {
@@ -152,7 +165,7 @@ const ProfilePage = () => {
     } catch (error) {
       // Keep the localStorage data if API fails
     } finally {
-      setIsLoading(false);
+      setIsLoadingProfile(false);
     }
   };
 
@@ -229,12 +242,12 @@ const ProfilePage = () => {
       updateHeaderInRealTime(updatedData);
       
       // Also update the user context if available (for header display)
-      if (typeof window !== 'undefined' && localStorage.getItem('user')) {
+      if (typeof window !== 'undefined' && localStorage.getItem('user_id')) {
         // Update localStorage with new name if it changed
-        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const currentUser = JSON.parse(localStorage.getItem('user_data') || '{}');
         if (updatedData.fullName && currentUser.fullName !== updatedData.fullName) {
           currentUser.fullName = updatedData.fullName;
-          localStorage.setItem('user', JSON.stringify(currentUser));
+          localStorage.setItem('user_data', JSON.stringify(currentUser));
         }
       }
       
@@ -370,7 +383,7 @@ const ProfilePage = () => {
 
 
 
-  if (loading || isLoading) {
+  if (isLoading || isLoadingProfile) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 flex items-center justify-center">
         <div className="text-center">
@@ -381,7 +394,7 @@ const ProfilePage = () => {
     );
   }
 
-  if (!user) {
+  if (!user || !isAuthenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 flex items-center justify-center">
         <div className="text-center">

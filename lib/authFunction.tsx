@@ -1,11 +1,10 @@
 import axiosInstance from '@/lib/axiosConfig';
-import Cookies from "js-cookie";
 
 export async function getLoggedInUser(): Promise<any> {
   try {
     if (typeof window === 'undefined') return null;
 
-    const userId = localStorage.getItem("user");
+    const userId = localStorage.getItem("user_id");
     if (!userId) {
       console.error('Missing user ID in localStorage.');
       return null;
@@ -19,14 +18,3 @@ export async function getLoggedInUser(): Promise<any> {
     return null;
   }
 }
-
-export const logout = () => {
-  
-  localStorage.removeItem("user");
-  localStorage.removeItem("token");
-
-  Cookies.remove("user");
-  Cookies.remove("token");
-
-  window.location.reload();
-};

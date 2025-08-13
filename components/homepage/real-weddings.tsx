@@ -151,8 +151,8 @@ function WeddingDetailModal({ wedding }: { wedding: any }) {
 
   const handleLike = () => {
     toast({
-      title: "Added to favorites!",
-      description: "This wedding story has been added to your favorites.",
+      title: "Liked!",
+      description: "This wedding story has been liked successfully.",
     })
   }
 

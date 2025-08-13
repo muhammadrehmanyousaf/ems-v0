@@ -1,8 +1,6 @@
-// import Protectlogin from "./_components/protect-login"
-
-import { LoginForm } from "@/components/login-form";
+import ProtectLogin from "./_components/protect-login"
 
 export default function LoginPage() {
-  return <LoginForm />
+  return <ProtectLogin />
 }
 

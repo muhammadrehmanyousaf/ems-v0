@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { logout } from "@/lib/authFunction";
+import { useUser } from "@/context/UserContext";
 import { 
   User, 
   Settings, 
@@ -34,7 +34,14 @@ type AvatarComponent = {
 }
 
 const HeaderAvatar = ({loading, user}: AvatarComponent) => {
+    const { logout } = useUser();
     const [localUser, setLocalUser] = useState<any>(user);
+
+    // Debug logging
+    useEffect(() => {
+        console.log("🔍 HeaderAvatar - Props:", { loading, user });
+        console.log("🔍 HeaderAvatar - Local state:", { localUser });
+    }, [loading, user, localUser]);
 
     // Update localUser when user prop changes
     useEffect(() => {
@@ -72,12 +79,14 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
     let userRole;
     try {
         userRole = displayUser?.roles?.[0]?.id;
+        console.log("🔍 HeaderAvatar - User role:", userRole);
     } catch (error) {
         console.warn('Could not get user role:', error);
         userRole = null;
     }
 
     if (loading) {
+        console.log("🔍 HeaderAvatar - Showing loading spinner");
         return (
             <div className="flex items-center justify-center">
                 <Spinner size="sm" className="text-rose-500" />
@@ -85,9 +94,8 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
         );
     }
 
-    const loggedIn = localStorage.getItem('user');
-    
-    if (displayUser && loggedIn) {
+    if (displayUser) {
+        console.log("🔍 HeaderAvatar - User is logged in, role:", userRole);
         // If we can't determine the role, treat as regular user
         if (!userRole) {
             console.log('User role not found, treating as regular user');
@@ -95,6 +103,7 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
         }
         
         if (userRole === 1 || userRole === 2) {
+            console.log("🔍 HeaderAvatar - Rendering admin dashboard button");
             // Admin/Manager Dashboard
             return (
                 <DropdownMenu>
@@ -154,6 +163,7 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
                 </DropdownMenu>
             );
         } else if (userRole === 3) {
+            console.log("🔍 HeaderAvatar - Rendering user profile avatar");
             // Regular User
             return (
                 <DropdownMenu>
@@ -198,17 +208,7 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
                                 </Link>
                             </DropdownMenuItem>
                             
-                            <DropdownMenuItem asChild>
-                                <Link href="/user/favorites" className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all duration-200">
-                                    <div className="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center">
-                                        <Heart className="w-4 h-4 text-pink-600" />
-                                    </div>
-                                    <div>
-                                        <div className="font-semibold text-neutral-900">Favorites</div>
-                                        <div className="text-xs text-neutral-500">Saved vendors & venues</div>
-                                    </div>
-                                </Link>
-                            </DropdownMenuItem>
+
                             
                             <DropdownMenuItem asChild>
                                 <Link href="/user/bookings" className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all duration-200">
@@ -269,6 +269,7 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
         }
     }
 
+    console.log("🔍 HeaderAvatar - No user logged in, showing business registration button");
     // If no user is logged in - Show "List Your Business" button
     return (
         <DropdownMenu>

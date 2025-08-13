@@ -192,7 +192,7 @@ function TipDetailModal({ tip }: { tip: any }) {
   const handleSave = () => {
     toast({
       title: "Tip saved!",
-      description: "This tip has been added to your favorites.",
+      description: "This tip has been saved successfully.",
     })
   }
 

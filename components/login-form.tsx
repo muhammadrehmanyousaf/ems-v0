@@ -12,11 +12,10 @@ import { Icons } from "@/components/ui/icons"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import Link from "next/link"
-import axios from "axios"
-import { BACKEND_URL } from "@/lib/backend-url"
+import axiosInstance from "@/lib/axiosConfig"
 import { useRouter } from "next/navigation"
 import { toast } from "./ui/use-toast"
-import Cookies from "js-cookie"
+import { useUser } from "@/context/UserContext"
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -27,63 +26,75 @@ type FormData = z.infer<typeof formSchema>
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
+  const { login } = useUser()
   const {
     register,
     handleSubmit,
-    reset,
     formState: { errors },
-  } = useForm<FormData>({
+    reset
+  } = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
   })
 
   const router = useRouter()
-  async function onSubmit(data: FormData) {
-    setIsLoading(true);
+
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
-      const response = await axios.post(`${BACKEND_URL}api/v1/auth/login`, data);
-      
+      setIsLoading(true)
+      console.log('🔐 Attempting login with:', data.email);
+
+      const response = await axiosInstance.post('/api/v1/auth/login', {
+        email: data.email,
+        password: data.password,
+      })
+
       if (response.status === 200) {
         const resData = response.data;
         const {user, token} = resData.data
-        console.log('response', response);
+        console.log('✅ Login response received:', resData);
+        console.log('✅ User data:', user);
+        console.log('✅ Token received:', !!token);
         
-        
-        localStorage.setItem("user", JSON.stringify(user.id));
-        localStorage.setItem("token", token)
-        Cookies.set("user", user.id);
-        Cookies.set("token",token);
+        // Use the UserContext login function
+        login(user, token);
         
         toast({
-          title:'Logged in successfully',
-          description: 'You are logged in successfully'
-        });
+          title: 'Login successful',
+          description: 'Welcome back!',
+        })
         reset()
+        
+        // Route based on user role
         if(user.roles[0].id === 1 || user.roles[0].id === 2) {
+          console.log("🔄 Redirecting admin to dashboard");
           router.push('/dashboard')
         }else if(user.roles[0].id === 3) {
+          console.log("🔄 Redirecting user to home");
           router.push('/')
         } else{
+          console.log("❌ No valid role found");
           toast({
             title: 'No role found'
           })
         }
       }else{
+        console.log("❌ Login failed with status:", response.status);
         toast({
           title: 'Login failed',
-          description: `Error: ${response?.data.message}`
+          description: 'Invalid credentials',
         })
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message
-      console.error("Login error:", error);
+      console.error("❌ Login error:", error);
       toast({
         title: 'Login failed',
-        description: `error: ${errorMessage || 'Something went wrong. Please try again later.'}`
-        });
+        description: errorMessage || 'Something went wrong',
+      })
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
     <div className=" min-h-screen bg-gray-50 ">
