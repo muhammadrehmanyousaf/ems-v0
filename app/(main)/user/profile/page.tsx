@@ -16,7 +16,7 @@ interface UserProfile {
   fullName: string;
   email: string;
   phoneNumber: string;
-  roles: Array<{ id: number; name: string }>;
+  roleIds: Array<number>;
 }
 
 interface PasswordForm {
@@ -61,7 +61,7 @@ const ProfilePage = () => {
     fullName: "",
     email: "",
     phoneNumber: "",
-    roles: []
+    roleIds: [3]
   });
   
   // Ensure all profile values are always strings to prevent controlled/uncontrolled warnings
@@ -69,7 +69,7 @@ const ProfilePage = () => {
     fullName: String(profile.fullName || ""),
     email: String(profile.email || ""),
     phoneNumber: String(profile.phoneNumber || ""),
-    roles: profile.roles || []
+    roleIds: [3]
   };
   const [passwordForm, setPasswordForm] = useState<PasswordForm>({
     oldPassword: "",
@@ -108,7 +108,7 @@ const ProfilePage = () => {
           fullName: user.fullName || "",
           email: user.email || "",
           phoneNumber: user.phoneNumber || "",
-          roles: user.roles || []
+          roleIds: [3]
         };
         
         console.log('🔍 ProfilePage - Initial profile:', initialProfile);
@@ -193,9 +193,10 @@ const ProfilePage = () => {
       
       const requestBody = {
         ...profile,
+        roleIds: [3],
         id: user.id
       };
-      
+      console.log(requestBody);
       const response = await fetch(`http://localhost:3000/api/v1/users?id=${user.id}`, {
         method: 'PATCH',
         headers: {
