@@ -45,7 +45,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const validateSession = (): boolean => {
     try {
       const token = localStorage.getItem(STORAGE_KEYS.TOKEN) || Cookies.get(STORAGE_KEYS.TOKEN);
-      const sessionExpiry = localStorage.getItem(STORAGE_KEYS.SESSION_EXPIRY);
+      const sessionExpiry = localStorage.getItem(STORAGE_KEYS.SESSION_EXPIRY) || Cookies.get(STORAGE_KEYS.SESSION_EXPIRY);
       
       if (!token) {
         console.log("❌ No token found");
@@ -97,8 +97,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      // Get stored user data
-      const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+      // Get stored user data from localStorage or cookies
+      const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA) || Cookies.get(STORAGE_KEYS.USER_DATA);
       const userId = localStorage.getItem(STORAGE_KEYS.USER_ID) || Cookies.get(STORAGE_KEYS.USER_ID);
 
       if (storedUserData && userId) {
@@ -137,9 +137,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       if (userData && userData.data) {
         console.log("✅ Server verification successful:", userData.data);
         
-        // Update stored data
+        // Update stored data in both localStorage and cookies
         const user = userData.data;
         localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+        Cookies.set(STORAGE_KEYS.USER_DATA, JSON.stringify(user), { expires: 1 });
         setUser(user);
         setIsAuthenticated(true);
       } else {

@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { User, Mail, Phone, Save, Edit3, CheckCircle, AlertCircle, Shield, Lock, Key } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
+import Cookies from "js-cookie";
 
 interface UserProfile {
   fullName: string;
@@ -35,7 +36,10 @@ const ProfilePage = () => {
   
   // Helper function to get auth token
   const getAuthToken = () => {
-    return localStorage.getItem('auth_token') || '';
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('auth_token') || Cookies.get('auth_token') || '';
+    }
+    return '';
   };
   
   // Function to update header in real-time without reload

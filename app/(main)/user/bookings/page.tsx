@@ -9,25 +9,59 @@ import { toast } from "@/hooks/use-toast";
 import { Calendar, Clock, MapPin, User, Phone, Mail, Star, Eye, Trash2, Edit, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
+import Cookies from "js-cookie";
 
-interface Booking {
-  id: string;
-  userId: string;
-  vendorId: string;
-  vendorName: string;
-  vendorType: string;
-  eventDate: string;
-  eventTime: string;
-  location: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+interface BookingDetail {
+  id: number;
+  bookingId: number;
+  businessId: number;
+  packageId: number;
+  menuId: number | null;
   totalAmount: number;
+  downPayment: number;
+  specialRequests: string | null;
   createdAt: string;
   updatedAt: string;
+  business: {
+    id: number;
+    name: string;
+    city: string;
+    subArea: string;
+    description: string;
+    services: string;
+  };
+  package: {
+    id: number;
+    name: string;
+    price: number;
+    features: string[];
+  };
+  menu: {
+    id: number;
+    title: string;
+    price: number;
+    data: any;
+  } | null;
+}
+
+interface Booking {
+  id: number;
   customerName: string;
   customerEmail: string;
   customerPhone: string;
-  specialRequirements?: string;
-  packageDetails?: string;
+  vendorId: number;
+  bookingDate: string;
+  bookingTime: string;
+  status: string;
+  totalAmount: number;
+  paymentStatus: string;
+  paymentMethod: string | null;
+  downPayment: number;
+  additionalRequests: string | null;
+  cancellationReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+  bookingDetails: BookingDetail[];
 }
 
 const BookingsPage = () => {
@@ -41,7 +75,10 @@ const BookingsPage = () => {
   
   // Helper function to get auth token
   const getAuthToken = () => {
-    return localStorage.getItem('auth_token') || '';
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('auth_token') || Cookies.get('auth_token') || '';
+    }
+    return '';
   };
   
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -73,7 +110,7 @@ const BookingsPage = () => {
       }
 
       console.log('🔍 BookingsPage - Fetching bookings for user:', user.id);
-      const response = await fetch(`http://localhost:3000/api/v1/bookings?userId=${user.id}`, {
+      const response = await fetch(`http://localhost:3000/api/v1/bookings/simple-user-bookings`, {
         headers: {
           'Authorization': `Bearer ${getAuthToken()}`,
           'Content-Type': 'application/json'
@@ -248,10 +285,9 @@ const BookingsPage = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-neutral-600">Total Spent</p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {/* Assuming totalAmount is the correct field for total spent */}
-                    {bookings.reduce((sum, b) => sum + b.totalAmount, 0)}
-                  </p>
+                                     <p className="text-2xl font-bold text-blue-600">
+                     Rs. {bookings.reduce((sum, b) => sum + b.totalAmount, 0).toLocaleString()}
+                   </p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                   <Star className="w-6 h-6 text-blue-600" />
@@ -310,11 +346,11 @@ const BookingsPage = () => {
                           <div className="flex items-center gap-4 text-sm text-neutral-600">
                             <span className="flex items-center gap-1">
                               <Calendar className="w-4 h-4" />
-                              {formatDate(booking.eventDate)}
+                              {formatDate(booking.bookingDate)}
                             </span>
                             <span className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
-                              {formatTime(booking.eventTime)}
+                              {formatTime(booking.bookingTime)}
                             </span>
                             <span className="flex items-center gap-1">
                               <User className="w-4 h-4" />
@@ -328,9 +364,9 @@ const BookingsPage = () => {
                                {booking.status}
                              </Badge>
                            </div>
-                           <p className="text-lg font-bold text-rose-600 mt-2">
-                             {booking.totalAmount}
-                           </p>
+                                                       <p className="text-lg font-bold text-rose-600 mt-2">
+                              Rs. {booking.totalAmount.toLocaleString()}
+                            </p>
                          </div>
                       </div>
 
@@ -340,22 +376,58 @@ const BookingsPage = () => {
                           <User className="w-4 h-4" />
                           <span>Phone: {booking.customerPhone}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-neutral-600">
-                          <MapPin className="w-4 h-4" />
-                          <span>Location: {booking.location}</span>
-                        </div>
-                        {booking.specialRequirements && (
-                          <div className="flex items-center gap-2 text-neutral-600 md:col-span-2">
-                            <Eye className="w-4 h-4" />
-                            <span>Requirements: {booking.specialRequirements}</span>
-                          </div>
-                        )}
-                        {booking.packageDetails && (
-                          <div className="flex items-center gap-2 text-neutral-600 md:col-span-2">
-                            <Star className="w-4 h-4" />
-                            <span>Package: {booking.packageDetails}</span>
-                          </div>
-                        )}
+                                                 <div className="flex items-center gap-2 text-neutral-600">
+                           <MapPin className="w-4 h-4" />
+                           <span>Location: {booking.bookingDetails[0]?.business.city}, {booking.bookingDetails[0]?.business.subArea}</span>
+                         </div>
+                         <div className="flex items-center gap-2 text-neutral-600">
+                           <User className="w-4 h-4" />
+                           <span>Vendor: {booking.bookingDetails[0]?.business.name}</span>
+                         </div>
+                         <div className="flex items-center gap-2 text-neutral-600">
+                           <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                             Payment: {booking.paymentStatus}
+                           </span>
+                           <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                             Down Payment: {booking.downPayment}%
+                           </span>
+                         </div>
+                         {booking.additionalRequests && (
+                           <div className="flex items-center gap-2 text-neutral-600 md:col-span-2">
+                             <Eye className="w-4 h-4" />
+                             <span>Requirements: {booking.additionalRequests}</span>
+                           </div>
+                         )}
+                         {booking.bookingDetails.length > 0 && (
+                           <div className="flex items-center gap-2 text-neutral-600 md:col-span-2">
+                             <Star className="w-4 h-4" />
+                             <span>Packages: {booking.bookingDetails.map(detail => detail.package.name).join(', ')}</span>
+                           </div>
+                         )}
+                         
+                         {/* Vendor Details Section */}
+                         {booking.bookingDetails.length > 1 && (
+                           <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                             <h4 className="font-semibold text-neutral-900 mb-3">Vendors & Services:</h4>
+                             <div className="space-y-3">
+                               {booking.bookingDetails.map((detail, index) => (
+                                 <div key={detail.id} className="border-l-4 border-rose-200 pl-3">
+                                   <div className="flex items-center justify-between">
+                                     <div>
+                                       <p className="font-medium text-neutral-900">{detail.business.name}</p>
+                                       <p className="text-sm text-neutral-600">{detail.business.city}, {detail.business.subArea}</p>
+                                       <p className="text-sm text-neutral-600">{detail.package.name}</p>
+                                     </div>
+                                     <div className="text-right">
+                                       <p className="font-semibold text-rose-600">Rs. {detail.totalAmount.toLocaleString()}</p>
+                                       <p className="text-xs text-neutral-500">Down Payment: {detail.downPayment}%</p>
+                                     </div>
+                                   </div>
+                                 </div>
+                               ))}
+                             </div>
+                           </div>
+                         )}
                       </div>
 
                       <p className="text-xs text-neutral-500">
