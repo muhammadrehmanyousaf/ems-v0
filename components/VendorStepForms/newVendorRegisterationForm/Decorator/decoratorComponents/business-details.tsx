@@ -132,151 +132,186 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
     };
 
     return (
-        <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                    <div>
-                        <Label htmlFor="name">Business Name</Label>
-                        <Input
-                            id="name"
-                            placeholder="Enter your business name"
-                            value={formData.name}
-                            onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                            className={errors.name ? "border-red-500" : ""}
-                        />
-                        {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+        <div className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Left Column - Basic Information */}
+                <div className="space-y-6">
+                    <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-neutral-200">
+                        <h3 className="text-lg font-semibold text-neutral-800 mb-4">Basic Information</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <Label htmlFor="name" className="text-sm font-medium text-neutral-700">Business Name</Label>
+                                <Input
+                                    id="name"
+                                    placeholder="Enter your business name"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                                    className={`mt-1 ${errors.name ? "border-red-500" : "border-neutral-300"}`}
+                                />
+                                {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+                            </div>
+
+                            <div>
+                                <Label htmlFor="description" className="text-sm font-medium text-neutral-700">Business Description</Label>
+                                <Textarea
+                                    id="description"
+                                    placeholder="Describe your decoration services"
+                                    value={formData.description}
+                                    onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                                    className={`mt-1 min-h-[100px] ${errors.description ? "border-red-500" : "border-neutral-300"}`}
+                                />
+                                {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
+                            </div>
+                        </div>
                     </div>
 
-                    <div>
-                        <Label htmlFor="description">Business Description</Label>
-                        <Textarea
-                            id="description"
-                            placeholder="Describe your decoration services"
-                            value={formData.description}
-                            onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                            className={errors.description ? "border-red-500" : ""}
-                        />
-                        {errors.description && <p className="text-red-500 text-sm">{errors.description}</p>}
+                    <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-neutral-200">
+                        <h3 className="text-lg font-semibold text-neutral-800 mb-4">Pricing Information</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <Label htmlFor="minimumPrice" className="text-sm font-medium text-neutral-700">Starting Price (PKR)</Label>
+                                <Input
+                                    id="minimumPrice"
+                                    type="number"
+                                    placeholder="Enter starting price"
+                                    value={formData.minimumPrice}
+                                    onChange={(e) => setFormData((prev) => ({ ...prev, minimumPrice: parseInt(e.target.value) }))}
+                                    className={`mt-1 ${errors.minimumPrice ? "border-red-500" : "border-neutral-300"}`}
+                                />
+                                {errors.minimumPrice && <p className="text-red-500 text-sm mt-1">{errors.minimumPrice}</p>}
+                            </div>
+
+                            <div>
+                                <Label htmlFor="downPayment" className="text-sm font-medium text-neutral-700">Down Payment</Label>
+                                <div className="flex gap-3 mt-1">
+                                    <Input
+                                        id="downPayment"
+                                        type="number"
+                                        placeholder="Amount"
+                                        value={formData.downPayment}
+                                        onChange={(e) => setFormData((prev) => ({ ...prev, downPayment: parseInt(e.target.value) }))}
+                                        className={`flex-1 ${errors.downPayment ? "border-red-500" : "border-neutral-300"}`}
+                                    />
+                                    <Select value={downPaymentType} onValueChange={setDownPaymentType}>
+                                        <SelectTrigger className="w-32 border-neutral-300">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {downPaymentTypes.map((type) => (
+                                                <SelectItem key={type.id} value={type.id}>
+                                                    {type.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                {errors.downPayment && <p className="text-red-500 text-sm mt-1">{errors.downPayment}</p>}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right Column - Business Details */}
+                <div className="space-y-6">
+                    <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-neutral-200">
+                        <h3 className="text-lg font-semibold text-neutral-800 mb-4">Business Specialization</h3>
+                        <div className="space-y-6">
+                            <div>
+                                <Label className="text-sm font-medium text-neutral-700 mb-2 block">Decoration Type</Label>
+                                <RadioButton
+                                    data={types}
+                                    selectedOption={selectedTypes}
+                                    setSelectedOption={(value: string) => {
+                                        setSelectedTypes(value);
+                                        setErrors((prevErrors) => ({
+                                            ...prevErrors,
+                                            subBusinessType: "",
+                                        }));
+                                    }}
+                                />
+                                {errors.subBusinessType && <p className="text-red-500 text-sm mt-1">{errors.subBusinessType}</p>}
+                            </div>
+
+                            <div>
+                                <MultipleSelect
+                                    label="Expertise"
+                                    placeholder="Select Expertise"
+                                    data={Expertise}
+                                    handleSelectOption={(value: string) => {
+                                        setSelectedExpertise((prev) =>
+                                            prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+                                        );
+                                        setErrors((prevErrors) => ({
+                                            ...prevErrors,
+                                            expertise: "",
+                                        }));
+                                    }}
+                                    selectedOption={selectedExpertise}
+                                />
+                                {errors.expertise && <p className="text-red-500 text-sm mt-1">{errors.expertise}</p>}
+                            </div>
+                        </div>
                     </div>
 
-                    <div>
-                        <Label htmlFor="minimumPrice">Starting Price (PKR)</Label>
-                        <Input
-                            id="minimumPrice"
-                            type="number"
-                            placeholder="Enter starting price"
-                            value={formData.minimumPrice}
-                            onChange={(e) => setFormData((prev) => ({ ...prev, minimumPrice: parseInt(e.target.value) }))}
-                            className={errors.minimumPrice ? "border-red-500" : ""}
-                        />
-                        {errors.minimumPrice && <p className="text-red-500 text-sm">{errors.minimumPrice}</p>}
+                    <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-neutral-200">
+                        <h3 className="text-lg font-semibold text-neutral-800 mb-4">Services & Staff</h3>
+                        <div className="space-y-6">
+                            <div>
+                                <MultipleSelect
+                                    label="Services & Amenities"
+                                    placeholder="Select Services & Amenities"
+                                    data={amenitiesData}
+                                    handleSelectOption={(value: string) => {
+                                        setSelectedAmenities((prev) =>
+                                            prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+                                        );
+                                        setErrors((prevErrors) => ({
+                                            ...prevErrors,
+                                            amenities: "",
+                                        }));
+                                    }}
+                                    selectedOption={selectedAmenities}
+                                />
+                                {errors.amenities && <p className="text-red-500 text-sm mt-1">{errors.amenities}</p>}
+                            </div>
+
+                            <div>
+                                <Label className="text-sm font-medium text-neutral-700 mb-2 block">Staff Gender</Label>
+                                <MultipleRadio
+                                    label="Staff Gender"
+                                    data={staff}
+                                    handleSelect={(type: string, index: number) => {
+                                        handleSelectStaff(type, index);
+                                        setErrors((prevErrors) => ({
+                                            ...prevErrors,
+                                            staff: "",
+                                        }));
+                                    }}
+                                    selectedIndexes={selectedStaffIndexes}
+                                />
+                                {errors.staff && <p className="text-red-500 text-sm mt-1">{errors.staff}</p>}
+                            </div>
+                        </div>
                     </div>
 
-                    <div>
-                        <Label htmlFor="downPayment">Down Payment</Label>
-                        <div className="flex gap-2">
-                            <Input
-                                id="downPayment"
-                                type="number"
-                                placeholder="Amount"
-                                value={formData.downPayment}
-                                onChange={(e) => setFormData((prev) => ({ ...prev, downPayment: parseInt(e.target.value) }))}
-                                className={errors.downPayment ? "border-red-500" : ""}
-                            />
-                            <Select value={downPaymentType} onValueChange={setDownPaymentType}>
-                                <SelectTrigger className="w-32">
-                                    <SelectValue />
+                    <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-neutral-200">
+                        <h3 className="text-lg font-semibold text-neutral-800 mb-4">Business Policies</h3>
+                        <div>
+                            <Label className="text-sm font-medium text-neutral-700 mb-2 block">Cancellation Policy</Label>
+                            <Select value={cancellation} onValueChange={setCancellation}>
+                                <SelectTrigger className="border-neutral-300">
+                                    <SelectValue placeholder="Select cancellation policy" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {downPaymentTypes.map((type) => (
-                                        <SelectItem key={type.id} value={type.id}>
-                                            {type.label}
+                                    {cancellationPolicies.map((policy) => (
+                                        <SelectItem key={policy.id} value={policy.id}>
+                                            {policy.label}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
+                            {errors.cancelationPolicy && <p className="text-red-500 text-sm mt-1">{errors.cancelationPolicy}</p>}
                         </div>
-                        {errors.downPayment && <p className="text-red-500 text-sm">{errors.downPayment}</p>}
-                    </div>
-                </div>
-
-                <div className="space-y-4">
-                    <div>
-                        <Label>Decoration Type</Label>
-                        <div className="grid grid-cols-1 gap-2 mt-2">
-                            {types.map((type, index) => (
-                                <RadioButton
-                                    key={type.id}
-                                    label={type.label}
-                                    isSelected={selectedTypeIndexes.includes(index)}
-                                    onClick={() => handleSelectType(type.id, index)}
-                                />
-                            ))}
-                        </div>
-                        {errors.subBusinessType && <p className="text-red-500 text-sm">{errors.subBusinessType}</p>}
-                    </div>
-
-                    <div>
-                        <Label>Expertise</Label>
-                        <div className="grid grid-cols-1 gap-2 mt-2">
-                            {Expertise.map((expertise) => (
-                                <MultipleSelect
-                                    key={expertise.value}
-                                    label={expertise.label}
-                                    isSelected={selectedExpertise.includes(expertise.value)}
-                                    onClick={() => handleSelectExpertise(expertise.value)}
-                                />
-                            ))}
-                        </div>
-                        {errors.expertise && <p className="text-red-500 text-sm">{errors.expertise}</p>}
-                    </div>
-
-                    <div>
-                        <Label>Services & Amenities</Label>
-                        <div className="grid grid-cols-1 gap-2 mt-2">
-                            {amenitiesData.map((amenity) => (
-                                <MultipleSelect
-                                    key={amenity.value}
-                                    label={amenity.label}
-                                    isSelected={selectedAmenities.includes(amenity.value)}
-                                    onClick={() => handleSelectAmenities(amenity.value)}
-                                />
-                            ))}
-                        </div>
-                        {errors.amenities && <p className="text-red-500 text-sm">{errors.amenities}</p>}
-                    </div>
-
-                    <div>
-                        <Label>Staff Gender</Label>
-                        <div className="flex gap-4 mt-2">
-                            {staff.map((staffMember, index) => (
-                                <MultipleRadio
-                                    key={staffMember.value}
-                                    label={staffMember.value}
-                                    icon={staffMember.icon}
-                                    isSelected={selectedStaffIndexes.includes(index)}
-                                    onClick={() => handleSelectStaff(staffMember.value, index)}
-                                />
-                            ))}
-                        </div>
-                        {errors.staff && <p className="text-red-500 text-sm">{errors.staff}</p>}
-                    </div>
-
-                    <div>
-                        <Label>Cancellation Policy</Label>
-                        <Select value={cancellation} onValueChange={setCancellation}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select cancellation policy" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {cancellationPolicies.map((policy) => (
-                                    <SelectItem key={policy.id} value={policy.id}>
-                                        {policy.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        {errors.cancelationPolicy && <p className="text-red-500 text-sm">{errors.cancelationPolicy}</p>}
                     </div>
                 </div>
             </div>

@@ -84,7 +84,12 @@ export default function ProfilePage() {
           </form>
         </CardContent>
         <CardFooter>
-          <Button onClick={handleSubmit}>Save Changes</Button>
+          <Button 
+            onClick={handleSubmit}
+            className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
+          >
+            Save Changes
+          </Button>
         </CardFooter>
       </Card>
     </div>

@@ -83,8 +83,6 @@ const BookingsPage = () => {
   
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState(true);
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [showDetails, setShowDetails] = useState(false);
   const router = useRouter();
 
   // Fetch bookings on component mount
@@ -120,7 +118,15 @@ const BookingsPage = () => {
       if (response.ok) {
         const data = await response.json();
         console.log('🔍 BookingsPage - Bookings data received:', data);
-        setBookings(data.data || []);
+        const bookingsData = data.data || [];
+        setBookings(bookingsData);
+        
+        // Store bookings in localStorage for detail page access
+        try {
+          localStorage.setItem('user_bookings', JSON.stringify(bookingsData));
+        } catch (error) {
+          console.log('🔍 BookingsPage - Error storing bookings in localStorage:', error);
+        }
       } else {
         console.error('🔍 BookingsPage - Failed to fetch bookings:', response.status);
         setBookings([]);
@@ -164,8 +170,7 @@ const BookingsPage = () => {
   };
 
   const handleViewDetails = (booking: Booking) => {
-    setSelectedBooking(booking);
-    setShowDetails(true);
+    router.push(`/user/bookings/${booking.id}`);
   };
 
   const handleEditBooking = (booking: Booking) => {
@@ -378,11 +383,11 @@ const BookingsPage = () => {
                         </div>
                                                  <div className="flex items-center gap-2 text-neutral-600">
                            <MapPin className="w-4 h-4" />
-                           <span>Location: {booking.bookingDetails[0]?.business.city}, {booking.bookingDetails[0]?.business.subArea}</span>
+                           <span>Location: {booking.bookingDetails?.[0]?.business?.city || 'N/A'}, {booking.bookingDetails?.[0]?.business?.subArea || 'N/A'}</span>
                          </div>
                          <div className="flex items-center gap-2 text-neutral-600">
                            <User className="w-4 h-4" />
-                           <span>Vendor: {booking.bookingDetails[0]?.business.name}</span>
+                           <span>Vendor: {booking.bookingDetails?.[0]?.business?.name || 'N/A'}</span>
                          </div>
                          <div className="flex items-center gap-2 text-neutral-600">
                            <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
@@ -398,34 +403,34 @@ const BookingsPage = () => {
                              <span>Requirements: {booking.additionalRequests}</span>
                            </div>
                          )}
-                         {booking.bookingDetails.length > 0 && (
+                         {booking.bookingDetails && booking.bookingDetails.length > 0 && (
                            <div className="flex items-center gap-2 text-neutral-600 md:col-span-2">
                              <Star className="w-4 h-4" />
-                             <span>Packages: {booking.bookingDetails.map(detail => detail.package.name).join(', ')}</span>
+                             <span>Packages: {booking.bookingDetails.map(detail => detail.package?.name || 'N/A').join(', ')}</span>
                            </div>
                          )}
                          
                          {/* Vendor Details Section */}
-                         {booking.bookingDetails.length > 1 && (
+                         {booking.bookingDetails && booking.bookingDetails.length > 1 && (
                            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                              <h4 className="font-semibold text-neutral-900 mb-3">Vendors & Services:</h4>
-                             <div className="space-y-3">
-                               {booking.bookingDetails.map((detail, index) => (
-                                 <div key={detail.id} className="border-l-4 border-rose-200 pl-3">
-                                   <div className="flex items-center justify-between">
-                                     <div>
-                                       <p className="font-medium text-neutral-900">{detail.business.name}</p>
-                                       <p className="text-sm text-neutral-600">{detail.business.city}, {detail.business.subArea}</p>
-                                       <p className="text-sm text-neutral-600">{detail.package.name}</p>
-                                     </div>
-                                     <div className="text-right">
-                                       <p className="font-semibold text-rose-600">Rs. {detail.totalAmount.toLocaleString()}</p>
-                                       <p className="text-xs text-neutral-500">Down Payment: {detail.downPayment}%</p>
+                                                            <div className="space-y-3">
+                                 {booking.bookingDetails.map((detail, index) => (
+                                   <div key={detail.id} className="border-l-4 border-rose-200 pl-3">
+                                     <div className="flex items-center justify-between">
+                                       <div>
+                                         <p className="font-medium text-neutral-900">{detail.business?.name || 'N/A'}</p>
+                                         <p className="text-sm text-neutral-600">{detail.business?.city || 'N/A'}, {detail.business?.subArea || 'N/A'}</p>
+                                         <p className="text-sm text-neutral-600">{detail.package?.name || 'N/A'}</p>
+                                       </div>
+                                       <div className="text-right">
+                                         <p className="font-semibold text-rose-600">Rs. {detail.totalAmount?.toLocaleString() || '0'}</p>
+                                         <p className="text-xs text-neutral-500">Down Payment: {detail.downPayment || 0}%</p>
+                                       </div>
                                      </div>
                                    </div>
-                                 </div>
-                               ))}
-                             </div>
+                                 ))}
+                               </div>
                            </div>
                          )}
                       </div>
