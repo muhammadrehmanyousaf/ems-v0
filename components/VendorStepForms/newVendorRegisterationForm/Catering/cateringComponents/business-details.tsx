@@ -38,7 +38,8 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
             expertise: selectedExpertise,
             subBusinessType: selectedTypes,
             cancelationPolicy: cancellation,
-            amenities: selectedAmenities
+            amenities: selectedAmenities,
+            downPaymentType: downPaymentType
         }));
     }, [
         selectedstaff,
@@ -46,6 +47,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
         cancellation,
         selectedTypes,
         selectedAmenities,
+        downPaymentType,
         setFormData
     ]);
 
@@ -95,7 +97,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
 
     const downPaymentTypes = [
         { id: "Percentage", label: "Percentage" },
-        { id: "Fixed", label: "Fixed Amount" },
+        { id: "Fixed Amount", label: "Fixed Amount" },
     ];
 
     const handleSelectStaff = (type: string, index: number) => {
@@ -195,7 +197,11 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                                         onChange={(e) => setFormData((prev) => ({ ...prev, downPayment: parseInt(e.target.value) }))}
                                         className={`flex-1 ${errors.downPayment ? "border-red-500" : "border-neutral-300"}`}
                                     />
-                                    <Select value={downPaymentType} onValueChange={setDownPaymentType}>
+                                    <Select value={downPaymentType} onValueChange={(value) => {
+                                        setDownPaymentType(value);
+                                        setFormData((prev) => ({ ...prev, downPaymentType: value }));
+                                        setErrors((prevErrors) => ({ ...prevErrors, downPaymentType: "" }));
+                                    }}>
                                         <SelectTrigger className="w-32 border-neutral-300">
                                             <SelectValue />
                                         </SelectTrigger>

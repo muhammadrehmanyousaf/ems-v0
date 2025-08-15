@@ -21,10 +21,11 @@ import { toast } from "../ui/use-toast"
 import { getUser } from "@/hooks/getLoggedinUser"
 import axiosInstance from '@/lib/axiosConfig';
 import SuccessStep from "./steps/success-step"
+import VendorSuccessStep from "./steps/vendor-success-step"
 import { Icons } from "../ui/icons"
 import { VendorAPI } from "@/lib/api/vendors"
 
-// Steps are dynamic based on booking type (venue vs other)
+// Steps are dynamic based on booking type (venue vs vendor)
 
 export default function BookingForm() {
   // Global pre-events steps: 0=User, 1=Event Selection; Afterwards, per-event steps tracked in each event
@@ -69,10 +70,20 @@ export default function BookingForm() {
   const fetchVenue = async (id: string) => {
     try {
       const response = await axios.get(`${BACKEND_URL}api/v1/businesses/${id}`);
-      setVenue(response.data.data); // Fix: use .data.data
+      const data = response.data.data;
+      console.log('🔍 Fetched business data:', data);
+      console.log('🔍 Business type check:', {
+        hasMenus: 'menus' in data,
+        hasPackages: 'packages' in data,
+        subBusinessType: data?.subBusinessType,
+        type: data?.type,
+        isVenueBooking: data && 'menus' in data && !!data?.menus && Array.isArray(data?.menus) && (data?.menus?.length ?? 0) > 0,
+        isVendor: data && !('menus' in data) && (data?.subBusinessType || data?.type)
+      });
+      setVenue(data); // This can be either EventVenue or Vendor type
     } catch (err: any) {
-      console.error('Failed to fetch venue:', err);
-      setError('Failed to load venue details.');
+      console.error('Failed to fetch business:', err);
+      setError('Failed to load business details.');
     } finally {
       setLoading(false);
     }
@@ -83,7 +94,7 @@ export default function BookingForm() {
       fetchVenue(venueId);
     } else {
       setLoading(false);
-      setError('Invalid venue ID.');
+      setError('Invalid business ID.');
     }
   }, [venueId]);
 
@@ -102,8 +113,13 @@ export default function BookingForm() {
   const currentFormForSelection: BookingFormData = (events.length > 0 && events[activeEventIndex]?.formData)
     ? events[activeEventIndex].formData
     : formData
-  const selectedPackageObj = venue?.packages?.find((pkg) => String(pkg.id) === String(currentFormForSelection.selectedPackage));
-  const selectedMenuObj = venue?.menus.find((menu) => String(menu.id) === String(currentFormForSelection.selectedMenu));
+  
+  // Handle both EventVenue and Vendor types for packages and menus
+  const venuePackages = venue?.packages || [];
+  const venueMenus = venue?.menus || [];
+  
+  const selectedPackageObj = venuePackages.find((pkg) => String(pkg.id) === String(currentFormForSelection.selectedPackage));
+  const selectedMenuObj = venueMenus.find((menu) => String(menu.id) === String(currentFormForSelection.selectedMenu));
 
   // Fetch and maintain selected vendors' details for active event
   const refreshVendorsDetailsForActive = async (vendorIds: (string|number)[]) => {
@@ -156,42 +172,104 @@ export default function BookingForm() {
     const venuePackage = venue?.packages?.find((pkg) => pkg.id === currentForm.selectedPackage)
     const venueMenu = venue?.menus?.find((menu) => menu.id === currentForm.selectedMenu)
 
+    // Ensure we have a valid business ID
+    if (!venue?.id) {
+      toast({
+        title: 'Booking Error',
+        description: 'Invalid business information. Please try again.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     const vendorsPayload: any[] = []
-    // Push main venue/vendor
-    vendorsPayload.push({
-      businessId: venue?.id,
-      packageId: currentForm.selectedPackage,
-      menuId: venueMenu ? currentForm.selectedMenu : undefined,
+    
+    // Push main venue/vendor - ensure businessId is always set
+    const mainBusinessEntry = {
+      businessId: venue.id, // This should always be the venue/vendor ID
+      packageId: currentForm.selectedPackage || null,
+      menuId: venueMenu ? currentForm.selectedMenu : null,
       totalAmount: (venuePackage?.price || 0) + (venueMenu?.price || 0),
       downPayment: venue?.downPayment || 0,
       specialRequests: ''
-    })
+    }
+    
+    // Only add main business entry if there's a package or menu selected
+    if (mainBusinessEntry.packageId || mainBusinessEntry.menuId) {
+      vendorsPayload.push(mainBusinessEntry)
+    }
 
     // Additional vendors (from selected vendor packages, mapped to actual vendor/business)
     if (currentForm.selectedVendorPackages && currentForm.selectedVendorPackages.length > 0) {
       currentForm.selectedVendorPackages.forEach((pkgId: any) => {
         const ownerVendor = currentVendorsDetails.find(v => (v.packages || []).some(p => p.id === pkgId))
         const ownerPackage = ownerVendor?.packages?.find(p => p.id === pkgId)
-        vendorsPayload.push({
-          businessId: ownerVendor?.id,
-          packageId: pkgId,
-          menuId: undefined,
-          totalAmount: ownerPackage?.price || 0,
-          downPayment: 0,
-          specialRequests: ''
-        })
+        
+        if (ownerVendor?.id && pkgId) {
+          vendorsPayload.push({
+            businessId: ownerVendor.id,
+            packageId: pkgId,
+            menuId: null,
+            totalAmount: ownerPackage?.price || 0,
+            downPayment: 0,
+            specialRequests: ''
+          })
+        }
       })
+    }
+
+    // Ensure we have at least one vendor entry
+    if (vendorsPayload.length === 0) {
+      // If no packages/menus selected, create a basic entry with just the business
+      vendorsPayload.push({
+        businessId: venue.id,
+        packageId: null,
+        menuId: null,
+        totalAmount: 0,
+        downPayment: venue?.downPayment || 0,
+        specialRequests: ''
+      })
+    }
+
+    // Validate that all entries have valid businessId
+    const invalidEntries = vendorsPayload.filter(vendor => !vendor.businessId || vendor.businessId === null || vendor.businessId === undefined);
+    if (invalidEntries.length > 0) {
+      console.error('❌ Invalid vendor entries found:', invalidEntries);
+      toast({
+        title: 'Booking Error',
+        description: 'Some vendor information is invalid. Please try again.',
+        variant: 'destructive'
+      });
+      return;
     }
 
     const payload = {
       customerName: currentForm.username,
       customerEmail: currentForm.email,
       customerPhone: currentForm.phoneNumber,
-      vendorId: venue?.vendor.id,
+      vendorId: venue?.vendor?.id || venue?.id, // Handle both venue and vendor cases
       bookingDate: currentForm.bookingDate,
       bookingTime: currentForm.timeSlot,
-      vendors: vendorsPayload
+      vendors: vendorsPayload.map(vendor => ({
+        ...vendor,
+        businessId: Number(vendor.businessId), // Ensure businessId is a number
+        packageId: vendor.packageId ? Number(vendor.packageId) : null,
+        menuId: vendor.menuId ? Number(vendor.menuId) : null,
+        totalAmount: Number(vendor.totalAmount),
+        downPayment: Number(vendor.downPayment)
+      }))
     };
+
+    console.log('🔍 Booking payload:', payload);
+    console.log('🔍 Venue data:', {
+      venueId: venue?.id,
+      venueType: (venue as any)?.type,
+      venueSubBusinessType: (venue as any)?.subBusinessType,
+      hasMenus: 'menus' in venue,
+      hasPackages: (venue?.packages?.length || 0) > 0,
+      selectedPackage: currentForm.selectedPackage,
+      selectedMenu: currentForm.selectedMenu
+    });
 
     try {
       setIsSubmitting(true); // Optional: manage a loading state
@@ -199,9 +277,23 @@ export default function BookingForm() {
 
       if (response.status === 201 || response.status === 200) {
         toast({ title: 'Booking Confirmed', description: 'Your booking has been submitted successfully.' });
-        // Move active event to success step
+        
+        // Store the booking response in the events state
+        const bookingResponse = response.data;
+        console.log('🔍 Booking response received:', bookingResponse);
+        
+        // Move active event to success step and store booking response
         if (globalStep >= 2) {
-          setEvents(prev => prev.map((e, idx) => idx === activeEventIndex ? { ...e, currentStep: eventStepOrder.length - 1, isSubmitted: true } : e))
+          setEvents(prev => prev.map((e, idx) => 
+            idx === activeEventIndex 
+              ? { 
+                  ...e, 
+                  currentStep: eventStepOrder.length - 1, 
+                  isSubmitted: true,
+                  bookingResponse: bookingResponse // Store the booking response
+                } 
+              : e
+          ))
         } else {
           setGlobalStep(2)
         }
@@ -221,6 +313,27 @@ export default function BookingForm() {
       setIsSubmitting(false); // Turn off loading indicator
     }
   };
+
+  // Dynamic steps based on booking type for headers
+  const isVenueBooking = venue && 'menus' in venue && !!venue?.menus && Array.isArray(venue?.menus) && (venue?.menus?.length ?? 0) > 0
+  const isVendor = venue && !('menus' in venue) && ((venue as any)?.subBusinessType || (venue as any)?.type)
+  const hasPackages = !!venue?.packages && Array.isArray(venue?.packages) && (venue?.packages?.length ?? 0) > 0
+
+  // Force vendor detection for testing - if it has subBusinessType or type but no menus, it's a vendor
+  const forceIsVendor = venue && !isVenueBooking && ((venue as any)?.subBusinessType || (venue as any)?.type)
+
+  // Debug logging for business type detection
+  console.log('🔍 Business Type Detection:', {
+    venueId: venue?.id,
+    hasMenus: venue ? 'menus' in venue : false,
+    menusLength: venue?.menus?.length,
+    subBusinessType: (venue as any)?.subBusinessType,
+    type: (venue as any)?.type,
+    isVenueBooking,
+    isVendor,
+    hasPackages,
+    packagesLength: venue?.packages?.length
+  });
 
   const isStepValid = useMemo(() => {
     const inEventPhase = globalStep >= 2
@@ -250,14 +363,25 @@ export default function BookingForm() {
             currentForm.timeSlot !== "" &&
             currentForm.guestCount > 0
           )
+        case 1: // Package Selection (for vendors) or Vendor Selection (for venues)
+          if (forceIsVendor) {
+            // For vendors, package selection is optional if they don't have packages
+            return hasPackages ? currentForm.selectedPackage !== "" : true
+          }
+          return true // Vendor selection is optional for venues
+        case 2: // Menu Selection (for venues) or Preview (for vendors)
+          if (isVenueBooking) {
+            return true // Menu selection is optional
+          }
+          return true // Preview step
         default:
           return true
       }
     }
-  }, [globalStep, formData, events, activeEventIndex, selectedEvents])
+  }, [globalStep, formData, events, activeEventIndex, selectedEvents, isVendor, isVenueBooking])
 
-  // Dynamic steps based on booking type for headers
-  const isVenueBooking = !!venue?.menus && Array.isArray(venue?.menus) && (venue?.menus?.length ?? 0) > 0
+
+  
   const stepOrder = useMemo(() => {
     const steps = [
       { key: "user", title: "Personal Information" },
@@ -268,12 +392,25 @@ export default function BookingForm() {
 
   const eventStepOrder = useMemo(() => {
     const steps: { key: string; title: string }[] = [{ key: "datetime", title: "Date & Time" }]
-    if (isVenueBooking) steps.push({ key: "vendors", title: "Vendors" })
-    steps.push({ key: "packages", title: "Packages" })
-    if (isVenueBooking) steps.push({ key: "menu", title: "Menu" })
-    steps.push({ key: "review", title: "Review" }, { key: "success", title: "Success" })
+    
+    if (forceIsVendor) {
+      // Vendor booking flow: Date & Time -> Package Selection -> Preview -> Success
+      steps.push({ key: "packages", title: "Package Selection" })
+      steps.push({ key: "review", title: "Review" }, { key: "success", title: "Success" })
+    } else if (isVenueBooking) {
+      // Venue booking flow: Date & Time -> Vendors -> Packages -> Menu -> Review -> Success
+      steps.push({ key: "vendors", title: "Vendors" })
+      if (hasPackages) steps.push({ key: "packages", title: "Packages" })
+      steps.push({ key: "menu", title: "Menu" })
+      steps.push({ key: "review", title: "Review" }, { key: "success", title: "Success" })
+    } else {
+      // Fallback flow
+      if (hasPackages) steps.push({ key: "packages", title: "Package Selection" })
+      steps.push({ key: "review", title: "Review" }, { key: "success", title: "Success" })
+    }
+    
     return steps
-  }, [isVenueBooking])
+  }, [isVenueBooking, forceIsVendor, hasPackages])
 
   // Helper to update form for active event or single
   const updateCurrentForm = (updater: React.SetStateAction<BookingFormData>) => {
@@ -284,8 +421,32 @@ export default function BookingForm() {
     }
   }
 
+  // Wrapper function for components that expect Partial<BookingFormData>
+  const updateFormDataPartial = (data: Partial<BookingFormData>) => {
+    updateCurrentForm(prev => ({ ...prev, ...data }))
+  }
+
   // Step content
   let stepContent = null
+  
+  // Debug logging for step flow
+  console.log('🔍 Step Debug:', {
+    globalStep,
+    eventStep: events[activeEventIndex]?.currentStep ?? 0,
+    isVendor,
+    isVenueBooking,
+    hasPackages,
+    eventStepOrder: eventStepOrder.map((step, idx) => `${idx}: ${step.title}`),
+    venueData: {
+      id: venue?.id,
+      name: venue?.name,
+      subBusinessType: (venue as any)?.subBusinessType,
+      type: (venue as any)?.type,
+      hasMenus: venue ? 'menus' in venue : false,
+      menusLength: venue?.menus?.length,
+      packagesLength: venue?.packages?.length
+    }
+  });
   if (globalStep === 0) {
       stepContent = (
         <UserInfoStep
@@ -309,7 +470,7 @@ export default function BookingForm() {
     // Event phase - per event step
     const eventStep = events[activeEventIndex]?.currentStep ?? 0
     switch (eventStep) {
-      case 0:
+      case 0: // Date & Time
         stepContent = (
           <DateSelectionStep
             formData={events.length ? events[activeEventIndex].formData : formData}
@@ -317,61 +478,138 @@ export default function BookingForm() {
           />
         )
         break
-      case 1:
-        stepContent = isVenueBooking ? (
-          <VendorSelectionStep
-            formData={events.length ? events[activeEventIndex].formData : formData}
-            updateFormData={(data) => updateCurrentForm(prev => ({ ...prev, ...data }))}
-          />
-        ) : (
-          <PackageSelectionStep
-            formData={events.length ? events[activeEventIndex].formData : formData}
-            updateFormData={updateCurrentForm}
-            venue={venue}
-            vendorDetails={vendorsDetails[activeEventIndex]}
-          />
-        )
+      case 1: // Package Selection (for vendors) or Vendor Selection (for venues)
+        if (forceIsVendor) {
+          // Always show package selection for vendors, regardless of hasPackages
+          stepContent = (
+            <PackageSelectionStep
+              formData={events.length ? events[activeEventIndex].formData : formData}
+              updateFormData={updateFormDataPartial}
+              venue={venue}
+              vendorDetails={vendorsDetails[activeEventIndex]}
+            />
+          )
+        } else if (isVenueBooking) {
+          stepContent = (
+            <VendorSelectionStep
+              formData={events.length ? events[activeEventIndex].formData : formData}
+              updateFormData={updateFormDataPartial}
+            />
+          )
+        } else {
+          stepContent = (
+            <PreviewStep
+              formData={events.length ? events[activeEventIndex].formData : formData}
+              selectedPackageObj={selectedPackageObj}
+              selectedMenuObj={selectedMenuObj}
+              vendorDetails={vendorsDetails[activeEventIndex]}
+            />
+          )
+        }
         break
-      case 2:
-        stepContent = isVenueBooking ? (
-          <PackageSelectionStep
-            formData={events.length ? events[activeEventIndex].formData : formData}
-            updateFormData={updateCurrentForm}
-            venue={venue}
-            vendorDetails={vendorsDetails[activeEventIndex]}
-          />
-        ) : (
-          <PreviewStep
-            formData={events.length ? events[activeEventIndex].formData : formData}
-            selectedPackageObj={selectedPackageObj}
-            selectedMenuObj={selectedMenuObj}
-            vendorDetails={vendorsDetails[activeEventIndex]}
-          />
-        )
+            case 2: // Review step (for vendors) or Package Selection (for venues with packages)
+        if (forceIsVendor) {
+          // For vendors: Date & Time -> Package Selection -> Review -> Success
+          stepContent = (
+            <PreviewStep
+              formData={events.length ? events[activeEventIndex].formData : formData}
+              selectedPackageObj={selectedPackageObj}
+              selectedMenuObj={selectedMenuObj}
+              vendorDetails={vendorsDetails[activeEventIndex]}
+            />
+          )
+        } else if (isVenueBooking) {
+          // For venues: Date & Time -> Vendors -> Packages -> Menu -> Review -> Success
+          if (hasPackages) {
+            stepContent = (
+              <PackageSelectionStep
+                formData={events.length ? events[activeEventIndex].formData : formData}
+                updateFormData={updateFormDataPartial}
+                venue={venue}
+                vendorDetails={vendorsDetails[activeEventIndex]}
+              />
+            )
+          } else {
+            stepContent = (
+              <MenuSelectionStep
+                formData={events.length ? events[activeEventIndex].formData : formData}
+                updateFormData={updateCurrentForm}
+                venue={venue}
+              />
+            )
+          }
+        } else {
+          stepContent = (
+            <PreviewStep
+              formData={events.length ? events[activeEventIndex].formData : formData}
+              selectedPackageObj={selectedPackageObj}
+              selectedMenuObj={selectedMenuObj}
+              vendorDetails={vendorsDetails[activeEventIndex]}
+            />
+          )
+        }
         break
-      case 3:
-        stepContent = isVenueBooking ? (
-          <MenuSelectionStep
-            formData={events.length ? events[activeEventIndex].formData : formData}
-            updateFormData={updateCurrentForm}
-            venue={venue}
-          />
-        ) : null
+      case 3: // Menu Selection (for venues with packages) or Success (for vendors)
+        if (forceIsVendor) {
+          // For vendors: Date & Time -> Package Selection -> Review -> Success
+          stepContent = (
+            <VendorSuccessStep
+              formData={events.length ? events[activeEventIndex].formData : formData}
+              vendor={venue as any}
+              selectedPackageObj={selectedPackageObj}
+              vendorDetails={vendorsDetails[activeEventIndex]}
+              bookingResponse={events[activeEventIndex]?.bookingResponse}
+            />
+          )
+        } else if (isVenueBooking && hasPackages) {
+          stepContent = (
+            <MenuSelectionStep
+              formData={events.length ? events[activeEventIndex].formData : formData}
+              updateFormData={updateCurrentForm}
+              venue={venue}
+            />
+          )
+        } else {
+          stepContent = (
+            <PreviewStep
+              formData={events.length ? events[activeEventIndex].formData : formData}
+              selectedPackageObj={selectedPackageObj}
+              selectedMenuObj={selectedMenuObj}
+              vendorDetails={vendorsDetails[activeEventIndex]}
+            />
+          )
+        }
         break
-      case 4:
-        stepContent = (
-          <PreviewStep
-            formData={events.length ? events[activeEventIndex].formData : formData}
-            selectedPackageObj={selectedPackageObj}
-            selectedMenuObj={selectedMenuObj}
-            vendorDetails={vendorsDetails[activeEventIndex]}
-          />
-        )
+      case 4: // Review step (for venues)
+        if (isVenueBooking) {
+          stepContent = (
+            <PreviewStep
+              formData={events.length ? events[activeEventIndex].formData : formData}
+              selectedPackageObj={selectedPackageObj}
+              selectedMenuObj={selectedMenuObj}
+              vendorDetails={vendorsDetails[activeEventIndex]}
+            />
+          )
+        }
         break
-      case 5:
+      case 5: // Success step (for venues)
+        console.log('🔍 Success Step - Debug info:', {
+          isVendor,
+          isVenueBooking,
+          venue,
+          selectedPackageObj,
+          selectedMenuObj,
+          vendorDetails: vendorsDetails[activeEventIndex],
+          bookingResponse: events[activeEventIndex]?.bookingResponse
+        });
+        
         stepContent = (
           <SuccessStep
             formData={events.length ? events[activeEventIndex].formData : formData}
+            venue={venue}
+            selectedPackageObj={selectedPackageObj}
+            selectedMenuObj={selectedMenuObj}
+            vendorDetails={vendorsDetails[activeEventIndex]}
           />
         )
         break
@@ -384,6 +622,9 @@ export default function BookingForm() {
   const header = globalStep < 2 ? stepOrder[globalStep] : eventStepOrder[events[activeEventIndex]?.currentStep ?? 0]
 
   const handleNext = () => {
+    // Scroll to top when navigating to next step
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    
     if (globalStep < 1) {
       setGlobalStep((s) => s + 1)
       return
@@ -414,27 +655,27 @@ export default function BookingForm() {
     }
   }
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-4xl">
       {(loading || userLoading) ?
         <div className="h-[500px] w-full flex items-center justify-center">
-            <span className="flex items-center gap-3 text-lg font-medium">
-              <Icons.spinner className="w-12 h-12 mr-2 animate-spin text-blue-500" />
+            <span className="flex items-center gap-3 text-lg font-medium text-neutral-700">
+              <Icons.spinner className="w-12 h-12 mr-2 animate-spin text-rose-500" />
               Loading form
             </span>
           </div> :
         (error || userError) ?
-          <div className="rounded-md bg-red-50 p-4 text-center">
+          <div className="rounded-xl bg-red-50 p-6 text-center border border-red-200">
             <h2 className="text-red-700 font-semibold text-lg">
               Something went wrong. Please try again later.
             </h2>
-            <p className="text-sm text-red-600 mt-1">
+            <p className="text-sm text-red-600 mt-2">
               Your booking cannot be processed right now. Please refresh the page or try again in a few minutes.
             </p>
           </div> :
-        <div className="rounded-lg bg-white shadow-lg">
+        <div className="rounded-xl bg-white/80 backdrop-blur-sm shadow-xl border border-neutral-200">
           {/* Multi-event tabs (visible after selection) */}
           {events.length > 0 && globalStep >= 2 && (
-            <div className="border-b border-gray-200 bg-gray-50 p-4">
+            <div className="border-b border-neutral-200 bg-gradient-to-r from-rose-50 to-pink-50 p-4">
               <EventTabs
                 events={events}
                 activeEventIndex={activeEventIndex}
@@ -442,10 +683,28 @@ export default function BookingForm() {
               />
             </div>
           )}
-          <div className="border-b border-gray-200 bg-gray-50 p-4">
+          <div className="border-b border-neutral-200 bg-gradient-to-r from-rose-50 to-pink-50 p-4">
             <div className="mt-4">
               <div className="mb-2 flex items-center justify-between">
-                {header?.title && <h2 className="text-lg font-medium text-gray-800">{header.title}</h2>}
+                {header?.title && <h2 className="text-lg font-semibold text-neutral-800">{header.title}</h2>}
+                {/* Show business type indicator */}
+                {venue && (
+                  <div className="text-sm text-neutral-600">
+                    {isVendor ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {(venue as any).subBusinessType || (venue as any).type} Service
+                      </span>
+                    ) : isVenueBooking ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Venue Booking
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        {(venue as any).subBusinessType || (venue as any).type}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -454,52 +713,58 @@ export default function BookingForm() {
             {stepContent}
           </div>
 
-          <div className="border-t border-gray-200 bg-gray-50 p-4">
-            <div className="flex justify-between">
-              <Button
-                variant="outline"
-                className="flex items-center gap-1"
-                onClick={() => {
-                  if (globalStep > 0 && globalStep < 2) {
-                    setGlobalStep((s) => Math.max(0, s - 1))
-                    return
-                  }
-                  if (globalStep >= 2) {
-                    const eventStep = events[activeEventIndex]?.currentStep ?? 0
-                    if (eventStep > 0) {
-                      setEvents(prev => prev.map((e, idx) => idx === activeEventIndex ? { ...e, currentStep: eventStep - 1 } : e))
-                    } else {
-                      setGlobalStep(1)
+          {/* Hide navigation buttons on success step */}
+          {((events[activeEventIndex]?.currentStep ?? 0) !== (eventStepOrder.length - 1)) && (
+            <div className="border-t border-neutral-200 bg-gradient-to-r from-rose-50 to-pink-50 p-4">
+              <div className="flex justify-between">
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2 border-neutral-300 hover:border-rose-500 hover:text-rose-600 transition-all duration-200"
+                  onClick={() => {
+                    // Scroll to top when navigating back
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                    
+                    if (globalStep > 0 && globalStep < 2) {
+                      setGlobalStep((s) => Math.max(0, s - 1))
+                      return
                     }
-                  }
-                }}
-                disabled={globalStep === 0}
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Previous
-              </Button>
-              <Button
-                className="flex items-center gap-1 bg-blue-500 hover:bg-blue-600"
-                onClick={handleNext}
-                disabled={!isStepValid || isSubmitting}
-              >
-                {isSubmitting ? 'Submitting...' : (
-                  globalStep < 2
-                    ? 'Next'
-                    : ((events[activeEventIndex]?.currentStep ?? 0) === (eventStepOrder.length - 2) ? 'Submit' : 'Next')
-                )}
-                {(globalStep < 2 || (events[activeEventIndex]?.currentStep ?? 0) !== (eventStepOrder.length - 2)) && (
-                  <ArrowRight className="h-4 w-4" />
-                )}
-              </Button>
+                    if (globalStep >= 2) {
+                      const eventStep = events[activeEventIndex]?.currentStep ?? 0
+                      if (eventStep > 0) {
+                        setEvents(prev => prev.map((e, idx) => idx === activeEventIndex ? { ...e, currentStep: eventStep - 1 } : e))
+                      } else {
+                        setGlobalStep(1)
+                      }
+                    }
+                  }}
+                  disabled={globalStep === 0}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <Button
+                  className="flex items-center gap-2 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  onClick={handleNext}
+                  disabled={!isStepValid || isSubmitting}
+                >
+                  {isSubmitting ? 'Submitting...' : (
+                    globalStep < 2
+                      ? 'Next'
+                      : ((events[activeEventIndex]?.currentStep ?? 0) === (eventStepOrder.length - 2) ? 'Submit' : 'Next')
+                  )}
+                  {(globalStep < 2 || (events[activeEventIndex]?.currentStep ?? 0) !== (eventStepOrder.length - 2)) && (
+                    <ArrowRight className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       }
 
       {/* Info message */}
       {globalStep >= 2 && events.length > 0 && (
-        <div className="mt-4 rounded-md bg-blue-50 p-4 text-sm text-blue-700">
+        <div className="mt-4 rounded-xl bg-gradient-to-r from-rose-50 to-pink-50 p-4 text-sm text-rose-700 border border-rose-200">
           <p>
             You're booking multiple events. Complete the form for each event tab and submit them individually.
           </p>

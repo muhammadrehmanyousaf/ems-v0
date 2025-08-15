@@ -56,17 +56,17 @@ export default function MenuSelectionStep({ formData, updateFormData, venue }: M
   return (
     <motion.div className="space-y-8" variants={containerVariants} initial="hidden" animate="visible">
       <div className="space-y-2 text-center">
-        <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-600">
+        <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-rose-600 to-pink-600">
           Select Menu
         </h2>
-        <p className="text-gray-600">Choose your preferred menu and additional food options</p>
+        <p className="text-neutral-600">Choose your preferred menu and additional food options</p>
       </div>
 
       <div className="space-y-8">
         <motion.div variants={itemVariants} className="space-y-4">
           <div className="flex items-center">
-            <Utensils className="mr-2 h-5 w-5 text-blue-600" />
-            <h3 className="text-lg font-medium text-gray-700">Menu Options</h3>
+            <Utensils className="mr-2 h-5 w-5 text-rose-600" />
+            <h3 className="text-lg font-medium text-neutral-700">Menu Options</h3>
           </div>
 
           <RadioGroup value={formData.selectedMenu} onValueChange={handleMenuSelect} className="space-y-5">
@@ -84,38 +84,38 @@ export default function MenuSelectionStep({ formData, updateFormData, venue }: M
                 transition={{ duration: 0.2 }}
                 className={`relative overflow-hidden rounded-xl border p-5 shadow-md transition-all ${
                   formData.selectedMenu === menu.id
-                    ? "border-blue-600 bg-gradient-to-br from-blue-50 to-purple-50 ring-1 ring-blue-600"
-                    : "border-gray-200 bg-white hover:border-blue-300"
+                    ? "border-rose-600 bg-gradient-to-br from-rose-50 to-pink-50 ring-1 ring-rose-600"
+                    : "border-neutral-200 bg-white hover:border-rose-300"
                 }`}
               >
                 {/* {formData.selectedMenu === menu.id && (
-                  <div className="absolute right-4 top-4 rounded-full bg-blue-600 p-1 text-white shadow-md">
+                  <div className="absolute right-4 top-4 rounded-full bg-rose-600 p-1 text-white shadow-md">
                     <Check className="h-4 w-4" />
                   </div>
                 )} */}
                 <div className="flex items-start">
-                  <RadioGroupItem value={menu.id} id={menu.id} className="mt-1 border-blue-600 text-blue-600" />
+                  <RadioGroupItem value={menu.id} id={menu.id} className="mt-1 border-rose-600 text-rose-600" />
                   <div className="ml-3 flex-1">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor={menu.id} className="text-xl font-semibold cursor-pointer text-gray-800">
+                      <Label htmlFor={menu.id} className="text-xl font-semibold cursor-pointer text-neutral-800">
                         {menu.title}
                       </Label>
-                      <span className="text-xl font-bold text-blue-600">${menu.price}</span>
+                      <span className="text-xl font-bold text-rose-600">${menu.price}</span>
                     </div>
-                    {/* <p className="mt-1 text-gray-600">{menu.description}</p> */}
-                    <div className="mt-4 rounded-lg bg-gradient-to-br from-gray-50 to-blue-50 p-4 shadow-sm">
-                      <h4 className="mb-3 text-sm font-medium text-gray-700">Menu Items:</h4>
+                    {/* <p className="mt-1 text-neutral-600">{menu.description}</p> */}
+                    <div className="mt-4 rounded-xl bg-gradient-to-br from-neutral-50 to-rose-50 p-4 shadow-sm">
+                      <h4 className="mb-3 text-sm font-medium text-neutral-700">Menu Items:</h4>
                       <ul className="grid grid-cols-1 gap-2 text-sm md:grid-cols-2">
                         {/* {(() => {
                           const selectedMenu = bookingMenus.find((menu) => menu.id === formData.selectedMenu)
                           if (selectedMenu && selectedMenu.items.length > 0) {
                             return selectedMenu.items.map((item: string, index: number) => (
-                              <li key={index} className="flex items-center text-gray-700">
-                                <span className="mr-2 text-blue-600">•</span> {item}
+                              <li key={index} className="flex items-center text-neutral-700">
+                                <span className="mr-2 text-rose-600">•</span> {item}
                               </li>
                             ))
                           } else {
-                            return <li className="text-gray-500">No items available</li>
+                            return <li className="text-neutral-500">No items available</li>
                           }
                         })()} */}
                         <span>
@@ -123,8 +123,8 @@ export default function MenuSelectionStep({ formData, updateFormData, venue }: M
                           <>
                             <p className="text-base font-medium">Starters</p>
                             {starters.map((item: string, j: number) => (
-                              <li key={j} className="flex items-center text-gray-700 text-sm">
-                                <span className="mr-2 text-blue-600">•</span> {item}
+                              <li key={j} className="flex items-center text-neutral-700 text-sm">
+                                <span className="mr-2 text-rose-600">•</span> {item}
                               </li>
                             ))}
                           </>
@@ -135,8 +135,8 @@ export default function MenuSelectionStep({ formData, updateFormData, venue }: M
                           <>
                             <p className="text-base font-medium">Main Course</p>
                             {mainCourse.map((item: string, l: number) => (
-                              <li key={l} className="flex items-center text-gray-700 text-sm">
-                                <span className="mr-2 text-blue-600">•</span> {item}
+                              <li key={l} className="flex items-center text-neutral-700 text-sm">
+                                <span className="mr-2 text-rose-600">•</span> {item}
                               </li>
                             ))}
                           </>
@@ -147,8 +147,8 @@ export default function MenuSelectionStep({ formData, updateFormData, venue }: M
                           <>
                             <p className="text-base font-medium">Drinks</p>
                             {drinks.map((item: string, m: number) => (
-                              <li key={m} className="flex items-center text-gray-700 text-sm">
-                                <span className="mr-2 text-blue-600">•</span> {item}
+                              <li key={m} className="flex items-center text-neutral-700 text-sm">
+                                <span className="mr-2 text-rose-600">•</span> {item}
                               </li>
                             ))}
                           </>
@@ -159,8 +159,8 @@ export default function MenuSelectionStep({ formData, updateFormData, venue }: M
                           <>
                             <p className="text-base font-medium">Deserts</p>
                             {deserts.map((item: string, n: number) => (
-                              <li key={n} className="flex items-center text-gray-700 text-sm">
-                                <span className="mr-2 text-blue-600">•</span> {item}
+                              <li key={n} className="flex items-center text-neutral-700 text-sm">
+                                <span className="mr-2 text-rose-600">•</span> {item}
                               </li>
                             ))}
                           </>
@@ -178,8 +178,8 @@ export default function MenuSelectionStep({ formData, updateFormData, venue }: M
 
         {/* <motion.div variants={itemVariants} className="space-y-4">
           <div className="flex items-center">
-            <Plus className="mr-2 h-5 w-5 text-blue-600" />
-            <h3 className="text-lg font-medium text-gray-700">Additional Options</h3>
+            <Plus className="mr-2 h-5 w-5 text-rose-600" />
+            <h3 className="text-lg font-medium text-neutral-700">Additional Options</h3>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {menuAddons.map((addon) => (
@@ -189,24 +189,24 @@ export default function MenuSelectionStep({ formData, updateFormData, venue }: M
                 transition={{ duration: 0.2 }}
                 className={`flex items-start space-x-3 rounded-xl border p-4 shadow-sm transition-all ${
                   formData.menuAddons.includes(addon.id)
-                    ? "border-blue-600 bg-gradient-to-br from-blue-50 to-purple-50"
-                    : "border-gray-200 bg-white hover:border-blue-300"
+                    ? "border-rose-600 bg-gradient-to-br from-rose-50 to-pink-50"
+                    : "border-neutral-200 bg-white hover:border-rose-300"
                 }`}
               >
                 <Checkbox
                   id={addon.id}
                   checked={formData.menuAddons.includes(addon.id)}
                   onCheckedChange={() => handleAddonToggle(addon.id)}
-                  className="mt-1 border-blue-600 text-blue-600"
+                  className="mt-1 border-rose-600 text-rose-600"
                 />
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor={addon.id} className="font-medium cursor-pointer text-gray-800">
+                    <Label htmlFor={addon.id} className="font-medium cursor-pointer text-neutral-800">
                       {addon.name}
                     </Label>
-                    <span className="font-medium text-blue-600">+${addon.price}</span>
+                    <span className="font-medium text-rose-600">+${addon.price}</span>
                   </div>
-                  <p className="text-sm text-gray-600">{addon.description}</p>
+                  <p className="text-sm text-neutral-600">{addon.description}</p>
                 </div>
               </motion.div>
             ))}
@@ -216,9 +216,9 @@ export default function MenuSelectionStep({ formData, updateFormData, venue }: M
 
       <motion.div
         variants={itemVariants}
-        className="rounded-xl bg-gradient-to-r from-blue-50 to-purple-50 p-4 shadow-sm"
+        className="rounded-xl bg-gradient-to-r from-rose-50 to-pink-50 p-4 shadow-sm border border-rose-200"
       >
-        <p className="text-sm text-blue-800 text-center">
+        <p className="text-sm text-rose-800 text-center">
           All menu options can be customized for dietary restrictions. Please mention any special requirements in the
           final step.
         </p>
