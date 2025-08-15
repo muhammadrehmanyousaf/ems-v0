@@ -16,7 +16,17 @@ export class VendorAPI {
       console.log(`🌐 Calling API: ${API_ENDPOINTS.ALL_BUSINESSES}`)
       const response = await axios.get(API_ENDPOINTS.ALL_BUSINESSES)
       console.log(`✅ API Response:`, response.data)
-      return response.data.data || []
+      const vendors = response.data.data || []
+      
+      // Store vendors in localStorage for fallback access
+      try {
+        localStorage.setItem('all_vendors', JSON.stringify(vendors))
+        console.log('💾 Stored vendors in localStorage for fallback access')
+      } catch (error) {
+        console.log('⚠️ Could not store vendors in localStorage:', error)
+      }
+      
+      return vendors
     } catch (error) {
       console.error('❌ Error fetching all businesses:', error)
       return []
@@ -27,7 +37,17 @@ export class VendorAPI {
   static async getBusinessesByVendorType(vendorType: string): Promise<Vendor[]> {
     try {
       const response = await axios.get(`${API_ENDPOINTS.BUSINESSES_BY_VENDOR}?vendorType=${encodeURIComponent(vendorType)}`)
-      return response.data.data || []
+      const vendors = response.data.data || []
+      
+      // Store vendors in localStorage for fallback access
+      try {
+        localStorage.setItem('all_vendors', JSON.stringify(vendors))
+        console.log('💾 Stored vendors in localStorage for fallback access')
+      } catch (error) {
+        console.log('⚠️ Could not store vendors in localStorage:', error)
+      }
+      
+      return vendors
     } catch (error) {
       console.error(`Error fetching businesses for vendor type ${vendorType}:`, error)
       return []
@@ -72,6 +92,14 @@ export class VendorAPI {
       const total = response.data.total || data.length
       const totalPages = Math.ceil(total / limit)
 
+      // Store vendors in localStorage for fallback access
+      try {
+        localStorage.setItem('all_vendors', JSON.stringify(data))
+        console.log('💾 Stored vendors in localStorage for fallback access')
+      } catch (error) {
+        console.log('⚠️ Could not store vendors in localStorage:', error)
+      }
+
       return {
         data,
         total,
@@ -107,7 +135,17 @@ export class VendorAPI {
         : `${API_ENDPOINTS.ALL_BUSINESSES}?${params}`
 
       const response = await axios.get(url)
-      return response.data.data || []
+      const vendors = response.data.data || []
+      
+      // Store vendors in localStorage for fallback access
+      try {
+        localStorage.setItem('all_vendors', JSON.stringify(vendors))
+        console.log('💾 Stored vendors in localStorage for fallback access')
+      } catch (error) {
+        console.log('⚠️ Could not store vendors in localStorage:', error)
+      }
+      
+      return vendors
     } catch (error) {
       console.error('Error searching businesses:', error)
       return []
@@ -216,16 +254,49 @@ export class VendorAPI {
       }
     ]
     
+    // Store mock data in localStorage for fallback access
+    try {
+      localStorage.setItem('all_vendors', JSON.stringify(mockData))
+      console.log('💾 Stored mock vendors in localStorage for fallback access')
+    } catch (error) {
+      console.log('⚠️ Could not store mock vendors in localStorage:', error)
+    }
+    
     return mockData
   }
 
   // Get business by ID
   static async getBusinessById(id: string | number): Promise<Vendor | null> {
     try {
+      console.log(`🔍 Fetching business with ID: ${id}`)
       const response = await axios.get(`${API_ENDPOINTS.ALL_BUSINESSES}/${id}`)
-      return response.data.data || null
+      const vendor = response.data.data || null
+      
+      if (vendor) {
+        console.log(`✅ Successfully fetched vendor: ${vendor.name}`)
+      } else {
+        console.log(`❌ No vendor found with ID: ${id}`)
+      }
+      
+      return vendor
     } catch (error) {
-      console.error(`Error fetching business with ID ${id}:`, error)
+      console.error(`❌ Error fetching business with ID ${id}:`, error)
+      
+      // Try to get from localStorage as fallback
+      try {
+        const storedVendors = localStorage.getItem('all_vendors')
+        if (storedVendors) {
+          const parsedVendors = JSON.parse(storedVendors)
+          const storedVendor = parsedVendors.find((v: Vendor) => v.id.toString() === id.toString())
+          if (storedVendor) {
+            console.log(`✅ Found vendor in localStorage fallback: ${storedVendor.name}`)
+            return storedVendor
+          }
+        }
+      } catch (localStorageError) {
+        console.log('❌ Error reading from localStorage:', localStorageError)
+      }
+      
       return null
     }
   }

@@ -11,6 +11,11 @@ interface MultipleRadioComponent {
 
 const MultipleRadio:React.FC<MultipleRadioComponent> = ({label, data, handleSelect, selectedIndexes}) => {
 
+  // Safety check to prevent map error
+  if (!data || data.length === 0) {
+    return null;
+  }
+
   return (
     <div>
       <Label>{label}</Label>
@@ -27,7 +32,7 @@ const MultipleRadio:React.FC<MultipleRadioComponent> = ({label, data, handleSele
                             <span
                                 className={`py-2 px-2 text-lg rounded-md ${selectedIndexes.includes(index)
                                     ? "bg-roze-default text-white"
-                                    : "text-[#8a959d]"
+                                    : "text-[#6b7983]"
                                     }`}
                             >
                                 {type.icon}

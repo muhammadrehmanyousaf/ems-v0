@@ -1,11 +1,12 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { addDays, format, isBefore, startOfToday } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { Calendar } from "@/components/ui/calendar"
+import Calendar18 from "@/components/calendar-18"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -117,6 +118,8 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
   const [newRating, setNewRating] = useState(5)
   const [newUserName, setNewUserName] = useState("")
   const [selectedImage, setSelectedImage] = useState(0)
+  const [selectedDate, setSelectedDate] = useState<Date>()
+  const [isDateAvailable, setIsDateAvailable] = useState<boolean | null>(null)
   const router = useRouter()
   const { toast } = useToast()
   const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('user_id') && localStorage.getItem('auth_token')
@@ -198,6 +201,62 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
 
   const VendorIcon = getVendorIcon(vendor.type)
 
+  // Mock function to check date availability
+  const checkDateAvailability = (date: Date) => {
+    // Simulate availability check - in real app, this would call an API
+    const today = startOfToday()
+    const isPast = isBefore(date, today)
+    
+    if (isPast) {
+      return false
+    }
+    
+    // Simulate some dates as unavailable (weekends, holidays, etc.)
+    const dayOfWeek = date.getDay()
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6 // Sunday or Saturday
+    
+    // For demo purposes, make some dates unavailable
+    const day = date.getDate()
+    const month = date.getMonth()
+    
+    // Make some specific dates unavailable for demo
+    const unavailableDates = [
+      new Date(2024, 11, 25), // Christmas
+      new Date(2024, 11, 31), // New Year's Eve
+      new Date(2025, 0, 1),   // New Year's Day
+    ]
+    
+    const isUnavailableDate = unavailableDates.some(unavailableDate => 
+      unavailableDate.getDate() === day && 
+      unavailableDate.getMonth() === month
+    )
+    
+    return !isWeekend && !isUnavailableDate
+  }
+
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date)
+    if (date) {
+      const isAvailable = checkDateAvailability(date)
+      setIsDateAvailable(isAvailable)
+      
+      if (isAvailable) {
+        toast({
+          title: "Date Available!",
+          description: `${format(date, 'MMMM dd, yyyy')} is available for booking.`,
+        })
+      } else {
+        toast({
+          title: "Date Unavailable",
+          description: `${format(date, 'MMMM dd, yyyy')} is not available. Please select another date.`,
+          variant: "destructive"
+        })
+      }
+    } else {
+      setIsDateAvailable(null)
+    }
+  }
+
   const handleSubmitComment = () => {
     if (!newComment.trim() || !newUserName.trim()) {
       toast({
@@ -221,7 +280,61 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-rose-50">
+    <>
+      <style jsx>{`
+        .calendar-container {
+          width: 100%;
+          max-width: 100%;
+        }
+        .calendar-container .rdp {
+          width: 100%;
+          margin: 0;
+        }
+        .calendar-container .rdp-table {
+          width: 100%;
+        }
+        .calendar-container .rdp-head_row {
+          width: 100%;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 24px;
+        }
+        .calendar-container .rdp-row {
+          width: 100%;
+          justify-content: space-between;
+          gap: 12px;
+          margin-top: 16px;
+          margin-bottom: 8px;
+        }
+        .calendar-container .rdp-cell {
+          flex: 1;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          margin: 0 8px;
+          height: 64px;
+        }
+        .calendar-container .rdp-day {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          margin: 0 4px;
+          min-height: 56px;
+        }
+        .calendar-container .rdp-caption {
+          margin-bottom: 24px;
+          padding-top: 12px;
+        }
+        .calendar-container .rdp-nav {
+          gap: 12px;
+        }
+        .calendar-container .rdp-nav_button {
+          margin: 0 8px;
+        }
+      `}</style>
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-rose-50">
       {/* Hero Section with Beautiful Background */}
       <div className="relative h-[70vh] overflow-hidden">
         {/* Background Image */}
@@ -278,22 +391,22 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                 <CalendarCheck className="w-5 h-5 mr-2" />
                 Book Now
               </Button>
-              <Button 
-                variant="outline"
-                size="lg"
-                onClick={() => setIsFavorite(!isFavorite)}
-                className="border-white/30 text-white hover:bg-white/10 backdrop-blur-sm px-6 py-3 text-lg font-semibold rounded-xl"
-              >
+                             <Button 
+                 variant="outline"
+                 size="lg"
+                 onClick={() => setIsFavorite(!isFavorite)}
+                 className="border-rose-200 text-rose-600 hover:bg-rose-600 hover:text-white backdrop-blur-sm px-6 py-3 text-lg font-semibold rounded-xl transition-all duration-200"
+               >
                 <Heart className={`w-5 h-5 mr-2 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
                 {isFavorite ? 'Saved' : 'Save'}
               </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={handleShare}
-                className="border-white/30 text-white hover:bg-white/10 backdrop-blur-sm px-6 py-3 text-lg font-semibold rounded-xl"
-                aria-label="Share vendor link"
-              >
+                             <Button
+                 variant="outline"
+                 size="lg"
+                 onClick={handleShare}
+                 className="border-rose-200 text-rose-600 hover:bg-rose-600 hover:text-white backdrop-blur-sm px-6 py-3 text-lg font-semibold rounded-xl transition-all duration-200"
+                 aria-label="Share vendor link"
+               >
                 <Share2 className="w-5 h-5 mr-2" />
                 Share
               </Button>
@@ -397,6 +510,13 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                             <p className="text-sm text-neutral-600">{formatPrice(vendor.minimumPrice || vendor.price)}</p>
                           </div>
                         </div>
+                        <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl">
+                          <CalendarCheck className="w-6 h-6 text-orange-500" />
+                          <div>
+                            <p className="text-sm font-semibold text-neutral-900">Availability</p>
+                            <p className="text-sm text-neutral-600">Check Calendar</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -416,6 +536,22 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                     <Button variant="outline" size="lg" className="flex items-center gap-2 border-neutral-200 hover:border-rose-500 hover:text-rose-600 transition-all duration-200">
                       <MessageCircle className="w-5 h-5" />
                       Contact
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="lg" 
+                      onClick={() => {
+                        const availabilityTab = document.querySelector('[data-state="active"][value="availability"]')
+                        if (!availabilityTab) {
+                          const tabsList = document.querySelector('[role="tablist"]')
+                          const availabilityTrigger = tabsList?.querySelector('[value="availability"]') as HTMLElement
+                          availabilityTrigger?.click()
+                        }
+                      }}
+                      className="flex items-center gap-2 border-neutral-200 hover:border-rose-500 hover:text-rose-600 transition-all duration-200"
+                    >
+                      <CalendarCheck className="w-5 h-5" />
+                      Check Availability
                     </Button>
                     <Button 
                       onClick={handleBookNow}
@@ -480,6 +616,12 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                     className="flex-1 rounded-none border-b-2 data-[state=active]:border-rose-500 data-[state=active]:text-rose-600 text-neutral-600 hover:text-rose-600 transition-all duration-200"
                   >
                     Pricing
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="availability"
+                    className="flex-1 rounded-none border-b-2 data-[state=active]:border-rose-500 data-[state=active]:text-rose-600 text-neutral-600 hover:text-rose-600 transition-all duration-200"
+                  >
+                    Availability
                   </TabsTrigger>
                   <TabsTrigger
                     value="reviews"
@@ -590,6 +732,119 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                     <p className="text-neutral-600 text-center text-lg">
                       Contact us for detailed pricing and package information tailored to your specific needs.
                     </p>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="availability" className="p-8">
+                  <div className="space-y-8">
+                    <h3 className="text-2xl font-bold text-neutral-900 flex items-center gap-2">
+                      <CalendarCheck className="w-6 h-6 text-rose-500" />
+                      Check Availability
+                    </h3>
+                    
+                    <div className="space-y-8">
+                      {/* Calendar Section */}
+                      <div className="space-y-6 w-full">
+                        <div className="bg-gradient-to-r from-rose-50 to-pink-50 p-8 rounded-2xl border border-rose-100 w-full calendar-container">
+                          <h4 className="text-xl font-semibold text-neutral-900 mb-6">Select Your Date</h4>
+                          <Calendar18 
+                            selected={selectedDate}
+                            onSelect={handleDateSelect}
+                            disabled={(date) => {
+                              const today = startOfToday()
+                              return isBefore(date, today)
+                            }}
+                          />
+                        </div>
+                        
+                        {/* Availability Status */}
+                        {selectedDate && (
+                          <div className={`p-4 rounded-xl border ${
+                            isDateAvailable 
+                              ? 'bg-green-50 border-green-200' 
+                              : 'bg-red-50 border-red-200'
+                          }`}>
+                            <div className="flex items-center gap-3">
+                              <div className={`w-3 h-3 rounded-full ${
+                                isDateAvailable ? 'bg-green-500' : 'bg-red-500'
+                              }`} />
+                              <div>
+                                <h5 className="font-semibold text-neutral-900">
+                                  {format(selectedDate, 'MMMM dd, yyyy')}
+                                </h5>
+                                <p className={`text-sm ${
+                                  isDateAvailable ? 'text-green-700' : 'text-red-700'
+                                }`}>
+                                  {isDateAvailable ? 'Available for booking' : 'Not available'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Availability Info */}
+                      <div className="space-y-6 w-full">
+                        <div className="bg-white p-6 rounded-2xl border border-neutral-200 shadow-sm">
+                          <h4 className="text-lg font-semibold text-neutral-900 mb-4 flex items-center gap-2">
+                            <Info className="w-5 h-5 text-rose-500" />
+                            Availability Information
+                          </h4>
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between py-2 border-b border-neutral-100">
+                              <span className="text-neutral-600">Available Days</span>
+                              <span className="font-semibold text-neutral-900">Monday - Friday</span>
+                            </div>
+                            <div className="flex items-center justify-between py-2 border-b border-neutral-100">
+                              <span className="text-neutral-600">Booking Lead Time</span>
+                              <span className="font-semibold text-neutral-900">2 weeks minimum</span>
+                            </div>
+                            <div className="flex items-center justify-between py-2 border-b border-neutral-100">
+                              <span className="text-neutral-600">Peak Season</span>
+                              <span className="font-semibold text-neutral-900">October - March</span>
+                            </div>
+                            <div className="flex items-center justify-between py-2">
+                              <span className="text-neutral-600">Cancellation Policy</span>
+                              <span className="font-semibold text-neutral-900">Flexible</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Quick Actions */}
+                        <div className="space-y-3">
+                          <Button 
+                            onClick={handleBookNow}
+                            disabled={!selectedDate || !isDateAvailable}
+                            className="w-full bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white"
+                          >
+                            <CalendarCheck className="w-4 h-4 mr-2" />
+                            Book This Date
+                          </Button>
+                          <Button 
+                            variant="outline"
+                            onClick={handleGetQuote}
+                            className="w-full border-rose-200 text-rose-600 hover:bg-rose-50"
+                          >
+                            <MessageCircle className="w-4 h-4 mr-2" />
+                            Get Quote
+                          </Button>
+                        </div>
+
+                        {/* Availability Tips */}
+                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
+                          <h5 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                            <Info className="w-4 h-4" />
+                            Booking Tips
+                          </h5>
+                          <ul className="text-sm text-blue-800 space-y-1">
+                            <li>• Book early for peak season dates</li>
+                            <li>• Weekends and holidays fill up quickly</li>
+                            <li>• Contact us for custom date requests</li>
+                            <li>• Flexible cancellation up to 7 days before</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </TabsContent>
 
@@ -752,7 +1007,14 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Calendar mode="single" selected={date} onSelect={setDate} className="rounded-xl border border-neutral-200" />
+                <Calendar18 
+                  selected={date}
+                  onSelect={setDate}
+                  disabled={(date) => {
+                    const today = startOfToday()
+                    return isBefore(date, today)
+                  }}
+                />
                 <Button className="w-full bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white" size="lg">
                   <CalendarCheck className="w-4 h-4 mr-2" />
                   Check Availability
@@ -893,5 +1155,6 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
         }}
       />
     </div>
+    </>
   )
 } 

@@ -7,6 +7,11 @@ interface RadioCompontent {
 };
 
 const RadioButton:React.FC<RadioCompontent> = ({data, selectedOption, setSelectedOption}) => {
+    // Safety check to prevent map error
+    if (!data || data.length === 0) {
+        return null;
+    }
+
     return (
         <div className="flex flex-wrap items-center gap-3 mt-3">
             {data.map((option) => (

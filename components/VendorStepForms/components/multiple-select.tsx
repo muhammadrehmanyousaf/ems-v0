@@ -14,6 +14,11 @@ interface MultipleSelectComponent {
 
 const MultipleSelect:React.FC<MultipleSelectComponent> = ({label, data, handleSelectOption, selectedOption, placeholder}) => {
 
+  // Safety check to prevent map error
+  if (!data || data.length === 0) {
+    return null;
+  }
+
   return (
     <div className='space-y-4'>
       <Label>{label}</Label>
