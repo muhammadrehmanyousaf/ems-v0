@@ -104,7 +104,7 @@ export default function BookingForm() {
         ...prev,
         username: user.fullName,
         email: user.email,
-        phoneNumber: user.phoneNumber
+        phoneNumber: user.phoneNumber || ""
       }))
     }
   }, [user])
@@ -655,7 +655,7 @@ export default function BookingForm() {
     }
   }
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="w-[90%] mx-auto max-w-4xl">
       {(loading || userLoading) ?
         <div className="h-[500px] w-full flex items-center justify-center">
             <span className="flex items-center gap-3 text-lg font-medium text-neutral-700">

@@ -78,18 +78,18 @@ export default function VendorsComponent() {
   }, [searchTerm, selectedCity, selectedType])
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-8">Wedding Vendors</h1>
+    <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 xl:px-12 py-4 sm:py-6 md:py-8">
+      <h1 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">Wedding Vendors</h1>
 
       {/* Search and Filters */}
-      <div className="mb-8 flex flex-wrap gap-4">
+      <div className="mb-6 sm:mb-8 flex flex-wrap gap-3 sm:gap-4">
         <FilterInput searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
         <CitySelect selectedCity={selectedCity} setSelectedCity={setSelectedCity} />
         <TypeSelect selectedType={selectedType} setSelectedType={setSelectedType} />
       </div>
 
       {/* Filtered Vendors */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8 sm:mb-12">
         {vendors.map((vendor) => (
           <VendorCard
             key={vendor.id}
