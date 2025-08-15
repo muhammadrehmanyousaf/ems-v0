@@ -95,13 +95,13 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
               {(venue as any)?.subBusinessType || (venue as any)?.type} Service
             </Badge>
           )}
-        </div>
+              </div>
 
         {venuePackages.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {venuePackages.map((pkg) => (
               <Card
-                key={pkg.id}
+                      key={pkg.id}
                 className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
                   selectedPackageId === String(pkg.id)
                     ? 'ring-2 ring-rose-500 bg-gradient-to-r from-rose-50 to-pink-50 border-rose-200'
@@ -115,7 +115,7 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                     {selectedPackageId === String(pkg.id) && (
                       <Check className="h-5 w-5 text-rose-500" />
                     )}
-                  </div>
+                        </div>
                   <div className="text-2xl font-bold text-rose-600">₹{pkg.price}</div>
                 </CardHeader>
                 <CardContent className="pt-0">
@@ -139,7 +139,7 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                     <div className="flex items-center mt-3 text-sm text-neutral-500">
                       <Clock className="h-4 w-4 mr-1" />
                       Duration: {pkg.duration}
-                    </div>
+      </div>
                   )}
                 </CardContent>
               </Card>
@@ -173,7 +173,7 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
             </CardContent>
           </Card>
         )}
-      </div>
+        </div>
 
       {/* Additional Vendor Packages (for venue bookings) */}
       {isVenueBooking && vendorPackages.length > 0 && (

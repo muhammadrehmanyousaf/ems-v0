@@ -21,7 +21,9 @@ export default async function RootLayout({
     <div lang="en" suppressHydrationWarning>
       <div className={inter.className} suppressHydrationWarning>
         <Header />
-        <div>{children}</div>
+        <main className="min-h-screen w-full">
+          {children}
+        </main>
         <Footer />
       </div>
     </div>

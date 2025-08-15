@@ -139,7 +139,7 @@ export default function VendorCard({
       >
         <Card 
           onClick={handleCardClick}
-          className="group h-full cursor-pointer overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-500 bg-white rounded-2xl relative flex flex-col"
+          className="group h-full cursor-pointer overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-500 bg-white rounded-2xl relative flex flex-col w-full"
         >
           {/* Image Section */}
           <div className="relative aspect-[4/3] overflow-hidden">
@@ -176,26 +176,26 @@ export default function VendorCard({
           </div>
 
           {/* Content Section - Flex-1 to take remaining space */}
-          <CardContent className="p-6 space-y-4 flex-1 flex flex-col">
+          <CardContent className="p-4 sm:p-6 space-y-3 sm:space-y-4 flex-1 flex flex-col">
             {/* Title and Location */}
             <div className="space-y-2">
-              <h3 className="font-bold text-xl leading-tight group-hover:text-rose-600 transition-colors duration-300 line-clamp-2">
+              <h3 className="font-bold text-lg sm:text-xl leading-tight group-hover:text-rose-600 transition-colors duration-300 line-clamp-2">
                 {name}
               </h3>
-              <div className="flex items-center text-gray-600 text-sm">
-                <MapPin className="w-4 h-4 mr-2 flex-shrink-0 text-rose-500" />
+              <div className="flex items-center text-gray-600 text-xs sm:text-sm">
+                <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0 text-rose-500" />
                 <span className="truncate font-medium">{location}</span>
               </div>
             </div>
 
             {/* Rating and Reviews */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <div className="flex items-center">
-                  <Star className={`w-5 h-5 ${getRatingColor(rating)} fill-current`} />
-                  <span className="ml-1 text-sm font-bold">{rating.toFixed(1)}</span>
+                  <Star className={`w-4 h-4 sm:w-5 sm:h-5 ${getRatingColor(rating)} fill-current`} />
+                  <span className="ml-1 text-xs sm:text-sm font-bold">{rating.toFixed(1)}</span>
                 </div>
-                <span className="text-sm text-gray-500 font-medium">({reviews} reviews)</span>
+                <span className="text-xs sm:text-sm text-gray-500 font-medium">({reviews} reviews)</span>
               </div>
               
               {/* Quick Info */}
@@ -274,7 +274,7 @@ export default function VendorCard({
               >
                 <Button
                   onClick={handleBookNow}
-                  className="w-full bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-bold py-3 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  className="w-full bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-bold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                 >
                   <Calendar className="w-4 h-4 mr-2" />
                   Book Now

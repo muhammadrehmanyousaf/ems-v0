@@ -436,7 +436,7 @@ function SearchContent() {
     <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-rose-50">
       {/* Header Section */}
       <div className="bg-white border-b border-neutral-100 shadow-sm">
-        <div className="container mx-auto px-4 py-6">
+        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-6">
           <div className="text-center">
             <h1 className="text-3xl font-bold text-neutral-900 mb-2">Search Results</h1>
             <p className="text-lg text-neutral-600">
@@ -449,8 +449,8 @@ function SearchContent() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
+      <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 xl:px-12 py-4 sm:py-6 md:py-8">
+        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
           {/* Sticky Filters Sidebar */}
           <div className="lg:w-80">
             <div className="sticky top-20 max-h-[calc(100vh-4rem)] overflow-hidden">
@@ -719,8 +719,8 @@ function SearchContent() {
               </div>
             ) : (
               <>
-                {/* Vendors Grid with VendorCards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                 {/* Vendors Grid with VendorCards */}
+                 <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
                   {paginatedVendors.map((vendor) => (
                     <VendorCard
                       key={vendor.id}

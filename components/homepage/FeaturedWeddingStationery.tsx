@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import VendorCard from "@/components/VendorCard"
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
+import { FeaturedSwiper, SwiperSlide } from "@/components/ui/featured-swiper"
 import { VendorAPI } from "@/lib/api/vendors"
 import { getVendorTypeFromPath } from "@/lib/vendor-types"
 import type { Vendor } from "@/lib/types"
@@ -29,8 +29,8 @@ export function FeaturedWeddingStationery() {
   }, [])
 
   return (
-    <section className="py-16 bg-gray-50">
-      <div className="container mx-auto px-4">
+    <section className="py-6 sm:py-8 md:py-12 lg:py-16 bg-gray-50">
+      <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 xl:px-12">
         <div className="flex justify-between items-end mb-12">
           <div>
             <h2 className="text-3xl font-bold mb-2">Featured Wedding Stationery</h2>
@@ -41,55 +41,47 @@ export function FeaturedWeddingStationery() {
           </Link>
         </div>
 
-        {/* ShadCN Carousel with Responsive Items Per Slide */}
-        <div className="relative w-full overflow-hidden">
-          <Carousel className="relative">
-            {/* Bigger and Spaced Arrows */}
-            <CarouselPrevious className="hidden sm:flex absolute left-2 md:left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gray-700 text-white rounded-full hover:bg-gray-900 transition z-50 pointer-events-auto" />
-            <CarouselNext className="hidden sm:flex absolute right-2 md:right-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gray-700 text-white rounded-full hover:bg-gray-900 transition z-50 pointer-events-auto" />
-
-            <CarouselContent className="flex gap-2 sm:gap-4 w-full justify-start pb-8" style={{ scrollSnapType: "x mandatory" }}>
-              {isLoading ? (
-                // Loading skeleton
-                Array.from({ length: 4 }).map((_, index) => (
-                  <CarouselItem
-                    key={index}
-                    className={`basis-[85%] sm:basis-[70%] md:basis-1/2 lg:basis-1/3 xl:basis-1/4 flex-shrink-0 scroll-snap-start p-2`}
-                  >
-                    <div className="animate-pulse">
-                      <div className="bg-gray-300 h-48 rounded-t-lg"></div>
-                      <div className="bg-white p-4 rounded-b-lg">
-                        <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
-                        <div className="h-4 bg-gray-300 rounded w-1/2"></div>
-                      </div>
-                    </div>
-                  </CarouselItem>
-                ))
-              ) : (
-                vendors.map((vendor) => (
-                  <CarouselItem
-                    key={vendor.id}
-                    className={`basis-[85%] sm:basis-[70%] md:basis-1/2 lg:basis-1/3 xl:basis-1/4 flex-shrink-0 scroll-snap-start p-2`}
-                  >
-                    <VendorCard
-                      id={vendor.id}
-                      name={vendor.name}
-                      image={vendor.images?.[0] || "/placeholder.svg"}
-                      location={vendor.location || vendor.city}
-                      rating={vendor.rating}
-                      reviews={vendor.reviews?.length || 0}
-                      price={vendor.minimumPrice || vendor.price}
-                      type={vendor.subBusinessType || vendor.type}
-                      capacity={vendor.capacity}
-                      amenities={vendor.amenities}
-                      sponsored={vendor.sponsored}
-                    />
-                  </CarouselItem>
-                ))
-              )}
-            </CarouselContent>
-          </Carousel>
-        </div>
+        {/* Professional Swiper Slider */}
+        <FeaturedSwiper>
+          {isLoading ? (
+            // Loading skeleton
+            Array.from({ length: 4 }).map((_, index) => (
+                             <SwiperSlide key={index}>
+                 <div className="flex justify-center px-2">
+                   <div className="animate-pulse w-full">
+                     <div className="bg-gray-300 h-48 rounded-t-lg"></div>
+                     <div className="bg-white p-4 rounded-b-lg">
+                       <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+                       <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+                     </div>
+                   </div>
+                 </div>
+               </SwiperSlide>
+            ))
+          ) : (
+                         vendors.map((vendor) => (
+               <SwiperSlide key={vendor.id}>
+                 <div className="flex justify-center px-2">
+                   <div className="w-full">
+                     <VendorCard
+                       id={vendor.id}
+                       name={vendor.name}
+                       image={vendor.images?.[0] || "/placeholder.svg"}
+                       location={vendor.location || vendor.city}
+                       rating={vendor.rating}
+                       reviews={vendor.reviews?.length || 0}
+                       price={vendor.minimumPrice || vendor.price}
+                       type={vendor.subBusinessType || vendor.type}
+                       capacity={vendor.capacity}
+                       amenities={vendor.amenities}
+                       sponsored={vendor.sponsored}
+                     />
+                   </div>
+                 </div>
+               </SwiperSlide>
+             ))
+          )}
+        </FeaturedSwiper>
 
         <div className="text-center mt-8 md:hidden">
           <Link href="/vendors/wedding-stationery" className="text-primary hover:underline">

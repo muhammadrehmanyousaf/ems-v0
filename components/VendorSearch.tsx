@@ -261,22 +261,22 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-rose-50">
-      <div className="container mx-auto px-4 py-8">
+      <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 xl:px-12 py-4 sm:py-6 md:py-8 lg:py-12">
         {/* Header Section */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-neutral-900 mb-3">{displayName}</h1>
-          <p className="text-lg text-neutral-600 max-w-3xl mx-auto">{description}</p>
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-neutral-900 mb-2 sm:mb-3">{displayName}</h1>
+          <p className="text-sm sm:text-base md:text-lg text-neutral-600 max-w-3xl mx-auto px-2">{description}</p>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
           {/* Sticky Left Sidebar - Filters */}
           <aside className="w-full lg:w-1/4">
             <div className="sticky top-20">
               <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm max-h-[calc(100vh-4rem)] overflow-hidden">
-                <CardHeader className="pb-4 border-b border-neutral-100 bg-gradient-to-r from-rose-50 to-pink-50">
+                <CardHeader className="pb-3 sm:pb-4 border-b border-neutral-100 bg-gradient-to-r from-rose-50 to-pink-50">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-xl font-bold text-neutral-900 flex items-center gap-2">
-                      <Filter className="w-5 h-5 text-rose-500" />
+                    <CardTitle className="text-lg sm:text-xl font-bold text-neutral-900 flex items-center gap-2">
+                      <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-rose-500" />
                       Filters
                     </CardTitle>
                     <Button
@@ -290,20 +290,20 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="max-h-[calc(100vh-12rem)] overflow-y-auto px-6 py-4 space-y-6 scrollbar-thin scrollbar-thumb-rose-300 scrollbar-track-neutral-100 hover:scrollbar-thumb-rose-400 scrollbar-thumb-rounded-full">
+                  <div className="max-h-[calc(100vh-12rem)] overflow-y-auto px-3 sm:px-6 py-3 sm:py-4 space-y-4 sm:space-y-6 scrollbar-thin scrollbar-thumb-rose-300 scrollbar-track-neutral-100 hover:scrollbar-thumb-rose-400 scrollbar-thumb-rounded-full">
                     {/* Search */}
-                    <div className="space-y-3">
-                      <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                        <Search className="w-4 h-4 text-rose-500" />
+                    <div className="space-y-2 sm:space-y-3">
+                      <label className="text-xs sm:text-sm font-semibold text-neutral-700 flex items-center gap-2">
+                        <Search className="w-3 h-3 sm:w-4 sm:h-4 text-rose-500" />
                         Search Vendors
                       </label>
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 w-4 h-4" />
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 w-3 h-3 sm:w-4 sm:h-4" />
                         <Input
                           placeholder="Search by name, location..."
                           value={filters.search}
                           onChange={(e) => setFilters({...filters, search: e.target.value})}
-                          className="pl-10 h-11 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 rounded-lg transition-all duration-200"
+                          className="pl-8 sm:pl-10 h-9 sm:h-11 text-sm sm:text-base border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 rounded-lg transition-all duration-200"
                         />
                       </div>
                     </div>
@@ -527,8 +527,8 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                 </div>
               </div>
 
-              {/* Results Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                             {/* Results Grid */}
+               <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
                 {isLoading ? (
                   Array.from({ length: 6 }).map((_, index) => (
                     <div key={index} className="animate-pulse">

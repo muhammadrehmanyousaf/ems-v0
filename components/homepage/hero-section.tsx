@@ -474,14 +474,14 @@ export function HeroSection() {
         <div className="absolute inset-0 bg-gradient-to-br from-rose-900/80 via-rose-800/60 to-pink-900/40" />
       </div>
 
-      <div className="relative container mx-auto px-4 py-12">
+      <div className="relative w-full px-2 sm:px-4 md:px-6 lg:px-8 xl:px-12 py-6 sm:py-8 md:py-12 lg:py-16">
         <div className="max-w-5xl mx-auto text-center text-white">
           {/* Enhanced Hero Content */}
-          <div className="mb-12">
-            <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight bg-gradient-to-r from-white to-rose-100 bg-clip-text text-transparent">
+          <div className="mb-8 sm:mb-12">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 sm:mb-6 md:mb-8 leading-tight bg-gradient-to-r from-white to-rose-100 bg-clip-text text-transparent">
             Find Your Perfect Wedding Vendors
           </h1>
-            <p className="text-xl md:text-2xl mb-8 text-rose-100 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-sm sm:text-lg md:text-xl lg:text-2xl mb-6 sm:mb-8 text-rose-100 max-w-3xl mx-auto leading-relaxed px-2">
             Discover and book the best wedding vendors in your city. From photographers to venues, 
             we've got everything you need for your special day.
           </p>
