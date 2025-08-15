@@ -1,258 +1,277 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { useState, useEffect } from "react"
 import { Label } from "@/components/ui/label"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { Check, Package } from "lucide-react"
-import type { BookingFormData, BookingVendor, BookingVendorPackage, EventVenue, Vendor } from "@/lib/types"
-import { bookingPackages, vendors } from "@/lib/data"
-import { VendorAPI } from "@/lib/api/vendors"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Check, Star, MapPin, Clock, Users, Package } from "lucide-react"
+import type { BookingFormData, EventVenue, Vendor } from "@/lib/types"
 
 interface PackageSelectionStepProps {
   formData: BookingFormData
-  updateFormData: React.Dispatch<React.SetStateAction<BookingFormData>>
+  updateFormData: (data: Partial<BookingFormData>) => void
   venue: EventVenue | null
   vendorDetails?: Vendor[]
 }
 
-export default function PackageSelectionStep({ formData, updateFormData, venue, vendorDetails = [] }: PackageSelectionStepProps) {
-  const [expandedVendorSection, setExpandedVendorSection] = useState<string[]>([])
-  const [expandedVenueSection, setExpandedVenueSection] = useState<boolean>(true)
-  const [selectedVendors, setSelectedVendors] = useState<BookingVendor[]>([])
-  const [resolvedVendors, setResolvedVendors] = useState<Vendor[]>(vendorDetails)
+export default function PackageSelectionStep({ formData, updateFormData, venue, vendorDetails }: PackageSelectionStepProps) {
+  const [selectedPackageId, setSelectedPackageId] = useState(formData.selectedPackage)
+  const [selectedVendorPackages, setSelectedVendorPackages] = useState<string[]>(formData.selectedVendorPackages || [])
 
-  const packages = venue?.packages
+  // Determine if this is a vendor booking
+  const isVendor = venue && !('menus' in venue) && ((venue as any)?.subBusinessType || (venue as any)?.type)
+  const isVenueBooking = venue && 'menus' in venue && !!venue?.menus && Array.isArray(venue?.menus) && (venue?.menus?.length ?? 0) > 0
+
+  const venuePackages = venue?.packages || []
+  const vendorPackages = vendorDetails?.flatMap(vendor => vendor.packages || []) || []
+
+  // Calculate total price
+  const calculateTotalPrice = () => {
+    let total = 0
+    
+    // Main venue/vendor package price
+    if (selectedPackageId) {
+      const selectedPackage = venuePackages.find(pkg => String(pkg.id) === String(selectedPackageId))
+      total += selectedPackage?.price || 0
+    }
+    
+    // Additional vendor packages
+    selectedVendorPackages.forEach(pkgId => {
+      const vendorPackage = vendorPackages.find(pkg => String(pkg.id) === String(pkgId))
+      total += vendorPackage?.price || 0
+    })
+    
+    return total
+  }
 
   useEffect(() => {
-    // Resolve selected vendors from ids stored in formData
-    const resolved = formData.selectedVendors
-      .map((id) => {
-        // try match from provided vendorDetails first
-        const vd = vendorDetails.find(v => String(v.id) === String(id))
-        if (vd) return { id: String(vd.id), name: vd.name, type: vd.type || vd.subBusinessType || '', price: vd.minimumPrice || vd.price || 0 }
-        const fallback = vendors.find((v) => v.id === id)
-        return fallback || null
-      })
-      .filter(Boolean) as BookingVendor[]
-    setSelectedVendors(resolved)
-  }, [formData.selectedVendors, vendorDetails])
+    const totalPrice = calculateTotalPrice()
+    updateFormData({ totalPrice })
+  }, [selectedPackageId, selectedVendorPackages])
 
-  // Ensure we have real vendor details with packages; if none passed in, fetch by id
-  useEffect(() => {
-    const load = async () => {
-      if (vendorDetails && vendorDetails.length > 0) {
-        setResolvedVendors(vendorDetails)
-        return
-      }
-      if (formData.selectedVendors.length === 0) {
-        setResolvedVendors([])
-        return
-      }
-      const details = await Promise.all(
-        formData.selectedVendors.map(async (id) => await VendorAPI.getBusinessById(id))
-      )
-      setResolvedVendors(details.filter(Boolean) as Vendor[])
-    }
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vendorDetails, formData.selectedVendors])
+  const handlePackageSelect = (packageId: string) => {
+    setSelectedPackageId(packageId)
+    updateFormData({ selectedPackage: packageId })
+  }
 
-  const toggleVendorPackage = (pkgId: string, price: number) => {
-    const exists = formData.selectedVendorPackages.includes(pkgId)
-    if (exists) {
-      updateFormData((prev) => ({
-        ...prev,
-        selectedVendorPackages: prev.selectedVendorPackages.filter((id) => id !== pkgId),
-        totalPrice: Math.max(0, prev.totalPrice - price),
-      }))
-    } else {
-      updateFormData((prev) => ({
-        ...prev,
-        selectedVendorPackages: [...prev.selectedVendorPackages, pkgId],
-        totalPrice: prev.totalPrice + price,
-      }))
-    }
+  const handleVendorPackageToggle = (packageId: string) => {
+    const newSelected = selectedVendorPackages.includes(packageId)
+      ? selectedVendorPackages.filter(id => id !== packageId)
+      : [...selectedVendorPackages, packageId]
+    
+    setSelectedVendorPackages(newSelected)
+    updateFormData({ selectedVendorPackages: newSelected })
+  }
+
+  const getVendorForPackage = (packageId: string) => {
+    return vendorDetails?.find(vendor => 
+      vendor.packages?.some(pkg => String(pkg.id) === String(packageId))
+    )
   }
 
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h2 className="mb-2 text-2xl font-bold text-gray-800">Select Packages</h2>
-        <p className="text-gray-600">Choose venue package and vendor packages</p>
+        <h2 className="mb-2 text-2xl font-bold text-neutral-900">
+          {isVendor ? 'Select Your Package' : 'Select Packages'}
+        </h2>
+        <p className="text-neutral-600">
+          {isVendor 
+            ? 'Choose the perfect package for your event'
+            : 'Select packages for your venue and additional vendors'
+          }
+        </p>
       </div>
 
-      {/* Venue Packages Section */}
+      {/* Main Venue/Vendor Package Selection */}
       <div className="space-y-4">
-        <h3 className="text-base font-medium text-gray-700">{venue ? 'Venue Package' : 'Select Package'}</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-neutral-800">
+            {isVendor ? 'Available Packages' : `${venue?.name || 'Venue'} Packages`}
+          </h3>
+          {isVendor && (
+            <Badge variant="outline" className="bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border-blue-200">
+              {(venue as any)?.subBusinessType || (venue as any)?.type} Service
+            </Badge>
+          )}
+        </div>
 
-        <Accordion
-          type="single"
-          collapsible
-          value={expandedVenueSection ? "venue-packages" : ""}
-          onValueChange={(value) => setExpandedVenueSection(value === "venue-packages")}
-          className="space-y-3"
-        >
-          <AccordionItem value="venue-packages" className="rounded-lg border border-gray-200 px-4 shadow-sm">
-            <AccordionTrigger className="py-3 hover:no-underline">
-              <div className="flex items-center">
-                <Package className="mr-2 h-5 w-5 text-blue-500" />
-                <span className="font-medium text-gray-800">Select a Venue Package</span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="pb-3">
-              <RadioGroup className="space-y-4">
-                 {(packages ?? []).map((pkg) => {
-                  const isRecommended = pkg.id === "standard"
-
-                  return (
-                    <div
-                       onClick={() => {
-                        updateFormData((prev) => ({
-                          ...prev,
-                          selectedPackage: pkg.id,
-                          totalPrice: prev.totalPrice + pkg.price,
-                        }))
-                      }}
-                      key={pkg.id}
-                      className={`relative overflow-hidden rounded-md border p-4 cursor-pointer ${formData.selectedPackage === pkg.id ? "border-blue-500 bg-blue-50" : "border-gray-200"
-                        }`}
-                    >
-                      <div className="space-y-3">
-                        {isRecommended && (
-                          <span className="bg-blue-500 px-4 py-1 text-xs font-medium text-white rounded-full">
-                            Recommended
-                          </span>
-                        )}
-                        <div className="flex items-center justify-between">
-                          <span className="text-lg font-medium text-gray-800">{pkg.name}</span>
-                           <span className="text-lg font-medium text-blue-600">₹{pkg.price}</span>
-                        </div>
-                        <p className="mt-1 text-sm text-gray-600">{pkg.description}</p>
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                        {pkg.features.slice(0, 4).map((facility: string, index: number) => (
-                          <div key={index} className="flex items-center">
-                            <Check className="mr-1.5 h-4 w-4 text-blue-500" />
-                            <span className="text-sm text-gray-700">{facility}</span>
-                          </div>
+        {venuePackages.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {venuePackages.map((pkg) => (
+              <Card
+                key={pkg.id}
+                className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                  selectedPackageId === String(pkg.id)
+                    ? 'ring-2 ring-rose-500 bg-gradient-to-r from-rose-50 to-pink-50 border-rose-200'
+                    : 'hover:border-rose-300'
+                }`}
+                onClick={() => handlePackageSelect(String(pkg.id))}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <CardTitle className="text-lg">{pkg.name}</CardTitle>
+                    {selectedPackageId === String(pkg.id) && (
+                      <Check className="h-5 w-5 text-rose-500" />
+                    )}
+                  </div>
+                  <div className="text-2xl font-bold text-rose-600">₹{pkg.price}</div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  {pkg.description && (
+                    <p className="text-sm text-neutral-600 mb-3">{pkg.description}</p>
+                  )}
+                  {pkg.features && pkg.features.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-neutral-700">What's included:</h4>
+                      <ul className="space-y-1">
+                        {pkg.features.map((feature, index) => (
+                          <li key={index} className="flex items-center text-sm text-neutral-600">
+                            <Check className="h-3 w-3 text-green-500 mr-2 flex-shrink-0" />
+                            {feature}
+                          </li>
                         ))}
-                        {pkg.features.length > 4 && (
-                          <div className="text-sm text-blue-600">+{pkg.features.length - 4} more features</div>
-                        )}
-                      </div>
+                      </ul>
                     </div>
-                  )
-                })}
-              </RadioGroup>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      </div>
-
-      {/* {formData.selectedVendors.length > 0 && (
-        <div className="rounded-lg bg-blue-50 p-4">
-          <h3 className="mb-2 text-sm font-medium text-blue-700">Selected Vendors</h3>
-          <div className="flex flex-wrap gap-2">
-            {selectedVendors.map((vendor) => (
-              <Badge key={vendor.id} variant="outline" className="bg-white">
-                {vendor.name}
-              </Badge>
+                  )}
+                  {pkg.duration && (
+                    <div className="flex items-center mt-3 text-sm text-neutral-500">
+                      <Clock className="h-4 w-4 mr-1" />
+                      Duration: {pkg.duration}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             ))}
           </div>
-          <p className="mt-2 text-xs text-blue-600">Select packages from your vendors below</p>
-        </div>
-      )} */}
+        ) : (
+          <Card className="border-dashed border-2 border-neutral-300 bg-neutral-50">
+            <CardContent className="p-8 text-center">
+              <div className="text-neutral-500 mb-4">
+                <Package className="h-12 w-12 mx-auto mb-3 text-neutral-400" />
+                <h3 className="text-lg font-medium text-neutral-700 mb-2">
+                  {isVendor ? 'No Packages Available' : 'No Packages Available'}
+                </h3>
+                <p className="text-sm text-neutral-600">
+                  {isVendor 
+                    ? 'This vendor currently doesn\'t have any packages defined. Please contact them directly for pricing and services.'
+                    : 'This venue currently doesn\'t have any packages defined. Please contact them directly for pricing and services.'
+                  }
+                </p>
+              </div>
+              <Button 
+                variant="outline" 
+                className="border-neutral-300 hover:border-rose-500 hover:text-rose-600"
+                onClick={() => {
+                  // Auto-select a default package or proceed without selection
+                  updateFormData({ selectedPackage: 'default' })
+                }}
+              >
+                Continue Without Package
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
-      {/* Vendor Packages Section */}
-      {(formData.selectedVendors?.length ?? 0) > 0 && (
+      {/* Additional Vendor Packages (for venue bookings) */}
+      {isVenueBooking && vendorPackages.length > 0 && (
         <div className="space-y-4">
-          <h3 className="text-base font-medium text-gray-700">Vendor Packages</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-neutral-800">Additional Vendor Services</h3>
+            <Badge variant="outline" className="bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border-green-200">
+              Optional Add-ons
+            </Badge>
+          </div>
 
-          <Accordion
-            type="multiple"
-            value={expandedVendorSection}
-            onValueChange={setExpandedVendorSection}
-            className="space-y-3"
-          >
-            {resolvedVendors
-              .filter(v => formData.selectedVendors.includes(String(v.id)))
-              .map((vendor) => {
-              const vendorPackagesList = (vendor as any).packages || []
-
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {vendorPackages.map((pkg) => {
+              const vendor = getVendorForPackage(String(pkg.id))
               return (
-                <AccordionItem
-                  key={vendor.id}
-                  value={vendor.id}
-                  className="rounded-lg border border-gray-200 px-4 shadow-sm"
+                <Card
+                  key={pkg.id}
+                  className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                    selectedVendorPackages.includes(String(pkg.id))
+                      ? 'ring-2 ring-green-500 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200'
+                      : 'hover:border-green-300'
+                  }`}
+                  onClick={() => handleVendorPackageToggle(String(pkg.id))}
                 >
-                  <AccordionTrigger className="py-3 hover:no-underline">
-                    <div className="flex items-center">
-                      <span className="font-medium text-gray-800">{vendor.name}</span>
-                      <Badge variant="outline" className="ml-2 bg-blue-50 text-xs text-blue-700">
-                        {vendor.type}
-                      </Badge>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="pb-3">
-                    {vendorPackagesList && vendorPackagesList.length > 0 ? (
-                      <div className="space-y-3">
-                        {vendorPackagesList.map((pkg) => (
-                          <div
-                            key={pkg.id}
-                            className={`relative rounded-md border p-3 ${formData.selectedVendorPackages.includes(pkg.id)
-                              ? "border-blue-500 bg-blue-50"
-                              : "border-gray-200 hover:border-blue-300"
-                              }`}
-                          >
-                            <div className="flex items-start">
-                              <Checkbox
-                                id={pkg.id}
-                                checked={formData.selectedVendorPackages.includes(pkg.id)}
-                                onCheckedChange={() => toggleVendorPackage(pkg.id, pkg.price)}
-                                className="mt-1 border-blue-500 text-blue-500"
-                              />
-                              <div className="ml-3 flex-1">
-                                <div className="flex items-center justify-between">
-                                  <Label htmlFor={pkg.id} className="font-medium cursor-pointer text-gray-800">
-                                    {pkg.name}
-                                  </Label>
-                                  <span className="font-medium text-blue-600">₹{pkg.price}</span>
-                                </div>
-                                <p className="text-sm text-gray-600">{pkg.description}</p>
-
-                                <div className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2">
-                                  {pkg.features.slice(0, 4).map((feature, index) => (
-                                    <div key={index} className="flex items-center">
-                                      <Check className="mr-1 h-3 w-3 text-blue-500" />
-                                      <span className="text-xs text-gray-700">{feature}</span>
-                                    </div>
-                                  ))}
-                                  {pkg.features.length > 4 && (
-                                    <div className="text-xs text-blue-600">
-                                      +{pkg.features.length - 4} more features
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-lg">{pkg.name}</CardTitle>
+                        {vendor && (
+                          <p className="text-sm text-neutral-500 mt-1">
+                            by {vendor.name}
+                          </p>
+                        )}
                       </div>
-                    ) : (
-                      <p className="text-sm text-gray-500">No packages available for this vendor.</p>
+                      {selectedVendorPackages.includes(String(pkg.id)) && (
+                        <Check className="h-5 w-5 text-green-500" />
+                      )}
+                    </div>
+                    <div className="text-2xl font-bold text-green-600">₹{pkg.price}</div>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    {pkg.description && (
+                      <p className="text-sm text-neutral-600 mb-3">{pkg.description}</p>
                     )}
-                  </AccordionContent>
-                </AccordionItem>
+                    {pkg.features && pkg.features.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium text-neutral-700">Features:</h4>
+                        <ul className="space-y-1">
+                          {pkg.features.slice(0, 3).map((feature, index) => (
+                            <li key={index} className="flex items-center text-sm text-neutral-600">
+                              <Check className="h-3 w-3 text-green-500 mr-2 flex-shrink-0" />
+                              {feature}
+                            </li>
+                          ))}
+                          {pkg.features.length > 3 && (
+                            <li className="text-xs text-neutral-500">
+                              +{pkg.features.length - 3} more features
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               )
             })}
-          </Accordion>
+          </div>
         </div>
       )}
 
+      {/* Total Price Summary */}
+      <Card className="bg-gradient-to-r from-rose-50 to-pink-50 border-rose-200">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-neutral-800">Total Amount</h3>
+              <p className="text-sm text-neutral-600">
+                {selectedPackageId ? 'Package selected' : 'No package selected'}
+                {selectedVendorPackages.length > 0 && ` + ${selectedVendorPackages.length} additional service(s)`}
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-3xl font-bold text-rose-600">₹{calculateTotalPrice()}</div>
+              <p className="text-sm text-neutral-500">All inclusive</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Help Text */}
+      <div className="rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border border-blue-200">
+        <p className="text-sm text-blue-700">
+          {isVendor 
+            ? 'Select the package that best fits your event requirements. You can review all details before confirming your booking.'
+            : 'Choose your venue package and optionally add services from other vendors to create your perfect event package.'
+          }
+        </p>
+      </div>
     </div>
   )
 }

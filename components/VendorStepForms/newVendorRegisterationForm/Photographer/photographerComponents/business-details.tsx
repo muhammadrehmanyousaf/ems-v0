@@ -32,13 +32,15 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
     const [downPaymentType, setDownPaymentType] = useState<string>(formData.downPaymentType || "");
 
     useEffect(() => {
+        console.log('🔍 useEffect - downPaymentType being set:', downPaymentType);
         setFormData((prevData) => ({
             ...prevData,
             staff: selectedstaff,
             expertise: selectedExpertise,
             subBusinessType: selectedTypes,
             cancelationPolicy: cancellation,
-            amenities: selectedAmenities
+            amenities: selectedAmenities,
+            downPaymentType: downPaymentType
         }));
     }, [
         selectedstaff,
@@ -46,6 +48,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
         cancellation,
         selectedTypes,
         selectedAmenities,
+        downPaymentType,
         setFormData
     ]);
 
@@ -90,8 +93,10 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
 
     const downPaymentTypes = [
         { id: "Percentage", label: "Percentage" },
-        { id: "Fixed", label: "Fixed Amount" },
+        { id: "Fixed Amount", label: "Fixed Amount" },
     ];
+
+    console.log('🔍 downPaymentTypes array:', downPaymentTypes);
 
     const handleSelectStaff = (type: string, index: number) => {
         if (selectedStaffIndexes.includes(index)) {
@@ -164,7 +169,12 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                                         onChange={(e) => setFormData((prev) => ({ ...prev, downPayment: parseInt(e.target.value) }))}
                                         className={`flex-1 ${errors.downPayment ? "border-red-500" : "border-neutral-300"}`}
                                     />
-                                    <Select value={downPaymentType} onValueChange={setDownPaymentType}>
+                                    <Select value={downPaymentType} onValueChange={(value) => {
+                                        console.log('🔍 Selected downPaymentType:', value);
+                                        setDownPaymentType(value);
+                                        setFormData((prev) => ({ ...prev, downPaymentType: value }));
+                                        setErrors((prevErrors) => ({ ...prevErrors, downPaymentType: "" }));
+                                    }}>
                                         <SelectTrigger className="w-32 border-neutral-300">
                                             <SelectValue />
                                         </SelectTrigger>

@@ -45,7 +45,8 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
             covidComplaint: covid === 'yes',
             parking: parking === 'yes',
             catering: selectedCatering,
-            amenities: selectedAmenities
+            amenities: selectedAmenities,
+            downPaymentType: downPaymentType
         }));
     }, [
         selectedstaff,
@@ -56,6 +57,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
         selectedAmenities,
         parking,
         selectedCatering,
+        downPaymentType,
         setFormData
     ]);
 

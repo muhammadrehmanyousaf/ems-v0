@@ -121,6 +121,7 @@ export interface EventBooking {
   formData: BookingFormData
   currentStep: number
   isSubmitted: boolean
+  bookingResponse?: any // Add booking response to store API response
 }
 
 export interface MultiEventBookingState {

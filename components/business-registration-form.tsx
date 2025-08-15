@@ -149,7 +149,7 @@ export function BusinessRegistrationForm() {
         expertise: formData.expertise,
         amenities: formData.amenities,
         staff: formData.staff,
-        maxCapacity: formData.maxCapacity,
+        maxCapacity: formData.maxCapacity || 1,
         minimumPrice: formData.minimumPrice,
         description: formData.description,
         downPaymentType: formData.downPaymentType,
@@ -159,6 +159,9 @@ export function BusinessRegistrationForm() {
         parking: false,
         images: formData.images,
       }
+
+      console.log('🔍 API Request - downPaymentType:', formData.downPaymentType);
+      console.log('🔍 API Request - full formData:', formData);
       const rentalData = {
         fullName: formData.fullName,
         email: formData.email,
