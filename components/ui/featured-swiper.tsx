@@ -119,15 +119,11 @@ export function FeaturedSwiper({ children, className = "" }: FeaturedSwiperProps
       <style dangerouslySetInnerHTML={{ __html: swiperStyles }} />
       <div className={`relative w-full pb-8 ${className}`}>
         <Swiper
-          modules={[Navigation, Pagination, Autoplay]}
+          modules={[Navigation, Pagination]}
           spaceBetween={0}
           slidesPerView={1}
           centeredSlides={true}
-          loop={true}
-          autoplay={{
-            delay: 5000,
-            disableOnInteraction: false,
-          }}
+          loop={false}
           navigation={{
             nextEl: '.swiper-button-next',
             prevEl: '.swiper-button-prev',
@@ -136,42 +132,42 @@ export function FeaturedSwiper({ children, className = "" }: FeaturedSwiperProps
             clickable: true,
             el: '.swiper-pagination',
           }}
-          breakpoints={{
-            // Mobile: 1 slide centered
-            320: {
-              slidesPerView: 1,
-              spaceBetween: 16,
-              centeredSlides: true,
-            },
-            // Tablet: 2 slides with better spacing
-            768: {
-              slidesPerView: 2,
-              spaceBetween: 20,
-              centeredSlides: false,
-            },
-            // Desktop: 3 slides
-            1024: {
-              slidesPerView: 3,
-              spaceBetween: 24,
-              centeredSlides: false,
-            },
-            // Large Desktop: 3 slides with more space
-            1280: {
-              slidesPerView: 3,
-              spaceBetween: 32,
-              centeredSlides: false,
-            },
-          }}
+                     breakpoints={{
+             // Mobile: 1 slide centered
+             320: {
+               slidesPerView: 1,
+               spaceBetween: 16,
+               centeredSlides: true,
+             },
+             // Tablet: 2 slides with better spacing
+             768: {
+               slidesPerView: 2,
+               spaceBetween: 20,
+               centeredSlides: false,
+             },
+             // Desktop: 3 slides
+             1024: {
+               slidesPerView: 3,
+               spaceBetween: 12,
+               centeredSlides: false,
+             },
+             // Large Desktop: 3 slides with more space
+             1280: {
+               slidesPerView: 3,
+               spaceBetween: 16,
+               centeredSlides: false,
+             },
+           }}
           className="featured-swiper"
         >
           {children}
         </Swiper>
 
-        {/* Custom Navigation Buttons */}
-        <div className="swiper-button-prev !w-10 !h-10 md:!w-12 md:!h-12 lg:!w-14 lg:!h-14 !bg-white/90 !backdrop-blur-sm !text-gray-800 !rounded-full hover:!bg-white !shadow-lg !transition !z-50 !border !border-gray-200 !left-2 md:!left-4 lg:!left-6">
+        {/* Custom Navigation Buttons - Hidden on Mobile and Tablet */}
+        <div className="swiper-button-prev hidden lg:block !w-10 !h-10 md:!w-12 md:!h-12 lg:!w-14 lg:!h-14 !bg-white/90 !backdrop-blur-sm !text-gray-800 !rounded-full hover:!bg-white !shadow-lg !transition !z-50 !border !border-gray-200 !left-2 md:!left-4 lg:!left-6">
           <ChevronLeft className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" />
         </div>
-        <div className="swiper-button-next !w-10 !h-10 md:!w-12 md:!h-12 lg:!w-14 lg:!h-14 !bg-white/90 !backdrop-blur-sm !text-gray-800 !rounded-full hover:!bg-white !shadow-lg !transition !z-50 !border !border-gray-200 !right-2 md:!right-4 lg:!right-6">
+        <div className="swiper-button-next hidden lg:block !w-10 !h-10 md:!w-12 md:!h-12 lg:!w-14 lg:!h-14 !bg-white/90 !backdrop-blur-sm !text-gray-800 !rounded-full hover:!bg-white !shadow-lg !transition !z-50 !border !border-gray-200 !right-2 md:!right-4 lg:!right-6">
           <ChevronRight className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" />
         </div>
 
