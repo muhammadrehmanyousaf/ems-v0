@@ -41,7 +41,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <div className={cn("transition-opacity px-2 py-1", open ? 'opacity-100 border-y' : 'opacity-0 -mt-10')}>
           <TeamSwitcher teams={data.teams} />
         </div>
-        <NavProjects projects={data.static} />
+        <NavProjects mainNavs={data.mainNav} vendorControlls={data.vendorControlls} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />

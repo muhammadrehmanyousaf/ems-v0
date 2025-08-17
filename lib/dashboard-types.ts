@@ -31,3 +31,43 @@ export type CustomersType = {
   createdAt?: string
   updatedAt?: string
 }
+
+// types.ts
+
+export type PaymentStatus = 
+  | "Pending"
+  | "Advance Paid"
+  | "Fully Paid"
+  | "Cancelled"
+  | "Failed";
+
+export type PaymentMethod = 
+  | "Bank Transfer"
+  | "Credit Card"
+  | "Debit Card"
+  | "Cash"
+  | null;
+
+export interface Payment {
+  paymentId: string;
+  customerName: string;
+  email: string;
+  phone: string;
+  eventType: "Wedding" | "Birthday Party" | "Corporate Event" | "Other";
+  eventDate: string; // ISO date string
+  venue: string;
+  guestsCount: number;
+  packageSelected: string; // Silver, Gold, Platinum etc.
+  totalAmount: number;
+  advanceAmount: number;
+  balanceAmount: number;
+  currency: string;
+  paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod;
+  transactionId: string | null;
+  invoiceId: string;
+  orderId: string;
+  paymentDate: string | null; // ISO string or null if not paid yet
+  dueDate: string;
+  notes?: string;
+}

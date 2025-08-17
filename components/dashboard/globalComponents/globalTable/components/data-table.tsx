@@ -22,7 +22,7 @@ export function DataTable<TData extends object>({
 }: CoreDataTableProps<TData>) {
     return (
         <div className="w-full">
-            <ScrollArea className="grid w-full max-w-full h-[calc(100dvh-270px)] md:h-[calc(100dvh-260px)] overflow-auto rounded-md border">
+            <ScrollArea className="grid w-full max-w-full h-[calc(100dvh-250px)] md:h-[calc(100dvh-260px)] overflow-auto rounded-md border">
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((hg) => (

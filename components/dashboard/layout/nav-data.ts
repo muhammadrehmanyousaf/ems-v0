@@ -6,14 +6,9 @@ import {
   CalendarDays,
   CircleDollarSign,
   ClipboardList,
-  Command,
-  Frame,
-  GalleryVerticalEnd,
   LayoutDashboard,
-  Map,
-  MessageSquareText,
   Package,
-  PieChart,
+  Settings,
   Settings2,
   Smile,
   SquareTerminal,
@@ -127,7 +122,7 @@ export const data = {
       ],
     },
   ],
-  static: [
+  mainNav: [
     {
       name: "Dashboard",
       url: "/dashboard",
@@ -148,16 +143,11 @@ export const data = {
       url: "/dashboard/calendar",
       icon: CalendarDays,
     },
-    {
-      name: "Packages",
-      url: "/dashboard/packages",
-      icon: Package,
-    },
-    {
-      name: "Conversations",
-      url: "/dashboard/conversations",
-      icon: MessageSquareText,
-    },
+    // {
+    //   name: "Conversations",
+    //   url: "/dashboard/conversations",
+    //   icon: MessageSquareText,
+    // },
     {
       name: "Payments",
       url: "/dashboard/payments",
@@ -169,4 +159,21 @@ export const data = {
       icon: Smile,
     },
   ],
+  vendorControlls: [
+    {
+      name: "Packages",
+      url: "/dashboard/packages",
+      icon: Package,
+    },
+    {
+      name: "Roles",
+      url: "/dashboard/roles",
+      icon: Settings2,
+    },
+    {
+      name: "Business Settings",
+      url: "/dashboard/business-settings",
+      icon: Settings,
+    },
+  ]
 }

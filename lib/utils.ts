@@ -149,3 +149,32 @@ export const SAMPLE_EVENTS: CalendarEvent[] = [
         end: new Date('2025-08-30T13:00:00'),
     },
 ];
+
+export function formatDateTime(dateString: string): string {
+  const date = new Date(dateString);
+
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+
+  let hours = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const ampm = hours >= 12 ? "pm" : "am";
+
+  hours = hours % 12;
+  hours = hours ? hours : 12; // 0 should be 12
+  const hoursStr = String(hours).padStart(2, "0");
+
+  return `${day}/${month}/${year}, ${hoursStr}:${minutes} ${ampm}`;
+}
+
+// utility function
+export function formatColumnId(id: string): string {
+  return id
+    // convert camelCase / PascalCase to words
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    // replace underscores with space
+    .replace(/_/g, " ")
+    // capitalize first letter of each word
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
