@@ -14,7 +14,7 @@ import {
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu"
 import { Input } from "@/components/ui/input"
-import { Menu, Search, Heart, Camera, Soup, Brush, Building, Paintbrush, Car, PenTool, Signature, MapPin, Star, Users, Calendar, Award, X, User, LogIn } from "lucide-react"
+import { Menu, Search, Heart, Camera, Soup, Brush, Building, Paintbrush, Car, PenTool, Signature, MapPin, Star, Users, Calendar, Award, X, User, LogIn, DollarSign, Clock, Palette, Sparkles, Utensils, Crown } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,19 +32,34 @@ import HeaderAvatar from "./header-avatar"
 const categories = [
   {
     title: "Planning Tools",
-    items: ["Checklist", "Budget", "Guest List", "Timeline", "Vendors", "Venues"],
+    items: [
+      { name: "Checklist", href: "/planning-tools/checklist", icon: Calendar },
+      { name: "Budget", href: "/planning-tools/budget", icon: DollarSign },
+      { name: "Guest List", href: "/planning-tools/guest-list", icon: Users },
+      { name: "Timeline", href: "/planning-tools/timeline", icon: Clock },
+    ],
   },
   {
-    title: "Wedding Venues",
-    items: ["Banquet Halls", "Hotels", "Resorts", "Gardens", "Farmhouses", "Destination Venues"],
+    title: "Vendor Categories",
+    items: [
+      { name: "Photographers", href: "/photographers", icon: Camera },
+      { name: "Makeup Artists", href: "/makeup-artists", icon: Palette },
+      { name: "Decorators", href: "/decor", icon: Sparkles },
+      { name: "Catering", href: "/catering", icon: Utensils },
+      { name: "Venues", href: "/venues", icon: Building },
+      { name: "Henna Artists", href: "/henna-artists", icon: Paintbrush },
+      { name: "Car Rental", href: "/car-rental", icon: Car },
+      { name: "Wedding Stationery", href: "/wedding-stationery", icon: PenTool },
+      { name: "Bridal Wear", href: "/bridal-wear", icon: Crown },
+    ],
   },
   {
-    title: "Wedding Vendors",
-    items: ["Photographers", "Makeup Artists", "Decorators", "Caterers", "Wedding Cards", "Mehendi Artists"],
-  },
-  {
-    title: "Wedding Services",
-    items: ["Bridal Wear", "Groom Wear", "Jewelry", "Car Rental", "Music", "Choreography"],
+    title: "Services",
+    items: [
+      { name: "All Vendors", href: "/vendors", icon: Star },
+      { name: "Events", href: "/events", icon: Calendar },
+      { name: "Search", href: "/search", icon: Search },
+    ],
   },
 ]
 
@@ -103,78 +118,121 @@ export function Header() {
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[280px] sm:w-[320px] bg-white border-r border-neutral-200 p-0">
-                <div className="flex items-center justify-between p-4 border-b border-neutral-100">
-                  <h2 className="text-lg font-semibold text-neutral-900">Menu</h2>
+              <SheetContent side="left" className="w-[300px] sm:w-[350px] bg-white border-r border-neutral-200 p-0">
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b border-neutral-100 bg-gradient-to-r from-rose-50 to-pink-50">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-gradient-to-br from-rose-500 to-pink-600 rounded-lg flex items-center justify-center">
+                      <Heart className="w-4 h-4 text-white" />
+                    </div>
+                    <h2 className="text-lg font-bold text-neutral-900">Menu</h2>
+                  </div>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => setIsOpen(false)}
-                    className="h-8 w-8"
+                    className="h-8 w-8 hover:bg-rose-100 hover:text-rose-600"
                     aria-label="Close menu"
                   >
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-                <nav className="flex flex-col gap-2 p-4 overflow-y-auto max-h-[calc(100vh-80px)]">
-                  {categories.map((category) => (
-                    <div key={category.title} className="space-y-2">
-                      <h3 className="font-semibold text-sm text-neutral-900 border-b border-neutral-100 pb-2">
-                        {category.title}
+
+                {/* Navigation Content */}
+                <nav className="flex flex-col h-full overflow-y-auto">
+                  <div className="p-4 space-y-6">
+                    {/* Main Navigation Categories */}
+                    {categories.map((category) => (
+                      <div key={category.title} className="space-y-3">
+                        <h3 className="font-semibold text-sm text-neutral-900 border-b border-neutral-200 pb-2 flex items-center gap-2">
+                          <div className="w-1 h-4 bg-gradient-to-b from-rose-500 to-pink-600 rounded-full"></div>
+                          {category.title}
+                        </h3>
+                        <div className="space-y-1">
+                          {category.items.map((item) => (
+                            <Link
+                              key={item.name}
+                              href={item.href}
+                              className="flex items-center gap-3 text-sm text-neutral-600 hover:text-rose-600 hover:bg-rose-50 px-3 py-3 rounded-lg transition-all duration-200 font-medium group"
+                              onClick={() => setIsOpen(false)}
+                            >
+                              <div className="w-8 h-8 bg-neutral-100 group-hover:bg-rose-100 rounded-lg flex items-center justify-center transition-all duration-200">
+                                <item.icon className="w-4 h-4 text-neutral-500 group-hover:text-rose-600" />
+                              </div>
+                              <span className="flex-1">{item.name}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {/* Quick Actions */}
+                    <div className="pt-4 border-t border-neutral-200">
+                      <h3 className="font-semibold text-sm text-neutral-900 border-b border-neutral-200 pb-2 mb-3 flex items-center gap-2">
+                        <div className="w-1 h-4 bg-gradient-to-b from-blue-500 to-indigo-600 rounded-full"></div>
+                        Quick Actions
                       </h3>
-                      <div className="flex flex-col space-y-1">
-                        {category.items.map((item) => (
-                          <Link
-                            key={item}
-                            href={`/${category.title.toLowerCase().replace(" ", "-")}/${item.toLowerCase().replace(" ", "-")}`}
-                            className="text-sm text-neutral-600 hover:text-rose-600 hover:bg-rose-50 px-3 py-2 rounded-lg transition-all duration-200 font-medium"
-                            onClick={() => setIsOpen(false)}
-                          >
-                            {item}
-                          </Link>
-                        ))}
+                      <div className="space-y-2">
+                        <Link 
+                          href="/user/bookings" 
+                          className="flex items-center gap-3 text-sm text-neutral-600 hover:text-rose-600 hover:bg-rose-50 px-3 py-3 rounded-lg transition-all duration-200 font-medium group" 
+                          onClick={() => setIsOpen(false)}
+                        >
+                          <div className="w-8 h-8 bg-blue-100 group-hover:bg-rose-100 rounded-lg flex items-center justify-center transition-all duration-200">
+                            <Calendar className="w-4 h-4 text-blue-600 group-hover:text-rose-600" />
+                          </div>
+                          <span>My Bookings</span>
+                        </Link>
+                        <Link 
+                          href="/favorites" 
+                          className="flex items-center gap-3 text-sm text-neutral-600 hover:text-rose-600 hover:bg-rose-50 px-3 py-3 rounded-lg transition-all duration-200 font-medium group" 
+                          onClick={() => setIsOpen(false)}
+                        >
+                          <div className="w-8 h-8 bg-red-100 group-hover:bg-rose-100 rounded-lg flex items-center justify-center transition-all duration-200">
+                            <Heart className="w-4 h-4 text-red-600 group-hover:text-rose-600" />
+                          </div>
+                          <span>Favorites</span>
+                        </Link>
                       </div>
                     </div>
-                  ))}
-                  <div className="pt-2 border-t border-neutral-100">
-                    <Link 
-                      href="/events" 
-                      className="text-sm text-neutral-600 hover:text-rose-600 hover:bg-rose-50 px-3 py-2 rounded-lg transition-all duration-200 font-medium block" 
-                      onClick={() => setIsOpen(false)}
-                    >
-                      Events
-                    </Link>
                   </div>
-                  
-                  {/* Authentication Section */}
-                  <div className="pt-4 border-t border-neutral-100">
-                    <h3 className="font-semibold text-sm text-neutral-900 border-b border-neutral-100 pb-2 mb-3">
+
+                  {/* Authentication Section - Fixed at Bottom */}
+                  <div className="mt-auto p-4 border-t border-neutral-200 bg-neutral-50">
+                    <h3 className="font-semibold text-sm text-neutral-900 border-b border-neutral-200 pb-2 mb-3 flex items-center gap-2">
+                      <div className="w-1 h-4 bg-gradient-to-b from-green-500 to-emerald-600 rounded-full"></div>
                       Account
                     </h3>
                     <div className="space-y-2">
                       <Link 
                         href="/login" 
-                        className="flex items-center gap-3 text-sm text-neutral-600 hover:text-rose-600 hover:bg-rose-50 px-3 py-2 rounded-lg transition-all duration-200 font-medium" 
+                        className="flex items-center gap-3 text-sm text-neutral-600 hover:text-rose-600 hover:bg-rose-50 px-3 py-3 rounded-lg transition-all duration-200 font-medium group" 
                         onClick={() => setIsOpen(false)}
                       >
-                        <LogIn className="w-4 h-4" />
-                        Sign In
+                        <div className="w-8 h-8 bg-green-100 group-hover:bg-rose-100 rounded-lg flex items-center justify-center transition-all duration-200">
+                          <LogIn className="w-4 h-4 text-green-600 group-hover:text-rose-600" />
+                        </div>
+                        <span>Sign In</span>
                       </Link>
                       <Link 
                         href="/register" 
-                        className="flex items-center gap-3 text-sm text-neutral-600 hover:text-rose-600 hover:bg-rose-50 px-3 py-2 rounded-lg transition-all duration-200 font-medium" 
+                        className="flex items-center gap-3 text-sm text-neutral-600 hover:text-rose-600 hover:bg-rose-50 px-3 py-3 rounded-lg transition-all duration-200 font-medium group" 
                         onClick={() => setIsOpen(false)}
                       >
-                        <User className="w-4 h-4" />
-                        Register
+                        <div className="w-8 h-8 bg-blue-100 group-hover:bg-rose-100 rounded-lg flex items-center justify-center transition-all duration-200">
+                          <User className="w-4 h-4 text-blue-600 group-hover:text-rose-600" />
+                        </div>
+                        <span>Register</span>
                       </Link>
                       <Link 
-                        href="/vendor-guide" 
-                        className="flex items-center gap-3 text-sm text-neutral-600 hover:text-rose-600 hover:bg-rose-50 px-3 py-2 rounded-lg transition-all duration-200 font-medium" 
+                        href="/list-your-business" 
+                        className="flex items-center gap-3 text-sm text-neutral-600 hover:text-rose-600 hover:bg-rose-50 px-3 py-3 rounded-lg transition-all duration-200 font-medium group" 
                         onClick={() => setIsOpen(false)}
                       >
-                        <Award className="w-4 h-4" />
-                        List Your Business
+                        <div className="w-8 h-8 bg-amber-100 group-hover:bg-rose-100 rounded-lg flex items-center justify-center transition-all duration-200">
+                          <Award className="w-4 h-4 text-amber-600 group-hover:text-rose-600" />
+                        </div>
+                        <span>List Your Business</span>
                       </Link>
                     </div>
                   </div>
@@ -229,7 +287,7 @@ export function Header() {
                         >
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                              <div className="w-4 h-4 text-green-600 font-bold">₹</div>
+                              <DollarSign className="w-4 h-4 text-green-600" />
                             </div>
                             <div>
                               <div className="font-semibold text-base text-neutral-900">Budget</div>
@@ -265,7 +323,7 @@ export function Header() {
                         >
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                              <Calendar className="w-4 h-4 text-purple-600" />
+                              <Clock className="w-4 h-4 text-purple-600" />
                             </div>
                             <div>
                               <div className="font-semibold text-base text-neutral-900">Timeline</div>

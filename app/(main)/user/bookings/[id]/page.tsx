@@ -24,7 +24,9 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  Info
+  Info,
+  HelpCircle,
+  Printer
 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { useUser } from "@/context/UserContext";
@@ -201,15 +203,15 @@ const BookingDetailPage = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'confirmed':
-        return <CheckCircle className="w-5 h-5 text-green-600" />;
+        return <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />;
       case 'pending':
-        return <AlertCircle className="w-5 h-5 text-yellow-600" />;
+        return <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />;
       case 'completed':
-        return <CheckCircle className="w-5 h-5 text-blue-600" />;
+        return <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />;
       case 'cancelled':
-        return <XCircle className="w-5 h-5 text-red-600" />;
+        return <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />;
       default:
-        return <Info className="w-5 h-5 text-gray-600" />;
+        return <Info className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />;
     }
   };
 
@@ -270,10 +272,10 @@ const BookingDetailPage = () => {
 
   if (isLoading || isLoadingBooking) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 flex items-center justify-center px-4">
+        <div className="text-center max-w-sm mx-auto">
           <Spinner size="lg" className="text-rose-500 mx-auto mb-4" />
-          <p className="text-neutral-600">Loading booking details...</p>
+          <p className="text-neutral-600 text-sm sm:text-base">Loading booking details...</p>
         </div>
       </div>
     );
@@ -281,9 +283,9 @@ const BookingDetailPage = () => {
 
   if (!user || !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-neutral-600">Please log in to view booking details</p>
+      <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 flex items-center justify-center px-4">
+        <div className="text-center max-w-sm mx-auto">
+          <p className="text-neutral-600 text-sm sm:text-base">Please log in to view booking details</p>
         </div>
       </div>
     );
@@ -291,12 +293,12 @@ const BookingDetailPage = () => {
 
      if (!booking || !booking.id) {
      return (
-       <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 flex items-center justify-center">
-         <div className="text-center">
-           <p className="text-neutral-600">Booking not found</p>
+       <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 flex items-center justify-center px-4">
+         <div className="text-center max-w-sm mx-auto">
+           <p className="text-neutral-600 text-sm sm:text-base mb-4">Booking not found</p>
            <Button 
              onClick={() => router.push('/user/bookings')}
-             className="mt-4 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white"
+             className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white min-h-[44px] px-6"
            >
              Back to Bookings
            </Button>
@@ -306,132 +308,138 @@ const BookingDetailPage = () => {
    }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header - Mobile Optimized */}
+        <div className="mb-6 sm:mb-8">
           <Button
             onClick={() => router.push('/user/bookings')}
             variant="ghost"
-            className="mb-4 text-neutral-600 hover:text-neutral-900"
+            className="mb-4 text-neutral-600 hover:text-neutral-900 min-h-[44px] px-3 sm:px-4"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Bookings
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+            <span className="text-sm sm:text-base">Back to Bookings</span>
           </Button>
           
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-neutral-900 mb-2">Booking Details</h1>
-              <p className="text-lg text-neutral-600">Booking #{booking.id}</p>
+            <div className="text-center lg:text-left">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900 mb-2 leading-tight">
+                Booking Details
+              </h1>
+              <p className="text-sm sm:text-base lg:text-lg text-neutral-600">Booking #{booking.id}</p>
             </div>
             
-            <div className="flex items-center gap-3">
-              <Badge className={`capitalize text-sm px-3 py-1 ${getStatusColor(booking.status)}`}>
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <Badge className={`capitalize text-xs sm:text-sm px-3 py-2 ${getStatusColor(booking.status)}`}>
                 {getStatusIcon(booking.status)}
                 <span className="ml-2">{booking.status}</span>
               </Badge>
               
-              <Button
-                onClick={handleEditBooking}
-                variant="outline"
-                size="sm"
-                className="border-green-200 text-green-600 hover:bg-green-50"
-                disabled={booking.status === 'cancelled' || booking.status === 'completed'}
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Edit
-              </Button>
-              
-              <Button
-                onClick={handleCancelBooking}
-                variant="outline"
-                size="sm"
-                className="border-red-200 text-red-600 hover:bg-red-50"
-                disabled={booking.status === 'cancelled' || booking.status === 'completed' || isUpdating}
-              >
-                {isUpdating ? (
-                  <Spinner size="sm" className="mr-2" />
-                ) : (
-                  <Trash2 className="w-4 h-4 mr-2" />
-                )}
-                Cancel
-              </Button>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button
+                  onClick={handleEditBooking}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 sm:flex-none border-green-200 text-green-600 hover:bg-green-50 min-h-[44px] text-sm"
+                  disabled={booking.status === 'cancelled' || booking.status === 'completed'}
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  <span className="hidden sm:inline">Edit</span>
+                  <span className="sm:hidden">Edit</span>
+                </Button>
+                
+                <Button
+                  onClick={handleCancelBooking}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 sm:flex-none border-red-200 text-red-600 hover:bg-red-50 min-h-[44px] text-sm"
+                  disabled={booking.status === 'cancelled' || booking.status === 'completed' || isUpdating}
+                >
+                  {isUpdating ? (
+                    <Spinner size="sm" className="mr-2" />
+                  ) : (
+                    <Trash2 className="w-4 h-4 mr-2" />
+                  )}
+                  <span className="hidden sm:inline">Cancel</span>
+                  <span className="sm:hidden">Cancel</span>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 lg:gap-8">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="xl:col-span-3 space-y-6">
             {/* Event Details */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                   <Calendar className="w-5 h-5 text-rose-600" />
                   Event Details
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex items-center gap-3">
-                    <Calendar className="w-5 h-5 text-neutral-500" />
-                    <div>
-                      <p className="text-sm text-neutral-600">Event Date</p>
-                      <p className="font-semibold text-neutral-900">{formatDate(booking.bookingDate)}</p>
+                    <Calendar className="w-5 h-5 text-neutral-500 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm text-neutral-600">Event Date</p>
+                      <p className="font-semibold text-neutral-900 text-sm sm:text-base truncate">{formatDate(booking.bookingDate)}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-3">
-                    <Clock className="w-5 h-5 text-neutral-500" />
-                    <div>
-                      <p className="text-sm text-neutral-600">Event Time</p>
-                      <p className="font-semibold text-neutral-900">{formatTime(booking.bookingTime)}</p>
+                    <Clock className="w-5 h-5 text-neutral-500 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm text-neutral-600">Event Time</p>
+                      <p className="font-semibold text-neutral-900 text-sm sm:text-base">{formatTime(booking.bookingTime)}</p>
                     </div>
                   </div>
                 </div>
                 
-                                 {booking.additionalRequests && booking.additionalRequests.trim() !== '' && (
-                   <div className="pt-4 border-t border-neutral-200">
-                     <p className="text-sm text-neutral-600 mb-2">Special Requirements</p>
-                     <p className="text-neutral-900 bg-neutral-50 p-3 rounded-lg">
-                       {booking.additionalRequests}
-                     </p>
-                   </div>
-                 )}
+                {booking.additionalRequests && booking.additionalRequests.trim() !== '' && (
+                  <div className="pt-4 border-t border-neutral-200">
+                    <p className="text-xs sm:text-sm text-neutral-600 mb-2">Special Requirements</p>
+                    <p className="text-neutral-900 bg-neutral-50 p-3 rounded-lg text-sm sm:text-base">
+                      {booking.additionalRequests}
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
             {/* Customer Information */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                   <User className="w-5 h-5 text-rose-600" />
                   Customer Information
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex items-center gap-3">
-                    <User className="w-5 h-5 text-neutral-500" />
-                    <div>
-                      <p className="text-sm text-neutral-600">Name</p>
-                      <p className="font-semibold text-neutral-900">{booking.customerName}</p>
+                    <User className="w-5 h-5 text-neutral-500 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm text-neutral-600">Name</p>
+                      <p className="font-semibold text-neutral-900 text-sm sm:text-base truncate">{booking.customerName}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-3">
-                    <Mail className="w-5 h-5 text-neutral-500" />
-                    <div>
-                      <p className="text-sm text-neutral-600">Email</p>
-                      <p className="font-semibold text-neutral-900">{booking.customerEmail}</p>
+                    <Mail className="w-5 h-5 text-neutral-500 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm text-neutral-600">Email</p>
+                      <p className="font-semibold text-neutral-900 text-sm sm:text-base truncate">{booking.customerEmail}</p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-3">
-                    <Phone className="w-5 h-5 text-neutral-500" />
-                    <div>
-                      <p className="text-sm text-neutral-600">Phone</p>
-                      <p className="font-semibold text-neutral-900">{booking.customerPhone}</p>
+                  <div className="flex items-center gap-3 sm:col-span-2">
+                    <Phone className="w-5 h-5 text-neutral-500 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm text-neutral-600">Phone</p>
+                      <p className="font-semibold text-neutral-900 text-sm sm:text-base">{booking.customerPhone}</p>
                     </div>
                   </div>
                 </div>
@@ -439,102 +447,102 @@ const BookingDetailPage = () => {
             </Card>
 
             {/* Vendors & Services */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                   <Building2 className="w-5 h-5 text-rose-600" />
                   Vendors & Services
                 </CardTitle>
               </CardHeader>
-                             <CardContent>
-                 <div className="space-y-6">
-                   {booking.bookingDetails && booking.bookingDetails.length > 0 ? (
-                     booking.bookingDetails.map((detail, index) => (
-                    <div key={detail.id} className="border border-neutral-200 rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-neutral-900 text-lg mb-1">
-                            {detail.business.name}
-                          </h4>
-                          <div className="flex items-center gap-2 text-sm text-neutral-600 mb-2">
-                            <MapPin className="w-4 h-4" />
-                            <span>{detail.business.city}, {detail.business.subArea}</span>
+              <CardContent>
+                <div className="space-y-6">
+                  {booking.bookingDetails && booking.bookingDetails.length > 0 ? (
+                    booking.bookingDetails.map((detail, index) => (
+                      <div key={detail.id} className="border border-neutral-200 rounded-lg p-4 sm:p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-neutral-900 text-base sm:text-lg mb-2 leading-tight">
+                              {detail.business.name}
+                            </h4>
+                            <div className="flex items-center gap-2 text-xs sm:text-sm text-neutral-600 mb-2">
+                              <MapPin className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                              <span className="truncate">{detail.business.city}, {detail.business.subArea}</span>
+                            </div>
+                            <p className="text-xs sm:text-sm text-neutral-600">{detail.business.description}</p>
                           </div>
-                          <p className="text-sm text-neutral-600">{detail.business.description}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold text-rose-600">
-                            Rs. {detail.totalAmount.toLocaleString()}
-                          </p>
-                          <p className="text-sm text-neutral-500">
-                            Down Payment: {detail.downPayment}%
-                          </p>
-                        </div>
-                      </div>
-                      
-                      {/* Package Details */}
-                      <div className="bg-neutral-50 rounded-lg p-4 mb-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Package className="w-4 h-4 text-rose-600" />
-                          <h5 className="font-semibold text-neutral-900">{detail.package.name}</h5>
+                          <div className="text-right">
+                            <p className="text-base sm:text-lg font-bold text-rose-600">
+                              Rs. {detail.totalAmount.toLocaleString()}
+                            </p>
+                            <p className="text-xs sm:text-sm text-neutral-500">
+                              Down Payment: {detail.downPayment}%
+                            </p>
+                          </div>
                         </div>
                         
-                        {detail.package.features && detail.package.features.length > 0 && (
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium text-neutral-700">Package Features:</p>
-                            <ul className="space-y-1">
-                              {detail.package.features.map((feature, featureIndex) => (
-                                <li key={featureIndex} className="text-sm text-neutral-600 flex items-center gap-2">
-                                  <CheckCircle className="w-3 h-3 text-green-600" />
-                                  {feature}
-                                </li>
-                              ))}
-                            </ul>
+                        {/* Package Details */}
+                        <div className="bg-neutral-50 rounded-lg p-3 sm:p-4 mb-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Package className="w-4 h-4 text-rose-600" />
+                            <h5 className="font-semibold text-neutral-900 text-sm sm:text-base">{detail.package.name}</h5>
+                          </div>
+                          
+                          {detail.package.features && detail.package.features.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-xs sm:text-sm font-medium text-neutral-700">Package Features:</p>
+                              <ul className="space-y-1">
+                                {detail.package.features.map((feature, featureIndex) => (
+                                  <li key={featureIndex} className="text-xs sm:text-sm text-neutral-600 flex items-start gap-2">
+                                    <CheckCircle className="w-3 h-3 text-green-600 flex-shrink-0 mt-0.5" />
+                                    <span className="flex-1">{feature}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Menu Details (if applicable) */}
+                        {detail.menu && (
+                          <div className="bg-blue-50 rounded-lg p-3 sm:p-4">
+                            <div className="flex items-center gap-2 mb-3">
+                              <FileText className="w-4 h-4 text-blue-600" />
+                              <h5 className="font-semibold text-neutral-900 text-sm sm:text-base">{detail.menu.title}</h5>
+                            </div>
+                            <p className="text-xs sm:text-sm text-neutral-600">
+                              Menu Price: Rs. {detail.menu.price.toLocaleString()}
+                            </p>
+                          </div>
+                        )}
+                        
+                        {/* Special Requests */}
+                        {detail.specialRequests && (
+                          <div className="bg-yellow-50 rounded-lg p-3 sm:p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Info className="w-4 h-4 text-yellow-600" />
+                              <h5 className="font-semibold text-neutral-900 text-sm sm:text-base">Special Requests</h5>
+                            </div>
+                            <p className="text-xs sm:text-sm text-neutral-700">{detail.specialRequests}</p>
                           </div>
                         )}
                       </div>
-                      
-                      {/* Menu Details (if applicable) */}
-                      {detail.menu && (
-                        <div className="bg-blue-50 rounded-lg p-4">
-                          <div className="flex items-center gap-2 mb-3">
-                            <FileText className="w-4 h-4 text-blue-600" />
-                            <h5 className="font-semibold text-neutral-900">{detail.menu.title}</h5>
-                          </div>
-                          <p className="text-sm text-neutral-600">
-                            Menu Price: Rs. {detail.menu.price.toLocaleString()}
-                          </p>
-                        </div>
-                      )}
-                      
-                      {/* Special Requests */}
-                      {detail.specialRequests && (
-                        <div className="bg-yellow-50 rounded-lg p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Info className="w-4 h-4 text-yellow-600" />
-                            <h5 className="font-semibold text-neutral-900">Special Requests</h5>
-                          </div>
-                          <p className="text-sm text-neutral-700">{detail.specialRequests}</p>
-                        </div>
-                                             )}
-                     </div>
-                   ))
-                   ) : (
-                     <div className="text-center py-8">
-                       <p className="text-neutral-600">No booking details available</p>
-                     </div>
-                   )}
-                 </div>
-               </CardContent>
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-neutral-600 text-sm sm:text-base">No booking details available</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
             </Card>
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Payment Summary */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                   <CreditCard className="w-5 h-5 text-rose-600" />
                   Payment Summary
                 </CardTitle>
@@ -542,40 +550,40 @@ const BookingDetailPage = () => {
               <CardContent className="space-y-4">
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-neutral-600">Total Amount:</span>
-                    <span className="font-semibold text-neutral-900">
+                    <span className="text-xs sm:text-sm text-neutral-600">Total Amount:</span>
+                    <span className="font-semibold text-neutral-900 text-sm sm:text-base">
                       Rs. {booking.totalAmount.toLocaleString()}
                     </span>
                   </div>
                   
                   <div className="flex justify-between items-center">
-                    <span className="text-neutral-600">Down Payment:</span>
-                    <span className="font-semibold text-neutral-900">
+                    <span className="text-xs sm:text-sm text-neutral-600">Down Payment:</span>
+                    <span className="font-semibold text-neutral-900 text-sm sm:text-base">
                       {booking.downPayment}%
                     </span>
                   </div>
                   
                   <div className="flex justify-between items-center">
-                    <span className="text-neutral-600">Payment Status:</span>
-                    <Badge className={`capitalize ${getStatusColor(booking.paymentStatus)}`}>
+                    <span className="text-xs sm:text-sm text-neutral-600">Payment Status:</span>
+                    <Badge className={`capitalize text-xs ${getStatusColor(booking.paymentStatus)}`}>
                       {booking.paymentStatus}
                     </Badge>
                   </div>
                   
-                                     {booking.paymentMethod && booking.paymentMethod.trim() !== '' && (
-                     <div className="flex justify-between items-center">
-                       <span className="text-neutral-600">Payment Method:</span>
-                       <span className="font-semibold text-neutral-900">
-                         {booking.paymentMethod}
-                       </span>
-                     </div>
-                   )}
+                  {booking.paymentMethod && booking.paymentMethod.trim() !== '' && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs sm:text-sm text-neutral-600">Payment Method:</span>
+                      <span className="font-semibold text-neutral-900 text-sm sm:text-base truncate">
+                        {booking.paymentMethod}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="pt-4 border-t border-neutral-200">
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-semibold text-neutral-900">Amount Due:</span>
-                    <span className="text-xl font-bold text-rose-600">
+                    <span className="text-base sm:text-lg font-semibold text-neutral-900">Amount Due:</span>
+                    <span className="text-lg sm:text-xl font-bold text-rose-600">
                       Rs. {booking.totalAmount.toLocaleString()}
                     </span>
                   </div>
@@ -584,9 +592,9 @@ const BookingDetailPage = () => {
             </Card>
 
             {/* Booking Timeline */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                   <Clock className="w-5 h-5 text-rose-600" />
                   Booking Timeline
                 </CardTitle>
@@ -594,61 +602,64 @@ const BookingDetailPage = () => {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
-                    <div className="w-3 h-3 bg-green-500 rounded-full mt-2"></div>
-                    <div>
-                      <p className="font-semibold text-neutral-900">Booking Created</p>
-                      <p className="text-sm text-neutral-600">{formatDate(booking.createdAt)}</p>
+                    <div className="w-3 h-3 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-neutral-900 text-sm sm:text-base">Booking Created</p>
+                      <p className="text-xs sm:text-sm text-neutral-600">{formatDate(booking.createdAt)}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-start gap-3">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full mt-2"></div>
-                    <div>
-                      <p className="font-semibold text-neutral-900">Last Updated</p>
-                      <p className="text-sm text-neutral-600">{formatDate(booking.updatedAt)}</p>
+                    <div className="w-3 h-3 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-neutral-900 text-sm sm:text-base">Last Updated</p>
+                      <p className="text-xs sm:text-sm text-neutral-600">{formatDate(booking.updatedAt)}</p>
                     </div>
                   </div>
                   
-                                     {booking.cancellationReason && booking.cancellationReason.trim() !== '' && (
-                     <div className="flex items-start gap-3">
-                       <div className="w-3 h-3 bg-red-500 rounded-full mt-2"></div>
-                       <div>
-                         <p className="font-semibold text-neutral-900">Cancellation Reason</p>
-                         <p className="text-sm text-neutral-600">{booking.cancellationReason}</p>
-                       </div>
-                     </div>
-                   )}
+                  {booking.cancellationReason && booking.cancellationReason.trim() !== '' && (
+                    <div className="flex items-start gap-3">
+                      <div className="w-3 h-3 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-neutral-900 text-sm sm:text-base">Cancellation Reason</p>
+                        <p className="text-xs sm:text-sm text-neutral-600">{booking.cancellationReason}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
 
             {/* Quick Actions */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-lg">Quick Actions</CardTitle>
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base sm:text-lg">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Button
                   onClick={() => router.push('/contact')}
                   variant="outline"
-                  className="w-full border-blue-200 text-blue-600 hover:bg-blue-50"
+                  className="w-full border-blue-200 text-blue-600 hover:bg-blue-50 min-h-[44px] text-sm"
                 >
+                  <HelpCircle className="w-4 h-4 mr-2" />
                   Contact Support
                 </Button>
                 
                 <Button
                   onClick={() => router.push('/help')}
                   variant="outline"
-                  className="w-full border-green-200 text-green-600 hover:bg-green-50"
+                  className="w-full border-green-200 text-green-600 hover:bg-green-50 min-h-[44px] text-sm"
                 >
+                  <HelpCircle className="w-4 h-4 mr-2" />
                   Get Help
                 </Button>
                 
                 <Button
                   onClick={() => window.print()}
                   variant="outline"
-                  className="w-full border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+                  className="w-full border-neutral-200 text-neutral-600 hover:bg-neutral-50 min-h-[44px] text-sm"
                 >
+                  <Printer className="w-4 h-4 mr-2" />
                   Print Details
                 </Button>
               </CardContent>

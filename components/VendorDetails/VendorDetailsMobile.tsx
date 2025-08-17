@@ -30,7 +30,8 @@ import {
   DollarSign,
   ArrowLeft,
   ChevronRight,
-  Calendar
+  Calendar,
+  ChevronLeft
 } from "lucide-react"
 import type { Vendor, Review } from "@/lib/types"
 import Image from "next/image"
@@ -64,6 +65,7 @@ const dummyReviews: Review[] = [
 export default function VendorDetailsMobile({ vendor }: VendorDetailsMobileProps) {
   const [isFavorite, setIsFavorite] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
+  const [currentDate, setCurrentDate] = useState(new Date())
   const router = useRouter()
   const { toast } = useToast()
 
@@ -125,6 +127,31 @@ export default function VendorDetailsMobile({ vendor }: VendorDetailsMobileProps
   }
 
   const VendorIcon = getVendorIcon(vendor.type)
+
+  // Calendar functions
+  const getDaysInMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+  }
+
+  const getFirstDayOfMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay()
+  }
+
+  const formatMonthYear = (date: Date) => {
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  }
+
+  const goToPreviousMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))
+  }
+
+  const goToNextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))
+  }
+
+  const goToToday = () => {
+    setCurrentDate(new Date())
+  }
 
     return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-rose-50">
@@ -393,45 +420,95 @@ export default function VendorDetailsMobile({ vendor }: VendorDetailsMobileProps
                      <p className="text-sm sm:text-base text-gray-600">Select your preferred date to check availability</p>
                    </div>
                    
-                   {/* Calendar Component */}
-                   <div className="bg-white rounded-xl border border-neutral-200 p-4 sm:p-6">
-                     <div className="flex items-center justify-between mb-4">
-                       <h4 className="text-base sm:text-lg font-semibold text-neutral-900">Calendar</h4>
-                       <Calendar className="w-5 h-5 text-rose-500" />
-                     </div>
-                     
-                     {/* Simple Calendar Grid */}
-                     <div className="grid grid-cols-7 gap-1 mb-4">
-                       {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                         <div key={day} className="text-center text-xs sm:text-sm font-medium text-neutral-600 py-2">
-                           {day}
-                         </div>
-                       ))}
-                       
-                       {/* Calendar Days */}
-                       {Array.from({ length: 35 }, (_, i) => {
-                         const day = i + 1
-                         const isAvailable = Math.random() > 0.3 // Random availability for demo
-                         const isToday = day === new Date().getDate()
-                         
-                         return (
-                           <div
-                             key={i}
-                             className={`
-                               text-center text-xs sm:text-sm py-2 rounded-lg cursor-pointer transition-all duration-200
-                               ${isToday 
-                                 ? 'bg-rose-500 text-white font-semibold' 
-                                 : isAvailable 
-                                   ? 'hover:bg-rose-50 text-neutral-900 hover:text-rose-600' 
-                                   : 'text-neutral-400 cursor-not-allowed'
-                               }
-                             `}
-                           >
-                             {day <= 31 ? day : ''}
-                           </div>
-                         )
-                       })}
-                     </div>
+                                       {/* Calendar Component */}
+                    <div className="bg-white rounded-xl border border-neutral-200 p-4 sm:p-6">
+                      {/* Calendar Header with Month Navigation */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={goToPreviousMonth}
+                            className="p-2 rounded-full hover:bg-rose-50 hover:text-rose-600 transition-all duration-200"
+                            aria-label="Previous month"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </Button>
+                          <h4 className="text-base sm:text-lg font-semibold text-neutral-900">
+                            {formatMonthYear(currentDate)}
+                          </h4>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={goToNextMonth}
+                            className="p-2 rounded-full hover:bg-rose-50 hover:text-rose-600 transition-all duration-200"
+                            aria-label="Next month"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-5 h-5 text-rose-500" />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={goToToday}
+                            className="text-xs border-rose-300 text-rose-600 hover:bg-rose-500 hover:text-white hover:border-rose-500 transition-all duration-200"
+                          >
+                            Today
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {/* Calendar Grid */}
+                      <div className="grid grid-cols-7 gap-1 mb-4">
+                        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                          <div key={day} className="text-center text-xs sm:text-sm font-medium text-neutral-600 py-2">
+                            {day}
+                          </div>
+                        ))}
+                        
+                        {/* Calendar Days */}
+                        {(() => {
+                          const daysInMonth = getDaysInMonth(currentDate)
+                          const firstDayOfMonth = getFirstDayOfMonth(currentDate)
+                          const today = new Date()
+                          const isCurrentMonth = currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear()
+                          
+                          // Create array for calendar grid (including empty cells for padding)
+                          const calendarDays = []
+                          
+                          // Add empty cells for days before the first day of the month
+                          for (let i = 0; i < firstDayOfMonth; i++) {
+                            calendarDays.push(<div key={`empty-${i}`} className="py-2"></div>)
+                          }
+                          
+                          // Add days of the month
+                          for (let day = 1; day <= daysInMonth; day++) {
+                            const isAvailable = Math.random() > 0.3 // Random availability for demo
+                            const isToday = isCurrentMonth && day === today.getDate()
+                            
+                            calendarDays.push(
+                              <div
+                                key={day}
+                                className={`
+                                  text-center text-xs sm:text-sm py-2 rounded-lg cursor-pointer transition-all duration-200
+                                  ${isToday 
+                                    ? 'bg-rose-500 text-white font-semibold' 
+                                    : isAvailable 
+                                      ? 'hover:bg-rose-50 text-neutral-900 hover:text-rose-600' 
+                                      : 'text-neutral-400 cursor-not-allowed'
+                                  }
+                                `}
+                              >
+                                {day}
+                              </div>
+                            )
+                          }
+                          
+                          return calendarDays
+                        })()}
+                      </div>
                      
                      {/* Availability Legend */}
                      <div className="flex items-center justify-center gap-4 text-xs sm:text-sm">
