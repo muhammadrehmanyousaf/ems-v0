@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import VendorDetails from "@/components/VendorDetails/VendorDetails"
+import VendorDetailsMobile from "@/components/VendorDetails/VendorDetailsMobile"
 import type { Vendor } from "@/lib/types"
 import { VendorAPI } from "@/lib/api/vendors"
 import { Button } from "@/components/ui/button"
@@ -142,6 +142,6 @@ export default function PhotographerDetailsPage() {
     )
   }
 
-  return <VendorDetails vendor={vendor} />
+  return <VendorDetailsMobile vendor={vendor} />
 }
 

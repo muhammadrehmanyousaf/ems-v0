@@ -69,34 +69,32 @@ export default function VendorCard({
       return;
     }
     
-    if (isLoggedIn) {
-      // Map vendor type to URL path - Support ALL vendor types
-      const getVendorTypePath = (vendorType: string) => {
-        const typeMap: { [key: string]: string } = {
-          'Photographer': 'photographers',
-          'Decorator': 'decor',
-          'Henna artist': 'henna-artists',
-          'Hena artist': 'henna-artists',
-          'Makeup artist': 'makeup-artists',
-          'Wedding venue': 'venues',
-          'Car rental': 'car-rental',
-          'Catering': 'catering',
-          'Bridal wearing': 'bridal-wear',
-          'Wedding Invitations and Stationery': 'wedding-stationery',
-          'Venue': 'venues',
-          'Caterer': 'catering',
-          'Makeup Artist': 'makeup-artists',
-          'Henna Artist': 'henna-artists',
-          'Car Rental': 'car-rental',
-          'Wedding Stationery': 'wedding-stationery',
-          'Bridal Wear': 'bridal-wear'
-        }
-        return typeMap[vendorType] || vendorType.toLowerCase().replace(/\s+/g, '-')
+    // Map vendor type to URL path - Support ALL vendor types
+    const getVendorTypePath = (vendorType: string) => {
+      const typeMap: { [key: string]: string } = {
+        'Photographer': 'photographers',
+        'Decorator': 'decor',
+        'Henna artist': 'henna-artists',
+        'Hena artist': 'henna-artists',
+        'Makeup artist': 'makeup-artists',
+        'Wedding venue': 'venues',
+        'Car rental': 'car-rental',
+        'Catering': 'catering',
+        'Bridal wearing': 'bridal-wear',
+        'Wedding Invitations and Stationery': 'wedding-stationery',
+        'Venue': 'venues',
+        'Caterer': 'catering',
+        'Makeup Artist': 'makeup-artists',
+        'Henna Artist': 'henna-artists',
+        'Car Rental': 'car-rental',
+        'Wedding Stationery': 'wedding-stationery',
+        'Bridal Wear': 'bridal-wear'
       }
-      
-      const vendorTypePath = getVendorTypePath(type)
-      router.push(`/${vendorTypePath}/${id}`)
+      return typeMap[vendorType] || vendorType.toLowerCase().replace(/\s+/g, '-')
     }
+    
+    const vendorTypePath = getVendorTypePath(type)
+    router.push(`/${vendorTypePath}/${id}`)
   }
 
   const handleBookNow = (e: React.MouseEvent) => {
