@@ -276,10 +276,11 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
             <DropdownMenuTrigger asChild>
                 <Button 
                     size="sm" 
-                    className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold group"
+                    className="hidden md:flex bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold group"
                 >
                     <Award className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
-                    List Your Business
+                    <span className="hidden lg:inline">List Your Business</span>
+                    <span className="lg:hidden">Sign In</span>
                     <ChevronDown className="w-4 h-4 ml-2 group-hover:scale-110 transition-transform duration-200" />
                 </Button>
             </DropdownMenuTrigger>
