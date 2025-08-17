@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import type { Table } from "@tanstack/react-table"
+import { formatColumnId } from "@/lib/utils"
 
 interface DataTableViewOptionsProps<TData> {
   table: Table<TData>
@@ -47,7 +48,7 @@ export function DataTableColumnView<TData>({
                 checked={column.getIsVisible()}
                 onCheckedChange={(value) => column.toggleVisibility(!!value)}
               >
-                {column.id.replace('_', ' ')}
+                {formatColumnId(column.id)}
               </DropdownMenuCheckboxItem>
             )
           })}
