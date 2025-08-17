@@ -13,7 +13,6 @@ export function middleware(request: NextRequest) {
 
   // Protected routes that require authentication
   const protectedRoutes = [
-    // '/dashboard', // Temporarily removed for testing
     '/user/profile',
     '/user/bookings',
     '/user/favorites',
