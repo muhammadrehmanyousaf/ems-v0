@@ -6,7 +6,7 @@ import Link from "next/link"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Star, MapPin, Users, Calendar, Clock, Award } from "lucide-react"
+import { Star, MapPin, Users, Calendar, Clock, Award, Heart } from "lucide-react"
 import Image from "next/image"
 import {
   AlertDialog,
@@ -19,6 +19,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useRouter } from "next/navigation"
+import { FavoritesAPI } from "@/lib/api/favorites"
+import { useFavorites } from "@/context/FavoritesContext"
 
 
 interface VendorCardProps {
@@ -34,6 +36,7 @@ interface VendorCardProps {
   capacity?: number
   amenities?: string[]
   sponsored?: boolean
+  isFavorite?: boolean
   showBookButton?: boolean
   showDetails?: boolean
   className?: string
@@ -52,6 +55,7 @@ export default function VendorCard({
   capacity,
   amenities = [],
   sponsored = false,
+  isFavorite: initialIsFavorite = false,
   showBookButton = true,
   showDetails = true,
   className = "",
@@ -59,6 +63,10 @@ export default function VendorCard({
   const [openAlert, setOpenAlert] = useState(false)
   const router = useRouter()
   const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('user_id') && localStorage.getItem('auth_token')
+  
+  // Use favorites context
+  const { isFavorited, toggleFavorite } = useFavorites();
+  const isFavorite = isFavorited(id);
   
 
 
@@ -102,6 +110,20 @@ export default function VendorCard({
     if (isLoggedIn) {
       // Route to the main booking page
       router.push(`/${id}/booking`)
+    } else {
+      setOpenAlert(true)
+    }
+  }
+
+  const handleFavoriteToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (isLoggedIn) {
+      try {
+        // Use context to toggle favorite
+        await toggleFavorite(id);
+      } catch (error) {
+        console.error('Error updating favorite:', error);
+      }
     } else {
       setOpenAlert(true)
     }
@@ -162,7 +184,22 @@ export default function VendorCard({
                 </Badge>
               )}
               
-
+              {/* Heart/Favorite Button */}
+              <Button
+                onClick={handleFavoriteToggle}
+                variant="ghost"
+                size="sm"
+                className="w-8 h-8 p-0 bg-white/90 backdrop-blur-sm hover:bg-white/95 border-0 shadow-md rounded-full transition-all duration-200 hover:scale-110"
+                data-no-navigate
+              >
+                <Heart 
+                  className={`w-4 h-4 transition-all duration-200 ${
+                    isFavorite 
+                      ? 'fill-rose-500 text-rose-500' 
+                      : 'text-gray-600 hover:text-rose-500'
+                  }`} 
+                />
+              </Button>
             </div>
 
             {/* Bottom Badge */}
@@ -283,31 +320,31 @@ export default function VendorCard({
         </Card>
       </motion.div>
 
-      {/* Login Alert Dialog */}
-      <AlertDialog open={openAlert} onOpenChange={setOpenAlert}>
-        <AlertDialogContent className="rounded-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-bold">Login Required</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-600">
-              You must be logged in to book this vendor. Please sign in to continue with your booking.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel 
-              onClick={() => setOpenAlert(false)}
-              className="rounded-lg"
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => router.push('/login')}
-              className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 rounded-lg"
-            >
-              Login Now
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+             {/* Login Alert Dialog */}
+       <AlertDialog open={openAlert} onOpenChange={setOpenAlert}>
+         <AlertDialogContent className="rounded-2xl">
+           <AlertDialogHeader>
+             <AlertDialogTitle className="text-xl font-bold">Login Required</AlertDialogTitle>
+             <AlertDialogDescription className="text-gray-600">
+               You must be logged in to save vendors to your favorites. Please sign in to continue.
+             </AlertDialogDescription>
+           </AlertDialogHeader>
+           <AlertDialogFooter>
+             <AlertDialogCancel 
+               onClick={() => setOpenAlert(false)}
+               className="rounded-lg"
+             >
+               Cancel
+             </AlertDialogCancel>
+             <AlertDialogAction 
+               onClick={() => router.push('/login')}
+               className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 rounded-lg"
+             >
+               Login Now
+             </AlertDialogAction>
+           </AlertDialogFooter>
+         </AlertDialogContent>
+       </AlertDialog>
     </>
   )
 }
