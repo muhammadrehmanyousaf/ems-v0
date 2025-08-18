@@ -12,7 +12,7 @@ export function DayView({ date, events = [], onOpenCellDialog }: DayViewProps) {
     const weekday = new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(date).toUpperCase();
 
     return (
-        <div className="h-[calc(100dvh-202px)] w-full border rounded-lg overflow-hidden">
+        <div className="h-[calc(100dvh-198px)] w-full border rounded-lg overflow-hidden">
             <div className="relative h-full">
                 <div className={cn('sticky top-0 z-20 bg-background border-b', 'grid grid-cols-[60px_1fr] md:grid-cols-[70px_1fr]')}>
                     <div className="h-14 pl-2 md:pl-3 pr-2 flex items-end pb-2 text-[11px] text-muted-foreground">{tzLabel}</div>

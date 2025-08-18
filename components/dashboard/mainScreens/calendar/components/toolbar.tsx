@@ -30,14 +30,14 @@ const Toolbar = ({ goNext, goPrev, goToday, setMode, mode, monthTitle, weekTitle
         <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 md:gap-4">
                 <span className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" onClick={goPrev}>
+                    <Button variant="outline" size="icon" className='h-8 w-8' onClick={goPrev}>
                         <ChevronLeft className="size-6" />
                     </Button>
-                    <Button variant="outline" size="icon" onClick={goNext}>
+                    <Button variant="outline" size="icon" className='h-8 w-8' onClick={goNext}>
                         <ChevronRight className="size-6" />
                     </Button>
                 </span>
-                <Button className="hidden sm:block" variant="outline" onClick={goToday}>
+                <Button className="hidden sm:block" variant="outline" size={'sm'} onClick={goToday}>
                     Today
                 </Button>
             </div>
@@ -69,7 +69,7 @@ const Toolbar = ({ goNext, goPrev, goToday, setMode, mode, monthTitle, weekTitle
                             onClick={() => setMode(m.value)}
                             variant={mode === m.value ? 'outline' : 'ghost'}
                             size="sm"
-                            className={cn(mode === m.value ? 'hover:bg-white dark:hover:bg-background/90 font-medium text-card-foreground' : 'text-muted-foreground font-normal', 'min-w-[67px] text-[13px]')}
+                            className={cn(mode === m.value ? 'hover:bg-white dark:hover:bg-background/90 font-medium text-card-foreground' : 'text-muted-foreground font-normal', 'min-w-[67px] text-[13px] h-7')}
                         >
                             {m.label}
                         </Button>

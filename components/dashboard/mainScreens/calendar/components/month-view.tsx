@@ -1,5 +1,5 @@
 import { CalendarEvent, Cell, ymd } from '@/lib/utils';
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 
 type MonthViewProps = {
   cells: Cell[];
@@ -19,18 +19,41 @@ const MonthView = ({ cells, events, onOpenCellDialog }: MonthViewProps) => {
 
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
+  const [sliceValue, setSetSliceValue] = useState(1);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerHeight > 750) {
+        setSetSliceValue(2);
+      } else {
+        setSetSliceValue(1);
+      }
+    };
+
+    // Run once on mount
+    handleResize();
+
+    // Add event listener
+    window.addEventListener("resize", handleResize);
+
+    // Clean up
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
   return (
-    <div className="h-[calc(100dvh-202px)] w-full border rounded-lg overflow-hidden">
+    <div className="h-[calc(100dvh-198px)] w-full border rounded-lg overflow-hidden">
       <div className="grid grid-cols-7">
         {days.map((lbl) => (
-          <div key={lbl} className="h-12 border grid place-items-center text-sm text-muted-foreground">{lbl}</div>
+          <div key={lbl} className="h-10 border grid place-items-center text-sm text-muted-foreground">{lbl}</div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 auto-rows-[minmax(6rem,_1fr)] h-[calc(100dvh-250px)] lg:h-full overflow-y-auto lg:overflow-hidden hide-scrollbar">
+      <div className="grid grid-cols-7 auto-rows-[minmax(5rem,_1fr)] h-[calc(100dvh-239px)] overflow-y-auto lg:overflow-hidden hide-scrollbar">
         {cells.map((c, i) => {
           const list = byDate.get(ymd(c.date)) ?? [];
-          const visible = list.slice(0, 3);
+          const visible = list.slice(0, sliceValue);
           const more = list.length - visible.length;
 
           return (
@@ -39,9 +62,9 @@ const MonthView = ({ cells, events, onOpenCellDialog }: MonthViewProps) => {
                 {c.date.getDate()}
               </span>
 
-              <div className="mt-1 space-y-1">
+              <div className="mt-1 xlarge:mt-2 space-y-1">
                 {visible.map(ev => (
-                  <div key={ev.id} title={`${ev.title}`} className="w-full truncate rounded-md bg-emerald-600/10 text-emerald-700 px-2 py-1 text-[10px] md:text-xs">
+                  <div key={ev.id} title={`${ev.title}`} className="w-full truncate rounded-md bg-emerald-600/10 text-emerald-700 px-2 py-0.5 text-[10px] md:text-[11px]">
                     {ev.title}
                   </div>
                 ))}
