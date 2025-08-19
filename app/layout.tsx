@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/toaster"
 import { UserProvider } from "@/context/UserContext"
-import { FavoritesProvider } from "@/context/FavoritesContext"
+import { QueryProvider } from "@/lib/providers/query-provider"
+import { PerformanceMonitor } from "@/components/performance-monitor"
 import { Inter } from "next/font/google";
 
 const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
@@ -13,12 +14,13 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <UserProvider>
-          <FavoritesProvider>
+        <QueryProvider>
+          <UserProvider>
             <main className={inter.className}>{children}</main>
             <Toaster />
-          </FavoritesProvider>
-        </UserProvider>
+            <PerformanceMonitor />
+          </UserProvider>
+        </QueryProvider>
       </body>
     </html>
   )

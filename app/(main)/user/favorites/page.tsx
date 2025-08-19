@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useFavorites } from "@/context/FavoritesContext";
-import { VendorAPI } from "@/lib/api/vendors";
+import React, { useEffect, useState, useMemo } from "react";
+import { useFavorites } from "@/hooks/use-favorites";
+import { useVendors } from "@/hooks/use-vendors";
 import VendorCard from "@/components/VendorCard";
+import { FavoritesPreloader } from "@/components/favorites-preloader";
 import { Heart, Loader2, Search, Filter, Star, MapPin, Users, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,46 +13,22 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Vendor } from "@/lib/types";
 
-const FavoritesPage = () => {
-  const { favorites, isLoading } = useFavorites();
-  const [favoriteVendors, setFavoriteVendors] = useState<Vendor[]>([]);
-  const [filteredVendors, setFilteredVendors] = useState<Vendor[]>([]);
-  const [isLoadingVendors, setIsLoadingVendors] = useState(false);
-
+const FavoritesPageContent = () => {
+  const { favorites, isLoading: favoritesLoading, refreshFavorites } = useFavorites();
+  const { data: allVendors = [], isLoading: vendorsLoading } = useVendors();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
-  // Load vendors only once and cache them
-  useEffect(() => {
-    const loadFavoriteVendors = async () => {
-      if (favorites.length === 0) {
-        setFavoriteVendors([]);
-        setFilteredVendors([]);
-        return;
-      }
+  // Get favorite vendors from all vendors - only show if we have both favorites and vendors
+  const favoriteVendors = useMemo(() => {
+    if (!allVendors.length || !favorites.length) return [];
+    return allVendors.filter(vendor => favorites.includes(Number(vendor.id)));
+  }, [allVendors, favorites]);
 
-      setIsLoadingVendors(true);
-      try {
-        // Get all vendors and filter by favorites
-        const allVendors = await VendorAPI.getAllBusinesses();
-        const filteredVendors = allVendors.filter(vendor => 
-          favorites.includes(Number(vendor.id))
-        );
-        setFavoriteVendors(filteredVendors);
-        setFilteredVendors(filteredVendors);
-      } catch (error) {
-        console.error('Error loading favorite vendors:', error);
-      } finally {
-        setIsLoadingVendors(false);
-      }
-    };
-
-    loadFavoriteVendors();
-  }, [favorites]);
-
-  // Filter and sort vendors based on search, category, and sort
-  useEffect(() => {
+  // Filter and sort vendors
+  const filteredVendors = useMemo(() => {
     let filtered = [...favoriteVendors];
 
     // Filter by search query
@@ -79,211 +56,185 @@ const FavoritesPage = () => {
         case 'rating':
           return (b.rating || 0) - (a.rating || 0);
         case 'price':
-          return (a.minimumPrice || a.price || 0) - (b.minimumPrice || b.price || 0);
-        case 'price-high':
-          return (b.minimumPrice || b.price || 0) - (a.minimumPrice || a.price || 0);
+          return (a.minimumPrice || 0) - (b.minimumPrice || 0);
+        case 'reviews':
+          return (Array.isArray(b.reviews) ? b.reviews.length : 0) - (Array.isArray(a.reviews) ? a.reviews.length : 0);
         default:
           return 0;
       }
     });
 
-    setFilteredVendors(filtered);
-  }, [favoriteVendors, searchQuery, selectedCategory, sortBy]);
+    return filtered;
+  }, [favoriteVendors, searchQuery, sortBy, selectedCategory]);
 
-  // Get unique categories from vendors
-  const categories = ['all', ...Array.from(new Set(favoriteVendors.map(v => v.type || v.subBusinessType).filter(Boolean)))];
+  const handleRefresh = async () => {
+    await refreshFavorites();
+  };
+
+  // Show loading only if favorites are loading OR if we have favorites but no vendors yet
+  const isLoading = favoritesLoading || (favorites.length > 0 && vendorsLoading && allVendors.length === 0);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-rose-50 via-white to-pink-50">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center py-20">
-            <div className="text-center">
-              <Loader2 className="w-12 h-12 animate-spin text-rose-500 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg">Loading your favorites...</p>
-            </div>
-          </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-rose-500" />
+          <p className="text-gray-600">Loading your favorites...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-white to-pink-50">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header Section */}
-        <div className="text-center mb-12">
-          <div className="flex items-center justify-center gap-3 mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-rose-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <Heart className="w-8 h-8 text-white fill-current" />
-            </div>
-            <div className="text-left">
-              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+                <Heart className="w-8 h-8 text-rose-500 mr-3" />
                 My Favorites
               </h1>
-              <p className="text-gray-600 text-lg">
-                Your saved vendors and venues
+              <p className="text-gray-600 mt-2">
+                {favorites.length} {favorites.length === 1 ? 'vendor' : 'vendors'} saved
               </p>
             </div>
+            <Button
+              onClick={handleRefresh}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Loader2 className="w-4 h-4" />
+              Refresh
+            </Button>
           </div>
+        </div>
+      </div>
 
-          {favorites.length > 0 && (
-            <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-gray-600">
-              <Badge variant="secondary" className="bg-white/80 backdrop-blur-sm">
-                <Heart className="w-4 h-4 mr-1 text-rose-500" />
-                {favorites.length} {favorites.length === 1 ? 'favorite' : 'favorites'}
-              </Badge>
-              <Badge variant="secondary" className="bg-white/80 backdrop-blur-sm">
-                <Star className="w-4 h-4 mr-1 text-yellow-500" />
-                {filteredVendors.length} showing
+      {/* Filters and Search */}
+      <div className="container mx-auto px-4 py-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Search vendors..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Category Filter */}
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="photographer">Photographers</SelectItem>
+                <SelectItem value="venue">Venues</SelectItem>
+                <SelectItem value="catering">Catering</SelectItem>
+                <SelectItem value="decorator">Decorators</SelectItem>
+                <SelectItem value="makeup artist">Makeup Artists</SelectItem>
+                <SelectItem value="henna artist">Henna Artists</SelectItem>
+                <SelectItem value="car rental">Car Rental</SelectItem>
+                <SelectItem value="bridal wear">Bridal Wear</SelectItem>
+                <SelectItem value="wedding stationery">Wedding Stationery</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Sort By */}
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Name</SelectItem>
+                <SelectItem value="rating">Rating</SelectItem>
+                <SelectItem value="price">Price</SelectItem>
+                <SelectItem value="reviews">Reviews</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Results Count */}
+            <div className="flex items-center justify-end">
+              <Badge variant="secondary" className="text-sm">
+                {filteredVendors.length} {filteredVendors.length === 1 ? 'result' : 'results'}
               </Badge>
             </div>
-          )}
+          </div>
         </div>
 
+        {/* Content */}
         {favorites.length === 0 ? (
-          /* Empty State */
-          <div className="max-w-md mx-auto text-center py-20">
-            <div className="w-32 h-32 bg-gradient-to-br from-rose-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-8">
-              <Heart className="w-16 h-16 text-rose-300" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">No favorites yet</h2>
-            <p className="text-gray-600 mb-8 leading-relaxed">
-              Start exploring amazing vendors and save your favorites by clicking the heart icon on any vendor card!
-            </p>
-            <div className="space-y-4">
-              <Button 
-                asChild
-                size="lg"
-                className="w-full bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-              >
-                <a href="/vendors">
-                  <Search className="w-5 h-5 mr-2" />
-                  Explore Vendors
-                </a>
+          <Card className="text-center py-12">
+            <CardContent>
+              <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No favorites yet</h3>
+              <p className="text-gray-600 mb-6">
+                Start exploring vendors and save your favorites to see them here.
+              </p>
+              <Button onClick={() => window.history.back()}>
+                Explore Vendors
               </Button>
+            </CardContent>
+          </Card>
+        ) : filteredVendors.length === 0 ? (
+          <Card className="text-center py-12">
+            <CardContent>
+              <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No results found</h3>
+              <p className="text-gray-600 mb-6">
+                Try adjusting your search or filter criteria.
+              </p>
               <Button 
-                asChild
-                variant="outline"
-                size="lg"
-                className="w-full border-2 border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl"
+                variant="outline" 
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedCategory('all');
+                  setSortBy('name');
+                }}
               >
-                <a href="/venues">
-                  <MapPin className="w-5 h-5 mr-2" />
-                  Browse Venues
-                </a>
+                Clear Filters
               </Button>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         ) : (
-          /* Content Section */
-          <div className="space-y-8">
-            {/* Filters and Search */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-              <CardContent className="p-6">
-                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {/* Search */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input
-                      placeholder="Search favorites..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 bg-white/50 border-rose-200 focus:border-rose-400"
-                    />
-                  </div>
-
-                  {/* Category Filter */}
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="bg-white/50 border-rose-200 focus:border-rose-400">
-                      <SelectValue placeholder="All Categories" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category === 'all' ? 'All Categories' : category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {/* Sort */}
-                  <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="bg-white/50 border-rose-200 focus:border-rose-400">
-                      <SelectValue placeholder="Sort by" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="name">Name A-Z</SelectItem>
-                      <SelectItem value="rating">Highest Rated</SelectItem>
-                      <SelectItem value="price">Price Low to High</SelectItem>
-                      <SelectItem value="price-high">Price High to Low</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Loading State */}
-            {isLoadingVendors ? (
-              <div className="flex items-center justify-center py-20">
-                <div className="text-center">
-                  <Loader2 className="w-8 h-8 animate-spin text-rose-500 mx-auto mb-4" />
-                  <p className="text-gray-600">Loading your favorite vendors...</p>
-                </div>
-              </div>
-            ) : (
-                             /* Vendors Grid */
-               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredVendors.map((vendor) => (
-                  <VendorCard
-                    key={vendor.id}
-                    id={vendor.id}
-                    name={vendor.name}
-                    image={vendor.images?.[0] || "/placeholder.svg"}
-                    location={vendor.location || vendor.city}
-                    rating={vendor.rating}
-                    reviews={vendor.reviews?.length || 0}
-                    price={vendor.minimumPrice || vendor.price}
-                    type={vendor.subBusinessType || vendor.type}
-                    capacity={vendor.capacity}
-                    amenities={vendor.amenities}
-                    sponsored={vendor.sponsored}
-                    isFavorite={true}
-                    
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* No Results */}
-            {filteredVendors.length === 0 && !isLoadingVendors && favorites.length > 0 && (
-              <div className="text-center py-20">
-                <div className="w-24 h-24 bg-gradient-to-br from-rose-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Search className="w-12 h-12 text-rose-300" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">No results found</h3>
-                <p className="text-gray-600 mb-6">
-                  Try adjusting your search or filters to find what you're looking for.
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSelectedCategory('all');
-                    setSortBy('name');
-                  }}
-                  className="border-rose-200 text-rose-600 hover:bg-rose-50"
-                >
-                  Clear Filters
-                </Button>
-              </div>
-            )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredVendors.map((vendor) => (
+              <VendorCard
+                key={vendor.id}
+                id={vendor.id}
+                name={vendor.name}
+                image={vendor.images?.[0] || "/placeholder.svg"}
+                location={vendor.city || vendor.location || "Location not specified"}
+                rating={vendor.rating || 0}
+                reviews={Array.isArray(vendor.reviews) ? vendor.reviews.length : 0}
+                price={vendor.minimumPrice || 0}
+                type={vendor.type || vendor.subBusinessType || "Vendor"}
+                vendorType={vendor.subBusinessType}
+                capacity={vendor.capacity}
+                amenities={vendor.amenities || []}
+                sponsored={vendor.sponsored}
+                showBookButton={true}
+                showDetails={true}
+              />
+            ))}
           </div>
         )}
       </div>
     </div>
+  );
+};
+
+const FavoritesPage = () => {
+  return (
+    <FavoritesPreloader>
+      <FavoritesPageContent />
+    </FavoritesPreloader>
   );
 };
 
