@@ -6,7 +6,7 @@ import Link from "next/link"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Star, MapPin, Users, Calendar, Clock, Award, Heart } from "lucide-react"
+import { Star, MapPin, Users, Calendar, Clock, Award, Heart, Loader2 } from "lucide-react"
 import Image from "next/image"
 import {
   AlertDialog,
@@ -19,9 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useRouter } from "next/navigation"
-import { FavoritesAPI } from "@/lib/api/favorites"
-import { useFavorites } from "@/context/FavoritesContext"
-
+import { useFavorites } from "@/hooks/use-favorites"
 
 interface VendorCardProps {
   id: string | number
@@ -62,13 +60,12 @@ export default function VendorCard({
 }: VendorCardProps) {
   const [openAlert, setOpenAlert] = useState(false)
   const router = useRouter()
-  const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('user_id') && localStorage.getItem('auth_token')
   
-  // Use favorites context
-  const { isFavorited, toggleFavorite } = useFavorites();
-  const isFavorite = isFavorited(id);
-  
+  // Use the simple favorites hook
+  const { isFavorited, toggleFavorite, isLoading } = useFavorites()
 
+  // Check if this vendor is favorited
+  const isFavorite = isFavorited(id)
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't navigate if clicking on interactive elements
@@ -107,6 +104,8 @@ export default function VendorCard({
 
   const handleBookNow = (e: React.MouseEvent) => {
     e.stopPropagation()
+    const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('user_id') && localStorage.getItem('auth_token')
+    
     if (isLoggedIn) {
       // Route to the main booking page
       router.push(`/${id}/booking`)
@@ -117,12 +116,13 @@ export default function VendorCard({
 
   const handleFavoriteToggle = async (e: React.MouseEvent) => {
     e.stopPropagation()
+    const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('user_id') && localStorage.getItem('auth_token')
+    
     if (isLoggedIn) {
       try {
-        // Use context to toggle favorite
-        await toggleFavorite(id);
+        await toggleFavorite(id)
       } catch (error) {
-        console.error('Error updating favorite:', error);
+        console.error('Error updating favorite:', error)
       }
     } else {
       setOpenAlert(true)
@@ -189,16 +189,21 @@ export default function VendorCard({
                 onClick={handleFavoriteToggle}
                 variant="ghost"
                 size="sm"
-                className="w-8 h-8 p-0 bg-white/90 backdrop-blur-sm hover:bg-white/95 border-0 shadow-md rounded-full transition-all duration-200 hover:scale-110"
+                disabled={isLoading}
+                className="w-8 h-8 p-0 bg-white/90 backdrop-blur-sm hover:bg-white/95 border-0 shadow-md rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50"
                 data-no-navigate
               >
-                <Heart 
-                  className={`w-4 h-4 transition-all duration-200 ${
-                    isFavorite 
-                      ? 'fill-rose-500 text-rose-500' 
-                      : 'text-gray-600 hover:text-rose-500'
-                  }`} 
-                />
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-rose-500" />
+                ) : (
+                  <Heart 
+                    className={`w-4 h-4 transition-all duration-200 ${
+                      isFavorite 
+                        ? 'fill-rose-500 text-rose-500' 
+                        : 'text-gray-600 hover:text-rose-500'
+                    }`} 
+                  />
+                )}
               </Button>
             </div>
 
@@ -283,68 +288,43 @@ export default function VendorCard({
                     )}
                   </div>
                 )}
-                
-                {/* Quick Stats */}
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <div className="flex items-center">
-                    <Clock className="w-3 h-3 mr-1" />
-                    <span>Quick Response</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Calendar className="w-3 h-3 mr-1" />
-                    <span>Flexible Booking</span>
-                  </div>
-                </div>
               </div>
             )}
           </CardContent>
 
-          {/* Footer with Book Button - Fixed at bottom */}
+          {/* Footer with Book Button */}
           {showBookButton && (
-            <CardFooter className="p-6 pt-0 mt-auto">
-              <motion.div 
-                whileHover={{ scale: 1.02 }} 
-                whileTap={{ scale: 0.98 }} 
-                className="w-full"
+            <CardFooter className="p-4 sm:p-6 pt-0">
+              <Button 
+                onClick={handleBookNow}
+                size="lg"
+                className="w-full bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white px-6 sm:px-8 py-3 text-base sm:text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
               >
-                <Button
-                  onClick={handleBookNow}
-                  className="w-full bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-bold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                >
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Book Now
-                </Button>
-              </motion.div>
+                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                Book Now
+              </Button>
             </CardFooter>
           )}
         </Card>
       </motion.div>
 
-             {/* Login Alert Dialog */}
-       <AlertDialog open={openAlert} onOpenChange={setOpenAlert}>
-         <AlertDialogContent className="rounded-2xl">
-           <AlertDialogHeader>
-             <AlertDialogTitle className="text-xl font-bold">Login Required</AlertDialogTitle>
-             <AlertDialogDescription className="text-gray-600">
-               You must be logged in to save vendors to your favorites. Please sign in to continue.
-             </AlertDialogDescription>
-           </AlertDialogHeader>
-           <AlertDialogFooter>
-             <AlertDialogCancel 
-               onClick={() => setOpenAlert(false)}
-               className="rounded-lg"
-             >
-               Cancel
-             </AlertDialogCancel>
-             <AlertDialogAction 
-               onClick={() => router.push('/login')}
-               className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 rounded-lg"
-             >
-               Login Now
-             </AlertDialogAction>
-           </AlertDialogFooter>
-         </AlertDialogContent>
-       </AlertDialog>
+      {/* Login Alert Dialog */}
+      <AlertDialog open={openAlert} onOpenChange={setOpenAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Login Required</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please log in to {showBookButton ? 'book this vendor or add it to your favorites' : 'add this vendor to your favorites'}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => router.push('/login')}>
+              Login
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

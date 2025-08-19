@@ -182,6 +182,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       // Broadcast login event to other tabs
       window.dispatchEvent(new CustomEvent('userLogin', { detail: userData }));
       
+      // Dispatch login event for favorites sync
+      window.dispatchEvent(new CustomEvent('user-login'));
+      
     } catch (error) {
       console.error("❌ Login error:", error);
       clearAuthData();
@@ -197,6 +200,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     
     // Broadcast logout event to other tabs
     window.dispatchEvent(new CustomEvent('userLogout'));
+    
+    // Dispatch logout event for favorites sync
+    window.dispatchEvent(new CustomEvent('user-logout'));
     
     // Force page reload to ensure clean state
     window.location.reload();
