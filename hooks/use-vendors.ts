@@ -20,8 +20,8 @@ export function useVendors() {
   return useQuery({
     queryKey: vendorKeys.lists(),
     queryFn: VendorAPI.getAllBusinesses,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 15 * 60 * 1000, // 15 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
   })
 }
 
@@ -31,8 +31,8 @@ export function useVendorsByType(type: string) {
     queryKey: vendorKeys.byType(type),
     queryFn: () => VendorAPI.getBusinessesByVendorType(type),
     enabled: !!type && type !== 'all',
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 15 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   })
 }
 
@@ -42,12 +42,44 @@ export function useFeaturedVendors() {
     queryKey: vendorKeys.featured(),
     queryFn: async () => {
       const allVendors = await VendorAPI.getAllBusinesses()
-      return allVendors
-        .filter(vendor => vendor.sponsored || (vendor.rating || 0) >= 4.5)
+      console.log('🔍 useFeaturedVendors - Total vendors:', allVendors.length)
+      
+      // Log some sample vendors to see their structure
+      if (allVendors.length > 0) {
+        console.log('🔍 Sample vendor:', allVendors[0])
+        console.log('🔍 Sample vendor sponsored:', allVendors[0].sponsored)
+        console.log('🔍 Sample vendor rating:', allVendors[0].rating)
+      }
+      
+      // More inclusive filtering - show vendors with rating >= 3.5 or sponsored
+      let featuredVendors = allVendors
+        .filter(vendor => {
+          const isSponsored = vendor.sponsored === true
+          const hasGoodRating = (vendor.rating || 0) >= 3.5
+          const hasAnyRating = (vendor.rating || 0) > 0
+          
+          // If no vendors meet strict criteria, fall back to showing vendors with any rating
+          if (allVendors.length > 0 && !allVendors.some(v => v.sponsored || (v.rating || 0) >= 3.5)) {
+            return hasAnyRating
+          }
+          
+          return isSponsored || hasGoodRating
+        })
         .slice(0, 8)
+      
+      // If still no vendors, just take the first 8 vendors as a fallback
+      if (featuredVendors.length === 0 && allVendors.length > 0) {
+        console.log('🔍 No vendors met criteria, using fallback - showing first 8 vendors')
+        featuredVendors = allVendors.slice(0, 8)
+      }
+      
+      console.log('🔍 Featured vendors found:', featuredVendors.length)
+      console.log('🔍 Featured vendors:', featuredVendors.map(v => ({ id: v.id, name: v.name, sponsored: v.sponsored, rating: v.rating })))
+      
+      return featuredVendors
     },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 15 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   })
 }
 
@@ -129,9 +161,24 @@ export function usePrefetchVendors() {
         queryKey: vendorKeys.featured(),
         queryFn: async () => {
           const allVendors = await VendorAPI.getAllBusinesses()
-          return allVendors
-            .filter(vendor => vendor.sponsored || (vendor.rating || 0) >= 4.5)
+          
+          // More inclusive filtering - show vendors with rating >= 3.5 or sponsored
+          const featuredVendors = allVendors
+            .filter(vendor => {
+              const isSponsored = vendor.sponsored === true
+              const hasGoodRating = (vendor.rating || 0) >= 3.5
+              const hasAnyRating = (vendor.rating || 0) > 0
+              
+              // If no vendors meet strict criteria, fall back to showing vendors with any rating
+              if (allVendors.length > 0 && !allVendors.some(v => v.sponsored || (v.rating || 0) >= 3.5)) {
+                return hasAnyRating
+              }
+              
+              return isSponsored || hasGoodRating
+            })
             .slice(0, 8)
+          
+          return featuredVendors
         },
         staleTime: 5 * 60 * 1000,
       })

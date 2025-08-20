@@ -10,23 +10,29 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            // Time before data is considered stale
-            staleTime: 5 * 60 * 1000, // 5 minutes
-            // Time before inactive queries are garbage collected
-            gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
-            // Retry failed requests
-            retry: 2,
-            // Retry delay
-            retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-            // Refetch on window focus
+            // Reduce refetching on window focus
             refetchOnWindowFocus: false,
-            // Refetch on reconnect
-            refetchOnReconnect: true,
+            // Reduce refetching on reconnect
+            refetchOnReconnect: false,
+            // Increase stale time to reduce unnecessary refetches
+            staleTime: 10 * 60 * 1000, // 10 minutes
+            // Increase garbage collection time
+            gcTime: 15 * 60 * 1000, // 15 minutes
+            // Add retry configuration
+            retry: (failureCount, error: any) => {
+              // Don't retry on 4xx errors (client errors)
+              if (error?.response?.status >= 400 && error?.response?.status < 500) {
+                return false
+              }
+              // Retry up to 2 times for other errors
+              return failureCount < 2
+            },
+            // Add retry delay
+            retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
           },
           mutations: {
-            // Retry failed mutations
+            // Add retry configuration for mutations
             retry: 1,
-            // Retry delay
             retryDelay: 1000,
           },
         },

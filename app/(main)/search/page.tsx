@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState, useEffect, Suspense, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import { Search, MapPin, Star, Users, Filter, SortAsc, SortDesc, Award, Heart, DollarSign, Calendar, X, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -12,11 +12,11 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Slider } from "@/components/ui/slider"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/components/ui/use-toast"
-import { VendorAPI } from "@/lib/api/vendors"
 import type { Vendor } from "@/lib/types"
 import { VENDOR_TYPES, VENDOR_TYPE_DISPLAY_NAMES, VENDOR_TYPE_DESCRIPTIONS, getAllVendorPaths } from "@/lib/vendor-types"
 import { useRouter } from "next/navigation"
 import VendorCard from "@/components/VendorCard"
+import { useVendors } from "@/hooks/use-vendors"
 
 interface Filters {
   search: string
@@ -34,13 +34,7 @@ function SearchContent() {
   const { toast } = useToast()
   const searchParams = useSearchParams()
   
-  const [vendors, setVendors] = useState<Vendor[]>([])
-  const [filteredVendors, setFilteredVendors] = useState<Vendor[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [totalVendors, setTotalVendors] = useState(0)
-
   const [filters, setFilters] = useState<Filters>({
     search: "",
     category: "all",
@@ -56,6 +50,9 @@ function SearchContent() {
   const query = searchParams?.get('q') || ""
   const category = searchParams?.get('category') || ""
   const location = searchParams?.get('location') || ""
+
+  // Use React Query hook for vendors
+  const { data: allVendors = [], isLoading, error } = useVendors()
 
   const vendorCategories = [
     { display: "All Categories", value: "all" },
@@ -83,27 +80,7 @@ function SearchContent() {
       category: category || "all",
       location: location
     }))
-    loadVendors()
   }, [query, category, location])
-
-  const loadVendors = async () => {
-    try {
-      setIsLoading(true)
-      const allVendors = await VendorAPI.getAllBusinesses()
-      setVendors(allVendors)
-      setTotalVendors(allVendors.length)
-      setTotalPages(Math.ceil(allVendors.length / 12))
-    } catch (error) {
-      console.error("Error loading vendors:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load vendors. Please try again.",
-        variant: "destructive"
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   // Helper function to check if vendor matches category
   const vendorMatchesCategory = (vendor: Vendor, category: string): boolean => {
@@ -222,12 +199,9 @@ function SearchContent() {
     }
   }
 
-  useEffect(() => {
-    applyFilters()
-  }, [vendors, filters])
-
-  const applyFilters = () => {
-    let filtered = [...vendors]
+  // Apply filters using useMemo for better performance
+  const filteredVendors = useMemo(() => {
+    let filtered = [...allVendors]
     console.log('🔍 Applying filters:', filters)
     console.log('📊 Total vendors before filtering:', filtered.length)
 
@@ -335,10 +309,17 @@ function SearchContent() {
         break
     }
 
-    setFilteredVendors(filtered)
-    setTotalPages(Math.ceil(filtered.length / 12))
+    return filtered
+  }, [allVendors, filters])
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredVendors.length / 12)
+  const paginatedVendors = filteredVendors.slice((currentPage - 1) * 12, currentPage * 12)
+
+  // Reset to first page when filters change
+  useEffect(() => {
     setCurrentPage(1)
-  }
+  }, [filters])
 
   const handleFilterChange = (key: keyof Filters, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }))
@@ -430,7 +411,20 @@ function SearchContent() {
     router.push(slug)
   }
 
-  const paginatedVendors = filteredVendors.slice((currentPage - 1) * 12, currentPage * 12)
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-rose-50 flex items-center justify-center">
+        <div className="text-center">
+          <h3 className="text-xl font-semibold text-neutral-900 mb-2">Error loading vendors</h3>
+          <p className="text-neutral-600 mb-4">Please try refreshing the page</p>
+          <Button onClick={() => window.location.reload()} className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700">
+            Refresh Page
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-rose-50">
@@ -643,7 +637,7 @@ function SearchContent() {
                 <div className="flex items-center gap-2">
                   <Users className="w-5 h-5 text-rose-500" />
                   <span className="text-sm font-semibold text-neutral-700">
-                    {isLoading ? "Loading..." : `${filteredVendors.length} of ${totalVendors} results`}
+                    {isLoading ? "Loading..." : `${filteredVendors.length} of ${allVendors.length} results`}
                   </span>
                 </div>
                 {(filters.search || filters.category !== "all" || filters.location || filters.rating > 0 || filters.capacity > 0 || filters.amenities.length > 0) && (
@@ -719,8 +713,8 @@ function SearchContent() {
               </div>
             ) : (
               <>
-                                 {/* Vendors Grid with VendorCards */}
-                 <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
+                {/* Vendors Grid with VendorCards */}
+                <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
                   {paginatedVendors.map((vendor) => (
                     <VendorCard
                       key={vendor.id}
@@ -729,7 +723,7 @@ function SearchContent() {
                       image={vendor.images?.[0] || "/placeholder.svg"}
                       location={vendor.location || vendor.city}
                       rating={vendor.rating}
-                      reviews={vendor.reviews?.length || 0}
+                      reviews={Array.isArray(vendor.reviews) ? vendor.reviews.length : 0}
                       price={vendor.minimumPrice || vendor.price}
                       type={vendor.subBusinessType || vendor.type}
                       capacity={vendor.capacity}

@@ -18,6 +18,28 @@ export interface Vendor {
   description: string
   packages: Package[]
   video?: string
+  availability?: Availability
+  isFavorite?: boolean
+}
+
+export interface Availability {
+  businessId: string
+  availabilityPeriod: {
+    startDate: string
+    endDate: string
+    daysAhead: number
+  }
+  timeSlots: string[]
+  availability: AvailabilityDay[]
+}
+
+export interface AvailabilityDay {
+  date: string
+  isAvailable: boolean
+  availableSlots: string[]
+  bookedSlots: string[]
+  totalSlots: number
+  availableCount: number
 }
 
 export interface Review {

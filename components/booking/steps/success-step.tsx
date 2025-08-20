@@ -61,7 +61,7 @@ export default function SuccessStep({
 
   const getTimeSlotText = (timeSlot: string) => {
     switch (timeSlot) {
-      case "9:00":
+      case "09:00":
         return "Morning (9AM - 12PM)"
       case "12:00":
         return "Midday (12PM - 4PM)"

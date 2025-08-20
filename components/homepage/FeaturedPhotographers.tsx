@@ -1,32 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import Link from "next/link"
 import VendorCard from "@/components/VendorCard"
 import { FeaturedSwiper, SwiperSlide } from "@/components/ui/featured-swiper"
-import { VendorAPI } from "@/lib/api/vendors"
 import { getVendorTypeFromPath } from "@/lib/vendor-types"
 import type { Vendor } from "@/lib/types"
+import { useVendorsByType } from "@/hooks/use-vendors"
 
 export function FeaturedPhotographers() {
-  const [vendors, setVendors] = useState<Vendor[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchFeaturedPhotographers = async () => {
-      try {
-        const vendorType = getVendorTypeFromPath('photographers')
-        const featuredPhotographers = await VendorAPI.getBusinessesByVendorType(vendorType)
-        setVendors(featuredPhotographers.slice(0, 8)) // Limit to 8 featured
-      } catch (error) {
-        console.error('Error fetching featured photographers:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchFeaturedPhotographers()
-  }, [])
+  const vendorType = getVendorTypeFromPath('photographers')
+  const { data: allVendors = [], isLoading } = useVendorsByType(vendorType)
+  const vendors = allVendors.slice(0, 8) // Limit to 8 featured
 
   return (
     <section className="py-6 sm:py-8 md:py-12 lg:py-16 bg-gray-50">

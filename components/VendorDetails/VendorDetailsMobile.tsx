@@ -33,7 +33,7 @@ import {
   Calendar,
   ChevronLeft
 } from "lucide-react"
-import type { Vendor, Review } from "@/lib/types"
+import type { Vendor, Review, AvailabilityDay } from "@/lib/types"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
@@ -66,10 +66,61 @@ export default function VendorDetailsMobile({ vendor }: VendorDetailsMobileProps
   const [isFavorite, setIsFavorite] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
   const [currentDate, setCurrentDate] = useState(new Date())
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const router = useRouter()
   const { toast } = useToast()
 
   const primaryImage = useMemo(() => vendor.images?.[0] || "/placeholder.jpg", [vendor.images])
+
+  // Helper function to check if a date is available
+  const isDateAvailable = (date: Date): boolean => {
+    if (!vendor.availability?.availability) return false
+    
+    const dateString = format(date, 'yyyy-MM-dd')
+    const availabilityDay = vendor.availability.availability.find(day => day.date === dateString)
+    
+    return availabilityDay ? availabilityDay.isAvailable && availabilityDay.availableCount > 0 : false
+  }
+
+  // Helper function to get availability info for a date
+  const getAvailabilityInfo = (date: Date): AvailabilityDay | null => {
+    if (!vendor.availability?.availability) return null
+    
+    const dateString = format(date, 'yyyy-MM-dd')
+    return vendor.availability.availability.find(day => day.date === dateString) || null
+  }
+
+  // Helper function to check if date is in the past
+  const isDateInPast = (date: Date): boolean => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    date.setHours(0, 0, 0, 0)
+    return date < today
+  }
+
+  // Helper function to check if date is within availability period
+  const isDateInAvailabilityPeriod = (date: Date): boolean => {
+    if (!vendor.availability?.availabilityPeriod) return false
+    
+    const { startDate, endDate } = vendor.availability.availabilityPeriod
+    const dateString = format(date, 'yyyy-MM-dd')
+    
+    return dateString >= startDate && dateString <= endDate
+  }
+
+  const handleDateSelect = (date: Date) => {
+    if (isDateInPast(date) || !isDateAvailable(date)) return
+    
+    setSelectedDate(date)
+    const availabilityInfo = getAvailabilityInfo(date)
+    
+    if (availabilityInfo) {
+      toast({
+        title: "Date Selected",
+        description: `${format(date, 'MMM dd, yyyy')} - ${availabilityInfo.availableCount} slots available`,
+      })
+    }
+  }
 
   const handleBookNow = () => {
     const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('user_id')
@@ -485,23 +536,37 @@ export default function VendorDetailsMobile({ vendor }: VendorDetailsMobileProps
                           
                           // Add days of the month
                           for (let day = 1; day <= daysInMonth; day++) {
-                            const isAvailable = Math.random() > 0.3 // Random availability for demo
+                            const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
+                            const isAvailable = isDateAvailable(date)
                             const isToday = isCurrentMonth && day === today.getDate()
+                            const isPast = isDateInPast(date)
+                            const isInAvailabilityPeriod = isDateInAvailabilityPeriod(date)
+                            const isSelected = selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+                            const availabilityInfo = getAvailabilityInfo(date)
+                            
+                            // Determine if date should be disabled
+                            const isDisabled = isPast || !isInAvailabilityPeriod || !isAvailable
                             
                             calendarDays.push(
                               <div
                                 key={day}
+                                onClick={() => handleDateSelect(date)}
                                 className={`
-                                  text-center text-xs sm:text-sm py-2 rounded-lg cursor-pointer transition-all duration-200
-                                  ${isToday 
-                                    ? 'bg-rose-500 text-white font-semibold' 
-                                    : isAvailable 
-                                      ? 'hover:bg-rose-50 text-neutral-900 hover:text-rose-600' 
-                                      : 'text-neutral-400 cursor-not-allowed'
+                                  text-center text-xs sm:text-sm py-2 rounded-lg transition-all duration-200 relative
+                                  ${isSelected 
+                                    ? 'bg-rose-600 text-white font-semibold shadow-lg' 
+                                    : isToday 
+                                      ? 'bg-rose-500 text-white font-semibold' 
+                                      : isAvailable && isInAvailabilityPeriod && !isPast
+                                        ? 'hover:bg-rose-50 text-neutral-900 hover:text-rose-600 cursor-pointer' 
+                                        : 'text-neutral-400 cursor-not-allowed bg-neutral-50'
                                   }
                                 `}
                               >
                                 {day}
+                                {availabilityInfo && availabilityInfo.availableCount > 0 && !isSelected && (
+                                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full"></div>
+                                )}
                               </div>
                             )
                           }
@@ -511,13 +576,17 @@ export default function VendorDetailsMobile({ vendor }: VendorDetailsMobileProps
                       </div>
                      
                      {/* Availability Legend */}
-                     <div className="flex items-center justify-center gap-4 text-xs sm:text-sm">
+                     <div className="flex items-center justify-center gap-4 text-xs sm:text-sm flex-wrap">
                        <div className="flex items-center gap-2">
                          <div className="w-3 h-3 bg-rose-500 rounded-full"></div>
                          <span>Today</span>
                        </div>
                        <div className="flex items-center gap-2">
-                         <div className="w-3 h-3 bg-rose-50 border border-rose-200 rounded-full"></div>
+                         <div className="w-3 h-3 bg-rose-600 rounded-full"></div>
+                         <span>Selected</span>
+                       </div>
+                       <div className="flex items-center gap-2">
+                         <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                          <span>Available</span>
                        </div>
                        <div className="flex items-center gap-2">
@@ -527,6 +596,55 @@ export default function VendorDetailsMobile({ vendor }: VendorDetailsMobileProps
                      </div>
                    </div>
                    
+                   {/* Selected Date Availability Details */}
+                   {selectedDate && (() => {
+                     const availabilityInfo = getAvailabilityInfo(selectedDate)
+                     return availabilityInfo ? (
+                       <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 sm:p-6 border border-green-200">
+                         <div className="flex items-start gap-3">
+                           <CalendarCheck className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                           <div className="flex-1">
+                             <h4 className="text-base sm:text-lg font-semibold text-neutral-900 mb-2">
+                               {format(selectedDate, 'EEEE, MMMM dd, yyyy')}
+                             </h4>
+                             <div className="space-y-2">
+                               <div className="flex items-center justify-between">
+                                 <span className="text-sm text-neutral-600">Available Slots:</span>
+                                 <Badge variant="secondary" className="bg-green-100 text-green-700">
+                                   {availabilityInfo.availableCount} of {availabilityInfo.totalSlots}
+                                 </Badge>
+                               </div>
+                               {availabilityInfo.availableSlots.length > 0 && (
+                                 <div>
+                                   <span className="text-sm text-neutral-600">Available Times:</span>
+                                   <div className="flex flex-wrap gap-2 mt-1">
+                                     {availabilityInfo.availableSlots.map((slot, index) => (
+                                       <Badge key={index} variant="outline" className="text-xs">
+                                         {slot}
+                                       </Badge>
+                                     ))}
+                                   </div>
+                                 </div>
+                               )}
+                               {availabilityInfo.bookedSlots.length > 0 && (
+                                 <div>
+                                   <span className="text-sm text-neutral-600">Booked Times:</span>
+                                   <div className="flex flex-wrap gap-2 mt-1">
+                                     {availabilityInfo.bookedSlots.map((slot, index) => (
+                                       <Badge key={index} variant="outline" className="text-xs bg-red-50 text-red-600 border-red-200">
+                                         {slot}
+                                       </Badge>
+                                     ))}
+                                   </div>
+                                 </div>
+                               )}
+                             </div>
+                           </div>
+                         </div>
+                       </div>
+                     ) : null
+                   })()}
+                   
                    {/* Quick Booking Info */}
                    <div className="bg-gradient-to-r from-rose-50 to-pink-50 rounded-xl p-4 sm:p-6">
                      <div className="flex items-start gap-3">
@@ -534,6 +652,12 @@ export default function VendorDetailsMobile({ vendor }: VendorDetailsMobileProps
                        <div>
                          <h4 className="text-base sm:text-lg font-semibold text-neutral-900 mb-2">Booking Information</h4>
                          <ul className="space-y-2 text-sm sm:text-base text-neutral-600">
+                           {vendor.availability?.availabilityPeriod && (
+                             <li>• Available from {format(new Date(vendor.availability.availabilityPeriod.startDate), 'MMM dd')} to {format(new Date(vendor.availability.availabilityPeriod.endDate), 'MMM dd, yyyy')}</li>
+                           )}
+                           {vendor.availability?.timeSlots && vendor.availability.timeSlots.length > 0 && (
+                             <li>• Time slots: {vendor.availability.timeSlots.join(', ')}</li>
+                           )}
                            <li>• Minimum booking notice: 48 hours</li>
                            <li>• Flexible cancellation policy</li>
                            <li>• Instant confirmation available</li>

@@ -20,9 +20,9 @@ export default function DateSelectionStep({ formData, updateFormData }: DateSele
   const formatedDate = date?.toLocaleDateString().replace(/\//g, "-")
 
   const timeSlotToHour: Record<string, number> = {
-    morning: 9,   // 9:00 AM
-    midday: 14,   // 2:00 PM
-    evening: 18,  // 6:00 PM
+    "09:00": 9,   // 9:00 AM
+    "14:00": 14,  // 2:00 PM
+    "18:00": 18,  // 6:00 PM
   }
 
   function formatDateWithSlot(date: Date, timeSlot: string): string {
@@ -86,13 +86,13 @@ export default function DateSelectionStep({ formData, updateFormData }: DateSele
           >
             <div
               className={`flex cursor-pointer items-center rounded-xl border p-3 transition-all duration-200 ${
-                formData.timeSlot === "9:00" 
+                formData.timeSlot === "09:00" 
                   ? "border-rose-500 bg-gradient-to-r from-rose-50 to-pink-50 shadow-md" 
                   : "border-neutral-200 hover:border-rose-200 hover:bg-rose-50/50"
               }`}
             >
-              <RadioGroupItem value="9:00" id="9:00" className="border-rose-500 text-rose-500" />
-              <Label htmlFor="9:00" className="ml-3 cursor-pointer">
+              <RadioGroupItem value="09:00" id="09:00" className="border-rose-500 text-rose-500" />
+                              <Label htmlFor="09:00" className="ml-3 cursor-pointer">
                 Morning
                 <span className="block text-xs text-neutral-500 mt-0.5">9AM - 12PM</span>
               </Label>
