@@ -38,6 +38,16 @@ export default function VendorSuccessStep({
     packageData,
     bookingData
   });
+  
+  console.log('🔍 Form Data Details:', {
+    eventType: formData.eventType,
+    bookingDate: formData.bookingDate,
+    timeSlot: formData.timeSlot,
+    guestCount: formData.guestCount,
+    username: formData.username,
+    email: formData.email,
+    phoneNumber: formData.phoneNumber
+  });
 
   useEffect(() => {
     // Trigger confetti animation on component mount
@@ -76,8 +86,7 @@ export default function VendorSuccessStep({
 
   const getTimeSlotText = (timeSlot: string) => {
     switch (timeSlot) {
-      case "9:00":
-      case "09:00":
+            case "09:00":
         return "Morning (9AM - 12PM)"
       case "12:00":
         return "Midday (12PM - 4PM)"
@@ -176,10 +185,12 @@ export default function VendorSuccessStep({
                 <span className="text-neutral-600">Phone:</span>
                 <span className="font-semibold text-neutral-800">{bookingData?.customerPhone || formData.phoneNumber}</span>
               </div>
-              <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
-                <span className="text-neutral-600">Guest Count:</span>
-                <span className="font-semibold text-neutral-800">{formData.guestCount} guests</span>
-              </div>
+                             <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
+                 <span className="text-neutral-600">Guest Count:</span>
+                 <span className="font-semibold text-neutral-800">
+                   {formData.guestCount && formData.guestCount > 0 ? `${formData.guestCount} guests` : "Not specified"}
+                 </span>
+               </div>
             </div>
           </div>
 
@@ -223,22 +234,24 @@ export default function VendorSuccessStep({
               Event Details
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
-                <span className="text-neutral-600">Event Type:</span>
-                <span className="font-semibold text-neutral-800">{bookingData?.eventType || "N/A"}</span>
-              </div>
-              <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
-                <span className="text-neutral-600">Event Date:</span>
-                <span className="font-semibold text-neutral-800">
-                  {bookingData?.bookingDate ? new Date(bookingData.bookingDate).toLocaleDateString() : "N/A"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
-                <span className="text-neutral-600">Time Slot:</span>
-                <span className="font-semibold text-neutral-800">
-                  {bookingData?.bookingTime ? getTimeSlotText(bookingData.bookingTime) : "N/A"}
-                </span>
-              </div>
+                             <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
+                 <span className="text-neutral-600">Event Type:</span>
+                 <span className="font-semibold text-neutral-800">{formData.eventType || bookingData?.eventType || "Wedding"}</span>
+               </div>
+               <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
+                 <span className="text-neutral-600">Event Date:</span>
+                 <span className="font-semibold text-neutral-800">
+                   {formData.bookingDate ? new Date(formData.bookingDate).toLocaleDateString() : 
+                    bookingData?.bookingDate ? new Date(bookingData.bookingDate).toLocaleDateString() : "N/A"}
+                 </span>
+               </div>
+               <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
+                 <span className="text-neutral-600">Time Slot:</span>
+                 <span className="font-semibold text-neutral-800">
+                   {formData.timeSlot ? getTimeSlotText(formData.timeSlot) : 
+                    bookingData?.bookingTime ? getTimeSlotText(bookingData.bookingTime) : "N/A"}
+                 </span>
+               </div>
             </div>
           </div>
 

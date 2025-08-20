@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useRouter } from "next/navigation"
 import { useFavorites } from "@/hooks/use-favorites"
+import { getFirstImage } from "@/lib/utils/image-utils"
 
 interface VendorCardProps {
   id: string | number
@@ -164,7 +165,7 @@ export default function VendorCard({
           {/* Image Section */}
           <div className="relative aspect-[4/3] overflow-hidden">
             <Image
-              src={image || "/placeholder.svg"}
+              src={getFirstImage(Array.isArray(image) ? image : [image])}
               alt={name}
               fill
               className="object-cover transition-transform duration-700 group-hover:scale-110"

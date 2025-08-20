@@ -1,30 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import Link from "next/link"
 import VendorCard from "@/components/VendorCard"
 import { FeaturedSwiper, SwiperSlide } from "@/components/ui/featured-swiper"
-import { VendorAPI } from "@/lib/api/vendors"
 import type { Vendor } from "@/lib/types"
+import { useFeaturedVendors } from "@/hooks/use-vendors"
 
 export function FeaturedCategories() {
-  const [vendors, setVendors] = useState<Vendor[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchFeaturedCategories = async () => {
-      try {
-        const featuredCategories = await VendorAPI.getAllBusinesses()
-        setVendors(featuredCategories.slice(0, 8)) // Limit to 8 featured
-      } catch (error) {
-        console.error('Error fetching featured categories:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchFeaturedCategories()
-  }, [])
+  const { data: vendors = [], isLoading, error } = useFeaturedVendors()
 
   return (
     <section className="py-6 sm:py-8 md:py-12 lg:py-16 bg-gray-50">
@@ -44,40 +27,49 @@ export function FeaturedCategories() {
           {isLoading ? (
             // Loading skeleton
             Array.from({ length: 4 }).map((_, index) => (
-                             <SwiperSlide key={index}>
-                 <div className="flex justify-center px-2">
-                   <div className="animate-pulse w-full">
-                     <div className="bg-gray-300 h-48 rounded-t-lg"></div>
-                     <div className="bg-white p-4 rounded-b-lg">
-                       <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
-                       <div className="h-4 bg-gray-300 rounded w-1/2"></div>
-                     </div>
-                   </div>
-                 </div>
-               </SwiperSlide>
+              <SwiperSlide key={index}>
+                <div className="flex justify-center px-2">
+                  <div className="animate-pulse w-full">
+                    <div className="bg-gray-300 h-48 rounded-t-lg"></div>
+                    <div className="bg-white p-4 rounded-b-lg">
+                      <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+                      <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                </div>
+              </SwiperSlide>
+            ))
+          ) : vendors.length > 0 ? (
+            vendors.map((vendor) => (
+              <SwiperSlide key={vendor.id}>
+                <div className="flex justify-center px-2">
+                  <div className="w-full">
+                    <VendorCard
+                      id={vendor.id}
+                      name={vendor.name}
+                      image={vendor.images?.[0] || "/placeholder.svg"}
+                      location={vendor.location || vendor.city}
+                      rating={vendor.rating}
+                      reviews={vendor.reviews?.length || 0}
+                      price={vendor.minimumPrice || vendor.price}
+                      type={vendor.subBusinessType || vendor.type}
+                      capacity={vendor.capacity}
+                      amenities={vendor.amenities}
+                      sponsored={vendor.sponsored}
+                    />
+                  </div>
+                </div>
+              </SwiperSlide>
             ))
           ) : (
-                         vendors.map((vendor) => (
-               <SwiperSlide key={vendor.id}>
-                 <div className="flex justify-center px-2">
-                   <div className="w-full">
-                     <VendorCard
-                       id={vendor.id}
-                       name={vendor.name}
-                       image={vendor.images?.[0] || "/placeholder.svg"}
-                       location={vendor.location || vendor.city}
-                       rating={vendor.rating}
-                       reviews={vendor.reviews?.length || 0}
-                       price={vendor.minimumPrice || vendor.price}
-                       type={vendor.subBusinessType || vendor.type}
-                       capacity={vendor.capacity}
-                       amenities={vendor.amenities}
-                       sponsored={vendor.sponsored}
-                     />
-                   </div>
-                 </div>
-               </SwiperSlide>
-             ))
+            // No vendors found
+            <SwiperSlide>
+              <div className="flex justify-center px-2">
+                <div className="w-full text-center py-8">
+                  <p className="text-gray-500">No featured vendors found</p>
+                </div>
+              </div>
+            </SwiperSlide>
           )}
         </FeaturedSwiper>
 

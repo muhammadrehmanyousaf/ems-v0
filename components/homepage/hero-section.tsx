@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Search, MapPin, Star, Users, Calendar, ArrowRight, X, Loader2, Heart, Award } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -12,9 +12,9 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
-import { VendorAPI } from "@/lib/api/vendors"
 import type { Vendor } from "@/lib/types"
 import { VENDOR_TYPES, VENDOR_TYPE_DISPLAY_NAMES, VENDOR_TYPE_DESCRIPTIONS, getAllVendorPaths, VENDOR_TYPE_PATHS } from "@/lib/vendor-types"
+import { useVendors } from "@/hooks/use-vendors"
 
 // Vendor categories with icons and descriptions
 const vendorCategories = [
@@ -51,29 +51,23 @@ export function HeroSection() {
   const [location, setLocation] = useState("")
   const [venueLocation, setVenueLocation] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
-  const [vendors, setVendors] = useState<Vendor[]>([])
-  const [venues, setVenues] = useState<Vendor[]>([])
-  const [filteredVendors, setFilteredVendors] = useState<Vendor[]>([])
-  const [filteredVenues, setFilteredVenues] = useState<Vendor[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+
   const [showLocationDropdown, setShowLocationDropdown] = useState(false)
   const [showVenueLocationDropdown, setShowVenueLocationDropdown] = useState(false)
   const [showVendorDropdown, setShowVendorDropdown] = useState(false)
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
   const [selectedVenue, setSelectedVenue] = useState<Vendor | null>(null)
-  const [popularCities, setPopularCities] = useState<string[]>([])
+
   const searchRef = useRef<HTMLDivElement>(null)
 
-  // Load vendors on component mount
-  useEffect(() => {
-    loadVendors()
-  }, [])
+  // Use React Query hook for vendors
+  const { data: allVendors = [], isLoading } = useVendors()
 
-  // Get popular cities from vendor data
-  const getPopularCities = (vendorList: Vendor[]): string[] => {
+  // Get popular cities from vendor data - memoized
+  const popularCities = useMemo(() => {
     const cityCounts: { [key: string]: number } = {}
     
-    vendorList.forEach((vendor) => {
+    allVendors.forEach((vendor) => {
       if (vendor.city) {
         cityCounts[vendor.city] = (cityCounts[vendor.city] || 0) + 1
       }
@@ -86,43 +80,21 @@ export function HeroSection() {
       .map(([city]) => city)
     
     return sortedCities
-  }
+  }, [allVendors])
 
-  // Load all vendors from API
-  const loadVendors = async () => {
-    try {
-      setIsLoading(true)
-      const allVendors = await VendorAPI.getAllBusinesses()
-      setVendors(allVendors)
-      
-      // Filter venues from all vendors
-      const venueVendors = allVendors.filter(vendor => 
-        vendor.type === VENDOR_TYPES.WEDDING_VENUE || 
-        vendor.name?.toLowerCase().includes('venue') ||
-        vendor.name?.toLowerCase().includes('hall') ||
-        vendor.name?.toLowerCase().includes('palace') ||
-        vendor.name?.toLowerCase().includes('banquet') ||
-        vendor.name?.toLowerCase().includes('marriage') ||
-        vendor.name?.toLowerCase().includes('wedding hall') ||
-        vendor.name?.toLowerCase().includes('garden')
-      )
-      setVenues(venueVendors)
-      
-      // Get popular cities from vendor data
-      const cities = getPopularCities(allVendors)
-      setPopularCities(cities)
-      
-    } catch (error) {
-      console.error("Error loading vendors:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load vendors. Please try again.",
-        variant: "destructive"
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  // Filter venues from all vendors - memoized to prevent infinite loops
+  const venues = useMemo(() => allVendors.filter(vendor => 
+    vendor.type === VENDOR_TYPES.WEDDING_VENUE || 
+    vendor.name?.toLowerCase().includes('venue') ||
+    vendor.name?.toLowerCase().includes('hall') ||
+    vendor.name?.toLowerCase().includes('palace') ||
+    vendor.name?.toLowerCase().includes('banquet') ||
+    vendor.name?.toLowerCase().includes('marriage') ||
+    vendor.name?.toLowerCase().includes('wedding hall') ||
+    vendor.name?.toLowerCase().includes('garden')
+  ), [allVendors])
+
+
 
   // Helper function to check if vendor matches category
   const vendorMatchesCategory = (vendor: Vendor, category: string): boolean => {
@@ -215,9 +187,9 @@ export function HeroSection() {
     }
   }
 
-  // Filter vendors based on search query and category
-  useEffect(() => {
-    let filtered = vendors
+  // Filter vendors based on search query and category - memoized
+  const filteredVendors = useMemo(() => {
+    let filtered = allVendors
 
     // Filter by category
     if (selectedCategory && selectedCategory !== 'all') {
@@ -246,11 +218,11 @@ export function HeroSection() {
       })
     }
     
-    setFilteredVendors(filtered.slice(0, 10)) // Limit to 10 for dropdown
-  }, [vendors, selectedCategory, location, searchQuery])
+    return filtered.slice(0, 10) // Limit to 10 for dropdown
+  }, [allVendors, selectedCategory, location, searchQuery])
 
-  // Filter venues based on search query and type
-  useEffect(() => {
+  // Filter venues based on search query and type - memoized
+  const filteredVenues = useMemo(() => {
     let filtered = venues
 
     // Filter by venue type
@@ -269,7 +241,7 @@ export function HeroSection() {
       })
     }
 
-    setFilteredVenues(filtered.slice(0, 10)) // Limit to 10 for dropdown
+    return filtered.slice(0, 10) // Limit to 10 for dropdown
   }, [venues, selectedVenueType, venueLocation])
 
   // Create reverse mapping from vendor type to path
@@ -686,21 +658,21 @@ export function HeroSection() {
                     </Popover>
                   </div>
 
-                  {/* Quick Stats */}
-                  <div className="flex items-center justify-center gap-8 text-sm text-gray-600 pt-4 border-t border-neutral-200">
-                    <div className="flex items-center gap-2">
-                      <Users className="w-5 h-5 text-rose-500" />
-                      <span className="font-semibold">{vendors.length}+ Vendors</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-5 h-5 text-rose-500" />
-                      <span className="font-semibold">50+ Cities</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Star className="w-5 h-5 text-yellow-500" />
-                      <span className="font-semibold">4.5+ Avg Rating</span>
-                    </div>
-                  </div>
+                                     {/* Quick Stats */}
+                   <div className="flex items-center justify-center gap-8 text-sm text-gray-600 pt-4 border-t border-neutral-200">
+                     <div className="flex items-center gap-2">
+                       <Users className="w-5 h-5 text-rose-500" />
+                       <span className="font-semibold">{allVendors.length}+ Vendors</span>
+                     </div>
+                     <div className="flex items-center gap-2">
+                       <MapPin className="w-5 h-5 text-rose-500" />
+                       <span className="font-semibold">50+ Cities</span>
+                     </div>
+                     <div className="flex items-center gap-2">
+                       <Star className="w-5 h-5 text-yellow-500" />
+                       <span className="font-semibold">4.5+ Avg Rating</span>
+                     </div>
+                   </div>
                 </TabsContent>
 
                 {/* Venues Tab */}
