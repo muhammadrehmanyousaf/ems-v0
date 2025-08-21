@@ -97,7 +97,12 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
   const fetchVendorsbyType = async () => {
     setIsLoading(true)
     try {
-      const vendorsData = await VendorAPI.getBusinessesByVendorType(vendorTypeFromPath);
+      let vendorsData;
+      if (vendorTypeFromPath === 'all') {
+        vendorsData = await VendorAPI.getAllBusinesses();
+      } else {
+        vendorsData = await VendorAPI.getBusinessesByVendorType(vendorTypeFromPath);
+      }
       setVendors(vendorsData);
       setTotalVendors(vendorsData.length);
       setIsLoading(false)

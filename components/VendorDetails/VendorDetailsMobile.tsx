@@ -70,6 +70,34 @@ export default function VendorDetailsMobile({ vendor }: VendorDetailsMobileProps
   const router = useRouter()
   const { toast } = useToast()
 
+  // Load favorite status from localStorage on component mount
+  useEffect(() => {
+    const savedFavorites = localStorage.getItem('favorites')
+    if (savedFavorites) {
+      const favorites = JSON.parse(savedFavorites)
+      setIsFavorite(favorites.includes(vendor.id))
+    }
+  }, [vendor.id])
+
+  // Save favorite status to localStorage
+  const handleFavoriteToggle = () => {
+    const newFavoriteStatus = !isFavorite
+    setIsFavorite(newFavoriteStatus)
+    
+    const savedFavorites = localStorage.getItem('favorites')
+    let favorites = savedFavorites ? JSON.parse(savedFavorites) : []
+    
+    if (newFavoriteStatus) {
+      if (!favorites.includes(vendor.id)) {
+        favorites.push(vendor.id)
+      }
+    } else {
+      favorites = favorites.filter((id: string) => id !== vendor.id)
+    }
+    
+    localStorage.setItem('favorites', JSON.stringify(favorites))
+  }
+
   const primaryImage = useMemo(() => vendor.images?.[0] || "/placeholder.jpg", [vendor.images])
 
   // Helper function to check if a date is available
@@ -112,14 +140,6 @@ export default function VendorDetailsMobile({ vendor }: VendorDetailsMobileProps
     if (isDateInPast(date) || !isDateAvailable(date)) return
     
     setSelectedDate(date)
-    const availabilityInfo = getAvailabilityInfo(date)
-    
-    if (availabilityInfo) {
-      toast({
-        title: "Date Selected",
-        description: `${format(date, 'MMM dd, yyyy')} - ${availabilityInfo.availableCount} slots available`,
-      })
-    }
   }
 
   const handleBookNow = () => {
@@ -259,7 +279,7 @@ export default function VendorDetailsMobile({ vendor }: VendorDetailsMobileProps
                <Button 
                  variant="outline"
                  size="lg"
-                 onClick={() => setIsFavorite(!isFavorite)}
+                 onClick={handleFavoriteToggle}
                  className="w-full sm:w-auto border-rose-300 text-rose-600 hover:bg-rose-500 hover:text-white hover:border-rose-500 backdrop-blur-sm px-6 sm:px-8 py-3 text-base sm:text-lg font-semibold rounded-xl transition-all duration-200 min-h-[48px]"
                >
                  <Heart className={`w-4 h-4 sm:w-5 sm:h-5 mr-2 ${isFavorite ? 'fill-rose-500 text-rose-500' : ''}`} />
@@ -271,7 +291,7 @@ export default function VendorDetailsMobile({ vendor }: VendorDetailsMobileProps
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-6 sm:py-8 -mt-16 sm:-mt-20 relative z-10">
+      <div className="w-full px-0.5 sm:px-0.5 md:px-4 py-6 sm:py-8 -mt-16 sm:-mt-20 relative z-10">
         {/* Mobile Breadcrumbs */}
         <div className="mb-4 sm:mb-6">
           <nav aria-label="Breadcrumb" className="text-xs sm:text-sm">
@@ -618,11 +638,29 @@ export default function VendorDetailsMobile({ vendor }: VendorDetailsMobileProps
                                  <div>
                                    <span className="text-sm text-neutral-600">Available Times:</span>
                                    <div className="flex flex-wrap gap-2 mt-1">
-                                     {availabilityInfo.availableSlots.map((slot, index) => (
-                                       <Badge key={index} variant="outline" className="text-xs">
-                                         {slot}
-                                       </Badge>
-                                     ))}
+                                                                           {availabilityInfo.availableSlots.map((slot, index) => {
+                                        // Convert 24-hour format to 12-hour format
+                                        const time = slot.replace(/^(\d{1,2}):(\d{2})$/, (match, hour, minute) => {
+                                          const hourNum = parseInt(hour);
+                                          const period = hourNum >= 12 ? 'PM' : 'AM';
+                                          const displayHour = hourNum === 0 ? 12 : hourNum > 12 ? hourNum - 12 : hourNum;
+                                          return `${displayHour}:${minute} ${period}`;
+                                        });
+                                        
+                                        // Add time description
+                                        const hourNum = parseInt(slot.split(':')[0]);
+                                        let timeDescription = '';
+                                        if (hourNum >= 5 && hourNum < 12) timeDescription = ' (Morning)';
+                                        else if (hourNum >= 12 && hourNum < 18) timeDescription = ' (Afternoon)';
+                                        else if (hourNum >= 18 && hourNum < 21) timeDescription = ' (Evening)';
+                                        else timeDescription = ' (Night)';
+                                        
+                                        return (
+                                          <Badge key={index} variant="outline" className="text-xs">
+                                            {time}{timeDescription}
+                                          </Badge>
+                                        );
+                                      })}
                                    </div>
                                  </div>
                                )}
@@ -630,11 +668,29 @@ export default function VendorDetailsMobile({ vendor }: VendorDetailsMobileProps
                                  <div>
                                    <span className="text-sm text-neutral-600">Booked Times:</span>
                                    <div className="flex flex-wrap gap-2 mt-1">
-                                     {availabilityInfo.bookedSlots.map((slot, index) => (
-                                       <Badge key={index} variant="outline" className="text-xs bg-red-50 text-red-600 border-red-200">
-                                         {slot}
-                                       </Badge>
-                                     ))}
+                                                                           {availabilityInfo.bookedSlots.map((slot, index) => {
+                                        // Convert 24-hour format to 12-hour format
+                                        const time = slot.replace(/^(\d{1,2}):(\d{2})$/, (match, hour, minute) => {
+                                          const hourNum = parseInt(hour);
+                                          const period = hourNum >= 12 ? 'PM' : 'AM';
+                                          const displayHour = hourNum === 0 ? 12 : hourNum > 12 ? hourNum - 12 : hourNum;
+                                          return `${displayHour}:${minute} ${period}`;
+                                        });
+                                        
+                                        // Add time description
+                                        const hourNum = parseInt(slot.split(':')[0]);
+                                        let timeDescription = '';
+                                        if (hourNum >= 5 && hourNum < 12) timeDescription = ' (Morning)';
+                                        else if (hourNum >= 12 && hourNum < 18) timeDescription = ' (Afternoon)';
+                                        else if (hourNum >= 18 && hourNum < 21) timeDescription = ' (Evening)';
+                                        else timeDescription = ' (Night)';
+                                        
+                                        return (
+                                          <Badge key={index} variant="outline" className="text-xs bg-red-50 text-red-600 border-red-200">
+                                            {time}{timeDescription}
+                                          </Badge>
+                                        );
+                                      })}
                                    </div>
                                  </div>
                                )}
