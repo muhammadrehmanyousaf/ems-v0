@@ -96,11 +96,41 @@ export default function VendorCard({
         'Wedding Stationery': 'wedding-stationery',
         'Bridal Wear': 'bridal-wear'
       }
-      return typeMap[vendorType] || vendorType.toLowerCase().replace(/\s+/g, '-')
+      
+      // Clean the vendor type before mapping
+      const cleanVendorType = vendorType?.trim() || ''
+      
+      // Check if we have a direct mapping
+      if (typeMap[cleanVendorType]) {
+        return typeMap[cleanVendorType]
+      }
+      
+      // For unmapped types like "Event Planning", redirect to vendors page
+      return 'vendors'
     }
     
     const vendorTypePath = getVendorTypePath(type)
-    router.push(`/${vendorTypePath}/${id}`)
+    // Ensure clean URL construction
+    const cleanId = String(id).trim()
+    const cleanPath = vendorTypePath.trim()
+    
+    // Debug logging to identify the issue
+    console.log('VendorCard navigation:', {
+      originalType: type,
+      vendorTypePath,
+      cleanPath,
+      originalId: id,
+      cleanId,
+      finalUrl: cleanPath === 'vendors' ? '/vendors' : `/${cleanPath}/${cleanId}`
+    })
+    
+    if (cleanPath === 'vendors') {
+      // For unmapped vendor types, go to main vendors page
+      router.push('/vendors')
+    } else if (cleanPath && cleanId) {
+      // For mapped vendor types, go to specific vendor page
+      router.push(`/${cleanPath}/${cleanId}`)
+    }
   }
 
   const handleBookNow = (e: React.MouseEvent) => {
