@@ -217,7 +217,7 @@ export default function VendorCard({
           </div>
 
           {/* Content Section - Flex-1 to take remaining space */}
-          <CardContent className="p-4 sm:p-6 space-y-3 sm:space-y-4 flex-1 flex flex-col">
+          <CardContent className="p-3 sm:p-4 lg:p-6 space-y-2 sm:space-y-3 lg:space-y-4 flex-1 flex flex-col">
             {/* Title and Location */}
             <div className="space-y-2">
               <h3 className="font-bold text-lg sm:text-xl leading-tight group-hover:text-rose-600 transition-colors duration-300 line-clamp-2">
@@ -265,9 +265,9 @@ export default function VendorCard({
             </div>
 
             {/* Additional Info - Flex-1 to push button to bottom */}
-            {showDetails && (
+            {/* {showDetails && (
               <div className="space-y-3 pt-2 border-t border-gray-100 flex-1">
-                {/* Amenities */}
+                
                 {amenities.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {amenities.slice(0, 3).map((amenity, index) => (
@@ -290,22 +290,23 @@ export default function VendorCard({
                   </div>
                 )}
               </div>
-            )}
+            )} */}
           </CardContent>
 
           {/* Footer with Book Button */}
           {showBookButton && (
-            <CardFooter className="p-4 sm:p-6 pt-0">
-              <Button 
-                onClick={handleBookNow}
-                size="lg"
-                className="w-full bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white px-6 sm:px-8 py-3 text-base sm:text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-              >
-                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                Book Now
-              </Button>
-            </CardFooter>
-          )}
+  <CardFooter className="p-3 sm:p-4 lg:p-6 pt-0">
+    <Button 
+      onClick={handleBookNow}
+      size="lg"
+      className="w-[100%] flex items-center justify-center gap-2 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3 text-sm sm:text-base lg:text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 min-h-[44px] sm:min-h-[48px] lg:min-h-[52px]"
+    >
+      <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
+      <span>Book Now</span>
+    </Button>
+  </CardFooter>
+)}
+
         </Card>
       </motion.div>
 

@@ -24,6 +24,7 @@ export const VENDOR_TYPE_PATHS = {
 } as const
 
 export const VENDOR_TYPE_DISPLAY_NAMES = {
+  'all': 'All Wedding Vendors',
   [VENDOR_TYPES.PHOTOGRAPHER]: 'Photographers',
   [VENDOR_TYPES.DECORATOR]: 'Decorators',
   [VENDOR_TYPES.HENNA_ARTIST]: 'Henna Artists',
@@ -36,6 +37,7 @@ export const VENDOR_TYPE_DISPLAY_NAMES = {
 } as const
 
 export const VENDOR_TYPE_DESCRIPTIONS = {
+  'all': 'Discover the best wedding vendors for your special day. From photographers to venues, find everything you need.',
   [VENDOR_TYPES.PHOTOGRAPHER]: 'Capture your special moments with professional wedding photographers',
   [VENDOR_TYPES.DECORATOR]: 'Transform your venue with stunning wedding decorations',
   [VENDOR_TYPES.HENNA_ARTIST]: 'Beautiful henna designs for your wedding celebrations',
@@ -49,6 +51,7 @@ export const VENDOR_TYPE_DESCRIPTIONS = {
 
 // Helper functions
 export const getVendorTypeFromPath = (path: string): string => {
+  if (path === 'all') return 'all'
   return VENDOR_TYPE_PATHS[path as keyof typeof VENDOR_TYPE_PATHS] || ''
 }
 
