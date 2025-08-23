@@ -12,6 +12,7 @@ import {
   Settings2,
   Smile,
   SquareTerminal,
+  SquareUser,
   Users,
 } from "lucide-react"
 
@@ -136,7 +137,7 @@ export const data = {
     {
       name: "Customers",
       url: "/dashboard/customers",
-      icon: Users,
+      icon: SquareUser,
     },
     {
       name: "Calendar",
@@ -160,6 +161,11 @@ export const data = {
     },
   ],
   vendorControlls: [
+    {
+      name: "Users",
+      url: "/dashboard/users",
+      icon: Users,
+    },
     {
       name: "Packages",
       url: "/dashboard/packages",
