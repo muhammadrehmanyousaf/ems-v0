@@ -71,3 +71,28 @@ export interface Payment {
   dueDate: string;
   notes?: string;
 }
+
+export type ReviewStatus = "Published" | "Pending" | "Rejected";
+
+export interface Review {
+  id: string;              // Unique review ID
+  reviewerName: string;    // Full name of the reviewer
+  email: string;           // Reviewer email
+  phone: string;           // Reviewer phone number
+  bookingId: string;       // Associated booking ID
+  rating: number;          // Rating (1–5)
+  reviewText: string;      // Written review
+  status: ReviewStatus;    // Review status
+  createdAt: string;       // Date/Time string (ISO or formatted)
+}
+
+export type UserRole = "Admin" | "Vendor" | "Manager";
+
+export type User = {
+  id: number;
+  fullName: string;
+  phoneNumber: string;
+  role: UserRole;
+  status: boolean;
+  createdAt: string;
+}
