@@ -23,7 +23,7 @@ export default function WeekCalendar({ current, startOnMonday = false, events = 
     }, [events, weekDays]);
 
     return (
-        <div className="h-[calc(100dvh-198px)] w-full border rounded-lg overflow-hidden">
+        <div className="h-[calc(100dvh-210px)] w-full border rounded-lg overflow-hidden">
             <div className="relative h-full">
                 <div className={cn('sticky top-0 z-20 bg-background border-b', 'grid grid-cols-[60px_repeat(7,minmax(0,1fr))] md:grid-cols-[70px_repeat(7,minmax(0,1fr))]')}>
                     <div className="h-14 pl-2 md:pl-3 pr-2 flex items-end pb-2 text-[11px] text-muted-foreground">{tzLabel}</div>

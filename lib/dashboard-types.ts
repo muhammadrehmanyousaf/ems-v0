@@ -96,3 +96,11 @@ export type User = {
   status: boolean;
   createdAt: string;
 }
+
+export type Role = {
+  id: string;
+  title: string;
+  description: string;
+  status: 'active' | 'inActive';
+  createdAt: string;
+}

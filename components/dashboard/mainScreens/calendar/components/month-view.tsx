@@ -43,14 +43,14 @@ const MonthView = ({ cells, events, onOpenCellDialog }: MonthViewProps) => {
   }, []);
 
   return (
-    <div className="h-[calc(100dvh-198px)] w-full border rounded-lg overflow-hidden">
+    <div className="h-[calc(100dvh-210px)] w-full border rounded-lg overflow-hidden">
       <div className="grid grid-cols-7">
         {days.map((lbl) => (
           <div key={lbl} className="h-10 border grid place-items-center text-sm text-muted-foreground">{lbl}</div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 auto-rows-[minmax(5rem,_1fr)] h-[calc(100dvh-239px)] overflow-y-auto lg:overflow-hidden hide-scrollbar">
+      <div className="grid grid-cols-7 auto-rows-[minmax(5rem,_1fr)] h-[calc(100dvh-251px)] overflow-y-auto lg:overflow-hidden hide-scrollbar">
         {cells.map((c, i) => {
           const list = byDate.get(ymd(c.date)) ?? [];
           const visible = list.slice(0, sliceValue);
