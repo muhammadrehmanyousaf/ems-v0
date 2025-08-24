@@ -51,7 +51,7 @@ export const columns: ColumnDef<User>[] = [
         header: "Status",
         cell: ({ row }) => (
             <span>
-                <Switch />
+                <Switch size="md" />
             </span>
         )
     },
