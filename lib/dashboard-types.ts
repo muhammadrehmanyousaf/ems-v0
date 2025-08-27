@@ -104,3 +104,24 @@ export type Role = {
   status: 'active' | 'inActive';
   createdAt: string;
 }
+
+export type Vendor = {
+  id: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  businessType: string;
+  BusinessName: string;
+  status: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type Business = {
+  id: string;
+  name: string;
+  type: string;
+  total_packages: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
