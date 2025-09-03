@@ -25,7 +25,8 @@ import {
   Award,
   ChevronDown,
   Crown,
-  Shield
+  Shield,
+  DollarSign
 } from "lucide-react";
 
 type AvatarComponent = {
@@ -242,6 +243,18 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
                                     <div>
                                         <div className="font-semibold text-neutral-900">Reviews</div>
                                         <div className="text-xs text-neutral-500">Your feedback</div>
+                                    </div>
+                                </Link>
+                            </DropdownMenuItem>
+                            
+                            <DropdownMenuItem asChild>
+                                <Link href="/user/payments" className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all duration-200">
+                                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                                        <DollarSign className="w-4 h-4 text-green-600" />
+                                    </div>
+                                    <div>
+                                        <div className="font-semibold text-neutral-900">Payments</div>
+                                        <div className="text-xs text-neutral-500">Manage payments</div>
                                     </div>
                                 </Link>
                             </DropdownMenuItem>

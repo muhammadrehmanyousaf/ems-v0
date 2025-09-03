@@ -24,6 +24,8 @@ import SuccessStep from "./steps/success-step"
 import VendorSuccessStep from "./steps/vendor-success-step"
 import { Icons } from "../ui/icons"
 import { VendorAPI } from "@/lib/api/vendors"
+import PaymentSelectionModal from "./payment-selection-modal"
+import StripePayment from "./stripe-payment"
 
 // Steps are dynamic based on booking type (venue vs vendor)
 
@@ -65,6 +67,10 @@ export default function BookingForm() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [showStripePayment, setShowStripePayment] = useState(false)
+  const [selectedPaymentType, setSelectedPaymentType] = useState<'down_payment' | 'full_payment' | null>(null)
+  const [bookingId, setBookingId] = useState<number | null>(null)
   const { user, loading: userLoading, error: userError } = getUser();
 
   const fetchVenue = async (id: string) => {
@@ -299,6 +305,77 @@ export default function BookingForm() {
         }
         // Mark active event as submitted if multi
         // (Handled above)
+        
+        // Store booking ID for payment processing
+        console.log('🔍 Full response structure:', response.data)
+        
+        // Try multiple possible locations for booking ID
+        let realBookingId = null
+        
+        if (response.data?.data?.id) {
+          realBookingId = response.data.data.id
+          console.log('🔍 BookingForm: Found ID in response.data.data.id:', realBookingId)
+        } else if (response.data?.id) {
+          realBookingId = response.data.id
+          console.log('🔍 BookingForm: Found ID in response.data.id:', realBookingId)
+        } else if (response.data?.bookingId) {
+          realBookingId = response.data.bookingId
+          console.log('🔍 BookingForm: Found ID in response.data.bookingId:', realBookingId)
+        } else if (response.data?.data?.bookingId) {
+          realBookingId = response.data.data.bookingId
+          console.log('🔍 BookingForm: Found ID in response.data.data.bookingId:', realBookingId)
+        }
+        
+        if (realBookingId) {
+          console.log('🔍 BookingForm: Real booking ID received:', realBookingId)
+          setBookingId(realBookingId)
+          
+          // Show payment modal after successful booking
+          setTimeout(() => {
+            setShowPaymentModal(true)
+          }, 1000)
+        } else {
+          console.warn('❌ No booking ID found in create response. Attempting fallback via simple-user-bookings...')
+          try {
+            const listResp = await axiosInstance.get(`${BACKEND_URL}api/v1/bookings/simple-user-bookings`)
+            const bookingsList = listResp?.data?.data || []
+            console.log('🔍 BookingForm: simple-user-bookings count:', bookingsList.length)
+            // Pick latest by createdAt or highest id
+            let fallbackId: number | null = null
+            if (Array.isArray(bookingsList) && bookingsList.length > 0) {
+              const sorted = [...bookingsList].sort((a: any, b: any) => {
+                const aTime = new Date(a?.createdAt || 0).getTime()
+                const bTime = new Date(b?.createdAt || 0).getTime()
+                if (aTime && bTime && aTime !== bTime) return bTime - aTime
+                return Number(b?.id || 0) - Number(a?.id || 0)
+              })
+              fallbackId = Number(sorted[0]?.id) || null
+            }
+            if (fallbackId) {
+              console.log('🔍 BookingForm: Fallback booking ID from list:', fallbackId)
+              setBookingId(fallbackId)
+              setTimeout(() => {
+                setShowPaymentModal(true)
+              }, 800)
+            } else {
+              console.error('❌ Fallback also failed to find booking id. Full list:', bookingsList)
+              toast({
+                title: 'Booking Error',
+                description: 'No booking ID received. Please contact support.',
+                variant: 'destructive'
+              })
+              return
+            }
+          } catch (fallbackErr) {
+            console.error('❌ Booking ID fallback error:', fallbackErr)
+            toast({
+              title: 'Booking Error',
+              description: 'No booking ID received. Please contact support.',
+              variant: 'destructive'
+            })
+            return
+          }
+        }
       } else {
         throw new Error('Unexpected response');
       }
@@ -313,6 +390,34 @@ export default function BookingForm() {
       setIsSubmitting(false); // Turn off loading indicator
     }
   };
+
+  const handlePaymentSelect = (paymentType: 'down_payment' | 'full_payment') => {
+    setSelectedPaymentType(paymentType)
+    setShowPaymentModal(false)
+    setShowStripePayment(true)
+  }
+
+  const handlePaymentSuccess = () => {
+    setShowStripePayment(false)
+    setSelectedPaymentType(null)
+    setBookingId(null)
+    // Redirect to payments page or show success message
+    toast({
+      title: "Payment Successful!",
+      description: "Your booking has been confirmed and payment processed.",
+    })
+  }
+
+  const handlePaymentFailure = () => {
+    setShowStripePayment(false)
+    setSelectedPaymentType(null)
+    // Show error message or retry options
+    toast({
+      title: "Payment Failed",
+      description: "Your payment could not be processed. Please try again.",
+      variant: "destructive"
+    })
+  }
 
   // Dynamic steps based on booking type for headers
   const isVenueBooking = venue && 'menus' in venue && !!venue?.menus && Array.isArray(venue?.menus) && (venue?.menus?.length ?? 0) > 0
@@ -769,6 +874,36 @@ export default function BookingForm() {
             You're booking multiple events. Complete the form for each event tab and submit them individually.
           </p>
         </div>
+      )}
+
+                  {/* Payment Selection Modal */}
+            {showPaymentModal && bookingId && (
+              <PaymentSelectionModal
+                isOpen={showPaymentModal}
+                onClose={() => setShowPaymentModal(false)}
+                formData={events.length > 0 ? events[activeEventIndex]?.formData || formData : formData}
+                venue={venue}
+                vendorDetails={events.length > 0 ? vendorsDetails[activeEventIndex] : []}
+                onPaymentSelect={handlePaymentSelect}
+                loading={false}
+                bookingId={bookingId}
+              />
+            )}
+
+      {/* Stripe Payment Modal */}
+      {showStripePayment && selectedPaymentType && bookingId && (
+        <StripePayment
+          isOpen={showStripePayment}
+          onClose={() => setShowStripePayment(false)}
+          bookingId={bookingId}
+          customerEmail={user?.email || ''}
+          paymentType={selectedPaymentType}
+          amount={events.length > 0 ? events[activeEventIndex]?.formData.totalPrice || formData.totalPrice : formData.totalPrice}
+          currency="usd"
+          businessName={venue?.name || 'Business'}
+          onPaymentSuccess={handlePaymentSuccess}
+          onPaymentFailure={handlePaymentFailure}
+        />
       )}
     </div>
   )

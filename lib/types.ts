@@ -247,3 +247,96 @@ export interface BookingEventType {
   createdAt: string;
   updatedAt: string;
 }
+
+// Payment Types
+export interface PaymentIntent {
+  clientSecret: string;
+  paymentIntentId: string;
+  bookingDetails: {
+    id: number;
+    customerName: string;
+    bookingDate: string;
+    bookingTime: string;
+    status: string;
+    paymentStatus: string;
+    businesses: Array<{
+      id: number;
+      name: string;
+    }>;
+  };
+  paymentDetails: {
+    type: 'down_payment' | 'remaining_payment' | 'full_payment';
+    amount: number;
+    currency: string;
+    expectedAmount: number;
+  };
+}
+
+export interface PaymentResponse {
+  status: boolean;
+  message: string;
+  data: PaymentIntent;
+}
+
+export interface PaymentProcessingResponse {
+  status: boolean;
+  message: string;
+  data: {
+    bookingId: number;
+    totalPayouts: number;
+    payouts: Array<{
+      payoutId: number;
+      vendorId: number;
+      vendorName: string;
+      businessId: number;
+      businessName: string;
+      originalAmount: number;
+      platformFee: number;
+      payoutAmount: number;
+      status: string;
+      bankDetails: {
+        bankName: string;
+        accountNumber: string;
+        accountHolderName: string;
+      } | null;
+    }>;
+  };
+}
+
+export interface PaymentHistory {
+  id: number;
+  bookingId: number;
+  amount: number;
+  currency: string;
+  paymentType: 'down_payment' | 'remaining_payment' | 'full_payment';
+  status: 'pending' | 'completed' | 'failed';
+  createdAt: string;
+  updatedAt: string;
+  totalAmount?: number;
+  bookingDetails?: {
+    customerName: string;
+    bookingDate: string;
+    businesses: Array<{
+      id: number;
+      name: string;
+    }>;
+  };
+}
+
+export interface PendingPayment {
+  id: number;
+  bookingId: number;
+  customerName: string;
+  bookingDate: string;
+  businesses: Array<{
+    id: number;
+    name: string;
+  }>;
+  paymentType: 'down_payment' | 'remaining_payment' | 'full_payment';
+  amount: number;
+  currency: string;
+  status: string;
+  paymentStatus: string;
+  createdAt: string;
+  totalAmount?: number;
+}

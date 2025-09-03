@@ -1,4 +1,4 @@
-# Unified Vendor Card System
+# EMS Platform - Vendor Cards & Payment System
 
 ## Overview
 

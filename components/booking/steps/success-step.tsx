@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle, Printer, Home, Calendar, Clock, Users, MapPin, Package, Building, Camera, Palette, Star } from "lucide-react"
+import { CheckCircle, Printer, Home, Calendar, Clock, Users, MapPin, Package, Building, Camera, Palette, Star, DollarSign } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { BookingFormData, EventVenue, Vendor } from "@/lib/types"
 import confetti from "canvas-confetti"
@@ -298,6 +298,13 @@ export default function SuccessStep({
         >
           <Printer className="mr-2 h-4 w-4" />
           Print Receipt
+        </Button>
+        <Button
+          onClick={() => (window.location.href = "/user/payments")}
+          className="flex items-center rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-3 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+        >
+          <DollarSign className="mr-2 h-4 w-4" />
+          Manage Payments
         </Button>
         <Button
           onClick={() => (window.location.href = "/")}
