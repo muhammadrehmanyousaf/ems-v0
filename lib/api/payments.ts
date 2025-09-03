@@ -77,6 +77,18 @@ export class PaymentAPI {
     }
   }
 
+  // Process full payment
+  static async processFullPayment(bookingId: number): Promise<PaymentProcessingResponse> {
+    try {
+      const response = await axiosInstance.post(`${BACKEND_URL}api/v1/payments/process-full-payment`, {
+        bookingId
+      });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to process full payment');
+    }
+  }
+
   // Get payment history
   static async getPaymentHistory(): Promise<PaymentHistory[]> {
     try {
@@ -227,8 +239,17 @@ export class PaymentAPI {
           name: 'Business'
         }];
         
-        const determinedPaymentType = this.determinePaymentType(booking.status, booking.paymentStatus);
-        const calculatedAmount = this.calculatePaymentAmount(booking.status, booking.paymentStatus, booking.totalAmount, booking.downPayment);
+              // Use the payment type from the backend if available, otherwise determine it
+              // Use the payment type and amount from the backend if available
+        const determinedPaymentType = booking.paymentType || this.determinePaymentType(booking.status, booking.paymentStatus);
+        
+        // For full payments, use the total amount; for others, calculate based on status
+        let calculatedAmount: number;
+        if (determinedPaymentType === 'full_payment') {
+          calculatedAmount = booking.totalAmount;
+        } else {
+          calculatedAmount = this.calculatePaymentAmount(booking.status, booking.paymentStatus, booking.totalAmount, booking.downPayment);
+        }
         
         console.log(`🔍 PaymentAPI: Payment type determination for booking ${index + 1}:`, {
           status: booking.status,
@@ -301,6 +322,9 @@ export class PaymentAPI {
     }
     
     if (payment === 'pending' && status === 'pending') {
+      // Check if this should be a full payment or down payment
+      // For now, we'll treat pending/pending as down_payment by default
+      // The backend can determine if it should be full_payment based on business logic
       return 'down_payment';
     } else if (payment === 'partial' && status === 'confirmed') {
       return 'remaining_payment';
@@ -317,7 +341,8 @@ export class PaymentAPI {
     const payment = paymentStatus?.toLowerCase();
     
     if (payment === 'pending' && status === 'pending') {
-      // Down payment: use the actual downPayment amount from the booking
+      // For pending payments, we need to check if it's a full payment or down payment
+      // The backend should determine this, but for now we'll use down payment logic
       return downPayment || Math.round(totalAmount * 0.2);
     } else if (payment === 'partial' && status === 'confirmed') {
       // Remaining amount = total - downPayment

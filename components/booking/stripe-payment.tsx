@@ -143,6 +143,9 @@ export default function StripePayment({
       } else if (paymentType === 'remaining_payment') {
         console.log('🔍 StripePayment: Calling processRemainingPayment for booking:', bookingId)
         await PaymentAPI.processRemainingPayment(bookingId)
+      } else if (paymentType === 'full_payment') {
+        console.log('🔍 StripePayment: Calling processFullPayment for booking:', bookingId)
+        await PaymentAPI.processFullPayment(bookingId)
       } else {
         console.log('🔍 StripePayment: Unknown payment type:', paymentType)
       }
@@ -150,7 +153,7 @@ export default function StripePayment({
       setPaymentStatus('success')
       toast({
         title: "Payment Successful!",
-        description: `${paymentType === 'down_payment' ? 'Down payment' : 'Payment'} processed successfully`,
+        description: `${paymentType === 'down_payment' ? 'Down payment' : paymentType === 'full_payment' ? 'Full payment' : 'Payment'} processed successfully`,
       })
       
       setTimeout(() => {
@@ -224,7 +227,7 @@ export default function StripePayment({
                 {getPaymentTypeLabel()} Completed
               </p>
               <p className="text-neutral-600">
-                Your {paymentType === 'down_payment' ? 'down payment has been processed' : 'payment has been completed'} successfully.
+                Your {paymentType === 'down_payment' ? 'down payment has been processed' : paymentType === 'full_payment' ? 'full payment has been completed' : 'payment has been completed'} successfully.
               </p>
             </div>
             
@@ -307,7 +310,7 @@ export default function StripePayment({
       <DialogContent className="max-w-lg w-[95vw] max-h-[90vh] overflow-y-auto overflow-x-hidden p-4 sm:p-6">
         <DialogHeader className="mb-4">
           <DialogTitle className="text-lg sm:text-xl font-semibold">
-            {paymentType === 'down_payment' ? 'Pay Down Payment' : 'Pay Remaining Funds'}
+            {paymentType === 'down_payment' ? 'Pay Down Payment' : paymentType === 'full_payment' ? 'Pay Full Amount' : 'Pay Remaining Funds'}
           </DialogTitle>
           <DialogDescription className="text-xs sm:text-sm text-gray-600">
             Complete your payment to secure your booking

@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Loader2, DollarSign, Clock, CheckCircle, AlertCircle, Calendar, Building, Users, CreditCard, RefreshCw } from "lucide-react"
+import { Loader2, DollarSign, Clock, CheckCircle, AlertCircle, Calendar, Building, Users, CreditCard, RefreshCw, Zap } from "lucide-react"
 import { PaymentAPI } from "@/lib/api/payments"
 import type { PendingPayment, PaymentHistory } from "@/lib/types"
 import StripePayment from "@/components/booking/stripe-payment"
@@ -78,6 +78,17 @@ export default function PaymentsPage() {
         toast({
           title: "Payment Error",
           description: `Remaining payment can only be made for confirmed bookings with partial payment status. Current: ${payment.status}/${payment.paymentStatus}`,
+          variant: "destructive"
+        })
+        return
+      }
+    }
+    
+    if (payment.paymentType === 'full_payment') {
+      if (payment.status?.toLowerCase() !== 'pending' || payment.paymentStatus?.toLowerCase() !== 'pending') {
+        toast({
+          title: "Payment Error",
+          description: `Full payment can only be made for pending bookings with pending payment status. Current: ${payment.status}/${payment.paymentStatus}`,
           variant: "destructive"
         })
         return
@@ -217,16 +228,22 @@ export default function PaymentsPage() {
               <DollarSign className="h-5 w-5 text-blue-600" />
               <span className="font-semibold text-blue-800">Payment Status Summary</span>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
               <div className="text-center p-2 bg-white rounded-lg border">
                 <div className="text-lg font-bold text-blue-700">{pendingPayments.length + paymentHistory.length}</div>
                 <div className="text-blue-600">Total Bookings</div>
               </div>
               <div className="text-center p-2 bg-white rounded-lg border">
                 <div className="text-lg font-bold text-yellow-700">
-                  {pendingPayments.filter(p => p.status === 'pending' && p.paymentStatus === 'pending').length}
+                  {pendingPayments.filter(p => p.status === 'pending' && p.paymentStatus === 'pending' && p.paymentType === 'down_payment').length}
                 </div>
                 <div className="text-yellow-600">Down Payment Due</div>
+              </div>
+              <div className="text-center p-2 bg-white rounded-lg border">
+                <div className="text-lg font-bold text-purple-700">
+                  {pendingPayments.filter(p => p.status === 'pending' && p.paymentStatus === 'pending' && p.paymentType === 'full_payment').length}
+                </div>
+                <div className="text-purple-600">Full Payment Due</div>
               </div>
               <div className="text-center p-2 bg-white rounded-lg border">
                 <div className="text-lg font-bold text-blue-700">
@@ -236,19 +253,56 @@ export default function PaymentsPage() {
               </div>
               <div className="text-center p-2 bg-white rounded-lg border">
                 <div className="text-lg font-bold text-green-700">
-                  {paymentHistory.filter(p => p.status === 'completed' && p.paymentType === 'full_payment').length}
+                  {paymentHistory.filter(p => p.status === 'completed').length}
                 </div>
                 <div className="text-green-600">Completed</div>
               </div>
             </div>
+            {/* Payment Amounts Summary */}
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+              <div className="text-center p-3 bg-white rounded-lg border border-yellow-200">
+                <div className="text-lg font-bold text-yellow-700">
+                  ${pendingPayments
+                    .filter(p => p.paymentType === 'down_payment')
+                    .reduce((sum, p) => sum + p.amount, 0)
+                    .toFixed(2)}
+                </div>
+                <div className="text-yellow-600">Down Payments Due</div>
+              </div>
+              <div className="text-center p-3 bg-white rounded-lg border border-purple-200">
+                <div className="text-lg font-bold text-purple-700">
+                  ${pendingPayments
+                    .filter(p => p.paymentType === 'full_payment')
+                    .reduce((sum, p) => sum + p.amount, 0)
+                    .toFixed(2)}
+                </div>
+                <div className="text-purple-600">Full Payments Due</div>
+              </div>
+              <div className="text-center p-3 bg-white rounded-lg border border-blue-200">
+                <div className="text-lg font-bold text-blue-700">
+                  ${pendingPayments
+                    .filter(p => p.paymentType === 'remaining_payment')
+                    .reduce((sum, p) => sum + p.amount, 0)
+                    .toFixed(2)}
+                </div>
+                <div className="text-blue-600">Remaining Due</div>
+              </div>
+              <div className="text-center p-3 bg-white rounded-lg border border-red-200">
+                <div className="text-lg font-bold text-red-700">
+                  ${pendingPayments.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
+                </div>
+                <div className="text-red-600">Total Due</div>
+              </div>
+            </div>
+            
             <div className="mt-3 p-2 bg-white rounded-lg border text-xs text-gray-600">
-              <strong>Status Logic:</strong> Down Payment (pending/pending) | Remaining (confirmed/partial) | Completed (completed/paid)
+              <strong>Status Logic:</strong> Down Payment (pending/pending) | Full Payment (pending/pending) | Remaining (confirmed/partial) | Completed (completed/paid)
             </div>
           </CardContent>
         </Card>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card className="border-2 border-green-100 bg-gradient-to-r from-green-50 to-emerald-50">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
@@ -258,6 +312,22 @@ export default function PaymentsPage() {
                 <div>
                   <p className="text-sm text-green-600 font-medium">Pending Payments</p>
                   <p className="text-2xl font-bold text-green-700">{pendingPayments.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-2 border-purple-100 bg-gradient-to-r from-purple-50 to-pink-50">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                  <Zap className="h-5 w-5 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-purple-600 font-medium">Full Payments Due</p>
+                  <p className="text-2xl font-bold text-purple-700">
+                    {pendingPayments.filter(p => p.paymentType === 'full_payment').length}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -277,15 +347,15 @@ export default function PaymentsPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-2 border-purple-100 bg-gradient-to-r from-purple-50 to-pink-50">
+          <Card className="border-2 border-amber-100 bg-gradient-to-r from-amber-50 to-yellow-50">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                  <CreditCard className="h-5 w-5 text-purple-600" />
+                <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                  <CreditCard className="h-5 w-5 text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-purple-600 font-medium">Total Transactions</p>
-                  <p className="text-2xl font-bold text-purple-700">{paymentHistory.length}</p>
+                  <p className="text-sm text-amber-600 font-medium">Total Transactions</p>
+                  <p className="text-2xl font-bold text-amber-700">{paymentHistory.length}</p>
                 </div>
               </div>
             </CardContent>
@@ -331,10 +401,17 @@ export default function PaymentsPage() {
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {pendingPayments.map((payment) => (
-                  <Card key={payment.id} className="border-2 border-amber-100 bg-gradient-to-r from-amber-50 to-yellow-50 hover:shadow-lg transition-all duration-200">
+                  <Card key={payment.id} className={`border-2 hover:shadow-lg transition-all duration-200 ${
+                    payment.paymentType === 'full_payment' 
+                      ? 'border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50'
+                      : payment.paymentType === 'remaining_payment'
+                      ? 'border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50'
+                      : 'border-amber-100 bg-gradient-to-r from-amber-50 to-yellow-50'
+                  }`}>
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
                         <Badge className={getPaymentTypeColor(payment.paymentType)}>
+                          {payment.paymentType === 'full_payment' && <Zap className="h-3 w-3 mr-1" />}
                           {getPaymentTypeLabel(payment.paymentType)}
                         </Badge>
                         <Badge className={getStatusColor(payment.status)}>
@@ -366,7 +443,13 @@ export default function PaymentsPage() {
                       </div>
 
                       {/* Payment Details */}
-                      <div className="bg-white rounded-lg p-4 border border-amber-200">
+                      <div className={`bg-white rounded-lg p-4 border ${
+                        payment.paymentType === 'full_payment' 
+                          ? 'border-purple-200'
+                          : payment.paymentType === 'remaining_payment'
+                          ? 'border-blue-200'
+                          : 'border-amber-200'
+                      }`}>
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-neutral-600">Payment Amount:</span>
@@ -382,23 +465,62 @@ export default function PaymentsPage() {
 
                       {/* Action Button - Show based on payment status */}
                       {(payment.paymentStatus?.toLowerCase() === 'pending' && payment.status?.toLowerCase() === 'pending') && (
-                        <Button
-                          onClick={() => handlePaymentSelect(payment)}
-                          className="w-full bg-green-600 hover:bg-green-700 text-white"
-                        >
-                          <CreditCard className="mr-2 h-4 w-4" />
-                          Pay Down Payment (${payment.amount})
-                        </Button>
+                        <div className="space-y-2">
+                          {payment.paymentType === 'full_payment' && (
+                            <div className="text-center p-2 bg-purple-50 border border-purple-200 rounded-lg">
+                              <div className="flex items-center justify-center gap-2 text-purple-700">
+                                <Zap className="h-4 w-4" />
+                                <span className="text-sm font-medium">Full Payment Required</span>
+                              </div>
+                              <div className="text-xs text-purple-600 mt-1">
+                                This booking requires the full amount upfront
+                              </div>
+                            </div>
+                          )}
+                          {payment.paymentType === 'down_payment' && (
+                            <div className="text-center p-2 bg-green-50 border border-green-200 rounded-lg">
+                              <div className="flex items-center justify-center gap-2 text-green-700">
+                                <DollarSign className="h-4 w-4" />
+                                <span className="text-sm font-medium">Down Payment Required</span>
+                              </div>
+                              <div className="text-xs text-green-600 mt-1">
+                                Secure your booking with an initial payment
+                              </div>
+                            </div>
+                          )}
+                          <Button
+                            onClick={() => handlePaymentSelect(payment)}
+                            className={`w-full text-white ${
+                              payment.paymentType === 'full_payment'
+                                ? 'bg-purple-600 hover:bg-purple-700'
+                                : 'bg-green-600 hover:bg-green-700'
+                            }`}
+                          >
+                            <CreditCard className="mr-2 h-4 w-4" />
+                            {payment.paymentType === 'full_payment' ? 'Pay Full Amount' : 'Pay Down Payment'} (${payment.amount})
+                          </Button>
+                        </div>
                       )}
                       
                       {(payment.paymentStatus?.toLowerCase() === 'partial' && payment.status?.toLowerCase() === 'confirmed') && (
-                        <Button
-                          onClick={() => handlePaymentSelect(payment)}
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                          <CreditCard className="mr-2 h-4 w-4" />
-                          Pay Remaining Funds (${payment.amount})
-                        </Button>
+                        <div className="space-y-2">
+                          <div className="text-center p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="flex items-center justify-center gap-2 text-blue-700">
+                              <Clock className="h-4 w-4" />
+                              <span className="text-sm font-medium">Remaining Payment Due</span>
+                            </div>
+                            <div className="text-xs text-blue-600 mt-1">
+                              Complete your booking with the remaining balance
+                            </div>
+                          </div>
+                          <Button
+                            onClick={() => handlePaymentSelect(payment)}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                          >
+                            <CreditCard className="mr-2 h-4 w-4" />
+                            Pay Remaining Funds (${payment.amount})
+                          </Button>
+                        </div>
                       )}
                       
                       {(payment.paymentStatus?.toLowerCase() === 'paid' && payment.status?.toLowerCase() === 'completed') && (
@@ -409,16 +531,36 @@ export default function PaymentsPage() {
                       )}
                       
                       {/* Show payment status and amount info */}
-                      <div className="text-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="text-sm text-blue-700">
+                      <div className={`text-center p-3 rounded-lg border ${
+                        payment.paymentType === 'full_payment' 
+                          ? 'bg-purple-50 border-purple-200'
+                          : payment.paymentType === 'remaining_payment'
+                          ? 'bg-blue-50 border-blue-200'
+                          : 'bg-blue-50 border-blue-200'
+                      }`}>
+                        <div className={`text-sm ${
+                          payment.paymentType === 'full_payment' 
+                            ? 'text-purple-700'
+                            : payment.paymentType === 'remaining_payment'
+                            ? 'text-blue-700'
+                            : 'text-blue-700'
+                        }`}>
                           <span className="font-medium">Total Booking:</span> ${payment.totalAmount}
                         </div>
-                        <div className="text-xs text-blue-600">
+                        <div className={`text-xs ${
+                          payment.paymentType === 'full_payment' 
+                            ? 'text-purple-600'
+                            : payment.paymentType === 'remaining_payment'
+                            ? 'text-blue-600'
+                            : 'text-blue-600'
+                        }`}>
                           {payment.paymentType === 'down_payment' 
                             ? `Down Payment: $${payment.amount}` 
                             : payment.paymentType === 'remaining_payment'
                             ? `Remaining: $${payment.amount}`
-                            : `Full Payment: $${payment.amount}`
+                            : payment.paymentType === 'full_payment'
+                            ? `Full Payment: $${payment.amount}`
+                            : `Payment: $${payment.amount}`
                           }
                         </div>
                         <div className="text-xs text-gray-600 mt-1">
