@@ -7,7 +7,7 @@ import { Vendor } from '@/lib/dashboard-types';
 import { vendors, columns } from './columns';
 
 const VendorsTable = () => {
-    const { table } = useDataTable<Vendor>({ data: vendors, columns });
+    const { table, paginationState } = useDataTable<Vendor>({ data: vendors, columns, totalItems: vendors.length });
     return (
         <div className='space-y-4'>
             <VendorTableActions
@@ -15,6 +15,8 @@ const VendorsTable = () => {
             />
             <GlobalTable
                 table={table}
+                paginationState={paginationState}
+                totalItems={vendors.length}
             />
         </div>
     )

@@ -7,7 +7,7 @@ import { useDataTable } from '@/components/dashboard/globalComponents/globalTabl
 import { User } from '@/lib/dashboard-types';
 
 const UserTable = () => {
-  const { table } = useDataTable<User>({ data: users, columns });
+  const { table, paginationState } = useDataTable<User>({ data: users, columns, totalItems: users.length });
   return (
     <div className='space-y-4'>
       <UserTableActions
@@ -15,6 +15,8 @@ const UserTable = () => {
       />
       <GlobalTable
         table={table}
+        paginationState={paginationState}
+        totalItems={users.length}
       />
     </div>
   )

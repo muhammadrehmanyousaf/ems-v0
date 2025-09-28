@@ -7,7 +7,7 @@ import BusinessTableActions from './business-table-actions';
 import { businesses, businessColumns } from './columns';
 
 const BusinessTable = () => {
-    const { table } = useDataTable<Business>({ data: businesses, columns: businessColumns });
+    const { table, paginationState } = useDataTable<Business>({ data: businesses, columns: businessColumns, totalItems: businesses.length });
     return (
         <div className='space-y-4'>
             <BusinessTableActions
@@ -15,6 +15,8 @@ const BusinessTable = () => {
             />
             <GlobalTable
                 table={table}
+                totalItems={businesses.length}
+                paginationState={paginationState}
             />
         </div>
     )
