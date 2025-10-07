@@ -7,7 +7,7 @@ import { customers, columns } from './columns'
 import { CustomersTableActions } from './customers-table-actions'
 
 const CustomersTable = () => {
-    const { table } = useDataTable<CustomersType>({ data: customers, columns })
+    const { table, paginationState } = useDataTable<CustomersType>({ data: customers, columns, totalItems: customers.length })
 
     return (
         <div className='space-y-4 w-full'>
@@ -16,6 +16,8 @@ const CustomersTable = () => {
             />
             <GlobalTable
                 table={table}
+                paginationState={paginationState}
+                totalItems={customers.length}
             />
         </div>
     )

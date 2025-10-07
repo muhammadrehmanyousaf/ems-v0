@@ -7,7 +7,7 @@ import { useDataTable } from '@/components/dashboard/globalComponents/globalTabl
 import { GlobalTable } from '@/components/dashboard/globalComponents/globalTable/global-table'
 
 const RolesTable = () => {
-    const { table } = useDataTable<Role>({ data: roles, columns })
+    const { table, paginationState } = useDataTable<Role>({ data: roles, columns, totalItems: roles.length })
 
     return (
         <div className='space-y-4'>
@@ -16,6 +16,8 @@ const RolesTable = () => {
             />
             <GlobalTable
                 table={table}
+                paginationState={paginationState}
+                totalItems={roles.length}
             />
         </div>
     )

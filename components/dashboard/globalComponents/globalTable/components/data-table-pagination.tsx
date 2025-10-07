@@ -2,12 +2,15 @@ import type { Table } from "@tanstack/react-table"
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { PaginationStateTypes } from "./use-data-table";
 
 interface DataTablePaginationProps<TData> {
-  table: Table<TData>
+  table: Table<TData>;
+  paginationState: PaginationStateTypes;
+  totalItems: number
 }
 
-export function DataTablePagination<TData>({ table }: DataTablePaginationProps<TData>) {
+export function DataTablePagination<TData>({ table, paginationState, totalItems }: DataTablePaginationProps<TData>) {
   return (
     <div className="flex items-center justify-between px-2">
       <div className="hidden md:flex flex-1 text-sm text-muted-foreground">
@@ -18,11 +21,11 @@ export function DataTablePagination<TData>({ table }: DataTablePaginationProps<T
         <div className="hidden md:flex items-center space-x-2">
           <p className="text-sm font-medium">Rows per page</p>
           <Select
-            value={`${table.getState().pagination.pageSize}`}
+            value={`${paginationState.pageSize}`}
             onValueChange={(value) => table.setPageSize(Number(value))}
           >
             <SelectTrigger className="h-8 w-[70px]">
-              <SelectValue placeholder={table.getState().pagination.pageSize} />
+              <SelectValue placeholder={paginationState.pageSize} />
             </SelectTrigger>
             <SelectContent side="top">
               {[10, 20, 30, 40, 50].map((n) => (
@@ -32,9 +35,13 @@ export function DataTablePagination<TData>({ table }: DataTablePaginationProps<T
           </Select>
         </div>
 
-        <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-          Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-        </div>
+        {totalItems > 0 ? (
+          <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+            Page {paginationState.pageIndex + 1} of {table.getPageCount()}
+          </div>
+        ) : (
+          'No pages'
+        )}
 
         <div className="flex items-center space-x-2">
           <Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex"

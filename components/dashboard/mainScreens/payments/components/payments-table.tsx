@@ -6,7 +6,7 @@ import { columns, payments } from './columns'
 import { PaymentTableActions } from './payment-table-actions'
 
 const PaymentsTable = () => {
-    const { table } = useDataTable<Payment>({ data: payments, columns })
+    const { table, paginationState } = useDataTable<Payment>({ data: payments, columns, totalItems: payments.length })
 
     return (
         <div className='space-y-4 w-full'>
@@ -15,6 +15,8 @@ const PaymentsTable = () => {
             />
             <GlobalTable
                 table={table}
+                paginationState={paginationState}
+                totalItems={payments.length}
             />
         </div>
     )
