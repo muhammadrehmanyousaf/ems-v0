@@ -11,10 +11,10 @@ import {
     DropdownMenuShortcut,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Booking } from "@/lib/dashboard-types"
+import { BookingData } from "@/lib/dashboard-types"
 
 interface DataTableRowActionsProps {
-    data: Booking
+    data: BookingData
 }
 
 export function RowActions({

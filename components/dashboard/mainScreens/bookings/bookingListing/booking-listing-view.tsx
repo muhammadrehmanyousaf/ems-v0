@@ -7,9 +7,7 @@ import CreationsButtons from './components/creations-buttons'
 import { searchParamsCache } from '@/lib/searchparams'
 
 const BookingListingView = () => {
-  const page = searchParamsCache.get('page');
   const search = searchParamsCache.get('q');
-  const pageLimit = searchParamsCache.get('limit');
 
   return (
     <div>
@@ -23,7 +21,7 @@ const BookingListingView = () => {
           </div>
           <Separator />
           <BookingTable
-          page={page}
+            search={search}
           />
         </div>
       </PageContainer>

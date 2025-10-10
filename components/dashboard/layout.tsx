@@ -47,7 +47,7 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   
   return (
-    // <ProtectedRoutes>
+    <ProtectedRoutes>
     <div className="flex h-screen bg-gray-100">
       <aside className="w-64 bg-white shadow-md">
         <div className="p-4">
@@ -71,6 +71,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </aside>
       <main className="flex-1 overflow-y-auto p-8">{children}</main>
     </div>
-    // </ProtectedRoutes>
+    </ProtectedRoutes>
   )
 }

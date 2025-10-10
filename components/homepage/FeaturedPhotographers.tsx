@@ -10,7 +10,7 @@ import { useVendorsByType } from "@/hooks/use-vendors"
 export function FeaturedPhotographers() {
   const vendorType = getVendorTypeFromPath('photographers')
   const { data: allVendors = [], isLoading } = useVendorsByType(vendorType)
-  const vendors = allVendors.slice(0, 8) // Limit to 8 featured
+  const vendors = allVendors ?? [] // Limit to 8 featured
 
   return (
     <section className="py-6 sm:py-8 md:py-12 lg:py-16 bg-gray-50">
@@ -43,7 +43,7 @@ export function FeaturedPhotographers() {
                </SwiperSlide>
             ))
           ) : (
-                         vendors.map((vendor) => (
+                         vendors?.slice(0, 8).map((vendor) => (
                <SwiperSlide key={vendor.id}>
                  <div className="flex justify-center px-2">
                    <div className="w-full">
