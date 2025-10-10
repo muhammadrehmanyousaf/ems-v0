@@ -7,10 +7,24 @@ import { PaginationStateTypes } from "./use-data-table";
 interface DataTablePaginationProps<TData> {
   table: Table<TData>;
   paginationState: PaginationStateTypes;
-  totalItems: number
+  totalItems: number;
+  setCurrentPage?: (v: number | ((old: number) => number | null) | null) => Promise<URLSearchParams>;
+  setPageSizeValue?: (v: number | ((old: number) => number | null) | null) => Promise<URLSearchParams>;
 }
 
-export function DataTablePagination<TData>({ table, paginationState, totalItems }: DataTablePaginationProps<TData>) {
+export function DataTablePagination<TData>({ table, paginationState, totalItems, setCurrentPage, setPageSizeValue }: DataTablePaginationProps<TData>) {
+  const handlePageSizeChange = async (value: string) => {
+    const size = Number(value);
+
+    // 1) Update React Table immediately
+    table.setPageSize(size);
+    table.setPageIndex(0);
+
+    // 2) Update URL (nuqs) so hydration uses the new limit
+    if (setPageSizeValue) await setPageSizeValue(size);
+    if (setCurrentPage) await setCurrentPage(1);
+  };
+  
   return (
     <div className="flex items-center justify-between px-2">
       <div className="hidden md:flex flex-1 text-sm text-muted-foreground">
@@ -22,7 +36,7 @@ export function DataTablePagination<TData>({ table, paginationState, totalItems 
           <p className="text-sm font-medium">Rows per page</p>
           <Select
             value={`${paginationState.pageSize}`}
-            onValueChange={(value) => table.setPageSize(Number(value))}
+            onValueChange={handlePageSizeChange}
           >
             <SelectTrigger className="h-8 w-[70px]">
               <SelectValue placeholder={paginationState.pageSize} />

@@ -2,13 +2,13 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { RowActions } from './row-actions';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Booking } from '@/lib/dashboard-types';
+import { Booking, BookingData } from '@/lib/dashboard-types';
 import { cn } from '@/lib/utils';
 
 export const formatDate = (iso?: string) =>
   iso ? new Date(iso).toLocaleDateString() : ""
 
-export const columns: ColumnDef<Booking>[] = [
+export const columns: ColumnDef<BookingData>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -32,18 +32,18 @@ export const columns: ColumnDef<Booking>[] = [
     enableHiding: false,
     size: 36,
   },
-  { accessorKey: "name", header: "Full Name" },
-  { accessorKey: "phone", header: "Phone Number" },
-  { accessorKey: "email", header: "Email" },
-  { accessorKey: "event_type", header: "Event Type" },
+  { accessorKey: "customerName", header: "Full Name" },
+  { accessorKey: "customerPhone", header: "Phone Number" },
+  { accessorKey: "customerEmail", header: "Email" },
+  // { accessorKey: "", header: "Event Type" },
   {
     id: "status",
     header: "Booking Status",
     cell: ({ row }) => {
       const status = row.original.status
-      const color = status === 'pending' ?
-        'border-amber-500 text-amber-800 bg-amber-50' : status === 'confirmed' ?
-          'border-green-500 text-green-600 bg-green-50' : 'border-red-500 text-red-600 bg-red-50'
+      const color = status === "Pending" ?
+        'border-amber-500 text-amber-800 bg-amber-50' : status === 'Confirmed' ?
+          'border-blue-500 text-blue-600 bg-blue-50' : status === 'Completed' ? 'border-green-500 text-green-600 bg-green-50' : 'border-red-500 text-red-600 bg-red-50'
       return (
         <span className={cn('px-3 border h-7 flex items-center justify-center rounded-md font-medium dark:bg-transparent', color)}>
           {status.charAt(0).toUpperCase() +
@@ -53,11 +53,12 @@ export const columns: ColumnDef<Booking>[] = [
     }
   },
   {
-    // Sort by epoch for accuracy; render human-friendly
     id: "date",
-    accessorFn: (row) => new Date(row.date).getTime(),
+    accessorFn: (row) => new Date(row.bookingDate).getTime(),
     header: "Booking Date",
-    cell: ({ row }) => formatDate((row.original?.date as string) ?? ""),
+    cell: ({ row }) => (
+      `${formatDate((row.original?.bookingDate as string) ?? "")}, ${row.original.bookingTime}`
+    ),
     sortingFn: "basic",
   },
   {
@@ -74,7 +75,7 @@ export const bookings: Booking[] = [
     phone: "+1 555 0123",
     email: "john@example.com",
     event_type: "demo",
-    status: "confirmed",
+    status: "Completed",
     date: "2025-08-15T14:30:00.000Z",
   },
   {
@@ -83,7 +84,7 @@ export const bookings: Booking[] = [
     phone: "+92 300 1112233",
     email: "sara@example.com",
     event_type: "consultation",
-    status: "pending",
+    status: "Pending",
     date: "2025-08-16T09:00:00.000Z",
   },
   {
@@ -92,7 +93,7 @@ export const bookings: Booking[] = [
     phone: "+44 20 7946 0958",
     email: "michael.lee@example.co.uk",
     event_type: "installation",
-    status: "canceled",
+    status: "Canceled",
     date: "2025-08-17T16:00:00.000Z",
   },
   {
@@ -101,7 +102,7 @@ export const bookings: Booking[] = [
     phone: "+92 321 5556677",
     email: "ayesha.malik@example.com",
     event_type: "support",
-    status: "pending",
+    status: "Pending",
     date: "2025-08-18T11:15:00.000Z",
   },
   {
@@ -110,7 +111,7 @@ export const bookings: Booking[] = [
     phone: "+1 404 555 8989",
     email: "david.brown@example.com",
     event_type: "demo",
-    status: "confirmed",
+    status: "Completed",
     date: "2025-08-19T13:45:00.000Z",
   },
   {
@@ -119,7 +120,7 @@ export const bookings: Booking[] = [
     phone: "+971 50 123 4567",
     email: "fatima.noor@example.ae",
     event_type: "consultation",
-    status: "confirmed",
+    status: "Completed",
     date: "2025-08-20T15:00:00.000Z",
   },
   {
@@ -128,7 +129,7 @@ export const bookings: Booking[] = [
     phone: "+1 212 555 3344",
     email: "alex.j@example.com",
     event_type: "installation",
-    status: "pending",
+    status: "Pending",
     date: "2025-08-21T10:30:00.000Z",
   },
   {
@@ -137,7 +138,7 @@ export const bookings: Booking[] = [
     phone: "+92 311 2223344",
     email: "zara.sheikh@example.com",
     event_type: "support",
-    status: "confirmed",
+    status: "Completed",
     date: "2025-08-22T09:15:00.000Z",
   },
   {
@@ -146,7 +147,7 @@ export const bookings: Booking[] = [
     phone: "+1 617 555 2299",
     email: "chris.evans@example.com",
     event_type: "follow_up",
-    status: "pending",
+    status: "Pending",
     date: "2025-08-23T12:00:00.000Z",
   },
   {
@@ -155,7 +156,7 @@ export const bookings: Booking[] = [
     phone: "+92 333 4567890",
     email: "mehwish.ahmed@example.com",
     event_type: "demo",
-    status: "pending",
+    status: "Pending",
     date: "2025-08-24T14:20:00.000Z",
   },
   {
@@ -164,7 +165,7 @@ export const bookings: Booking[] = [
     phone: "+1 646 555 1122",
     email: "ryan.smith@example.com",
     event_type: "consultation",
-    status: "confirmed",
+    status: "Completed",
     date: "2025-08-25T08:45:00.000Z",
   },
   {
@@ -173,7 +174,7 @@ export const bookings: Booking[] = [
     phone: "+92 321 9876543",
     email: "ali.raza@example.com",
     event_type: "installation",
-    status: "confirmed",
+    status: "Completed",
     date: "2025-08-26T10:00:00.000Z",
   },
   {
@@ -182,7 +183,7 @@ export const bookings: Booking[] = [
     phone: "+44 161 555 7788",
     email: "emily.davis@example.co.uk",
     event_type: "support",
-    status: "canceled",
+    status: "Canceled",
     date: "2025-08-27T11:10:00.000Z",
   },
   {
@@ -191,7 +192,7 @@ export const bookings: Booking[] = [
     phone: "+92 301 1234567",
     email: "usman.ali@example.com",
     event_type: "follow_up",
-    status: "pending",
+    status: "Pending",
     date: "2025-08-28T13:25:00.000Z",
   },
   {
@@ -200,7 +201,7 @@ export const bookings: Booking[] = [
     phone: "+1 305 555 7788",
     email: "hannah.taylor@example.com",
     event_type: "demo",
-    status: "pending",
+    status: "Pending",
     date: "2025-08-29T15:40:00.000Z",
   },
   {
@@ -209,7 +210,7 @@ export const bookings: Booking[] = [
     phone: "+92 334 1112233",
     email: "bilal.khan@example.com",
     event_type: "consultation",
-    status: "confirmed",
+    status: "Completed",
     date: "2025-08-30T09:05:00.000Z",
   },
   {
@@ -218,7 +219,7 @@ export const bookings: Booking[] = [
     phone: "+1 818 555 6655",
     email: "sophia.wilson@example.com",
     event_type: "installation",
-    status: "pending",
+    status: "Pending",
     date: "2025-08-31T16:15:00.000Z",
   },
   {
@@ -227,7 +228,7 @@ export const bookings: Booking[] = [
     phone: "+92 312 6549870",
     email: "ahmed.hassan@example.com",
     event_type: "support",
-    status: "pending",
+    status: "Pending",
     date: "2025-09-01T14:50:00.000Z",
   },
   {
@@ -236,7 +237,7 @@ export const bookings: Booking[] = [
     phone: "+34 91 555 1212",
     email: "olivia.martinez@example.es",
     event_type: "follow_up",
-    status: "confirmed",
+    status: "Completed",
     date: "2025-09-02T11:35:00.000Z",
   },
   {
@@ -245,7 +246,7 @@ export const bookings: Booking[] = [
     phone: "+92 335 2223344",
     email: "hamza.yousaf@example.com",
     event_type: "demo",
-    status: "confirmed",
+    status: "Completed",
     date: "2025-09-03T10:10:00.000Z",
   },
 ]

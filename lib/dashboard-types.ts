@@ -1,5 +1,5 @@
 // types/booking.ts
-export type BookingStatus = "pending" | "confirmed" | "canceled"
+export type BookingStatus = "Pending" | "Completed" | "Canceled" | "Confirmed"
 export type EventType =
   | "demo"
   | "consultation"
@@ -124,4 +124,82 @@ export type Business = {
   total_packages: number;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface Menu {
+  id: number;
+  title: string;
+  price: number;
+  data: Record<string, unknown>; // or a specific shape if you have it
+}
+
+export interface Package {
+  id: number;
+  name: string;
+  price: number;
+  features: string[]; // adjust if not strictly string[]
+}
+
+// details row (the item inside bookingDetails[])
+export interface BookingDetail {
+  id: number;                // 44
+  bookingId: number;         // 33
+  businessId: number;        // 1
+  menuId: number;            // 1
+  packageId: number;         // 1
+
+  totalAmount: number;       // 500
+  downPayment: number;       // 20
+
+  specialRequests: string | null;   // "Need vegetarian meal options"
+  additionalRequests: string | null;
+
+  // denormalized joins (present in your sample)
+  business: Business;
+  menu: Menu;
+  package: Package;
+
+  // audit
+  createdAt: string;         // ISO
+  updatedAt: string;         // ISO
+}
+
+// top-level booking row (what your table lists)
+export interface BookingData {
+  id: number;                       // 33
+  customerName: string;             // "Michael Brown"
+  customerEmail: string;            // "michaelbrown@gmail.com"
+  customerPhone: string;            // "+9988776655"
+
+  bookingDate: string;              // "2040-09-01T00:00:00.000Z"
+  bookingTime: string;              // "14:00"  (keep string; don't lock to a literal)
+
+  status: BookingStatus;            // "Pending"
+  paymentStatus: PaymentStatus;     // "Pending"
+  paymentMethod: PaymentMethod;     // null | method
+
+  totalAmount: number;              // 1000
+  downPayment: number;              // 40
+
+  specialRequests: string | null;
+  additionalRequests: string | null;
+  cancellationReason: string | null;
+
+  vendorIds: number[];              // [2,3]
+
+  // audit
+  createdAt: string;                // ISO
+  updatedAt: string;                // ISO
+
+  // nested
+  bookingDetails: BookingDetail[];  // Array(1)
+}
+
+// common API list response shape
+export interface BookingListResponse {
+  data: Booking[];
+  filters: {
+    total: number;
+    // add page, pageSize, etc., if your API returns them
+  };
 }
