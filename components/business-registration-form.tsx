@@ -160,8 +160,6 @@ export function BusinessRegistrationForm() {
         images: formData.images,
       }
 
-      console.log('🔍 API Request - downPaymentType:', formData.downPaymentType);
-      console.log('🔍 API Request - full formData:', formData);
       const rentalData = {
         fullName: formData.fullName,
         email: formData.email,

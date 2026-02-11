@@ -32,19 +32,6 @@ export default function PaymentsPage() {
       // Fetch user's bookings and organize them by payment status
       const { pendingPayments: pending, paymentHistory: history } = await PaymentAPI.getUserBookings()
       
-      console.log('🔍 PaymentsPage: Raw data from API:', { pending, history })
-      console.log('🔍 PaymentsPage: Pending count:', pending.length, 'History count:', history.length)
-      
-      // Log some details about pending payments to see their status
-      if (pending.length > 0) {
-        console.log('🔍 PaymentsPage: First pending payment:', {
-          id: pending[0].id,
-          status: pending[0].status,
-          paymentStatus: pending[0].paymentStatus,
-          paymentType: pending[0].paymentType
-        })
-      }
-      
       setPendingPayments(pending)
       setPaymentHistory(history)
       
@@ -60,9 +47,12 @@ export default function PaymentsPage() {
     }
   }
 
-  const handlePaymentSelect = (payment: PendingPayment) => {
+  const handlePaymentSelect = (payment: PendingPayment, paymentTypeOverride?: 'down_payment' | 'full_payment') => {
+    // Use override payment type if provided, otherwise use the payment's default type
+    const selectedPaymentType = paymentTypeOverride || payment.paymentType
+    
     // Validate payment can be made based on exact status requirements (case-insensitive)
-    if (payment.paymentType === 'down_payment') {
+    if (selectedPaymentType === 'down_payment') {
       if (payment.status?.toLowerCase() !== 'pending' || payment.paymentStatus?.toLowerCase() !== 'pending') {
         toast({
           title: "Payment Error",
@@ -73,7 +63,7 @@ export default function PaymentsPage() {
       }
     }
     
-    if (payment.paymentType === 'remaining_payment') {
+    if (selectedPaymentType === 'remaining_payment') {
       if (payment.status?.toLowerCase() !== 'confirmed' || payment.paymentStatus?.toLowerCase() !== 'partial') {
         toast({
           title: "Payment Error",
@@ -84,7 +74,7 @@ export default function PaymentsPage() {
       }
     }
     
-    if (payment.paymentType === 'full_payment') {
+    if (selectedPaymentType === 'full_payment') {
       if (payment.status?.toLowerCase() !== 'pending' || payment.paymentStatus?.toLowerCase() !== 'pending') {
         toast({
           title: "Payment Error",
@@ -105,7 +95,14 @@ export default function PaymentsPage() {
       return
     }
    
-    setSelectedPayment(payment)
+    // Create a modified payment object with the selected payment type and amount
+    const modifiedPayment = {
+      ...payment,
+      paymentType: selectedPaymentType,
+      amount: selectedPaymentType === 'full_payment' ? (payment.totalAmount || payment.amount) : payment.amount
+    }
+   
+    setSelectedPayment(modifiedPayment)
     setPaymentModalOpen(true)
   }
 
@@ -122,6 +119,43 @@ export default function PaymentsPage() {
   const handlePaymentFailure = () => {
     setPaymentModalOpen(false)
     setSelectedPayment(null)
+  }
+
+  const handleCleanupDuplicates = async () => {
+    try {
+      setLoading(true)
+      toast({
+        title: "Cleaning up duplicate payment intents...",
+        description: "This may take a moment",
+      })
+      
+      // Call cleanup endpoint (this would need to be implemented in the backend)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000'}/api/v1/payments/cleanup-duplicates`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (response.ok) {
+        toast({
+          title: "Cleanup Complete",
+          description: "Duplicate payment intents have been cleaned up",
+        })
+        fetchPayments() // Refresh the data
+      } else {
+        throw new Error('Failed to cleanup duplicates')
+      }
+    } catch (error: any) {
+      console.error('Error cleaning up duplicates:', error)
+      toast({
+        title: "Cleanup Failed",
+        description: error.message || "Failed to cleanup duplicate payment intents",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   const getPaymentTypeLabel = (type: string) => {
@@ -208,7 +242,7 @@ export default function PaymentsPage() {
           <p className="text-gray-600 max-w-2xl mx-auto">
             Manage your payments, track pending amounts, and view your complete payment history
           </p>
-          <div className="mt-4">
+          <div className="mt-4 flex flex-col sm:flex-row gap-3 justify-center">
             <Button 
               onClick={fetchPayments} 
               variant="outline" 
@@ -217,6 +251,15 @@ export default function PaymentsPage() {
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh Payments
+            </Button>
+            <Button 
+              onClick={handleCleanupDuplicates} 
+              variant="outline" 
+              className="flex items-center gap-2 border-orange-200 text-orange-600 hover:bg-orange-50"
+              disabled={loading}
+            >
+              <AlertCircle className="h-4 w-4" />
+              Cleanup Duplicates
             </Button>
           </div>
         </div>
@@ -227,6 +270,27 @@ export default function PaymentsPage() {
             <div className="flex items-center gap-2 mb-3">
               <DollarSign className="h-5 w-5 text-blue-600" />
               <span className="font-semibold text-blue-800">Payment Status Summary</span>
+            </div>
+            
+            {/* Payment Options Info */}
+            <div className="mb-4 p-3 bg-white rounded-lg border border-blue-200">
+              <div className="text-sm font-medium text-blue-800 mb-2">💡 Payment Options Explained</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                  <div>
+                    <span className="font-medium text-green-700">Down Payment:</span>
+                    <span className="text-gray-600"> Pay a portion now, complete payment later</span>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                  <div>
+                    <span className="font-medium text-purple-700">Full Payment:</span>
+                    <span className="text-gray-600"> Pay complete amount and finish booking</span>
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
               <div className="text-center p-2 bg-white rounded-lg border">
@@ -463,9 +527,9 @@ export default function PaymentsPage() {
                         </div>
                       </div>
 
-                      {/* Action Button - Show based on payment status */}
+                      {/* Action Buttons - Show based on payment status */}
                       {(payment.paymentStatus?.toLowerCase() === 'pending' && payment.status?.toLowerCase() === 'pending') && (
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {payment.paymentType === 'full_payment' && (
                             <div className="text-center p-2 bg-purple-50 border border-purple-200 rounded-lg">
                               <div className="flex items-center justify-center gap-2 text-purple-700">
@@ -481,24 +545,46 @@ export default function PaymentsPage() {
                             <div className="text-center p-2 bg-green-50 border border-green-200 rounded-lg">
                               <div className="flex items-center justify-center gap-2 text-green-700">
                                 <DollarSign className="h-4 w-4" />
-                                <span className="text-sm font-medium">Down Payment Required</span>
+                                <span className="text-sm font-medium">Payment Options Available</span>
                               </div>
                               <div className="text-xs text-green-600 mt-1">
-                                Secure your booking with an initial payment
+                                Choose between down payment or pay the full amount
                               </div>
                             </div>
                           )}
-                          <Button
-                            onClick={() => handlePaymentSelect(payment)}
-                            className={`w-full text-white ${
-                              payment.paymentType === 'full_payment'
-                                ? 'bg-purple-600 hover:bg-purple-700'
-                                : 'bg-green-600 hover:bg-green-700'
-                            }`}
-                          >
-                            <CreditCard className="mr-2 h-4 w-4" />
-                            {payment.paymentType === 'full_payment' ? 'Pay Full Amount' : 'Pay Down Payment'} (${payment.amount})
-                          </Button>
+                          
+                          {/* Payment Option Buttons */}
+                          <div className="space-y-2">
+                            {/* Down Payment Button */}
+                            <Button
+                              onClick={() => handlePaymentSelect(payment, 'down_payment')}
+                              className="w-full bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              <DollarSign className="mr-2 h-4 w-4" />
+                              Pay Down Payment (${payment.amount})
+                            </Button>
+                            
+                            {/* Full Payment Button */}
+                            <Button
+                              onClick={() => handlePaymentSelect(payment, 'full_payment')}
+                              variant="outline"
+                              className="w-full border-purple-200 text-purple-600 hover:bg-purple-50"
+                            >
+                              <Zap className="mr-2 h-4 w-4" />
+                              Pay Full Amount (${payment.totalAmount})
+                            </Button>
+                          </div>
+                          
+                          {/* Payment Comparison Info */}
+                          <div className="text-center p-2 bg-gray-50 border border-gray-200 rounded-lg">
+                            <div className="text-xs text-gray-600">
+                              <span className="font-medium">Down Payment:</span> ${payment.amount} • 
+                              <span className="font-medium"> Full Amount:</span> ${payment.totalAmount}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Pay full amount to complete your booking immediately
+                            </div>
+                          </div>
                         </div>
                       )}
                       
@@ -536,14 +622,14 @@ export default function PaymentsPage() {
                           ? 'bg-purple-50 border-purple-200'
                           : payment.paymentType === 'remaining_payment'
                           ? 'bg-blue-50 border-blue-200'
-                          : 'bg-blue-50 border-blue-200'
+                          : 'bg-green-50 border-green-200'
                       }`}>
                         <div className={`text-sm ${
                           payment.paymentType === 'full_payment' 
                             ? 'text-purple-700'
                             : payment.paymentType === 'remaining_payment'
                             ? 'text-blue-700'
-                            : 'text-blue-700'
+                            : 'text-green-700'
                         }`}>
                           <span className="font-medium">Total Booking:</span> ${payment.totalAmount}
                         </div>
@@ -552,7 +638,7 @@ export default function PaymentsPage() {
                             ? 'text-purple-600'
                             : payment.paymentType === 'remaining_payment'
                             ? 'text-blue-600'
-                            : 'text-blue-600'
+                            : 'text-green-600'
                         }`}>
                           {payment.paymentType === 'down_payment' 
                             ? `Down Payment: $${payment.amount}` 
@@ -566,6 +652,11 @@ export default function PaymentsPage() {
                         <div className="text-xs text-gray-600 mt-1">
                           Status: {payment.status} | Payment: {payment.paymentStatus}
                         </div>
+                        {payment.paymentType === 'down_payment' && (
+                          <div className="text-xs text-purple-600 mt-2 font-medium">
+                            💡 You can also pay the full amount (${payment.totalAmount}) to complete your booking
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

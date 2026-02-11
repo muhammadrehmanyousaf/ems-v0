@@ -85,14 +85,12 @@ export const useVendorStore = create<VendorState>()(
 
           // Return cached data if still valid
           if (vendors.length > 0 && (now - lastFetched) < cacheExpiry) {
-            console.log('💾 Using cached vendors data')
             return
           }
 
           set({ isLoading: true })
 
           try {
-            console.log('🌐 Fetching all vendors from API...')
             const allVendors = await VendorAPI.getAllBusinesses()
             
             set({
@@ -102,9 +100,8 @@ export const useVendorStore = create<VendorState>()(
               isLoading: false
             })
 
-            console.log(`✅ Loaded ${allVendors.length} vendors`)
           } catch (error) {
-            console.error('❌ Error fetching vendors:', error)
+            console.error('Error fetching vendors:', error)
             set({ isLoading: false })
           }
         },
@@ -116,7 +113,6 @@ export const useVendorStore = create<VendorState>()(
 
           // Return cached data if still valid
           if (vendorsByType[type] && (now - lastFetched) < cacheExpiry) {
-            console.log(`💾 Using cached ${type} vendors`)
             return vendorsByType[type]
           }
 
@@ -126,7 +122,6 @@ export const useVendorStore = create<VendorState>()(
           })
 
           try {
-            console.log(`🌐 Fetching ${type} vendors from API...`)
             const typeVendors = await VendorAPI.getBusinessesByVendorType(type)
             
             set({
@@ -134,10 +129,9 @@ export const useVendorStore = create<VendorState>()(
               isLoadingByType: { ...isLoadingByType, [type]: false }
             })
 
-            console.log(`✅ Loaded ${typeVendors.length} ${type} vendors`)
             return typeVendors
           } catch (error) {
-            console.error(`❌ Error fetching ${type} vendors:`, error)
+            console.error(`Error fetching ${type} vendors:`, error)
             set({
               isLoadingByType: { ...isLoadingByType, [type]: false }
             })
@@ -152,14 +146,12 @@ export const useVendorStore = create<VendorState>()(
 
           // Return cached data if still valid
           if (featuredVendors.length > 0 && (now - lastFetched) < cacheExpiry) {
-            console.log('💾 Using cached featured vendors')
             return
           }
 
           set({ isLoadingFeatured: true })
 
           try {
-            console.log('🌐 Fetching featured vendors...')
             const allVendors = await VendorAPI.getAllBusinesses()
             const featured = allVendors
               .filter(vendor => vendor.sponsored || vendor.rating >= 4.5)
@@ -170,9 +162,8 @@ export const useVendorStore = create<VendorState>()(
               isLoadingFeatured: false
             })
 
-            console.log(`✅ Loaded ${featured.length} featured vendors`)
           } catch (error) {
-            console.error('❌ Error fetching featured vendors:', error)
+            console.error('Error fetching featured vendors:', error)
             set({ isLoadingFeatured: false })
           }
         },

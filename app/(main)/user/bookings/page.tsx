@@ -65,13 +65,7 @@ interface Booking {
 }
 
 const BookingsPage = () => {
-  console.log('🔍 BookingsPage - Component rendered!');
-  
   const { user, isAuthenticated, isLoading } = useUser();
-  
-  // Debug logging
-  console.log('🔍 BookingsPage - Auth state:', { user: !!user, isAuthenticated, isLoading });
-  console.log('🔍 BookingsPage - User data:', user);
   
   // Helper function to get auth token
   const getAuthToken = () => {
@@ -87,27 +81,20 @@ const BookingsPage = () => {
 
   // Fetch bookings on component mount
   useEffect(() => {
-    console.log('🔍 BookingsPage - useEffect triggered:', { user: !!user, isLoading });
     if (user && !isLoading) {
-      console.log('🔍 BookingsPage - Loading user bookings...');
       fetchBookings();
     } else if (!isLoading && !user) {
-      console.log('🔍 BookingsPage - No user found, stopping loading');
       setIsLoadingBookings(false);
     }
   }, [user, isLoading]);
 
   const fetchBookings = async () => {
     try {
-      console.log('🔍 BookingsPage - fetchBookings called');
       setIsLoadingBookings(true);
-      
+
       if (!user || !user.id) {
-        console.log('🔍 BookingsPage - No user ID found');
         throw new Error('User ID not found');
       }
-
-      console.log('🔍 BookingsPage - Fetching bookings for user:', user.id);
       const response = await fetch(`http://localhost:3000/api/v1/bookings/simple-user-bookings`, {
         headers: {
           'Authorization': `Bearer ${getAuthToken()}`,
@@ -117,7 +104,6 @@ const BookingsPage = () => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('🔍 BookingsPage - Bookings data received:', data);
         const bookingsData = data.data || [];
         setBookings(bookingsData);
         
@@ -125,14 +111,14 @@ const BookingsPage = () => {
         try {
           localStorage.setItem('user_bookings', JSON.stringify(bookingsData));
         } catch (error) {
-          console.log('🔍 BookingsPage - Error storing bookings in localStorage:', error);
+          // Error storing bookings in localStorage
         }
       } else {
-        console.error('🔍 BookingsPage - Failed to fetch bookings:', response.status);
+        console.error('Failed to fetch bookings:', response.status);
         setBookings([]);
       }
     } catch (error) {
-      console.error('🔍 BookingsPage - Error fetching bookings:', error);
+      console.error('Error fetching bookings:', error);
       setBookings([]);
     } finally {
       setIsLoadingBookings(false);

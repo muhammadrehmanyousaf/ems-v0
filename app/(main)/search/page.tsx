@@ -202,8 +202,6 @@ function SearchContent() {
   // Apply filters using useMemo for better performance
   const filteredVendors = useMemo(() => {
     let filtered = [...allVendors]
-    console.log('🔍 Applying filters:', filters)
-    console.log('📊 Total vendors before filtering:', filtered.length)
 
     // Search filter
     if (filters.search.trim()) {
@@ -217,13 +215,11 @@ function SearchContent() {
         
         return nameMatch || locationMatch || cityMatch || typeMatch || subTypeMatch
       })
-      console.log('🔍 After search filter:', filtered.length, 'vendors')
     }
 
     // Category filter
     if (filters.category && filters.category !== "all") {
       filtered = filtered.filter(vendor => vendorMatchesCategory(vendor, filters.category))
-      console.log('🔍 After category filter:', filtered.length, 'vendors')
     }
 
     // Location filter
@@ -234,7 +230,6 @@ function SearchContent() {
         const cityMatch = vendor.city?.toLowerCase().includes(locationTerm)
         return locationMatch || cityMatch
       })
-      console.log('🔍 After location filter:', filtered.length, 'vendors')
     }
 
     // Price range filter
@@ -244,7 +239,6 @@ function SearchContent() {
       const maxPrice = filters.priceRange[1]
       return price >= minPrice && price <= maxPrice
     })
-    console.log('🔍 After price filter:', filtered.length, 'vendors')
 
     // Rating filter
     if (filters.rating > 0) {
@@ -252,7 +246,6 @@ function SearchContent() {
         const rating = Number(vendor.rating || 0)
         return rating >= filters.rating
       })
-      console.log('🔍 After rating filter:', filtered.length, 'vendors')
     }
 
     // Capacity filter
@@ -261,7 +254,6 @@ function SearchContent() {
         const capacity = Number(vendor.capacity || 0)
         return capacity >= filters.capacity
       })
-      console.log('🔍 After capacity filter:', filtered.length, 'vendors')
     }
 
     // Amenities filter
@@ -275,7 +267,6 @@ function SearchContent() {
           )
         })
       })
-      console.log('🔍 After amenities filter:', filtered.length, 'vendors')
     }
 
     // Sort

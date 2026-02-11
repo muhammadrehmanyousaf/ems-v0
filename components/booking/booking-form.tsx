@@ -77,15 +77,6 @@ export default function BookingForm() {
     try {
       const response = await axios.get(`${BACKEND_URL}api/v1/businesses/${id}`);
       const data = response.data.data;
-      console.log('🔍 Fetched business data:', data);
-      console.log('🔍 Business type check:', {
-        hasMenus: 'menus' in data,
-        hasPackages: 'packages' in data,
-        subBusinessType: data?.subBusinessType,
-        type: data?.type,
-        isVenueBooking: data && 'menus' in data && !!data?.menus && Array.isArray(data?.menus) && (data?.menus?.length ?? 0) > 0,
-        isVendor: data && !('menus' in data) && (data?.subBusinessType || data?.type)
-      });
       setVenue(data); // This can be either EventVenue or Vendor type
     } catch (err: any) {
       console.error('Failed to fetch business:', err);
@@ -240,7 +231,6 @@ export default function BookingForm() {
     // Validate that all entries have valid businessId
     const invalidEntries = vendorsPayload.filter(vendor => !vendor.businessId || vendor.businessId === null || vendor.businessId === undefined);
     if (invalidEntries.length > 0) {
-      console.error('❌ Invalid vendor entries found:', invalidEntries);
       toast({
         title: 'Booking Error',
         description: 'Some vendor information is invalid. Please try again.',
@@ -266,17 +256,6 @@ export default function BookingForm() {
       }))
     };
 
-    console.log('🔍 Booking payload:', payload);
-    console.log('🔍 Venue data:', {
-      venueId: venue?.id,
-      venueType: (venue as any)?.type,
-      venueSubBusinessType: (venue as any)?.subBusinessType,
-      hasMenus: 'menus' in venue,
-      hasPackages: (venue?.packages?.length || 0) > 0,
-      selectedPackage: currentForm.selectedPackage,
-      selectedMenu: currentForm.selectedMenu
-    });
-
     try {
       setIsSubmitting(true); // Optional: manage a loading state
       const response = await axiosInstance.post(`${BACKEND_URL}api/v1/bookings`, payload);
@@ -286,8 +265,7 @@ export default function BookingForm() {
         
         // Store the booking response in the events state
         const bookingResponse = response.data;
-        console.log('🔍 Booking response received:', bookingResponse);
-        
+
         // Move active event to success step and store booking response
         if (globalStep >= 2) {
           setEvents(prev => prev.map((e, idx) => 
@@ -307,27 +285,20 @@ export default function BookingForm() {
         // (Handled above)
         
         // Store booking ID for payment processing
-        console.log('🔍 Full response structure:', response.data)
-        
         // Try multiple possible locations for booking ID
         let realBookingId = null
         
         if (response.data?.data?.id) {
           realBookingId = response.data.data.id
-          console.log('🔍 BookingForm: Found ID in response.data.data.id:', realBookingId)
         } else if (response.data?.id) {
           realBookingId = response.data.id
-          console.log('🔍 BookingForm: Found ID in response.data.id:', realBookingId)
         } else if (response.data?.bookingId) {
           realBookingId = response.data.bookingId
-          console.log('🔍 BookingForm: Found ID in response.data.bookingId:', realBookingId)
         } else if (response.data?.data?.bookingId) {
           realBookingId = response.data.data.bookingId
-          console.log('🔍 BookingForm: Found ID in response.data.data.bookingId:', realBookingId)
         }
         
         if (realBookingId) {
-          console.log('🔍 BookingForm: Real booking ID received:', realBookingId)
           setBookingId(realBookingId)
           
           // Show payment modal after successful booking
@@ -335,11 +306,9 @@ export default function BookingForm() {
             setShowPaymentModal(true)
           }, 1000)
         } else {
-          console.warn('❌ No booking ID found in create response. Attempting fallback via simple-user-bookings...')
           try {
             const listResp = await axiosInstance.get(`${BACKEND_URL}api/v1/bookings/simple-user-bookings`)
             const bookingsList = listResp?.data?.data || []
-            console.log('🔍 BookingForm: simple-user-bookings count:', bookingsList.length)
             // Pick latest by createdAt or highest id
             let fallbackId: number | null = null
             if (Array.isArray(bookingsList) && bookingsList.length > 0) {
@@ -352,13 +321,11 @@ export default function BookingForm() {
               fallbackId = Number(sorted[0]?.id) || null
             }
             if (fallbackId) {
-              console.log('🔍 BookingForm: Fallback booking ID from list:', fallbackId)
               setBookingId(fallbackId)
               setTimeout(() => {
                 setShowPaymentModal(true)
               }, 800)
             } else {
-              console.error('❌ Fallback also failed to find booking id. Full list:', bookingsList)
               toast({
                 title: 'Booking Error',
                 description: 'No booking ID received. Please contact support.',
@@ -367,7 +334,6 @@ export default function BookingForm() {
               return
             }
           } catch (fallbackErr) {
-            console.error('❌ Booking ID fallback error:', fallbackErr)
             toast({
               title: 'Booking Error',
               description: 'No booking ID received. Please contact support.',
@@ -426,19 +392,6 @@ export default function BookingForm() {
 
   // Force vendor detection for testing - if it has subBusinessType or type but no menus, it's a vendor
   const forceIsVendor = venue && !isVenueBooking && ((venue as any)?.subBusinessType || (venue as any)?.type)
-
-  // Debug logging for business type detection
-  console.log('🔍 Business Type Detection:', {
-    venueId: venue?.id,
-    hasMenus: venue ? 'menus' in venue : false,
-    menusLength: venue?.menus?.length,
-    subBusinessType: (venue as any)?.subBusinessType,
-    type: (venue as any)?.type,
-    isVenueBooking,
-    isVendor,
-    hasPackages,
-    packagesLength: venue?.packages?.length
-  });
 
   const isStepValid = useMemo(() => {
     const inEventPhase = globalStep >= 2
@@ -534,24 +487,6 @@ export default function BookingForm() {
   // Step content
   let stepContent = null
   
-  // Debug logging for step flow
-  console.log('🔍 Step Debug:', {
-    globalStep,
-    eventStep: events[activeEventIndex]?.currentStep ?? 0,
-    isVendor,
-    isVenueBooking,
-    hasPackages,
-    eventStepOrder: eventStepOrder.map((step, idx) => `${idx}: ${step.title}`),
-    venueData: {
-      id: venue?.id,
-      name: venue?.name,
-      subBusinessType: (venue as any)?.subBusinessType,
-      type: (venue as any)?.type,
-      hasMenus: venue ? 'menus' in venue : false,
-      menusLength: venue?.menus?.length,
-      packagesLength: venue?.packages?.length
-    }
-  });
   if (globalStep === 0) {
       stepContent = (
         <UserInfoStep
@@ -698,16 +633,6 @@ export default function BookingForm() {
         }
         break
       case 5: // Success step (for venues)
-        console.log('🔍 Success Step - Debug info:', {
-          isVendor,
-          isVenueBooking,
-          venue,
-          selectedPackageObj,
-          selectedMenuObj,
-          vendorDetails: vendorsDetails[activeEventIndex],
-          bookingResponse: events[activeEventIndex]?.bookingResponse
-        });
-        
         stepContent = (
           <SuccessStep
             formData={events.length ? events[activeEventIndex].formData : formData}

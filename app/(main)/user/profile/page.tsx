@@ -26,13 +26,7 @@ interface PasswordForm {
 }
 
 const ProfilePage = () => {
-  console.log('🔍 ProfilePage - Component rendered!');
-  
   const { user, isAuthenticated, isLoading, logout } = useUser();
-  
-  // Debug logging
-  console.log('🔍 ProfilePage - Auth state:', { user: !!user, isAuthenticated, isLoading });
-  console.log('🔍 ProfilePage - User data:', user);
   
   // Helper function to get auth token
   const getAuthToken = () => {
@@ -86,23 +80,18 @@ const ProfilePage = () => {
 
   // Fetch user profile on component mount
   useEffect(() => {
-    console.log('🔍 ProfilePage - useEffect triggered:', { user: !!user, isLoading });
     if (user && !isLoading) {
-      console.log('🔍 ProfilePage - Loading user profile...');
       loadUserProfile();
     } else if (!isLoading && !user) {
-      console.log('🔍 ProfilePage - No user found, stopping loading');
       setIsLoadingProfile(false);
     }
   }, [user, isLoading]);
 
   const loadUserProfile = () => {
     try {
-      console.log('🔍 ProfilePage - loadUserProfile called');
       setIsLoadingProfile(true);
-      
+
       if (user) {
-        console.log('🔍 ProfilePage - Setting initial profile from user data');
         // Set profile from the user data fetched by the context
         const initialProfile = {
           fullName: user.fullName || "",
@@ -111,7 +100,6 @@ const ProfilePage = () => {
           roleIds: [3]
         };
         
-        console.log('🔍 ProfilePage - Initial profile:', initialProfile);
         setProfile(initialProfile);
         setOriginalProfile(initialProfile);
         setIsLoadingProfile(false); // Stop loading immediately since we have user data
@@ -119,11 +107,10 @@ const ProfilePage = () => {
         // Then fetch fresh data from API in background
         fetchProfileFromAPI(user.id);
       } else {
-        console.log('🔍 ProfilePage - No user data available');
         setIsLoadingProfile(false);
       }
     } catch (error) {
-      console.error('🔍 ProfilePage - Error in loadUserProfile:', error);
+      console.error('Error in loadUserProfile:', error);
       setIsLoadingProfile(false);
     }
   };

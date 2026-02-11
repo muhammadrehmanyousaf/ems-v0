@@ -30,21 +30,15 @@ export default function CarRentalDetailsPage() {
         setIsLoading(true)
         setError(null)
         
-        console.log('🔍 Fetching car rental vendor details for ID:', id)
-        
         // Fetch vendor details from API
         const vendorData = await VendorAPI.getBusinessById(id)
         
         if (vendorData) {
-          console.log('✅ Car rental vendor data received:', vendorData)
           setVendor(vendorData)
         } else {
-          console.log('❌ No car rental vendor data received from API')
           throw new Error('Car rental vendor not found')
         }
       } catch (err) {
-        console.error('❌ Error fetching car rental vendor details:', err)
-        
         // Try to get from localStorage as fallback
         try {
           const storedVendors = localStorage.getItem('all_vendors')
@@ -52,13 +46,11 @@ export default function CarRentalDetailsPage() {
             const parsedVendors = JSON.parse(storedVendors)
             const storedVendor = parsedVendors.find((v: Vendor) => v.id.toString() === id)
             if (storedVendor) {
-              console.log('✅ Found car rental vendor in localStorage fallback')
               setVendor(storedVendor)
               return
             }
           }
         } catch (localStorageError) {
-          console.log('❌ Error reading from localStorage:', localStorageError)
         }
         
         setError(err instanceof Error ? err.message : 'Failed to load car rental vendor details. Please try again.')

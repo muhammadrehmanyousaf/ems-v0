@@ -2,31 +2,49 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getUser } from "@/hooks/getLoggedinUser";
+import { useUser } from "@/context/UserContext";
 
 const ProtectedRoutes = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = getUser();
+  const { user, isAuthenticated, isLoading } = useUser();
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (loading) return;
+    if (isLoading) return;
 
-    const localStorageUser = localStorage.getItem("user");
-    const localStorageToken = localStorage.getItem("token");
+    const token = localStorage.getItem("auth_token");
+    const userData = localStorage.getItem("user_data");
 
-    if (localStorageUser && localStorageToken && (user?.roles[0]?.id === 1 || user?.roles[0]?.id === 2)) {
+    if (!token || !userData || !isAuthenticated || !user) {
+      setIsAuthorized(false);
+      router.replace("/login");
+      return;
+    }
+
+    // Allow access if user is a vendor (isVendor flag) or has admin/vendor role
+    const hasAccess =
+      user.isVendor === true ||
+      user.roles?.some(
+        (role: any) =>
+          role.id === 1 ||
+          role.id === 2 ||
+          role.name?.toLowerCase() === "super admin" ||
+          role.name?.toLowerCase() === "vendor" ||
+          role.name?.toLowerCase() === "admin"
+      );
+
+    if (hasAccess) {
       setIsAuthorized(true);
     } else {
       setIsAuthorized(false);
-      router.replace("/login");
+      router.replace("/");
     }
-  }, [user, loading, router]);
+  }, [user, isAuthenticated, isLoading, router]);
 
-  if (loading || isAuthorized === null) {
+  if (isLoading || isAuthorized === null) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p>Loading...</p>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-500"></div>
       </div>
     );
   }

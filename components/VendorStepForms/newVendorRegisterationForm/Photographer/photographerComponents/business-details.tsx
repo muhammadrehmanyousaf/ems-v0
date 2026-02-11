@@ -32,7 +32,6 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
     const [downPaymentType, setDownPaymentType] = useState<string>(formData.downPaymentType || "");
 
     useEffect(() => {
-        console.log('🔍 useEffect - downPaymentType being set:', downPaymentType);
         setFormData((prevData) => ({
             ...prevData,
             staff: selectedstaff,
@@ -95,8 +94,6 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
         { id: "Percentage", label: "Percentage" },
         { id: "Fixed Amount", label: "Fixed Amount" },
     ];
-
-    console.log('🔍 downPaymentTypes array:', downPaymentTypes);
 
     const handleSelectStaff = (type: string, index: number) => {
         if (selectedStaffIndexes.includes(index)) {
@@ -170,7 +167,6 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                                         className={`flex-1 ${errors.downPayment ? "border-red-500" : "border-neutral-300"}`}
                                     />
                                     <Select value={downPaymentType} onValueChange={(value) => {
-                                        console.log('🔍 Selected downPaymentType:', value);
                                         setDownPaymentType(value);
                                         setFormData((prev) => ({ ...prev, downPaymentType: value }));
                                         setErrors((prevErrors) => ({ ...prevErrors, downPaymentType: "" }));

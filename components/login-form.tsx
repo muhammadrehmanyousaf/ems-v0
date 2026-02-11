@@ -41,7 +41,6 @@ export function LoginForm() {
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
       setIsLoading(true)
-      console.log('🔐 Attempting login with:', data.email);
 
       const response = await axiosInstance.post('/api/v1/auth/login', {
         email: data.email,
@@ -51,10 +50,7 @@ export function LoginForm() {
       if (response.status === 200) {
         const resData = response.data;
         const {user, token} = resData.data
-        console.log('✅ Login response received:', resData);
-        console.log('✅ User data:', user);
-        console.log('✅ Token received:', !!token);
-        
+
         // Use the UserContext login function
         login(user, token);
         
@@ -64,21 +60,27 @@ export function LoginForm() {
         })
         reset()
         
-        // Route based on user role
-        if(user.roles[0].id === 1 || user.roles[0].id === 2) {
-          console.log("🔄 Redirecting admin to dashboard");
+        // Route based on user role — vendors and admins go to dashboard
+        const isAdmin = user.roles?.some(
+          (role: any) =>
+            role.id === 1 ||
+            role.name?.toLowerCase() === 'super admin' ||
+            role.name?.toLowerCase() === 'admin'
+        )
+        const isVendor =
+          user.isVendor === true ||
+          user.roles?.some(
+            (role: any) =>
+              role.id === 2 ||
+              role.name?.toLowerCase() === 'vendor'
+          )
+
+        if (isAdmin || isVendor) {
           router.push('/dashboard')
-        }else if(user.roles[0].id === 3) {
-          console.log("🔄 Redirecting user to home");
+        } else {
           router.push('/')
-        } else{
-          console.log("❌ No valid role found");
-          toast({
-            title: 'No role found'
-          })
         }
       }else{
-        console.log("❌ Login failed with status:", response.status);
         toast({
           title: 'Login failed',
           description: 'Invalid credentials',
@@ -86,7 +88,6 @@ export function LoginForm() {
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message
-      console.error("❌ Login error:", error);
       toast({
         title: 'Login failed',
         description: errorMessage || 'Something went wrong',

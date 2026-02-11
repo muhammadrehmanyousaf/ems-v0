@@ -72,11 +72,9 @@ export class FavoritesAPI {
     try {
       const token = getAuthToken();
       if (!token) {
-        console.log('❌ No auth token found for favorites');
         return [];
       }
 
-      console.log(`🌐 Calling API: ${API_ENDPOINTS.GET_FAVORITES}`);
       const response = await axios.get<FavoritesResponse>(API_ENDPOINTS.GET_FAVORITES, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -84,18 +82,15 @@ export class FavoritesAPI {
         }
       });
       
-      console.log(`✅ Favorites API Response:`, response.data);
-      
       if (response.data.status && response.data.data) {
         // Extract business IDs from the favorites
         const favoriteBusinessIds = response.data.data.map(favorite => favorite.businessId);
-        console.log(`💖 Found ${favoriteBusinessIds.length} favorite businesses:`, favoriteBusinessIds);
         return favoriteBusinessIds;
       }
       
       return [];
     } catch (error) {
-      console.error('❌ Error fetching user favorites:', error);
+      console.error('Error fetching user favorites:', error);
       return [];
     }
   }
@@ -106,11 +101,9 @@ export class FavoritesAPI {
       const token = getAuthToken();
       
       if (!token) {
-        console.log('❌ No auth token found');
         return false;
       }
 
-      console.log(`🌐 Adding business ${businessId} to favorites`);
       const response = await axios.post<CreateFavoriteResponse>(API_ENDPOINTS.CREATE_FAVORITE, {
         businessId: businessId
       }, {
@@ -120,16 +113,13 @@ export class FavoritesAPI {
         }
       });
       
-      console.log(`✅ Added to favorites:`, response.data);
-      
       if (response.data.status) {
-        console.log(`💖 Successfully added business ${businessId} to favorites`);
         return true;
       }
       
       return false;
     } catch (error) {
-      console.error('❌ Error adding to favorites:', error);
+      console.error('Error adding to favorites:', error);
       return false;
     }
   }
@@ -140,11 +130,9 @@ export class FavoritesAPI {
       const token = getAuthToken();
       
       if (!token) {
-        console.log('❌ No auth token found');
         return false;
       }
 
-      console.log(`🌐 Removing business ${businessId} from favorites`);
       const response = await axios.delete(API_ENDPOINTS.DELETE_FAVORITE(businessId), {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -152,10 +140,9 @@ export class FavoritesAPI {
         }
       });
       
-      console.log(`✅ Removed from favorites:`, response.data);
       return true;
     } catch (error) {
-      console.error('❌ Error removing from favorites:', error);
+      console.error('Error removing from favorites:', error);
       return false;
     }
   }
@@ -172,7 +159,7 @@ export class FavoritesAPI {
       const favorites = await this.getUserFavorites();
       return favorites.includes(Number(businessId));
     } catch (error) {
-      console.error('❌ Error checking if business is favorited:', error);
+      console.error('Error checking if business is favorited:', error);
       return false;
     }
   }
@@ -188,7 +175,7 @@ export class FavoritesAPI {
         return await this.addToFavorites(businessId);
       }
     } catch (error) {
-      console.error('❌ Error toggling favorite:', error);
+      console.error('Error toggling favorite:', error);
       return false;
     }
   }

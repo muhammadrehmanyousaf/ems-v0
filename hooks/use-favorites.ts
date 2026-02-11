@@ -39,12 +39,11 @@ const getCachedFavorites = (): number[] | null => {
       
       if (now - cacheTime < CACHE_DURATION) {
         const favorites = JSON.parse(cached)
-        console.log('💾 Using cached favorites:', favorites)
         return favorites
       }
     }
   } catch (error) {
-    console.error('❌ Error reading cached favorites:', error)
+    console.error('Error reading cached favorites:', error)
   }
   
   return null
@@ -58,7 +57,7 @@ const setCachedFavorites = (favorites: number[]) => {
     localStorage.setItem(FAVORITES_CACHE_KEY, JSON.stringify(favorites))
     localStorage.setItem(FAVORITES_CACHE_TIMESTAMP_KEY, Date.now().toString())
   } catch (error) {
-    console.error('❌ Error caching favorites:', error)
+    console.error('Error caching favorites:', error)
   }
 }
 
@@ -70,7 +69,7 @@ const clearCachedFavorites = () => {
     localStorage.removeItem(FAVORITES_CACHE_KEY)
     localStorage.removeItem(FAVORITES_CACHE_TIMESTAMP_KEY)
   } catch (error) {
-    console.error('❌ Error clearing cached favorites:', error)
+    console.error('Error clearing cached favorites:', error)
   }
 }
 
@@ -100,9 +99,8 @@ export function useFavorites(): UseFavoritesReturn {
       const userFavorites = await FavoritesAPI.getUserFavorites()
       setFavorites(userFavorites)
       setCachedFavorites(userFavorites)
-      console.log('💖 Loaded favorites from API:', userFavorites)
     } catch (error) {
-      console.error('❌ Error loading favorites:', error)
+      console.error('Error loading favorites:', error)
       setFavorites([])
       clearCachedFavorites()
     } finally {
@@ -140,7 +138,7 @@ export function useFavorites(): UseFavoritesReturn {
   // Toggle favorite with optimistic update
   const toggleFavorite = useCallback(async (businessId: string | number): Promise<boolean> => {
     if (!isAuthenticated()) {
-      console.log('❌ User not authenticated')
+      console.log('User not authenticated')
       return false
     }
 
@@ -160,7 +158,6 @@ export function useFavorites(): UseFavoritesReturn {
       if (isCurrentlyFavorited) {
         success = await FavoritesAPI.removeFromFavorites(businessId)
         if (success) {
-          console.log(`💖 Removed business ${businessId} from favorites`)
           setCachedFavorites(favorites.filter(id => id !== businessIdNum))
         } else {
           // Revert optimistic update on failure
@@ -169,7 +166,6 @@ export function useFavorites(): UseFavoritesReturn {
       } else {
         success = await FavoritesAPI.addToFavorites(businessId)
         if (success) {
-          console.log(`💖 Added business ${businessId} to favorites`)
           setCachedFavorites([...favorites, businessIdNum])
         } else {
           // Revert optimistic update on failure
@@ -179,7 +175,7 @@ export function useFavorites(): UseFavoritesReturn {
       
       return success
     } catch (error) {
-      console.error('❌ Error toggling favorite:', error)
+      console.error('Error toggling favorite:', error)
       
       // Revert optimistic update on error
       if (isCurrentlyFavorited) {

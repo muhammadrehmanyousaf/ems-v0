@@ -105,9 +105,7 @@ const BookingDetailPage = () => {
 
   // Fetch booking details
   useEffect(() => {
-    console.log('🔍 BookingDetailPage - useEffect triggered:', { user: !!user, isLoading, bookingId });
     if (user && !isLoading && bookingId) {
-      console.log('🔍 BookingDetailPage - Fetching booking details for ID:', bookingId);
       fetchBookingDetails();
     } else if (!isLoading && !user) {
       setIsLoadingBooking(false);
@@ -134,15 +132,10 @@ const BookingDetailPage = () => {
         const data = await response.json();
         const allBookings = data.data || [];
         
-        console.log('🔍 BookingDetailPage - All bookings received:', allBookings.length);
-        console.log('🔍 BookingDetailPage - Looking for booking ID:', bookingId);
-        console.log('🔍 BookingDetailPage - Available booking IDs:', allBookings.map((b: Booking) => b.id));
-        
         // Find the specific booking by ID
         const foundBooking = allBookings.find((booking: Booking) => booking.id.toString() === bookingId);
         
         if (foundBooking) {
-          console.log('🔍 BookingDetailPage - Found booking:', foundBooking);
           // Ensure bookingDetails is always an array
           if (!foundBooking.bookingDetails) {
             foundBooking.bookingDetails = [];
@@ -150,8 +143,6 @@ const BookingDetailPage = () => {
           
           setBooking(foundBooking);
         } else {
-          console.log('🔍 BookingDetailPage - Booking not found in list');
-          
           // Try to get booking from localStorage as fallback
           try {
             const storedBookings = localStorage.getItem('user_bookings');
@@ -159,13 +150,12 @@ const BookingDetailPage = () => {
               const parsedBookings = JSON.parse(storedBookings);
               const storedBooking = parsedBookings.find((b: Booking) => b.id.toString() === bookingId);
               if (storedBooking) {
-                console.log('🔍 BookingDetailPage - Found booking in localStorage');
                 setBooking(storedBooking);
                 return;
               }
             }
           } catch (error) {
-            console.log('🔍 BookingDetailPage - Error reading from localStorage:', error);
+            // Error reading from localStorage
           }
           
           throw new Error('Booking not found');

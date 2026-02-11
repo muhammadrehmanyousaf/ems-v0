@@ -72,7 +72,6 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({ children }
     // Check if we have cached data that's still valid
     const now = Date.now();
     if (favorites.length > 0 && (now - lastFetchTime) < CACHE_DURATION) {
-      console.log('💖 Using cached favorites data');
       return;
     }
     
@@ -81,7 +80,6 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({ children }
       const userFavorites = await FavoritesAPI.getUserFavorites();
       setFavorites(userFavorites);
       setLastFetchTime(now);
-      console.log('💖 Loaded favorites:', userFavorites);
     } catch (error) {
       console.error('Error loading favorites:', error);
     } finally {
@@ -102,7 +100,6 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({ children }
       const success = await FavoritesAPI.addToFavorites(businessId);
       if (success) {
         setFavorites(prev => [...prev, Number(businessId)]);
-        console.log(`💖 Added business ${businessId} to favorites`);
       }
       return success;
     } catch (error) {
@@ -116,7 +113,6 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({ children }
       const success = await FavoritesAPI.removeFromFavorites(businessId);
       if (success) {
         setFavorites(prev => prev.filter(id => id !== Number(businessId)));
-        console.log(`💖 Removed business ${businessId} from favorites`);
       }
       return success;
     } catch (error) {

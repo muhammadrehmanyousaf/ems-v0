@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -47,29 +47,52 @@ export default function StripePayment({
   const [paymentIntent, setPaymentIntent] = useState<PaymentIntent | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'processing' | 'success' | 'failed'>('pending')
+  
+  // Use refs to prevent multiple calls and track state
+  const isCreatingRef = useRef(false)
+  const hasCreatedRef = useRef(false)
+  const currentBookingRef = useRef<number | null>(null)
 
+  // Reset state when modal closes
   useEffect(() => {
-    if (isOpen && !paymentIntent) {
-      createPaymentIntent()
+    if (!isOpen) {
+      setPaymentIntent(null)
+      setError(null)
+      setPaymentStatus('pending')
+      isCreatingRef.current = false
+      hasCreatedRef.current = false
+      currentBookingRef.current = null
     }
   }, [isOpen])
 
+  // Create payment intent only when modal opens and no intent exists for this booking
+  useEffect(() => {
+    if (!isOpen) return
+    
+    // Check if we already have a payment intent for this booking
+    if (hasCreatedRef.current && currentBookingRef.current === bookingId && paymentIntent) {
+      return
+    }
+    
+    // Check if we're already creating a payment intent
+    if (isCreatingRef.current) {
+      return
+    }
+
+    // Create payment intent
+    createPaymentIntent()
+  }, [isOpen, bookingId])
+
   const createPaymentIntent = async () => {
+    // Prevent multiple simultaneous calls
+    if (isCreatingRef.current) {
+      return
+    }
+    
     try {
+      isCreatingRef.current = true
       setLoading(true)
       setError(null)
-      
-      console.log('🔍 StripePayment: Creating payment intent with:', {
-        bookingId,
-        customerEmail,
-        paymentType,
-        bookingIdType: typeof bookingId,
-        paymentTypeDetails: {
-          isDownPayment: paymentType === 'down_payment',
-          isRemainingPayment: paymentType === 'remaining_payment',
-          isFullPayment: paymentType === 'full_payment'
-        }
-      })
       
       // Validate bookingId
       if (!bookingId || isNaN(Number(bookingId))) {
@@ -82,11 +105,8 @@ export default function StripePayment({
         throw new Error(`Booking #${bookingId} not found. Please ensure the booking was created successfully.`)
       }
       
-      console.log('🔍 StripePayment: About to call PaymentAPI.createPaymentIntent with:', {
-        bookingId: Number(bookingId),
-        customerEmail,
-        paymentType
-      })
+      // Cancel any existing incomplete payment intents to prevent duplicates
+      await PaymentAPI.cancelIncompletePaymentIntents(Number(bookingId))
       
       const response = await PaymentAPI.createPaymentIntent(
         Number(bookingId),
@@ -94,17 +114,15 @@ export default function StripePayment({
         paymentType
       )
       
-      console.log('🔍 StripePayment: Payment intent response:', response)
-      
       if (response.status) {
         setPaymentIntent(response.data)
         setPaymentStatus('processing')
+        hasCreatedRef.current = true
+        currentBookingRef.current = bookingId
       } else {
         throw new Error(response.message || 'Failed to create payment intent')
       }
     } catch (err: any) {
-      console.error('🔍 StripePayment: Payment intent error:', err)
-      
       // Handle specific error cases
       let errorMessage = err.message || 'Failed to create payment intent'
       
@@ -123,6 +141,7 @@ export default function StripePayment({
       })
     } finally {
       setLoading(false)
+      isCreatingRef.current = false
     }
   }
 
@@ -130,24 +149,12 @@ export default function StripePayment({
     try {
       setLoading(true)
       
-      console.log('🔍 StripePayment: Processing payment success for:', {
-        paymentType,
-        bookingId,
-        isDownPayment: paymentType === 'down_payment',
-        isRemainingPayment: paymentType === 'remaining_payment'
-      })
-      
       if (paymentType === 'down_payment') {
-        console.log('🔍 StripePayment: Calling processDownPayment for booking:', bookingId)
         await PaymentAPI.processDownPayment(bookingId)
       } else if (paymentType === 'remaining_payment') {
-        console.log('🔍 StripePayment: Calling processRemainingPayment for booking:', bookingId)
         await PaymentAPI.processRemainingPayment(bookingId)
       } else if (paymentType === 'full_payment') {
-        console.log('🔍 StripePayment: Calling processFullPayment for booking:', bookingId)
         await PaymentAPI.processFullPayment(bookingId)
-      } else {
-        console.log('🔍 StripePayment: Unknown payment type:', paymentType)
       }
       
       setPaymentStatus('success')
@@ -162,7 +169,6 @@ export default function StripePayment({
       }, 2000)
       
     } catch (err: any) {
-      console.error('🔍 StripePayment: Payment processing error:', err)
       setPaymentStatus('failed')
       setError(err.message || 'Failed to process payment')
       toast({

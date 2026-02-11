@@ -26,7 +26,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
                 enableSystem
                 disableTransitionOnChange
             >
-                {/* <ProtectedRoutes> */}
+                <ProtectedRoutes>
                 <SidebarProvider>
                     <AppSidebar />
                     <SidebarInset>
@@ -34,7 +34,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
                         {children}
                     </SidebarInset>
                 </SidebarProvider>
-                {/* </ProtectedRoutes> */}
+                </ProtectedRoutes>
             </ThemeProvider>
         </main>
     )

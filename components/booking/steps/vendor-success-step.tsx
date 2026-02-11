@@ -27,28 +27,6 @@ export default function VendorSuccessStep({
   const packageData = bookingResponse?.data?.bookingDetails?.[0]?.package || selectedPackageObj;
   const bookingData = bookingResponse?.data;
 
-  // Debug logging
-  console.log('🔍 VendorSuccessStep - Received props:', {
-    formData,
-    vendor,
-    selectedPackageObj,
-    vendorDetails,
-    bookingResponse,
-    vendorData,
-    packageData,
-    bookingData
-  });
-  
-  console.log('🔍 Form Data Details:', {
-    eventType: formData.eventType,
-    bookingDate: formData.bookingDate,
-    timeSlot: formData.timeSlot,
-    guestCount: formData.guestCount,
-    username: formData.username,
-    email: formData.email,
-    phoneNumber: formData.phoneNumber
-  });
-
   useEffect(() => {
     // Trigger confetti animation on component mount
     const duration = 3 * 1000

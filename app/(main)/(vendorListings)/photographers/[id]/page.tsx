@@ -30,21 +30,15 @@ export default function PhotographerDetailsPage() {
         setIsLoading(true)
         setError(null)
         
-        console.log('🔍 Fetching photographer details for ID:', id)
-        
         // Fetch vendor details from API
         const vendorData = await VendorAPI.getBusinessById(id)
         
         if (vendorData) {
-          console.log('✅ Photographer data received:', vendorData)
           setVendor(vendorData)
         } else {
-          console.log('❌ No photographer data received from API')
           throw new Error('Photographer not found')
         }
       } catch (err) {
-        console.error('❌ Error fetching photographer details:', err)
-        
         // Try to get from localStorage as fallback
         try {
           const storedVendors = localStorage.getItem('all_vendors')
@@ -52,13 +46,11 @@ export default function PhotographerDetailsPage() {
             const parsedVendors = JSON.parse(storedVendors)
             const storedVendor = parsedVendors.find((v: Vendor) => v.id.toString() === id)
             if (storedVendor) {
-              console.log('✅ Found photographer in localStorage fallback')
               setVendor(storedVendor)
               return
             }
           }
         } catch (localStorageError) {
-          console.log('❌ Error reading from localStorage:', localStorageError)
         }
         
         setError(err instanceof Error ? err.message : 'Failed to load photographer details. Please try again.')

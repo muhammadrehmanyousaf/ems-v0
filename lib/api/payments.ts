@@ -8,6 +8,26 @@ import type {
 } from '../types';
 
 export class PaymentAPI {
+  // Check for existing payment intent
+  static async checkExistingPaymentIntent(
+    bookingId: number,
+    paymentType: 'down_payment' | 'remaining_payment' | 'full_payment'
+  ): Promise<PaymentResponse | null> {
+    try {
+      const response = await axiosInstance.get(
+        `${BACKEND_URL}api/v1/payments/check-existing-intent?bookingId=${bookingId}&paymentType=${paymentType}`
+      );
+      
+      if (response.data.status && response.data.data) {
+        return response.data;
+      }
+      
+      return null;
+    } catch (error: any) {
+      return null;
+    }
+  }
+
   // Create payment intent
   static async createPaymentIntent(
     bookingId: number,
@@ -15,17 +35,11 @@ export class PaymentAPI {
     paymentType: 'down_payment' | 'remaining_payment' | 'full_payment'
   ): Promise<PaymentResponse> {
     try {
-      console.log('🔍 PaymentAPI: Creating payment intent with:', {
-        bookingId,
-        customerEmail,
-        paymentType,
-        paymentTypeDetails: {
-          isDownPayment: paymentType === 'down_payment',
-          isRemainingPayment: paymentType === 'remaining_payment',
-          isFullPayment: paymentType === 'full_payment'
-        },
-        endpoint: `${BACKEND_URL}api/v1/payments/create-payment-intent`
-      });
+      // First check if there's an existing incomplete payment intent
+      const existingIntent = await this.checkExistingPaymentIntent(bookingId, paymentType);
+      if (existingIntent) {
+        return existingIntent;
+      }
       
       const requestBody = {
         bookingId: Number(bookingId), // Ensure bookingId is a number
@@ -33,16 +47,10 @@ export class PaymentAPI {
         paymentType
       };
       
-      console.log('🔍 PaymentAPI: Request body being sent:', requestBody);
-      
       const response = await axiosInstance.post(`${BACKEND_URL}api/v1/payments/create-payment-intent`, requestBody);
-      
-      console.log('🔍 PaymentAPI: Payment intent response:', response.data);
+
       return response.data;
     } catch (error: any) {
-      console.error('🔍 PaymentAPI: Error creating payment intent:', error);
-      console.error('🔍 PaymentAPI: Error response:', error.response?.data);
-      
       // Better error message handling
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.error || 
@@ -93,8 +101,6 @@ export class PaymentAPI {
   static async getPaymentHistory(): Promise<PaymentHistory[]> {
     try {
       // TODO: Replace with your actual payment history endpoint
-      console.log('🔍 PaymentAPI: Fetching payment history...');
-      
       // For now, return empty array until we know your real endpoint
       return [];
       
@@ -102,7 +108,7 @@ export class PaymentAPI {
       // const response = await axiosInstance.get(`${BACKEND_URL}api/v1/payments/history`);
       // return response.data.data || [];
     } catch (error: any) {
-      console.error('🔍 PaymentAPI: Error fetching payment history:', error);
+      console.error('Error fetching payment history:', error);
       return [];
     }
   }
@@ -111,8 +117,6 @@ export class PaymentAPI {
   static async getPendingPayments(): Promise<PendingPayment[]> {
     try {
       // TODO: Replace with your actual pending payments endpoint
-      console.log('🔍 PaymentAPI: Fetching pending payments...');
-      
       // For now, return empty array until we know your real endpoint
       return [];
       
@@ -120,7 +124,7 @@ export class PaymentAPI {
       // const response = await axiosInstance.get(`${BACKEND_URL}api/v1/payments/pending`);
       // return response.data.data || [];
     } catch (error: any) {
-      console.error('🔍 PaymentAPI: Error fetching pending payments:', error);
+      console.error('Error fetching pending payments:', error);
       return [];
     }
   }
@@ -141,14 +145,27 @@ export class PaymentAPI {
     }
   }
 
+  // Cancel incomplete payment intents for a booking
+  static async cancelIncompletePaymentIntents(bookingId: number): Promise<boolean> {
+    try {
+      const response = await axiosInstance.post(
+        `${BACKEND_URL}api/v1/payments/cancel-incomplete-intents`,
+        { bookingId: Number(bookingId) }
+      );
+      
+      return response.data.status === true;
+    } catch (error: any) {
+      console.error('Error cancelling incomplete payment intents:', error);
+      return false;
+    }
+  }
+
   // Verify booking exists before creating payment intent
   static async verifyBookingExists(bookingId: number): Promise<boolean> {
     try {
-      console.log('🔍 PaymentAPI: Verifying booking exists:', bookingId);
       // 1) Primary check: direct booking lookup
       try {
         const resp = await axiosInstance.get(`${BACKEND_URL}api/v1/bookings/${bookingId}`);
-        console.log('🔍 PaymentAPI: Booking verification response (direct):', resp.data);
         // Consider HTTP 200 as success even if payload shape differs
         if (resp.status === 200) {
           const data = resp.data;
@@ -162,7 +179,6 @@ export class PaymentAPI {
       } catch (err: any) {
         // If 404, we will try fallback; otherwise log and continue
         const status = err?.response?.status;
-        console.warn('🔍 PaymentAPI: Direct booking lookup failed with status:', status);
         if (status === 404) {
           // proceed to fallback check
         } else {
@@ -174,18 +190,16 @@ export class PaymentAPI {
       try {
         const listResp = await axiosInstance.get(`${BACKEND_URL}api/v1/bookings/simple-user-bookings`);
         const list = listResp?.data?.data || [];
-        console.log('🔍 PaymentAPI: Fallback bookings list count:', Array.isArray(list) ? list.length : 0);
         const found = Array.isArray(list) && list.some((b: any) => Number(b?.id) === Number(bookingId));
-        console.log('🔍 PaymentAPI: Fallback booking id present:', found);
         return !!found;
       } catch (listErr) {
-        console.error('🔍 PaymentAPI: Fallback bookings list lookup failed:', listErr);
+        console.error('Fallback bookings list lookup failed:', listErr);
       }
 
       // If neither check confirms existence, return false
       return false;
     } catch (error: any) {
-      console.error('🔍 PaymentAPI: Booking verification unexpected error:', error);
+      console.error('Booking verification unexpected error:', error);
       return false;
     }
   }
@@ -196,40 +210,16 @@ export class PaymentAPI {
     paymentHistory: PaymentHistory[];
   }> {
     try {
-      console.log('🔍 PaymentAPI: Fetching user bookings for payments...');
-      
       // Use the same API endpoint as the bookings page
       const response = await axiosInstance.get(`${BACKEND_URL}api/v1/bookings/simple-user-bookings`);
-      console.log('🔍 PaymentAPI: User bookings response:', response.data);
-      
+
       const bookings = response.data.data || [];
-      console.log('🔍 PaymentAPI: Raw bookings data:', bookings);
-      
-      // Log first few bookings to see structure
-      if (bookings.length > 0) {
-        console.log('🔍 PaymentAPI: First booking structure:', {
-          id: bookings[0].id,
-          status: bookings[0].status,
-          paymentStatus: bookings[0].paymentStatus,
-          totalAmount: bookings[0].totalAmount,
-          downPayment: bookings[0].downPayment,
-          customerName: bookings[0].customerName
-        });
-      }
-      
+
       // Organize bookings by payment status
       const pendingPayments: PendingPayment[] = [];
       const paymentHistory: PaymentHistory[] = [];
       
       bookings.forEach((booking: any, index: number) => {
-        console.log(`🔍 PaymentAPI: Processing booking ${index + 1}:`, {
-          id: booking.id,
-          status: booking.status,
-          paymentStatus: booking.paymentStatus,
-          totalAmount: booking.totalAmount,
-          downPayment: booking.downPayment
-        });
-        
         // Extract business info from bookingDetails
         const businesses = booking.bookingDetails?.map((detail: any) => ({
           id: detail.businessId,
@@ -251,15 +241,6 @@ export class PaymentAPI {
           calculatedAmount = this.calculatePaymentAmount(booking.status, booking.paymentStatus, booking.totalAmount, booking.downPayment);
         }
         
-        console.log(`🔍 PaymentAPI: Payment type determination for booking ${index + 1}:`, {
-          status: booking.status,
-          paymentStatus: booking.paymentStatus,
-          determinedPaymentType,
-          calculatedAmount,
-          totalAmount: booking.totalAmount,
-          downPayment: booking.downPayment
-        });
-        
         const paymentData = {
           id: booking.id,
           bookingId: booking.id,
@@ -275,13 +256,10 @@ export class PaymentAPI {
           totalAmount: booking.totalAmount
         };
         
-        console.log(`🔍 PaymentAPI: Payment data for booking ${index + 1}:`, paymentData);
-        
         // Treat any completed booking as done (history), regardless of paymentStatus
         const statusLower = String(booking.status || '').toLowerCase();
         const paymentLower = String(booking.paymentStatus || '').toLowerCase();
         if (statusLower === 'completed' || paymentLower === 'paid' || paymentLower === 'completed') {
-          console.log(`🔍 PaymentAPI: Adding to payment history:`, paymentData);
           paymentHistory.push({
             ...paymentData,
             status: 'completed',
@@ -293,20 +271,13 @@ export class PaymentAPI {
             }
           });
         } else {
-          console.log(`🔍 PaymentAPI: Adding to pending payments:`, paymentData);
           pendingPayments.push(paymentData);
         }
       });
       
-      console.log('🔍 PaymentAPI: Final organized payments:', { 
-        pendingPayments: pendingPayments.length, 
-        paymentHistory: paymentHistory.length,
-        totalBookings: bookings.length
-      });
-      
       return { pendingPayments, paymentHistory };
     } catch (error: any) {
-      console.error('🔍 PaymentAPI: Error fetching user bookings:', error);
+      console.error('Error fetching user bookings:', error);
       return { pendingPayments: [], paymentHistory: [] };
     }
   }

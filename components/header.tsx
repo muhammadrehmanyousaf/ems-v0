@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -80,16 +80,6 @@ export function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const router = useRouter()
   const { user, isAuthenticated, isLoading } = useUser();
-
-  // Debug logging
-  useEffect(() => {
-    console.log("🔍 Header - Auth state:", { 
-      user: !!user, 
-      isAuthenticated, 
-      isLoading,
-      userData: user 
-    });
-  }, [user, isAuthenticated, isLoading]);
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()

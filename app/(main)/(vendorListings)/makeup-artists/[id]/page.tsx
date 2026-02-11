@@ -30,21 +30,15 @@ export default function MakeupArtistDetailsPage() {
         setIsLoading(true)
         setError(null)
         
-        console.log('🔍 Fetching makeup artist details for ID:', id)
-        
         // Fetch vendor details from API
         const vendorData = await VendorAPI.getBusinessById(id)
         
         if (vendorData) {
-          console.log('✅ Makeup artist data received:', vendorData)
           setVendor(vendorData)
         } else {
-          console.log('❌ No makeup artist data received from API')
           throw new Error('Makeup artist not found')
         }
       } catch (err) {
-        console.error('❌ Error fetching makeup artist details:', err)
-        
         // Try to get from localStorage as fallback
         try {
           const storedVendors = localStorage.getItem('all_vendors')
@@ -52,13 +46,11 @@ export default function MakeupArtistDetailsPage() {
             const parsedVendors = JSON.parse(storedVendors)
             const storedVendor = parsedVendors.find((v: Vendor) => v.id.toString() === id)
             if (storedVendor) {
-              console.log('✅ Found makeup artist in localStorage fallback')
               setVendor(storedVendor)
               return
             }
           }
         } catch (localStorageError) {
-          console.log('❌ Error reading from localStorage:', localStorageError)
         }
         
         setError(err instanceof Error ? err.message : 'Failed to load makeup artist details. Please try again.')

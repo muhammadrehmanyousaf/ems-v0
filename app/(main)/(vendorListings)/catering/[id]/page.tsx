@@ -30,21 +30,15 @@ export default function CateringDetailsPage() {
         setIsLoading(true)
         setError(null)
         
-        console.log('🔍 Fetching catering vendor details for ID:', id)
-        
         // Fetch vendor details from API
         const vendorData = await VendorAPI.getBusinessById(id)
         
         if (vendorData) {
-          console.log('✅ Catering vendor data received:', vendorData)
           setVendor(vendorData)
         } else {
-          console.log('❌ No catering vendor data received from API')
           throw new Error('Catering vendor not found')
         }
       } catch (err) {
-        console.error('❌ Error fetching catering vendor details:', err)
-        
         // Try to get from localStorage as fallback
         try {
           const storedVendors = localStorage.getItem('all_vendors')
@@ -52,13 +46,11 @@ export default function CateringDetailsPage() {
             const parsedVendors = JSON.parse(storedVendors)
             const storedVendor = parsedVendors.find((v: Vendor) => v.id.toString() === id)
             if (storedVendor) {
-              console.log('✅ Found catering vendor in localStorage fallback')
               setVendor(storedVendor)
               return
             }
           }
         } catch (localStorageError) {
-          console.log('❌ Error reading from localStorage:', localStorageError)
         }
         
         setError(err instanceof Error ? err.message : 'Failed to load catering vendor details. Please try again.')

@@ -13,11 +13,10 @@ import { FeaturedWeddingStationery } from "@/components/homepage/FeaturedWedding
 import { PlanningTools } from "@/components/homepage/planning-tools"
 import { RealWeddings } from "@/components/homepage/real-weddings"
 import { WeddingTips } from "@/components/homepage/wedding-tips"
-import { UserProvider } from "@/context/UserContext"
 
 export default function Home() {
   return (
-    <UserProvider>
+    <>
       <HeroSection />
       <FeaturedCategories />
       <FeaturedVendors />
@@ -33,7 +32,7 @@ export default function Home() {
       <PlanningTools />
       <RealWeddings />
       <WeddingTips />
-    </UserProvider>
+    </>
   )
 }
 

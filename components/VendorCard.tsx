@@ -114,16 +114,6 @@ export default function VendorCard({
     const cleanId = String(id).trim()
     const cleanPath = vendorTypePath.trim()
     
-    // Debug logging to identify the issue
-    console.log('VendorCard navigation:', {
-      originalType: type,
-      vendorTypePath,
-      cleanPath,
-      originalId: id,
-      cleanId,
-      finalUrl: cleanPath === 'vendors' ? '/vendors' : `/${cleanPath}/${cleanId}`
-    })
-    
     if (cleanPath === 'vendors') {
       // For unmapped vendor types, go to main vendors page
       router.push('/vendors')

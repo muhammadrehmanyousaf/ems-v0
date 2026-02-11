@@ -30,21 +30,15 @@ export default function VenueDetailsPage() {
         setIsLoading(true)
         setError(null)
         
-        console.log('🔍 Fetching venue details for ID:', id)
-        
         // Fetch venue details from API
         const venueData = await VendorAPI.getBusinessById(id)
         
         if (venueData) {
-          console.log('✅ Venue data received:', venueData)
           setVenue(venueData)
         } else {
-          console.log('❌ No venue data received from API')
           throw new Error('Venue not found')
         }
       } catch (err) {
-        console.error('❌ Error fetching venue details:', err)
-        
         // Try to get from localStorage as fallback
         try {
           const storedVenues = localStorage.getItem('all_vendors')
@@ -52,13 +46,11 @@ export default function VenueDetailsPage() {
             const parsedVenues = JSON.parse(storedVenues)
             const storedVenue = parsedVenues.find((v: Vendor) => v.id.toString() === id)
             if (storedVenue) {
-              console.log('✅ Found venue in localStorage fallback')
               setVenue(storedVenue)
               return
             }
           }
         } catch (localStorageError) {
-          console.log('❌ Error reading from localStorage:', localStorageError)
         }
         
         setError(err instanceof Error ? err.message : 'Failed to load venue details. Please try again.')

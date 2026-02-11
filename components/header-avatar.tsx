@@ -38,22 +38,14 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
     const { logout } = useUser();
     const [localUser, setLocalUser] = useState<any>(user);
 
-    // Debug logging
-    useEffect(() => {
-        console.log("🔍 HeaderAvatar - Props:", { loading, user });
-        console.log("🔍 HeaderAvatar - Local state:", { localUser });
-    }, [loading, user, localUser]);
-
     // Update localUser when user prop changes
     useEffect(() => {
-        console.log('Header: user prop changed, updating localUser:', user);
         setLocalUser(user);
     }, [user]);
 
     // Listen for profile updates from the profile page
     useEffect(() => {
         const handleProfileUpdate = (event: CustomEvent) => {
-            console.log('Header received profile update:', event.detail);
             setLocalUser((prev: any) => ({
                 ...prev,
                 ...event.detail
@@ -76,18 +68,21 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
         logout();
     };
 
-    // Safely get user role with proper null checks
-    let userRole;
-    try {
-        userRole = displayUser?.roles?.[0]?.id;
-        console.log("🔍 HeaderAvatar - User role:", userRole);
-    } catch (error) {
-        console.warn('Could not get user role:', error);
-        userRole = null;
-    }
+    // Determine if user has dashboard access (admin, vendor, or isVendor flag)
+    const hasDashboardAccess = displayUser
+      ? displayUser.isVendor === true ||
+        displayUser.isSuperAdmin === true ||
+        displayUser.roles?.some(
+          (role: any) =>
+            role.id === 1 ||
+            role.id === 2 ||
+            role.name?.toLowerCase() === 'super admin' ||
+            role.name?.toLowerCase() === 'vendor' ||
+            role.name?.toLowerCase() === 'admin'
+        )
+      : false;
 
     if (loading) {
-        console.log("🔍 HeaderAvatar - Showing loading spinner");
         return (
             <div className="flex items-center justify-center">
                 <Spinner size="sm" className="text-rose-500" />
@@ -96,15 +91,7 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
     }
 
     if (displayUser) {
-        console.log("🔍 HeaderAvatar - User is logged in, role:", userRole);
-        // If we can't determine the role, treat as regular user
-        if (!userRole) {
-            console.log('User role not found, treating as regular user');
-            userRole = 3; // Default to regular user
-        }
-        
-        if (userRole === 1 || userRole === 2) {
-            console.log("🔍 HeaderAvatar - Rendering admin dashboard button");
+        if (hasDashboardAccess) {
             // Admin/Manager Dashboard
             return (
                 <DropdownMenu>
@@ -163,8 +150,7 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
                     </DropdownMenuContent>
                 </DropdownMenu>
             );
-        } else if (userRole === 3) {
-            console.log("🔍 HeaderAvatar - Rendering user profile avatar");
+        } else {
             // Regular User
             return (
                 <DropdownMenu>
@@ -294,7 +280,6 @@ const HeaderAvatar = ({loading, user}: AvatarComponent) => {
         }
     }
 
-    console.log("🔍 HeaderAvatar - No user logged in, showing business registration button");
     // If no user is logged in - Show "List Your Business" button
     return (
         <DropdownMenu>

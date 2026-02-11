@@ -246,92 +246,72 @@ export function HeroSection() {
 
   // Create reverse mapping from vendor type to path
   const getVendorTypeToPath = (vendorType: string): string => {
-    console.log('🔍 Looking for vendor type:', vendorType)
-    
     // First try exact match
     for (const [path, type] of Object.entries(VENDOR_TYPE_PATHS)) {
       if (type === vendorType) {
-        console.log('✅ Exact match found:', path)
         return path
       }
     }
-    
+
     // Try case-insensitive match
     const lowerVendorType = vendorType.toLowerCase()
     for (const [path, type] of Object.entries(VENDOR_TYPE_PATHS)) {
       if (type.toLowerCase() === lowerVendorType) {
-        console.log('✅ Case-insensitive match found:', path)
         return path
       }
     }
-    
+
     // Try partial match
     for (const [path, type] of Object.entries(VENDOR_TYPE_PATHS)) {
       if (type.toLowerCase().includes(lowerVendorType) || lowerVendorType.includes(type.toLowerCase())) {
-        console.log('✅ Partial match found:', path)
         return path
       }
     }
-    
-    console.log('❌ No match found, using fallback')
+
     return 'vendor' // fallback
   }
 
   // Map vendor types to URL slugs using VENDOR_TYPE_PATHS from vendor-types.ts
   const getVendorSlug = (vendor: Vendor): string => {
-    console.log('🎯 Getting slug for vendor:', vendor.name, 'Type:', vendor.type)
-    
     const vendorType = vendor.type || ''
-    
+
     // Use the reverse mapping to get the correct path
     const path = getVendorTypeToPath(vendorType)
     if (path !== 'vendor') {
-      console.log('✅ Using path from type mapping:', path)
       return path
     }
-    
+
     // Fallback: try to determine from vendor name
     const vendorName = vendor.name?.toLowerCase() || ''
-    console.log('🔍 Trying name-based fallback for:', vendorName)
-    
+
     if (vendorName.includes('photography') || vendorName.includes('photographer') || vendorName.includes('camera')) {
-      console.log('✅ Name-based match: photographers')
       return 'photographers'
     }
     if (vendorName.includes('makeup') || vendorName.includes('beauty') || vendorName.includes('glamour')) {
-      console.log('✅ Name-based match: makeup-artists')
       return 'makeup-artists'
     }
     if (vendorName.includes('decor') || vendorName.includes('sajawat') || vendorName.includes('event')) {
-      console.log('✅ Name-based match: decor')
       return 'decor'
     }
     if (vendorName.includes('catering') || vendorName.includes('food') || vendorName.includes('kitchen')) {
-      console.log('✅ Name-based match: catering')
       return 'catering'
     }
     if (vendorName.includes('venue') || vendorName.includes('hall') || vendorName.includes('palace') || vendorName.includes('banquet')) {
-      console.log('✅ Name-based match: venues')
       return 'venues'
     }
     if (vendorName.includes('car') || vendorName.includes('rental') || vendorName.includes('drive')) {
-      console.log('✅ Name-based match: car-rental')
       return 'car-rental'
     }
     if (vendorName.includes('henna') || vendorName.includes('mehndi')) {
-      console.log('✅ Name-based match: henna-artists')
       return 'henna-artists'
     }
     if (vendorName.includes('bridal') || vendorName.includes('couture') || vendorName.includes('fashion')) {
-      console.log('✅ Name-based match: bridal-wear')
       return 'bridal-wear'
     }
     if (vendorName.includes('card') || vendorName.includes('invitation') || vendorName.includes('print')) {
-      console.log('✅ Name-based match: wedding-stationery')
       return 'wedding-stationery'
     }
-    
-    console.log('❌ No match found, using vendor fallback')
+
     return 'vendor' // final fallback
   }
 

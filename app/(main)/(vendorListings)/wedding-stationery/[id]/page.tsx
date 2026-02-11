@@ -30,21 +30,15 @@ export default function WeddingStationeryDetailsPage() {
         setIsLoading(true)
         setError(null)
         
-        console.log('🔍 Fetching wedding stationery vendor details for ID:', id)
-        
         // Fetch vendor details from API
         const vendorData = await VendorAPI.getBusinessById(id)
         
         if (vendorData) {
-          console.log('✅ Wedding stationery vendor data received:', vendorData)
           setVendor(vendorData)
         } else {
-          console.log('❌ No wedding stationery vendor data received from API')
           throw new Error('Wedding stationery vendor not found')
         }
       } catch (err) {
-        console.error('❌ Error fetching wedding stationery vendor details:', err)
-        
         // Try to get from localStorage as fallback
         try {
           const storedVendors = localStorage.getItem('all_vendors')
@@ -52,13 +46,11 @@ export default function WeddingStationeryDetailsPage() {
             const parsedVendors = JSON.parse(storedVendors)
             const storedVendor = parsedVendors.find((v: Vendor) => v.id.toString() === id)
             if (storedVendor) {
-              console.log('✅ Found wedding stationery vendor in localStorage fallback')
               setVendor(storedVendor)
               return
             }
           }
         } catch (localStorageError) {
-          console.log('❌ Error reading from localStorage:', localStorageError)
         }
         
         setError(err instanceof Error ? err.message : 'Failed to load wedding stationery vendor details. Please try again.')
