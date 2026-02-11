@@ -71,6 +71,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </aside>
       <main className="flex-1 overflow-y-auto p-8">{children}</main>
     </div>
-     </ProtectedRoutes>
+    </ProtectedRoutes>
   )
 }

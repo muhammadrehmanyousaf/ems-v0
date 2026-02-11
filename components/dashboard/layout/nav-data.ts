@@ -185,7 +185,7 @@ export const data = {
     },
     {
       name: "Business Settings",
-      url: "/dashboard/business-settings",
+      url: "/dashboard/settings",
       icon: Settings,
     },
   ],

@@ -67,7 +67,7 @@ export function HeroSection() {
   const popularCities = useMemo(() => {
     const cityCounts: { [key: string]: number } = {}
     
-    allVendors.forEach((vendor) => {
+    allVendors?.forEach((vendor) => {
       if (vendor.city) {
         cityCounts[vendor.city] = (cityCounts[vendor.city] || 0) + 1
       }
