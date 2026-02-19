@@ -22,10 +22,10 @@ const businessTypes = [
     title: "Makeup Artist",
     subtitle: "Beauty & Styling Services",
     icon: Heart,
-    color: "from-pink-500 to-rose-600",
-    bgColor: "from-pink-50 to-rose-50",
-    borderColor: "border-pink-200",
-    textColor: "text-pink-600",
+    color: "from-purple-500 to-purple-600",
+    bgColor: "from-purple-50 to-purple-50/80",
+    borderColor: "border-purple-200",
+    textColor: "text-purple-600",
   },
   {
     id: "Wedding venue",
@@ -62,8 +62,8 @@ const businessTypes = [
     title: "Catering",
     subtitle: "Food & Beverage Services",
     icon: Utensils,
-    color: "from-red-500 to-pink-600",
-    bgColor: "from-red-50 to-pink-50",
+    color: "from-red-500 to-red-600",
+    bgColor: "from-red-50 to-red-50",
     borderColor: "border-red-200",
     textColor: "text-red-600",
   },
@@ -156,17 +156,17 @@ export function BusinessTypeStep({setBusinessType, businessType}: BussineTypeCom
       </div>
       
       {businessType && (
-        <Card className="bg-gradient-to-r from-rose-50 to-pink-50 border-rose-200">
+        <Card className="bg-gradient-to-r from-purple-50 to-purple-50/80 border-purple-200">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-rose-500 to-pink-600 rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-purple-600 to-purple-700 rounded-full flex items-center justify-center flex-shrink-0">
                 <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-medium text-rose-900">
+                <p className="text-xs sm:text-sm font-medium text-purple-900">
                   You selected: <span className="font-bold">{businessType}</span>
                 </p>
-                <p className="text-xs text-rose-700">
+                <p className="text-xs text-purple-700">
                   Click "Continue" to proceed with your registration
                 </p>
               </div>

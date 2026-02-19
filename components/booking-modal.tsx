@@ -40,7 +40,6 @@ export function BookingModal({ isOpen, onClose, vendorId, vendorName }: BookingM
 
   const handleSubmit = () => {
     // Here you would typically send the booking data to your backend
-    console.log("Booking submitted:", { vendorId, ...formData })
     onClose()
   }
 

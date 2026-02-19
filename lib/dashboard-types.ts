@@ -1,25 +1,19 @@
-// types/booking.ts
-export type BookingStatus = "Pending" | "Completed" | "Canceled" | "Confirmed"
-export type EventType =
-  | "demo"
-  | "consultation"
-  | "installation"
-  | "support"
-  | "follow_up"
+// ─── Booking ──────────────────────────────────────────────────
+export type BookingStatus = "Pending" | "Completed" | "Cancelled" | "Confirmed";
 
 export type Booking = {
-  _id: string
-  name: string
-  phone: string
-  email: string
-  event_type: EventType
-  status: BookingStatus
-  /** ISO string, e.g. "2025-08-09T10:00:00.000Z" */
-  date: string
-  createdAt?: string
-  updatedAt?: string
-}
+  _id: string;
+  name: string;
+  phone: string;
+  email: string;
+  event_type: string;
+  status: BookingStatus;
+  date: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
 
+// ─── Customers (aggregated from bookings) ─────────────────────
 export type CustomersType = {
   _id: string;
   name: string;
@@ -27,25 +21,25 @@ export type CustomersType = {
   email: string;
   address: string;
   total_booking: number;
-  last_booking: string
-  createdAt?: string
-  updatedAt?: string
-}
+  last_booking: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
 
-// types.ts
-
-export type PaymentStatus = 
+// ─── Payment ──────────────────────────────────────────────────
+export type PaymentStatus =
   | "Pending"
   | "Advance Paid"
   | "Fully Paid"
   | "Cancelled"
   | "Failed";
 
-export type PaymentMethod = 
+export type PaymentMethod =
   | "Bank Transfer"
   | "Credit Card"
   | "Debit Card"
   | "Cash"
+  | "stripe"
   | null;
 
 export interface Payment {
@@ -53,153 +47,160 @@ export interface Payment {
   customerName: string;
   email: string;
   phone: string;
-  eventType: "Wedding" | "Birthday Party" | "Corporate Event" | "Other";
-  eventDate: string; // ISO date string
+  eventType: string;
+  eventDate: string;
   venue: string;
   guestsCount: number;
-  packageSelected: string; // Silver, Gold, Platinum etc.
+  packageSelected: string;
   totalAmount: number;
   advanceAmount: number;
   balanceAmount: number;
   currency: string;
-  paymentStatus: PaymentStatus;
+  paymentStatus: string;
   paymentMethod: PaymentMethod;
   transactionId: string | null;
   invoiceId: string;
   orderId: string;
-  paymentDate: string | null; // ISO string or null if not paid yet
+  paymentDate: string | null;
   dueDate: string;
   notes?: string;
 }
 
+// ─── Review ───────────────────────────────────────────────────
 export type ReviewStatus = "Published" | "Pending" | "Rejected";
 
 export interface Review {
-  id: string;              // Unique review ID
-  reviewerName: string;    // Full name of the reviewer
-  email: string;           // Reviewer email
-  phone: string;           // Reviewer phone number
-  bookingId: string;       // Associated booking ID
-  rating: number;          // Rating (1–5)
-  reviewText: string;      // Written review
-  status: ReviewStatus;    // Review status
-  createdAt: string;       // Date/Time string (ISO or formatted)
+  id: string;
+  reviewerName: string;
+  email: string;
+  phone: string;
+  bookingId: string;
+  rating: number;
+  reviewText: string;
+  businessName?: string;
+  status: string;
+  createdAt: string;
+  vendorReply?: string;
+  vendorReplyDate?: string;
 }
 
-export type UserRole = "Admin" | "Vendor" | "Manager";
-
+// ─── User ─────────────────────────────────────────────────────
 export type User = {
   id: number;
   fullName: string;
+  email?: string;
   phoneNumber: string;
-  role: UserRole;
-  status: boolean;
+  active: boolean;
+  isVendor: boolean;
+  roles: { id: number; name: string }[];
   createdAt: string;
-}
+  updatedAt?: string;
+};
 
+// ─── Role ─────────────────────────────────────────────────────
 export type Role = {
-  id: string;
-  title: string;
+  id: string | number;
+  name?: string;
+  title?: string;
   description: string;
-  status: 'active' | 'inActive';
+  type?: string;
+  status?: "active" | "inActive";
   createdAt: string;
-}
+  users?: { id: number; fullName: string; isVendor: boolean }[];
+};
 
+// ─── Vendor ───────────────────────────────────────────────────
 export type Vendor = {
-  id: string;
+  id: string | number;
   fullName: string;
   email: string;
   phoneNumber: string;
-  businessType: string;
-  BusinessName: string;
+  vendorType?: string;
+  businessType?: string;
+  BusinessName?: string;
   status: string;
+  active?: boolean;
+  reviewProfile?: boolean;
   createdAt?: string;
   updatedAt?: string;
-}
+};
 
+// ─── Business ─────────────────────────────────────────────────
 export type Business = {
-  id: string;
+  id: string | number;
   name: string;
-  type: string;
-  total_packages: number;
+  type?: string;
+  city?: string;
+  subArea?: string;
+  total_packages?: number;
+  vendorName?: string;
+  vendorType?: string;
   createdAt?: string;
   updatedAt?: string;
-}
+};
 
+// ─── Menu ─────────────────────────────────────────────────────
 export interface Menu {
   id: number;
   title: string;
   price: number;
-  data: Record<string, unknown>; // or a specific shape if you have it
+  data: Record<string, unknown>;
 }
 
+// ─── Package ──────────────────────────────────────────────────
 export interface Package {
   id: number;
   name: string;
+  description?: string;
   price: number;
-  features: string[]; // adjust if not strictly string[]
+  features: string[];
+  businessId?: number;
+  businessName?: string;
 }
 
-// details row (the item inside bookingDetails[])
+// ─── Booking Detail ───────────────────────────────────────────
 export interface BookingDetail {
-  id: number;                // 44
-  bookingId: number;         // 33
-  businessId: number;        // 1
-  menuId: number;            // 1
-  packageId: number;         // 1
-
-  totalAmount: number;       // 500
-  downPayment: number;       // 20
-
-  specialRequests: string | null;   // "Need vegetarian meal options"
+  id: number;
+  bookingId: number;
+  businessId: number;
+  menuId: number;
+  packageId: number;
+  totalAmount: number;
+  downPayment: number;
+  specialRequests: string | null;
   additionalRequests: string | null;
-
-  // denormalized joins (present in your sample)
   business: Business;
   menu: Menu;
   package: Package;
-
-  // audit
-  createdAt: string;         // ISO
-  updatedAt: string;         // ISO
+  createdAt: string;
+  updatedAt: string;
 }
 
-// top-level booking row (what your table lists)
+// ─── Full Booking Data ────────────────────────────────────────
 export interface BookingData {
-  id: number;                       // 33
-  customerName: string;             // "Michael Brown"
-  customerEmail: string;            // "michaelbrown@gmail.com"
-  customerPhone: string;            // "+9988776655"
-
-  bookingDate: string;              // "2040-09-01T00:00:00.000Z"
-  bookingTime: string;              // "14:00"  (keep string; don't lock to a literal)
-
-  status: BookingStatus;            // "Pending"
-  paymentStatus: PaymentStatus;     // "Pending"
-  paymentMethod: PaymentMethod;     // null | method
-
-  totalAmount: number;              // 1000
-  downPayment: number;              // 40
-
+  id: number;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  bookingDate: string;
+  bookingTime: string;
+  status: BookingStatus;
+  paymentStatus: string;
+  paymentMethod: PaymentMethod;
+  totalAmount: number;
+  downPayment: number;
   specialRequests: string | null;
   additionalRequests: string | null;
   cancellationReason: string | null;
-
-  vendorIds: number[];              // [2,3]
-
-  // audit
-  createdAt: string;                // ISO
-  updatedAt: string;                // ISO
-
-  // nested
-  bookingDetails: BookingDetail[];  // Array(1)
+  vendorIds: number[];
+  createdAt: string;
+  updatedAt: string;
+  bookingDetails: BookingDetail[];
 }
 
-// common API list response shape
 export interface BookingListResponse {
   data: Booking[];
   filters: {
     total: number;
-    // add page, pageSize, etc., if your API returns them
   };
 }

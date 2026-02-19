@@ -102,7 +102,7 @@ export function PersonalDetailsStep({ onSubmit }: FormInterface) {
         <Checkbox id="agreeToTerms" />
         <Label htmlFor="agreeToTerms" className="text-sm text-gray-700">
           Agree to{" "}
-          <Link href="/terms" className="text-rose-600 hover:underline">
+          <Link href="/terms" className="text-purple-600 hover:underline">
             Terms & Conditions
           </Link>
         </Label>

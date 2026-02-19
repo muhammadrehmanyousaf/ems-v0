@@ -56,6 +56,22 @@ export default function ChecklistPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const [loaded, setLoaded] = useState(false);
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('planning_checklist_items');
+      if (saved) setItems(JSON.parse(saved));
+    } catch { /* ignore corrupt data */ }
+    setLoaded(true);
+  }, []);
+
+  // Persist items to localStorage
+  useEffect(() => {
+    if (!loaded) return;
+    localStorage.setItem('planning_checklist_items', JSON.stringify(items));
+  }, [items, loaded]);
 
   // Filter items based on search and category
   const filteredItems = items.filter(item => {
@@ -138,14 +154,14 @@ export default function ChecklistPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-6 sm:mb-8"
       >
-        <Link href="/planning-tools" className="inline-flex items-center gap-2 text-rose-600 hover:text-rose-700 mb-4 transition-colors duration-200">
+        <Link href="/planning-tools" className="inline-flex items-center gap-2 text-purple-600 hover:text-purple-700 mb-4 transition-colors duration-200">
           <ArrowLeft className="w-4 h-4" />
           <span className="text-sm sm:text-base">Back to Planning Tools</span>
         </Link>
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-6">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-rose-50 rounded-2xl flex items-center justify-center shadow-lg">
-            <CalendarDays className="w-6 h-6 sm:w-8 sm:h-8 text-rose-600" />
+          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-purple-50 rounded-2xl flex items-center justify-center shadow-lg">
+            <CalendarDays className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
           </div>
           <div className="flex-1">
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900 mb-2">Wedding Checklist</h1>
@@ -272,7 +288,7 @@ export default function ChecklistPage() {
                   {item.completed ? (
                     <CheckCircle className="w-5 h-5 text-green-600" />
                   ) : (
-                    <Circle className="w-5 h-5 text-neutral-400 hover:text-rose-500 transition-colors" />
+                    <Circle className="w-5 h-5 text-neutral-400 hover:text-purple-500 transition-colors" />
                   )}
                 </button>
                 

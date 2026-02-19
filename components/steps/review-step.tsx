@@ -79,7 +79,7 @@ export function ReviewStep() {
         {formData.packages.map((pkg, index) => (
           <div key={index} className="border p-4 rounded-lg">
             <h4 className="font-medium">{pkg.name}</h4>
-            <p className="text-rose-600">Price: {pkg.price}</p>
+            <p className="text-purple-600">Price: {pkg.price}</p>
             <p>Services: {pkg.services.join(", ")}</p>
           </div>
         ))}
@@ -130,7 +130,7 @@ export function ReviewStep() {
         </div>
       </div>
 
-      <Button className="w-full bg-rose-600 hover:bg-rose-700 text-white">Submit Registration</Button>
+      <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white">Submit Registration</Button>
     </div>
   )
 }

@@ -1,3 +1,5 @@
+'use client';
+
 import { MoreHorizontal, PencilLine, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,9 +14,11 @@ import { User } from "@/lib/dashboard-types";
 
 interface RowActionsProps {
     data: User;
+    onEdit: (user: User) => void;
+    onDelete: (user: User) => void;
 }
 
-export function RowActions({ data }: RowActionsProps) {
+export function RowActions({ data, onEdit, onDelete }: RowActionsProps) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -27,18 +31,16 @@ export function RowActions({ data }: RowActionsProps) {
                     <span className="sr-only">Open menu</span>
                 </Button>
             </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end" className="">
+            <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                    className="gap-2"
-                >
+                <DropdownMenuItem className="gap-2" onClick={() => onEdit(data)}>
                     <PencilLine className="size-4 opacity-70" />
                     Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem
                     className="gap-2 text-destructive focus:text-destructive"
+                    onClick={() => onDelete(data)}
                 >
                     <Trash2 className="size-4" />
                     Delete

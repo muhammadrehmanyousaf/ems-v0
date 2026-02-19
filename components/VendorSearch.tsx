@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
@@ -107,7 +108,6 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
       setTotalVendors(vendorsData.length);
       setIsLoading(false)
     } catch (error) {
-      console.log('error', error);
       setIsLoading(false)
     }
   };
@@ -265,41 +265,54 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-rose-50">
+    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-purple-50/30">
       <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 xl:px-12 py-4 sm:py-6 md:py-8 lg:py-12">
-        {/* Header Section */}
-        <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-neutral-900 mb-2 sm:mb-3">{displayName}</h1>
-          <p className="text-sm sm:text-base md:text-lg text-neutral-600 max-w-3xl mx-auto px-2">{description}</p>
-        </div>
+        {/* Hero Banner */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="relative rounded-2xl overflow-hidden mb-6 sm:mb-8 bg-gradient-to-r from-purple-700 via-purple-600 to-purple-800 p-8 sm:p-10 text-center"
+        >
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute inset-0" style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23D4AF37' fill-opacity='0.3'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            }} />
+          </div>
+          <div className="relative z-10">
+            <p className="text-xs sm:text-sm font-medium uppercase tracking-[0.2em] text-gold-300 mb-2">Find Your Perfect Match</p>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-heading font-bold text-white mb-2 sm:mb-3">{displayName}</h1>
+            <p className="text-sm sm:text-base text-purple-100 max-w-2xl mx-auto">{description}</p>
+          </div>
+        </motion.div>
 
         <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
           {/* Sticky Left Sidebar - Filters */}
           <aside className="w-full lg:w-1/4">
             <div className="sticky top-20">
               <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm max-h-[calc(100vh-4rem)] overflow-hidden">
-                <CardHeader className="pb-3 sm:pb-4 border-b border-neutral-100 bg-gradient-to-r from-rose-50 to-pink-50">
+                <CardHeader className="pb-3 sm:pb-4 border-b border-neutral-100 bg-gradient-to-r from-purple-50 to-purple-50/80">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg sm:text-xl font-bold text-neutral-900 flex items-center gap-2">
-                      <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-rose-500" />
+                      <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
                       Filters
                     </CardTitle>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={clearAllFilters}
-                      className="text-rose-600 hover:text-rose-700 hover:bg-rose-100 px-3 py-1 rounded-lg transition-all duration-200"
+                      className="text-purple-600 hover:text-purple-700 hover:bg-purple-100 px-3 py-1 rounded-lg transition-all duration-200"
                     >
                       Clear All
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="max-h-[calc(100vh-12rem)] overflow-y-auto px-3 sm:px-6 py-3 sm:py-4 space-y-4 sm:space-y-6 scrollbar-thin scrollbar-thumb-rose-300 scrollbar-track-neutral-100 hover:scrollbar-thumb-rose-400 scrollbar-thumb-rounded-full">
+                  <div className="max-h-[calc(100vh-12rem)] overflow-y-auto px-3 sm:px-6 py-3 sm:py-4 space-y-4 sm:space-y-6 scrollbar-thin scrollbar-thumb-purple-300 scrollbar-track-neutral-100 hover:scrollbar-thumb-purple-400 scrollbar-thumb-rounded-full">
                     {/* Search */}
                     <div className="space-y-2 sm:space-y-3">
                       <label className="text-xs sm:text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                        <Search className="w-3 h-3 sm:w-4 sm:h-4 text-rose-500" />
+                        <Search className="w-3 h-3 sm:w-4 sm:h-4 text-purple-500" />
                         Search Vendors
                       </label>
                       <div className="relative">
@@ -308,7 +321,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                           placeholder="Search by name, location..."
                           value={filters.search}
                           onChange={(e) => setFilters({...filters, search: e.target.value})}
-                          className="pl-8 sm:pl-10 h-9 sm:h-11 text-sm sm:text-base border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 rounded-lg transition-all duration-200"
+                          className="pl-8 sm:pl-10 h-9 sm:h-11 text-sm sm:text-base border-neutral-200 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 rounded-lg transition-all duration-200"
                         />
                       </div>
                     </div>
@@ -318,7 +331,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                     {/* Location */}
                     <div className="space-y-3">
                       <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-rose-500" />
+                        <MapPin className="w-4 h-4 text-purple-500" />
                         Location
                       </label>
                       <div className="relative">
@@ -327,7 +340,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                           placeholder="Enter city or area..."
                           value={filters.location}
                           onChange={(e) => setFilters({...filters, location: e.target.value})}
-                          className="pl-10 h-11 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 rounded-lg transition-all duration-200"
+                          className="pl-10 h-11 border-neutral-200 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 rounded-lg transition-all duration-200"
                         />
                       </div>
                     </div>
@@ -337,7 +350,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                     {/* Price Range */}
                     <div className="space-y-4">
                       <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                        <DollarSign className="w-4 h-4 text-rose-500" />
+                        <DollarSign className="w-4 h-4 text-purple-500" />
                         Price Range
                       </label>
                       <div className="px-2">
@@ -360,18 +373,18 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                     {/* Rating */}
                     <div className="space-y-3">
                       <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                        <Star className="w-4 h-4 text-rose-500" />
+                        <Star className="w-4 h-4 text-purple-500" />
                         Minimum Rating
                       </label>
                       <Select value={filters.rating.toString()} onValueChange={(value) => setFilters({...filters, rating: Number(value)})}>
-                        <SelectTrigger className="h-11 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 rounded-lg transition-all duration-200">
+                        <SelectTrigger className="h-11 border-neutral-200 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 rounded-lg transition-all duration-200">
                           <SelectValue placeholder="Select rating" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="0" className="hover:bg-rose-50">Any Rating</SelectItem>
-                          <SelectItem value="3" className="hover:bg-rose-50">3+ Stars</SelectItem>
-                          <SelectItem value="4" className="hover:bg-rose-50">4+ Stars</SelectItem>
-                          <SelectItem value="4.5" className="hover:bg-rose-50">4.5+ Stars</SelectItem>
+                          <SelectItem value="0" className="hover:bg-purple-50">Any Rating</SelectItem>
+                          <SelectItem value="3" className="hover:bg-purple-50">3+ Stars</SelectItem>
+                          <SelectItem value="4" className="hover:bg-purple-50">4+ Stars</SelectItem>
+                          <SelectItem value="4.5" className="hover:bg-purple-50">4.5+ Stars</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -381,16 +394,16 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                     {/* Budget */}
                     <div className="space-y-3">
                       <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                        <DollarSign className="w-4 h-4 text-rose-500" />
+                        <DollarSign className="w-4 h-4 text-purple-500" />
                         Budget Category
                       </label>
                       <Select value={filters.budget} onValueChange={(value) => setFilters({...filters, budget: value})}>
-                        <SelectTrigger className="h-11 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 rounded-lg transition-all duration-200">
+                        <SelectTrigger className="h-11 border-neutral-200 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 rounded-lg transition-all duration-200">
                           <SelectValue placeholder="Select budget" />
                         </SelectTrigger>
                         <SelectContent>
                           {budgetOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value} className="hover:bg-rose-50">
+                            <SelectItem key={option.value} value={option.value} className="hover:bg-purple-50">
                               {option.label}
                             </SelectItem>
                           ))}
@@ -403,7 +416,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                     {/* Availability */}
                     <div className="space-y-3">
                       <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-rose-500" />
+                        <Calendar className="w-4 h-4 text-purple-500" />
                         Availability
                       </label>
                       <div className="space-y-3">
@@ -419,7 +432,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                                   setFilters({...filters, availability: filters.availability.filter(item => item !== option.value)})
                                 }
                               }}
-                              className="text-rose-600 border-neutral-300 hover:border-rose-500 transition-colors duration-200"
+                              className="text-purple-600 border-neutral-300 hover:border-purple-500 transition-colors duration-200"
                             />
                             <label htmlFor={option.value} className="text-sm text-neutral-600 cursor-pointer hover:text-neutral-800 transition-colors duration-200">
                               {option.label}
@@ -434,7 +447,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                     {/* Experience */}
                     <div className="space-y-3">
                       <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                        <Award className="w-4 h-4 text-rose-500" />
+                        <Award className="w-4 h-4 text-purple-500" />
                         Experience Level
                       </label>
                       <div className="space-y-3">
@@ -450,7 +463,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                                   setFilters({...filters, experience: filters.experience.filter(item => item !== option.value)})
                                 }
                               }}
-                              className="text-rose-600 border-neutral-300 hover:border-rose-500 transition-colors duration-200"
+                              className="text-purple-600 border-neutral-300 hover:border-purple-500 transition-colors duration-200"
                             />
                             <label htmlFor={option.value} className="text-sm text-neutral-600 cursor-pointer hover:text-neutral-800 transition-colors duration-200">
                               {option.label}
@@ -465,7 +478,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                     {/* Services */}
                     <div className="space-y-3">
                       <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                        <Heart className="w-4 h-4 text-rose-500" />
+                        <Heart className="w-4 h-4 text-purple-500" />
                         Service Type
                       </label>
                       <div className="space-y-3">
@@ -481,7 +494,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                                   setFilters({...filters, services: filters.services.filter(item => item !== option.value)})
                                 }
                               }}
-                              className="text-rose-600 border-neutral-300 hover:border-rose-500 transition-colors duration-200"
+                              className="text-purple-600 border-neutral-300 hover:border-purple-500 transition-colors duration-200"
                             />
                             <label htmlFor={option.value} className="text-sm text-neutral-600 cursor-pointer hover:text-neutral-800 transition-colors duration-200">
                               {option.label}
@@ -503,13 +516,13 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 p-4 bg-white rounded-xl shadow-sm border border-neutral-100">
                 <div className="flex items-center gap-4 mb-4 sm:mb-0">
                   <div className="flex items-center gap-2">
-                    <Users className="w-5 h-5 text-rose-500" />
+                    <Users className="w-5 h-5 text-purple-500" />
                     <span className="text-sm font-semibold text-neutral-700">
                       {isLoading ? "Loading..." : `${filteredVendors.length} of ${totalVendors} results`}
                     </span>
                   </div>
                   {filters.search || filters.location || filters.rating > 0 ? (
-                    <Badge variant="secondary" className="bg-rose-100 text-rose-700 border-0">
+                    <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-0">
                       Filtered
                     </Badge>
                   ) : null}
@@ -517,7 +530,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                 
                 <div className="flex items-center gap-3">
                   <Select value={sortOption} onValueChange={setSortOption}>
-                    <SelectTrigger className="w-full sm:w-[200px] h-10 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
+                    <SelectTrigger className="w-full sm:w-[200px] h-10 border-neutral-200 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                       <SelectValue placeholder="Sort by" />
                     </SelectTrigger>
                     <SelectContent>
@@ -537,37 +550,48 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                 {isLoading ? (
                   Array.from({ length: 6 }).map((_, index) => (
                     <div key={index} className="animate-pulse">
-                      <div className="bg-gray-300 h-48 rounded-t-lg"></div>
-                      <div className="bg-white p-4 rounded-b-lg">
-                        <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
-                        <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+                      <div className="bg-gradient-to-r from-purple-100 via-purple-50 to-purple-100 h-48 rounded-t-xl animate-shimmer bg-[length:200%_100%]"></div>
+                      <div className="bg-white p-4 rounded-b-xl border border-purple-50">
+                        <div className="h-4 bg-purple-100 rounded-full w-3/4 mb-3"></div>
+                        <div className="h-3 bg-purple-50 rounded-full w-1/2 mb-2"></div>
+                        <div className="h-3 bg-purple-50 rounded-full w-2/3"></div>
                       </div>
                     </div>
                   ))
                 ) : filteredVendors.length > 0 ? (
-                  paginatedVendors.map((vendor) => (
-                    <VendorCard
-                      key={vendor.id}
-                      id={vendor.id}
-                      name={vendor.name}
-                      image={vendor.images?.[0] || "/placeholder.svg"}
-                      location={vendor.location || vendor.city}
-                      rating={vendor.rating}
-                      reviews={vendor.reviews?.length || 0}
-                      price={vendor.minimumPrice || vendor.price}
-                      type={vendor.subBusinessType || vendor.type}
-                      capacity={vendor.capacity}
-                      amenities={vendor.amenities}
-                      sponsored={vendor.sponsored}
-                    />
-                  ))
+                  <AnimatePresence mode="popLayout">
+                    {paginatedVendors.map((vendor, index) => (
+                      <motion.div
+                        key={vendor.id}
+                        layout
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                      >
+                        <VendorCard
+                          id={vendor.id}
+                          name={vendor.name}
+                          image={vendor.images?.[0] || "/placeholder.svg"}
+                          location={vendor.location || vendor.city}
+                          rating={vendor.rating}
+                          reviews={vendor.reviews?.length || 0}
+                          price={vendor.minimumPrice || vendor.price}
+                          type={vendor.type || vendor.subBusinessType}
+                          capacity={vendor.capacity}
+                          amenities={vendor.amenities}
+                          sponsored={vendor.sponsored}
+                        />
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 ) : (
                   <div className="col-span-full text-center py-12">
                     <div className="max-w-md mx-auto">
                       <Search className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
                       <h3 className="text-xl font-semibold text-neutral-900 mb-2">No results found</h3>
                       <p className="text-neutral-600 mb-6">Try adjusting your filters or search terms</p>
-                      <Button onClick={clearAllFilters} className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700">
+                      <Button onClick={clearAllFilters} className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800">
                         Clear All Filters
                       </Button>
                     </div>
@@ -582,7 +606,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                     variant="outline"
                     onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className="m-1 border-neutral-200 hover:border-rose-500 hover:text-rose-600"
+                    className="m-1 border-neutral-200 hover:border-purple-500 hover:text-purple-600"
                   >
                     <ChevronLeft className="w-4 h-4 mr-2" /> Previous
                   </Button>
@@ -592,7 +616,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                       <Button
                         key={page}
                         variant={currentPage === page ? "default" : "outline"}
-                        className={`m-1 ${currentPage === page ? 'bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700' : 'border-neutral-200 hover:border-rose-500 hover:text-rose-600'}`}
+                        className={`m-1 ${currentPage === page ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800' : 'border-neutral-200 hover:border-purple-500 hover:text-purple-600'}`}
                         onClick={() => setCurrentPage(page)}
                       >
                         {page}
@@ -603,7 +627,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                     variant="outline"
                     onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className="m-1 border-neutral-200 hover:border-rose-500 hover:text-rose-600"
+                    className="m-1 border-neutral-200 hover:border-purple-500 hover:text-purple-600"
                   >
                     Next <ChevronRight className="w-4 h-4 ml-2" />
                   </Button>

@@ -18,6 +18,7 @@ const ImagesStep = ({ errors, setErrors }: ImageProps) => {
       setFormData((prevData) => ({
         ...prevData,
         images: newImageUrls,
+        imageFiles: files,
       }));
       setErrors((prevErrors) => ({
         ...prevErrors,

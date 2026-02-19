@@ -1,26 +1,23 @@
 "use client"
 
-import { MoreHorizontal } from "lucide-react"
-
+import { Eye, MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuLabel,
     DropdownMenuSeparator,
-    DropdownMenuShortcut,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Payment } from "@/lib/dashboard-types"
 
 interface DataTableRowActionsProps {
-    data: Payment
+    data: Payment;
+    onView: (payment: Payment) => void;
 }
 
-export function RowActions({
-    data,
-}: DataTableRowActionsProps) {
-
+export function RowActions({ data, onView }: DataTableRowActionsProps) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -33,13 +30,11 @@ export function RowActions({
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[160px]">
-                <DropdownMenuItem>Edit</DropdownMenuItem>
-                <DropdownMenuItem>Make a copy</DropdownMenuItem>
-                <DropdownMenuItem>Favorite</DropdownMenuItem>
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                    Delete
-                    <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
+                <DropdownMenuItem className="gap-2" onClick={() => onView(data)}>
+                    <Eye className="size-4 opacity-70" />
+                    View Details
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import {
-  Card, CardContent, CardHeader, CardTitle, CardFooter,
+  Card, CardContent, CardHeader, CardTitle,
 } from '@/components/ui/card';
 import { Progress, ProgressProps } from '@/components/ui/progress';
 import {
@@ -12,30 +12,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { bookings as defaultRows, formatDate } from '../../bookings/bookingListing/components/columns';
-
-type Booking = {
-  _id: string;
-  name: string;
-  phone: string;
-  event_type: string;
-  status: 'New' | 'Pending' | 'Confirmed' | 'Cancelled' | string;
-  date: string;
-};
-
-type Stats = {
-  total?: number;
-  newCount: number;
-  pendingCount: number;
-  confirmedCount: number;
-  cancelledCount: number;
-};
+import { useRouter } from 'next/navigation';
+import type { RecentBookingItem, BookingStats } from '@/lib/api/analytics';
 
 interface RecentBookingTableProps {
-  rows?: Booking[];
-  stats?: Stats;
+  rows?: RecentBookingItem[];
+  stats?: BookingStats;
   loading?: boolean;
-  onViewAll?: () => void;
   className?: string;
 }
 
@@ -68,7 +51,7 @@ function Stat({
   );
 }
 
-function StatusBadge({ status }: { status: Booking['status'] }) {
+function StatusBadge({ status }: { status: string }) {
   const s = String(status).toLowerCase();
   if (s === 'confirmed')
     return <Badge variant="outline" className="border-emerald-500 text-emerald-600">Confirmed</Badge>;
@@ -76,46 +59,47 @@ function StatusBadge({ status }: { status: Booking['status'] }) {
     return <Badge variant="outline" className="border-amber-500 text-amber-600">Pending</Badge>;
   if (s === 'cancelled' || s === 'canceled')
     return <Badge variant="outline" className="border-red-500 text-red-600">Cancelled</Badge>;
+  if (s === 'completed')
+    return <Badge variant="outline" className="border-blue-500 text-blue-600">Completed</Badge>;
   return <Badge variant="secondary">New</Badge>;
 }
 
-function deriveStats(rows: Booking[]): Stats {
-  const counts = rows.reduce(
-    (acc, r) => {
-      const s = String(r.status).toLowerCase();
-      if (s === 'new') acc.newCount++;
-      else if (s === 'pending') acc.pendingCount++;
-      else if (s === 'confirmed') acc.confirmedCount++;
-      else if (s === 'cancelled' || s === 'canceled') acc.cancelledCount++;
-      else acc.newCount++;
-      return acc;
-    },
-    { newCount: 0, pendingCount: 0, confirmedCount: 0, cancelledCount: 0 }
-  );
-  const total =
-    counts.newCount + counts.pendingCount + counts.confirmedCount + counts.cancelledCount;
-  return { total, ...counts };
+function formatBookingDate(dateStr: string) {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 }
 
 const RecentBookingTable: React.FC<RecentBookingTableProps> = ({
-  rows = defaultRows as unknown as Booking[],
+  rows = [],
   stats,
   loading = false,
-  onViewAll,
   className,
 }) => {
-  const computed = React.useMemo(() => stats ?? deriveStats(rows), [rows, stats]);
-  const topRows = rows?.slice(0, 10) ?? [];
+  const router = useRouter();
+  const computed = stats || {
+    newCount: 0,
+    pendingCount: 0,
+    confirmedCount: 0,
+    cancelledCount: 0,
+    completedCount: 0,
+    total: 0,
+  };
 
   return (
     <Card className={cn('flex h-full xlarge:h-auto md:min-h-[420px] xlarge:min-h-[685px] flex-col', className)}>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Recent Bookings</CardTitle>
-        {onViewAll && (
-          <Button variant="outline" size="sm" onClick={onViewAll}>
-            View all
-          </Button>
-        )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.push('/dashboard/bookings')}
+        >
+          View all
+        </Button>
       </CardHeader>
 
       <CardContent className='px-4 md:px-6'>
@@ -132,12 +116,6 @@ const RecentBookingTable: React.FC<RecentBookingTableProps> = ({
           ) : (
             <>
               <Stat
-                label="New Bookings"
-                count={computed.newCount}
-                total={computed.total}
-                bar={{ indicatorColor: 'bg-blue-500', trackClass: 'bg-blue-100' }}
-              />
-              <Stat
                 label="Pending Bookings"
                 count={computed.pendingCount}
                 total={computed.total}
@@ -148,6 +126,12 @@ const RecentBookingTable: React.FC<RecentBookingTableProps> = ({
                 count={computed.confirmedCount}
                 total={computed.total}
                 bar={{ indicatorColor: 'bg-emerald-500', trackClass: 'bg-emerald-100' }}
+              />
+              <Stat
+                label="Completed Bookings"
+                count={computed.completedCount}
+                total={computed.total}
+                bar={{ indicatorColor: 'bg-blue-500', trackClass: 'bg-blue-100' }}
               />
               <Stat
                 label="Cancelled Bookings"
@@ -164,16 +148,16 @@ const RecentBookingTable: React.FC<RecentBookingTableProps> = ({
           <Table aria-label="Recent bookings">
             <TableHeader>
               <TableRow>
-                <TableHead className='whitespace-nowrap'>Full Name</TableHead>
-                <TableHead className='whitespace-nowrap'>Phone Number</TableHead>
-                <TableHead className='whitespace-nowrap'>Event Type</TableHead>
+                <TableHead className='whitespace-nowrap'>Customer</TableHead>
+                <TableHead className='whitespace-nowrap'>Phone</TableHead>
+                <TableHead className='whitespace-nowrap'>Business</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Date</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                Array.from({ length: 10 }).map((_, i) => (
+                Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell><Skeleton className="h-4 w-40" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-28" /></TableCell>
@@ -182,15 +166,15 @@ const RecentBookingTable: React.FC<RecentBookingTableProps> = ({
                     <TableCell><Skeleton className="h-4 w-28" /></TableCell>
                   </TableRow>
                 ))
-              ) : topRows.length ? (
-                topRows.map((item) => (
-                  <TableRow key={item._id}>
-                    <TableCell className="font-medium whitespace-nowrap">{item.name}</TableCell>
-                    <TableCell className="tabular-nums whitespace-nowrap">{item.phone}</TableCell>
-                    <TableCell className='whitespace-nowrap'>{item.event_type}</TableCell>
+              ) : rows.length ? (
+                rows.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium whitespace-nowrap">{item.customerName}</TableCell>
+                    <TableCell className="tabular-nums whitespace-nowrap">{item.customerPhone}</TableCell>
+                    <TableCell className='whitespace-nowrap'>{item.eventType}</TableCell>
                     <TableCell><StatusBadge status={item.status} /></TableCell>
                     <TableCell className="whitespace-nowrap">
-                      {formatDate(item.date)}
+                      {formatBookingDate(item.bookingDate)}
                     </TableCell>
                   </TableRow>
                 ))

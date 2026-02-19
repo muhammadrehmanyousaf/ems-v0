@@ -26,7 +26,6 @@ export default function ProfilePage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Profile updated:", profile)
     // Here you would typically send the data to an API
   }
 
@@ -86,7 +85,7 @@ export default function ProfilePage() {
         <CardFooter>
           <Button 
             onClick={handleSubmit}
-            className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
+            className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
           >
             Save Changes
           </Button>

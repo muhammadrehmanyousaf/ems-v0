@@ -405,11 +405,11 @@ function SearchContent() {
   // Show error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-rose-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-purple-50/30 flex items-center justify-center">
         <div className="text-center">
           <h3 className="text-xl font-semibold text-neutral-900 mb-2">Error loading vendors</h3>
           <p className="text-neutral-600 mb-4">Please try refreshing the page</p>
-          <Button onClick={() => window.location.reload()} className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700">
+          <Button onClick={() => window.location.reload()} className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800">
             Refresh Page
           </Button>
         </div>
@@ -418,7 +418,7 @@ function SearchContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-rose-50">
+    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-purple-50/30">
       {/* Header Section */}
       <div className="bg-white border-b border-neutral-100 shadow-sm">
         <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-6">
@@ -440,49 +440,49 @@ function SearchContent() {
           <div className="lg:w-80">
             <div className="sticky top-20 max-h-[calc(100vh-4rem)] overflow-hidden">
               <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm">
-                <CardHeader className="pb-4 border-b border-neutral-100 bg-gradient-to-r from-rose-50 to-pink-50">
+                <CardHeader className="pb-4 border-b border-neutral-100 bg-gradient-to-r from-purple-50 to-purple-50/80">
                   <CardTitle className="text-xl font-bold text-neutral-900 flex items-center gap-2">
-                    <Filter className="w-5 h-5 text-rose-500" />
+                    <Filter className="w-5 h-5 text-purple-500" />
                     Filters
                   </CardTitle>
                   <Button 
                     variant="ghost" 
                     size="sm" 
                     onClick={clearFilters}
-                    className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                    className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
                   >
                     Clear all filters
                   </Button>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="max-h-[calc(100vh-12rem)] overflow-y-auto px-6 py-4 space-y-6 scrollbar-thin scrollbar-thumb-rose-300 scrollbar-track-neutral-100 hover:scrollbar-thumb-rose-400 scrollbar-thumb-rounded-full">
+                  <div className="max-h-[calc(100vh-12rem)] overflow-y-auto px-6 py-4 space-y-6 scrollbar-thin scrollbar-thumb-purple-300 scrollbar-track-neutral-100 hover:scrollbar-thumb-purple-400 scrollbar-thumb-rounded-full">
                     {/* Search */}
                     <div className="space-y-3">
                       <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                        <Search className="w-4 h-4 text-rose-500" />
+                        <Search className="w-4 h-4 text-purple-500" />
                         Search
                       </label>
                       <Input
                         placeholder="Search vendors..."
                         value={filters.search}
                         onChange={(e) => handleFilterChange("search", e.target.value)}
-                        className="h-11 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 rounded-lg transition-all duration-200"
+                        className="h-11 border-neutral-200 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 rounded-lg transition-all duration-200"
                       />
                     </div>
 
                     {/* Category */}
                     <div className="space-y-3">
                       <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                        <Award className="w-4 h-4 text-rose-500" />
+                        <Award className="w-4 h-4 text-purple-500" />
                         Category
                       </label>
                       <Select value={filters.category} onValueChange={(value) => handleFilterChange("category", value)}>
-                        <SelectTrigger className="h-11 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 rounded-lg transition-all duration-200">
+                        <SelectTrigger className="h-11 border-neutral-200 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 rounded-lg transition-all duration-200">
                           <SelectValue placeholder="All categories" />
                         </SelectTrigger>
                         <SelectContent>
                           {vendorCategories.map((category) => (
-                            <SelectItem key={category.value} value={category.value} className="hover:bg-rose-50">
+                            <SelectItem key={category.value} value={category.value} className="hover:bg-purple-50">
                               {category.display}
                             </SelectItem>
                           ))}
@@ -493,21 +493,21 @@ function SearchContent() {
                     {/* Location */}
                     <div className="space-y-3">
                       <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-rose-500" />
+                        <MapPin className="w-4 h-4 text-purple-500" />
                         Location
                       </label>
                       <Input
                         placeholder="Enter city..."
                         value={filters.location}
                         onChange={(e) => handleFilterChange("location", e.target.value)}
-                        className="h-11 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 rounded-lg transition-all duration-200"
+                        className="h-11 border-neutral-200 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 rounded-lg transition-all duration-200"
                       />
                     </div>
 
                     {/* Price Range */}
                     <div className="space-y-3">
                       <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                        <DollarSign className="w-4 h-4 text-rose-500" />
+                        <DollarSign className="w-4 h-4 text-purple-500" />
                         Price Range
                       </label>
                       <div className="px-2">
@@ -528,18 +528,18 @@ function SearchContent() {
                     {/* Rating */}
                     <div className="space-y-3">
                       <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                        <Star className="w-4 h-4 text-rose-500" />
+                        <Star className="w-4 h-4 text-purple-500" />
                         Minimum Rating
                       </label>
                       <Select value={filters.rating.toString()} onValueChange={(value) => handleFilterChange("rating", parseInt(value))}>
-                        <SelectTrigger className="h-11 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 rounded-lg transition-all duration-200">
+                        <SelectTrigger className="h-11 border-neutral-200 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 rounded-lg transition-all duration-200">
                           <SelectValue placeholder="Any rating" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="0" className="hover:bg-rose-50">Any rating</SelectItem>
-                          <SelectItem value="3" className="hover:bg-rose-50">3+ stars</SelectItem>
-                          <SelectItem value="4" className="hover:bg-rose-50">4+ stars</SelectItem>
-                          <SelectItem value="4.5" className="hover:bg-rose-50">4.5+ stars</SelectItem>
+                          <SelectItem value="0" className="hover:bg-purple-50">Any rating</SelectItem>
+                          <SelectItem value="3" className="hover:bg-purple-50">3+ stars</SelectItem>
+                          <SelectItem value="4" className="hover:bg-purple-50">4+ stars</SelectItem>
+                          <SelectItem value="4.5" className="hover:bg-purple-50">4.5+ stars</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -547,19 +547,19 @@ function SearchContent() {
                     {/* Capacity */}
                     <div className="space-y-3">
                       <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                        <Users className="w-4 h-4 text-rose-500" />
+                        <Users className="w-4 h-4 text-purple-500" />
                         Minimum Capacity
                       </label>
                       <Select value={filters.capacity.toString()} onValueChange={(value) => handleFilterChange("capacity", parseInt(value))}>
-                        <SelectTrigger className="h-11 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 rounded-lg transition-all duration-200">
+                        <SelectTrigger className="h-11 border-neutral-200 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 rounded-lg transition-all duration-200">
                           <SelectValue placeholder="Any capacity" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="0" className="hover:bg-rose-50">Any capacity</SelectItem>
-                          <SelectItem value="50" className="hover:bg-rose-50">50+ guests</SelectItem>
-                          <SelectItem value="100" className="hover:bg-rose-50">100+ guests</SelectItem>
-                          <SelectItem value="200" className="hover:bg-rose-50">200+ guests</SelectItem>
-                          <SelectItem value="500" className="hover:bg-rose-50">500+ guests</SelectItem>
+                          <SelectItem value="0" className="hover:bg-purple-50">Any capacity</SelectItem>
+                          <SelectItem value="50" className="hover:bg-purple-50">50+ guests</SelectItem>
+                          <SelectItem value="100" className="hover:bg-purple-50">100+ guests</SelectItem>
+                          <SelectItem value="200" className="hover:bg-purple-50">200+ guests</SelectItem>
+                          <SelectItem value="500" className="hover:bg-purple-50">500+ guests</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -569,19 +569,19 @@ function SearchContent() {
                     {/* Sort By */}
                     <div className="space-y-3">
                       <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                        <SortAsc className="w-4 h-4 text-rose-500" />
+                        <SortAsc className="w-4 h-4 text-purple-500" />
                         Sort By
                       </label>
                       <Select value={filters.sortBy} onValueChange={(value) => handleFilterChange("sortBy", value)}>
-                        <SelectTrigger className="h-11 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 rounded-lg transition-all duration-200">
+                        <SelectTrigger className="h-11 border-neutral-200 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 rounded-lg transition-all duration-200">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="rating" className="hover:bg-rose-50">Highest Rated</SelectItem>
-                          <SelectItem value="price-low" className="hover:bg-rose-50">Price: Low to High</SelectItem>
-                          <SelectItem value="price-high" className="hover:bg-rose-50">Price: High to Low</SelectItem>
-                          <SelectItem value="name" className="hover:bg-rose-50">Name: A to Z</SelectItem>
-                          <SelectItem value="recent" className="hover:bg-rose-50">Most Recent</SelectItem>
+                          <SelectItem value="rating" className="hover:bg-purple-50">Highest Rated</SelectItem>
+                          <SelectItem value="price-low" className="hover:bg-purple-50">Price: Low to High</SelectItem>
+                          <SelectItem value="price-high" className="hover:bg-purple-50">Price: High to Low</SelectItem>
+                          <SelectItem value="name" className="hover:bg-purple-50">Name: A to Z</SelectItem>
+                          <SelectItem value="recent" className="hover:bg-purple-50">Most Recent</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -591,7 +591,7 @@ function SearchContent() {
                     {/* Amenities */}
                     <div>
                       <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2 mb-4">
-                        <Heart className="w-4 h-4 text-rose-500" />
+                        <Heart className="w-4 h-4 text-purple-500" />
                         Amenities
                       </label>
                       <div className="grid grid-cols-1 gap-3">
@@ -607,7 +607,7 @@ function SearchContent() {
                                   handleFilterChange("amenities", filters.amenities.filter(a => a !== amenity))
                                 }
                               }}
-                              className="text-rose-600 border-neutral-300 hover:border-rose-500 transition-colors duration-200"
+                              className="text-purple-600 border-neutral-300 hover:border-purple-500 transition-colors duration-200"
                             />
                             <label htmlFor={amenity} className="text-sm text-neutral-600 cursor-pointer hover:text-neutral-800 transition-colors duration-200">{amenity}</label>
                           </div>
@@ -626,13 +626,13 @@ function SearchContent() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 bg-white rounded-xl shadow-sm border border-neutral-100 mb-6">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-rose-500" />
+                  <Users className="w-5 h-5 text-purple-500" />
                   <span className="text-sm font-semibold text-neutral-700">
                     {isLoading ? "Loading..." : `${filteredVendors.length} of ${allVendors.length} results`}
                   </span>
                 </div>
                 {(filters.search || filters.category !== "all" || filters.location || filters.rating > 0 || filters.capacity > 0 || filters.amenities.length > 0) && (
-                  <Badge variant="secondary" className="bg-rose-100 text-rose-700 border-0">
+                  <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-0">
                     Filtered
                   </Badge>
                 )}
@@ -645,32 +645,32 @@ function SearchContent() {
                 <div className="flex flex-wrap gap-2 items-center">
                   <span className="text-sm font-semibold text-neutral-700">Active filters:</span>
                   {filters.search && (
-                    <Badge variant="secondary" className="bg-rose-100 text-rose-700 border-0">
+                    <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-0">
                       Search: {filters.search}
                     </Badge>
                   )}
                   {filters.category && filters.category !== "all" && (
-                    <Badge variant="secondary" className="bg-rose-100 text-rose-700 border-0">
+                    <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-0">
                       Category: {vendorCategories.find(c => c.value === filters.category)?.display}
                     </Badge>
                   )}
                   {filters.location && (
-                    <Badge variant="secondary" className="bg-rose-100 text-rose-700 border-0">
+                    <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-0">
                       Location: {filters.location}
                     </Badge>
                   )}
                   {filters.rating > 0 && (
-                    <Badge variant="secondary" className="bg-rose-100 text-rose-700 border-0">
+                    <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-0">
                       Rating: {filters.rating}+ stars
                     </Badge>
                   )}
                   {filters.capacity > 0 && (
-                    <Badge variant="secondary" className="bg-rose-100 text-rose-700 border-0">
+                    <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-0">
                       Capacity: {filters.capacity}+ guests
                     </Badge>
                   )}
                   {filters.amenities.map((amenity) => (
-                    <Badge key={amenity} variant="secondary" className="bg-rose-100 text-rose-700 border-0">
+                    <Badge key={amenity} variant="secondary" className="bg-purple-100 text-purple-700 border-0">
                       {amenity}
                     </Badge>
                   ))}
@@ -697,7 +697,7 @@ function SearchContent() {
                   <Search className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
                   <h3 className="text-xl font-semibold text-neutral-900 mb-2">No vendors found</h3>
                   <p className="text-neutral-600 mb-6">Try adjusting your search criteria or filters</p>
-                  <Button onClick={clearFilters} className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700">
+                  <Button onClick={clearFilters} className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800">
                     Clear all filters
                   </Button>
                 </div>
@@ -716,7 +716,7 @@ function SearchContent() {
                       rating={vendor.rating}
                       reviews={Array.isArray(vendor.reviews) ? vendor.reviews.length : 0}
                       price={vendor.minimumPrice || vendor.price}
-                      type={vendor.subBusinessType || vendor.type}
+                      type={vendor.type || vendor.subBusinessType}
                       capacity={vendor.capacity}
                       amenities={vendor.amenities}
                       sponsored={vendor.sponsored}
@@ -732,7 +732,7 @@ function SearchContent() {
                         variant="outline"
                         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                         disabled={currentPage === 1}
-                        className="border-neutral-200 hover:border-rose-500 hover:text-rose-600 transition-all duration-200"
+                        className="border-neutral-200 hover:border-purple-500 hover:text-purple-600 transition-all duration-200"
                       >
                         <ChevronLeft className="w-4 h-4 mr-2" />
                         Previous
@@ -744,7 +744,7 @@ function SearchContent() {
                             key={page}
                             variant={currentPage === page ? "default" : "outline"}
                             onClick={() => setCurrentPage(page)}
-                            className={`${currentPage === page ? 'bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700' : 'border-neutral-200 hover:border-rose-500 hover:text-rose-600'} transition-all duration-200`}
+                            className={`${currentPage === page ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800' : 'border-neutral-200 hover:border-purple-500 hover:text-purple-600'} transition-all duration-200`}
                           >
                             {page}
                           </Button>
@@ -754,7 +754,7 @@ function SearchContent() {
                         variant="outline"
                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                         disabled={currentPage === totalPages}
-                        className="border-neutral-200 hover:border-rose-500 hover:text-rose-600 transition-all duration-200"
+                        className="border-neutral-200 hover:border-purple-500 hover:text-purple-600 transition-all duration-200"
                       >
                         Next
                         <ChevronRight className="w-4 h-4 ml-2" />
@@ -774,9 +774,9 @@ function SearchContent() {
 export default function SearchPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-rose-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-purple-50/30 flex items-center justify-center">
         <div className="flex items-center gap-2">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-rose-500"></div>
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500"></div>
           <span className="text-neutral-600">Loading search page...</span>
         </div>
       </div>

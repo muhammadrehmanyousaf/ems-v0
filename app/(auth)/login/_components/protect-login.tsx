@@ -13,8 +13,7 @@ const ProtectLogin = () => {
   useEffect(() => {
     // Only redirect if we're not loading and user is authenticated
     if (!isLoading && isAuthenticated && pathname === "/login") {
-      console.log("ProtectLogin: User is authenticated, redirecting from login page");
-      router.replace("/");
+      router.replace("/dashboard");
     }
   }, [isAuthenticated, isLoading, pathname, router]);
   
@@ -23,7 +22,7 @@ const ProtectLogin = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Checking authentication...</p>
         </div>
       </div>

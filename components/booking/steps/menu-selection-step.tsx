@@ -2,227 +2,126 @@
 
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
 import type { BookingFormData, EventVenue } from "@/lib/types"
-import { bookingMenus, menuAddons } from "@/lib/data"
-import { Utensils, Plus, Check } from "lucide-react"
+import { Check } from "lucide-react"
 import { motion } from "framer-motion"
 
 interface MenuSelectionStepProps {
   formData: BookingFormData
   updateFormData: React.Dispatch<React.SetStateAction<BookingFormData>>
-    venue: EventVenue | null;
+  venue: EventVenue | null
+}
+
+const container = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+}
+
+const item = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
 }
 
 export default function MenuSelectionStep({ formData, updateFormData, venue }: MenuSelectionStepProps) {
   const handleMenuSelect = (menuId: string) => {
-    const selectedMenu = venue?.menus.find((menu) => menu.id === menuId)
-    const price = selectedMenu ? selectedMenu.price : 0
-    updateFormData({ ...formData, selectedMenu: menuId, totalPrice: formData.totalPrice + price })
+    const selectedMenu = venue?.menus.find((m) => m.id === menuId)
+    const menuPrice = selectedMenu ? Number(selectedMenu.price) || 0 : 0
+
+    // Recalculate: remove old menu price, add new
+    const oldMenu = venue?.menus.find((m) => m.id === formData.selectedMenu)
+    const oldMenuPrice = oldMenu ? Number(oldMenu.price) || 0 : 0
+    const currentTotal = Number(formData.totalPrice) || 0
+
+    updateFormData({
+      ...formData,
+      selectedMenu: menuId,
+      totalPrice: currentTotal - oldMenuPrice + menuPrice,
+    })
   }
 
-  const menue = venue?.menus
-  console.log('menue', menue);
-  
-  // const handleAddonToggle = (addonId: string) => {
-  //   const currentAddons = [...formData.menuAddons]
+  const menus = venue?.menus
 
-  //   if (currentAddons.includes(addonId)) {
-  //     updateFormData({
-  //       menuAddons: currentAddons.filter((id) => id !== addonId),
-  //     })
-  //   } else {
-  //     updateFormData({
-  //       menuAddons: [...currentAddons, addonId],
-  //     })
-  //   }
-  // }
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  }
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 },
+  const categoryLabels: Record<string, string> = {
+    starters: "Starters",
+    mainCourse: "Main Course",
+    drinks: "Beverages",
+    desserts: "Desserts",
   }
 
   return (
-    <motion.div className="space-y-8" variants={containerVariants} initial="hidden" animate="visible">
-      <div className="space-y-2 text-center">
-        <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-rose-600 to-pink-600">
-          Select Menu
-        </h2>
-        <p className="text-neutral-600">Choose your preferred menu and additional food options</p>
-      </div>
+    <motion.div className="space-y-6" variants={container} initial="hidden" animate="visible">
+      <motion.div variants={item}>
+        <h2 className="font-heading text-2xl font-bold text-neutral-900">Choose Your Menu</h2>
+        <p className="mt-1 text-sm text-neutral-500">Select a menu package for your event</p>
+      </motion.div>
 
-      <div className="space-y-8">
-        <motion.div variants={itemVariants} className="space-y-4">
-          <div className="flex items-center">
-            <Utensils className="mr-2 h-5 w-5 text-rose-600" />
-            <h3 className="text-lg font-medium text-neutral-700">Menu Options</h3>
-          </div>
+      <div className="space-y-3">
+        <RadioGroup value={formData.selectedMenu} onValueChange={handleMenuSelect}>
+          {menus?.map((menu) => {
+            const items = menu.data
+            const isSelected = formData.selectedMenu === menu.id
 
-          <RadioGroup value={formData.selectedMenu} onValueChange={handleMenuSelect} className="space-y-5">
-            {menue?.map((menu) => {
-              const items = menu.data 
-              const deserts = items.desserts.items
-              const drinks = items.drinks.items
-              const mainCourse = items.mainCourse.items
-              const starters = items.starters.items
+            const categories = [
+              { key: "starters", data: items.starters?.items || [] },
+              { key: "mainCourse", data: items.mainCourse?.items || [] },
+              { key: "drinks", data: items.drinks?.items || [] },
+              { key: "desserts", data: items.desserts?.items || [] },
+            ].filter(c => c.data.length > 0)
 
-              return (
-                <motion.div
+            return (
+              <motion.div
                 key={menu.id}
-                whileHover={{ scale: 1.01, y: -2 }}
-                transition={{ duration: 0.2 }}
-                className={`relative overflow-hidden rounded-xl border p-5 shadow-md transition-all ${
-                  formData.selectedMenu === menu.id
-                    ? "border-rose-600 bg-gradient-to-br from-rose-50 to-pink-50 ring-1 ring-rose-600"
-                    : "border-neutral-200 bg-white hover:border-rose-300"
+                variants={item}
+                className={`relative rounded-xl border-2 overflow-hidden transition-all duration-200 cursor-pointer ${
+                  isSelected
+                    ? 'border-purple-500 bg-purple-50/30'
+                    : 'border-neutral-200 bg-white hover:border-neutral-300'
                 }`}
               >
-                {/* {formData.selectedMenu === menu.id && (
-                  <div className="absolute right-4 top-4 rounded-full bg-rose-600 p-1 text-white shadow-md">
-                    <Check className="h-4 w-4" />
-                  </div>
-                )} */}
-                <div className="flex items-start">
-                  <RadioGroupItem value={menu.id} id={menu.id} className="mt-1 border-rose-600 text-rose-600" />
-                  <div className="ml-3 flex-1">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor={menu.id} className="text-xl font-semibold cursor-pointer text-neutral-800">
+                {isSelected && (
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-4 right-4 w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center z-10">
+                    <Check className="w-3.5 h-3.5 text-white" />
+                  </motion.div>
+                )}
+
+                <div className="flex items-start gap-3 p-5">
+                  <RadioGroupItem value={menu.id} id={menu.id} className="mt-1 border-purple-400 text-purple-600" />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between pr-8">
+                      <Label htmlFor={menu.id} className="text-lg font-bold cursor-pointer text-neutral-900">
                         {menu.title}
                       </Label>
-                      <span className="text-xl font-bold text-rose-600">${menu.price}</span>
+                      <span className="text-xl font-bold text-purple-600">Rs. {Number(menu.price)?.toLocaleString()}</span>
                     </div>
-                    {/* <p className="mt-1 text-neutral-600">{menu.description}</p> */}
-                    <div className="mt-4 rounded-xl bg-gradient-to-br from-neutral-50 to-rose-50 p-4 shadow-sm">
-                      <h4 className="mb-3 text-sm font-medium text-neutral-700">Menu Items:</h4>
-                      <ul className="grid grid-cols-1 gap-2 text-sm md:grid-cols-2">
-                        {/* {(() => {
-                          const selectedMenu = bookingMenus.find((menu) => menu.id === formData.selectedMenu)
-                          if (selectedMenu && selectedMenu.items.length > 0) {
-                            return selectedMenu.items.map((item: string, index: number) => (
-                              <li key={index} className="flex items-center text-neutral-700">
-                                <span className="mr-2 text-rose-600">•</span> {item}
-                              </li>
-                            ))
-                          } else {
-                            return <li className="text-neutral-500">No items available</li>
-                          }
-                        })()} */}
-                        <span>
-                        {starters.length > 0 && (
-                          <>
-                            <p className="text-base font-medium">Starters</p>
-                            {starters.map((item: string, j: number) => (
-                              <li key={j} className="flex items-center text-neutral-700 text-sm">
-                                <span className="mr-2 text-rose-600">•</span> {item}
-                              </li>
-                            ))}
-                          </>
-                        )}
-                        </span>
-                        <span>
-                        {mainCourse.length > 0 && (
-                          <>
-                            <p className="text-base font-medium">Main Course</p>
-                            {mainCourse.map((item: string, l: number) => (
-                              <li key={l} className="flex items-center text-neutral-700 text-sm">
-                                <span className="mr-2 text-rose-600">•</span> {item}
-                              </li>
-                            ))}
-                          </>
-                        )}
-                        </span>
-                        <span>
-                        {drinks.length > 0 && (
-                          <>
-                            <p className="text-base font-medium">Drinks</p>
-                            {drinks.map((item: string, m: number) => (
-                              <li key={m} className="flex items-center text-neutral-700 text-sm">
-                                <span className="mr-2 text-rose-600">•</span> {item}
-                              </li>
-                            ))}
-                          </>
-                        )}
-                        </span>
-                        <span>
-                        {deserts.length > 0 && (
-                          <>
-                            <p className="text-base font-medium">Deserts</p>
-                            {deserts.map((item: string, n: number) => (
-                              <li key={n} className="flex items-center text-neutral-700 text-sm">
-                                <span className="mr-2 text-rose-600">•</span> {item}
-                              </li>
-                            ))}
-                          </>
-                        )}
-                        </span>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-              )
-            })}
-          </RadioGroup>
-        </motion.div>
 
-        {/* <motion.div variants={itemVariants} className="space-y-4">
-          <div className="flex items-center">
-            <Plus className="mr-2 h-5 w-5 text-rose-600" />
-            <h3 className="text-lg font-medium text-neutral-700">Additional Options</h3>
-          </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {menuAddons.map((addon) => (
-              <motion.div
-                key={addon.id}
-                whileHover={{ scale: 1.02 }}
-                transition={{ duration: 0.2 }}
-                className={`flex items-start space-x-3 rounded-xl border p-4 shadow-sm transition-all ${
-                  formData.menuAddons.includes(addon.id)
-                    ? "border-rose-600 bg-gradient-to-br from-rose-50 to-pink-50"
-                    : "border-neutral-200 bg-white hover:border-rose-300"
-                }`}
-              >
-                <Checkbox
-                  id={addon.id}
-                  checked={formData.menuAddons.includes(addon.id)}
-                  onCheckedChange={() => handleAddonToggle(addon.id)}
-                  className="mt-1 border-rose-600 text-rose-600"
-                />
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor={addon.id} className="font-medium cursor-pointer text-neutral-800">
-                      {addon.name}
-                    </Label>
-                    <span className="font-medium text-rose-600">+${addon.price}</span>
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      {categories.map(({ key, data }) => (
+                        <div key={key} className="rounded-lg bg-neutral-50 p-3">
+                          <h4 className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-1.5">
+                            {categoryLabels[key] || key}
+                          </h4>
+                          <ul className="space-y-0.5">
+                            {data.map((menuItem: string, j: number) => (
+                              <li key={j} className="text-xs text-neutral-600 flex items-center gap-1.5">
+                                <span className="w-1 h-1 rounded-full bg-purple-300 flex-shrink-0" />
+                                {menuItem}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <p className="text-sm text-neutral-600">{addon.description}</p>
                 </div>
               </motion.div>
-            ))}
-          </div>
-        </motion.div> */}
+            )
+          })}
+        </RadioGroup>
       </div>
 
-      <motion.div
-        variants={itemVariants}
-        className="rounded-xl bg-gradient-to-r from-rose-50 to-pink-50 p-4 shadow-sm border border-rose-200"
-      >
-        <p className="text-sm text-rose-800 text-center">
-          All menu options can be customized for dietary restrictions. Please mention any special requirements in the
-          final step.
-        </p>
-      </motion.div>
+      <p className="text-xs text-neutral-400">
+        Menus can be customized for dietary needs. Add notes in the final step.
+      </p>
     </motion.div>
   )
 }

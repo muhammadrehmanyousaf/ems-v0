@@ -1,151 +1,114 @@
 "use client"
 
 import Link from "next/link"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { 
-  Camera, 
-  Palette, 
-  Heart, 
-  MapPin, 
-  Car, 
-  Utensils, 
-  Crown, 
+import {
+  Camera,
+  Palette,
+  Heart,
+  MapPin,
+  Car,
+  Utensils,
+  Crown,
   Mail,
-  ArrowRight
+  ArrowRight,
 } from "lucide-react"
-import { VENDOR_TYPE_PATHS, VENDOR_TYPE_DISPLAY_NAMES } from "@/lib/vendor-types"
+import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ui/motion-wrapper"
+import { SectionHeading } from "@/components/ui/section-heading"
 
 const categoryData = [
   {
     path: "photographers",
     icon: Camera,
     title: "Photographers",
-    description: "Capture your special moments",
-    color: "from-blue-500 to-indigo-600",
-    bgColor: "bg-blue-50",
-    textColor: "text-blue-600"
+    gradient: "from-purple-600 via-purple-700 to-violet-800",
   },
   {
     path: "venues",
     icon: MapPin,
-    title: "Wedding Venues",
-    description: "Find the perfect venue",
-    color: "from-green-500 to-emerald-600",
-    bgColor: "bg-green-50",
-    textColor: "text-green-600"
+    title: "Venues",
+    gradient: "from-gold-500 via-amber-600 to-orange-700",
   },
   {
     path: "decor",
     icon: Palette,
     title: "Decorators",
-    description: "Transform your venue",
-    color: "from-purple-500 to-violet-600",
-    bgColor: "bg-purple-50",
-    textColor: "text-purple-600"
+    gradient: "from-purple-500 via-indigo-600 to-blue-700",
   },
   {
     path: "makeup-artists",
     icon: Heart,
-    title: "Makeup Artists",
-    description: "Perfect wedding look",
-    color: "from-pink-500 to-rose-600",
-    bgColor: "bg-pink-50",
-    textColor: "text-pink-600"
+    title: "Makeup",
+    gradient: "from-pink-500 via-rose-600 to-purple-700",
   },
   {
     path: "catering",
     icon: Utensils,
     title: "Catering",
-    description: "Delicious wedding food",
-    color: "from-orange-500 to-red-600",
-    bgColor: "bg-orange-50",
-    textColor: "text-orange-600"
+    gradient: "from-amber-500 via-orange-600 to-red-700",
   },
   {
     path: "car-rental",
     icon: Car,
     title: "Car Rental",
-    description: "Luxury transportation",
-    color: "from-gray-500 to-slate-600",
-    bgColor: "bg-gray-50",
-    textColor: "text-gray-600"
+    gradient: "from-slate-600 via-slate-700 to-slate-900",
   },
   {
     path: "bridal-wear",
     icon: Crown,
     title: "Bridal Wear",
-    description: "Stunning wedding dresses",
-    color: "from-rose-500 to-pink-600",
-    bgColor: "bg-rose-50",
-    textColor: "text-rose-600"
+    gradient: "from-gold-500 via-gold-600 to-amber-700",
   },
   {
     path: "wedding-stationery",
     icon: Mail,
-    title: "Wedding Stationery",
-    description: "Beautiful invitations",
-    color: "from-teal-500 to-cyan-600",
-    bgColor: "bg-teal-50",
-    textColor: "text-teal-600"
-  }
+    title: "Stationery",
+    gradient: "from-purple-800 via-purple-900 to-slate-900",
+  },
 ]
 
 export function FeaturedCategories() {
   return (
-    <section className="py-6 sm:py-8 md:py-12 lg:py-16 bg-gray-50">
-      <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 xl:px-12">
-        <div className="flex justify-between items-end mb-12">
-          <div>
-            <h2 className="text-3xl font-bold mb-2">Featured Categories</h2>
-            <p className="text-gray-600">Explore different wedding service categories</p>
+    <section className="section-padding bg-gradient-to-b from-purple-50/50 to-white">
+      <div className="container-responsive">
+        <ScrollReveal>
+          <div className="flex justify-between items-end mb-10">
+            <div>
+              <SectionHeading title="Browse Services" subtitle="Categories" align="left" />
+              <p className="text-muted-foreground mt-2">Explore different wedding service categories</p>
+            </div>
+            <Link
+              href="/vendors"
+              className="hidden md:inline-flex items-center gap-2 text-purple-600 hover:text-purple-700 font-semibold group"
+            >
+              View all
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
           </div>
-          <Link href="/vendors" className="text-primary hover:underline hidden md:block">
-            View all vendors →
-          </Link>
-        </div>
+        </ScrollReveal>
 
-        {/* Category Cards Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
+        <StaggerContainer staggerDelay={0.06} className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
           {categoryData.map((category) => {
             const IconComponent = category.icon
             return (
-              <Link key={category.path} href={`/${category.path}`} className="w-full">
-                <Card className="group hover:shadow-xl transition-all duration-300 cursor-pointer border-0 bg-white/95 backdrop-blur-sm overflow-hidden h-full">
-                  <CardContent className="p-3 sm:p-4 lg:p-3">
-                    <div className="flex flex-col items-center text-center space-y-3">
-                      <div className={`p-2 sm:p-3 rounded-xl bg-gradient-to-r ${category.color}`}>
-                        <IconComponent className="w-4 h-4 sm:w-5 sm:h-5 lg:w-4 lg:h-4 text-white" />
-                      </div>
-                      
-                      <div className="space-y-1">
-                        <h3 className="text-xs sm:text-sm lg:text-xs font-semibold text-gray-900 group-hover:text-gray-700 transition-colors duration-200 leading-tight">
-                          {category.title}
-                        </h3>
-                        <p className="text-xs lg:text-xs text-gray-600 leading-tight hidden sm:block lg:hidden">
-                          {category.description}
-                        </p>
-                      </div>
-
-                      <div className="mt-auto">
-                        <Badge 
-                          variant="secondary" 
-                          className={`${category.bgColor} ${category.textColor} border-0 hover:opacity-80 transition-opacity duration-200 text-xs px-2 py-1`}
-                        >
-                          Explore
-                        </Badge>
-                      </div>
+              <StaggerItem key={category.path}>
+                <Link href={`/${category.path}`} className="block group">
+                  <div className={`relative rounded-2xl overflow-hidden bg-gradient-to-br ${category.gradient} p-4 flex flex-col items-center justify-center text-center gap-2.5 min-h-[120px] shadow-md hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300`}>
+                    <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:bg-white/25 transition-all duration-300">
+                      <IconComponent className="w-5 h-5 text-white" />
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                    <h3 className="text-xs sm:text-sm font-semibold text-white leading-tight">
+                      {category.title}
+                    </h3>
+                  </div>
+                </Link>
+              </StaggerItem>
             )
           })}
-        </div>
+        </StaggerContainer>
 
         <div className="text-center mt-8 md:hidden">
-          <Link href="/vendors" className="text-primary hover:underline">
-            View all vendors →
+          <Link href="/vendors" className="text-purple-600 hover:text-purple-700 font-medium">
+            View all vendors &rarr;
           </Link>
         </div>
       </div>

@@ -76,10 +76,59 @@ const FavoritesPageContent = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-rose-500" />
-          <p className="text-gray-600">Loading your favorites...</p>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header skeleton — matches the real header */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="container mx-auto px-4 py-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 skeleton-shimmer rounded-lg" />
+                  <div className="h-8 w-44 skeleton-shimmer rounded-lg" />
+                </div>
+                <div className="h-4 w-28 skeleton-shimmer rounded" />
+              </div>
+              <div className="h-9 w-24 skeleton-shimmer rounded-lg" />
+            </div>
+          </div>
+        </div>
+
+        {/* Filter bar skeleton */}
+        <div className="container mx-auto px-4 py-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1 h-10 skeleton-shimmer rounded-lg" />
+              <div className="w-40 h-10 skeleton-shimmer rounded-lg" />
+              <div className="w-40 h-10 skeleton-shimmer rounded-lg" />
+            </div>
+          </div>
+
+          {/* Vendor cards skeleton */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div key={i} className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                {/* Image placeholder */}
+                <div className="relative h-52 skeleton-shimmer" />
+                {/* Content */}
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="h-5 w-32 skeleton-shimmer rounded" />
+                    <div className="h-5 w-10 skeleton-shimmer rounded" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 w-3 skeleton-shimmer rounded-full" />
+                    <div className="h-3 w-28 skeleton-shimmer rounded" />
+                  </div>
+                  <div className="h-3 w-full skeleton-shimmer rounded" />
+                  <div className="h-3 w-2/3 skeleton-shimmer rounded" />
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                    <div className="h-5 w-24 skeleton-shimmer rounded" />
+                    <div className="h-8 w-20 skeleton-shimmer rounded-lg" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -93,7 +142,7 @@ const FavoritesPageContent = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-                <Heart className="w-8 h-8 text-rose-500 mr-3" />
+                <Heart className="w-8 h-8 text-purple-500 mr-3" />
                 My Favorites
               </h1>
               <p className="text-gray-600 mt-2">

@@ -1,29 +1,22 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import Link from "next/link"
 import VendorCard from "@/components/VendorCard"
 import { FeaturedSwiper, SwiperSlide } from "@/components/ui/featured-swiper"
 import { useFeaturedVendors } from "@/hooks/use-vendors"
 import { Loader2 } from "lucide-react"
+import { SectionHeading } from "@/components/ui/section-heading"
 
 export function FeaturedVendors() {
   const { data: vendors = [], isLoading, error } = useFeaturedVendors()
 
   if (isLoading) {
     return (
-      <section className="py-16 bg-gradient-to-br from-rose-50 via-white to-pink-50">
+      <section className="py-16 bg-gradient-to-br from-purple-50/30 via-white to-gold-50/20">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Featured Vendors
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Discover our handpicked selection of premium wedding vendors
-            </p>
-          </div>
-          <div className="flex justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-rose-500" />
+          <SectionHeading title="Featured Vendors" subtitle="Handpicked Selection" />
+          <div className="flex justify-center mt-8">
+            <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
           </div>
         </div>
       </section>
@@ -35,16 +28,15 @@ export function FeaturedVendors() {
   }
 
   return (
-    <section className="py-16 bg-gradient-to-br from-rose-50 via-white to-pink-50">
+    <section className="py-16 bg-gradient-to-br from-purple-50/30 via-white to-gold-50/20">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Featured Vendors
-          </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Discover our handpicked selection of premium wedding vendors
-          </p>
-        </div>
+        <SectionHeading
+          title="Featured Vendors"
+          subtitle="Handpicked Selection"
+        />
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto text-center mt-3 mb-12">
+          Discover our handpicked selection of premium wedding vendors
+        </p>
 
         <FeaturedSwiper>
           {vendors.map((vendor) => (
@@ -72,7 +64,7 @@ export function FeaturedVendors() {
         <div className="text-center mt-8">
           <Link
             href="/vendors"
-            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transform hover:scale-105"
           >
             View All Vendors
           </Link>

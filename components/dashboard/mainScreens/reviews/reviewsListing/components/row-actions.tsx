@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, MoreHorizontal, Trash2 } from "lucide-react";
+import { Eye, MoreHorizontal, Trash2, MessageSquareReply } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -14,10 +14,12 @@ import { Review } from "@/lib/dashboard-types";
 
 interface RowActionsProps {
     data: Review;
-    setOpen: (v: boolean) => void;
+    onView: (review: Review) => void;
+    onDelete: (review: Review) => void;
+    onReply: (review: Review) => void;
 }
 
-export function RowActions({ data, setOpen }: RowActionsProps) {
+export function RowActions({ data, onView, onDelete, onReply }: RowActionsProps) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -30,20 +32,21 @@ export function RowActions({ data, setOpen }: RowActionsProps) {
                     <span className="sr-only">Open menu</span>
                 </Button>
             </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end" className="">
+            <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                    className="gap-2"
-                    onClick={()=> setOpen(true)}
-                >
+                <DropdownMenuItem className="gap-2" onClick={() => onView(data)}>
                     <Eye className="size-4 opacity-70" />
                     View
                 </DropdownMenuItem>
+                <DropdownMenuItem className="gap-2" onClick={() => onReply(data)}>
+                    <MessageSquareReply className="size-4 opacity-70" />
+                    {data.vendorReply ? "Edit Reply" : "Reply"}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                     className="gap-2 text-destructive focus:text-destructive"
-                    onSelect={(e) => e.preventDefault()}
+                    onClick={() => onDelete(data)}
                 >
                     <Trash2 className="size-4" />
                     Delete

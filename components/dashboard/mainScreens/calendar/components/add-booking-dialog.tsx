@@ -21,7 +21,6 @@ import {
     CalendarClock,
     Mail,
     Phone,
-    Trash2,
     User2,
     Package as PackageIcon,
     Utensils,
@@ -141,11 +140,11 @@ export default function AddBookingDialog({
 
                 {/* List of bookings with individual popovers */}
                 <div className="space-y-2 flex-grow">
-                    <div className='h-48 w-full flex items-center justify-center'>
-                        {selectedEvents.length === 0 && (
-                        <Empty text="No bookings for this date yet." />
+                    {selectedEvents.length === 0 && (
+                        <div className='h-48 w-full flex items-center justify-center'>
+                            <Empty text="No bookings for this date yet." />
+                        </div>
                     )}
-                    </div>
 
                     {selectedEvents.map((ev) => {
                         const detail = bookingDetails[ev.id];
@@ -170,15 +169,6 @@ export default function AddBookingDialog({
                                 >
                                     <div className="flex items-center justify-between">
                                         <h2 className="text-lg font-semibold">Booking Details</h2>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="text-red-500 hover:text-red-600"
-                                            title="Delete booking"
-                                        // onClick={() => onDelete(ev.id)}
-                                        >
-                                            <Trash2 className="size-5" />
-                                        </Button>
                                     </div>
 
                                     <Separator className="my-3" />
@@ -303,7 +293,6 @@ export default function AddBookingDialog({
                     <Button variant="outline" onClick={() => setOpen(false)}>
                         Close
                     </Button>
-                    <Button>Add New</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

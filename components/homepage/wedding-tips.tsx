@@ -13,9 +13,9 @@ const tips = [
     icon: Calendar,
     title: "When to Start Planning",
     description: "Ideal timeline for wedding planning and important milestones",
-    color: "text-rose-600",
-    bgColor: "bg-rose-50",
-    gradient: "from-rose-500 to-pink-600",
+    color: "text-purple-600",
+    bgColor: "bg-purple-50",
+    gradient: "from-purple-600 to-purple-700",
     content: {
       timeline: [
         { month: "12-18 months before", tasks: ["Set budget", "Choose wedding style", "Book venue", "Hire photographer"] },
@@ -219,7 +219,7 @@ function TipDetailModal({ tip }: { tip: any }) {
                 {tip.content.timeline.map((item: any, index: number) => (
                   <div key={index} className="p-6 border border-neutral-200 rounded-xl bg-white hover:shadow-lg transition-all duration-200">
                     <div className="flex items-center gap-4 mb-4">
-                      <Badge className="bg-gradient-to-r from-rose-500 to-pink-600 text-white border-0">
+                      <Badge className="bg-gradient-to-r from-purple-600 to-purple-700 text-white border-0">
                         {item.month}
                       </Badge>
                     </div>
@@ -437,11 +437,11 @@ function TipDetailModal({ tip }: { tip: any }) {
 
         {/* Action Buttons */}
         <div className="flex gap-4 pt-6 border-t border-neutral-200">
-          <Button onClick={handleSave} variant="outline" className="flex-1 h-12 border-neutral-200 hover:border-rose-500 hover:text-rose-600">
+          <Button onClick={handleSave} variant="outline" className="flex-1 h-12 border-neutral-200 hover:border-purple-500 hover:text-purple-600">
             <Bookmark className="w-5 h-5 mr-2" />
             Save Tip
           </Button>
-          <Button onClick={handleShare} variant="outline" className="flex-1 h-12 border-neutral-200 hover:border-rose-500 hover:text-rose-600">
+          <Button onClick={handleShare} variant="outline" className="flex-1 h-12 border-neutral-200 hover:border-purple-500 hover:text-purple-600">
             <Share2 className="w-5 h-5 mr-2" />
             Share Tip
           </Button>
@@ -453,10 +453,11 @@ function TipDetailModal({ tip }: { tip: any }) {
 
 export function WeddingTips() {
   return (
-    <section className="py-8 sm:py-12 lg:py-16 bg-gradient-to-br from-neutral-50 via-white to-rose-50">
+    <section className="py-8 sm:py-12 lg:py-16 bg-gradient-to-br from-neutral-50 via-white to-purple-50/30">
       <div className="w-[90%] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-neutral-900 mb-4">Wedding Planning Tips</h2>
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-gold-600 mb-2">Expert Advice</p>
+          <h2 className="text-4xl font-heading font-bold text-foreground mb-4">Wedding Planning Tips</h2>
           <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
             Expert advice to help you plan your perfect day. From timelines to photography, 
             we've got all the tips you need for a stress-free wedding planning experience.
@@ -477,14 +478,14 @@ export function WeddingTips() {
                   <CardContent className="px-6 pb-6">
                     <p className="text-neutral-600 mb-6 leading-relaxed">{tip.description}</p>
                     <div className="flex items-center justify-between">
-                      <span className="text-rose-600 text-sm font-semibold group-hover:text-rose-700 transition-colors duration-200">
+                      <span className="text-purple-600 text-sm font-semibold group-hover:text-purple-700 transition-colors duration-200">
                         Read more →
                       </span>
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-rose-50 hover:text-rose-600">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-purple-50 hover:text-purple-600">
                           <Heart className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-rose-50 hover:text-rose-600">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-purple-50 hover:text-purple-600">
                           <Share2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -501,7 +502,7 @@ export function WeddingTips() {
           <Button 
             variant="outline" 
             size="lg" 
-            className="text-rose-600 hover:text-rose-700 border-rose-200 hover:border-rose-300 bg-white hover:bg-rose-50 transition-all duration-300 px-8 py-3"
+            className="text-purple-600 hover:text-purple-700 border-purple-200 hover:border-purple-300 bg-white hover:bg-purple-50 transition-all duration-300 px-8 py-3"
           >
             View all planning tips
             <ArrowRight className="w-5 h-5 ml-2" />

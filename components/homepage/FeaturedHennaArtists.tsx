@@ -1,91 +1,67 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import Link from "next/link"
 import VendorCard from "@/components/VendorCard"
 import { FeaturedSwiper, SwiperSlide } from "@/components/ui/featured-swiper"
-import { VendorAPI } from "@/lib/api/vendors"
 import { getVendorTypeFromPath } from "@/lib/vendor-types"
-import type { Vendor } from "@/lib/types"
+import { useVendorsByType } from "@/hooks/use-vendors"
+import { SectionHeading } from "@/components/ui/section-heading"
 
 export function FeaturedHennaArtists() {
-  const [vendors, setVendors] = useState<Vendor[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchFeaturedHennaArtists = async () => {
-      try {
-        const vendorType = getVendorTypeFromPath('henna-artists')
-        const featuredHennaArtists = await VendorAPI.getBusinessesByVendorType(vendorType)
-        setVendors(featuredHennaArtists.slice(0, 8)) // Limit to 8 featured
-      } catch (error) {
-        console.error('Error fetching featured henna artists:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchFeaturedHennaArtists()
-  }, [])
+  const vendorType = getVendorTypeFromPath('henna-artists')
+  const { data: allVendors = [], isLoading } = useVendorsByType(vendorType)
+  const vendors = allVendors.slice(0, 8)
 
   return (
-    <section className="py-6 sm:py-8 md:py-12 lg:py-16 bg-gray-50">
+    <section className="py-6 sm:py-8 md:py-12 lg:py-16 bg-gradient-to-b from-white to-gold-50/30">
       <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 xl:px-12">
         <div className="flex justify-between items-end mb-12">
           <div>
-            <h2 className="text-3xl font-bold mb-2">Featured Henna Artists</h2>
-            <p className="text-gray-600">Beautiful henna designs for your wedding celebrations</p>
+            <SectionHeading title="Featured Henna Artists" subtitle="Mehndi Artistry" />
+            <p className="text-muted-foreground mt-2">Beautiful henna designs for your wedding celebrations</p>
           </div>
-          <Link href="/vendors/henna-artists" className="text-primary hover:underline hidden md:block">
-            View all henna artists →
+          <Link href="/henna-artists" className="text-purple-600 hover:text-purple-700 hover:underline hidden md:block font-medium">
+            View all henna artists &rarr;
           </Link>
         </div>
 
-        {/* Professional Swiper Slider */}
         <FeaturedSwiper>
           {isLoading ? (
-            // Loading skeleton
             Array.from({ length: 4 }).map((_, index) => (
-                             <SwiperSlide key={index}>
-                 <div className="flex justify-center px-2">
-                   <div className="animate-pulse w-full">
-                     <div className="bg-gray-300 h-48 rounded-t-lg"></div>
-                     <div className="bg-white p-4 rounded-b-lg">
-                       <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
-                       <div className="h-4 bg-gray-300 rounded w-1/2"></div>
-                     </div>
-                   </div>
-                 </div>
-               </SwiperSlide>
+              <SwiperSlide key={index}>
+                <div className="animate-pulse w-full">
+                  <div className="bg-gold-100 h-48 rounded-t-lg" />
+                  <div className="bg-white p-4 rounded-b-lg">
+                    <div className="h-4 bg-gold-100 rounded w-3/4 mb-2" />
+                    <div className="h-4 bg-gold-100 rounded w-1/2" />
+                  </div>
+                </div>
+              </SwiperSlide>
             ))
           ) : (
-                         vendors.map((vendor) => (
-               <SwiperSlide key={vendor.id}>
-                 <div className="flex justify-center px-2">
-                   <div className="w-full">
-                     <VendorCard
-                       id={vendor.id}
-                       name={vendor.name}
-                       image={vendor.images?.[0] || "/placeholder.svg"}
-                       location={vendor.location || vendor.city}
-                       rating={vendor.rating}
-                       reviews={vendor.reviews?.length || 0}
-                       price={vendor.minimumPrice || vendor.price}
-                       type={vendor.subBusinessType || vendor.type}
-                       capacity={vendor.capacity}
-                       amenities={vendor.amenities}
-                       sponsored={vendor.sponsored}
-                     />
-                   </div>
-                 </div>
-               </SwiperSlide>
-             ))
+            vendors.map((vendor) => (
+              <SwiperSlide key={vendor.id}>
+                <VendorCard
+                  id={vendor.id}
+                  name={vendor.name}
+                  image={vendor.images?.[0] || "/placeholder.svg"}
+                  location={vendor.location || vendor.city}
+                  rating={vendor.rating}
+                  reviews={vendor.reviews?.length || 0}
+                  price={vendor.minimumPrice || vendor.price}
+                  type={vendor.type || vendor.subBusinessType}
+                  capacity={vendor.capacity}
+                  amenities={vendor.amenities}
+                  sponsored={vendor.sponsored}
+                />
+              </SwiperSlide>
+            ))
           )}
         </FeaturedSwiper>
 
         <div className="text-center mt-8 md:hidden">
-          <Link href="/vendors/henna-artists" className="text-primary hover:underline">
-            View all henna artists →
+          <Link href="/henna-artists" className="text-purple-600 hover:text-purple-700 hover:underline font-medium">
+            View all henna artists &rarr;
           </Link>
         </div>
       </div>

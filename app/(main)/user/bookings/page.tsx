@@ -6,10 +6,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, User, Phone, Mail, Star, Eye, Trash2, Edit, Plus, RefreshCw } from "lucide-react";
+import { Calendar, Clock, MapPin, User, Phone, Mail, Star, Eye, Trash2, Edit, Plus, RefreshCw, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
-import Cookies from "js-cookie";
+import axiosInstance from "@/lib/axiosConfig";
+import { BACKEND_URL } from "@/lib/backend-url";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface BookingDetail {
   id: number;
@@ -67,16 +78,11 @@ interface Booking {
 const BookingsPage = () => {
   const { user, isAuthenticated, isLoading } = useUser();
   
-  // Helper function to get auth token
-  const getAuthToken = () => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('auth_token') || Cookies.get('auth_token') || '';
-    }
-    return '';
-  };
-  
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState(true);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
   const router = useRouter();
 
   // Fetch bookings on component mount
@@ -95,30 +101,16 @@ const BookingsPage = () => {
       if (!user || !user.id) {
         throw new Error('User ID not found');
       }
-      const response = await fetch(`http://localhost:3000/api/v1/bookings/simple-user-bookings`, {
-        headers: {
-          'Authorization': `Bearer ${getAuthToken()}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const res = await axiosInstance.get(`${BACKEND_URL}api/v1/bookings/simple-user-bookings`);
+      const bookingsData = res.data?.data || [];
+      setBookings(bookingsData);
 
-      if (response.ok) {
-        const data = await response.json();
-        const bookingsData = data.data || [];
-        setBookings(bookingsData);
-        
-        // Store bookings in localStorage for detail page access
-        try {
-          localStorage.setItem('user_bookings', JSON.stringify(bookingsData));
-        } catch (error) {
-          // Error storing bookings in localStorage
-        }
-      } else {
-        console.error('Failed to fetch bookings:', response.status);
-        setBookings([]);
+      try {
+        localStorage.setItem('user_bookings', JSON.stringify(bookingsData));
+      } catch {
+        // localStorage quota exceeded
       }
     } catch (error) {
-      console.error('Error fetching bookings:', error);
       setBookings([]);
     } finally {
       setIsLoadingBookings(false);
@@ -160,45 +152,116 @@ const BookingsPage = () => {
   };
 
   const handleEditBooking = (booking: Booking) => {
-    // Navigate to booking edit page
-    router.push(`/booking/${booking.id}/edit`);
+    router.push(`/user/bookings/${booking.id}`);
   };
 
-  const handleCancelBooking = async (booking: Booking) => {
-    try {
-      const response = await fetch(`http://localhost:3000/api/v1/bookings/${booking.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${getAuthToken()}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status: 'cancelled' })
-      });
+  const handleCancelClick = (booking: Booking) => {
+    setBookingToCancel(booking);
+    setCancelDialogOpen(true);
+  };
 
-      if (response.ok) {
-        toast({
-          title: "Booking Cancelled",
-          description: "Your booking has been cancelled successfully.",
-        });
-        fetchBookings(); // Refresh the list
-      } else {
-        throw new Error('Failed to cancel booking');
-      }
+  const handleConfirmCancel = async () => {
+    if (!bookingToCancel) return;
+    try {
+      setIsCancelling(true);
+      await axiosInstance.patch(`${BACKEND_URL}api/v1/bookings/${bookingToCancel.id}`, { status: 'cancelled' });
+      toast({
+        title: "Booking Cancelled",
+        description: `Booking #${bookingToCancel.id} has been cancelled successfully.`,
+      });
+      fetchBookings();
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to cancel booking. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsCancelling(false);
+      setCancelDialogOpen(false);
+      setBookingToCancel(null);
     }
   };
 
   if (isLoading || isLoadingBookings) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 flex items-center justify-center px-4">
-        <div className="text-center max-w-sm mx-auto">
-          <Spinner size="lg" className="text-rose-500 mx-auto mb-4" />
-          <p className="text-neutral-600 text-sm sm:text-base">Loading your bookings...</p>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-purple-50/80 py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Header skeleton */}
+          <div className="text-center mb-6 sm:mb-8">
+            <div className="h-9 w-52 skeleton-shimmer rounded-lg mx-auto mb-3" />
+            <div className="h-4 w-72 skeleton-shimmer rounded mx-auto" />
+          </div>
+
+          {/* Stats cards skeleton */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i} className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+                <CardContent className="p-3 sm:p-4 lg:p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="h-3 w-20 skeleton-shimmer rounded mb-2" />
+                      <div className="h-7 w-12 skeleton-shimmer rounded" />
+                    </div>
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 skeleton-shimmer rounded-full flex-shrink-0 ml-2" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Action bar skeleton */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <div className="h-4 w-40 skeleton-shimmer rounded" />
+            <div className="flex gap-2">
+              <div className="h-9 w-28 skeleton-shimmer rounded-lg" />
+              <div className="h-9 w-28 skeleton-shimmer rounded-lg" />
+            </div>
+          </div>
+
+          {/* Booking cards skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Card key={i} className="bg-white/80 backdrop-blur-sm border-0 shadow-lg overflow-hidden">
+                <CardContent className="p-0">
+                  {/* Card header stripe */}
+                  <div className="h-2 skeleton-shimmer" />
+                  <div className="p-4 sm:p-5 space-y-4">
+                    {/* Title row */}
+                    <div className="flex items-center justify-between">
+                      <div className="h-5 w-28 skeleton-shimmer rounded" />
+                      <div className="h-6 w-20 skeleton-shimmer rounded-full" />
+                    </div>
+                    {/* Info rows */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 skeleton-shimmer rounded" />
+                        <div className="h-4 w-36 skeleton-shimmer rounded" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 skeleton-shimmer rounded" />
+                        <div className="h-4 w-28 skeleton-shimmer rounded" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 skeleton-shimmer rounded" />
+                        <div className="h-4 w-32 skeleton-shimmer rounded" />
+                      </div>
+                    </div>
+                    {/* Divider */}
+                    <div className="h-px bg-gray-100" />
+                    {/* Actions row */}
+                    <div className="flex items-center justify-between">
+                      <div className="h-5 w-24 skeleton-shimmer rounded" />
+                      <div className="flex gap-2">
+                        <div className="h-8 w-16 skeleton-shimmer rounded-lg" />
+                        <div className="h-8 w-16 skeleton-shimmer rounded-lg" />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -206,7 +269,7 @@ const BookingsPage = () => {
 
   if (!user || !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-purple-50/80 flex items-center justify-center px-4">
         <div className="text-center max-w-sm mx-auto">
           <p className="text-neutral-600 text-sm sm:text-base">Please log in to view your bookings</p>
         </div>
@@ -215,7 +278,7 @@ const BookingsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-6">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-purple-50/80 py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-6">
       <div className="max-w-7xl mx-auto">
         {/* Header - Mobile Optimized */}
         <div className="text-center mb-6 sm:mb-8">
@@ -236,8 +299,8 @@ const BookingsPage = () => {
                   <p className="text-xs sm:text-sm font-medium text-neutral-600 truncate">Total Bookings</p>
                   <p className="text-lg sm:text-xl lg:text-2xl font-bold text-neutral-900">{bookings.length}</p>
                 </div>
-                <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-rose-100 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
-                  <Calendar className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-rose-600" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
+                  <Calendar className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-purple-600" />
                 </div>
               </div>
             </CardContent>
@@ -303,7 +366,7 @@ const BookingsPage = () => {
             disabled={isLoadingBookings}
             variant="outline"
             size="sm"
-            className="border-rose-200 text-rose-600 hover:bg-rose-50 self-center sm:self-auto min-h-[44px] px-4"
+            className="border-purple-200 text-purple-600 hover:bg-purple-50 self-center sm:self-auto min-h-[44px] px-4"
           >
             {isLoadingBookings ? (
               <Spinner size="sm" className="mr-2" />
@@ -324,7 +387,7 @@ const BookingsPage = () => {
               </div>
               <h3 className="text-base sm:text-lg font-semibold text-neutral-900 mb-2">No Bookings Yet</h3>
               <p className="text-sm sm:text-base text-neutral-600 mb-6 px-4">You haven't made any bookings yet. Start planning your perfect event!</p>
-              <Button className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white min-h-[44px] px-6">
+              <Button className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white min-h-[44px] px-6">
                 Browse Venues & Vendors
               </Button>
             </CardContent>
@@ -360,7 +423,7 @@ const BookingsPage = () => {
                         <Badge className={`capitalize text-xs sm:text-sm ${getStatusColor(booking.status)}`}>
                           {booking.status}
                         </Badge>
-                        <p className="text-base sm:text-lg font-bold text-rose-600">
+                        <p className="text-base sm:text-lg font-bold text-purple-600">
                           Rs. {booking.totalAmount.toLocaleString()}
                         </p>
                       </div>
@@ -412,7 +475,7 @@ const BookingsPage = () => {
                         <h4 className="font-semibold text-neutral-900 mb-3 text-sm sm:text-base">Vendors & Services:</h4>
                         <div className="space-y-3">
                           {booking.bookingDetails.map((detail, index) => (
-                            <div key={detail.id} className="border-l-4 border-rose-200 pl-3">
+                            <div key={detail.id} className="border-l-4 border-purple-200 pl-3">
                               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                 <div className="min-w-0 flex-1">
                                   <p className="font-medium text-neutral-900 text-sm sm:text-base truncate">
@@ -426,7 +489,7 @@ const BookingsPage = () => {
                                   </p>
                                 </div>
                                 <div className="text-right">
-                                  <p className="font-semibold text-rose-600 text-sm sm:text-base">
+                                  <p className="font-semibold text-purple-600 text-sm sm:text-base">
                                     Rs. {detail.totalAmount?.toLocaleString() || '0'}
                                   </p>
                                   <p className="text-xs text-neutral-500">
@@ -467,7 +530,7 @@ const BookingsPage = () => {
                         Edit
                       </Button>
                       <Button
-                        onClick={() => handleCancelBooking(booking)}
+                        onClick={() => handleCancelClick(booking)}
                         variant="outline"
                         size="sm"
                         className="border-red-200 text-red-600 hover:bg-red-50 min-h-[44px] text-sm"
@@ -491,6 +554,42 @@ const BookingsPage = () => {
           </p>
         </div>
       </div>
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+              Cancel Booking
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel{" "}
+              <span className="font-semibold text-neutral-900">
+                Booking #{bookingToCancel?.id}
+              </span>
+              ? This action cannot be undone. Any payments made may be subject to the refund policy.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCancelling}>Keep Booking</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmCancel}
+              disabled={isCancelling}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isCancelling ? (
+                <>
+                  <Spinner size="sm" className="mr-2" />
+                  Cancelling...
+                </>
+              ) : (
+                "Yes, Cancel Booking"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

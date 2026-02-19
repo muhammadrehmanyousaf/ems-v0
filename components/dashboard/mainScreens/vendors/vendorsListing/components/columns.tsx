@@ -1,12 +1,20 @@
+'use client';
 import { Checkbox } from "@/components/ui/checkbox";
 import { ColumnDef } from "@tanstack/react-table";
 import { RowActions } from "./row-actions";
-import { User, Vendor } from "@/lib/dashboard-types";
+import { Vendor } from "@/lib/dashboard-types";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { formatDateTime } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import axiosInstance from "@/lib/axiosConfig";
+import React from "react";
 
-export const columns: ColumnDef<Vendor>[] = [
+export const columns = (
+    onEdit: (vendor: Vendor) => void,
+    onDelete: (vendor: Vendor) => void,
+): ColumnDef<Vendor>[] => [
     {
         id: "select",
         header: ({ table }) => (
@@ -39,30 +47,87 @@ export const columns: ColumnDef<Vendor>[] = [
             <div className="flex items-center gap-2">
                 <Avatar className="h-[34px] w-[34px]">
                     <AvatarFallback className="bg-primary/20 text-primary">
-                        {row.original.fullName.charAt(0).toLocaleUpperCase()}
+                        {row.original.fullName?.charAt(0).toLocaleUpperCase()}
                     </AvatarFallback>
                 </Avatar>
-                {row.original.fullName}
+                <div>
+                    <span className="font-medium">{row.original.fullName}</span>
+                    <p className="text-xs text-muted-foreground">{row.original.email}</p>
+                </div>
             </div>
         ),
     },
-    { accessorKey: "email", header: "Email" },
     { accessorKey: "phoneNumber", header: "Phone Number" },
-    { accessorKey: "BusinessName", header: "Business Name" },
-    { accessorKey: "businessType", header: "Business Type" },
     {
-        accessorKey: "status",
-        header: "Status",
+        id: "vendorType",
+        header: "Vendor Type",
         cell: ({ row }) => (
-            <Switch
-                size="md"
-                checked={row.original.status === "Active"}
-                onCheckedChange={() => {
-                    // here you can add toggle logic
-                    console.log("Status toggled for", row.original.fullName);
-                }}
-            />
+            <Badge variant="outline" className="capitalize">
+                {row.original.vendorType || "N/A"}
+            </Badge>
         ),
+    },
+    {
+        id: "profileApproval",
+        header: "Profile Approved",
+        cell: ({ row }) => {
+            const ProfileSwitch = () => {
+                const [checked, setChecked] = React.useState(row.original.reviewProfile ?? false);
+                const handleToggle = async (value: boolean) => {
+                    setChecked(value);
+                    try {
+                        await axiosInstance.patch(
+                            `/api/v1/users/vendor-profile-update?id=${row.original.id}&reviewProfile=${value}`
+                        );
+                        toast.success(
+                            `Vendor profile ${value ? "approved" : "unapproved"}`
+                        );
+                    } catch {
+                        setChecked(!value);
+                        toast.error("Failed to update vendor profile status");
+                    }
+                };
+                return (
+                    <Switch
+                        size="md"
+                        checked={checked}
+                        onCheckedChange={handleToggle}
+                    />
+                );
+            };
+            return <ProfileSwitch />;
+        },
+    },
+    {
+        id: "activeStatus",
+        header: "Active",
+        cell: ({ row }) => {
+            const ActiveSwitch = () => {
+                const [active, setActive] = React.useState(row.original.active ?? true);
+                const handleToggle = async (value: boolean) => {
+                    setActive(value);
+                    try {
+                        await axiosInstance.patch(
+                            `/api/v1/users/change-status?id=${row.original.id}&active=${value}`
+                        );
+                        toast.success(
+                            `Vendor ${value ? "activated" : "deactivated"}`
+                        );
+                    } catch {
+                        setActive(!value);
+                        toast.error("Failed to update vendor status");
+                    }
+                };
+                return (
+                    <Switch
+                        size="md"
+                        checked={active}
+                        onCheckedChange={handleToggle}
+                    />
+                );
+            };
+            return <ActiveSwitch />;
+        },
     },
     {
         accessorKey: "createdAt",
@@ -74,59 +139,12 @@ export const columns: ColumnDef<Vendor>[] = [
     {
         id: "actions",
         enableHiding: false,
-        cell: ({ row }) => <RowActions data={row.original} />,
-    },
-];
-
-export const vendors: Vendor[] = [
-    {
-        id: '1',
-        fullName: "Ali Khan",
-        email: "ali.khan@example.com",
-        phoneNumber: "+92-300-1234567",
-        businessType: "Clothing",
-        BusinessName: "Khan Fashion Hub",
-        status: "Active",
-        createdAt: "2025-08-01T10:30:00Z",
-    },
-    {
-        id: '2',
-        fullName: "Sara Ahmed",
-        email: "sara.ahmed@example.com",
-        phoneNumber: "+92-321-7654321",
-        businessType: "Electronics",
-        BusinessName: "Tech World",
-        status: "Inactive",
-        createdAt: "2025-07-25T15:45:00Z",
-    },
-    {
-        id: '3',
-        fullName: "Hassan Raza",
-        email: "hassan.raza@example.com",
-        phoneNumber: "+92-333-9876543",
-        businessType: "Food & Beverages",
-        BusinessName: "Raza Foods",
-        status: "Active",
-        createdAt: "2025-06-15T09:00:00Z",
-    },
-    {
-        id: '4',
-        fullName: "Maria Iqbal",
-        email: "maria.iqbal@example.com",
-        phoneNumber: "+92-345-4567890",
-        businessType: "Home Decor",
-        BusinessName: "Elegant Interiors",
-        status: "Pending",
-        createdAt: "2025-08-20T18:20:00Z",
-    },
-    {
-        id: '5',
-        fullName: "Usman Tariq",
-        email: "usman.tariq@example.com",
-        phoneNumber: "+92-301-6549872",
-        businessType: "Sports",
-        BusinessName: "Tariq Sports Store",
-        status: "Active",
-        createdAt: "2025-05-10T12:10:00Z",
+        cell: ({ row }) => (
+            <RowActions
+                data={row.original}
+                onEdit={onEdit}
+                onDelete={onDelete}
+            />
+        ),
     },
 ];

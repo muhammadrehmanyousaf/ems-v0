@@ -1,9 +1,11 @@
 "use client"
 
 import type { Table } from "@tanstack/react-table"
-import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Download, Plus } from "lucide-react"
 import { DataTableColumnView } from "@/components/dashboard/globalComponents/globalTable/components/data-table-column-view"
 import { DataTableSearch } from "@/components/dashboard/globalComponents/globalTable/components/data-table-search"
+import { exportTableToCSV } from "@/lib/utils/csv-export"
 import { Options } from "nuqs"
 
 interface DataTableToolbarProps<TData> {
@@ -17,6 +19,7 @@ interface DataTableToolbarProps<TData> {
         value: number | ((old: number) => number | null) | null,
         options?: Options<Shallow> | undefined
     ) => Promise<URLSearchParams>;
+    onAddBooking?: () => void;
 }
 
 export function BookingTableActions<TData>({
@@ -24,19 +27,12 @@ export function BookingTableActions<TData>({
     searchQuery,
     setPage,
     setSearchQuery,
+    onAddBooking,
 }: DataTableToolbarProps<TData>) {
 
     return (
         <div className="flex items-center justify-between">
             <div className="flex flex-1 items-center space-x-2">
-                {/* <Input
-                    placeholder="Search Booking..."
-                    value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-                    onChange={(event) =>
-                        table.getColumn("name")?.setFilterValue(event.target.value)
-                    }
-                    className="h-9 w-[250px] xl:w-[300px]"
-                /> */}
                 <DataTableSearch
                     searchKey={'name'}
                     placeholder={'Search'}
@@ -45,8 +41,18 @@ export function BookingTableActions<TData>({
                     setPage={setPage}
                 />
             </div>
-            <div className="ml-auto hidden lg:flex">
-                <DataTableColumnView table={table} />
+            <div className="ml-auto flex items-center gap-2">
+                {onAddBooking && (
+                    <Button size="sm" onClick={onAddBooking}>
+                        <Plus className="mr-2 h-4 w-4" />Add Booking
+                    </Button>
+                )}
+                <Button variant="outline" size="sm" className="hidden lg:flex" onClick={() => exportTableToCSV(table, "bookings")}>
+                    <Download className="mr-2 h-4 w-4" />Export
+                </Button>
+                <div className="hidden lg:flex">
+                    <DataTableColumnView table={table} />
+                </div>
             </div>
         </div>
     )

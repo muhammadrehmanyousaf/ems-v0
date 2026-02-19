@@ -1,7 +1,6 @@
 "use client"
 
-import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
-
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import {
   Card,
   CardContent,
@@ -15,61 +14,78 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-
-export const description = "A bar chart"
-
-const chartData = [
-  { month: "January", desktop: 186 },
-  { month: "February", desktop: 305 },
-  { month: "March", desktop: 237 },
-  { month: "April", desktop: 73 },
-  { month: "May", desktop: 209 },
-  { month: "June", desktop: 214 },
-]
+import { Skeleton } from "@/components/ui/skeleton"
+import type { RevenueTrendItem } from "@/lib/api/analytics"
 
 const chartConfig = {
-  desktop: {
-    label: "Desktop",
+  revenue: {
+    label: "Revenue (Rs.)",
     color: "var(--chart-3)",
   },
 } satisfies ChartConfig
 
-export function RevenueBarChart({chartHeight}: {chartHeight?: number}) {
+const formatCompact = (v: number) => {
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`
+  if (v >= 1_000) return `${(v / 1_000).toFixed(0)}K`
+  return String(v)
+}
+
+interface RevenueBarChartProps {
+  chartHeight?: number;
+  data: RevenueTrendItem[];
+  period: string;
+  loading?: boolean;
+}
+
+export function RevenueBarChart({ chartHeight, data, period, loading }: RevenueBarChartProps) {
   return (
     <Card className="flex h-full xlarge:h-auto flex-col">
       <CardHeader>
         <CardTitle>Total Revenue</CardTitle>
-        <CardDescription>January - June 2024</CardDescription>
+        <CardDescription>{period || "Monthly revenue"}</CardDescription>
       </CardHeader>
       <CardContent>
         <div style={{ height: chartHeight }} className="w-full">
-        <ChartContainer config={chartConfig}>
-          <BarChart accessibilityLayer data={chartData}>
-            <CartesianGrid vertical={false} />
-            <XAxis
-              dataKey="month"
-              tickLine={false}
-              tickMargin={10}
-              axisLine={false}
-              tickFormatter={(value) => value.slice(0, 3)}
-            />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent hideLabel />}
-            />
-            <Bar dataKey="desktop" fill="var(--color-desktop)" radius={8} />
-          </BarChart>
-        </ChartContainer>
+          {loading ? (
+            <Skeleton className="h-full w-full rounded-lg" />
+          ) : data.length === 0 ? (
+            <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+              No revenue data
+            </div>
+          ) : (
+            <ChartContainer config={chartConfig}>
+              <BarChart accessibilityLayer data={data} margin={{ left: 0, right: 4, top: 4, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--color-revenue)" stopOpacity={0.9} />
+                    <stop offset="100%" stopColor="var(--color-revenue)" stopOpacity={0.5} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="month"
+                  tickLine={false}
+                  tickMargin={10}
+                  axisLine={false}
+                  tickFormatter={(value) => value.slice(0, 3)}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={4}
+                  width={48}
+                  tickFormatter={formatCompact}
+                />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent hideLabel />}
+                />
+                <Bar dataKey="revenue" fill="url(#revenueGradient)" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          )}
         </div>
       </CardContent>
-      {/* <CardFooter className="flex-col items-start gap-2 text-sm">
-        <div className="flex gap-2 leading-none font-medium">
-          Trending up by 5.2% this month <TrendingUp className="h-4 w-4" />
-        </div>
-        <div className="text-muted-foreground leading-none">
-          Showing total visitors for the last 6 months
-        </div>
-      </CardFooter> */}
     </Card>
   )
 }

@@ -58,6 +58,30 @@ export default function BudgetPage() {
   });
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const [loaded, setLoaded] = useState(false);
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('planning_budget_items');
+      if (saved) setItems(JSON.parse(saved));
+      const savedBudget = localStorage.getItem('planning_budget_total');
+      if (savedBudget) setTotalBudget(JSON.parse(savedBudget));
+    } catch { /* ignore corrupt data */ }
+    setLoaded(true);
+  }, []);
+
+  // Persist items to localStorage
+  useEffect(() => {
+    if (!loaded) return;
+    localStorage.setItem('planning_budget_items', JSON.stringify(items));
+  }, [items, loaded]);
+
+  // Persist total budget to localStorage
+  useEffect(() => {
+    if (!loaded) return;
+    localStorage.setItem('planning_budget_total', JSON.stringify(totalBudget));
+  }, [totalBudget, loaded]);
 
   const addBudgetItem = () => {
     if (!newItem.item?.trim()) return;
@@ -150,7 +174,7 @@ export default function BudgetPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-6 sm:mb-8"
       >
-        <Link href="/planning-tools" className="inline-flex items-center gap-2 text-rose-600 hover:text-rose-700 mb-4 transition-colors duration-200">
+        <Link href="/planning-tools" className="inline-flex items-center gap-2 text-purple-600 hover:text-purple-700 mb-4 transition-colors duration-200">
           <ArrowLeft className="w-4 h-4" />
           <span className="text-sm sm:text-base">Back to Planning Tools</span>
         </Link>
@@ -221,7 +245,7 @@ export default function BudgetPage() {
           </CardContent>
         </Card>
 
-        <Card className={`text-white border-0 ${overBudget ? 'bg-gradient-to-br from-red-500 to-pink-600' : 'bg-gradient-to-br from-orange-500 to-amber-600'}`}>
+        <Card className={`text-white border-0 ${overBudget ? 'bg-gradient-to-br from-red-500 to-purple-700' : 'bg-gradient-to-br from-orange-500 to-amber-600'}`}>
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>

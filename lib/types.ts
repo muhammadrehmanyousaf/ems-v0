@@ -1,5 +1,6 @@
 export interface Vendor {
   id: string | number
+  userId?: number
   name: string
   images: string[]
   location: string
@@ -17,6 +18,7 @@ export interface Vendor {
   staff: string[]
   description: string
   packages: Package[]
+  menus?: VendorMenu[]
   video?: string
   availability?: Availability
   isFavorite?: boolean
@@ -59,6 +61,13 @@ export interface Package {
   price: number
   features: string[]
   duration?: string
+}
+
+export interface VendorMenu {
+  id: string | number
+  title: string
+  price: number
+  data?: { items?: string[] } | null
 }
 
 export interface Venue {

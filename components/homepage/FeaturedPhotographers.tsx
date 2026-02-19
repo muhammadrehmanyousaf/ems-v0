@@ -4,75 +4,67 @@ import Link from "next/link"
 import VendorCard from "@/components/VendorCard"
 import { FeaturedSwiper, SwiperSlide } from "@/components/ui/featured-swiper"
 import { getVendorTypeFromPath } from "@/lib/vendor-types"
-import type { Vendor } from "@/lib/types"
 import { useVendorsByType } from "@/hooks/use-vendors"
+import { SectionHeading } from "@/components/ui/section-heading"
 
 export function FeaturedPhotographers() {
   const vendorType = getVendorTypeFromPath('photographers')
   const { data: allVendors = [], isLoading } = useVendorsByType(vendorType)
-  const vendors = allVendors ?? [] // Limit to 8 featured
+  const vendors = allVendors.slice(0, 8)
 
   return (
-    <section className="py-6 sm:py-8 md:py-12 lg:py-16 bg-gray-50">
+    <section className="py-6 sm:py-8 md:py-12 lg:py-16 bg-gradient-to-br from-purple-50/30 via-white to-gold-50/20">
       <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 xl:px-12">
         <div className="flex justify-between items-end mb-12">
           <div>
-            <h2 className="text-3xl font-bold mb-2">Featured Photographers</h2>
-            <p className="text-gray-600">Capture your special moments with professional wedding photographers</p>
+            <SectionHeading title="Featured Photographers" subtitle="Capture Every Moment" />
+            <p className="text-muted-foreground mt-2">Capture your special moments with professional wedding photographers</p>
           </div>
-          <Link href="/vendors/photographers" className="text-primary hover:underline hidden md:block">
-            View all photographers →
+          <Link href="/photographers" className="text-purple-600 hover:text-purple-700 hover:underline hidden md:block font-medium">
+            View all photographers &rarr;
           </Link>
         </div>
 
-        {/* Professional Swiper Slider */}
         <FeaturedSwiper>
           {isLoading ? (
-            // Loading skeleton
             Array.from({ length: 4 }).map((_, index) => (
-                             <SwiperSlide key={index}>
-                 <div className="flex justify-center px-2">
-                   <div className="animate-pulse w-full">
-                     <div className="bg-gray-300 h-48 rounded-t-lg"></div>
-                     <div className="bg-white p-4 rounded-b-lg">
-                       <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
-                       <div className="h-4 bg-gray-300 rounded w-1/2"></div>
-                     </div>
-                   </div>
-                 </div>
-               </SwiperSlide>
+              <SwiperSlide key={index}>
+                <div className="animate-pulse w-full">
+                  <div className="bg-purple-100 h-48 rounded-t-lg" />
+                  <div className="bg-white p-4 rounded-b-lg">
+                    <div className="h-4 bg-purple-100 rounded w-3/4 mb-2" />
+                    <div className="h-4 bg-purple-100 rounded w-1/2" />
+                  </div>
+                </div>
+              </SwiperSlide>
             ))
           ) : (
-                         vendors?.slice(0, 8).map((vendor) => (
-               <SwiperSlide key={vendor.id}>
-                 <div className="flex justify-center px-2">
-                   <div className="w-full">
-                     <VendorCard
-                       id={vendor.id}
-                       name={vendor.name}
-                       image={vendor.images?.[0] || "/placeholder.svg"}
-                       location={vendor.location || vendor.city}
-                       rating={vendor.rating}
-                       reviews={vendor.reviews?.length || 0}
-                       price={vendor.minimumPrice || vendor.price}
-                       type={vendor.subBusinessType || vendor.type}
-                       capacity={vendor.capacity}
-                       amenities={vendor.amenities}
-                       sponsored={vendor.sponsored}
-                     />
-                   </div>
-                 </div>
-               </SwiperSlide>
-             ))
+            vendors.map((vendor) => (
+              <SwiperSlide key={vendor.id}>
+                <VendorCard
+                  id={vendor.id}
+                  name={vendor.name}
+                  image={vendor.images?.[0] || "/placeholder.svg"}
+                  location={vendor.location || vendor.city}
+                  rating={vendor.rating}
+                  reviews={vendor.reviews?.length || 0}
+                  price={vendor.minimumPrice || vendor.price}
+                  type={vendor.type || vendor.subBusinessType}
+                  capacity={vendor.capacity}
+                  amenities={vendor.amenities}
+                  sponsored={vendor.sponsored}
+                />
+              </SwiperSlide>
+            ))
           )}
         </FeaturedSwiper>
 
         <div className="text-center mt-8 md:hidden">
-          <Link href="/vendors/photographers" className="text-primary hover:underline">
-            View all photographers →
+          <Link href="/photographers" className="text-purple-600 hover:text-purple-700 hover:underline font-medium">
+            View all photographers &rarr;
           </Link>
         </div>
       </div>
     </section>
   )
-} 
+}

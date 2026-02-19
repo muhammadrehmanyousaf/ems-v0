@@ -8,6 +8,12 @@ import type {
 } from '../types';
 
 export class PaymentAPI {
+  // Get Stripe publishable key from backend
+  static async getStripeConfig(): Promise<{ publishableKey: string }> {
+    const response = await axiosInstance.get(`${BACKEND_URL}api/v1/payments/config`);
+    return response.data.data;
+  }
+
   // Check for existing payment intent
   static async checkExistingPaymentIntent(
     bookingId: number,
@@ -100,13 +106,8 @@ export class PaymentAPI {
   // Get payment history
   static async getPaymentHistory(): Promise<PaymentHistory[]> {
     try {
-      // TODO: Replace with your actual payment history endpoint
-      // For now, return empty array until we know your real endpoint
-      return [];
-      
-      // When you provide the real endpoint, uncomment this:
-      // const response = await axiosInstance.get(`${BACKEND_URL}api/v1/payments/history`);
-      // return response.data.data || [];
+      const response = await axiosInstance.get(`${BACKEND_URL}api/v1/payments/history`);
+      return response.data.data || [];
     } catch (error: any) {
       console.error('Error fetching payment history:', error);
       return [];
@@ -116,13 +117,8 @@ export class PaymentAPI {
   // Get pending payments
   static async getPendingPayments(): Promise<PendingPayment[]> {
     try {
-      // TODO: Replace with your actual pending payments endpoint
-      // For now, return empty array until we know your real endpoint
-      return [];
-      
-      // When you provide the real endpoint, uncomment this:
-      // const response = await axiosInstance.get(`${BACKEND_URL}api/v1/payments/pending`);
-      // return response.data.data || [];
+      const response = await axiosInstance.get(`${BACKEND_URL}api/v1/payments/pending`);
+      return response.data.data || [];
     } catch (error: any) {
       console.error('Error fetching pending payments:', error);
       return [];
@@ -138,7 +134,7 @@ export class PaymentAPI {
     remainingAmount: number;
   }> {
     try {
-      const response = await axiosInstance.get(`${BACKEND_URL}api/v1/bookings/${bookingId}/payment-status`);
+      const response = await axiosInstance.get(`${BACKEND_URL}api/v1/payments/booking-status/${bookingId}`);
       return response.data.data;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch booking payment status');
@@ -201,6 +197,43 @@ export class PaymentAPI {
     } catch (error: any) {
       console.error('Booking verification unexpected error:', error);
       return false;
+    }
+  }
+
+  // Create a Stripe Checkout Session (redirects user to Stripe-hosted page)
+  static async createCheckoutSession(
+    bookingId: number,
+    customerEmail: string,
+    paymentType: 'down_payment' | 'remaining_payment' | 'full_payment'
+  ): Promise<{ sessionId: string; url: string; amount: number; paymentType: string }> {
+    try {
+      const response = await axiosInstance.post(`${BACKEND_URL}api/v1/payments/create-checkout-session`, {
+        bookingId: Number(bookingId),
+        customerEmail,
+        paymentType,
+      });
+      return response.data.data;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to create checkout session';
+      throw new Error(errorMessage);
+    }
+  }
+
+  // Verify a completed Checkout Session after Stripe redirects back
+  static async verifyCheckoutSession(
+    sessionId: string,
+    bookingId?: number,
+    paymentType?: string
+  ): Promise<{ bookingId: number; paymentType: string; amount: number; status: string; alreadyProcessed?: boolean }> {
+    try {
+      const params = new URLSearchParams({ sessionId });
+      if (bookingId) params.append('bookingId', bookingId.toString());
+      if (paymentType) params.append('paymentType', paymentType);
+      const response = await axiosInstance.get(`${BACKEND_URL}api/v1/payments/verify-checkout-session?${params.toString()}`);
+      return response.data.data;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to verify checkout session';
+      throw new Error(errorMessage);
     }
   }
 

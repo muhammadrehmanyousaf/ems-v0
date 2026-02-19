@@ -1,4 +1,6 @@
-import { MoreHorizontal, PencilLine, Trash2 } from "lucide-react";
+'use client';
+
+import { Eye, MoreHorizontal, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -8,13 +10,15 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Business, User, Vendor } from "@/lib/dashboard-types";
+import { Business } from "@/lib/dashboard-types";
 
 interface RowActionsProps {
     data: Business;
+    onView: (business: Business) => void;
+    onDelete: (business: Business) => void;
 }
 
-export function RowActions({ data }: RowActionsProps) {
+export function RowActions({ data, onView, onDelete }: RowActionsProps) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -27,18 +31,16 @@ export function RowActions({ data }: RowActionsProps) {
                     <span className="sr-only">Open menu</span>
                 </Button>
             </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end" className="">
+            <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                    className="gap-2"
-                >
-                    <PencilLine className="size-4 opacity-70" />
-                    Edit
+                <DropdownMenuItem className="gap-2" onClick={() => onView(data)}>
+                    <Eye className="size-4 opacity-70" />
+                    View Details
                 </DropdownMenuItem>
                 <DropdownMenuItem
                     className="gap-2 text-destructive focus:text-destructive"
+                    onClick={() => onDelete(data)}
                 >
                     <Trash2 className="size-4" />
                     Delete

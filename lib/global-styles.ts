@@ -2,18 +2,6 @@
 export const designTokens = {
   colors: {
     primary: {
-      50: '#fdf2f8',
-      100: '#fce7f3',
-      200: '#fbcfe8',
-      300: '#f9a8d4',
-      400: '#f472b6',
-      500: '#ec4899',
-      600: '#db2777',
-      700: '#be185d',
-      800: '#9d174d',
-      900: '#831843',
-    },
-    secondary: {
       50: '#faf5ff',
       100: '#f3e8ff',
       200: '#e9d5ff',
@@ -24,6 +12,18 @@ export const designTokens = {
       700: '#7c3aed',
       800: '#6b21a8',
       900: '#581c87',
+    },
+    gold: {
+      50: '#fefce8',
+      100: '#fef9c3',
+      200: '#fef08a',
+      300: '#fde047',
+      400: '#d4af37',
+      500: '#c4a030',
+      600: '#a38529',
+      700: '#856b22',
+      800: '#664f1b',
+      900: '#483814',
     },
     gray: {
       50: '#f9fafb',
@@ -72,9 +72,9 @@ export const vendorCardClasses = {
   rating: "flex items-center gap-2",
   price: "text-lg font-bold text-primary",
   badge: "bg-white/90 text-gray-800 border-0",
-  sponsoredBadge: "bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0",
+  sponsoredBadge: "bg-gradient-to-r from-gold-500 to-gold-600 text-white border-0",
   favoriteButton: "absolute top-3 right-3 h-8 w-8 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white p-0",
-  bookButton: "w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold py-2.5 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg",
+  bookButton: "w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-2.5 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg",
 }
 
 // Responsive breakpoints

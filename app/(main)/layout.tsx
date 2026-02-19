@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { PageTransition } from "@/components/ui/page-transition"
 
 const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
@@ -16,13 +17,15 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  
+
   return (
     <div lang="en" suppressHydrationWarning>
       <div className={inter.className} suppressHydrationWarning>
         <Header />
         <main className="min-h-screen w-full">
-          {children}
+          <PageTransition>
+            {children}
+          </PageTransition>
         </main>
         <Footer />
       </div>

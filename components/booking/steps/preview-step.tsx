@@ -1,29 +1,31 @@
 "use client"
 
 import { format } from "date-fns"
-import type { BookingFormData, Vendor } from "@/lib/types"
-import { bookingPackages, bookingMenus, menuAddons } from "@/lib/data"
-import { Card, CardContent } from "@/components/ui/card"
-import { CalendarDays, Users, User, Clock, MapPin } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import type { BookingFormData, Vendor, EventVenue } from "@/lib/types"
+import { User, CalendarDays, Package, Utensils, Users, CreditCard, Receipt, Info, Clock } from "lucide-react"
+import { motion } from "framer-motion"
 
 interface PreviewStepProps {
   formData: BookingFormData
   selectedMenuObj: any
   selectedPackageObj: any
   vendorDetails?: Vendor[]
+  venue?: EventVenue | null
 }
 
-export default function PreviewStep({ formData, selectedPackageObj, selectedMenuObj, vendorDetails = [] }: PreviewStepProps) {
-  // const selectedPackage = bookingPackages.find((p) => p.id === formData.selectedPackage)
-  const selectedMenu = bookingMenus.find((m) => m.id === formData.selectedMenu)
+const container = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.08 } },
+}
 
-  const selectedAddons = (formData.menuAddons || [])
-    .map((addonId) => menuAddons.find((addon) => addon.id === addonId))
-    .filter(Boolean)
+const item = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+}
 
+export default function PreviewStep({ formData, selectedPackageObj, selectedMenuObj, vendorDetails = [], venue }: PreviewStepProps) {
   const selectedVendors = (formData.selectedVendors || [])
-    .map((vendorId) => vendorDetails.find((vendor) => String(vendor.id) === String(vendorId)))
+    .map((vendorId) => vendorDetails.find((v) => String(v.id) === String(vendorId)))
     .filter(Boolean)
 
   const selectedVendorPackages = (formData.selectedVendorPackages || [])
@@ -35,293 +37,227 @@ export default function PreviewStep({ formData, selectedPackageObj, selectedMenu
     })
     .filter(Boolean)
 
-  // Format time slot for display
+  // Build line-item invoice
+  const invoiceLines: { label: string; type: string; amount: number }[] = []
+  const vendorIdsWithPackages = new Set<string>()
+
+  if (selectedPackageObj) {
+    invoiceLines.push({
+      label: `${venue?.name || "Venue"} — ${selectedPackageObj.name}`,
+      type: "Package",
+      amount: Number(selectedPackageObj.price) || 0,
+    })
+  }
+  if (selectedMenuObj) {
+    invoiceLines.push({
+      label: `${venue?.name || "Venue"} — ${selectedMenuObj.title || selectedMenuObj.name}`,
+      type: "Menu",
+      amount: Number(selectedMenuObj.price) || 0,
+    })
+  }
+  if (!selectedPackageObj && !selectedMenuObj && venue) {
+    invoiceLines.push({
+      label: venue.name,
+      type: "Venue Base",
+      amount: Number(venue.minimumPrice) || 0,
+    })
+  }
+
+  selectedVendorPackages.forEach((p: any) => {
+    invoiceLines.push({
+      label: `${p?.vendorName} — ${p?.name}`,
+      type: "Vendor Pkg",
+      amount: Number(p?.price || 0),
+    })
+    if (p?.vendorName) {
+      const ownerVendor = vendorDetails.find(v => v.name === p.vendorName)
+      if (ownerVendor) vendorIdsWithPackages.add(String(ownerVendor.id))
+    }
+  })
+
+  selectedVendors.forEach((v: any) => {
+    if (vendorIdsWithPackages.has(String(v?.id))) return
+    if (venue && String(v?.id) === String(venue.id)) return
+    invoiceLines.push({
+      label: v?.name || "Vendor",
+      type: "Vendor",
+      amount: Number((v as any)?.minimumPrice || (v as any)?.price || 0),
+    })
+  })
+
+  const subtotal = invoiceLines.reduce((sum, l) => sum + l.amount, 0)
+  const computedTotal = subtotal > 0 ? subtotal : Number(formData.totalPrice) || 0
+
+  // Down payment calc
+  let downPayment = 0
+  if (venue) {
+    const dpType = (venue.downPaymentType || "").toLowerCase()
+    const dpValue = Number(venue.downPayment) || 0
+    if (dpType.includes("percent")) {
+      downPayment = Math.round(computedTotal * (dpValue / 100))
+    } else {
+      downPayment = dpValue
+    }
+  }
+  const remaining = computedTotal - downPayment
+
+  const formatPKR = (n: number) =>
+    new Intl.NumberFormat("en-PK", { style: "currency", currency: "PKR", maximumFractionDigits: 0 }).format(n)
+
   const getTimeSlotDisplay = (timeSlot: string) => {
     switch (timeSlot) {
-      case '09:00':
-        return "Morning (9AM - 12PM)"
-      case "12:00":
-        return "Midday (12PM - 4PM)"
-      case "17:00":
-        return "Evening (5PM - 10PM)"
-      default:
-        return "Not selected"
+      case '09:00': return "Morning (9 AM - 12 PM)"
+      case "14:00": return "Afternoon (2 PM - 6 PM)"
+      case "18:00": return "Evening (6 PM - 11 PM)"
+      default: return timeSlot || "Not selected"
     }
   }
 
+  // Cancellation policies
+  const policies: { name: string; policy: string }[] = []
+  if (venue?.cancelationPolicy) {
+    policies.push({ name: venue.name, policy: venue.cancelationPolicy })
+  }
+  vendorDetails.forEach((v) => {
+    const pol = v.cancellationPolicy || (v as any).cancelationPolicy
+    if (pol && !policies.some(p => p.policy === pol)) {
+      policies.push({ name: v.name, policy: pol })
+    }
+  })
+
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="mb-2 text-2xl font-bold text-neutral-900">Booking Summary</h2>
-        <p className="text-neutral-600">Please review your booking details before submitting</p>
-      </div>
+    <motion.div className="space-y-6" variants={container} initial="hidden" animate="visible">
+      <motion.div variants={item}>
+        <h2 className="font-heading text-2xl font-bold text-neutral-900">Review Your Booking</h2>
+        <p className="mt-1 text-sm text-neutral-500">Confirm everything looks right before submitting</p>
+      </motion.div>
 
-      <div className="space-y-6">
-        <Card className="overflow-hidden rounded-xl border-neutral-200 shadow-lg">
-           <div className="bg-gradient-to-r from-rose-500 to-pink-600 px-6 py-4">
-            <h3 className="text-lg font-medium text-white">Personal Information</h3>
+      <motion.div variants={item} className="rounded-xl border border-neutral-200 bg-white divide-y divide-neutral-100 overflow-hidden">
+        {/* Contact */}
+        <div className="p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <User className="h-4 w-4 text-purple-500" />
+            <span className="text-sm font-bold text-neutral-700">Contact</span>
           </div>
+          <div className="ml-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <p className="text-xs text-neutral-400">Name</p>
+              <p className="text-sm font-medium text-neutral-800">{formData.username}</p>
+            </div>
+            <div>
+              <p className="text-xs text-neutral-400">Email</p>
+              <p className="text-sm font-medium text-neutral-800">{formData.email}</p>
+            </div>
+            <div>
+              <p className="text-xs text-neutral-400">Phone</p>
+              <p className="text-sm font-medium text-neutral-800">{formData.phoneNumber}</p>
+            </div>
+          </div>
+        </div>
 
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-1">
-                <div className="flex items-center text-sm text-neutral-500">
-                  <User className="mr-1 h-4 w-4 text-rose-500" />
-                  Name
+        {/* Event */}
+        <div className="p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <CalendarDays className="h-4 w-4 text-purple-500" />
+            <span className="text-sm font-bold text-neutral-700">Event</span>
+          </div>
+          <div className="ml-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <p className="text-xs text-neutral-400">Date</p>
+              <p className="text-sm font-medium text-neutral-800">
+                {formData.bookingDate
+                  ? format(typeof formData.bookingDate === "string" ? new Date(formData.bookingDate) : formData.bookingDate, "MMM d, yyyy")
+                  : "Not selected"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-neutral-400">Time</p>
+              <p className="text-sm font-medium text-neutral-800">{getTimeSlotDisplay(formData.timeSlot)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-neutral-400">Guests</p>
+              <p className="text-sm font-medium text-neutral-800">{formData.guestCount}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Invoice Breakdown */}
+        <div className="p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Receipt className="h-4 w-4 text-purple-500" />
+            <span className="text-sm font-bold text-neutral-700">Cost Breakdown</span>
+          </div>
+          <div className="ml-6 space-y-2">
+            {invoiceLines.map((line, i) => (
+              <div key={i} className="flex items-center justify-between text-sm">
+                <div className="min-w-0 flex-1">
+                  <span className="text-neutral-700">{line.label}</span>
+                  <span className="ml-2 text-[10px] text-neutral-400 bg-neutral-50 px-1.5 py-0.5 rounded">{line.type}</span>
                 </div>
-                <p className="font-medium text-neutral-800">{formData.username}</p>
+                <span className="text-neutral-800 font-medium shrink-0 ml-3">{formatPKR(line.amount)}</span>
               </div>
-              <div className="space-y-1">
-                <div className="flex items-center text-sm text-neutral-500">
-                  <MapPin className="mr-1 h-4 w-4 text-rose-500" />
-                  Email
+            ))}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Total + Payment Schedule */}
+      <motion.div variants={item} className="rounded-xl bg-purple-50 border border-purple-100 p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-purple-600" />
+            <span className="text-lg font-bold text-neutral-900">Total</span>
+          </div>
+          <span className="text-2xl font-bold text-purple-600">{formatPKR(computedTotal)}</span>
+        </div>
+
+        {/* Payment Timeline */}
+        {downPayment > 0 && (
+          <div className="border-t border-purple-200/50 pt-3">
+            <p className="text-xs font-semibold text-purple-700 mb-2">Payment Schedule</p>
+            <div className="flex items-center gap-3">
+              {/* Step 1: Down Payment */}
+              <div className="flex-1 relative">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">1</div>
+                  <span className="text-xs font-medium text-purple-800">Down Payment</span>
                 </div>
-                <p className="font-medium text-neutral-800">{formData.email}</p>
+                <p className="ml-8 text-sm font-bold text-purple-700">{formatPKR(downPayment)}</p>
+                <p className="ml-8 text-[10px] text-purple-500">Due at booking</p>
               </div>
-              <div className="space-y-1">
-                <div className="flex items-center text-sm text-neutral-500">
-                  <Clock className="mr-1 h-4 w-4 text-rose-500" />
-                  Phone
+              {/* Connector */}
+              <div className="w-8 h-0.5 bg-purple-200 shrink-0 mt-[-8px]" />
+              {/* Step 2: Remaining */}
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-6 h-6 rounded-full bg-purple-200 text-purple-600 flex items-center justify-center text-[10px] font-bold shrink-0">2</div>
+                  <span className="text-xs font-medium text-purple-600">Remaining</span>
                 </div>
-                <p className="font-medium text-neutral-800">{formData.phoneNumber}</p>
+                <p className="ml-8 text-sm font-bold text-purple-600">{formatPKR(remaining)}</p>
+                <p className="ml-8 text-[10px] text-purple-400">Before event</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="overflow-hidden rounded-xl border-neutral-200 shadow-lg">
-          <div className="bg-gradient-to-r from-rose-500 to-pink-600 px-6 py-4">
-            <h3 className="text-lg font-medium text-white">Event Details</h3>
           </div>
-
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="space-y-1">
-                <div className="flex items-center text-sm text-neutral-500">
-                  <CalendarDays className="mr-1 h-4 w-4 text-rose-500" />
-                  Date
-                </div>
-                <p className="font-medium text-neutral-800">
-                  {formData.bookingDate
-                    ? format(
-                      typeof formData.bookingDate === "string"
-                        ? new Date(formData.bookingDate)
-                        : formData.bookingDate,
-                      "MMMM d, yyyy"
-                    )
-                    : "Not selected"}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center text-sm text-neutral-500">
-                  <Clock className="mr-1 h-4 w-4 text-rose-500" />
-                  Time
-                </div>
-                <p className="font-medium text-neutral-800">{getTimeSlotDisplay(formData.timeSlot)}</p>
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center text-sm text-neutral-500">
-                  <Users className="mr-1 h-4 w-4 text-rose-500" />
-                  Guests
-                </div>
-                <p className="font-medium text-neutral-800">{formData.guestCount} people</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="overflow-hidden rounded-xl border-neutral-200 shadow-lg">
-          <div className="bg-gradient-to-r from-rose-500 to-pink-600 px-6 py-4">
-            <h3 className="text-lg font-medium text-white">Venue Package</h3>
-          </div>
-
-          <CardContent className="p-6">
-            {selectedPackageObj ? (
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <h4 className="text-lg font-medium text-neutral-800">{selectedPackageObj.name}</h4>
-                    {/* <p className="text-sm text-neutral-600">{selectedPackageObj.description}</p> */}
-                  </div>
-                   <Badge className="bg-gradient-to-r from-rose-50 to-pink-50 text-rose-700 border-rose-200 text-sm px-2 py-1">₹{selectedPackageObj.price}</Badge>
-                </div>
-
-                <div className="rounded-xl bg-gradient-to-r from-neutral-50 to-rose-50 p-4 border border-rose-200">
-                  <h5 className="mb-2 text-sm font-medium text-neutral-700">Included Facilities:</h5>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {selectedPackageObj.features.map((facility: string, index: number) => (
-                      <div key={index} className="flex items-center text-sm">
-                        <div className="mr-2 h-1.5 w-1.5 rounded-full bg-rose-500"></div>
-                        <span className="text-neutral-700">{facility}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <p className="text-neutral-500">No package selected</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="overflow-hidden rounded-xl border-neutral-200 shadow-lg">
-          <div className="bg-gradient-to-r from-rose-500 to-pink-600 px-6 py-4">
-            <h3 className="text-lg font-medium text-white">Menu Selection</h3>
-          </div>
-
-          <CardContent className="p-6">
-            {selectedMenuObj ? (
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <h4 className="text-lg font-medium text-neutral-800">{selectedMenuObj.name}</h4>
-                    {/* <p className="text-sm text-neutral-600">{selectedMenuObj.description}</p> */}
-                  </div>
-                   <Badge className="bg-gradient-to-r from-rose-50 to-pink-50 text-rose-700 border-rose-200 text-sm px-2 py-1">₹{selectedMenuObj.price}</Badge>
-                </div>
-
-                <div className="rounded-xl bg-gradient-to-r from-neutral-50 to-rose-50 p-4 border border-rose-200">
-                  <h5 className="mb-2 text-sm font-medium text-neutral-700">Menu Items:</h5>
-                  <div className="space-y-4">
-                    {Object.entries(selectedMenuObj.data).map(([category, value]: [string, any]) => (
-                      <div key={category}>
-                        <div className="flex items-center gap-2 mb-1">
-                          <img src={value.icon} alt={`${category} icon`} className="w-4 h-4" />
-                          <h6 className="text-sm font-semibold text-neutral-800 capitalize">{category}</h6>
-                        </div>
-                        <div className="grid grid-cols-1 gap-2 pl-6 sm:grid-cols-2">
-                          {value.items.map((item: string, idx: number) => (
-                            <div key={idx} className="flex items-center text-sm">
-                              <div className="mr-2 h-1.5 w-1.5 rounded-full bg-rose-500"></div>
-                              <span className="text-neutral-700">{item}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {selectedAddons.length > 0 && (
-                  <div>
-                    <h5 className="mb-2 text-sm font-medium text-neutral-700">Selected Add-ons:</h5>
-                    <div className="space-y-2">
-                      {selectedAddons.map((addon) => (
-                        <div key={addon?.id} className="flex items-center justify-between rounded-xl bg-gradient-to-r from-rose-50 to-pink-50 p-2 border border-rose-200">
-                          <span className="text-sm text-neutral-800">{addon?.name}</span>
-                          <Badge className="bg-gradient-to-r from-rose-50 to-pink-50 text-rose-700 border-rose-200 text-xs">+${addon?.price}</Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="text-neutral-500">No menu selected</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {selectedVendors.length > 0 && (
-          <Card className="overflow-hidden rounded-xl border-neutral-200 shadow-lg">
-            <div className="bg-gradient-to-r from-rose-500 to-pink-600 px-6 py-4">
-              <h3 className="text-lg font-medium text-white">Selected Vendors</h3>
-            </div>
-
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {selectedVendors.map((vendor) => (
-                    <div
-                      key={vendor?.id}
-                      className="flex justify-between rounded-xl bg-gradient-to-r from-neutral-50 to-rose-50 p-3 border border-rose-200"
-                    >
-                      <div>
-                        <p className="font-medium text-neutral-800">{vendor?.name}</p>
-                          <Badge variant="outline" className="mt-1 bg-gradient-to-r from-rose-50 to-pink-50 text-xs text-rose-700 border-rose-200">{(vendor as any)?.type || (vendor as any)?.subBusinessType}</Badge>
-                      </div>
-                          <span className="font-medium text-rose-600">₹{(vendor as any)?.minimumPrice || (vendor as any)?.price || 0}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {selectedVendorPackages.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    <h4 className="text-sm font-medium text-neutral-700">Selected Vendor Packages:</h4>
-                    {selectedVendorPackages.map((pkg) => (
-                      <div
-                        key={pkg?.id || ''}
-                        className="flex justify-between rounded-xl bg-gradient-to-r from-rose-50 to-pink-50 p-3 border border-rose-200"
-                      >
-                        <div>
-                          <p className="font-medium text-neutral-800">{pkg?.name || "Unknown Package"}</p>
-                          <p className="text-xs text-neutral-600">{pkg?.vendorName || "Unknown Vendor"}</p>
-                        </div>
-                         <span className="font-medium text-rose-600">₹{pkg?.price || 0}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
         )}
+      </motion.div>
 
-        <Card className="overflow-hidden rounded-xl border-neutral-200 shadow-lg">
-          <div className="bg-gradient-to-r from-rose-500 to-pink-600 px-6 py-4">
-            <h3 className="text-lg font-medium text-white">Pricing Summary</h3>
-          </div>
-
-          <CardContent className="p-6">
-            <div className="space-y-3">
-              {selectedPackageObj && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-neutral-600">Venue Package ({selectedPackageObj.name})</span>
-                   <span className="font-medium text-neutral-800">₹{selectedPackageObj.price}</span>
+      {/* Cancellation Policy */}
+      {policies.length > 0 && (
+        <motion.div variants={item} className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-start gap-2">
+            <Info className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-amber-800">Cancellation Policy</p>
+              {policies.map((p, i) => (
+                <div key={i}>
+                  {policies.length > 1 && <p className="text-xs font-medium text-amber-700">{p.name}</p>}
+                  <p className="text-xs text-amber-700">{p.policy}</p>
                 </div>
-              )}
-
-              {selectedMenuObj && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-neutral-600">Menu ({selectedMenuObj.name})</span>
-                   <span className="font-medium text-neutral-800">₹{selectedMenuObj.price}</span>
-                </div>
-              )}
-
-              {selectedAddons.length > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-neutral-600">Menu Add-ons ({selectedAddons.length})</span>
-                   <span className="font-medium text-neutral-800">₹{selectedAddons.length * 100}</span>
-                </div>
-              )}
-
-              {selectedVendors.length > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-neutral-600">Vendors ({selectedVendors.length})</span>
-                   <span className="font-medium text-neutral-800">₹{selectedVendors.length * 300}</span>
-                </div>
-              )}
-
-              {selectedVendorPackages.length > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-neutral-600">Vendor Packages ({selectedVendorPackages.length})</span>
-                  <span className="font-medium text-neutral-800">
-                     ₹
-                     {selectedVendorPackages.reduce((total, pkg) => {
-                      return total + (pkg?.price || 0)
-                    }, 0)}
-                  </span>
-                </div>
-              )}
-
-              <div className="border-t border-neutral-200 pt-3 flex justify-between">
-                <span className="text-base font-medium text-neutral-800">Total</span>
-                <span className="text-lg font-bold text-rose-600">₹{formData.totalPrice}</span>
-              </div>
+              ))}
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+          </div>
+        </motion.div>
+      )}
+    </motion.div>
   )
 }

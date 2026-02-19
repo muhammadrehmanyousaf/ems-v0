@@ -29,7 +29,7 @@ export function PackagesStep() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold">Packages</h2>
-        <Button onClick={addPackage} variant="outline" className="text-rose-600 border-rose-600">
+        <Button onClick={addPackage} variant="outline" className="text-purple-600 border-purple-600">
           <Plus className="w-4 h-4 mr-2" />
           Create new package
         </Button>

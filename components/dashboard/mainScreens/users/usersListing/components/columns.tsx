@@ -1,3 +1,5 @@
+'use client';
+import React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ColumnDef } from "@tanstack/react-table";
 import { RowActions } from "./row-actions";
@@ -5,8 +7,14 @@ import { User } from "@/lib/dashboard-types";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { formatDateTime } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { UsersAPI } from "@/lib/api/dashboard";
+import { toast } from "sonner";
 
-export const columns: ColumnDef<User>[] = [
+export const columns = (
+    onEdit: (user: User) => void,
+    onDelete: (user: User) => void,
+): ColumnDef<User>[] => [
     {
         id: "select",
         header: ({ table }) => (
@@ -37,23 +45,63 @@ export const columns: ColumnDef<User>[] = [
             <div className='flex items-center gap-2'>
                 <Avatar className='h-[34px] w-[34px]'>
                     <AvatarFallback className='bg-primary/20 text-primary'>
-                        {row.original.fullName.charAt(0).toLocaleUpperCase()}
+                        {row.original.fullName?.charAt(0).toLocaleUpperCase()}
                     </AvatarFallback>
                 </Avatar>
-                {row.original.fullName}
+                <div>
+                    <span className="font-medium">{row.original.fullName}</span>
+                    {row.original.email && (
+                        <p className="text-xs text-muted-foreground">{row.original.email}</p>
+                    )}
+                </div>
             </div>
         )
     },
     { accessorKey: "phoneNumber", header: "Phone Number" },
-    { accessorKey: "role", header: "Role" },
+    {
+        id: "role",
+        header: "Role",
+        cell: ({ row }) => {
+            const roles = row.original.roles || [];
+            return (
+                <div className="flex flex-wrap gap-1">
+                    {roles.length > 0 ? roles.map((r) => (
+                        <Badge key={r.id} variant="outline" className="text-xs capitalize">
+                            {r.name}
+                        </Badge>
+                    )) : (
+                        <Badge variant="secondary" className="text-xs">No role</Badge>
+                    )}
+                </div>
+            );
+        }
+    },
     {
         id: "status",
         header: "Status",
-        cell: ({ row }) => (
-            <span>
-                <Switch size="md" />
-            </span>
-        )
+        cell: ({ row }) => {
+            const StatusSwitch = () => {
+                const [checked, setChecked] = React.useState(row.original.active);
+                const handleToggle = async (value: boolean) => {
+                    setChecked(value);
+                    try {
+                        await UsersAPI.changeStatus(row.original.id, value);
+                        toast.success(`User ${value ? 'activated' : 'deactivated'}`);
+                    } catch {
+                        setChecked(!value);
+                        toast.error("Failed to update status");
+                    }
+                };
+                return (
+                    <Switch
+                        size="md"
+                        checked={checked}
+                        onCheckedChange={handleToggle}
+                    />
+                );
+            };
+            return <StatusSwitch />;
+        }
     },
     {
         id: 'createdAt',
@@ -65,74 +113,12 @@ export const columns: ColumnDef<User>[] = [
     {
         id: "actions",
         enableHiding: false,
-        cell: ({ row }) =>
-            <RowActions data={row.original} />,
-    },
-];
-
-export const users: User[] = [
-    {
-        id: 1,
-        fullName: "Sophie Khan",
-        phoneNumber: "+92-300-1234557",
-        role: "Admin",
-        status: true,
-        createdAt: "2025-08-14 06:10 PM"
-    },
-    {
-        id: 2,
-        fullName: "Ahmed Ali",
-        phoneNumber: "+92-321-8765432",
-        role: "Vendor",
-        status: true,
-        createdAt: "2025-08-14 06:10 PM"
-    },
-    {
-        id: 3,
-        fullName: "Hassan Raza",
-        phoneNumber: "+92-334-1825456",
-        role: "Vendor",
-        status: false,
-        createdAt: "2025-08-14 06:10 PM"
-    },
-    {
-        id: 4,
-        fullName: "Sana Malik",
-        phoneNumber: "+92-334-1925456",
-        role: "Manager",
-        status: true,
-        createdAt: "2025-08-14 06:10 PM"
-    },
-    {
-        id: 5,
-        fullName: "Bilal Hussain",
-        phoneNumber: "+92-310-6547890",
-        role: "Admin",
-        status: false,
-        createdAt: "2025-08-14 06:10 PM"
-    },
-    {
-        id: 6,
-        fullName: "Zainab Malik",
-        phoneNumber: "+92-345-9876543",
-        role: "Vendor",
-        status: true,
-        createdAt: "2025-08-14 06:10 PM"
-    },
-    {
-        id: 7,
-        fullName: "Hamza Tariq",
-        phoneNumber: "+92-333-5678901",
-        role: "Manager",
-        status: true,
-        createdAt: "2025-08-14 06:10 PM"
-    },
-    {
-        id: 8,
-        fullName: "Sara Ahmed",
-        phoneNumber: "+92-321-4567890",
-        role: "Vendor",
-        status: false,
-        createdAt: "2025-08-14 06:10 PM"
+        cell: ({ row }) => (
+            <RowActions
+                data={row.original}
+                onEdit={onEdit}
+                onDelete={onDelete}
+            />
+        ),
     },
 ];

@@ -1,199 +1,318 @@
+'use client';
+
 import { Button } from '@/components/ui/button'
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
 import { zodResolver } from '@hookform/resolvers/zod'
-import React from 'react'
+import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from '@/components/ui/label'
+import { BusinessesAPI, type ApiBusiness } from '@/lib/api/dashboard'
+import { toast } from 'sonner'
+import { Loader2, Building2, MapPin, DollarSign, Shield } from 'lucide-react'
 
-const BasicInfoTab = () => {
-  const formSchema = z.object({
-    brand: z.string().min(2, {
-      message: "Username must be at least 2 characters.",
-    }),
-    secondaryPhone: z.string().min(2, {
-      message: "secondary phone number must be at least 2 characters.",
-    }),
-    instagram_link: z.string().min(2, {
-      message: "instagram link must be at least 2 characters.",
-    }),
-    facebook_link: z.string().min(2, {
-      message: "facebook link must be at least 2 characters.",
-    }),
-    city: z.string().min(2, {
-      message: "facebook link must be at least 2 characters.",
-    }),
-    address: z.string().min(2, {
-      message: "facebook link must be at least 2 characters.",
-    }),
-  })
+const formSchema = z.object({
+    name: z.string().min(2, { message: "Business name must be at least 2 characters." }),
+    city: z.string().optional(),
+    subArea: z.string().optional(),
+    description: z.string().optional(),
+    additionalInfo: z.string().optional(),
+    minimumPrice: z.string().optional(),
+    starterPrice: z.string().optional(),
+    downPaymentType: z.string().optional(),
+    downPayment: z.string().optional(),
+    cancelationPolicy: z.string().optional(),
+});
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      brand: "",
-    },
-  })
+type FormValues = z.infer<typeof formSchema>;
 
-  const onSubmit = () => {
-    console.log('Clicked');
-  };
+interface BasicInfoTabProps {
+    business: ApiBusiness;
+    onSuccess: () => void;
+}
 
-  return (
-    <div className='max-w-4xl'>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
-          <div className="grid md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="brand"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Brand Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="shadcn" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="secondaryPhone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Secondary Phone Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="shadcn" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="city"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>City</FormLabel>
-                  <FormControl>
-                    <Input placeholder="shadcn" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Office Address</FormLabel>
-                  <FormControl>
-                    <Input placeholder="shadcn" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="instagram_link"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Instagram Link</FormLabel>
-                  <FormControl>
-                    <Input placeholder="shadcn" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="facebook_link"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Facebook Link</FormLabel>
-                  <FormControl>
-                    <Input placeholder="shadcn" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="facebook_link"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Type of Venue</FormLabel>
-                  <FormControl>
-                    <Select>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Theme" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="light">Light</SelectItem>
-                        <SelectItem value="dark">Dark</SelectItem>
-                        <SelectItem value="system">System</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="facebook_link"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Maximum People Capacity</FormLabel>
-                  <FormControl>
-                    <Input placeholder="shadcn" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="facebook_link"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Catering</FormLabel>
-                  <FormControl>
-                    <RadioGroup defaultValue="option-one" className='flex space-x-3'>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="option-one" id="option-one" />
-                        <Label htmlFor="option-one">Option One</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="option-two" id="option-two" />
-                        <Label htmlFor="option-two">Option Two</Label>
-                      </div>
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <Button type="submit" className='max-w-20'>Submit</Button>
-        </form>
-      </Form>
-    </div>
-  )
+const BasicInfoTab = ({ business, onSuccess }: BasicInfoTabProps) => {
+    const [saving, setSaving] = useState(false);
+
+    const form = useForm<FormValues>({
+        resolver: zodResolver(formSchema),
+        defaultValues: {
+            name: business.name || '',
+            city: business.city || '',
+            subArea: business.subArea || '',
+            description: business.description || '',
+            additionalInfo: business.additionalInfo || '',
+            minimumPrice: business.minimumPrice?.toString() || '',
+            starterPrice: business.starterPrice?.toString() || '',
+            downPaymentType: business.downPaymentType || '',
+            downPayment: business.downPayment?.toString() || '',
+            cancelationPolicy: business.cancelationPolicy || '',
+        },
+    });
+
+    const downPaymentType = form.watch('downPaymentType');
+
+    const onSubmit = async (values: FormValues) => {
+        setSaving(true);
+        try {
+            await BusinessesAPI.update(business.id, {
+                name: values.name,
+                city: values.city || null,
+                subArea: values.subArea || null,
+                description: values.description || null,
+                additionalInfo: values.additionalInfo || null,
+                minimumPrice: values.minimumPrice ? Number(values.minimumPrice) : null,
+                starterPrice: values.starterPrice ? Number(values.starterPrice) : null,
+                downPaymentType: (values.downPaymentType as ApiBusiness['downPaymentType']) || null,
+                downPayment: values.downPayment ? Number(values.downPayment) : null,
+                cancelationPolicy: values.cancelationPolicy || null,
+            });
+            toast.success('Business updated successfully');
+            onSuccess();
+        } catch {
+            toast.error('Failed to update business');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className='max-w-4xl'>
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8'>
+                    {/* Section: Basic Details */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-primary" />
+                            <h3 className="text-sm font-semibold text-foreground">Basic Details</h3>
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="name"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Business Name</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="My Business" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <div /> {/* spacer */}
+                            <FormField
+                                control={form.control}
+                                name="description"
+                                render={({ field }) => (
+                                    <FormItem className="md:col-span-2">
+                                        <FormLabel>Description</FormLabel>
+                                        <FormControl>
+                                            <Textarea
+                                                placeholder="Tell customers about your business, services, and what makes you special..."
+                                                rows={4}
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormDescription>This is shown to customers on your public profile.</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="additionalInfo"
+                                render={({ field }) => (
+                                    <FormItem className="md:col-span-2">
+                                        <FormLabel>Additional Information</FormLabel>
+                                        <FormControl>
+                                            <Textarea
+                                                placeholder="Any extra details — special instructions, notes for customers, etc."
+                                                rows={3}
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Section: Location */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-primary" />
+                            <h3 className="text-sm font-semibold text-foreground">Location</h3>
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="city"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>City</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Lahore" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="subArea"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Sub Area / Address</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="DHA Phase 5" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Section: Pricing */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                            <DollarSign className="h-4 w-4 text-primary" />
+                            <h3 className="text-sm font-semibold text-foreground">Pricing</h3>
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="starterPrice"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Starter Price (Rs.)</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" placeholder="100000" {...field} />
+                                        </FormControl>
+                                        <FormDescription>Starting price shown to customers.</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="minimumPrice"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Minimum Price (Rs.)</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" placeholder="50000" {...field} />
+                                        </FormControl>
+                                        <FormDescription>Lowest price you accept for a booking.</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="downPaymentType"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Down Payment Type</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select type" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="Percentage">Percentage (%)</SelectItem>
+                                                <SelectItem value="Fixed Amount">Fixed Amount (Rs.)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="downPayment"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>
+                                            Down Payment {downPaymentType === 'Percentage' ? '(%)' : downPaymentType === 'Fixed Amount' ? '(Rs.)' : ''}
+                                        </FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="number"
+                                                placeholder={downPaymentType === 'Percentage' ? '30' : '25000'}
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormDescription>
+                                            {downPaymentType === 'Percentage'
+                                                ? 'Percentage of total amount required upfront.'
+                                                : downPaymentType === 'Fixed Amount'
+                                                    ? 'Fixed rupee amount required upfront.'
+                                                    : 'Select a down payment type first.'}
+                                        </FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Section: Policies */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                            <Shield className="h-4 w-4 text-primary" />
+                            <h3 className="text-sm font-semibold text-foreground">Policies</h3>
+                        </div>
+                        <div className="grid md:grid-cols-1 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="cancelationPolicy"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Cancellation Policy</FormLabel>
+                                        <FormControl>
+                                            <Textarea
+                                                placeholder="Describe your cancellation and refund policy..."
+                                                rows={3}
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormDescription>Shown to customers before they book.</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 pt-2">
+                        <Button type="submit" disabled={saving}>
+                            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {saving ? 'Saving...' : 'Save Changes'}
+                        </Button>
+                    </div>
+                </form>
+            </Form>
+        </div>
+    )
 }
 
 export default BasicInfoTab

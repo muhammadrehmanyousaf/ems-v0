@@ -30,7 +30,8 @@ import {
 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { useUser } from "@/context/UserContext";
-import Cookies from "js-cookie";
+import axiosInstance from "@/lib/axiosConfig";
+import { BACKEND_URL } from "@/lib/backend-url";
 
 interface BookingDetail {
   id: number;
@@ -95,14 +96,6 @@ const BookingDetailPage = () => {
   const [isLoadingBooking, setIsLoadingBooking] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Helper function to get auth token
-  const getAuthToken = () => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('auth_token') || Cookies.get('auth_token') || '';
-    }
-    return '';
-  };
-
   // Fetch booking details
   useEffect(() => {
     if (user && !isLoading && bookingId) {
@@ -120,51 +113,34 @@ const BookingDetailPage = () => {
         throw new Error('User ID not found');
       }
 
-      // First try to get all bookings and find the specific one
-      const response = await fetch(`http://localhost:3000/api/v1/bookings/simple-user-bookings`, {
-        headers: {
-          'Authorization': `Bearer ${getAuthToken()}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const res = await axiosInstance.get(`${BACKEND_URL}api/v1/bookings/simple-user-bookings`);
+      const allBookings = res.data?.data || [];
 
-      if (response.ok) {
-        const data = await response.json();
-        const allBookings = data.data || [];
-        
-        // Find the specific booking by ID
-        const foundBooking = allBookings.find((booking: Booking) => booking.id.toString() === bookingId);
-        
-        if (foundBooking) {
-          // Ensure bookingDetails is always an array
-          if (!foundBooking.bookingDetails) {
-            foundBooking.bookingDetails = [];
-          }
-          
-          setBooking(foundBooking);
-        } else {
-          // Try to get booking from localStorage as fallback
-          try {
-            const storedBookings = localStorage.getItem('user_bookings');
-            if (storedBookings) {
-              const parsedBookings = JSON.parse(storedBookings);
-              const storedBooking = parsedBookings.find((b: Booking) => b.id.toString() === bookingId);
-              if (storedBooking) {
-                setBooking(storedBooking);
-                return;
-              }
-            }
-          } catch (error) {
-            // Error reading from localStorage
-          }
-          
-          throw new Error('Booking not found');
+      const foundBooking = allBookings.find((b: Booking) => b.id.toString() === bookingId);
+
+      if (foundBooking) {
+        if (!foundBooking.bookingDetails) {
+          foundBooking.bookingDetails = [];
         }
+        setBooking(foundBooking);
       } else {
-        throw new Error('Failed to fetch booking details');
+        // Fallback to localStorage cache
+        try {
+          const storedBookings = localStorage.getItem('user_bookings');
+          if (storedBookings) {
+            const parsedBookings = JSON.parse(storedBookings);
+            const storedBooking = parsedBookings.find((b: Booking) => b.id.toString() === bookingId);
+            if (storedBooking) {
+              setBooking(storedBooking);
+              return;
+            }
+          }
+        } catch {
+          // localStorage read failed
+        }
+        throw new Error('Booking not found');
       }
     } catch (error) {
-      console.error('Error fetching booking details:', error);
       toast({
         title: "Error",
         description: "Failed to load booking details. Please try again.",
@@ -222,7 +198,7 @@ const BookingDetailPage = () => {
 
   const handleEditBooking = () => {
     if (booking) {
-      router.push(`/booking/${booking.id}/edit`);
+      router.push(`/user/bookings/${booking.id}`);
     }
   };
 
@@ -231,24 +207,12 @@ const BookingDetailPage = () => {
 
     try {
       setIsUpdating(true);
-      const response = await fetch(`http://localhost:3000/api/v1/bookings/${booking.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${getAuthToken()}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status: 'cancelled' })
+      await axiosInstance.patch(`${BACKEND_URL}api/v1/bookings/${booking.id}`, { status: 'cancelled' });
+      toast({
+        title: "Booking Cancelled",
+        description: "Your booking has been cancelled successfully.",
       });
-
-      if (response.ok) {
-        toast({
-          title: "Booking Cancelled",
-          description: "Your booking has been cancelled successfully.",
-        });
-        fetchBookingDetails(); // Refresh the data
-      } else {
-        throw new Error('Failed to cancel booking');
-      }
+      fetchBookingDetails();
     } catch (error) {
       toast({
         title: "Error",
@@ -262,9 +226,9 @@ const BookingDetailPage = () => {
 
   if (isLoading || isLoadingBooking) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-purple-50/80 flex items-center justify-center px-4">
         <div className="text-center max-w-sm mx-auto">
-          <Spinner size="lg" className="text-rose-500 mx-auto mb-4" />
+          <Spinner size="lg" className="text-purple-500 mx-auto mb-4" />
           <p className="text-neutral-600 text-sm sm:text-base">Loading booking details...</p>
         </div>
       </div>
@@ -273,7 +237,7 @@ const BookingDetailPage = () => {
 
   if (!user || !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-purple-50/80 flex items-center justify-center px-4">
         <div className="text-center max-w-sm mx-auto">
           <p className="text-neutral-600 text-sm sm:text-base">Please log in to view booking details</p>
         </div>
@@ -283,12 +247,12 @@ const BookingDetailPage = () => {
 
      if (!booking || !booking.id) {
      return (
-       <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 flex items-center justify-center px-4">
+       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-purple-50/80 flex items-center justify-center px-4">
          <div className="text-center max-w-sm mx-auto">
            <p className="text-neutral-600 text-sm sm:text-base mb-4">Booking not found</p>
            <Button 
              onClick={() => router.push('/user/bookings')}
-             className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white min-h-[44px] px-6"
+             className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white min-h-[44px] px-6"
            >
              Back to Bookings
            </Button>
@@ -298,7 +262,7 @@ const BookingDetailPage = () => {
    }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-6">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-purple-50/80 py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-6">
       <div className="max-w-7xl mx-auto">
         {/* Header - Mobile Optimized */}
         <div className="mb-6 sm:mb-8">
@@ -365,7 +329,7 @@ const BookingDetailPage = () => {
             <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                  <Calendar className="w-5 h-5 text-rose-600" />
+                  <Calendar className="w-5 h-5 text-purple-600" />
                   Event Details
                 </CardTitle>
               </CardHeader>
@@ -403,7 +367,7 @@ const BookingDetailPage = () => {
             <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                  <User className="w-5 h-5 text-rose-600" />
+                  <User className="w-5 h-5 text-purple-600" />
                   Customer Information
                 </CardTitle>
               </CardHeader>
@@ -440,7 +404,7 @@ const BookingDetailPage = () => {
             <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                  <Building2 className="w-5 h-5 text-rose-600" />
+                  <Building2 className="w-5 h-5 text-purple-600" />
                   Vendors & Services
                 </CardTitle>
               </CardHeader>
@@ -461,7 +425,7 @@ const BookingDetailPage = () => {
                             <p className="text-xs sm:text-sm text-neutral-600">{detail.business.description}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-base sm:text-lg font-bold text-rose-600">
+                            <p className="text-base sm:text-lg font-bold text-purple-600">
                               Rs. {detail.totalAmount.toLocaleString()}
                             </p>
                             <p className="text-xs sm:text-sm text-neutral-500">
@@ -473,7 +437,7 @@ const BookingDetailPage = () => {
                         {/* Package Details */}
                         <div className="bg-neutral-50 rounded-lg p-3 sm:p-4 mb-4">
                           <div className="flex items-center gap-2 mb-3">
-                            <Package className="w-4 h-4 text-rose-600" />
+                            <Package className="w-4 h-4 text-purple-600" />
                             <h5 className="font-semibold text-neutral-900 text-sm sm:text-base">{detail.package.name}</h5>
                           </div>
                           
@@ -533,7 +497,7 @@ const BookingDetailPage = () => {
             <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                  <CreditCard className="w-5 h-5 text-rose-600" />
+                  <CreditCard className="w-5 h-5 text-purple-600" />
                   Payment Summary
                 </CardTitle>
               </CardHeader>
@@ -573,7 +537,7 @@ const BookingDetailPage = () => {
                 <div className="pt-4 border-t border-neutral-200">
                   <div className="flex justify-between items-center">
                     <span className="text-base sm:text-lg font-semibold text-neutral-900">Amount Due:</span>
-                    <span className="text-lg sm:text-xl font-bold text-rose-600">
+                    <span className="text-lg sm:text-xl font-bold text-purple-600">
                       Rs. {booking.totalAmount.toLocaleString()}
                     </span>
                   </div>
@@ -585,7 +549,7 @@ const BookingDetailPage = () => {
             <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                  <Clock className="w-5 h-5 text-rose-600" />
+                  <Clock className="w-5 h-5 text-purple-600" />
                   Booking Timeline
                 </CardTitle>
               </CardHeader>

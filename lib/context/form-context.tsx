@@ -58,7 +58,7 @@ export type FormType = {
   starterPrice: number;
   // services: string;
   images: string[];
-  // reviewProfile: boolean;
+  imageFiles: File[];
   subBusinessType: string;
   // cityCovered: string[];
   // travelToClientHome: string;
@@ -137,7 +137,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     starterPrice: 0,
     // services: "",
     images: [],
-    // reviewProfile: false,
+    imageFiles: [],
     subBusinessType: '',
     // cityCovered: [],
     // travelToClientHome: "",

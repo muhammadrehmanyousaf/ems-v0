@@ -6,10 +6,9 @@ import { Payment } from '@/lib/dashboard-types';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn, formatDateTime } from '@/lib/utils';
 
-export const formatDate = (iso?: string) =>
-    iso ? new Date(iso).toLocaleDateString() : ""
-
-export const columns: ColumnDef<Payment>[] = [
+export const columns = (
+    onView: (payment: Payment) => void,
+): ColumnDef<Payment>[] => [
     {
         id: "select",
         header: ({ table }) => (
@@ -42,26 +41,32 @@ export const columns: ColumnDef<Payment>[] = [
             <div className="flex items-center gap-2">
                 <Avatar className="h-[34px] w-[34px]">
                     <AvatarFallback className="bg-primary/20 text-primary">
-                        {row.original.customerName.charAt(0).toUpperCase()}
+                        {row.original.customerName?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                 </Avatar>
-                {row.original.customerName}
+                <div>
+                    <span className="font-medium">{row.original.customerName}</span>
+                    {row.original.email && (
+                        <p className="text-xs text-muted-foreground">{row.original.email}</p>
+                    )}
+                </div>
             </div>
         ),
     },
-    { accessorKey: "phone", header: "Phone Number" },
-    { accessorKey: "eventType", header: "Booked Event" },
+    { accessorKey: "orderId", header: "Booking ID" },
+    { accessorKey: "eventType", header: "Business" },
     {
         id: "paymentStatus",
         header: "Payment Status",
         cell: ({ row }) => {
             const status = row.original.paymentStatus;
             const statusColors: Record<string, string> = {
-                Pending: "border-amber-500 text-amber-800 bg-amber-50",
-                "Fully Paid": "border-green-500 text-green-600 bg-green-50",
-                "Advance Paid": "border-blue-500 text-blue-600 bg-blue-50",
-                Cancelled: "border-red-500 text-red-600 bg-red-50",
-                Failed: "border-red-500 text-red-600 bg-red-50",
+                pending: "border-amber-500 text-amber-800 bg-amber-50",
+                scheduled: "border-blue-500 text-blue-600 bg-blue-50",
+                completed: "border-green-500 text-green-600 bg-green-50",
+                failed: "border-red-500 text-red-600 bg-red-50",
+                hold: "border-orange-500 text-orange-600 bg-orange-50",
+                refunded: "border-purple-500 text-purple-600 bg-purple-50",
             };
             const color =
                 statusColors[status] ||
@@ -70,7 +75,7 @@ export const columns: ColumnDef<Payment>[] = [
             return (
                 <span
                     className={cn(
-                        "px-2 border h-7 flex items-center justify-center rounded-md font-medium dark:bg-transparent text-sm",
+                        "px-2 border h-7 flex items-center justify-center rounded-md font-medium dark:bg-transparent text-sm whitespace-nowrap capitalize",
                         color
                     )}
                 >
@@ -80,35 +85,43 @@ export const columns: ColumnDef<Payment>[] = [
         },
     },
     {
-        id: "amount_paid",
-        header: "Amount Paid",
+        id: "payout_amount",
+        header: "Payout Amount",
         cell: ({ row }) => {
-            const payemntStatus = row.original.paymentStatus
-            const paymentPaid = payemntStatus === 'Advance Paid' ? row.original.advanceAmount :
-                payemntStatus === 'Fully Paid' ? row.original.totalAmount : '-'
+            const amount = Number(row.original.advanceAmount) || 0;
             return (
                 <div className="max-w-32 flex justify-center">
-                    {paymentPaid !== '-' ?
-                        `Rs. ${paymentPaid.toLocaleString()}` :
-                        '-'}
+                    {amount > 0 ? `Rs. ${amount.toLocaleString()}` : '—'}
                 </div>
-            )
+            );
         },
     },
     {
         accessorKey: "totalAmount",
-        header: "Total Amount",
+        header: "Booking Amount",
         cell: ({ row }) => (
             <div className="max-w-32 flex justify-center">
-                {`Rs. ${row.original.totalAmount.toLocaleString()}`}
+                {`Rs. ${(Number(row.original.totalAmount) || 0).toLocaleString()}`}
             </div>
         ),
+    },
+    {
+        id: "platform_fee",
+        header: "Platform Fee",
+        cell: ({ row }) => {
+            const fee = Number(row.original.balanceAmount) || 0;
+            return (
+                <div className="max-w-32 flex justify-center">
+                    {fee > 0 ? `Rs. ${fee.toLocaleString()}` : '—'}
+                </div>
+            );
+        },
     },
     {
         accessorKey: "paymentDate",
         header: "Payment Date",
         cell: ({ row }) => (
-            <div className="max-w-32 flex justify-center">
+            <div className="max-w-32 flex justify-center whitespace-nowrap">
                 {row.original.paymentDate ?
                     formatDateTime(row.original.paymentDate)
                     : 'Not Paid'
@@ -119,101 +132,8 @@ export const columns: ColumnDef<Payment>[] = [
     {
         id: "actions",
         enableHiding: false,
-        cell: ({ row }) => <RowActions data={row.original} />,
-    },
-];
-
-export const payments: Payment[] = [
-    {
-        paymentId: "PAY-2001",
-        customerName: "Ali Khan",
-        email: "ali.khan@example.com",
-        phone: "+92-300-1234567",
-        eventType: "Wedding",
-        eventDate: "2025-09-10",
-        venue: "Pearl Continental Lahore",
-        guestsCount: 300,
-        packageSelected: "Platinum",
-        totalAmount: 250000,
-        advanceAmount: 100000,
-        balanceAmount: 150000,
-        currency: "PKR",
-        paymentStatus: "Advance Paid",
-        paymentMethod: "Bank Transfer",
-        transactionId: "TXN-10045",
-        invoiceId: "INV-601",
-        orderId: "EVT-9001",
-        paymentDate: "2025-08-15T14:32:00Z",
-        dueDate: "2025-09-05T00:00:00Z",
-        notes: "Advance paid for wedding booking",
-    },
-    {
-        paymentId: "PAY-2002",
-        customerName: "Sara Ahmed",
-        email: "sara.ahmed@example.com",
-        phone: "+92-321-8765432",
-        eventType: "Birthday Party",
-        eventDate: "2025-08-25",
-        venue: "Royal Palm Banquet Hall",
-        guestsCount: 100,
-        packageSelected: "Silver",
-        totalAmount: 50000,
-        advanceAmount: 20000,
-        balanceAmount: 30000,
-        currency: "PKR",
-        paymentStatus: "Pending",
-        paymentMethod: null,
-        transactionId: null,
-        invoiceId: "INV-602",
-        orderId: "EVT-9002",
-        paymentDate: null,
-        dueDate: "2025-08-22T00:00:00Z",
-        notes: "Booking confirmed, advance not yet received",
-    },
-    {
-        paymentId: "PAY-2003",
-        customerName: "Hamza Tariq",
-        email: "hamza.tariq@example.com",
-        phone: "+92-333-5678901",
-        eventType: "Corporate Event",
-        eventDate: "2025-09-15",
-        venue: "Marriott Karachi",
-        guestsCount: 500,
-        packageSelected: "Gold",
-        totalAmount: 400000,
-        advanceAmount: 400000,
-        balanceAmount: 0,
-        currency: "PKR",
-        paymentStatus: "Fully Paid",
-        paymentMethod: "Credit Card",
-        transactionId: "TXN-10046",
-        invoiceId: "INV-603",
-        orderId: "EVT-9003",
-        paymentDate: "2025-08-16T11:20:00Z",
-        dueDate: "2025-09-01T00:00:00Z",
-        notes: "Full advance paid",
-    },
-    {
-        paymentId: "PAY-2004",
-        customerName: "Zainab Malik",
-        email: "zainab.malik@example.com",
-        phone: "+92-345-9876543",
-        eventType: "Wedding",
-        eventDate: "2025-09-20",
-        venue: "Serena Hotel Islamabad",
-        guestsCount: 250,
-        packageSelected: "Gold",
-        totalAmount: 200000,
-        advanceAmount: 0,
-        balanceAmount: 200000,
-        currency: "PKR",
-        paymentStatus: "Cancelled",
-        paymentMethod: null,
-        transactionId: null,
-        invoiceId: "INV-604",
-        orderId: "EVT-9004",
-        paymentDate: null,
-        dueDate: "2025-09-10T00:00:00Z",
-        notes: "Booking cancelled by customer",
+        cell: ({ row }) => (
+            <RowActions data={row.original} onView={onView} />
+        ),
     },
 ];

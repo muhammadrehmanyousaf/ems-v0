@@ -1,4 +1,6 @@
-import React from 'react'
+'use client';
+
+import React, { useCallback, useRef } from 'react'
 import PageContainer from '@/components/dashboard/layout/page-container'
 import { Heading } from '@/components/heading'
 import { Separator } from '@/components/ui/separator'
@@ -6,6 +8,8 @@ import CustomersTable from './components/customers-table'
 import CreationsButtons from './components/creations-buttons'
 
 const CustomersView = () => {
+    const refreshRef = useRef<() => void>(() => {});
+
     return (
         <div>
             <PageContainer>
@@ -14,10 +18,10 @@ const CustomersView = () => {
                         <Heading
                             title='Customers'
                         />
-                        <CreationsButtons/>
+                        <CreationsButtons onCustomerAdded={() => refreshRef.current()} />
                     </div>
                     <Separator />
-                    <CustomersTable />
+                    <CustomersTable onRefreshReady={(fn) => { refreshRef.current = fn; }} />
                 </div>
             </PageContainer>
         </div>

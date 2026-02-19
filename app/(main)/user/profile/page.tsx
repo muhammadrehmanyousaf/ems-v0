@@ -7,10 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/hooks/use-toast";
-import { User, Mail, Phone, Save, Edit3, CheckCircle, AlertCircle, Shield, Lock, Key } from "lucide-react";
+import { User, Mail, Phone, Save, Edit3, CheckCircle, AlertCircle, Shield, Lock, Key, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
-import Cookies from "js-cookie";
+import axiosInstance from "@/lib/axiosConfig";
+import { BACKEND_URL } from "@/lib/backend-url";
 
 interface UserProfile {
   fullName: string;
@@ -27,14 +28,6 @@ interface PasswordForm {
 
 const ProfilePage = () => {
   const { user, isAuthenticated, isLoading, logout } = useUser();
-  
-  // Helper function to get auth token
-  const getAuthToken = () => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('auth_token') || Cookies.get('auth_token') || '';
-    }
-    return '';
-  };
   
   // Function to update header in real-time without reload
   const updateHeaderInRealTime = (updatedProfile: UserProfile) => {
@@ -74,6 +67,9 @@ const ProfilePage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isPasswordChanging, setIsPasswordChanging] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showRepeatPassword, setShowRepeatPassword] = useState(false);
   const [originalProfile, setOriginalProfile] = useState<UserProfile | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const router = useRouter();
@@ -110,51 +106,30 @@ const ProfilePage = () => {
         setIsLoadingProfile(false);
       }
     } catch (error) {
-      console.error('Error in loadUserProfile:', error);
       setIsLoadingProfile(false);
     }
   };
 
     const fetchProfileFromAPI = async (userId: string) => {
     try {
-      // Try the authenticated endpoint first
-      const response = await fetch(`http://localhost:3000/api/v1/users?id=${userId}`, {
-        headers: {
-          'Authorization': `Bearer ${getAuthToken()}`,
-          'Content-Type': 'application/json'
+      const res = await axiosInstance.get(`${BACKEND_URL}api/v1/users?id=${userId}`);
+      const data = res.data;
+
+      if (data.data && Array.isArray(data.data)) {
+        const userData = data.data.find((u: any) => u.id === userId);
+        if (userData) {
+          setProfile(userData);
+          setOriginalProfile(userData);
         }
-      });
-      
-      if (response.ok) {
-        const responseText = await response.text();
-        
-        if (responseText && responseText.trim() !== '') {
-          try {
-            const data = JSON.parse(responseText);
-            
-            // Check if we got user data or just a message
-            if (data.data && Array.isArray(data.data)) {
-              // If data.data is an array, find the user by ID
-              const userData = data.data.find((user: any) => user.id === userId);
-              if (userData) {
-                setProfile(userData);
-                setOriginalProfile(userData);
-              }
-            } else if (data.data && data.data.fullName) {
-              setProfile(data.data);
-              setOriginalProfile(data.data);
-            } else if (data.fullName) {
-              setProfile(data);
-              setOriginalProfile(data);
-            }
-          } catch (parseError) {
-            // Keep current data if parsing fails
-          }
-        }
+      } else if (data.data && data.data.fullName) {
+        setProfile(data.data);
+        setOriginalProfile(data.data);
+      } else if (data.fullName) {
+        setProfile(data);
+        setOriginalProfile(data);
       }
-      // Keep the localStorage data if API fails
-    } catch (error) {
-      // Keep the localStorage data if API fails
+    } catch {
+      // Keep the context data if API fails
     } finally {
       setIsLoadingProfile(false);
     }
@@ -183,45 +158,14 @@ const ProfilePage = () => {
         roleIds: [3],
         id: user.id
       };
-      console.log(requestBody);
-      const response = await fetch(`http://localhost:3000/api/v1/users?id=${user.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${getAuthToken()}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
+      const res = await axiosInstance.patch(`${BACKEND_URL}api/v1/users?id=${user.id}`, requestBody);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Failed to update profile: ${response.status}`);
-      }
-
-      // Get the response data to update the frontend
-      let updatedData;
-      try {
-        const responseText = await response.text();
-        
-        if (responseText && responseText.trim() !== '') {
-          updatedData = JSON.parse(responseText);
-          
-          // Check if the response contains the updated user data
-          if (updatedData.data && updatedData.data.fullName) {
-            // API returned updated user data
-            updatedData = updatedData.data;
-          } else if (updatedData.fullName) {
-            // API returned user data directly
-            updatedData = updatedData;
-          } else {
-            // API didn't return user data, use what we sent
-            updatedData = profile;
-          }
-        } else {
-          updatedData = profile;
-        }
-      } catch (parseError) {
-        updatedData = profile;
+      let updatedData = profile;
+      const resData = res.data;
+      if (resData?.data?.fullName) {
+        updatedData = resData.data;
+      } else if (resData?.fullName) {
+        updatedData = resData;
       }
       
       // Update the profile state with new data - this updates the UI immediately!
@@ -279,35 +223,11 @@ const ProfilePage = () => {
         throw new Error('User ID not found');
       }
 
-      // Prepare request data
-      const requestBody = {
+      await axiosInstance.post(`${BACKEND_URL}api/v1/users/change-password`, {
         userId: user.id,
         oldPassword: passwordForm.oldPassword,
         newPassword: passwordForm.newPassword,
-      };
-
-      // Make API call
-      const response = await fetch(`http://localhost:3000/api/v1/users/change-password`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${getAuthToken()}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
       });
-
-      if (!response.ok) {
-        // Try to get error details
-        let errorData;
-        try {
-          const errorText = await response.text();
-          errorData = JSON.parse(errorText);
-        } catch (parseError) {
-          errorData = { message: 'Unknown error' };
-        }
-        
-        throw new Error(errorData.message || `Failed to change password: ${response.status}`);
-      }
 
       // Success! Clear password form
       setPasswordForm({
@@ -352,6 +272,22 @@ const ProfilePage = () => {
     setIsEditing(false);
   };
 
+  const getPasswordStrength = (password: string): { score: number; label: string; color: string } => {
+    if (!password) return { score: 0, label: "", color: "" };
+    let score = 0;
+    if (password.length >= 8) score++;
+    if (password.length >= 12) score++;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+    if (/\d/.test(password)) score++;
+    if (/[^a-zA-Z0-9]/.test(password)) score++;
+
+    if (score <= 1) return { score: 1, label: "Weak", color: "bg-red-500" };
+    if (score <= 2) return { score: 2, label: "Fair", color: "bg-orange-500" };
+    if (score <= 3) return { score: 3, label: "Good", color: "bg-yellow-500" };
+    if (score <= 4) return { score: 4, label: "Strong", color: "bg-green-500" };
+    return { score: 5, label: "Very Strong", color: "bg-emerald-500" };
+  };
+
   const hasChanges = () => {
     if (!originalProfile) {
       return false;
@@ -377,10 +313,85 @@ const ProfilePage = () => {
 
   if (isLoading || isLoadingProfile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 flex items-center justify-center">
-        <div className="text-center">
-          <Spinner size="lg" className="text-rose-500 mx-auto mb-4" />
-          <p className="text-neutral-600">Loading your profile...</p>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-purple-50/80 py-8 px-4">
+        <div className="max-w-4xl mx-auto">
+          {/* Page title skeleton */}
+          <div className="text-center mb-8">
+            <div className="h-10 w-56 skeleton-shimmer rounded-lg mx-auto mb-3" />
+            <div className="h-5 w-80 skeleton-shimmer rounded mx-auto" />
+          </div>
+
+          {/* Profile card skeleton */}
+          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm overflow-hidden">
+            {/* Purple gradient header */}
+            <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-white/20 rounded-full" />
+                  <div>
+                    <div className="h-5 w-44 bg-white/30 rounded mb-2" />
+                    <div className="h-3 w-56 bg-white/20 rounded" />
+                  </div>
+                </div>
+                <div className="h-9 w-28 bg-white/20 rounded-lg" />
+              </div>
+            </div>
+            {/* Form fields */}
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[
+                  { label: "Full Name", width: "w-20" },
+                  { label: "Email Address", width: "w-28" },
+                  { label: "Phone Number", width: "w-28" },
+                ].map((field, i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 skeleton-shimmer rounded" />
+                      <div className={`h-4 ${field.width} skeleton-shimmer rounded`} />
+                    </div>
+                    <div className="h-10 w-full skeleton-shimmer rounded-lg border-2 border-neutral-100" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Password card skeleton */}
+          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm mt-6 overflow-hidden">
+            {/* Blue gradient header */}
+            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-white/20 rounded-full" />
+                <div>
+                  <div className="h-5 w-40 bg-white/30 rounded mb-2" />
+                  <div className="h-3 w-48 bg-white/20 rounded" />
+                </div>
+              </div>
+            </div>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {["Current Password", "New Password"].map((label, i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 skeleton-shimmer rounded" />
+                      <div className="h-4 w-32 skeleton-shimmer rounded" />
+                    </div>
+                    <div className="h-10 w-full skeleton-shimmer rounded-lg border-2 border-neutral-100" />
+                  </div>
+                ))}
+                <div className="space-y-2 md:col-span-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 skeleton-shimmer rounded" />
+                    <div className="h-4 w-40 skeleton-shimmer rounded" />
+                  </div>
+                  <div className="h-10 w-full skeleton-shimmer rounded-lg border-2 border-neutral-100" />
+                </div>
+              </div>
+              <div className="flex justify-end mt-6 pt-6 border-t border-neutral-200">
+                <div className="h-11 w-44 skeleton-shimmer rounded-lg" />
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -388,7 +399,7 @@ const ProfilePage = () => {
 
   if (!user || !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-purple-50/80 flex items-center justify-center">
         <div className="text-center">
           <p className="text-neutral-600">Please log in to view your profile</p>
         </div>
@@ -397,7 +408,7 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-purple-50/80 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
@@ -407,7 +418,7 @@ const ProfilePage = () => {
 
         {/* Profile Card */}
         <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader className="bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-t-lg">
+          <CardHeader className="bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-t-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
@@ -415,10 +426,10 @@ const ProfilePage = () => {
                 </div>
                                  <div>
                    <CardTitle className="text-xl">Personal Information</CardTitle>
-                   <CardDescription className="text-rose-100">
+                   <CardDescription className="text-purple-100">
                      Update your basic profile details
                      {lastUpdated && (
-                       <span className="block text-xs text-rose-200 mt-1">
+                       <span className="block text-xs text-purple-200 mt-1">
                          Last updated: {lastUpdated.toLocaleString()}
                        </span>
                      )}
@@ -444,7 +455,7 @@ const ProfilePage = () => {
               {/* Full Name */}
               <div className="space-y-2">
                 <Label htmlFor="fullName" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                  <User className="w-4 h-4 text-rose-500" />
+                  <User className="w-4 h-4 text-purple-500" />
                   Full Name
                 </Label>
                                  <Input
@@ -455,7 +466,7 @@ const ProfilePage = () => {
                    disabled={!isEditing}
                    className={`border-2 transition-all duration-200 ${
                      isEditing 
-                       ? 'border-rose-200 focus:border-rose-500 focus:ring-rose-500/20' 
+                       ? 'border-purple-200 focus:border-purple-500 focus:ring-purple-500/20' 
                        : 'border-neutral-200 bg-neutral-50'
                    }`}
                    placeholder="Enter your full name"
@@ -465,7 +476,7 @@ const ProfilePage = () => {
               {/* Email */}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-rose-500" />
+                  <Mail className="w-4 h-4 text-purple-500" />
                   Email Address
                 </Label>
                                  <Input
@@ -476,7 +487,7 @@ const ProfilePage = () => {
                    disabled={!isEditing}
                    className={`border-2 transition-all duration-200 ${
                      isEditing 
-                       ? 'border-rose-200 focus:border-rose-500 focus:ring-rose-500/20' 
+                       ? 'border-purple-200 focus:border-purple-500 focus:ring-purple-500/20' 
                        : 'border-neutral-200 bg-neutral-50'
                    }`}
                    placeholder="Enter your email"
@@ -486,7 +497,7 @@ const ProfilePage = () => {
               {/* Phone Number */}
               <div className="space-y-2">
                 <Label htmlFor="phoneNumber" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-rose-500" />
+                  <Phone className="w-4 h-4 text-purple-500" />
                   Phone Number
                 </Label>
                                  <Input
@@ -497,7 +508,7 @@ const ProfilePage = () => {
                    disabled={!isEditing}
                    className={`border-2 transition-all duration-200 ${
                      isEditing 
-                       ? 'border-rose-200 focus:border-rose-500 focus:ring-rose-500/20' 
+                       ? 'border-purple-200 focus:border-purple-500 focus:ring-purple-500/20' 
                        : 'border-neutral-200 bg-neutral-50'
                    }`}
                    placeholder="Enter your phone number"
@@ -522,7 +533,7 @@ const ProfilePage = () => {
                     onClick={handleSave}
                     disabled={!hasChanges() || isSaving}
                     size="lg"
-                    className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
+                    className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
                   >
                   {isSaving ? (
                     <>
@@ -586,14 +597,23 @@ const ProfilePage = () => {
                   <Lock className="w-4 h-4 text-blue-500" />
                   Current Password
                 </Label>
-                <Input
-                  id="oldPassword"
-                  type="password"
-                  value={passwordForm.oldPassword}
-                  onChange={(e) => setPasswordForm(prev => ({ ...prev, oldPassword: e.target.value }))}
-                  className="border-2 border-blue-200 focus:border-blue-500 focus:ring-blue-500/20"
-                  placeholder="Enter current password"
-                />
+                <div className="relative">
+                  <Input
+                    id="oldPassword"
+                    type={showOldPassword ? "text" : "password"}
+                    value={passwordForm.oldPassword}
+                    onChange={(e) => setPasswordForm(prev => ({ ...prev, oldPassword: e.target.value }))}
+                    className="border-2 border-blue-200 focus:border-blue-500 focus:ring-blue-500/20 pr-10"
+                    placeholder="Enter current password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowOldPassword(!showOldPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                  >
+                    {showOldPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               {/* New Password */}
@@ -602,14 +622,47 @@ const ProfilePage = () => {
                   <Key className="w-4 h-4 text-blue-500" />
                   New Password
                 </Label>
-                <Input
-                  id="newPassword"
-                  type="password"
-                  value={passwordForm.newPassword}
-                  onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
-                  className="border-2 border-blue-200 focus:border-blue-500 focus:ring-blue-500/20"
-                  placeholder="Enter new password"
-                />
+                <div className="relative">
+                  <Input
+                    id="newPassword"
+                    type={showNewPassword ? "text" : "password"}
+                    value={passwordForm.newPassword}
+                    onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                    className="border-2 border-blue-200 focus:border-blue-500 focus:ring-blue-500/20 pr-10"
+                    placeholder="Enter new password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                  >
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {passwordForm.newPassword && (
+                  <div className="space-y-1.5">
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <div
+                          key={i}
+                          className={`h-1.5 flex-1 rounded-full transition-colors ${
+                            i <= getPasswordStrength(passwordForm.newPassword).score
+                              ? getPasswordStrength(passwordForm.newPassword).color
+                              : "bg-gray-200"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <p className={`text-xs font-medium ${
+                      getPasswordStrength(passwordForm.newPassword).score <= 1 ? "text-red-600" :
+                      getPasswordStrength(passwordForm.newPassword).score <= 2 ? "text-orange-600" :
+                      getPasswordStrength(passwordForm.newPassword).score <= 3 ? "text-yellow-600" :
+                      "text-green-600"
+                    }`}>
+                      {getPasswordStrength(passwordForm.newPassword).label}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Repeat New Password */}
@@ -618,14 +671,30 @@ const ProfilePage = () => {
                   <CheckCircle className="w-4 h-4 text-blue-500" />
                   Confirm New Password
                 </Label>
-                <Input
-                  id="repeatPassword"
-                  type="password"
-                  value={passwordForm.repeatPassword}
-                  onChange={(e) => setPasswordForm(prev => ({ ...prev, repeatPassword: e.target.value }))}
-                  className="border-2 border-blue-200 focus:border-blue-500 focus:ring-blue-500/20"
-                  placeholder="Repeat new password"
-                />
+                <div className="relative">
+                  <Input
+                    id="repeatPassword"
+                    type={showRepeatPassword ? "text" : "password"}
+                    value={passwordForm.repeatPassword}
+                    onChange={(e) => setPasswordForm(prev => ({ ...prev, repeatPassword: e.target.value }))}
+                    className={`border-2 focus:ring-blue-500/20 pr-10 ${
+                      passwordForm.repeatPassword && passwordForm.repeatPassword !== passwordForm.newPassword
+                        ? "border-red-300 focus:border-red-500"
+                        : "border-blue-200 focus:border-blue-500"
+                    }`}
+                    placeholder="Repeat new password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRepeatPassword(!showRepeatPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                  >
+                    {showRepeatPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {passwordForm.repeatPassword && passwordForm.repeatPassword !== passwordForm.newPassword && (
+                  <p className="text-xs text-red-600">Passwords do not match</p>
+                )}
               </div>
             </div>
 

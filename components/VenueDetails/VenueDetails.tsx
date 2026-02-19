@@ -160,7 +160,7 @@ export default function VenueDetails({ venue }: VenueDetailsProps) {
                 <MessageCircle className="w-4 h-4" />
                 Contact
               </Button>
-              <Button size="sm" className="flex items-center gap-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700">
+              <Button size="sm" className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700">
                 <CalendarCheck className="w-4 h-4" />
                 Book Now
               </Button>

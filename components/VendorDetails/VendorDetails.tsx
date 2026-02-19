@@ -1,68 +1,43 @@
 "use client"
 
 import { useMemo, useState, useEffect } from "react"
-import { addDays, format, isBefore, startOfToday } from "date-fns"
+import { format, isBefore, startOfToday } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import Calendar18 from "@/components/calendar-18"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import {
   Breadcrumb,
-  BreadcrumbEllipsis,
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { 
-  Star, 
-  MapPin, 
-  Users, 
-  Car, 
-  Clock, 
-  ThumbsUp, 
-  Phone, 
-  Share2, 
+import {
+  Star,
+  MapPin,
+  Users,
+  Car,
+  Clock,
+  Share2,
   CalendarCheck,
   Heart,
   MessageCircle,
   Award,
   Shield,
   CheckCircle,
-  Info,
   Camera,
   Palette,
   Utensils,
-  Send,
-  User,
-  Mail,
-  Instagram,
-  Facebook,
-  Twitter,
-  Linkedin,
-  Globe,
-  Camera as CameraIcon,
-  Image as ImageIcon,
-  Video,
-  Music,
   Flower,
   Crown,
   Sparkles,
-  Zap,
-  TrendingUp,
-  Clock as ClockIcon,
   DollarSign,
   Package,
   Gift,
-  Sparkle,
-  ChevronLeft,
-  Menu,
-  X,
+  Camera as CameraIcon,
   ArrowLeft
 } from "lucide-react"
 import type { Vendor, Review } from "@/lib/types"
@@ -70,66 +45,42 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 import Link from "next/link"
+import { useUser } from "@/context/UserContext"
+import { ChatDrawer } from "@/components/chat/chat-drawer"
+import { toast as sonnerToast } from "sonner"
 
 interface VendorDetailsProps {
   vendor: Vendor
 }
 
-const dummyReviews: Review[] = [
-  {
-    id: "1",
-    userId: "u1",
-    userName: "Hira Sayyid",
-    rating: 5,
-    comment:
-      "Absolutely amazing experience! The service was exceptional and very professional. They went above and beyond our expectations. Highly recommended for any special occasion!",
-    date: "2024-02-10",
-  },
-  {
-    id: "2",
-    userId: "u2",
-    userName: "Awais Ahmed",
-    rating: 5,
-    comment:
-      "Professional Staff & Services. Quality is awesome. The attention to detail was incredible and they made our special day truly memorable. Will definitely book again!",
-    date: "2024-02-08",
-  },
-  {
-    id: "3",
-    userId: "u3",
-    userName: "Fatima Khan",
-    rating: 4,
-    comment:
-      "Great service and very responsive. The team was professional and delivered exactly what we wanted. Would recommend to friends and family.",
-    date: "2024-02-05",
-  },
-]
-
-const dummyImages = [
-  "/placeholder.jpg",
-  "/placeholder.jpg", 
-  "/placeholder.jpg",
-  "/placeholder.jpg",
-  "/placeholder.jpg",
-  "/placeholder.jpg"
-]
 
 export default function VendorDetails({ vendor }: VendorDetailsProps) {
-  const [reviews, setReviews] = useState<Review[]>(dummyReviews)
+  const reviews = vendor.reviews || []
   const [date, setDate] = useState<Date | undefined>(undefined)
   const [isFavorite, setIsFavorite] = useState(false)
-  const [newComment, setNewComment] = useState("")
-  const [newRating, setNewRating] = useState(5)
-  const [newUserName, setNewUserName] = useState("")
   const [selectedImage, setSelectedImage] = useState(0)
   const [selectedDate, setSelectedDate] = useState<Date>()
   const [isDateAvailable, setIsDateAvailable] = useState<boolean | null>(null)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
   const [isStickyHeader, setIsStickyHeader] = useState(false)
+  const [chatDrawerOpen, setChatDrawerOpen] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
+  const { isAuthenticated } = useUser()
   const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('user_id') && localStorage.getItem('auth_token')
+
+  const handleMessageVendor = () => {
+    if (!isAuthenticated) {
+      router.push('/login')
+      return
+    }
+    if (!vendor.userId) {
+      sonnerToast.error('Unable to message this vendor at the moment.')
+      return
+    }
+    setChatDrawerOpen(true)
+  }
 
   const primaryImage = useMemo(() => vendor.images?.[0] || "/placeholder.jpg", [vendor.images])
 
@@ -156,17 +107,6 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const addReview = (newReview: Review) => {
-    setReviews([...reviews, newReview])
-    setNewComment("")
-    setNewRating(5)
-    setNewUserName("")
-    toast({
-      title: "Review Added!",
-      description: "Thank you for your feedback!",
-      variant: "default"
-    })
-  }
 
   const handleBookNow = () => {
     if (isLoggedIn) {
@@ -200,17 +140,15 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
         })
       }
     } catch (error) {
-      console.error('Error sharing:', error)
+      // share failed silently
     }
   }
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return `Rs. ${new Intl.NumberFormat('en-PK', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(price)
+    }).format(price)}`
   }
 
   const getVendorIcon = (type: string) => {
@@ -282,30 +220,9 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
     }
   }
 
-  const handleSubmitComment = () => {
-    if (!newComment.trim() || !newUserName.trim()) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive"
-      })
-      return
-    }
-
-    const newReview: Review = {
-      id: String(reviews.length + 1),
-      userId: "guest",
-      userName: newUserName,
-      rating: newRating,
-      comment: newComment,
-      date: new Date().toISOString().split('T')[0],
-    }
-
-    addReview(newReview)
-  }
 
   return (
-      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-rose-50">
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-purple-50/30">
       {/* Mobile Sticky Header */}
       <div className={`lg:hidden fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isStickyHeader ? 'bg-white/95 backdrop-blur-md shadow-lg' : 'bg-transparent'
@@ -349,14 +266,14 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
           priority
           className="object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-rose-900/80 via-pink-800/70 to-purple-900/60" />
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-950/80 via-purple-900/70 to-purple-900/60" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
         
         {/* Mobile Hero Content */}
         <div className="relative h-full flex items-end justify-center pb-20 sm:pb-32">
           <div className="text-center text-white max-w-4xl mx-auto px-4">
             <div className="flex items-center justify-center gap-2 mb-4">
-              <VendorIcon className="w-6 h-6 sm:w-8 sm:h-8 text-rose-300" />
+              <VendorIcon className="w-6 h-6 sm:w-8 sm:h-8 text-purple-300" />
               <Badge variant="secondary" className="bg-white/20 text-white border-white/30 backdrop-blur-sm text-xs sm:text-sm">
                 {vendor.type}
               </Badge>
@@ -365,7 +282,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
               {vendor.name}
             </h1>
             <p className="text-sm sm:text-xl md:text-2xl opacity-90 mb-6 flex items-center justify-center gap-2">
-              <MapPin className="w-4 h-4 sm:w-6 sm:h-6 text-rose-300" />
+              <MapPin className="w-4 h-4 sm:w-6 sm:h-6 text-purple-300" />
               {vendor.location || vendor.city}
             </p>
             <div className="flex items-center justify-center gap-4 mb-6">
@@ -375,7 +292,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                 <span className="text-xs sm:text-lg opacity-80">({reviews.length})</span>
               </div>
               <div className="flex items-center gap-1 sm:gap-2">
-                <Award className="w-4 h-4 sm:w-6 sm:h-6 text-rose-300" />
+                <Award className="w-4 h-4 sm:w-6 sm:h-6 text-purple-300" />
                 <span className="text-xs sm:text-lg opacity-80">Verified</span>
               </div>
             </div>
@@ -385,7 +302,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
               <Button 
                 onClick={handleBookNow}
                 size="lg"
-                className="w-full sm:w-auto bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white px-6 sm:px-8 py-3 text-base sm:text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-6 sm:px-8 py-3 text-base sm:text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
               >
                 <CalendarCheck className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 Book Now
@@ -394,7 +311,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                  variant="outline"
                  size="lg"
                  onClick={() => setIsFavorite(!isFavorite)}
-                className="w-full sm:w-auto border-rose-200 text-rose-600 hover:bg-rose-600 hover:text-white backdrop-blur-sm px-6 sm:px-8 py-3 text-base sm:text-lg font-semibold rounded-xl transition-all duration-200"
+                className="w-full sm:w-auto border-purple-200 text-purple-600 hover:bg-purple-600 hover:text-white backdrop-blur-sm px-6 sm:px-8 py-3 text-base sm:text-lg font-semibold rounded-xl transition-all duration-200"
                >
                 <Heart className={`w-4 h-4 sm:w-5 sm:h-5 mr-2 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
                 {isFavorite ? 'Saved' : 'Save'}
@@ -451,7 +368,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                             )}
                           </div>
                           <div className="flex items-center text-neutral-600">
-                          <MapPin className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-rose-500 flex-shrink-0" />
+                          <MapPin className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-purple-500 flex-shrink-0" />
                           <p className="text-sm sm:text-lg truncate">{vendor.location || vendor.city}</p>
                           </div>
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
@@ -470,8 +387,8 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
 
                     {/* Quick Stats - Mobile Grid */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 pt-4 sm:pt-6 border-t border-neutral-200">
-                      <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-r from-rose-50 to-pink-50 rounded-xl">
-                        <VendorIcon className="w-4 h-4 sm:w-6 sm:h-6 text-rose-500 flex-shrink-0" />
+                      <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-r from-purple-50 to-purple-50/80 rounded-xl">
+                        <VendorIcon className="w-4 h-4 sm:w-6 sm:h-6 text-purple-500 flex-shrink-0" />
                         <div className="min-w-0">
                           <p className="text-xs sm:text-sm font-semibold text-neutral-900 truncate">Type</p>
                           <p className="text-xs sm:text-sm text-neutral-600 truncate">{vendor.type}</p>
@@ -516,7 +433,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                       variant="outline"
                       size="lg"
                       onClick={handleShare}
-                      className="flex items-center justify-center gap-2 border-neutral-200 hover:border-rose-500 hover:text-rose-600 transition-all duration-200 h-12"
+                      className="flex items-center justify-center gap-2 border-neutral-200 hover:border-purple-500 hover:text-purple-600 transition-all duration-200 h-12"
                     >
                       <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
                       <span className="hidden sm:inline">Share</span>
@@ -525,7 +442,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                       variant="outline" 
                       size="lg" 
                       onClick={() => setActiveTab("availability")}
-                      className="flex items-center justify-center gap-2 border-neutral-200 hover:border-rose-500 hover:text-rose-600 transition-all duration-200 h-12"
+                      className="flex items-center justify-center gap-2 border-neutral-200 hover:border-purple-500 hover:text-purple-600 transition-all duration-200 h-12"
                     >
                       <CalendarCheck className="w-4 h-4 sm:w-5 sm:h-5" />
                       <span className="hidden sm:inline">Check Availability</span>
@@ -533,7 +450,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                     <Button 
                       onClick={handleBookNow}
                       size="lg" 
-                      className="flex items-center justify-center gap-2 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 h-12"
+                      className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 h-12"
                     >
                       <CalendarCheck className="w-4 h-4 sm:w-5 sm:h-5" />
                       Book Now
@@ -548,16 +465,16 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
               <CardContent className="p-0">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                   <TabsList className="grid w-full grid-cols-4 h-12 sm:h-14 bg-neutral-100 p-1">
-                    <TabsTrigger value="overview" className="text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:text-rose-600">
+                    <TabsTrigger value="overview" className="text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:text-purple-600">
                       Overview
                   </TabsTrigger>
-                    <TabsTrigger value="gallery" className="text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:text-rose-600">
+                    <TabsTrigger value="gallery" className="text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:text-purple-600">
                       Gallery
                     </TabsTrigger>
-                    <TabsTrigger value="pricing" className="text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:text-rose-600">
+                    <TabsTrigger value="pricing" className="text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:text-purple-600">
                     Pricing
                   </TabsTrigger>
-                    <TabsTrigger value="reviews" className="text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:text-rose-600">
+                    <TabsTrigger value="reviews" className="text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:text-purple-600">
                     Reviews
                   </TabsTrigger>
                 </TabsList>
@@ -574,7 +491,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {vendor.amenities.map((amenity, index) => (
                             <div key={index} className="flex items-center gap-2 p-3 bg-neutral-50 rounded-lg">
-                              <div className="w-2 h-2 bg-rose-500 rounded-full flex-shrink-0" />
+                              <div className="w-2 h-2 bg-purple-500 rounded-full flex-shrink-0" />
                               <span className="text-sm sm:text-base text-gray-600">{amenity}</span>
                             </div>
                           ))}
@@ -585,11 +502,11 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
 
                   <TabsContent value="gallery" className="p-4 sm:p-6">
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-                      {dummyImages.map((image, index) => (
+                      {(vendor.images?.length ? vendor.images : ["/placeholder.jpg"]).map((image, index) => (
                         <div 
                           key={index}
                           className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-105 ${
-                            selectedImage === index ? 'ring-4 ring-rose-500' : 'hover:shadow-lg'
+                            selectedImage === index ? 'ring-4 ring-purple-500' : 'hover:shadow-lg'
                           }`}
                           onClick={() => setSelectedImage(index)}
                         >
@@ -600,7 +517,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                             className="object-cover"
                           />
                           {selectedImage === index && (
-                            <div className="absolute inset-0 bg-rose-500/20 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-purple-500/20 flex items-center justify-center">
                               <CameraIcon className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                         </div>
                           )}
@@ -610,31 +527,74 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                 </TabsContent>
 
                   <TabsContent value="pricing" className="p-4 sm:p-6">
-                          <div className="space-y-4">
-                      {vendor.packages.map((pkg, index) => (
-                        <div key={index} className="border border-neutral-200 rounded-xl p-4 sm:p-6">
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
-                            <h4 className="text-lg sm:text-xl font-semibold">{pkg.name}</h4>
-                            <Badge className="w-fit bg-rose-100 text-rose-700 border-rose-200">
-                              {formatPrice(pkg.price)}
-                            </Badge>
+                          <div className="space-y-6">
+                      {/* Packages */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold">Packages</h3>
+                        {(vendor.packages || []).length > 0 ? (vendor.packages || []).map((pkg, index) => (
+                          <div key={index} className="border border-neutral-200 rounded-xl p-4 sm:p-6">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                              <h4 className="text-lg sm:text-xl font-semibold">{pkg.name}</h4>
+                              <Badge className="w-fit bg-purple-100 text-purple-700 border-purple-200">
+                                {formatPrice(pkg.price)}
+                              </Badge>
                             </div>
-                          <p className="text-sm sm:text-base text-gray-600 mb-4">{pkg.description}</p>
-                          <div className="space-y-2">
-                            {pkg.features.map((feature, featureIndex) => (
-                              <div key={featureIndex} className="flex items-center gap-2">
-                                <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                                <span className="text-sm sm:text-base text-gray-600">{feature}</span>
+                            <p className="text-sm sm:text-base text-gray-600 mb-4">{pkg.description}</p>
+                            <div className="space-y-2">
+                              {(pkg.features || []).map((feature, featureIndex) => (
+                                <div key={featureIndex} className="flex items-center gap-2">
+                                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                  <span className="text-sm sm:text-base text-gray-600">{feature}</span>
+                                </div>
+                              ))}
                             </div>
-                            ))}
-                            </div>
-                            </div>
-                      ))}
+                          </div>
+                        )) : (
+                          <p className="text-sm text-neutral-500 text-center py-4">No packages available yet. Contact the vendor for pricing.</p>
+                        )}
+                      </div>
+
+                      {/* Menus */}
+                      {Array.isArray(vendor.menus) && vendor.menus.length > 0 && (
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold flex items-center gap-2">
+                            <Utensils className="w-5 h-5 text-purple-500" />
+                            Menus
+                          </h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {vendor.menus.map((menu, index) => {
+                              const menuItems = Array.isArray(menu.data?.items) ? menu.data!.items : []
+                              return (
+                                <div key={menu.id ?? index} className="border border-neutral-200 rounded-xl p-4 sm:p-6">
+                                  <div className="flex items-start justify-between gap-3 mb-3">
+                                    <h4 className="text-base sm:text-lg font-semibold capitalize">{menu.title}</h4>
+                                    <Badge className="w-fit bg-purple-100 text-purple-700 border-purple-200 shrink-0">
+                                      Rs. {menu.price?.toLocaleString()}/head
+                                    </Badge>
+                                  </div>
+                                  {menuItems.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 mt-2">
+                                      {menuItems.map((item, i) => (
+                                        <Badge key={i} variant="outline" className="text-xs font-normal bg-neutral-50">
+                                          {String(item)}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
                   </div>
                 </TabsContent>
 
                   <TabsContent value="reviews" className="p-4 sm:p-6">
                     <div className="space-y-4 sm:space-y-6">
+                      {reviews.length === 0 && (
+                        <p className="text-sm text-neutral-500 text-center py-8">No reviews yet. Be the first to book and leave a review!</p>
+                      )}
                       {reviews.map((review) => (
                         <div key={review.id} className="border border-neutral-200 rounded-xl p-4 sm:p-6">
                           <div className="flex items-start justify-between mb-3">
@@ -671,7 +631,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
             <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-xl font-bold text-neutral-900 flex items-center gap-2">
-                  <CalendarCheck className="w-5 h-5 text-rose-500" />
+                  <CalendarCheck className="w-5 h-5 text-purple-500" />
                   Check Availability
                 </CardTitle>
               </CardHeader>
@@ -696,32 +656,50 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
               </CardContent>
             </Card>
 
-            {/* Contact Information */}
+            {/* Contact / Location */}
             <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-xl font-bold text-neutral-900 flex items-center gap-2">
-                  <MessageCircle className="w-5 h-5 text-rose-500" />
-                  Contact Info
+                  <MessageCircle className="w-5 h-5 text-purple-500" />
+                  Get in Touch
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <Phone className="w-5 h-5 text-rose-500" />
-                  <span className="text-sm">+1 (555) 123-4567</span>
-                  </div>
-                <div className="flex items-center gap-3">
-                  <Mail className="w-5 h-5 text-rose-500" />
-                  <span className="text-sm">contact@{vendor.name.toLowerCase().replace(/\s+/g, '')}.com</span>
-                  </div>
-                <div className="flex items-center gap-3">
-                  <Globe className="w-5 h-5 text-rose-500" />
-                  <span className="text-sm">www.{vendor.name.toLowerCase().replace(/\s+/g, '')}.com</span>
+                  <MapPin className="w-5 h-5 text-purple-500" />
+                  <span className="text-sm">{vendor.location || vendor.city}</span>
                 </div>
+                <Button
+                  onClick={handleMessageVendor}
+                  variant="outline"
+                  className="w-full border-purple-200 text-purple-600 hover:bg-purple-50"
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Message Vendor
+                </Button>
+                <Button
+                  onClick={handleBookNow}
+                  className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white"
+                >
+                  <CalendarCheck className="w-4 h-4 mr-2" />
+                  Book & Get Contact Details
+                </Button>
               </CardContent>
             </Card>
           </div>
         </div>
       </div>
+
+      {/* Chat Drawer */}
+      {vendor.userId && (
+        <ChatDrawer
+          open={chatDrawerOpen}
+          onOpenChange={setChatDrawerOpen}
+          vendorUserId={vendor.userId}
+          vendorName={vendor.name}
+          vendorImage={vendor.images?.[0]}
+        />
+      )}
         </div>
   )
 } 

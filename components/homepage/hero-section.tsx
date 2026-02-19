@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useRef, useMemo } from "react"
-import { Search, MapPin, Star, Users, Calendar, ArrowRight, X, Loader2, Heart, Award } from "lucide-react"
+import { useState, useEffect, useRef, useMemo, useCallback } from "react"
+import { Search, MapPin, Star, Users, Calendar, ArrowRight, X, Loader2, Heart, Award, ChevronDown } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -15,6 +15,12 @@ import { useToast } from "@/hooks/use-toast"
 import type { Vendor } from "@/lib/types"
 import { VENDOR_TYPES, VENDOR_TYPE_DISPLAY_NAMES, VENDOR_TYPE_DESCRIPTIONS, getAllVendorPaths, VENDOR_TYPE_PATHS } from "@/lib/vendor-types"
 import { useVendors } from "@/hooks/use-vendors"
+import { motion, AnimatePresence } from "framer-motion"
+import { Swiper, SwiperSlide } from "swiper/react"
+import { Autoplay, EffectFade } from "swiper/modules"
+import "swiper/css"
+import "swiper/css/effect-fade"
+import { TextReveal, CountUp, ScrollReveal } from "@/components/ui/motion-wrapper"
 
 // Vendor categories with icons and descriptions
 const vendorCategories = [
@@ -414,61 +420,123 @@ export function HeroSection() {
     setVenueLocation("")
   }
 
+  // Hero background images – real wedding Pexels photos
+  const heroImages = [
+    "https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/2253870/pexels-photo-2253870.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/1456613/pexels-photo-1456613.jpeg?auto=compress&cs=tinysrgb&w=1920",
+  ]
+
   return (
-    <section className="relative min-h-screen flex items-center justify-center">
-      {/* Background Image with Enhanced Overlay */}
+    <section className="relative min-h-[100svh] flex flex-col justify-center overflow-hidden">
+      {/* ── Background: Swiper Ken Burns Carousel ── */}
       <div className="absolute inset-0">
-        <img
-          src="https://images.pexels.com/photos/1779414/pexels-photo-1779414.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
-          alt="Wedding couple"
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-br from-rose-900/80 via-rose-800/60 to-pink-900/40" />
+        <Swiper
+          modules={[Autoplay, EffectFade]}
+          effect="fade"
+          autoplay={{ delay: 5000, disableOnInteraction: false }}
+          loop
+          speed={2000}
+          className="w-full h-full"
+        >
+          {heroImages.map((src, i) => (
+            <SwiperSlide key={i}>
+              <div className="w-full h-full overflow-hidden">
+                <img
+                  src={src}
+                  alt=""
+                  className="w-full h-full object-cover animate-ken-burns"
+                  style={{ animationDelay: `${i * 5}s` }}
+                />
+              </div>
+            </SwiperSlide>
+          ))}
+        </Swiper>
+
+        {/* Cinematic gradient overlay */}
+        <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/70 via-purple-950/60 to-black/80" />
+        <div className="absolute inset-0 z-10 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]" />
       </div>
 
-      <div className="relative w-full px-2 sm:px-4 md:px-6 lg:px-8 xl:px-12 py-6 sm:py-8 md:py-12 lg:py-16">
-        <div className="max-w-5xl mx-auto text-center text-white">
-          {/* Enhanced Hero Content */}
-          <div className="mb-8 sm:mb-12">
-            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 sm:mb-6 md:mb-8 leading-tight bg-gradient-to-r from-white to-rose-100 bg-clip-text text-transparent">
-            Find Your Perfect Wedding Vendors
-          </h1>
-            <p className="text-sm sm:text-lg md:text-xl lg:text-2xl mb-6 sm:mb-8 text-rose-100 max-w-3xl mx-auto leading-relaxed px-2">
-            Discover and book the best wedding vendors in your city. From photographers to venues, 
-            we've got everything you need for your special day.
-          </p>
+      {/* ── Floating decorative elements ── */}
+      <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
+        <div className="absolute top-[15%] left-[8%] w-64 h-64 rounded-full bg-purple-500/5 blur-3xl animate-float" />
+        <div className="absolute bottom-[20%] right-[5%] w-80 h-80 rounded-full bg-gold-400/5 blur-3xl animate-float" style={{ animationDelay: "3s" }} />
+        <div className="absolute top-1/4 right-[12%] w-1 h-1 rounded-full bg-gold-400/50 animate-float" style={{ animationDelay: "1s" }} />
+        <div className="absolute top-[40%] left-[5%] w-1.5 h-1.5 rounded-full bg-gold-400/40 animate-float" style={{ animationDelay: "2s" }} />
+        <div className="absolute bottom-[35%] right-[18%] w-1 h-1 rounded-full bg-purple-300/40 animate-float" style={{ animationDelay: "4s" }} />
+      </div>
+
+      {/* ── Main Content ── */}
+      <div className="relative z-20 w-full pt-28 sm:pt-32 pb-10">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+
+          {/* ── Text Area ── */}
+          <div className="text-center mb-8 sm:mb-10">
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 mb-6"
+            >
+              <div className="w-1.5 h-1.5 rounded-full bg-gold-400 animate-pulse" />
+              <span className="text-xs font-medium uppercase tracking-[0.2em] text-gold-300">Pakistan&apos;s Wedding Platform</span>
+            </motion.div>
+
+            <TextReveal
+              text="Plan Your Perfect Wedding"
+              as="h1"
+              mode="word"
+              staggerDelay={0.08}
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-heading font-bold mb-5 leading-[1.05] text-white"
+            />
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.9 }}
+              className="text-base sm:text-lg text-white/70 max-w-xl mx-auto leading-relaxed"
+            >
+              Discover top-rated photographers, venues, decorators and more — all in one place.
+            </motion.p>
           </div>
 
-          {/* Enhanced Search Card */}
-          <Card className="bg-white/95 backdrop-blur-md shadow-2xl border-0 rounded-2xl overflow-hidden">
-            <CardContent className="p-8">
+          {/* ── Search Card ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 25 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 1.2, ease: [0.25, 0.4, 0.25, 1] }}
+            className="max-w-3xl mx-auto"
+          >
+            <div className="bg-white/95 backdrop-blur-2xl rounded-2xl shadow-2xl shadow-black/20 p-3 sm:p-4">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-8 bg-gray-100 p-1 rounded-xl">
-                  <TabsTrigger 
-                    value="vendors" 
-                    className="text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-rose-600 data-[state=active]:shadow-md rounded-lg transition-all duration-200"
+                {/* Pill Tabs */}
+                <TabsList className="grid w-full grid-cols-2 mb-3 bg-purple-50/80 p-1 rounded-xl h-auto">
+                  <TabsTrigger
+                    value="vendors"
+                    className="text-sm font-semibold py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm transition-all duration-300"
                   >
-                    <Search className="w-4 h-4 mr-2" />
-                    Find Vendors
+                    <Search className="w-3.5 h-3.5 mr-1.5" />
+                    Vendors
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="venues" 
-                    className="text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-rose-600 data-[state=active]:shadow-md rounded-lg transition-all duration-200"
+                  <TabsTrigger
+                    value="venues"
+                    className="text-sm font-semibold py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm transition-all duration-300"
                   >
-                    <MapPin className="w-4 h-4 mr-2" />
-                    Find Venues
+                    <MapPin className="w-3.5 h-3.5 mr-1.5" />
+                    Venues
                   </TabsTrigger>
                 </TabsList>
 
-                {/* Vendors Tab */}
-                <TabsContent value="vendors" className="space-y-6">
-                  {/* Category Selection */}
-                  <div className="flex flex-col md:flex-row gap-4">
+                {/* ── Vendors Tab ── */}
+                <TabsContent value="vendors" className="space-y-2.5 mt-0">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <Select value={selectedCategory} onValueChange={handleCategorySelect}>
-                      <SelectTrigger className="w-full md:w-[220px] h-12 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
-                        <SelectValue placeholder="Select category" />
+                      <SelectTrigger className="w-full sm:w-[180px] h-11 border-purple-100/80 bg-white rounded-xl text-sm focus:ring-2 focus:ring-purple-400/30 focus:border-purple-300 transition-all">
+                        <SelectValue placeholder="Category" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="rounded-xl">
                         <SelectItem value="all">
                           <div className="flex items-center gap-2">
                             <span>🎯</span>
@@ -486,100 +554,98 @@ export function HeroSection() {
                       </SelectContent>
                     </Select>
 
-                    {/* Location Input with Dropdown */}
+                    {/* Location Input */}
                     <div className="relative flex-1">
                       <Popover open={showLocationDropdown} onOpenChange={setShowLocationDropdown}>
                         <PopoverTrigger asChild>
                           <div className="relative">
-                            <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-400 w-5 h-5" />
+                            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-400 w-4 h-4" />
                             <Input
                               type="text"
-                              placeholder="Enter your city"
+                              placeholder="City"
                               value={location}
                               onChange={(e) => setLocation(e.target.value)}
-                              className="pl-12 h-12 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
+                              className="pl-9 h-11 border-purple-100/80 bg-white rounded-xl text-sm focus:ring-2 focus:ring-purple-400/30 focus:border-purple-300 transition-all"
                             />
                           </div>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[300px] p-0" align="start">
+                        <PopoverContent className="w-[280px] p-0 rounded-xl" align="start">
                           <Command>
                             <CommandInput placeholder="Search cities..." />
-                                                         <CommandList>
-                               <CommandEmpty>No cities found.</CommandEmpty>
-                               <CommandGroup>
-                                 <div className="p-2">
-                                   <h4 className="text-sm font-medium mb-2">Popular Cities ({popularCities.length})</h4>
-                                   <div className="grid grid-cols-2 gap-1">
-                                     {popularCities.length > 0 ? (
-                                       popularCities.map((city) => (
-                                         <Button
-                                           key={city}
-                                           variant="ghost"
-                                           size="sm"
-                                          className="justify-start text-left hover:bg-rose-50"
-                                           onClick={() => handleLocationSelect(city)}
-                                         >
-                                           {city}
-                                         </Button>
-                                       ))
-                                     ) : (
-                                       <div className="text-sm text-gray-500 p-2">
-                                         Loading cities...
-                                       </div>
-                                     )}
-                                   </div>
-                                 </div>
-                               </CommandGroup>
-                             </CommandList>
+                            <CommandList>
+                              <CommandEmpty>No cities found.</CommandEmpty>
+                              <CommandGroup>
+                                <div className="p-2">
+                                  <h4 className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Popular Cities</h4>
+                                  <div className="grid grid-cols-2 gap-1">
+                                    {popularCities.length > 0 ? (
+                                      popularCities.map((city) => (
+                                        <Button
+                                          key={city}
+                                          variant="ghost"
+                                          size="sm"
+                                          className="justify-start text-left hover:bg-purple-50 text-sm"
+                                          onClick={() => handleLocationSelect(city)}
+                                        >
+                                          {city}
+                                        </Button>
+                                      ))
+                                    ) : (
+                                      <div className="text-sm text-gray-500 p-2">Loading...</div>
+                                    )}
+                                  </div>
+                                </div>
+                              </CommandGroup>
+                            </CommandList>
                           </Command>
                         </PopoverContent>
                       </Popover>
                     </div>
 
                     {/* Search Button */}
-                    <Button 
-                      onClick={handleVendorSearch} 
-                      className="w-full md:w-auto h-12 px-8 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl" 
+                    <Button
+                      onClick={handleVendorSearch}
+                      className="h-11 px-8 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white text-sm font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-purple-600/25 hover:shadow-xl hover:shadow-purple-600/30"
                       disabled={isLoading}
                     >
                       {isLoading ? (
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       ) : (
-                        <Search className="w-5 h-5 mr-2" />
+                        <Search className="w-4 h-4 mr-2" />
                       )}
-                      Search Vendors
+                      Search
                     </Button>
                   </div>
 
-                  {/* Vendor Search with Autocomplete */}
+                  {/* Vendor Autocomplete */}
                   <div className="relative" ref={searchRef}>
                     <Popover open={showVendorDropdown} onOpenChange={setShowVendorDropdown}>
                       <PopoverTrigger asChild>
                         <div className="relative">
-                          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-400 w-5 h-5" />
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-400 w-4 h-4" />
                           <Input
                             type="text"
-                            placeholder="Search for specific vendors..."
+                            placeholder="Or search by vendor name..."
                             value={searchQuery}
                             onChange={(e) => {
                               setSearchQuery(e.target.value)
                               setShowVendorDropdown(true)
                             }}
-                            className="pl-12 pr-12 h-12 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
+                            className="pl-9 pr-10 h-10 border-purple-100/60 bg-purple-50/40 rounded-xl text-sm focus:ring-2 focus:ring-purple-400/30 focus:border-purple-300 focus:bg-white transition-all"
                           />
                           {searchQuery && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-rose-50"
+                              className="absolute right-1.5 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0 hover:bg-purple-100 rounded-lg"
                               onClick={clearVendorSearch}
                             >
-                              <X className="w-4 h-4" />
+                              <X className="w-3.5 h-3.5" />
                             </Button>
                           )}
                         </div>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[500px] p-0" align="start">
+                      <PopoverContent className="w-[500px] p-0 rounded-xl" align="start">
                         <Command>
                           <CommandInput placeholder="Search vendors..." />
                           <CommandList>
@@ -589,10 +655,10 @@ export function HeroSection() {
                                 <CommandItem
                                   key={vendor.id}
                                   onSelect={() => handleVendorSelect(vendor)}
-                                  className="cursor-pointer hover:bg-rose-50"
+                                  className="cursor-pointer hover:bg-purple-50"
                                 >
-                                  <div className="flex items-center gap-4 w-full p-2">
-                                    <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0">
+                                  <div className="flex items-center gap-3 w-full p-1.5">
+                                    <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 ring-1 ring-purple-100">
                                       <img
                                         src={vendor.images?.[0] || "/placeholder.jpg"}
                                         alt={vendor.name}
@@ -600,34 +666,29 @@ export function HeroSection() {
                                       />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <h4 className="font-semibold truncate">{vendor.name}</h4>
+                                      <div className="flex items-center gap-2 mb-0.5">
+                                        <h4 className="font-semibold text-sm truncate">{vendor.name}</h4>
                                         {vendor.sponsored && (
-                                          <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-0 text-xs">
-                                            <Award className="w-3 h-3 mr-1" />
+                                          <Badge className="bg-gradient-to-r from-gold-500 to-gold-600 text-white border-0 text-[10px] px-1.5 py-0">
                                             Featured
                                           </Badge>
                                         )}
                                       </div>
-                                      <div className="flex items-center gap-3 text-sm text-gray-600 mb-1">
-                                        <div className="flex items-center gap-1">
-                                          <MapPin className="w-3 h-3 text-rose-500" />
-                                         <span>{vendor.city || 'Location not specified'}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                          <Star className="w-3 h-3 text-yellow-500" />
-                                         <span>{vendor.rating || 0}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                          <Users className="w-3 h-3 text-blue-500" />
-                                         <span>{vendor.reviews?.length || 0} reviews</span>
-                                       </div>
+                                      <div className="flex items-center gap-2.5 text-xs text-gray-500">
+                                        <span className="flex items-center gap-1">
+                                          <MapPin className="w-3 h-3" />
+                                          {vendor.city || "N/A"}
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                          <Star className="w-3 h-3 text-gold-500" />
+                                          {vendor.rating || 0}
+                                        </span>
+                                        <span className="font-medium text-purple-600">
+                                          ₹{(vendor.minimumPrice || vendor.price || 0).toLocaleString()}
+                                        </span>
                                       </div>
-                                      <div className="text-sm font-semibold text-rose-600">
-                                         Starting from ₹{(vendor.minimumPrice || vendor.price || 0).toLocaleString()}
-                                       </div>
                                     </div>
-                                    <ArrowRight className="w-5 h-5 text-gray-400" />
+                                    <ArrowRight className="w-4 h-4 text-gray-300" />
                                   </div>
                                 </CommandItem>
                               ))}
@@ -637,33 +698,16 @@ export function HeroSection() {
                       </PopoverContent>
                     </Popover>
                   </div>
-
-                                     {/* Quick Stats */}
-                   <div className="flex items-center justify-center gap-8 text-sm text-gray-600 pt-4 border-t border-neutral-200">
-                     <div className="flex items-center gap-2">
-                       <Users className="w-5 h-5 text-rose-500" />
-                       <span className="font-semibold">{allVendors.length}+ Vendors</span>
-                     </div>
-                     <div className="flex items-center gap-2">
-                       <MapPin className="w-5 h-5 text-rose-500" />
-                       <span className="font-semibold">50+ Cities</span>
-                     </div>
-                     <div className="flex items-center gap-2">
-                       <Star className="w-5 h-5 text-yellow-500" />
-                       <span className="font-semibold">4.5+ Avg Rating</span>
-                     </div>
-                   </div>
                 </TabsContent>
 
-                {/* Venues Tab */}
-                <TabsContent value="venues" className="space-y-6">
-                  <div className="flex flex-col md:flex-row gap-4">
-                    {/* Venue Type Selection */}
+                {/* ── Venues Tab ── */}
+                <TabsContent value="venues" className="space-y-2.5 mt-0">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <Select value={selectedVenueType} onValueChange={handleVenueTypeSelect}>
-                      <SelectTrigger className="w-full md:w-[220px] h-12 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500">
+                      <SelectTrigger className="w-full sm:w-[180px] h-11 border-purple-100/80 bg-white rounded-xl text-sm focus:ring-2 focus:ring-purple-400/30 focus:border-purple-300 transition-all">
                         <SelectValue placeholder="Venue type" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="rounded-xl">
                         {venueTypes.map((venueType) => (
                           <SelectItem key={venueType.value} value={venueType.value}>
                             <div className="flex items-center gap-2">
@@ -675,29 +719,28 @@ export function HeroSection() {
                       </SelectContent>
                     </Select>
 
-                    {/* Venue Location Input */}
                     <div className="relative flex-1">
                       <Popover open={showVenueLocationDropdown} onOpenChange={setShowVenueLocationDropdown}>
                         <PopoverTrigger asChild>
                           <div className="relative">
-                            <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-400 w-5 h-5" />
+                            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-400 w-4 h-4" />
                             <Input
                               type="text"
-                              placeholder="Enter your city"
+                              placeholder="City"
                               value={venueLocation}
                               onChange={(e) => setVenueLocation(e.target.value)}
-                              className="pl-12 h-12 border-neutral-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
+                              className="pl-9 h-11 border-purple-100/80 bg-white rounded-xl text-sm focus:ring-2 focus:ring-purple-400/30 focus:border-purple-300 transition-all"
                             />
                           </div>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[300px] p-0" align="start">
+                        <PopoverContent className="w-[280px] p-0 rounded-xl" align="start">
                           <Command>
                             <CommandInput placeholder="Search cities..." />
                             <CommandList>
                               <CommandEmpty>No cities found.</CommandEmpty>
                               <CommandGroup>
                                 <div className="p-2">
-                                  <h4 className="text-sm font-medium mb-2">Popular Cities ({popularCities.length})</h4>
+                                  <h4 className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Popular Cities</h4>
                                   <div className="grid grid-cols-2 gap-1">
                                     {popularCities.length > 0 ? (
                                       popularCities.map((city) => (
@@ -705,16 +748,14 @@ export function HeroSection() {
                                           key={city}
                                           variant="ghost"
                                           size="sm"
-                                          className="justify-start text-left hover:bg-rose-50"
+                                          className="justify-start text-left hover:bg-purple-50 text-sm"
                                           onClick={() => handleVenueLocationSelect(city)}
                                         >
                                           {city}
                                         </Button>
                                       ))
                                     ) : (
-                                      <div className="text-sm text-gray-500 p-2">
-                                        Loading cities...
-                                      </div>
+                                      <div className="text-sm text-gray-500 p-2">Loading...</div>
                                     )}
                                   </div>
                                 </div>
@@ -725,33 +766,32 @@ export function HeroSection() {
                       </Popover>
                     </div>
 
-                    {/* Venue Search Button */}
-                    <Button 
-                      onClick={handleVenueSearch} 
-                      className="w-full md:w-auto h-12 px-8 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl" 
+                    <Button
+                      onClick={handleVenueSearch}
+                      className="h-11 px-8 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white text-sm font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-purple-600/25 hover:shadow-xl hover:shadow-purple-600/30"
                       disabled={isLoading}
                     >
                       {isLoading ? (
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       ) : (
-                        <Search className="w-5 h-5 mr-2" />
+                        <Search className="w-4 h-4 mr-2" />
                       )}
-                      Search Venues
+                      Search
                     </Button>
                   </div>
 
                   {/* Venue Results Preview */}
                   {filteredVenues.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-semibold text-gray-700">Popular Venues</h4>
-                      <div className="space-y-2">
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Popular Venues</h4>
+                      <div className="space-y-1.5">
                         {filteredVenues.slice(0, 3).map((venue) => (
                           <div
                             key={venue.id}
-                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-rose-50 cursor-pointer transition-colors duration-200"
+                            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-purple-50 cursor-pointer transition-all duration-200 group"
                             onClick={() => handleVenueSelect(venue)}
                           >
-                            <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                            <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 ring-1 ring-purple-100">
                               <img
                                 src={venue.images?.[0] || "/placeholder.jpg"}
                                 alt={venue.name}
@@ -759,76 +799,62 @@ export function HeroSection() {
                               />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h5 className="font-semibold truncate">{venue.name}</h5>
-                                {venue.sponsored && (
-                                  <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-0 text-xs">
-                                    <Award className="w-3 h-3 mr-1" />
-                                    Featured
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-3 text-sm text-gray-600">
-                                <div className="flex items-center gap-1">
-                                  <MapPin className="w-3 h-3 text-rose-500" />
-                                  <span>{venue.city || 'Location not specified'}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Star className="w-3 h-3 text-yellow-500" />
-                                  <span>{venue.rating || 0}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Users className="w-3 h-3 text-blue-500" />
-                                  <span>{venue.capacity || 0} guests</span>
-                                </div>
+                              <h5 className="font-semibold text-sm truncate">{venue.name}</h5>
+                              <div className="flex items-center gap-2.5 text-xs text-gray-500">
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  {venue.city || "N/A"}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Star className="w-3 h-3 text-gold-500" />
+                                  {venue.rating || 0}
+                                </span>
                               </div>
                             </div>
-                            <ArrowRight className="w-4 h-4 text-gray-400" />
+                            <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-purple-500 transition-colors" />
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
-
-                  {/* Venue Stats */}
-                  <div className="flex items-center justify-center gap-8 text-sm text-gray-600 pt-4 border-t border-neutral-200">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-5 h-5 text-rose-500" />
-                      <span className="font-semibold">{venues.length}+ Venues</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Star className="w-5 h-5 text-yellow-500" />
-                      <span className="font-semibold">4.8+ Avg Rating</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Heart className="w-5 h-5 text-rose-500" />
-                      <span className="font-semibold">Premium Locations</span>
-                    </div>
-                  </div>
                 </TabsContent>
               </Tabs>
-            </CardContent>
-          </Card>
+            </div>
+          </motion.div>
 
-          {/* Enhanced Popular Categories */}
-          {/* <div className="mt-12 flex flex-wrap justify-center gap-4">
-            {vendorCategories.slice(0, 6).map((category) => (
-              <Button
-                key={category.value}
-                variant="outline"
-                size="lg"
-                className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30 backdrop-blur-sm transition-all duration-200 font-semibold rounded-xl px-6 py-3"
-                onClick={() => {
-                  // Navigate directly to the category page
-                  router.push(`/${category.value}`)
-                }}
-              >
-                <span className="mr-2 text-lg">{category.icon}</span>
-                {category.label}
-              </Button>
+          {/* ── Stats Row ── */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 1.6 }}
+            className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 mt-8 sm:mt-10"
+          >
+            {[
+              { end: allVendors.length || 500, suffix: "+", label: "Vendors" },
+              { end: 10000, suffix: "+", label: "Couples Served" },
+              { end: 50, suffix: "+", label: "Cities" },
+            ].map((stat, i) => (
+              <div key={i} className="text-center">
+                <div className="text-2xl sm:text-3xl font-heading font-bold text-white leading-none">
+                  <CountUp end={stat.end} suffix={stat.suffix} duration={2.5} />
+                </div>
+                <div className="text-[10px] sm:text-xs text-white/50 uppercase tracking-widest mt-1">{stat.label}</div>
+              </div>
             ))}
-          </div> */}
+          </motion.div>
         </div>
+      </div>
+
+      {/* ── Scroll Indicator ── */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 2.5 }}
+          className="w-5 h-8 rounded-full border border-white/20 flex items-start justify-center p-1"
+        >
+          <div className="w-1 h-1 rounded-full bg-white/60 animate-bounce-dot" />
+        </motion.div>
       </div>
     </section>
   )

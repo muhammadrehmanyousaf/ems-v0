@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, Suspense } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -8,11 +9,25 @@ import { Button } from "@/components/ui/button"
 import { Loader2, DollarSign, Clock, CheckCircle, AlertCircle, Calendar, Building, Users, CreditCard, RefreshCw, Zap } from "lucide-react"
 import { PaymentAPI } from "@/lib/api/payments"
 import type { PendingPayment, PaymentHistory } from "@/lib/types"
-import StripePayment from "@/components/booking/stripe-payment"
+import dynamic from "next/dynamic"
+
+const StripePayment = dynamic(() => import("@/components/booking/stripe-payment"), { ssr: false })
 import { toast } from "@/components/ui/use-toast"
 import { getUser } from "@/hooks/getLoggedinUser"
 
 export default function PaymentsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    }>
+      <PaymentsPageContent />
+    </Suspense>
+  )
+}
+
+function PaymentsPageContent() {
   const [activeTab, setActiveTab] = useState("pending")
   const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([])
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([])
@@ -20,6 +35,82 @@ export default function PaymentsPage() {
   const [paymentModalOpen, setPaymentModalOpen] = useState(false)
   const [selectedPayment, setSelectedPayment] = useState<PendingPayment | null>(null)
   const { user } = getUser()
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const sessionVerifiedRef = useRef(false)
+
+  // Handle Stripe Checkout return — verify session_id from URL
+  useEffect(() => {
+    const sessionId = searchParams.get('session_id')
+    const bookingId = searchParams.get('bookingId')
+    const paymentType = searchParams.get('paymentType')
+    const cancelled = searchParams.get('cancelled')
+
+    if (cancelled) {
+      toast({
+        title: "Payment Cancelled",
+        description: "You cancelled the payment. You can try again anytime.",
+        variant: "destructive"
+      })
+      // Clean URL params
+      router.replace('/user/payments')
+      return
+    }
+
+    if (sessionId && !sessionVerifiedRef.current) {
+      sessionVerifiedRef.current = true
+      verifyStripeSession(sessionId, bookingId ? Number(bookingId) : undefined, paymentType || undefined)
+    }
+  }, [searchParams])
+
+  const verifyStripeSession = async (sessionId: string, bookingId?: number, paymentType?: string) => {
+    try {
+      toast({
+        title: "Verifying Payment",
+        description: "Please wait while we confirm your payment...",
+      })
+
+      const result = await PaymentAPI.verifyCheckoutSession(sessionId, bookingId, paymentType)
+
+      if (result.alreadyProcessed) {
+        toast({
+          title: "Payment Already Processed",
+          description: "This payment was already recorded. Refreshing your data.",
+        })
+      } else {
+        // Process vendor payouts based on payment type
+        const pType = result.paymentType || paymentType || 'down_payment'
+        try {
+          if (pType === 'down_payment') {
+            await PaymentAPI.processDownPayment(result.bookingId)
+          } else if (pType === 'remaining_payment') {
+            await PaymentAPI.processRemainingPayment(result.bookingId)
+          } else if (pType === 'full_payment') {
+            await PaymentAPI.processFullPayment(result.bookingId)
+          }
+        } catch (processErr: any) {
+          console.error('Payout processing error (non-critical):', processErr)
+        }
+
+        toast({
+          title: "Payment Successful!",
+          description: `Your ${pType === 'down_payment' ? 'down payment' : pType === 'full_payment' ? 'full payment' : 'remaining payment'} of Rs. ${Number(result.amount).toLocaleString()} has been processed.`,
+        })
+      }
+
+      // Refresh data and clean URL
+      await fetchPayments()
+      router.replace('/user/payments')
+
+    } catch (err: any) {
+      toast({
+        title: "Verification Failed",
+        description: err.message || "Could not verify the payment. Please contact support.",
+        variant: "destructive"
+      })
+      router.replace('/user/payments')
+    }
+  }
 
   useEffect(() => {
     fetchPayments()
@@ -36,7 +127,6 @@ export default function PaymentsPage() {
       setPaymentHistory(history)
       
     } catch (error: any) {
-      console.error('Error fetching payments:', error)
       toast({
         title: "Error",
         description: error.message || "Failed to fetch payments",
@@ -130,7 +220,7 @@ export default function PaymentsPage() {
       })
       
       // Call cleanup endpoint (this would need to be implemented in the backend)
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000'}/api/v1/payments/cleanup-duplicates`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/payments/cleanup-duplicates`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -147,7 +237,6 @@ export default function PaymentsPage() {
         throw new Error('Failed to cleanup duplicates')
       }
     } catch (error: any) {
-      console.error('Error cleaning up duplicates:', error)
       toast({
         title: "Cleanup Failed",
         description: error.message || "Failed to cleanup duplicate payment intents",
@@ -206,22 +295,96 @@ export default function PaymentsPage() {
     })
   }
 
-  const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency.toUpperCase()
-    }).format(amount)
+  const formatCurrency = (amount: number | string, currency?: string) => {
+    const num = Number(amount) || 0
+    return `Rs. ${num.toLocaleString()}`
   }
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f8fafc] py-12 px-4">
         <div className="container mx-auto max-w-6xl">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-rose-500 mx-auto mb-4" />
-              <p className="text-neutral-600">Loading payments...</p>
+          {/* Header skeleton */}
+          <div className="mb-8 text-center">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="w-12 h-12 skeleton-shimmer rounded-full" />
+              <div className="h-9 w-36 skeleton-shimmer rounded-lg" />
             </div>
+            <div className="h-4 w-80 skeleton-shimmer rounded mx-auto mb-4" />
+            <div className="flex gap-3 justify-center">
+              <div className="h-9 w-36 skeleton-shimmer rounded-lg" />
+              <div className="h-9 w-40 skeleton-shimmer rounded-lg" />
+            </div>
+          </div>
+
+          {/* Payment info card skeleton */}
+          <Card className="border-2 border-blue-100 bg-blue-50/50 mb-6">
+            <CardContent className="p-4 space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="h-5 w-5 skeleton-shimmer rounded" />
+                <div className="h-5 w-48 skeleton-shimmer rounded" />
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="text-center p-2 bg-white rounded-lg border">
+                    <div className="h-6 w-10 skeleton-shimmer rounded mx-auto mb-1" />
+                    <div className="h-3 w-20 skeleton-shimmer rounded mx-auto" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Stats cards skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            {["green", "purple", "blue", "amber"].map((color) => (
+              <Card key={color} className={`border-2 border-${color}-100`}>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 skeleton-shimmer rounded-full" />
+                    <div>
+                      <div className="h-3 w-24 skeleton-shimmer rounded mb-2" />
+                      <div className="h-7 w-10 skeleton-shimmer rounded" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Tabs skeleton */}
+          <div className="flex justify-center mb-8">
+            <div className="grid grid-cols-2 gap-1 bg-gray-100 rounded-lg p-1 w-full max-w-2xl">
+              <div className="h-10 skeleton-shimmer rounded-md" />
+              <div className="h-10 bg-transparent rounded-md" />
+            </div>
+          </div>
+
+          {/* Payment cards skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i} className="border-2 border-amber-100 bg-gradient-to-r from-amber-50 to-yellow-50">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="h-6 w-28 skeleton-shimmer rounded-full" />
+                    <div className="h-6 w-20 skeleton-shimmer rounded-full" />
+                  </div>
+                  <div className="h-5 w-32 skeleton-shimmer rounded" />
+                  <div className="h-4 w-44 skeleton-shimmer rounded mt-1" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-white rounded-lg p-4 border border-amber-200 space-y-2">
+                    <div className="flex justify-between">
+                      <div className="h-4 w-28 skeleton-shimmer rounded" />
+                      <div className="h-5 w-24 skeleton-shimmer rounded" />
+                    </div>
+                    <div className="h-3 w-32 skeleton-shimmer rounded" />
+                  </div>
+                  <div className="h-10 w-full skeleton-shimmer rounded-lg" />
+                  <div className="h-10 w-full skeleton-shimmer rounded-lg" />
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </div>
@@ -326,34 +489,34 @@ export default function PaymentsPage() {
             <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
               <div className="text-center p-3 bg-white rounded-lg border border-yellow-200">
                 <div className="text-lg font-bold text-yellow-700">
-                  ${pendingPayments
+                  Rs. {pendingPayments
                     .filter(p => p.paymentType === 'down_payment')
-                    .reduce((sum, p) => sum + p.amount, 0)
-                    .toFixed(2)}
+                    .reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
+                    .toLocaleString()}
                 </div>
                 <div className="text-yellow-600">Down Payments Due</div>
               </div>
               <div className="text-center p-3 bg-white rounded-lg border border-purple-200">
                 <div className="text-lg font-bold text-purple-700">
-                  ${pendingPayments
+                  Rs. {pendingPayments
                     .filter(p => p.paymentType === 'full_payment')
-                    .reduce((sum, p) => sum + p.amount, 0)
-                    .toFixed(2)}
+                    .reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
+                    .toLocaleString()}
                 </div>
                 <div className="text-purple-600">Full Payments Due</div>
               </div>
               <div className="text-center p-3 bg-white rounded-lg border border-blue-200">
                 <div className="text-lg font-bold text-blue-700">
-                  ${pendingPayments
+                  Rs. {pendingPayments
                     .filter(p => p.paymentType === 'remaining_payment')
-                    .reduce((sum, p) => sum + p.amount, 0)
-                    .toFixed(2)}
+                    .reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
+                    .toLocaleString()}
                 </div>
                 <div className="text-blue-600">Remaining Due</div>
               </div>
               <div className="text-center p-3 bg-white rounded-lg border border-red-200">
                 <div className="text-lg font-bold text-red-700">
-                  ${pendingPayments.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
+                  Rs. {pendingPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0).toLocaleString()}
                 </div>
                 <div className="text-red-600">Total Due</div>
               </div>
@@ -381,7 +544,7 @@ export default function PaymentsPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-2 border-purple-100 bg-gradient-to-r from-purple-50 to-pink-50">
+          <Card className="border-2 border-purple-100 bg-gradient-to-r from-purple-50 to-purple-50/80">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
@@ -467,7 +630,7 @@ export default function PaymentsPage() {
                 {pendingPayments.map((payment) => (
                   <Card key={payment.id} className={`border-2 hover:shadow-lg transition-all duration-200 ${
                     payment.paymentType === 'full_payment' 
-                      ? 'border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50'
+                      ? 'border-purple-200 bg-gradient-to-r from-purple-50 to-purple-50/80'
                       : payment.paymentType === 'remaining_payment'
                       ? 'border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50'
                       : 'border-amber-100 bg-gradient-to-r from-amber-50 to-yellow-50'
@@ -561,7 +724,7 @@ export default function PaymentsPage() {
                               className="w-full bg-green-600 hover:bg-green-700 text-white"
                             >
                               <DollarSign className="mr-2 h-4 w-4" />
-                              Pay Down Payment (${payment.amount})
+                              Pay Down Payment (Rs. {Number(payment.amount).toLocaleString()})
                             </Button>
                             
                             {/* Full Payment Button */}
@@ -571,15 +734,15 @@ export default function PaymentsPage() {
                               className="w-full border-purple-200 text-purple-600 hover:bg-purple-50"
                             >
                               <Zap className="mr-2 h-4 w-4" />
-                              Pay Full Amount (${payment.totalAmount})
+                              Pay Full Amount (Rs. {Number(payment.totalAmount).toLocaleString()})
                             </Button>
                           </div>
                           
                           {/* Payment Comparison Info */}
                           <div className="text-center p-2 bg-gray-50 border border-gray-200 rounded-lg">
                             <div className="text-xs text-gray-600">
-                              <span className="font-medium">Down Payment:</span> ${payment.amount} • 
-                              <span className="font-medium"> Full Amount:</span> ${payment.totalAmount}
+                              <span className="font-medium">Down Payment:</span> Rs. {Number(payment.amount).toLocaleString()} •
+                              <span className="font-medium"> Full Amount:</span> Rs. {Number(payment.totalAmount).toLocaleString()}
                             </div>
                             <div className="text-xs text-gray-500 mt-1">
                               Pay full amount to complete your booking immediately
@@ -604,7 +767,7 @@ export default function PaymentsPage() {
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                           >
                             <CreditCard className="mr-2 h-4 w-4" />
-                            Pay Remaining Funds (${payment.amount})
+                            Pay Remaining Funds (Rs. {Number(payment.amount).toLocaleString()})
                           </Button>
                         </div>
                       )}
@@ -631,7 +794,7 @@ export default function PaymentsPage() {
                             ? 'text-blue-700'
                             : 'text-green-700'
                         }`}>
-                          <span className="font-medium">Total Booking:</span> ${payment.totalAmount}
+                          <span className="font-medium">Total Booking:</span> Rs. {Number(payment.totalAmount).toLocaleString()}
                         </div>
                         <div className={`text-xs ${
                           payment.paymentType === 'full_payment' 
@@ -641,12 +804,12 @@ export default function PaymentsPage() {
                             : 'text-green-600'
                         }`}>
                           {payment.paymentType === 'down_payment' 
-                            ? `Down Payment: $${payment.amount}` 
+                            ? `Down Payment: Rs. ${Number(payment.amount).toLocaleString()}`
                             : payment.paymentType === 'remaining_payment'
-                            ? `Remaining: $${payment.amount}`
+                            ? `Remaining: Rs. ${Number(payment.amount).toLocaleString()}`
                             : payment.paymentType === 'full_payment'
-                            ? `Full Payment: $${payment.amount}`
-                            : `Payment: $${payment.amount}`
+                            ? `Full Payment: Rs. ${Number(payment.amount).toLocaleString()}`
+                            : `Payment: Rs. ${Number(payment.amount).toLocaleString()}`
                           }
                         </div>
                         <div className="text-xs text-gray-600 mt-1">
@@ -654,7 +817,7 @@ export default function PaymentsPage() {
                         </div>
                         {payment.paymentType === 'down_payment' && (
                           <div className="text-xs text-purple-600 mt-2 font-medium">
-                            💡 You can also pay the full amount (${payment.totalAmount}) to complete your booking
+                            💡 You can also pay the full amount (Rs. {Number(payment.totalAmount).toLocaleString()}) to complete your booking
                           </div>
                         )}
                       </div>

@@ -13,8 +13,6 @@ const PersonalDetails = ({
 }) => {
   const { setFormData, formData } = useFormContext();
 
-  console.log("error:", errors);
-
   const formFields = [
     {
       label: "Full Name",

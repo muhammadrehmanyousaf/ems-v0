@@ -63,6 +63,22 @@ export default function TimelinePage() {
   const [selectedPriority, setSelectedPriority] = useState('all');
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const [loaded, setLoaded] = useState(false);
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('planning_timeline');
+      if (saved) setTimeline(JSON.parse(saved));
+    } catch { /* ignore corrupt data */ }
+    setLoaded(true);
+  }, []);
+
+  // Persist timeline to localStorage
+  useEffect(() => {
+    if (!loaded) return;
+    localStorage.setItem('planning_timeline', JSON.stringify(timeline));
+  }, [timeline, loaded]);
 
   // Filter timeline based on search and filters
   const filteredTimeline = timeline.filter(item => {
@@ -162,7 +178,7 @@ export default function TimelinePage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-6 sm:mb-8"
       >
-        <Link href="/planning-tools" className="inline-flex items-center gap-2 text-rose-600 hover:text-rose-700 mb-4 transition-colors duration-200">
+        <Link href="/planning-tools" className="inline-flex items-center gap-2 text-purple-600 hover:text-purple-700 mb-4 transition-colors duration-200">
           <ArrowLeft className="w-4 h-4" />
           <span className="text-sm sm:text-base">Back to Planning Tools</span>
         </Link>
@@ -219,7 +235,7 @@ export default function TimelinePage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-rose-500 to-pink-600 text-white border-0">
+        <Card className="bg-gradient-to-br from-purple-600 to-purple-700 text-white border-0">
           <CardContent className="p-4 sm:p-6 text-center">
             <div className="flex items-center justify-center mb-2">
               <Clock className="w-6 h-6 mr-2" />
@@ -227,7 +243,7 @@ export default function TimelinePage() {
                 {timeline.length > 0 ? timeline[timeline.length - 1].time : '--'}
               </p>
             </div>
-            <p className="text-sm text-rose-100">End Time</p>
+            <p className="text-sm text-purple-100">End Time</p>
           </CardContent>
         </Card>
 

@@ -17,8 +17,6 @@ export function EventForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // For now, we'll just log the event details and redirect
-    console.log("Event details:", { title, description, date, location })
     router.push("/events")
   }
 

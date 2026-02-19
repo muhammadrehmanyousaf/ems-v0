@@ -98,7 +98,7 @@ export default function VendorSuccessStep({
       case 'photographer':
         return 'from-blue-500 to-indigo-600'
       case 'makeup artist':
-        return 'from-pink-500 to-rose-600'
+        return 'from-purple-500 to-purple-600'
       case 'henna artist':
         return 'from-orange-500 to-amber-600'
       case 'decorator':
@@ -106,7 +106,7 @@ export default function VendorSuccessStep({
       case 'catering':
         return 'from-green-500 to-emerald-600'
       default:
-        return 'from-rose-500 to-pink-600'
+        return 'from-purple-600 to-purple-700'
     }
   }
 
@@ -124,7 +124,7 @@ export default function VendorSuccessStep({
           Your booking has been successfully confirmed!
         </p>
         <p className="mt-2 text-sm text-neutral-500">
-          We've sent a confirmation email to <span className="font-medium text-rose-600">{formData.email}</span>
+          We've sent a confirmation email to <span className="font-medium text-purple-600">{formData.email}</span>
         </p>
       </div>
 
@@ -147,7 +147,7 @@ export default function VendorSuccessStep({
           {/* Customer Information */}
           <div className="mb-8">
             <h4 className="mb-4 text-lg font-semibold text-neutral-800 flex items-center gap-2">
-              <Users className="h-5 w-5 text-rose-500" />
+              <Users className="h-5 w-5 text-purple-500" />
               Customer Information
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -175,7 +175,7 @@ export default function VendorSuccessStep({
           {/* Vendor Details */}
           <div className="mb-8">
             <h4 className="mb-4 text-lg font-semibold text-neutral-800 flex items-center gap-2">
-              <Building className="h-5 w-5 text-rose-500" />
+              <Building className="h-5 w-5 text-purple-500" />
               Vendor Details
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -208,7 +208,7 @@ export default function VendorSuccessStep({
           {/* Event Details */}
           <div className="mb-8">
             <h4 className="mb-4 text-lg font-semibold text-neutral-800 flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-rose-500" />
+              <Calendar className="h-5 w-5 text-purple-500" />
               Event Details
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -237,10 +237,10 @@ export default function VendorSuccessStep({
           {(packageData || formData.selectedPackage) && (
             <div className="mb-8">
               <h4 className="mb-4 text-lg font-semibold text-neutral-800 flex items-center gap-2">
-                <Package className="h-5 w-5 text-rose-500" />
+                <Package className="h-5 w-5 text-purple-500" />
                 Selected Package
               </h4>
-              <div className="rounded-xl bg-gradient-to-r from-rose-50 to-pink-50 p-6 border border-rose-200">
+              <div className="rounded-xl bg-gradient-to-r from-purple-50 to-purple-50/80 p-6 border border-purple-200">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center justify-between">
                     <span className="text-neutral-600">Package Name:</span>
@@ -251,7 +251,7 @@ export default function VendorSuccessStep({
                   {packageData?.price && (
                     <div className="flex items-center justify-between">
                       <span className="text-neutral-600">Package Price:</span>
-                      <span className="font-semibold text-rose-600 text-lg">${packageData.price}</span>
+                      <span className="font-semibold text-purple-600 text-lg">${packageData.price}</span>
                     </div>
                   )}
                   {packageData?.description && (
@@ -266,7 +266,7 @@ export default function VendorSuccessStep({
                       <ul className="mt-2 space-y-1">
                         {packageData.features.map((feature: string, index: number) => (
                           <li key={index} className="flex items-center text-neutral-800">
-                            <span className="mr-2 text-rose-500">•</span>
+                            <span className="mr-2 text-purple-500">•</span>
                             {feature}
                           </li>
                         ))}
@@ -282,12 +282,12 @@ export default function VendorSuccessStep({
           {vendorDetails && vendorDetails.length > 0 && (
             <div className="mb-8">
               <h4 className="mb-4 text-lg font-semibold text-neutral-800 flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-rose-500" />
+                <MapPin className="h-5 w-5 text-purple-500" />
                 Additional Vendors
               </h4>
               <div className="space-y-3">
                 {vendorDetails.map((vendor, index) => (
-                  <div key={index} className="rounded-xl bg-gradient-to-r from-neutral-50 to-rose-50 p-4 border border-rose-200">
+                  <div key={index} className="rounded-xl bg-gradient-to-r from-neutral-50 to-purple-50 p-4 border border-purple-200">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-neutral-600 font-medium">Vendor {index + 1}:</span>
                       <span className="font-semibold text-neutral-800">{vendor.name}</span>
@@ -302,15 +302,15 @@ export default function VendorSuccessStep({
           )}
 
           {/* Total Amount */}
-          <div className="mt-8 rounded-xl bg-gradient-to-r from-rose-50 to-pink-50 p-6 border border-rose-200">
+          <div className="mt-8 rounded-xl bg-gradient-to-r from-purple-50 to-purple-50/80 p-6 border border-purple-200">
             <div className="flex items-center justify-between">
               <span className="text-xl font-semibold text-neutral-700">Total Amount:</span>
-              <span className="text-3xl font-bold text-rose-600">${bookingData?.totalAmount || formData.totalPrice}</span>
+              <span className="text-3xl font-bold text-purple-600">${bookingData?.totalAmount || formData.totalPrice}</span>
             </div>
             {bookingData?.downPayment && (
               <div className="mt-2 flex items-center justify-between text-sm">
                 <span className="text-neutral-600">Down Payment Required:</span>
-                <span className="font-semibold text-rose-600">${bookingData.downPayment}</span>
+                <span className="font-semibold text-purple-600">${bookingData.downPayment}</span>
               </div>
             )}
           </div>
@@ -322,14 +322,14 @@ export default function VendorSuccessStep({
         <Button
           variant="outline"
           onClick={() => window.print()}
-          className="flex items-center rounded-xl border-neutral-300 px-8 py-3 hover:border-rose-500 hover:text-rose-600 transition-all duration-200"
+          className="flex items-center rounded-xl border-neutral-300 px-8 py-3 hover:border-purple-500 hover:text-purple-600 transition-all duration-200"
         >
           <Printer className="mr-2 h-4 w-4" />
           Print Receipt
         </Button>
         <Button
           onClick={() => (window.location.href = "/")}
-          className="flex items-center rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 px-8 py-3 hover:from-rose-600 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+          className="flex items-center rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 px-8 py-3 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
         >
           <Home className="mr-2 h-4 w-4" />
           Return to Home

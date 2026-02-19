@@ -11,11 +11,11 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Icons } from "@/components/ui/icons"
 import { cn } from "@/lib/utils"
-import Image from "next/image"
 import Link from "next/link"
 import { BACKEND_URL } from "@/lib/backend-url"
 import { toast } from "./ui/use-toast"
 import { useRouter } from "next/navigation"
+import { Heart, Sparkles, Users, Calendar } from "lucide-react"
 
 const formSchema = z
   .object({
@@ -50,7 +50,7 @@ export function UserRegistrationForm() {
 
   async function onSubmit(data: FormData) {
     setIsLoading(true);
-  
+
     try {
       const response = await axios.post(`${BACKEND_URL}api/v1/auth/signup`, {
         ...data,
@@ -58,7 +58,6 @@ export function UserRegistrationForm() {
       });
 
       if (response.status === 200) {
-        console.log("Success:", response.data);
         reset();
         toast({
           title: "Account Created!",
@@ -67,12 +66,10 @@ export function UserRegistrationForm() {
         router.push('/login');
       }
     } catch (error: any) {
-      console.error("Error:", error);
-  
       // Extract error message from backend response
       const errorMessage =
         error.response?.data?.message || "Something went wrong. Please try again.";
-  
+
       toast({
         title: "Sign-Up Failed",
         description: errorMessage,
@@ -82,137 +79,260 @@ export function UserRegistrationForm() {
       setIsLoading(false);
     }
   }
-  
 
   return (
-    <div className=" min-h-screen bg-gray-50">
-      <div className="flex flex-col justify-center w-full max-w-md px-4 py-12 mx-auto sm:px-6 lg:px-8">
-        {/* <div className="flex justify-center mb-8">
-          <Link href="/" className="flex items-center space-x-2">
-            <Image src="/placeholder.svg" alt="EMS Logo" width={48} height={48} className="w-12 h-12" />
-            <span className="text-3xl font-bold text-gray-900">EMS</span>
-          </Link>
-        </div> */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full p-8 bg-white rounded-xl shadow-lg space-y-6"
-        >
-          <div className="space-y-2 text-center">
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Create an account</h1>
-            <p className="text-sm text-gray-500">Enter your details to register</p>
+    <div className="min-h-screen flex">
+      {/* Left side - Decorative panel (hidden on mobile) */}
+      <motion.div
+        initial={{ opacity: 0, x: -30 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.7, ease: "easeOut" }}
+        className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-purple-900 via-purple-800 to-purple-950 overflow-hidden"
+      >
+        {/* Decorative circles */}
+        <div className="absolute -top-20 -right-20 w-80 h-80 bg-gold-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-20 -left-20 w-72 h-72 bg-purple-600/30 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/3 right-16 w-32 h-32 border border-gold-500/20 rounded-full" />
+        <div className="absolute top-1/4 left-20 w-20 h-20 border border-purple-400/20 rounded-full" />
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col items-center justify-center w-full px-12">
+          <div className="text-center space-y-6 max-w-md">
+            <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-purple-700 rounded-2xl flex items-center justify-center mx-auto shadow-xl border border-gold-500/20">
+              <Sparkles className="w-8 h-8 text-gold-400" />
+            </div>
+            <h2 className="text-3xl font-heading font-bold text-white">
+              Begin Your Journey
+            </h2>
+            <p className="text-purple-200 text-lg leading-relaxed">
+              Join thousands of couples who found their dream wedding vendors on our platform.
+            </p>
+
+            {/* Stats cards */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.6 }}
+              className="mt-10 grid grid-cols-2 gap-4"
+            >
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/10 text-center">
+                <Users className="w-6 h-6 text-gold-400 mx-auto mb-2" />
+                <p className="text-2xl font-bold text-white">10K+</p>
+                <p className="text-xs text-purple-200">Happy Couples</p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/10 text-center">
+                <Heart className="w-6 h-6 text-gold-400 mx-auto mb-2" />
+                <p className="text-2xl font-bold text-white">500+</p>
+                <p className="text-xs text-purple-200">Vendors</p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/10 text-center">
+                <Calendar className="w-6 h-6 text-gold-400 mx-auto mb-2" />
+                <p className="text-2xl font-bold text-white">50+</p>
+                <p className="text-xs text-purple-200">Cities</p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/10 text-center">
+                <Sparkles className="w-6 h-6 text-gold-400 mx-auto mb-2" />
+                <p className="text-2xl font-bold text-white">4.8</p>
+                <p className="text-xs text-purple-200">Avg Rating</p>
+              </div>
+            </motion.div>
           </div>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+        </div>
+      </motion.div>
+
+      {/* Right side - Form */}
+      <motion.div
+        initial={{ opacity: 0, x: 30 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="flex-1 flex items-center justify-center bg-gradient-to-br from-purple-50/30 to-white px-4 py-8"
+      >
+        <div className="w-full max-w-md space-y-6">
+          {/* Mobile logo */}
+          <div className="lg:hidden flex justify-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg">
+              <Sparkles className="w-6 h-6 text-gold-400" />
+            </div>
+          </div>
+
+          <div className="space-y-2 text-center lg:text-left">
+            <h1 className="text-3xl font-heading font-bold text-neutral-900">Create an account</h1>
+            <p className="text-neutral-500">Enter your details to get started</p>
+          </div>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {/* Full Name */}
+            <div className="relative">
               <Input
                 id="name"
-                placeholder="John Doe"
+                placeholder=" "
                 type="text"
                 autoCapitalize="words"
                 autoComplete="name"
                 autoCorrect="off"
                 {...register("fullName")}
-                className={cn("w-full px-3 py-2 border rounded-md", errors.fullName && "border-red-500")}
+                className={cn(
+                  "peer h-12 w-full rounded-xl border bg-white px-4 pt-4 pb-1 text-sm placeholder-transparent focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200",
+                  errors.fullName ? "border-red-400" : "border-neutral-200"
+                )}
               />
-              {errors.fullName && <p className="text-xs text-red-500">{errors.fullName.message}</p>}
+              <Label
+                htmlFor="name"
+                className="absolute left-4 top-1 text-[10px] text-neutral-400 transition-all duration-200 peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-purple-600"
+              >
+                Full Name
+              </Label>
+              {errors.fullName && <p className="text-xs text-red-500 mt-1 ml-1">{errors.fullName.message}</p>}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+
+            {/* Email */}
+            <div className="relative">
               <Input
                 id="email"
-                placeholder="m@example.com"
+                placeholder=" "
                 type="email"
                 autoCapitalize="none"
                 autoComplete="email"
                 autoCorrect="off"
                 {...register("email")}
-                className={cn("w-full px-3 py-2 border rounded-md", errors.email && "border-red-500")}
+                className={cn(
+                  "peer h-12 w-full rounded-xl border bg-white px-4 pt-4 pb-1 text-sm placeholder-transparent focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200",
+                  errors.email ? "border-red-400" : "border-neutral-200"
+                )}
               />
-              {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
+              <Label
+                htmlFor="email"
+                className="absolute left-4 top-1 text-[10px] text-neutral-400 transition-all duration-200 peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-purple-600"
+              >
+                Email address
+              </Label>
+              {errors.email && <p className="text-xs text-red-500 mt-1 ml-1">{errors.email.message}</p>}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Phone Number</Label>
+
+            {/* Phone Number */}
+            <div className="relative">
               <Input
                 id="phoneNumber"
-                placeholder="03xxxxxxxxx"
-                // type="number"
+                placeholder=" "
                 autoCapitalize="none"
                 autoCorrect="off"
                 {...register("phoneNumber")}
-                className={cn("w-full px-3 py-2 border rounded-md", errors.email && "border-red-500")}
+                className={cn(
+                  "peer h-12 w-full rounded-xl border bg-white px-4 pt-4 pb-1 text-sm placeholder-transparent focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200",
+                  errors.phoneNumber ? "border-red-400" : "border-neutral-200"
+                )}
               />
-              {errors.phoneNumber && <p className="text-xs text-red-500">{errors.phoneNumber.message}</p>}
+              <Label
+                htmlFor="phoneNumber"
+                className="absolute left-4 top-1 text-[10px] text-neutral-400 transition-all duration-200 peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-purple-600"
+              >
+                Phone Number
+              </Label>
+              {errors.phoneNumber && <p className="text-xs text-red-500 mt-1 ml-1">{errors.phoneNumber.message}</p>}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+
+            {/* Password */}
+            <div className="relative">
               <Input
                 id="password"
+                placeholder=" "
                 type="password"
                 autoCapitalize="none"
                 autoComplete="new-password"
                 {...register("password")}
-                className={cn("w-full px-3 py-2 border rounded-md", errors.password && "border-red-500")}
+                className={cn(
+                  "peer h-12 w-full rounded-xl border bg-white px-4 pt-4 pb-1 text-sm placeholder-transparent focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200",
+                  errors.password ? "border-red-400" : "border-neutral-200"
+                )}
               />
-              {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
+              <Label
+                htmlFor="password"
+                className="absolute left-4 top-1 text-[10px] text-neutral-400 transition-all duration-200 peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-purple-600"
+              >
+                Password
+              </Label>
+              {errors.password && <p className="text-xs text-red-500 mt-1 ml-1">{errors.password.message}</p>}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+
+            {/* Confirm Password */}
+            <div className="relative">
               <Input
                 id="confirmPassword"
+                placeholder=" "
                 type="password"
                 autoCapitalize="none"
                 autoComplete="new-password"
                 {...register("confirmPassword")}
-                className={cn("w-full px-3 py-2 border rounded-md", errors.confirmPassword && "border-red-500")}
+                className={cn(
+                  "peer h-12 w-full rounded-xl border bg-white px-4 pt-4 pb-1 text-sm placeholder-transparent focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200",
+                  errors.confirmPassword ? "border-red-400" : "border-neutral-200"
+                )}
               />
-              {errors.confirmPassword && <p className="text-xs text-red-500">{errors.confirmPassword.message}</p>}
+              <Label
+                htmlFor="confirmPassword"
+                className="absolute left-4 top-1 text-[10px] text-neutral-400 transition-all duration-200 peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-purple-600"
+              >
+                Confirm Password
+              </Label>
+              {errors.confirmPassword && <p className="text-xs text-red-500 mt-1 ml-1">{errors.confirmPassword.message}</p>}
             </div>
-            <Button type="submit" className="w-full bg-rose-600 hover:bg-rose-700 text-white" disabled={isLoading}>
+
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-12 rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold shadow-lg shadow-purple-200/50 hover:shadow-xl transition-all duration-300"
+            >
               {isLoading && <Icons.spinner className="w-4 h-4 mr-2 animate-spin" />}
-              Register
+              Create Account
             </Button>
           </form>
+
+          {/* Divider */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+              <span className="w-full border-t border-neutral-200" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="px-2 bg-white text-gray-500">Or continue with</span>
+              <span className="px-3 bg-gradient-to-br from-purple-50/30 to-white text-neutral-400">Or continue with</span>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Button variant="outline" type="button">
+
+          {/* Social buttons */}
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              variant="outline"
+              type="button"
+              className="h-11 rounded-xl border-neutral-200 hover:border-purple-300 hover:bg-purple-50 transition-all duration-200"
+            >
               <Icons.google className="w-4 h-4 mr-2" />
               Google
             </Button>
-            <Button variant="outline" type="button">
+            <Button
+              variant="outline"
+              type="button"
+              className="h-11 rounded-xl border-neutral-200 hover:border-purple-300 hover:bg-purple-50 transition-all duration-200"
+            >
               <Icons.facebook className="w-4 h-4 mr-2" />
               Facebook
             </Button>
           </div>
-          <p className="text-sm text-center text-gray-500">
-            Already have an account?{" "}
-            <Link href="/login" className="text-rose-600 hover:underline">
-              Sign in
-            </Link>
-          </p>
-          <div className="text-sm text-center">
-            <Link href="/business-registration" className="text-rose-600 hover:underline">
-              Register your business
-            </Link>
+
+          {/* Footer links */}
+          <div className="space-y-2 text-center">
+            <p className="text-sm text-neutral-500">
+              Already have an account?{" "}
+              <Link href="/login" className="text-purple-600 hover:text-purple-700 font-semibold">
+                Sign in
+              </Link>
+            </p>
+            <p className="text-sm">
+              <Link href="/business-registration" className="text-purple-600 hover:text-purple-700 font-medium">
+                Register your business
+              </Link>
+            </p>
           </div>
-        </motion.div>
-      </div>
-      <div className="hidden lg:block relative w-0 flex-1">
-        <Image
-          className="absolute inset-0 h-full w-full object-cover"
-          src="/wedding-illustration.png"
-          alt="Wedding Celebration Illustration"
-          layout="fill"
-        />
-      </div>
+        </div>
+      </motion.div>
     </div>
   )
 }

@@ -21,9 +21,10 @@ type KpiCardProps = {
   value: number | string;
   subtitle?: string;
   icon?: LucideIcon;
+  iconColor?: string;
   className?: string;
   isCurrency?: boolean;
-  delta?: number; // e.g. 12.5 means +12.5%
+  delta?: number;
   direction?: Direction;
   loading?: boolean;
 };
@@ -43,6 +44,7 @@ export function KpiCard({
   value,
   subtitle,
   icon: Icon,
+  iconColor,
   className,
   isCurrency,
   delta,
@@ -53,27 +55,40 @@ export function KpiCard({
     <Card className={cn("@container/card relative overflow-hidden", className)}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-2">
-          <CardDescription className="truncate">{title}</CardDescription>
+          <div className="flex items-center gap-3">
+            {Icon && (
+              <span className={cn(
+                "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                iconColor || "bg-primary/10 text-primary"
+              )}>
+                <Icon className="h-[18px] w-[18px]" />
+              </span>
+            )}
+            <CardDescription className="truncate font-medium">{title}</CardDescription>
+          </div>
 
           {typeof delta === "number" && (
             <Badge
               variant="outline"
               className={cn(
-                "gap-1.5 px-2 py-0.5 text-xs",
-                direction === "up" && "border-emerald-500 text-emerald-600",
-                direction === "down" && "border-red-500 text-red-600",
+                "gap-1 px-2 py-0.5 text-xs font-medium",
+                direction === "up" && "border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400",
+                direction === "down" && "border-red-200 bg-red-50 text-red-600 dark:border-red-800 dark:bg-red-950 dark:text-red-400",
                 direction === "flat" && "text-muted-foreground"
               )}
             >
-              {direction === "up" && <ArrowUpRight className="h-3.5 w-3.5" />}
-              {direction === "down" && <ArrowDownRight className="h-3.5 w-3.5" />}
-              {direction === "flat" && <span>•</span>}
+              {direction === "up" && <ArrowUpRight className="h-3 w-3" />}
+              {direction === "down" && <ArrowDownRight className="h-3 w-3" />}
+              {direction === "flat" && <span>-</span>}
               {delta}%
             </Badge>
           )}
         </div>
 
-        <CardTitle className="text-3xl font-extrabold tabular-nums @[250px]/card:text-3xl">
+        <CardTitle className={cn(
+          "text-2xl font-extrabold tabular-nums @[250px]/card:text-3xl",
+          Icon && "pl-12"
+        )}>
           {loading ? (
             <Skeleton className="h-8 w-32" />
           ) : typeof value === "number" ? (
@@ -84,16 +99,9 @@ export function KpiCard({
         </CardTitle>
       </CardHeader>
 
-      {(subtitle || Icon) && (
-        <CardContent className="pt-1">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            {Icon && (
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-muted">
-                <Icon className="h-3.5 w-3.5" />
-              </span>
-            )}
-            {subtitle && <span className="line-clamp-1">{subtitle}</span>}
-          </div>
+      {subtitle && (
+        <CardContent className="pt-0">
+          <p className={cn("text-xs text-muted-foreground line-clamp-1", Icon && "pl-12")}>{subtitle}</p>
         </CardContent>
       )}
     </Card>

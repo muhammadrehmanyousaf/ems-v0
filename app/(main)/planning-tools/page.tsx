@@ -11,9 +11,9 @@ const tools = [
     title: "Wedding Checklist",
     description: "Stay organized with our comprehensive wedding planning checklist",
     icon: CalendarDays,
-    color: "text-rose-600",
-    bgColor: "bg-rose-50",
-    gradient: "from-rose-500 to-pink-600",
+    color: "text-purple-600",
+    bgColor: "bg-purple-50",
+    gradient: "from-purple-600 to-purple-700",
     href: "/planning-tools/checklist",
     features: ["Progress tracking", "Category organization", "Due date reminders"]
   },
@@ -84,8 +84,8 @@ export default function PlanningToolsPage() {
         className="text-center mb-8 sm:mb-12 lg:mb-16 px-4"
       >
         <div className="flex items-center justify-center gap-2 mb-4">
-          <Sparkles className="w-6 h-6 text-rose-500" />
-          <span className="text-sm font-medium text-rose-600 bg-rose-50 px-3 py-1 rounded-full">
+          <Sparkles className="w-6 h-6 text-purple-500" />
+          <span className="text-sm font-medium text-purple-600 bg-purple-50 px-3 py-1 rounded-full">
             Planning Made Easy
           </span>
         </div>
@@ -135,7 +135,7 @@ export default function PlanningToolsPage() {
                 
                 <CardContent className="p-4 sm:p-6 pt-0 mt-auto relative z-10">
                   <div className="flex items-center justify-center">
-                    <div className="flex items-center gap-2 text-rose-600 font-medium group-hover:text-rose-700 transition-colors duration-300">
+                    <div className="flex items-center gap-2 text-purple-600 font-medium group-hover:text-purple-700 transition-colors duration-300">
                       <span className="text-sm sm:text-base">Open Tool</span>
                       <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                     </div>
@@ -162,12 +162,12 @@ export default function PlanningToolsPage() {
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
             <Link href="/vendors" className="w-full sm:w-auto">
-              <div className="px-6 py-3 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-lg hover:from-rose-600 hover:to-pink-700 transition-all duration-300 font-medium text-center">
+              <div className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-300 font-medium text-center">
                 Find Vendors
               </div>
             </Link>
             <Link href="/venues" className="w-full sm:w-auto">
-              <div className="px-6 py-3 border border-rose-500 text-rose-600 rounded-lg hover:bg-rose-50 transition-all duration-300 font-medium text-center">
+              <div className="px-6 py-3 border border-purple-500 text-purple-600 rounded-lg hover:bg-purple-50 transition-all duration-300 font-medium text-center">
                 Browse Venues
               </div>
             </Link>

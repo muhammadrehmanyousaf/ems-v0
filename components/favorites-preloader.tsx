@@ -37,7 +37,7 @@ export function FavoritesPreloader({ children }: FavoritesPreloaderProps) {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-                  <Heart className="w-8 h-8 text-rose-500 mr-3" />
+                  <Heart className="w-8 h-8 text-purple-500 mr-3" />
                   My Favorites
                 </h1>
                 <p className="text-gray-600 mt-2">

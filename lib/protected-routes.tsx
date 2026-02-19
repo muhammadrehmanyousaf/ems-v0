@@ -44,7 +44,7 @@ const ProtectedRoutes = ({ children }: { children: React.ReactNode }) => {
   if (isLoading || isAuthorized === null) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
       </div>
     );
   }

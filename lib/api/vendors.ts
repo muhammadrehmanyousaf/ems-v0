@@ -4,12 +4,39 @@ import type { Vendor } from '@/lib/types'
 // API base path
 const BASE = '/api/v1/businesses'
 
+/**
+ * Normalize raw backend business data to the flat Vendor shape the frontend expects.
+ * The backend returns { id, name, city, subBusinessType, vendor: { vendorType, ... }, ... }
+ * but the frontend expects { type, location, userId, rating, ... } at the top level.
+ */
+function normalizeBusiness(raw: any): any {
+  if (!raw) return raw
+  const vendor = raw.vendor || {}
+  return {
+    ...raw,
+    userId: raw.userId ?? vendor.id,
+    type: raw.type || vendor.vendorType || raw.subBusinessType || '',
+    location: raw.location || raw.subArea || raw.city || vendor.city || '',
+    rating: raw.rating ?? 0,
+    reviews: raw.reviews || [],
+    price: raw.price ?? raw.minimumPrice ?? raw.starterPrice ?? 0,
+    staff: raw.staff || [],
+    amenities: raw.amenities || [],
+    cancellationPolicy: raw.cancellationPolicy || raw.cancelationPolicy || '',
+    sponsored: raw.sponsored ?? false,
+    description: raw.description || '',
+    images: raw.images || [],
+  }
+}
+
 export class VendorAPI {
   // Get all businesses
   static async getAllBusinesses(): Promise<Vendor[]> {
     try {
       const response = await axiosInstance.get(BASE)
-      return response.data.data || []
+      const result = response.data.data
+      const list = Array.isArray(result) ? result : result?.data || []
+      return list.map(normalizeBusiness)
     } catch {
       return []
     }
@@ -21,7 +48,9 @@ export class VendorAPI {
       const response = await axiosInstance.get(`${BASE}/businesses-by-vendor`, {
         params: { vendorType },
       })
-      return response.data.data || []
+      const result = response.data.data
+      const list = Array.isArray(result) ? result : result?.data || []
+      return list.map(normalizeBusiness)
     } catch {
       return []
     }
@@ -31,7 +60,7 @@ export class VendorAPI {
   static async getBusinessById(id: string | number): Promise<Vendor | null> {
     try {
       const response = await axiosInstance.get(`${BASE}/${id}`)
-      return response.data.data || null
+      return normalizeBusiness(response.data.data) || null
     } catch {
       return null
     }
@@ -45,9 +74,44 @@ export class VendorAPI {
 
       const url = vendorType ? `${BASE}/businesses-by-vendor` : BASE
       const response = await axiosInstance.get(url, { params })
-      return response.data.data || []
+      const result = response.data.data
+      const list = Array.isArray(result) ? result : result?.data || []
+      return list.map(normalizeBusiness)
     } catch {
       return []
+    }
+  }
+
+  // Check date availability for businesses
+  static async checkDateAvailability(
+    businessIds: number[],
+    date: string,
+    time: string
+  ): Promise<{ available: boolean; conflicts: { businessId: number; businessName: string }[]; alternativeSlots: any }> {
+    try {
+      const response = await axiosInstance.post('/api/v1/bookings/check-availability', {
+        businessIds,
+        bookingDate: date,
+        bookingTime: time,
+      })
+      return response.data.data || { available: true, conflicts: [], alternativeSlots: null }
+    } catch {
+      return { available: true, conflicts: [], alternativeSlots: null }
+    }
+  }
+
+  // Get bulk availability for businesses over a month
+  static async getMonthAvailability(
+    businessIds: number[],
+    month: string
+  ): Promise<Record<number, Record<string, { bookedSlots: string[]; availableSlots: string[] }>>> {
+    try {
+      const response = await axiosInstance.get('/api/v1/bookings/availability', {
+        params: { businessIds: businessIds.join(','), month },
+      })
+      return response.data.data?.availability || {}
+    } catch {
+      return {}
     }
   }
 
@@ -82,15 +146,18 @@ export class VendorAPI {
 
       const url = vendorType ? `${BASE}/businesses-by-vendor` : BASE
       const response = await axiosInstance.get(url, { params })
-      const data = response.data.data || []
-      const total = response.data.total || data.length
+      const result = response.data.data
+      const rawData = Array.isArray(result) ? result : result?.data || []
+      const data = rawData.map(normalizeBusiness)
+      const pagination = result?.pagination
+      const total = pagination?.total || response.data.total || data.length
 
       return {
         data,
         total,
         page,
         limit,
-        totalPages: Math.ceil(total / limit),
+        totalPages: pagination?.totalPages || Math.ceil(total / limit),
       }
     } catch {
       return { data: [], total: 0, page, limit, totalPages: 0 }

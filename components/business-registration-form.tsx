@@ -130,6 +130,27 @@ export function BusinessRegistrationForm() {
     });
 
     try {
+      // Upload image files first if any
+      let uploadedImageUrls: string[] = [];
+      if (formData.imageFiles && formData.imageFiles.length > 0) {
+        const imgFormData = new FormData();
+        formData.imageFiles.forEach((file: File) => {
+          imgFormData.append("images", file);
+        });
+        try {
+          const uploadRes = await axios.post(
+            `${BACKEND_URL}api/v1/businesses/upload-images`,
+            imgFormData,
+            { headers: { "Content-Type": "multipart/form-data" } }
+          );
+          uploadedImageUrls = uploadRes.data?.data || [];
+        } catch {
+          toast({ title: "Error", description: "Failed to upload images. Please try again." });
+          loadingToastId.dismiss();
+          return;
+        }
+      }
+
       const formatedData = {
         fullName: formData.fullName,
         email: formData.email,
@@ -141,7 +162,6 @@ export function BusinessRegistrationForm() {
         city: formData.city,
         secondaryContactNumber: formData.secondaryContactNumber,
         vendorType: formData.businessType,
-        // "isVendor": true,
         name: formData.name,
         brandLogo: formData.profilePicture,
         roleIds: [2],
@@ -152,12 +172,16 @@ export function BusinessRegistrationForm() {
         maxCapacity: formData.maxCapacity || 1,
         minimumPrice: formData.minimumPrice,
         description: formData.description,
+        additionalInfo: formData.additionalInfo || undefined,
         downPaymentType: formData.downPaymentType,
         downPayment: formData.downPayment,
         cancelationPolicy: formData.cancelationPolicy,
-        covidComplaint: false,
-        parking: false,
-        images: formData.images,
+        covidComplaint: formData.covidComplaint,
+        parking: formData.parking,
+        catering: formData.catering === "internal",
+        starterPrice: formData.starterPrice || undefined,
+        images: uploadedImageUrls.length > 0 ? uploadedImageUrls : formData.images,
+        packages: formData.packages?.filter((p: any) => p.name && p.price) || [],
       }
 
       const rentalData = {
@@ -212,6 +236,7 @@ export function BusinessRegistrationForm() {
           cancelationPolicy: "",
           starterPrice: 0,
           images: [],
+          imageFiles: [],
           subBusinessType: '',
           expertise: [],
           packages: [{
@@ -233,16 +258,17 @@ export function BusinessRegistrationForm() {
       const vendorData = responseData.data
 
       if (response.status === 201 && vendorData.business && !carRentalOrBridleWear) {
-        const vendorId = vendorData.business.id;
-        const packagesArray = formData.packages.map(pkg => ({
-          name: pkg.name,
-          price: pkg.price,
-          description: pkg.services,
-          businessId: vendorId,
-        }));
-
-        // Send package details directly as an array
-        await axios.post(`${BACKEND_URL}api/v1/packages`, packagesArray);
+        // Packages are now included in the business creation payload above,
+        // so no separate auth-required API call is needed.
+        // TODO: Re-enable separate Package records creation after login flow is implemented
+        // const vendorId = vendorData.business.id;
+        // const packagesArray = formData.packages.map(pkg => ({
+        //   name: pkg.name,
+        //   price: pkg.price,
+        //   description: pkg.services,
+        //   businessId: vendorId,
+        // }));
+        // await axios.post(`${BACKEND_URL}api/v1/packages`, packagesArray);
 
         setFormData({
           fullName: "",
@@ -272,6 +298,7 @@ export function BusinessRegistrationForm() {
           cancelationPolicy: "",
           starterPrice: 0,
           images: [],
+          imageFiles: [],
           subBusinessType: '',
           expertise: [],
           packages: [{
@@ -306,19 +333,19 @@ export function BusinessRegistrationForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-rose-50">
+    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-purple-50/30">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-neutral-200 shadow-sm">
         <div className="w-[90%] mx-auto sm:container sm:mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center space-x-2 sm:space-x-3 group">
               <div className="relative">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-rose-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300">
                   <Sparkles className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
                 </div>
               </div>
               <div>
-                <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent">
+                <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">
                   Perfect Wedding
                 </h1>
                 <p className="text-xs text-neutral-500">Business Registration</p>
@@ -327,7 +354,7 @@ export function BusinessRegistrationForm() {
             
             <Link 
               href="/get-help" 
-              className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-all duration-200"
+              className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-all duration-200"
             >
               <HelpCircle className="w-4 h-4" />
               <span className="hidden sm:inline">Need Help?</span>
@@ -349,7 +376,7 @@ export function BusinessRegistrationForm() {
                   <div className="space-y-3 sm:space-y-4">
                     <div className="flex items-center justify-between">
                       <h2 className="text-base sm:text-lg font-semibold text-neutral-900">Registration Progress</h2>
-                      <span className="text-sm font-medium text-rose-600">{getProgressPercentage()}%</span>
+                      <span className="text-sm font-medium text-purple-600">{getProgressPercentage()}%</span>
                     </div>
                     <Progress value={getProgressPercentage()} className="h-2" />
                     <div className="flex items-center gap-2 text-sm text-neutral-600">
@@ -361,13 +388,13 @@ export function BusinessRegistrationForm() {
               </Card>
 
               {/* Benefits Section */}
-              <Card className="bg-gradient-to-br from-rose-500 to-pink-600 text-white border-0 shadow-xl">
+              <Card className="bg-gradient-to-br from-purple-600 to-purple-700 text-white border-0 shadow-xl">
                 <CardContent className="p-4 sm:p-6">
                   <div className="space-y-4 sm:space-y-6">
                     <div className="text-center">
-                      <Award className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-rose-200" />
+                      <Award className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-purple-200" />
                       <h3 className="text-lg sm:text-xl font-bold mb-2">Join Our Premium Network</h3>
-                      <p className="text-rose-100 text-sm">
+                      <p className="text-purple-100 text-sm">
                         Connect with thousands of couples looking for your services
                       </p>
                     </div>
@@ -435,7 +462,7 @@ export function BusinessRegistrationForm() {
                   {currentStep === 0 || currentStep < 1 ? (
                     <div className="space-y-4 sm:space-y-6">
                       <div className="text-center space-y-3 sm:space-y-4">
-                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-rose-500 to-pink-600 rounded-full flex items-center justify-center mx-auto shadow-lg">
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-purple-600 to-purple-700 rounded-full flex items-center justify-center mx-auto shadow-lg">
                           <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                         </div>
                         <div>
@@ -452,7 +479,7 @@ export function BusinessRegistrationForm() {
                   ) : (
                     <div className="space-y-4 sm:space-y-6">
                       <div className="flex items-center gap-3 mb-4 sm:mb-6">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-rose-500 to-pink-600 rounded-full flex items-center justify-center">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-600 to-purple-700 rounded-full flex items-center justify-center">
                           <span className="text-white font-semibold text-sm sm:text-base">{currentStep}</span>
                         </div>
                         <div>
@@ -496,7 +523,7 @@ export function BusinessRegistrationForm() {
                     disabled={currentStep === 0} 
                     onClick={handleBack} 
                     variant="outline" 
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 border-neutral-200 hover:border-rose-500 hover:text-rose-600 transition-all duration-200 py-3 sm:py-2"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 border-neutral-200 hover:border-purple-500 hover:text-purple-600 transition-all duration-200 py-3 sm:py-2"
                   >
                     <ArrowLeft className="w-4 h-4" />
                     Back
@@ -505,7 +532,7 @@ export function BusinessRegistrationForm() {
                   <Button
                     type="button"
                     onClick={(carRentalOrBridleWear && currentStep === 2) || (photographer && currentStep === 6) || (makeupArtist && currentStep === 6) || (hennaArtist && currentStep === 6) || (decorator && currentStep === 6) || (catering && currentStep === 6) ? handleSubmit : currentStep === 6 ? handleSubmit : handleNext}
-                    className="w-full sm:w-auto bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 px-6 sm:px-8 py-3 sm:py-2 font-semibold"
+                    className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 px-6 sm:px-8 py-3 sm:py-2 font-semibold"
                   >
                     {(carRentalOrBridleWear && currentStep === 2) || (photographer && currentStep === 6) || (makeupArtist && currentStep === 6) || (hennaArtist && currentStep === 6) || (decorator && currentStep === 6) || (catering && currentStep === 6) ? 'Submit Registration' : currentStep === 6 ? "Submit Registration" : "Continue"}
                   </Button>

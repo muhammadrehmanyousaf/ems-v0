@@ -27,7 +27,7 @@ export const vendorToCardProps = (vendor: Vendor): VendorCardProps => {
     rating: vendor.rating,
     reviews: vendor.reviews.length,
     price: vendor.minimumPrice || vendor.price,
-    type: vendor.subBusinessType || vendor.type,
+    type: vendor.type || vendor.subBusinessType,
     capacity: vendor.capacity,
     amenities: vendor.amenities,
     sponsored: vendor.sponsored,

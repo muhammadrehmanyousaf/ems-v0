@@ -8,7 +8,6 @@ export const metadata: Metadata = {
 }
 
 const page = ({params}: {params:{type:string}}) => {
-    console.log('page', params.type);
     const vendorType = params.type;
     
     return (

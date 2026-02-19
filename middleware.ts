@@ -13,6 +13,7 @@ export function middleware(request: NextRequest) {
     '/user/profile',
     '/user/bookings',
     '/user/favorites',
+    '/user/notifications',
     '/user/settings',
     '/dashboard',
   ];
@@ -24,9 +25,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // If accessing login page while authenticated, redirect to home
-  if (pathname === '/login' && isAuthenticated) {
-    return NextResponse.redirect(new URL('/', request.url));
+  // If accessing login/register pages while authenticated, redirect to dashboard
+  if ((pathname === '/login' || pathname === '/register') && isAuthenticated) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
   return NextResponse.next();

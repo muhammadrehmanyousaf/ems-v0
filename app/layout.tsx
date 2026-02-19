@@ -1,11 +1,49 @@
+import type { Metadata } from "next"
 import { Toaster } from "@/components/ui/toaster"
 import { UserProvider } from "@/context/UserContext"
+import { NotificationProvider } from "@/context/NotificationContext"
+import { ChatProvider } from "@/context/ChatContext"
 import { QueryProvider } from "@/lib/providers/query-provider"
 import { PerformanceMonitor } from "@/components/performance-monitor"
-// import { BackendStatus } from "@/components/backend-status"
-import { Inter } from "next/font/google";
+import { Inter, Playfair_Display } from "next/font/google";
 
-const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
+export const metadata: Metadata = {
+  title: {
+    default: "AJOINT — Pakistan's Premier Event Planning Platform",
+    template: "%s | AJOINT",
+  },
+  description: "Find, compare, and book the best wedding vendors and event services across Pakistan. Venues, photographers, caterers, decorators, and more — all in one place.",
+  keywords: ["wedding planning", "event management", "Pakistan", "wedding vendors", "venues", "photographers", "caterers", "decorators", "book vendors"],
+  authors: [{ name: "AJOINT" }],
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: "AJOINT",
+    title: "AJOINT — Pakistan's Premier Event Planning Platform",
+    description: "Find, compare, and book the best wedding vendors and event services across Pakistan.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AJOINT — Pakistan's Premier Event Planning Platform",
+    description: "Find, compare, and book the best wedding vendors and event services across Pakistan.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-inter",
+});
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
+  variable: "--font-playfair",
+});
 
 export default function RootLayout({
   children,
@@ -14,17 +52,19 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body suppressHydrationWarning>
+      <body className={`${inter.variable} ${playfair.variable} font-sans`} suppressHydrationWarning>
         <QueryProvider>
           <UserProvider>
-            <main className={inter.className}>{children}</main>
-            <Toaster />
-            <PerformanceMonitor />
-            {/* <BackendStatus className="fixed bottom-4 right-4 z-50 max-w-sm" /> */}
+            <NotificationProvider>
+              <ChatProvider>
+                <main>{children}</main>
+                <Toaster />
+                <PerformanceMonitor />
+              </ChatProvider>
+            </NotificationProvider>
           </UserProvider>
         </QueryProvider>
       </body>
     </html>
   )
 }
-

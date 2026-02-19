@@ -1,10 +1,10 @@
 "use client"
 
-import { CheckCircle, Printer, Home, Calendar, Clock, Users, MapPin, Package, Building, Camera, Palette, Star, DollarSign } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { CheckCircle, Printer, Home, Calendar, Clock, Users, MapPin, Package, Building, DollarSign, Sparkles } from "lucide-react"
 import type { BookingFormData, EventVenue, Vendor } from "@/lib/types"
 import confetti from "canvas-confetti"
 import { useEffect } from "react"
+import { motion } from "framer-motion"
 
 interface SuccessStepProps {
   formData: BookingFormData
@@ -12,20 +12,26 @@ interface SuccessStepProps {
   selectedPackageObj?: any
   selectedMenuObj?: any
   vendorDetails?: Vendor[]
-  // bookingReference: string | null
 }
 
-export default function SuccessStep({ 
-  formData, 
-  venue, 
-  selectedPackageObj, 
-  selectedMenuObj, 
-  vendorDetails 
-}: SuccessStepProps) {
-  // const reference = bookingReference || `VB-${Math.floor(100000 + Math.random() * 900000)}`
+const container = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.3 } },
+}
 
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.25, 0.4, 0.25, 1] } },
+}
+
+export default function SuccessStep({
+  formData,
+  venue,
+  selectedPackageObj,
+  selectedMenuObj,
+  vendorDetails
+}: SuccessStepProps) {
   useEffect(() => {
-    // Trigger confetti animation on component mount
     const duration = 3 * 1000
     const animationEnd = Date.now() + duration
     const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 }
@@ -34,26 +40,12 @@ export default function SuccessStep({
       return Math.random() * (max - min) + min
     }
 
-    const interval: any = setInterval(() => {
+    const interval: ReturnType<typeof setInterval> = setInterval(() => {
       const timeLeft = animationEnd - Date.now()
-
-      if (timeLeft <= 0) {
-        return clearInterval(interval)
-      }
-
+      if (timeLeft <= 0) return clearInterval(interval)
       const particleCount = 50 * (timeLeft / duration)
-
-      // since particles fall down, start a bit higher than random
-      confetti({
-        ...defaults,
-        particleCount,
-        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-      })
-      confetti({
-        ...defaults,
-        particleCount,
-        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-      })
+      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } })
+      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } })
     }, 250)
 
     return () => clearInterval(interval)
@@ -61,259 +53,128 @@ export default function SuccessStep({
 
   const getTimeSlotText = (timeSlot: string) => {
     switch (timeSlot) {
-      case "09:00":
-        return "Morning (9AM - 12PM)"
-      case "12:00":
-        return "Midday (12PM - 4PM)"
-      case "17:00":
-        return "Evening (5PM - 10PM)"
-      default:
-        return timeSlot
-    }
-  }
-
-  const getVendorIcon = (vendorType?: string) => {
-    switch (vendorType?.toLowerCase()) {
-      case 'photographer':
-        return <Camera className="h-6 w-6" />
-      case 'makeup artist':
-        return <Palette className="h-6 w-6" />
-      case 'henna artist':
-        return <Palette className="h-6 w-6" />
-      case 'decorator':
-        return <Palette className="h-6 w-6" />
-      case 'catering':
-        return <Package className="h-6 w-6" />
-      default:
-        return <Star className="h-6 w-6" />
+      case "09:00": return "Morning (9 AM - 12 PM)"
+      case "12:00": return "Midday (12 PM - 4 PM)"
+      case "14:00": return "Afternoon (2 PM - 6 PM)"
+      case "17:00": return "Evening (5 PM - 10 PM)"
+      case "18:00": return "Evening (6 PM - 11 PM)"
+      default: return timeSlot
     }
   }
 
   const isVendor = venue && !('menus' in venue)
 
   return (
-    <div className="flex flex-col items-center justify-center py-10 text-center">
-      <div className="mb-6 rounded-full bg-gradient-to-r from-green-100 to-emerald-100 p-4 shadow-lg">
-        <CheckCircle className="h-16 w-16 text-green-600" />
-      </div>
-
-      <h2 className="mb-2 text-3xl font-bold text-neutral-900">Booking Confirmed!</h2>
-
-      <p className="mb-8 max-w-md text-neutral-600">
-        Thank you for your booking, <span className="font-semibold text-rose-600">{formData.username}</span>. We have sent a
-        confirmation email to <span className="font-semibold text-rose-600">{formData.email}</span> with all the details.
-      </p>
-
-      <div className="mb-10 w-full max-w-2xl overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg">
-        <div className="bg-gradient-to-r from-rose-500 to-pink-600 px-6 py-4 text-left">
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-            {getVendorIcon(venue?.subBusinessType)}
-            {isVendor ? 'Vendor Booking Details' : 'Venue Booking Details'}
-          </h3>
+    <motion.div
+      className="flex flex-col items-center justify-center py-6 text-center"
+      variants={container}
+      initial="hidden"
+      animate="visible"
+    >
+      {/* Success Icon */}
+      <motion.div variants={item} className="mb-6 relative">
+        <div className="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center">
+          <CheckCircle className="h-10 w-10 text-green-600" />
         </div>
-        <div className="p-6 text-left">
-          {/* Customer Information */}
-          <div className="mb-6">
-            <h4 className="mb-4 text-lg font-semibold text-neutral-800 flex items-center gap-2">
-              <Users className="h-5 w-5 text-rose-500" />
-              Customer Details
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
-                <span className="text-neutral-600">Name:</span>
-                <span className="font-medium text-neutral-800">{formData.username}</span>
-              </div>
-              <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
-                <span className="text-neutral-600">Email:</span>
-                <span className="font-medium text-neutral-800">{formData.email}</span>
-              </div>
-              <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
-                <span className="text-neutral-600">Phone:</span>
-                <span className="font-medium text-neutral-800">{formData.phoneNumber}</span>
-              </div>
-              <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
-                <span className="text-neutral-600">Guest Count:</span>
-                <span className="font-medium text-neutral-800">{formData.guestCount} guests</span>
-              </div>
-            </div>
+        <motion.div
+          className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center"
+          initial={{ scale: 0, rotate: -45 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ delay: 0.6, type: "spring", stiffness: 300 }}
+        >
+          <Sparkles className="w-4 h-4 text-white" />
+        </motion.div>
+      </motion.div>
+
+      <motion.div variants={item}>
+        <h2 className="font-heading text-3xl font-bold text-neutral-900">Booking Confirmed!</h2>
+        <p className="mt-2 max-w-md text-neutral-500 text-sm mx-auto">
+          Thank you, <span className="font-semibold text-purple-600">{formData.username}</span>. A confirmation has been sent to{" "}
+          <span className="font-semibold text-purple-600">{formData.email}</span>.
+        </p>
+      </motion.div>
+
+      {/* Booking Details */}
+      <motion.div variants={item} className="mt-8 w-full max-w-2xl text-left">
+        <div className="rounded-xl border border-neutral-200 bg-white divide-y divide-neutral-100 overflow-hidden">
+          {/* Header */}
+          <div className="bg-purple-600 px-6 py-4">
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <Building className="h-4 w-4" />
+              {isVendor ? 'Vendor Booking' : 'Venue Booking'} — {venue?.name}
+            </h3>
           </div>
 
-          {/* Vendor/Venue Information */}
-          {venue && (
-            <div className="mb-6">
-              <h4 className="mb-4 text-lg font-semibold text-neutral-800 flex items-center gap-2">
-                <Building className="h-5 w-5 text-rose-500" />
-                {isVendor ? 'Vendor Details' : 'Venue Details'}
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
-                  <span className="text-neutral-600">Business Name:</span>
-                  <span className="font-medium text-neutral-800">{venue.name || venue.name}</span>
+          <div className="p-5 space-y-4">
+            {/* Customer & Event grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: "Name", value: formData.username },
+                { label: "Guests", value: `${formData.guestCount}` },
+                { label: "Date", value: formData.bookingDate ? new Date(formData.bookingDate).toLocaleDateString() : "N/A" },
+                { label: "Time", value: formData.timeSlot ? getTimeSlotText(formData.timeSlot) : "N/A" },
+              ].map((row) => (
+                <div key={row.label}>
+                  <p className="text-xs text-neutral-400">{row.label}</p>
+                  <p className="text-sm font-medium text-neutral-800 mt-0.5">{row.value}</p>
                 </div>
-                <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
-                  <span className="text-neutral-600">Business Type:</span>
-                  <span className="font-medium text-neutral-800 capitalize">{venue.subBusinessType || venue.subBusinessType || 'N/A'}</span>
-                </div>
-                {(venue.subArea || venue.city) && (
-                  <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
-                    <span className="text-neutral-600">Location:</span>
-                    <span className="font-medium text-neutral-800">{venue.subArea} , {venue.city}</span>
-                  </div>
-                )}
-                {venue.vendor?.rating && (
-                  <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
-                    <span className="text-neutral-600">Rating:</span>
-                    <span className="font-medium text-neutral-800 flex items-center gap-1">
-                      <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                      {venue.vendor?.rating}/5
-                    </span>
-                  </div>
-                )}
-              </div>
+              ))}
             </div>
-          )}
 
-          {/* Event Details */}
-          <div className="mb-6">
-            <h4 className="mb-4 text-lg font-semibold text-neutral-800 flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-rose-500" />
-              Event Details
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
-                <span className="text-neutral-600">Event Type:</span>
-                <span className="font-medium text-neutral-800">{formData.eventType || "N/A"}</span>
-              </div>
-              <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
-                <span className="text-neutral-600">Event Date:</span>
-                <span className="font-medium text-neutral-800">
-                  {formData.bookingDate ? new Date(formData.bookingDate).toLocaleDateString() : "N/A"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
-                <span className="text-neutral-600">Time Slot:</span>
-                <span className="font-medium text-neutral-800">
-                  {formData.timeSlot ? getTimeSlotText(formData.timeSlot) : "N/A"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Package & Menu Information */}
-          {(selectedPackageObj || selectedMenuObj || formData.selectedPackage || formData.selectedMenu) && (
-            <div className="mb-6">
-              <h4 className="mb-4 text-lg font-semibold text-neutral-800 flex items-center gap-2">
-                <Package className="h-5 w-5 text-rose-500" />
-                Selected Services
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(selectedPackageObj || formData.selectedPackage) && (
-                  <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
-                    <span className="text-neutral-600">Selected Package:</span>
-                    <span className="font-medium text-neutral-800">
-                      {selectedPackageObj?.name || formData.selectedPackage}
-                    </span>
+            {/* Services */}
+            {(selectedPackageObj || selectedMenuObj) && (
+              <div className="pt-3 border-t border-neutral-100 space-y-1.5">
+                {selectedPackageObj && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-neutral-600">Package: {selectedPackageObj.name}</span>
+                    <span className="font-medium text-neutral-800">Rs. {Number(selectedPackageObj.price)?.toLocaleString()}</span>
                   </div>
                 )}
-                {(selectedMenuObj || formData.selectedMenu) && (
-                  <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
-                    <span className="text-neutral-600">Selected Menu:</span>
-                    <span className="font-medium text-neutral-800">
-                      {selectedMenuObj?.name || formData.selectedMenu}
-                    </span>
-                  </div>
-                )}
-                {selectedPackageObj?.price && (
-                  <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
-                    <span className="text-neutral-600">Package Price:</span>
-                    <span className="font-medium text-neutral-800">${selectedPackageObj.price}</span>
-                  </div>
-                )}
-                {selectedMenuObj?.price && (
-                  <div className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-3">
-                    <span className="text-neutral-600">Menu Price:</span>
-                    <span className="font-medium text-neutral-800">${selectedMenuObj.price}</span>
+                {selectedMenuObj && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-neutral-600">Menu: {selectedMenuObj.name || selectedMenuObj.title}</span>
+                    <span className="font-medium text-neutral-800">Rs. {Number(selectedMenuObj.price)?.toLocaleString()}</span>
                   </div>
                 )}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Additional Vendors Information */}
-          {vendorDetails && vendorDetails.length > 0 && (
-            <div className="mb-6">
-              <h4 className="mb-4 text-lg font-semibold text-neutral-800 flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-rose-500" />
-                Additional Vendors
-              </h4>
-              <div className="space-y-3">
-                {vendorDetails.map((vendor, index) => (
-                  <div key={index} className="rounded-xl bg-gradient-to-r from-neutral-50 to-rose-50 p-4 border border-rose-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-neutral-600 font-medium">Vendor {index + 1}:</span>
-                      <span className="font-semibold text-neutral-800">{vendor.name}</span>
-                    </div>
-                    <div className="text-sm text-neutral-600 capitalize">
-                      {vendor.subBusinessType || 'N/A'}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Selected Vendor Packages */}
-          {formData.selectedVendorPackages && formData.selectedVendorPackages.length > 0 && (
-            <div className="mb-6">
-              <h4 className="mb-4 text-lg font-semibold text-neutral-800 flex items-center gap-2">
-                <Package className="h-5 w-5 text-rose-500" />
-                Selected Vendor Packages
-              </h4>
-              <div className="space-y-2">
-                {formData.selectedVendorPackages.map((pkgId, index) => (
-                  <div key={index} className="flex items-center justify-between border-b border-dashed border-neutral-200 pb-2">
-                    <span className="text-neutral-600">Package {index + 1}:</span>
-                    <span className="font-medium text-neutral-800">{pkgId}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Pricing Information */}
-          <div className="mt-6 rounded-xl bg-gradient-to-r from-rose-50 to-pink-50 p-4 border border-rose-200">
-            <div className="flex items-center justify-between">
-              <span className="text-lg font-semibold text-neutral-700">Total Amount:</span>
-              <span className="text-2xl font-bold text-rose-600">${formData.totalPrice}</span>
+            {/* Total */}
+            <div className="rounded-lg bg-purple-50 p-4 flex items-center justify-between">
+              <span className="text-sm font-semibold text-neutral-700">Total Amount</span>
+              <span className="text-xl font-bold text-purple-600">Rs. {Number(formData.totalPrice)?.toLocaleString()}</span>
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="flex flex-col space-y-3 sm:flex-row sm:space-x-4 sm:space-y-0">
-        <Button
-          variant="outline"
+      {/* Action Buttons */}
+      <motion.div variants={item} className="mt-8 flex flex-col space-y-3 sm:flex-row sm:space-x-3 sm:space-y-0">
+        <button
+          type="button"
           onClick={() => window.print()}
-          className="flex items-center rounded-xl border-neutral-300 px-6 py-3 hover:border-rose-500 hover:text-rose-600 transition-all duration-200"
+          className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium border border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors"
         >
-          <Printer className="mr-2 h-4 w-4" />
-          Print Receipt
-        </Button>
-        <Button
+          <Printer className="h-4 w-4" />
+          Print
+        </button>
+        <button
+          type="button"
           onClick={() => (window.location.href = "/user/payments")}
-          className="flex items-center rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-3 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+          className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-green-600 hover:bg-green-700 text-white transition-colors"
         >
-          <DollarSign className="mr-2 h-4 w-4" />
+          <DollarSign className="h-4 w-4" />
           Manage Payments
-        </Button>
-        <Button
+        </button>
+        <button
+          type="button"
           onClick={() => (window.location.href = "/")}
-          className="flex items-center rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 px-6 py-3 hover:from-rose-600 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+          className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-purple-600 hover:bg-purple-700 text-white transition-colors"
         >
-          <Home className="mr-2 h-4 w-4" />
-          Return to Home
-        </Button>
-      </div>
-    </div>
+          <Home className="h-4 w-4" />
+          Home
+        </button>
+      </motion.div>
+    </motion.div>
   )
 }

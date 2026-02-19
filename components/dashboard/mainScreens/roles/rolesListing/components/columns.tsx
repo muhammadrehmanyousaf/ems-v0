@@ -3,13 +3,13 @@ import { ColumnDef } from '@tanstack/react-table';
 import { RowActions } from './row-actions';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Role } from '@/lib/dashboard-types';
-import { Switch } from '@/components/ui/switch';
 import { formatDateTime } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
-export const formatDate = (iso?: string) =>
-    iso ? new Date(iso).toLocaleDateString() : ""
-
-export const columns: ColumnDef<Role>[] = [
+export const columns = (
+    onEdit: (role: Role) => void,
+    onDelete: (role: Role) => void,
+): ColumnDef<Role>[] => [
     {
         id: "select",
         header: ({ table }) => (
@@ -36,26 +36,46 @@ export const columns: ColumnDef<Role>[] = [
         size: 36,
     },
     {
-        accessorKey: "title",
+        id: "name",
+        accessorFn: (row) => row.name || row.title,
         header: "Title",
+        cell: ({ row }) => (
+            <span className="font-medium capitalize">
+                {row.original.name || row.original.title}
+            </span>
+        ),
     },
     {
         accessorKey: "description",
         header: "Description",
         cell: ({ row }) => (
-            <span className='text-ellipsis whitespace-nowrap max-w-36 overflow-hidden truncate'>
-                {row.original.description}
+            <span className='text-ellipsis whitespace-nowrap max-w-44 overflow-hidden truncate block'>
+                {row.original.description || "—"}
             </span>
         )
     },
     {
-        accessorKey: "status",
-        header: "Status",
+        id: "type",
+        header: "Type",
         cell: ({ row }) => (
-            <span>
-                <Switch size='md' checked={row.original.status === 'active'} />
-            </span>
-        )
+            <Badge variant="outline" className="capitalize">
+                {row.original.type || "general"}
+            </Badge>
+        ),
+    },
+    {
+        id: "users",
+        header: "Users",
+        cell: ({ row }) => {
+            const count = row.original.users?.length ?? 0;
+            return (
+                <div className="max-w-16 flex justify-center">
+                    <span className="bg-primary/20 text-primary rounded-md h-8 w-8 flex items-center justify-center font-medium">
+                        {count}
+                    </span>
+                </div>
+            );
+        },
     },
     {
         id: 'createdAt',
@@ -69,30 +89,12 @@ export const columns: ColumnDef<Role>[] = [
     {
         id: "actions",
         enableHiding: false,
-        cell: ({ row }) => <RowActions data={row.original} />,
-    },
-];
-
-export const roles: Role[] = [
-    {
-        id: '1',
-        title: 'Manager',
-        description: 'He will manage everything.',
-        status: 'active',
-        createdAt: '2025-08-15T14:32:00Z'
-    },
-    {
-        id: '2',
-        title: 'Chef',
-        description: 'He will cook food.',
-        status: 'active',
-        createdAt: '2025-08-15T14:32:00Z'
-    },
-    {
-        id: '3',
-        title: 'Waiter',
-        description: 'He will serve the food.',
-        status: 'active',
-        createdAt: '2025-08-15T14:32:00Z'
+        cell: ({ row }) => (
+            <RowActions
+                data={row.original}
+                onEdit={onEdit}
+                onDelete={onDelete}
+            />
+        ),
     },
 ];

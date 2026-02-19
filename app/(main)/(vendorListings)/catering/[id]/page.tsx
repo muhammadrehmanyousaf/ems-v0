@@ -72,9 +72,9 @@ export default function CateringDetailsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50/50 to-purple-50/30 flex items-center justify-center">
         <div className="text-center">
-          <Spinner size="lg" className="text-rose-500 mx-auto mb-4" />
+          <Spinner size="lg" className="text-purple-500 mx-auto mb-4" />
           <p className="text-neutral-600 text-lg">Loading catering vendor details...</p>
           <p className="text-sm text-neutral-500 mt-2">Please wait while we fetch the vendor information</p>
         </div>
@@ -84,7 +84,7 @@ export default function CateringDetailsPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50/50 to-purple-50/30 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto px-4">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-8 h-8 text-red-600" />
@@ -94,7 +94,7 @@ export default function CateringDetailsPage() {
           <div className="space-y-3">
             <Button 
               onClick={handleRetry}
-              className="w-full bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white"
+              className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Try Again
@@ -115,7 +115,7 @@ export default function CateringDetailsPage() {
 
   if (!vendor) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50/50 to-purple-50/30 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto px-4">
           <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-8 h-8 text-neutral-400" />
@@ -124,7 +124,7 @@ export default function CateringDetailsPage() {
           <p className="text-neutral-600 mb-6">The catering vendor you're looking for doesn't exist or has been removed.</p>
           <Button 
             onClick={handleGoBack}
-            className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white"
+            className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Go Back

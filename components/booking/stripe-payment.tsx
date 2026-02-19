@@ -2,21 +2,10 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Loader2, CheckCircle, XCircle, CreditCard, DollarSign, Calendar, Building } from "lucide-react"
-import type { PaymentIntent } from "@/lib/types"
+import { Loader2, CheckCircle, XCircle, CreditCard, ExternalLink, Shield } from "lucide-react"
 import { PaymentAPI } from "@/lib/api/payments"
 import { toast } from "@/components/ui/use-toast"
-import { loadStripe } from "@stripe/stripe-js"
-import { Elements, useStripe, useElements, PaymentElement } from "@stripe/react-stripe-js"
-
-// Initialize Stripe promise with env fallback and provided key
-const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
-  "pk_test_51RbTluRs24VuP7A1EhiDNQpQZyCcmOn0hUJeywoJmEdqXym9gkxJq2TQhEKdkscR96JNqMsnN7AvILqkfSqAN5zN00lqAqdSYB"
-)
 
 interface StripePaymentProps {
   isOpen: boolean
@@ -44,96 +33,69 @@ export default function StripePayment({
   onPaymentFailure
 }: StripePaymentProps) {
   const [loading, setLoading] = useState(false)
-  const [paymentIntent, setPaymentIntent] = useState<PaymentIntent | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'processing' | 'success' | 'failed'>('pending')
-  
-  // Use refs to prevent multiple calls and track state
+  const [status, setStatus] = useState<'idle' | 'creating' | 'redirecting' | 'failed'>('idle')
   const isCreatingRef = useRef(false)
-  const hasCreatedRef = useRef(false)
-  const currentBookingRef = useRef<number | null>(null)
 
   // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
-      setPaymentIntent(null)
       setError(null)
-      setPaymentStatus('pending')
+      setStatus('idle')
+      setLoading(false)
       isCreatingRef.current = false
-      hasCreatedRef.current = false
-      currentBookingRef.current = null
     }
   }, [isOpen])
 
-  // Create payment intent only when modal opens and no intent exists for this booking
-  useEffect(() => {
-    if (!isOpen) return
-    
-    // Check if we already have a payment intent for this booking
-    if (hasCreatedRef.current && currentBookingRef.current === bookingId && paymentIntent) {
-      return
+  const getPaymentTypeLabel = () => {
+    switch (paymentType) {
+      case 'down_payment': return 'Down Payment'
+      case 'remaining_payment': return 'Remaining Payment'
+      case 'full_payment': return 'Full Payment'
+      default: return 'Payment'
     }
-    
-    // Check if we're already creating a payment intent
-    if (isCreatingRef.current) {
-      return
-    }
+  }
 
-    // Create payment intent
-    createPaymentIntent()
-  }, [isOpen, bookingId])
+  const handlePayNow = async () => {
+    if (isCreatingRef.current || loading) return
+    isCreatingRef.current = true
 
-  const createPaymentIntent = async () => {
-    // Prevent multiple simultaneous calls
-    if (isCreatingRef.current) {
-      return
-    }
-    
     try {
-      isCreatingRef.current = true
       setLoading(true)
       setError(null)
-      
-      // Validate bookingId
+      setStatus('creating')
+
       if (!bookingId || isNaN(Number(bookingId))) {
         throw new Error(`Invalid booking ID: ${bookingId}`)
       }
-      
-      // Verify booking exists before creating payment intent
-      const bookingExists = await PaymentAPI.verifyBookingExists(Number(bookingId))
-      if (!bookingExists) {
-        throw new Error(`Booking #${bookingId} not found. Please ensure the booking was created successfully.`)
-      }
-      
-      // Cancel any existing incomplete payment intents to prevent duplicates
-      await PaymentAPI.cancelIncompletePaymentIntents(Number(bookingId))
-      
-      const response = await PaymentAPI.createPaymentIntent(
+
+      // Create Checkout Session via backend
+      const { url } = await PaymentAPI.createCheckoutSession(
         Number(bookingId),
         customerEmail,
         paymentType
       )
-      
-      if (response.status) {
-        setPaymentIntent(response.data)
-        setPaymentStatus('processing')
-        hasCreatedRef.current = true
-        currentBookingRef.current = bookingId
-      } else {
-        throw new Error(response.message || 'Failed to create payment intent')
+
+      if (!url) {
+        throw new Error('No checkout URL returned from server')
       }
+
+      setStatus('redirecting')
+      toast({
+        title: "Redirecting to Stripe",
+        description: "You'll be redirected to a secure Stripe payment page.",
+      })
+
+      // Redirect to Stripe Checkout
+      window.location.href = url
+
     } catch (err: any) {
-      // Handle specific error cases
-      let errorMessage = err.message || 'Failed to create payment intent'
-      
+      let errorMessage = err.message || 'Failed to create checkout session'
       if (errorMessage.includes('Booking not found')) {
         errorMessage = `Booking #${bookingId} not found. Please ensure the booking was created successfully.`
-      } else if (errorMessage.includes('not found')) {
-        errorMessage = `The requested resource was not found. Please check your booking details.`
       }
-      
       setError(errorMessage)
-      setPaymentStatus('failed')
+      setStatus('failed')
       toast({
         title: "Payment Error",
         description: errorMessage,
@@ -145,163 +107,36 @@ export default function StripePayment({
     }
   }
 
-  const handlePaymentSuccess = async () => {
-    try {
-      setLoading(true)
-      
-      if (paymentType === 'down_payment') {
-        await PaymentAPI.processDownPayment(bookingId)
-      } else if (paymentType === 'remaining_payment') {
-        await PaymentAPI.processRemainingPayment(bookingId)
-      } else if (paymentType === 'full_payment') {
-        await PaymentAPI.processFullPayment(bookingId)
-      }
-      
-      setPaymentStatus('success')
-      toast({
-        title: "Payment Successful!",
-        description: `${paymentType === 'down_payment' ? 'Down payment' : paymentType === 'full_payment' ? 'Full payment' : 'Payment'} processed successfully`,
-      })
-      
-      setTimeout(() => {
-        onPaymentSuccess()
-        onClose()
-      }, 2000)
-      
-    } catch (err: any) {
-      setPaymentStatus('failed')
-      setError(err.message || 'Failed to process payment')
-      toast({
-        title: "Payment Processing Error",
-        description: err.message || 'Failed to process payment',
-        variant: "destructive"
-      })
-    } finally {
-      setLoading(false)
-    }
+  const handleOpenChange = (open: boolean) => {
+    if (!open && status === 'redirecting') return
+    if (!open) onClose()
   }
 
-  const handlePaymentFailure = () => {
-    setPaymentStatus('failed')
-    setError('Payment was cancelled or failed')
-    onPaymentFailure()
-  }
-
-  const getPaymentTypeLabel = () => {
-    switch (paymentType) {
-      case 'down_payment':
-        return 'Down Payment'
-      case 'remaining_payment':
-        return 'Remaining Payment'
-      case 'full_payment':
-        return 'Full Payment'
-      default:
-        return 'Payment'
-    }
-  }
-
-  const getPaymentTypeColor = () => {
-    switch (paymentType) {
-      case 'down_payment':
-        return 'bg-green-100 text-green-800'
-      case 'remaining_payment':
-        return 'bg-blue-100 text-blue-800'
-      case 'full_payment':
-        return 'bg-purple-100 text-purple-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  if (paymentStatus === 'success') {
+  // Failed state
+  if (status === 'failed') {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-center text-2xl font-bold text-green-600">
-              Payment Successful!
+            <DialogTitle className="text-center text-xl font-bold text-red-600">
+              Payment Setup Failed
             </DialogTitle>
           </DialogHeader>
-          
           <div className="text-center space-y-4">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <CheckCircle className="h-10 w-10 text-green-600" />
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+              <XCircle className="h-8 w-8 text-red-600" />
             </div>
-            
+            <p className="text-neutral-600 text-sm">
+              {error || 'Something went wrong. Please try again.'}
+            </p>
             <div className="space-y-2">
-              <p className="text-lg font-semibold text-neutral-900">
-                {getPaymentTypeLabel()} Completed
-              </p>
-              <p className="text-neutral-600">
-                Your {paymentType === 'down_payment' ? 'down payment has been processed' : paymentType === 'full_payment' ? 'full payment has been completed' : 'payment has been completed'} successfully.
-              </p>
-            </div>
-            
-            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-              <div className="text-sm text-green-800">
-                <p><strong>Amount:</strong> ${amount} {currency.toUpperCase()}</p>
-                <p><strong>Booking ID:</strong> #{bookingId}</p>
-                <p><strong>Business:</strong> {businessName}</p>
-              </div>
-            </div>
-            
-            <Button 
-              onClick={onClose}
-              className="w-full bg-green-600 hover:bg-green-700"
-            >
-              Continue
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    )
-  }
-
-  if (paymentStatus === 'failed') {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-center text-2xl font-bold text-red-600">
-              Payment Failed
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="text-center space-y-4">
-            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto">
-              <XCircle className="h-10 w-10 text-red-600" />
-            </div>
-            
-            <div className="space-y-2">
-              <p className="text-lg font-semibold text-neutral-900">
-                Payment Unsuccessful
-              </p>
-              <p className="text-neutral-600">
-                {error || 'Something went wrong with your payment. Please try again.'}
-              </p>
-            </div>
-            
-            <div className="space-y-3">
-              <Button 
-                onClick={createPaymentIntent}
-                disabled={loading}
+              <Button
+                onClick={handlePayNow}
                 className="w-full bg-blue-600 hover:bg-blue-700"
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Retrying...
-                  </>
-                ) : (
-                  'Try Again'
-                )}
+                Try Again
               </Button>
-              
-              <Button 
-                onClick={onClose}
-                variant="outline"
-                className="w-full"
-              >
+              <Button onClick={onClose} variant="outline" className="w-full">
                 Cancel
               </Button>
             </div>
@@ -311,116 +146,96 @@ export default function StripePayment({
     )
   }
 
+  // Redirecting state
+  if (status === 'redirecting') {
+    return (
+      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+        <DialogContent className="max-w-md">
+          <div className="text-center py-8 space-y-4">
+            <Loader2 className="h-10 w-10 animate-spin text-blue-600 mx-auto" />
+            <div>
+              <p className="text-lg font-semibold text-neutral-900">Redirecting to Stripe...</p>
+              <p className="text-sm text-neutral-500 mt-1">You&apos;ll be taken to a secure payment page</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
+  // Default: show payment summary + Pay button
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg w-[95vw] max-h-[90vh] overflow-y-auto overflow-x-hidden p-4 sm:p-6">
-        <DialogHeader className="mb-4">
-          <DialogTitle className="text-lg sm:text-xl font-semibold">
-            {paymentType === 'down_payment' ? 'Pay Down Payment' : paymentType === 'full_payment' ? 'Pay Full Amount' : 'Pay Remaining Funds'}
-          </DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm text-gray-600">
-            Complete your payment to secure your booking
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="overflow-y-auto overflow-x-hidden max-h-[60vh] sm:max-h-[70vh]">
-          {paymentIntent && (
-            <Elements stripe={stripePromise} options={{ clientSecret: paymentIntent.clientSecret }}>
-              <CheckoutForm 
-                onSuccess={handlePaymentSuccess}
-                onError={handlePaymentFailure}
-                onCancel={onClose}
-                paymentType={paymentType}
-                bookingId={bookingId.toString()}
-              />
-            </Elements>
-          )}
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-md p-0 overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-6 pb-5 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white">
+              {paymentType === 'down_payment' ? 'Pay Down Payment' : paymentType === 'full_payment' ? 'Pay Full Amount' : 'Pay Remaining Balance'}
+            </DialogTitle>
+            <DialogDescription className="text-blue-100 text-sm">
+              Secure payment via Stripe
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+
+        <div className="px-6 pb-6 space-y-5">
+          {/* Payment Summary */}
+          <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-neutral-500">Payment Type</span>
+              <span className="text-sm font-semibold text-neutral-800">{getPaymentTypeLabel()}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-neutral-500">Business</span>
+              <span className="text-sm font-medium text-neutral-700">{businessName}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-neutral-500">Booking</span>
+              <span className="text-sm font-medium text-neutral-700">#{bookingId}</span>
+            </div>
+            <div className="border-t border-neutral-200 pt-3">
+              <div className="flex items-center justify-between">
+                <span className="text-base font-semibold text-neutral-700">Amount</span>
+                <span className="text-xl font-bold text-neutral-900">
+                  Rs. {Number(amount).toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Security Badge */}
+          <div className="flex items-center gap-2 text-xs text-neutral-400 justify-center">
+            <Shield className="h-3.5 w-3.5" />
+            <span>Secured by Stripe. Your card details never touch our servers.</span>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="space-y-2">
+            <Button
+              onClick={handlePayNow}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 text-base font-semibold"
+              disabled={loading}
+            >
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Setting up...
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Pay Rs. {Number(amount).toLocaleString()}
+                  <ExternalLink className="h-4 w-4 ml-1 opacity-60" />
+                </div>
+              )}
+            </Button>
+            <Button onClick={onClose} variant="ghost" className="w-full text-neutral-500" disabled={loading}>
+              Cancel
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
   )
 }
-
-// Stripe Checkout Form Component
-const CheckoutForm = ({ 
-  onSuccess, 
-  onError, 
-  onCancel, 
-  paymentType, 
-  bookingId 
-}: {
-  onSuccess: (paymentType: string, bookingId: string) => void;
-  onError: (error: string) => void;
-  onCancel: () => void;
-  paymentType: string;
-  bookingId: string;
-}) => {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!stripe || !elements) {
-      onError('Stripe is not initialized');
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      const result = await stripe.confirmPayment({
-        elements,
-        redirect: 'if_required',
-        confirmParams: {
-          return_url: typeof window !== 'undefined' ? `${window.location.origin}/user/payments?bookingId=${bookingId}` : undefined,
-        },
-      });
-
-      if (result.error) {
-        onError(result.error.message || 'Payment failed');
-      } else if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
-        onSuccess(paymentType, bookingId);
-      }
-    } catch (error) {
-      onError('Payment failed unexpectedly');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-4">
-        <PaymentElement />
-      </div>
-      
-      <div className="flex gap-3 pt-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={isProcessing}
-          className="flex-1"
-        >
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          disabled={!stripe || isProcessing}
-          className="flex-1 bg-blue-600 hover:bg-blue-700"
-        >
-          {isProcessing ? (
-            <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Processing...
-            </div>
-          ) : (
-            'Pay Now'
-          )}
-        </Button>
-      </div>
-    </form>
-  );
-};
