@@ -1,6 +1,6 @@
-import { UserRegistrationForm } from "@/components/user-registration-form"
+import "../../globals.css";
+import { UserRegistrationForm } from "@/components/user-registration-form";
 
 export default function UserRegistrationPage() {
-  return <UserRegistrationForm />
+  return <UserRegistrationForm />;
 }
-

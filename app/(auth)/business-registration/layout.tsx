@@ -1,11 +1,11 @@
-import type React from "react"
-import { FormProvider } from "@/lib/context/form-context"
+import "../../globals.css";
+import type React from "react";
+import { FormProvider } from "@/lib/context/form-context";
 
 export default function BusinessRegistrationLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  return <FormProvider>{children}</FormProvider>
+  return <FormProvider>{children}</FormProvider>;
 }
-

@@ -13,7 +13,17 @@ import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Flag, Loader2, ArrowLeft, HelpCircle, CheckCircle, Star, Award, Shield, Sparkles } from "lucide-react";
+import {
+  Flag,
+  Loader2,
+  ArrowLeft,
+  HelpCircle,
+  CheckCircle,
+  Star,
+  Award,
+  Shield,
+  Sparkles,
+} from "lucide-react";
 import { FormType, useFormContext } from "@/lib/context/form-context";
 import { toast } from "./ui/use-toast";
 import VenueSteps from "./VendorStepForms/newVendorRegisterationForm/venueSteps/venue-steps";
@@ -34,49 +44,80 @@ import { Progress } from "@/components/ui/progress";
 export function BusinessRegistrationForm() {
   // const [currentStep, setCurrentStep] = useState(0);
   const [file, setFile] = useState<File | null>(null);
-  const { businessType, setBusinessType, steps, setFormData, formData, setErrors, errors, setCurrentStep, currentStep } = useFormContext()
+  const {
+    businessType,
+    setBusinessType,
+    steps,
+    setFormData,
+    formData,
+    setErrors,
+    errors,
+    setCurrentStep,
+    currentStep,
+  } = useFormContext();
+
+  console.log("Current Step:", currentStep);
+  console.log("Business type:", businessType);
   const [openModal, setOpenModal] = useState(false);
 
-  const carRentalOrBridleWear = businessType === 'Car rental' || businessType === 'Bridal wearing';
-  const photographer = businessType === 'Photographer';
-  const makeupArtist = businessType === 'Makeup artist';
-  const hennaArtist = businessType === 'Henna artist';
-  const decorator = businessType === 'Decorator';
-  const catering = businessType === 'Catering';
+  const carRentalOrBridleWear =
+    businessType === "Car rental" || businessType === "Bridal wearing";
+  const photographer = businessType === "Photographer";
+  const makeupArtist = businessType === "Makeup artist";
+  const hennaArtist = businessType === "Henna artist";
+  const decorator = businessType === "Decorator";
+  const catering = businessType === "Catering";
 
   // Calculate progress percentage
   const getProgressPercentage = () => {
     if (currentStep === 0) return 0;
     if (carRentalOrBridleWear && currentStep === 2) return 100;
-    if ((photographer || makeupArtist || hennaArtist || decorator || catering) && currentStep === 6) return 100;
+    if (
+      (photographer || makeupArtist || hennaArtist || decorator || catering) &&
+      currentStep === 6
+    )
+      return 100;
     if (currentStep === 6) return 100;
-    
+
     const maxSteps = carRentalOrBridleWear ? 2 : 6;
     return Math.round((currentStep / maxSteps) * 100);
   };
 
+  console.log("formdata here iasefaoeoifvnnafn", formData);
+
   const handleValidations = () => {
     let currentErrors: { [key: string]: string } = {};
+    console.log("Running validations for step:", currentStep);
 
     if (currentStep === 0) {
-      if (!formData.businessType) currentErrors.businessType = "Select Business Type";
-    } else
-      if (formData.businessType === 'Wedding venue') {
-        vanueValidations({ currentStep, formData, currentErrors })
-        setErrors(currentErrors);
-        return currentErrors;
-      };
-    if (carRentalOrBridleWear) {
-      CarRentalOrBridleWearValidations({ currentStep, formData, currentErrors })
+      if (!formData.businessType) {
+        console.log("in no business type 43525452435", formData.businessType);
+        currentErrors.businessType = "Select Business Type";
+      }
       setErrors(currentErrors);
       return currentErrors;
-    };
+    } else if (formData.businessType === "Wedding venue") {
+      vanueValidations({ currentStep, formData, currentErrors });
+      setErrors(currentErrors);
+      return currentErrors;
+    }
+    if (carRentalOrBridleWear) {
+      CarRentalOrBridleWearValidations({
+        currentStep,
+        formData,
+        currentErrors,
+      });
+      setErrors(currentErrors);
+      return currentErrors;
+    }
     if (photographer || makeupArtist || hennaArtist || decorator || catering) {
       // For now, use basic validation for new business types
       if (currentStep === 1) {
-        if (!formData.fullName) currentErrors.fullName = "Full name is required";
+        if (!formData.fullName)
+          currentErrors.fullName = "Full name is required";
         if (!formData.email) currentErrors.email = "Email is required";
-        if (!formData.phoneNumber) currentErrors.phoneNumber = "Phone number is required";
+        if (!formData.phoneNumber)
+          currentErrors.phoneNumber = "Phone number is required";
         if (!formData.password) currentErrors.password = "Password is required";
       }
       if (currentStep === 2) {
@@ -84,18 +125,21 @@ export function BusinessRegistrationForm() {
         if (!formData.city) currentErrors.city = "City is required";
       }
       if (currentStep === 3) {
-        if (!formData.description) currentErrors.description = "Business description is required";
-        if (!formData.minimumPrice) currentErrors.minimumPrice = "Starting price is required";
-        if (!formData.subBusinessType) currentErrors.subBusinessType = "Business type is required";
+        if (!formData.description)
+          currentErrors.description = "Business description is required";
+        if (!formData.minimumPrice)
+          currentErrors.minimumPrice = "Starting price is required";
+        if (!formData.subBusinessType)
+          currentErrors.subBusinessType = "Business type is required";
       }
       setErrors(currentErrors);
       return currentErrors;
-    };
-  }
+    }
+  };
 
   const handleNext = () => {
-
     const validationErrors = handleValidations();
+    console.log("Validation Errors:", validationErrors);
 
     if (validationErrors && Object.keys(validationErrors).length > 0) {
       toast({
@@ -141,11 +185,14 @@ export function BusinessRegistrationForm() {
           const uploadRes = await axios.post(
             `${BACKEND_URL}api/v1/businesses/upload-images`,
             imgFormData,
-            { headers: { "Content-Type": "multipart/form-data" } }
+            { headers: { "Content-Type": "multipart/form-data" } },
           );
           uploadedImageUrls = uploadRes.data?.data || [];
         } catch {
-          toast({ title: "Error", description: "Failed to upload images. Please try again." });
+          toast({
+            title: "Error",
+            description: "Failed to upload images. Please try again.",
+          });
           loadingToastId.dismiss();
           return;
         }
@@ -180,9 +227,11 @@ export function BusinessRegistrationForm() {
         parking: formData.parking,
         catering: formData.catering === "internal",
         starterPrice: formData.starterPrice || undefined,
-        images: uploadedImageUrls.length > 0 ? uploadedImageUrls : formData.images,
-        packages: formData.packages?.filter((p: any) => p.name && p.price) || [],
-      }
+        images:
+          uploadedImageUrls.length > 0 ? uploadedImageUrls : formData.images,
+        packages:
+          formData.packages?.filter((p: any) => p.name && p.price) || [],
+      };
 
       const rentalData = {
         fullName: formData.fullName,
@@ -199,7 +248,7 @@ export function BusinessRegistrationForm() {
         name: formData.name,
         brandLogo: formData.profilePicture,
         roleIds: [2],
-      }
+      };
       const response = await axios.post(
         `${BACKEND_URL}api/v1/businesses/create-business-with-vendor`,
         {
@@ -237,27 +286,33 @@ export function BusinessRegistrationForm() {
           starterPrice: 0,
           images: [],
           imageFiles: [],
-          subBusinessType: '',
+          subBusinessType: "",
           expertise: [],
-          packages: [{
-            id: undefined,
-            name: "",
-            price: 0,
-            services: "",
-          }],
+          packages: [
+            {
+              id: undefined,
+              name: "",
+              price: 0,
+              services: "",
+            },
+          ],
           amenities: [],
           maxCapacity: "",
           catering: "",
           parking: false,
-        })
+        });
         loadingToastId.dismiss();
         setOpenModal(true);
-        setCurrentStep(0)
+        setCurrentStep(0);
       }
-      const responseData = response.data
-      const vendorData = responseData.data
+      const responseData = response.data;
+      const vendorData = responseData.data;
 
-      if (response.status === 201 && vendorData.business && !carRentalOrBridleWear) {
+      if (
+        response.status === 201 &&
+        vendorData.business &&
+        !carRentalOrBridleWear
+      ) {
         // Packages are now included in the business creation payload above,
         // so no separate auth-required API call is needed.
         // TODO: Re-enable separate Package records creation after login flow is implemented
@@ -299,29 +354,32 @@ export function BusinessRegistrationForm() {
           starterPrice: 0,
           images: [],
           imageFiles: [],
-          subBusinessType: '',
+          subBusinessType: "",
           expertise: [],
-          packages: [{
-            id: undefined,
-            name: "",
-            price: 0,
-            services: "",
-          }],
+          packages: [
+            {
+              id: undefined,
+              name: "",
+              price: 0,
+              services: "",
+            },
+          ],
           amenities: [],
           maxCapacity: "",
           catering: "",
           parking: false,
-        })
+        });
         loadingToastId.dismiss();
         setOpenModal(true);
-        setCurrentStep(0)
+        setCurrentStep(0);
       }
-
     } catch (error: any) {
       loadingToastId.dismiss();
       toast({
         title: "Error",
-        description: error.response?.data?.message || "Something went wrong. Please try again.",
+        description:
+          error.response?.data?.message ||
+          "Something went wrong. Please try again.",
       });
     }
   };
@@ -338,7 +396,10 @@ export function BusinessRegistrationForm() {
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-neutral-200 shadow-sm">
         <div className="w-[90%] mx-auto sm:container sm:mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-2 sm:space-x-3 group">
+            <Link
+              href="/"
+              className="flex items-center space-x-2 sm:space-x-3 group"
+            >
               <div className="relative">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300">
                   <Sparkles className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
@@ -348,12 +409,14 @@ export function BusinessRegistrationForm() {
                 <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">
                   Perfect Wedding
                 </h1>
-                <p className="text-xs text-neutral-500">Business Registration</p>
+                <p className="text-xs text-neutral-500">
+                  Business Registration
+                </p>
               </div>
             </Link>
-            
-            <Link 
-              href="/get-help" 
+
+            <Link
+              href="/get-help"
               className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-all duration-200"
             >
               <HelpCircle className="w-4 h-4" />
@@ -366,7 +429,6 @@ export function BusinessRegistrationForm() {
       {/* Main Content */}
       <main className="w-[90%] mx-auto sm:container sm:mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 max-w-7xl mx-auto">
-          
           {/* Left Side - Sticky Hero Section */}
           <div className="lg:col-span-5 order-2 lg:order-1">
             <div className="lg:sticky lg:top-24 space-y-4 sm:space-y-6 lg:space-y-8">
@@ -375,13 +437,20 @@ export function BusinessRegistrationForm() {
                 <CardContent className="p-4 sm:p-6">
                   <div className="space-y-3 sm:space-y-4">
                     <div className="flex items-center justify-between">
-                      <h2 className="text-base sm:text-lg font-semibold text-neutral-900">Registration Progress</h2>
-                      <span className="text-sm font-medium text-purple-600">{getProgressPercentage()}%</span>
+                      <h2 className="text-base sm:text-lg font-semibold text-neutral-900">
+                        Registration Progress
+                      </h2>
+                      <span className="text-sm font-medium text-purple-600">
+                        {getProgressPercentage()}%
+                      </span>
                     </div>
                     <Progress value={getProgressPercentage()} className="h-2" />
                     <div className="flex items-center gap-2 text-sm text-neutral-600">
                       <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>Step {currentStep + 1} of {carRentalOrBridleWear ? 3 : 7}</span>
+                      <span>
+                        Step {currentStep + 1} of{" "}
+                        {carRentalOrBridleWear ? 3 : 7}
+                      </span>
                     </div>
                   </div>
                 </CardContent>
@@ -393,9 +462,12 @@ export function BusinessRegistrationForm() {
                   <div className="space-y-4 sm:space-y-6">
                     <div className="text-center">
                       <Award className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-purple-200" />
-                      <h3 className="text-lg sm:text-xl font-bold mb-2">Join Our Premium Network</h3>
+                      <h3 className="text-lg sm:text-xl font-bold mb-2">
+                        Join Our Premium Network
+                      </h3>
                       <p className="text-purple-100 text-sm">
-                        Connect with thousands of couples looking for your services
+                        Connect with thousands of couples looking for your
+                        services
                       </p>
                     </div>
 
@@ -404,25 +476,33 @@ export function BusinessRegistrationForm() {
                         <div className="w-7 h-7 sm:w-8 sm:h-8 bg-white/20 rounded-full flex items-center justify-center">
                           <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                         </div>
-                        <span className="text-sm font-medium">Free Business Profile</span>
+                        <span className="text-sm font-medium">
+                          Free Business Profile
+                        </span>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="w-7 h-7 sm:w-8 sm:h-8 bg-white/20 rounded-full flex items-center justify-center">
                           <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                         </div>
-                        <span className="text-sm font-medium">Direct Customer Leads</span>
+                        <span className="text-sm font-medium">
+                          Direct Customer Leads
+                        </span>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="w-7 h-7 sm:w-8 sm:h-8 bg-white/20 rounded-full flex items-center justify-center">
                           <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                         </div>
-                        <span className="text-sm font-medium">Professional Marketing Tools</span>
+                        <span className="text-sm font-medium">
+                          Professional Marketing Tools
+                        </span>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="w-7 h-7 sm:w-8 sm:h-8 bg-white/20 rounded-full flex items-center justify-center">
                           <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                         </div>
-                        <span className="text-sm font-medium">24/7 Customer Support</span>
+                        <span className="text-sm font-medium">
+                          24/7 Customer Support
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -439,12 +519,20 @@ export function BusinessRegistrationForm() {
                     </h3>
                     <div className="grid grid-cols-2 gap-3 sm:gap-4">
                       <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
-                        <div className="text-xl sm:text-2xl font-bold text-blue-600">500+</div>
-                        <div className="text-xs text-blue-600">Active Vendors</div>
+                        <div className="text-xl sm:text-2xl font-bold text-blue-600">
+                          500+
+                        </div>
+                        <div className="text-xs text-blue-600">
+                          Active Vendors
+                        </div>
                       </div>
                       <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl">
-                        <div className="text-xl sm:text-2xl font-bold text-green-600">10K+</div>
-                        <div className="text-xs text-green-600">Happy Couples</div>
+                        <div className="text-xl sm:text-2xl font-bold text-green-600">
+                          10K+
+                        </div>
+                        <div className="text-xs text-green-600">
+                          Happy Couples
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -470,71 +558,136 @@ export function BusinessRegistrationForm() {
                             Choose Your Business Type
                           </h2>
                           <p className="text-sm sm:text-base text-neutral-600">
-                            Select the category that best describes your wedding services
+                            Select the category that best describes your wedding
+                            services
                           </p>
                         </div>
                       </div>
-                      <BusinessTypeStep setBusinessType={setBusinessType} businessType={businessType} />
+                      <BusinessTypeStep
+                        setBusinessType={setBusinessType}
+                        businessType={businessType}
+                        errors={errors}
+                      />
                     </div>
                   ) : (
                     <div className="space-y-4 sm:space-y-6">
                       <div className="flex items-center gap-3 mb-4 sm:mb-6">
                         <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-600 to-purple-700 rounded-full flex items-center justify-center">
-                          <span className="text-white font-semibold text-sm sm:text-base">{currentStep}</span>
+                          <span className="text-white font-semibold text-sm sm:text-base">
+                            {currentStep}
+                          </span>
                         </div>
                         <div>
                           <h2 className="text-lg sm:text-xl font-bold text-neutral-900">
                             {businessType} Registration
                           </h2>
-                          <p className="text-sm sm:text-base text-neutral-600">Complete your business profile</p>
+                          <p className="text-sm sm:text-base text-neutral-600">
+                            Complete your business profile
+                          </p>
                         </div>
                       </div>
-                      
-                      {formData.businessType === 'Wedding venue' ?
-                        <VenueSteps setFile={setFile} file={file} error={errors} setErrors={setErrors} currentStep={currentStep} />
-                        :
-                        carRentalOrBridleWear ?
-                          <FormSteps setFile={setFile} file={file} error={errors} setErrors={setErrors} currentStep={currentStep} />
-                          :
-                          photographer ?
-                            <PhotographerSteps setFile={setFile} file={file} error={errors} setErrors={setErrors} currentStep={currentStep} />
-                            :
-                            makeupArtist ?
-                              <MakeupArtistSteps setFile={setFile} file={file} error={errors} setErrors={setErrors} currentStep={currentStep} />
-                              :
-                              hennaArtist ?
-                                <HennaArtistSteps setFile={setFile} file={file} error={errors} setErrors={setErrors} currentStep={currentStep} />
-                                :
-                                decorator ?
-                                  <DecoratorSteps setFile={setFile} file={file} error={errors} setErrors={setErrors} currentStep={currentStep} />
-                                  :
-                                  catering ?
-                                    <CateringSteps setFile={setFile} file={file} error={errors} setErrors={setErrors} currentStep={currentStep} />
-                                    :
-                                    <div></div>
-                      }
+
+                      {formData.businessType === "Wedding venue" ? (
+                        <VenueSteps
+                          setFile={setFile}
+                          file={file}
+                          error={errors}
+                          setErrors={setErrors}
+                          currentStep={currentStep}
+                        />
+                      ) : carRentalOrBridleWear ? (
+                        <FormSteps
+                          setFile={setFile}
+                          file={file}
+                          error={errors}
+                          setErrors={setErrors}
+                          currentStep={currentStep}
+                        />
+                      ) : photographer ? (
+                        <PhotographerSteps
+                          setFile={setFile}
+                          file={file}
+                          error={errors}
+                          setErrors={setErrors}
+                          currentStep={currentStep}
+                        />
+                      ) : makeupArtist ? (
+                        <MakeupArtistSteps
+                          setFile={setFile}
+                          file={file}
+                          error={errors}
+                          setErrors={setErrors}
+                          currentStep={currentStep}
+                        />
+                      ) : hennaArtist ? (
+                        <HennaArtistSteps
+                          setFile={setFile}
+                          file={file}
+                          error={errors}
+                          setErrors={setErrors}
+                          currentStep={currentStep}
+                        />
+                      ) : decorator ? (
+                        <DecoratorSteps
+                          setFile={setFile}
+                          file={file}
+                          error={errors}
+                          setErrors={setErrors}
+                          currentStep={currentStep}
+                        />
+                      ) : catering ? (
+                        <CateringSteps
+                          setFile={setFile}
+                          file={file}
+                          error={errors}
+                          setErrors={setErrors}
+                          currentStep={currentStep}
+                        />
+                      ) : (
+                        <div></div>
+                      )}
                     </div>
                   )}
                 </div>
 
                 {/* Navigation Buttons */}
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 pt-4 sm:pt-6 border-t border-neutral-200 mt-6 sm:mt-8">
-                  <Button 
-                    disabled={currentStep === 0} 
-                    onClick={handleBack} 
-                    variant="outline" 
+                  <Button
+                    disabled={currentStep === 0}
+                    onClick={handleBack}
+                    variant="outline"
                     className="w-full sm:w-auto flex items-center justify-center gap-2 border-neutral-200 hover:border-purple-500 hover:text-purple-600 transition-all duration-200 py-3 sm:py-2"
                   >
                     <ArrowLeft className="w-4 h-4" />
                     Back
                   </Button>
-                  
+
                   <Button
                     type="button"
-                    onClick={(carRentalOrBridleWear && currentStep === 2) || (photographer && currentStep === 6) || (makeupArtist && currentStep === 6) || (hennaArtist && currentStep === 6) || (decorator && currentStep === 6) || (catering && currentStep === 6) ? handleSubmit : currentStep === 6 ? handleSubmit : handleNext}
+                    onClick={
+                      (carRentalOrBridleWear && currentStep === 2) ||
+                      (photographer && currentStep === 6) ||
+                      (makeupArtist && currentStep === 6) ||
+                      (hennaArtist && currentStep === 6) ||
+                      (decorator && currentStep === 6) ||
+                      (catering && currentStep === 6)
+                        ? handleSubmit
+                        : currentStep === 6
+                          ? handleSubmit
+                          : handleNext
+                    }
                     className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 px-6 sm:px-8 py-3 sm:py-2 font-semibold"
                   >
-                    {(carRentalOrBridleWear && currentStep === 2) || (photographer && currentStep === 6) || (makeupArtist && currentStep === 6) || (hennaArtist && currentStep === 6) || (decorator && currentStep === 6) || (catering && currentStep === 6) ? 'Submit Registration' : currentStep === 6 ? "Submit Registration" : "Continue"}
+                    {(carRentalOrBridleWear && currentStep === 2) ||
+                    (photographer && currentStep === 6) ||
+                    (makeupArtist && currentStep === 6) ||
+                    (hennaArtist && currentStep === 6) ||
+                    (decorator && currentStep === 6) ||
+                    (catering && currentStep === 6)
+                      ? "Submit Registration"
+                      : currentStep === 6
+                        ? "Submit Registration"
+                        : "Continue"}
                   </Button>
                 </div>
               </CardContent>
@@ -543,11 +696,7 @@ export function BusinessRegistrationForm() {
         </div>
       </main>
 
-      <SuccessModal
-        open={openModal}
-        setOpen={setOpenModal}
-      />
+      <SuccessModal open={openModal} setOpen={setOpenModal} />
     </div>
   );
 }
-
