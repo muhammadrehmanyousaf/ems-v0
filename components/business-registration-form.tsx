@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PersonalDetailsStep } from "./steps/personal-details-step";
 import { BusinessTypeStep } from "./steps/business-type-step";
 import Image from "next/image";
@@ -23,6 +23,9 @@ import {
   Award,
   Shield,
   Sparkles,
+  Heart,
+  Calendar,
+  Users,
 } from "lucide-react";
 import { FormType, useFormContext } from "@/lib/context/form-context";
 import { toast } from "./ui/use-toast";
@@ -40,10 +43,13 @@ import FormSteps from "./VendorStepForms/newVendorRegisterationForm/CarRentalAnd
 import { CarRentalOrBridleWearValidations } from "./VendorStepForms/newVendorRegisterationForm/CarRentalAndBridleWear/components/validations";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { useFetchData } from "@/hooks/use-fetch-data";
+import { PlatformStats } from "@/lib/types";
+import { Icons } from "./ui/icons";
+import { motion } from "framer-motion";
 
 export function BusinessRegistrationForm() {
   // const [currentStep, setCurrentStep] = useState(0);
-  const [file, setFile] = useState<File | null>(null);
   const {
     businessType,
     setBusinessType,
@@ -55,10 +61,13 @@ export function BusinessRegistrationForm() {
     setCurrentStep,
     currentStep,
   } = useFormContext();
-
   console.log("Current Step:", currentStep);
   console.log("Business type:", businessType);
+
+  const [file, setFile] = useState<File | null>(null);
   const [openModal, setOpenModal] = useState(false);
+  const [stats, setStats] = useState<PlatformStats | null>(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
 
   const carRentalOrBridleWear =
     businessType === "Car rental" || businessType === "Bridal wearing";
@@ -67,6 +76,23 @@ export function BusinessRegistrationForm() {
   const hennaArtist = businessType === "Henna artist";
   const decorator = businessType === "Decorator";
   const catering = businessType === "Catering";
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      setIsLoadingStats(true);
+      try {
+        const data = await axios.get(`${BACKEND_URL}api/v1/platform-stats`);
+        console.log("Fetched stats:", data);
+        setStats(data.data.data);
+      } catch (error) {
+        console.error("Failed to load stats", error);
+      }
+      setIsLoadingStats(false);
+    };
+    fetchStats();
+  }, []);
+
+  console.log("stats here", stats);
 
   // Calculate progress percentage
   const getProgressPercentage = () => {
@@ -119,6 +145,10 @@ export function BusinessRegistrationForm() {
         if (!formData.phoneNumber)
           currentErrors.phoneNumber = "Phone number is required";
         if (!formData.password) currentErrors.password = "Password is required";
+        if (!formData.re_enterPassword)
+          currentErrors.re_enterPassword = "Re-enter password is required";
+        else if (formData.password !== formData.re_enterPassword)
+          currentErrors.re_enterPassword = "Passwords do not match";
       }
       if (currentStep === 2) {
         if (!formData.name) currentErrors.name = "Business name is required";
@@ -509,7 +539,7 @@ export function BusinessRegistrationForm() {
                 </CardContent>
               </Card>
 
-              {/* Stats Section */}
+              {/* Stats cards */}
               <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
                 <CardContent className="p-4 sm:p-6">
                   <div className="space-y-3 sm:space-y-4">
@@ -520,7 +550,8 @@ export function BusinessRegistrationForm() {
                     <div className="grid grid-cols-2 gap-3 sm:gap-4">
                       <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
                         <div className="text-xl sm:text-2xl font-bold text-blue-600">
-                          500+
+                          {stats ? stats.vendors : 0}
+                          {"+"}
                         </div>
                         <div className="text-xs text-blue-600">
                           Active Vendors
@@ -528,7 +559,8 @@ export function BusinessRegistrationForm() {
                       </div>
                       <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl">
                         <div className="text-xl sm:text-2xl font-bold text-green-600">
-                          10K+
+                          {stats ? stats.couplesServed : 0}
+                          {"+"}
                         </div>
                         <div className="text-xs text-green-600">
                           Happy Couples

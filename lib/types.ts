@@ -1,214 +1,219 @@
 export interface Vendor {
-  id: string | number
-  userId?: number
-  name: string
-  images: string[]
-  location: string
-  city: string
-  rating: number
-  reviews: Review[]
-  price: number
-  minimumPrice: number
-  type: string
-  subBusinessType: string
-  capacity?: number
-  amenities: string[]
-  cancellationPolicy: string
-  sponsored: boolean
-  staff: string[]
-  description: string
-  packages: Package[]
-  menus?: VendorMenu[]
-  video?: string
-  availability?: Availability
-  isFavorite?: boolean
+  id: string | number;
+  userId?: number;
+  name: string;
+  images: string[];
+  location: string;
+  city: string;
+  rating: number;
+  reviews: Review[];
+  price: number;
+  minimumPrice: number;
+  type: string;
+  subBusinessType: string;
+  capacity?: number;
+  amenities: string[];
+  cancellationPolicy: string;
+  sponsored: boolean;
+  staff: string[];
+  description: string;
+  packages: Package[];
+  menus?: VendorMenu[];
+  video?: string;
+  availability?: Availability;
+  isFavorite?: boolean;
 }
 
 export interface Availability {
-  businessId: string
+  businessId: string;
   availabilityPeriod: {
-    startDate: string
-    endDate: string
-    daysAhead: number
-  }
-  timeSlots: string[]
-  availability: AvailabilityDay[]
+    startDate: string;
+    endDate: string;
+    daysAhead: number;
+  };
+  timeSlots: string[];
+  availability: AvailabilityDay[];
 }
 
 export interface AvailabilityDay {
-  date: string
-  isAvailable: boolean
-  availableSlots: string[]
-  bookedSlots: string[]
-  totalSlots: number
-  availableCount: number
+  date: string;
+  isAvailable: boolean;
+  availableSlots: string[];
+  bookedSlots: string[];
+  totalSlots: number;
+  availableCount: number;
 }
 
 export interface Review {
-  id: string
-  userId: string
-  userName: string
-  rating: number
-  comment: string
-  date: string
-  images?: string[]
+  id: string;
+  userId: string;
+  userName: string;
+  rating: number;
+  comment: string;
+  date: string;
+  images?: string[];
 }
 
 export interface Package {
-  id: string
-  name: string
-  description: string
-  price: number
-  features: string[]
-  duration?: string
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  features: string[];
+  duration?: string;
 }
 
 export interface VendorMenu {
-  id: string | number
-  title: string
-  price: number
-  data?: { items?: string[] } | null
+  id: string | number;
+  title: string;
+  price: number;
+  data?: { items?: string[] } | null;
 }
 
 export interface Venue {
-  id: number
-  name: string
-  image: string
-  location: string
-  rating: number
-  reviews: number
-  price: number
-  type: string
-  capacity: number
-  amenities: string[]
-  cancellationPolicy: string
-  sponsored: boolean
+  id: number;
+  name: string;
+  image: string;
+  location: string;
+  rating: number;
+  reviews: number;
+  price: number;
+  type: string;
+  capacity: number;
+  amenities: string[];
+  cancellationPolicy: string;
+  sponsored: boolean;
 }
 
 export interface Filters {
-  city: string
-  subArea: string
-  minPrice: string
-  maxPrice: string
-  type: string
-  capacity: string
-  amenities: string[]
-  cancellationPolicy: string
-  staff: string[]
+  city: string;
+  subArea: string;
+  minPrice: string;
+  maxPrice: string;
+  type: string;
+  capacity: string;
+  amenities: string[];
+  cancellationPolicy: string;
+  staff: string[];
 }
 
-export type SortOption = "default" | "price-low" | "price-high" | "rating" | "alphabetical"
-export type StaffOption = "Male" | "Female" | "Transgender"
+export type SortOption =
+  | "default"
+  | "price-low"
+  | "price-high"
+  | "rating"
+  | "alphabetical";
+export type StaffOption = "Male" | "Female" | "Transgender";
 
 export interface VendorCardProps {
-  id: string | number
-  name: string
-  image: string
-  location: string
-  rating?: number
-  reviews?: number
-  price: number | string
-  type: string
-  vendorType?: string
-  capacity?: number
-  amenities?: string[]
-  sponsored?: boolean
-  showBookButton?: boolean
-  showDetails?: boolean
-  className?: string
+  id: string | number;
+  name: string;
+  image: string;
+  location: string;
+  rating?: number;
+  reviews?: number;
+  price: number | string;
+  type: string;
+  vendorType?: string;
+  capacity?: number;
+  amenities?: string[];
+  sponsored?: boolean;
+  showBookButton?: boolean;
+  showDetails?: boolean;
+  className?: string;
 }
 
 /////////////////////////////////////////
 
 export interface BookingFormData {
   // User Info
-  username: string
-  phoneNumber: string
-  email: string
-  password: string
+  username: string;
+  phoneNumber: string;
+  email: string;
+  password: string;
 
   // Date & Time
-  bookingDate: Date | string | undefined
-  timeSlot: string
-  guestCount: number
+  bookingDate: Date | string | undefined;
+  timeSlot: string;
+  guestCount: number;
 
   // Package
-  selectedPackage: string
-  eventType: string
+  selectedPackage: string;
+  eventType: string;
   // Menu
-  selectedMenu: string
-  menuAddons: string[]
+  selectedMenu: string;
+  menuAddons: string[];
 
   // Vendors
-  selectedVendors: string[]
-  selectedVendorPackages: string[] // New field for vendor packages
+  selectedVendors: string[];
+  selectedVendorPackages: string[]; // New field for vendor packages
 
   // Pricing
-  totalPrice: number
+  totalPrice: number;
 }
 
 export interface EventBooking {
-  eventType: string
-  formData: BookingFormData
-  currentStep: number
-  isSubmitted: boolean
-  bookingResponse?: any // Add booking response to store API response
+  eventType: string;
+  formData: BookingFormData;
+  currentStep: number;
+  isSubmitted: boolean;
+  bookingResponse?: any; // Add booking response to store API response
 }
 
 export interface MultiEventBookingState {
-  events: EventBooking[]
-  activeEventIndex: number
+  events: EventBooking[];
+  activeEventIndex: number;
 }
 
 export interface BookingPackage {
-  id: string
-  name: string
-  price: number
-  description: string
-  facilities: string[]
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+  facilities: string[];
 }
 
 export interface BookingVendorPackage {
-  id: string
-  vendorId: string
-  name: string
-  price: number
-  description: string
-  features: string[]
+  id: string;
+  vendorId: string;
+  name: string;
+  price: number;
+  description: string;
+  features: string[];
 }
 
 export interface BookingMenu {
-  id: string
-  name: string
-  price: number
-  description: string
-  items: string[]
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+  items: string[];
 }
 
 export interface BookingMenuAddon {
-  id: string
-  name: string
-  price: number
-  description: string
+  id: string;
+  name: string;
+  price: number;
+  description: string;
 }
 
 export interface BookingVendor {
-  id: string
-  type: string
-  name: string
-  price: number
-  description: string
-  packages?: BookingVendorPackage[]
+  id: string;
+  type: string;
+  name: string;
+  price: number;
+  description: string;
+  packages?: BookingVendorPackage[];
 }
 
 export interface BookingEventType {
-  id: string
-  name: string
-  icon: string
-  description: string
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
 }
 
-  export interface EventVenue {
+export interface EventVenue {
   id: number;
   userId: number;
 
@@ -222,7 +227,7 @@ export interface BookingEventType {
   cityCovered: string[];
 
   subBusinessType: string;
-  menus: any[]
+  menus: any[];
   services: string;
   serviceProvided: string[];
   expertise: string[];
@@ -235,7 +240,7 @@ export interface BookingEventType {
   minimumPrice: number;
   starterPrice: number;
   downPayment: number;
-  downPaymentType: 'Percentage' | 'Fixed' | string;
+  downPaymentType: "Percentage" | "Fixed" | string;
   cancelationPolicy: string;
   vendor?: any;
   parking: boolean;
@@ -252,7 +257,7 @@ export interface BookingEventType {
   covidComplaint: boolean;
 
   images: string[];
-  packages?: any[]
+  packages?: any[];
   createdAt: string;
   updatedAt: string;
 }
@@ -274,7 +279,7 @@ export interface PaymentIntent {
     }>;
   };
   paymentDetails: {
-    type: 'down_payment' | 'remaining_payment' | 'full_payment';
+    type: "down_payment" | "remaining_payment" | "full_payment";
     amount: number;
     currency: string;
     expectedAmount: number;
@@ -317,8 +322,8 @@ export interface PaymentHistory {
   bookingId: number;
   amount: number;
   currency: string;
-  paymentType: 'down_payment' | 'remaining_payment' | 'full_payment';
-  status: 'pending' | 'completed' | 'failed';
+  paymentType: "down_payment" | "remaining_payment" | "full_payment";
+  status: "pending" | "completed" | "failed";
   createdAt: string;
   updatedAt: string;
   totalAmount?: number;
@@ -341,11 +346,17 @@ export interface PendingPayment {
     id: number;
     name: string;
   }>;
-  paymentType: 'down_payment' | 'remaining_payment' | 'full_payment';
+  paymentType: "down_payment" | "remaining_payment" | "full_payment";
   amount: number;
   currency: string;
   status: string;
   paymentStatus: string;
   createdAt: string;
   totalAmount?: number;
+}
+
+export interface PlatformStats {
+  vendors: number;
+  couplesServed: number;
+  cities: number;
 }
