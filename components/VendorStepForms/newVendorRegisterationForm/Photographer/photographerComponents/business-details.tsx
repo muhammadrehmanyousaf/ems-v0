@@ -44,7 +44,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
     formData.cancelationPolicy || "",
   );
   const [downPaymentType, setDownPaymentType] = useState<string>(
-    formData.downPaymentType || "",
+    formData.downPaymentType || "Percentage",
   );
 
   useEffect(() => {
@@ -195,14 +195,22 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                 <Input
                   id="minimumPrice"
                   type="number"
+                  min={1}
                   placeholder="Enter starting price"
                   value={formData.minimumPrice}
-                  onChange={(e) =>
+                  onKeyDown={(e) => {
+                    if (["e", "E", "+", "-"].includes(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    if (val < 1) return;
                     setFormData((prev) => ({
                       ...prev,
-                      minimumPrice: parseInt(e.target.value),
-                    }))
-                  }
+                      minimumPrice: isNaN(val) ? 0 : val,
+                    }));
+                  }}
                   className={`mt-1 ${errors.minimumPrice ? "border-red-500" : "border-neutral-300"}`}
                 />
                 {errors.minimumPrice && (
@@ -220,32 +228,6 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                   Down Payment
                 </Label>
                 <div className="flex gap-3 mt-1">
-                  <Input
-                    id="downPayment"
-                    type="number"
-                    placeholder="Amount"
-                    value={formData.downPayment}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value);
-                      setFormData((prev) => ({
-                        ...prev,
-                        downPayment: isNaN(val) ? 0 : val,
-                      }));
-
-                      let errorMsg = "";
-                      if (val < 0) {
-                        errorMsg = "Value must be positive";
-                      } else if (
-                        downPaymentType === "Percentage" &&
-                        val > 100
-                      ) {
-                        errorMsg = "Percentage must be between 0 and 100";
-                      }
-                      setErrors((prev) => ({ ...prev, downPayment: errorMsg }));
-                    }}
-                    className={`flex-1 ${errors.downPayment ? "border-red-500" : "border-neutral-300"}`}
-                    min={0}
-                  />
                   <Select
                     value={downPaymentType}
                     onValueChange={(value) => {
@@ -256,8 +238,8 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                       }));
 
                       let errorMsg = "";
-                      if (formData.downPayment < 0) {
-                        errorMsg = "Value must be positive";
+                      if (!formData.downPayment || formData.downPayment <= 0) {
+                        errorMsg = "Please enter a valid amount";
                       } else if (
                         value === "Percentage" &&
                         formData.downPayment > 100
@@ -283,6 +265,39 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                       ))}
                     </SelectContent>
                   </Select>
+
+                  <Input
+                    id="downPayment"
+                    type="number"
+                    placeholder="Amount"
+                    value={formData.downPayment || ""}
+                    onKeyDown={(e) => {
+                      if (["e", "E", "+", "-"].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const val = parseInt(value);
+                      setFormData((prev) => ({
+                        ...prev,
+                        downPayment: isNaN(val) ? 0 : val,
+                      }));
+
+                      let errorMsg = "";
+                      if (!value || isNaN(val) || val <= 0) {
+                        errorMsg = "Please enter a valid amount";
+                      } else if (
+                        downPaymentType === "Percentage" &&
+                        val > 100
+                      ) {
+                        errorMsg = "Percentage must be between 0 and 100";
+                      }
+                      setErrors((prev) => ({ ...prev, downPayment: errorMsg }));
+                    }}
+                    className={`flex-1 ${errors.downPayment ? "border-red-500" : "border-neutral-300"}`}
+                    min={1}
+                  />
                 </div>
                 {errors.downPayment && (
                   <p className="text-red-500 text-sm mt-1">

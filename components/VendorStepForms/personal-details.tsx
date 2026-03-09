@@ -45,7 +45,15 @@ const PersonalDetails = ({
     },
   ];
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    fieldName: string,
+  ) => {
     const { value, type } = e.target;
 
     setFormData((prevData) => ({
@@ -57,6 +65,21 @@ const PersonalDetails = ({
       ...prevErrors,
       [fieldName]: "",
     }));
+  };
+
+  const handleBlur = (
+    e: React.FocusEvent<HTMLInputElement>,
+    fieldName: string,
+  ) => {
+    if (fieldName === "email") {
+      const value = e.target.value;
+      if (value && !validateEmail(value)) {
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          email: "Please enter a valid email address",
+        }));
+      }
+    }
   };
 
   return (
@@ -74,7 +97,9 @@ const PersonalDetails = ({
                 type={field.type}
                 placeholder={field.place}
                 className="rounded-l-none"
-                value={String(formData[field.name as keyof typeof formData]) ?? ''}
+                value={
+                  String(formData[field.name as keyof typeof formData]) ?? ""
+                }
                 onChange={(e) => handleChange(e, field.name)}
               />
             </div>
@@ -82,8 +107,11 @@ const PersonalDetails = ({
             <Input
               type={field.type || "text"}
               placeholder={field.place}
-              value={String(formData[field.name as keyof typeof formData] ?? "")}
+              value={String(
+                formData[field.name as keyof typeof formData] ?? "",
+              )}
               onChange={(e) => handleChange(e, field.name)}
+              onBlur={(e) => handleBlur(e, field.name)}
             />
           )}
 
