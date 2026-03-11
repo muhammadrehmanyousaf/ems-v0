@@ -111,6 +111,11 @@ export function BusinessRegistrationForm() {
 
   console.log("formdata here iasefaoeoifvnnafn", formData);
 
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleValidations = () => {
     let currentErrors: { [key: string]: string } = {};
     console.log("Running validations for step:", currentStep);
@@ -142,6 +147,8 @@ export function BusinessRegistrationForm() {
         if (!formData.fullName)
           currentErrors.fullName = "Full name is required";
         if (!formData.email) currentErrors.email = "Email is required";
+        if (formData.email && !validateEmail(formData.email))
+          currentErrors.email = "Invalid email address";
         if (!formData.phoneNumber)
           currentErrors.phoneNumber = "Phone number is required";
         if (!formData.password) currentErrors.password = "Password is required";
@@ -161,6 +168,15 @@ export function BusinessRegistrationForm() {
           currentErrors.minimumPrice = "Starting price is required";
         if (!formData.subBusinessType)
           currentErrors.subBusinessType = "Business type is required";
+        if (!formData.downPayment)
+          currentErrors.downPayment = "Down payment is required";
+        else if (
+          formData.downPaymentType === "Percentage" &&
+          (Number(formData.downPayment) <= 0 ||
+            Number(formData.downPayment) > 100)
+        ) {
+          currentErrors.downPayment = "Percentage must be between 0 and 100";
+        }
       }
       setErrors(currentErrors);
       return currentErrors;
@@ -316,7 +332,7 @@ export function BusinessRegistrationForm() {
           starterPrice: 0,
           images: [],
           imageFiles: [],
-          subBusinessType: "",
+          subBusinessType: [],
           expertise: [],
           packages: [
             {
@@ -384,7 +400,7 @@ export function BusinessRegistrationForm() {
           starterPrice: 0,
           images: [],
           imageFiles: [],
-          subBusinessType: "",
+          subBusinessType: [],
           expertise: [],
           packages: [
             {

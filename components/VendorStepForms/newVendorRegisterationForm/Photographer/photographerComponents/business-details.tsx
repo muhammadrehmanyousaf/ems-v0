@@ -14,7 +14,7 @@ import RadioButton from "@/components/VendorStepForms/components/radio-button";
 import { useFormContext } from "@/lib/context/form-context";
 import React, { useEffect, useState } from "react";
 import { BiFemale } from "react-icons/bi";
-import { FaFemale, FaMale } from "react-icons/fa";
+import { FaCircle, FaFemale, FaMale, FaInfoCircle } from "react-icons/fa";
 
 interface Errors {
   subBusinessType?: string;
@@ -27,8 +27,58 @@ interface BusinessDetails {
 }
 
 const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
-  const { businessType, setFormData, formData } = useFormContext();
-  const [selectedTypes, setSelectedTypes] = useState<string>("");
+  const { setFormData, formData } = useFormContext();
+  const staff = [
+    { value: "Male", icon: <FaMale /> },
+    { value: "Female", icon: <FaFemale /> },
+    { value: "Transgender", icon: <BiFemale /> },
+  ];
+
+  const Expertise = [
+    { value: "Engagement", label: "Engagement" },
+    { value: "Wedding", label: "Wedding" },
+    { value: "Parties", label: "Parties" },
+    { value: "Fashion Show", label: "Fashion Show" },
+    { value: "Corporate Events", label: "Corporate Events" },
+    { value: "Birthday", label: "Birthday" },
+    { value: "Anniversary", label: "Anniversary" },
+  ];
+
+  const types = [
+    { value: "Portrait", label: "Portrait Photography", icon: <FaCircle /> },
+    { value: "Event", label: "Event Photography", icon: <FaCircle /> },
+    { value: "Wedding", label: "Wedding Photography", icon: <FaCircle /> },
+    {
+      value: "Commercial",
+      label: "Commercial Photography",
+      icon: <FaCircle />,
+    },
+    { value: "Fashion", label: "Fashion Photography", icon: <FaCircle /> },
+  ];
+
+  const amenitiesData = [
+    { value: "Drone Photography", label: "Drone Photography" },
+    { value: "Video Recording", label: "Video Recording" },
+    { value: "Photo Editing", label: "Photo Editing" },
+    { value: "Album Design", label: "Album Design" },
+    { value: "Online Gallery", label: "Online Gallery" },
+    { value: "Print Services", label: "Print Services" },
+  ];
+
+  const cancellationPolicies = [
+    { id: "Refundable", label: "Refundable" },
+    { id: "Partially Refundable", label: "Partially Refundable" },
+    { id: "Non-refundable", label: "Non-refundable" },
+  ];
+
+  const downPaymentTypes = [
+    { id: "Percentage", label: "Percentage" },
+    { id: "Fixed Amount", label: "Fixed Amount" },
+  ];
+
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(
+    formData.subBusinessType || [],
+  );
   const [selectedTypeIndexes, setSelectedTypeIndexes] = useState<number[]>([]);
   const [selectedExpertise, setSelectedExpertise] = useState<string[]>(
     formData.expertise || [],
@@ -36,9 +86,18 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>(
     formData.amenities || [],
   );
-  const [selectedstaff, setSelectedstaff] = useState<string[]>([]);
+  const [selectedstaff, setSelectedstaff] = useState<string[]>(
+    formData.staff || [],
+  );
   const [selectedStaffIndexes, setSelectedStaffIndexes] = useState<number[]>(
-    [],
+    () => {
+      if (formData.staff) {
+        return formData.staff
+          .map((s: string) => staff.findIndex((item) => item.value === s))
+          .filter((i: number) => i !== -1);
+      }
+      return [];
+    },
   );
   const [cancellation, setCancellation] = useState<string>(
     formData.cancelationPolicy || "",
@@ -67,50 +126,6 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
     setFormData,
   ]);
 
-  const staff = [
-    { value: "Male", icon: <FaMale /> },
-    { value: "Female", icon: <FaFemale /> },
-    { value: "Transgender", icon: <BiFemale /> },
-  ];
-
-  const Expertise = [
-    { value: "Engagement", label: "Engagement" },
-    { value: "Wedding", label: "Wedding" },
-    { value: "Parties", label: "Parties" },
-    { value: "Fashion Show", label: "Fashion Show" },
-    { value: "Corporate Events", label: "Corporate Events" },
-    { value: "Birthday", label: "Birthday" },
-    { value: "Anniversary", label: "Anniversary" },
-  ];
-
-  const types = [
-    { id: "Portrait", label: "Portrait Photography" },
-    { id: "Event", label: "Event Photography" },
-    { id: "Wedding", label: "Wedding Photography" },
-    { id: "Commercial", label: "Commercial Photography" },
-    { id: "Fashion", label: "Fashion Photography" },
-  ];
-
-  const amenitiesData = [
-    { value: "Drone Photography", label: "Drone Photography" },
-    { value: "Video Recording", label: "Video Recording" },
-    { value: "Photo Editing", label: "Photo Editing" },
-    { value: "Album Design", label: "Album Design" },
-    { value: "Online Gallery", label: "Online Gallery" },
-    { value: "Print Services", label: "Print Services" },
-  ];
-
-  const cancellationPolicies = [
-    { id: "Refundable", label: "Refundable" },
-    { id: "Partially Refundable", label: "Partially Refundable" },
-    { id: "Non-refundable", label: "Non-refundable" },
-  ];
-
-  const downPaymentTypes = [
-    { id: "Percentage", label: "Percentage" },
-    { id: "Fixed Amount", label: "Fixed Amount" },
-  ];
-
   const handleSelectStaff = (type: string, index: number) => {
     if (selectedStaffIndexes.includes(index)) {
       setSelectedStaffIndexes(selectedStaffIndexes.filter((i) => i !== index));
@@ -118,6 +133,16 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
     } else {
       setSelectedStaffIndexes([...selectedStaffIndexes, index]);
       setSelectedstaff([...selectedstaff, type]);
+    }
+  };
+
+  const handleSelectSubBusinessType = (type: string, index: number) => {
+    if (selectedTypeIndexes.includes(index)) {
+      setSelectedTypeIndexes(selectedTypeIndexes.filter((i) => i !== index));
+      setSelectedTypes(selectedTypes.filter((t) => t !== type));
+    } else {
+      setSelectedTypeIndexes([...selectedTypeIndexes, index]);
+      setSelectedTypes([...selectedTypes, type]);
     }
   };
 
@@ -192,6 +217,12 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                 >
                   Starting Price (PKR)
                 </Label>
+                <div className="flex items-center gap-2 my-2 p-2.5 bg-blue-50 border border-blue-100 rounded-lg text-blue-700 shadow-sm">
+                  <FaInfoCircle className="w-4 h-4 shrink-0" />
+                  <p className="text-xs font-medium">
+                    This price will be shown to users as your starting price.
+                  </p>
+                </div>
                 <Input
                   id="minimumPrice"
                   type="number"
@@ -204,14 +235,14 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                     }
                   }}
                   onChange={(e) => {
-                    const val = parseInt(e.target.value);
-                    if (val < 1) return;
+                    const numValue = Number(e.target.value);
                     setFormData((prev) => ({
                       ...prev,
-                      minimumPrice: isNaN(val) ? 0 : val,
+                      minimumPrice:
+                        isNaN(numValue) || numValue < 0 ? 0 : numValue,
                     }));
                   }}
-                  className={`mt-1 ${errors.minimumPrice ? "border-red-500" : "border-neutral-300"}`}
+                  className={`mt-2 ${errors.minimumPrice ? "border-red-500" : "border-neutral-300"}`}
                 />
                 {errors.minimumPrice && (
                   <p className="text-red-500 text-sm mt-1">
@@ -278,18 +309,19 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                     }}
                     onChange={(e) => {
                       const value = e.target.value;
-                      const val = parseInt(value);
+                      const numValue = Number(value);
+
                       setFormData((prev) => ({
                         ...prev,
-                        downPayment: isNaN(val) ? 0 : val,
+                        downPayment: isNaN(numValue) ? 0 : numValue,
                       }));
 
                       let errorMsg = "";
-                      if (!value || isNaN(val) || val <= 0) {
+                      if (value !== "" && (isNaN(numValue) || numValue <= 0)) {
                         errorMsg = "Please enter a valid amount";
                       } else if (
                         downPaymentType === "Percentage" &&
-                        val > 100
+                        numValue > 100
                       ) {
                         errorMsg = "Percentage must be between 0 and 100";
                       }
@@ -317,19 +349,28 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
             </h3>
             <div className="space-y-6">
               <div>
-                <Label className="text-sm font-medium text-neutral-700 mb-2 block">
+                {/* <Label className="text-sm font-medium text-neutral-700 mb-2 block">
                   Photography Type
-                </Label>
-                <RadioButton
+                </Label> */}
+                <MultipleRadio
+                  label="Photography Type"
                   data={types}
-                  selectedOption={selectedTypes}
-                  setSelectedOption={(value: string) => {
-                    setSelectedTypes(value);
+                  // selectedOption={selectedTypes}
+                  // setSelectedOption={(value: string) => {
+                  //   setSelectedTypes(value);
+                  //   setErrors((prevErrors) => ({
+                  //     ...prevErrors,
+                  //     subBusinessType: "",
+                  //   }));
+                  // }}
+                  handleSelect={(value: string, index: number) => {
+                    handleSelectSubBusinessType(value, index);
                     setErrors((prevErrors) => ({
                       ...prevErrors,
-                      subBusinessType: "",
+                      subBusinessType: [],
                     }));
                   }}
+                  selectedIndexes={selectedTypeIndexes}
                 />
                 {errors.subBusinessType && (
                   <p className="text-red-500 text-sm mt-1">
@@ -396,9 +437,6 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
               </div>
 
               <div>
-                <Label className="text-sm font-medium text-neutral-700 mb-2 block">
-                  Staff Gender
-                </Label>
                 <MultipleRadio
                   label="Staff Gender"
                   data={staff}
@@ -406,7 +444,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                     handleSelectStaff(type, index);
                     setErrors((prevErrors) => ({
                       ...prevErrors,
-                      staff: "",
+                      staff: [],
                     }));
                   }}
                   selectedIndexes={selectedStaffIndexes}
