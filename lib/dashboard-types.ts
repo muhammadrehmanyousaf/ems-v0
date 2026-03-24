@@ -154,8 +154,7 @@ export interface Package {
   description?: string;
   price: number;
   features: string[];
-  businessId?: number;
-  businessName?: string;
+  businessId: number;
 }
 
 // ─── Booking Detail ───────────────────────────────────────────

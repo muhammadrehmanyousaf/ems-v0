@@ -57,10 +57,9 @@ export interface Review {
 export interface Package {
   id: string;
   name: string;
-  description: string;
   price: number;
   features: string[];
-  duration?: string;
+  businessId: number;
 }
 
 export interface VendorMenu {

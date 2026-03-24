@@ -263,7 +263,7 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
 
           <DropdownMenuItem asChild>
             <Link
-              href="/register"
+              href="/business-registration"
               className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-purple-50 hover:text-purple-600 transition-all duration-200"
             >
               <div className="w-8 h-8 bg-gold-100 rounded-lg flex items-center justify-center">

@@ -44,9 +44,10 @@ import { CarRentalOrBridleWearValidations } from "./VendorStepForms/newVendorReg
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useFetchData } from "@/hooks/use-fetch-data";
-import { PlatformStats } from "@/lib/types";
+import { usePlatformStats } from "@/hooks/use-platform-stats";
 import { Icons } from "./ui/icons";
 import { motion } from "framer-motion";
+import { Package } from "@/lib/types";
 
 export function BusinessRegistrationForm() {
   // const [currentStep, setCurrentStep] = useState(0);
@@ -66,8 +67,8 @@ export function BusinessRegistrationForm() {
 
   const [file, setFile] = useState<File | null>(null);
   const [openModal, setOpenModal] = useState(false);
-  const [stats, setStats] = useState<PlatformStats | null>(null);
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [successMessage, setSuccessMessage] = useState("");
+  const { data: stats, isLoading: isLoadingStats } = usePlatformStats();
 
   const carRentalOrBridleWear =
     businessType === "Car rental" || businessType === "Bridal wearing";
@@ -76,23 +77,6 @@ export function BusinessRegistrationForm() {
   const hennaArtist = businessType === "Henna artist";
   const decorator = businessType === "Decorator";
   const catering = businessType === "Catering";
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      setIsLoadingStats(true);
-      try {
-        const data = await axios.get(`${BACKEND_URL}api/v1/platform-stats`);
-        console.log("Fetched stats:", data);
-        setStats(data.data.data);
-      } catch (error) {
-        console.error("Failed to load stats", error);
-      }
-      setIsLoadingStats(false);
-    };
-    fetchStats();
-  }, []);
-
-  console.log("stats here", stats);
 
   // Calculate progress percentage
   const getProgressPercentage = () => {
@@ -152,6 +136,8 @@ export function BusinessRegistrationForm() {
         if (!formData.phoneNumber)
           currentErrors.phoneNumber = "Phone number is required";
         if (!formData.password) currentErrors.password = "Password is required";
+        if (formData.password && formData.password.length < 8)
+          currentErrors.password = "Password must be at least 8 characters";
         if (!formData.re_enterPassword)
           currentErrors.re_enterPassword = "Re-enter password is required";
         else if (formData.password !== formData.re_enterPassword)
@@ -160,6 +146,7 @@ export function BusinessRegistrationForm() {
       if (currentStep === 2) {
         if (!formData.name) currentErrors.name = "Business name is required";
         if (!formData.city) currentErrors.city = "City is required";
+        if (!formData.subArea) currentErrors.subArea = "Sub area is required";
       }
       if (currentStep === 3) {
         if (!formData.description)
@@ -168,6 +155,8 @@ export function BusinessRegistrationForm() {
           currentErrors.minimumPrice = "Starting price is required";
         if (!formData.subBusinessType)
           currentErrors.subBusinessType = "Business type is required";
+        if (formData.staff.length < 1)
+          currentErrors.staff = "Staff is required";
         if (!formData.downPayment)
           currentErrors.downPayment = "Down payment is required";
         else if (
@@ -176,6 +165,41 @@ export function BusinessRegistrationForm() {
             Number(formData.downPayment) > 100)
         ) {
           currentErrors.downPayment = "Percentage must be between 0 and 100";
+        } else if (
+          formData.downPaymentType === "Fixed Amount" &&
+          (Number(formData.downPayment) <= 0 ||
+            Number(formData.downPayment) > Number(formData.minimumPrice))
+        ) {
+          currentErrors.downPayment = "Down payment cannot exceed the starting price";
+        }
+      }
+      if (currentStep === 4) {
+        if (formData.packages) {
+          formData.packages.forEach((pkg: Package, index: number) => {
+            if (!pkg.name) {
+              currentErrors[`packages[${index}].name`] =
+                "Package name is required";
+            }
+            if (!pkg.price) {
+              currentErrors[`packages[${index}].price`] =
+                "Package price is required";
+            }
+            // Features Validation: Ensure checked categories are not empty
+            if (pkg.features) {
+              Object.keys(pkg.features).forEach((feature) => {
+                const items = pkg.features[feature];
+                if (items && items.length > 0) {
+                  const hasValidItem = items.some(
+                    (item: string) => item.trim() !== "",
+                  );
+                  if (!hasValidItem) {
+                    currentErrors[`packages[${index}].features.${feature}`] =
+                      `At least one ${feature} item is required`;
+                  }
+                }
+              });
+            }
+          });
         }
       }
       setErrors(currentErrors);
@@ -253,6 +277,7 @@ export function BusinessRegistrationForm() {
         officeAddress: formData.officeAddress,
         officeGoogleLink: formData.officeGoogleLink,
         city: formData.city,
+        subArea: formData.subArea,
         secondaryContactNumber: formData.secondaryContactNumber,
         vendorType: formData.businessType,
         name: formData.name,
@@ -288,6 +313,7 @@ export function BusinessRegistrationForm() {
         officeAddress: formData.officeAddress,
         officeGoogleLink: formData.officeGoogleLink,
         city: formData.city,
+        subArea: formData.subArea,
         secondaryContactNumber: formData.secondaryContactNumber,
         vendorType: formData.businessType,
         // "isVendor": true,
@@ -313,6 +339,7 @@ export function BusinessRegistrationForm() {
           name: "",
           profilePicture: "",
           city: "",
+          subArea: "",
           roleIds: [2],
           secondaryContactNumber: "",
           instagram: "",
@@ -339,7 +366,12 @@ export function BusinessRegistrationForm() {
               id: undefined,
               name: "",
               price: 0,
-              services: "",
+              features: {
+                deliverables: [],
+                photography: [],
+                team: [],
+                videography: [],
+              },
             },
           ],
           amenities: [],
@@ -348,6 +380,7 @@ export function BusinessRegistrationForm() {
           parking: false,
         });
         loadingToastId.dismiss();
+        setSuccessMessage(response.data?.message || "");
         setOpenModal(true);
         setCurrentStep(0);
       }
@@ -381,6 +414,7 @@ export function BusinessRegistrationForm() {
           name: "",
           profilePicture: "",
           city: "",
+          subArea: "",
           roleIds: [2],
           secondaryContactNumber: "",
           instagram: "",
@@ -407,7 +441,12 @@ export function BusinessRegistrationForm() {
               id: undefined,
               name: "",
               price: 0,
-              services: "",
+              features: {
+                deliverables: [],
+                photography: [],
+                team: [],
+                videography: [],
+              },
             },
           ],
           amenities: [],
@@ -416,6 +455,7 @@ export function BusinessRegistrationForm() {
           parking: false,
         });
         loadingToastId.dismiss();
+        setSuccessMessage(response.data?.message || "");
         setOpenModal(true);
         setCurrentStep(0);
       }
@@ -744,7 +784,11 @@ export function BusinessRegistrationForm() {
         </div>
       </main>
 
-      <SuccessModal open={openModal} setOpen={setOpenModal} />
+      <SuccessModal
+        open={openModal}
+        setOpen={setOpenModal}
+        message={successMessage}
+      />
     </div>
   );
 }

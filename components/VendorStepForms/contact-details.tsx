@@ -21,6 +21,7 @@ const ContactDetails = ({ setErrors, errors, setFile, file }: ContactDetailsProp
         { name: 'instagram', label: 'Instagram Link', place: 'Enter your Instagram link' },
         { name: 'facebook', label: 'Facebook Link', place: 'Enter your Facebook link' },
         { name: 'city', label: 'City', place: 'Enter your city' },
+        { name: 'subArea', label: 'Sub Area', place: 'Enter your sub area (e.g., G-10 Markaz)' },
         { name: 'officeAddress', label: 'Office Address', place: 'Enter your office address here' },
         { name: 'officeGoogleLink', label: 'Office Google map link', place: 'Enter here your Google map link' },
     ];

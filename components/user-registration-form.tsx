@@ -16,7 +16,7 @@ import { BACKEND_URL } from "@/lib/backend-url";
 import { toast } from "./ui/use-toast";
 import { useRouter } from "next/navigation";
 import { Heart, Sparkles, Users, Calendar } from "lucide-react";
-import { PlatformStats } from "@/lib/types";
+import { usePlatformStats } from "@/hooks/use-platform-stats";
 
 const formSchema = z
   .object({
@@ -44,8 +44,7 @@ type FormData = z.infer<typeof formSchema>;
 
 export function UserRegistrationForm() {
   const [isLoading, setIsLoading] = useState(false);
-  const [stats, setStats] = useState<PlatformStats | null>(null);
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const { data: stats, isLoading: isLoadingStats } = usePlatformStats();
   const {
     register,
     reset,
@@ -56,23 +55,6 @@ export function UserRegistrationForm() {
   });
 
   const router = useRouter();
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      setIsLoadingStats(true);
-      try {
-        const data = await axios.get(`${BACKEND_URL}api/v1/platform-stats`);
-        console.log("Fetched stats:", data);
-        setStats(data.data.data);
-      } catch (error) {
-        console.error("Failed to load stats", error);
-      }
-      setIsLoadingStats(false);
-    };
-    fetchStats();
-  }, []);
-
-  console.log("stats in user regitered form here", stats);
 
   async function onSubmit(data: FormData) {
     setIsLoading(true);

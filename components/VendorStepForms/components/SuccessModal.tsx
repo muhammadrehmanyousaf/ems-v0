@@ -14,9 +14,10 @@ import { CheckCircle } from 'lucide-react';
 interface SuccessModalProps {
     open: boolean,
     setOpen: React.Dispatch<React.SetStateAction<boolean>>,
+    message?: string,
 };
 
-const SuccessModal: React.FC<SuccessModalProps> = ({setOpen, open}) => {
+const SuccessModal: React.FC<SuccessModalProps> = ({setOpen, open, message}) => {
 
     const router = useRouter()
 
@@ -32,7 +33,7 @@ const SuccessModal: React.FC<SuccessModalProps> = ({setOpen, open}) => {
           <CheckCircle className="w-12 h-12 text-green-500 mx-auto" />
           <h3 className="text-lg font-semibold">Business Registered Successfully!</h3>
           <p className="text-muted-foreground text-sm">
-            Your business has been created. Please sign in to access your dashboard and manage your profile.
+            {message || "Your business has been created. Please sign in to access your dashboard and manage your profile."}
           </p>
         </div>
         <DialogFooter className='flex items-center justify-center w-full'>

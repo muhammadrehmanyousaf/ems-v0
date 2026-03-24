@@ -23,7 +23,12 @@ interface Package {
   id?: number;
   name: string;
   price: number;
-  services: string;
+  features: {
+    deliverables: string[];
+    photography: string[];
+    team: string[];
+    videography: string[];
+  };
 }
 
 export type FormType = {
@@ -37,7 +42,7 @@ export type FormType = {
   name: string;
   profilePicture: string;
   city: string;
-  // subArea: string;
+  subArea: string;
   secondaryContactNumber: string;
   instagram: string;
   facebook: string;
@@ -115,7 +120,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     profilePicture: "",
     city: "",
     roleIds: [2],
-    // subArea: "",
+    subArea: "",
     secondaryContactNumber: "",
     instagram: "",
     facebook: "",
@@ -153,7 +158,12 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         id: undefined,
         name: "",
         price: 0,
-        services: "",
+        features: {
+          deliverables: [],
+          photography: [],
+          team: [],
+          videography: [],
+        },
       },
     ],
     amenities: [],

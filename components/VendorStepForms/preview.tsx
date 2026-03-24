@@ -144,16 +144,29 @@ const Preview = () => {
                         <tr className='bg-[#f1f1f1]'>
                             <th className='p-3 text-sm text-left'>Package Name</th>
                             <th className='p-3 text-sm text-left'>Price</th>
-                            <th className='p-3 text-sm text-left'>Services</th>
+                            <th className='p-3 text-sm text-left'>Features</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {formData.packages.map((pkg) => (
-                            <tr key={pkg.name} className='bg-[#fafafa]'>
+                        {formData.packages.map((pkg, index) => (
+                            <tr key={index} className='bg-[#fafafa]'>
                                 <td className='border p-3 text-sm md:text-base'>{pkg.name}</td>
                                 <td className='border p-3 text-roze-default font-semibold text-sm'>{pkg.price}</td>
                                 <td className='border p-3 text-sm md:text-base'>
-                                    <p>{pkg.services}</p>
+                                    {pkg.features && (
+                                        <div className="space-y-1">
+                                            {Object.entries(pkg.features).map(([category, items]) => {
+                                                const list = items as string[];
+                                                if (!list || list.length === 0) return null;
+                                                return (
+                                                    <div key={category}>
+                                                        <span className="font-semibold capitalize text-xs">{category}:</span>
+                                                        <p className="text-xs text-neutral-600">{list.join(', ')}</p>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </td>
                             </tr>
                         ))}

@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import type { Vendor } from "@/lib/types"
 import { VENDOR_TYPES, VENDOR_TYPE_DISPLAY_NAMES, VENDOR_TYPE_DESCRIPTIONS, getAllVendorPaths, VENDOR_TYPE_PATHS } from "@/lib/vendor-types"
 import { useVendors } from "@/hooks/use-vendors"
+import { usePlatformStats } from "@/hooks/use-platform-stats"
 import { motion, AnimatePresence } from "framer-motion"
 import { Swiper, SwiperSlide } from "swiper/react"
 import { Autoplay, EffectFade } from "swiper/modules"
@@ -68,6 +69,7 @@ export function HeroSection() {
 
   // Use React Query hook for vendors
   const { data: allVendors = [], isLoading } = useVendors()
+  const { data: stats } = usePlatformStats()
 
   // Get popular cities from vendor data - memoized
   const popularCities = useMemo(() => {
@@ -830,9 +832,9 @@ export function HeroSection() {
             className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 mt-8 sm:mt-10"
           >
             {[
-              { end: allVendors.length || 500, suffix: "+", label: "Vendors" },
-              { end: 10000, suffix: "+", label: "Couples Served" },
-              { end: 50, suffix: "+", label: "Cities" },
+              { end: stats?.vendors || allVendors.length || 500, suffix: "+", label: "Vendors" },
+              { end: stats?.couplesServed || 10000, suffix: "+", label: "Couples Served" },
+              { end: stats?.cities || 50, suffix: "+", label: "Cities" },
             ].map((stat, i) => (
               <div key={i} className="text-center">
                 <div className="text-2xl sm:text-3xl font-heading font-bold text-white leading-none">
@@ -859,4 +861,3 @@ export function HeroSection() {
     </section>
   )
 }
-
