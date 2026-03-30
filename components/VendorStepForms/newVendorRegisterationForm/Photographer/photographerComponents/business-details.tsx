@@ -212,47 +212,6 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
             <div className="space-y-4">
               <div>
                 <Label
-                  htmlFor="minimumPrice"
-                  className="text-sm font-medium text-neutral-700"
-                >
-                  Starting Price (PKR)
-                </Label>
-                <div className="flex items-center gap-2 my-2 p-2.5 bg-blue-50 border border-blue-100 rounded-lg text-blue-700 shadow-sm">
-                  <FaInfoCircle className="w-4 h-4 shrink-0" />
-                  <p className="text-xs font-medium">
-                    This price will be shown to users as your starting price.
-                  </p>
-                </div>
-                <Input
-                  id="minimumPrice"
-                  type="number"
-                  min={1}
-                  placeholder="Enter starting price"
-                  value={formData.minimumPrice}
-                  onKeyDown={(e) => {
-                    if (["e", "E", "+", "-"].includes(e.key)) {
-                      e.preventDefault();
-                    }
-                  }}
-                  onChange={(e) => {
-                    const numValue = Number(e.target.value);
-                    setFormData((prev) => ({
-                      ...prev,
-                      minimumPrice:
-                        isNaN(numValue) || numValue < 0 ? 0 : numValue,
-                    }));
-                  }}
-                  className={`mt-2 ${errors.minimumPrice ? "border-red-500" : "border-neutral-300"}`}
-                />
-                {errors.minimumPrice && (
-                  <p className="text-red-500 text-sm mt-1">
-                    {errors.minimumPrice}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <Label
                   htmlFor="downPayment"
                   className="text-sm font-medium text-neutral-700"
                 >

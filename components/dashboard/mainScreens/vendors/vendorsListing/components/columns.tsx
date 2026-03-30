@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import axiosInstance from "@/lib/axiosConfig";
 import React from "react";
+import { BACKEND_URL } from "@/lib/backend-url";
 
 export const columns = (
     onEdit: (vendor: Vendor) => void,
@@ -77,7 +78,7 @@ export const columns = (
                     setChecked(value);
                     try {
                         await axiosInstance.patch(
-                            `/api/v1/users/vendor-profile-update?id=${row.original.id}&reviewProfile=${value}`
+                            `${BACKEND_URL}api/v1/users/vendor-profile-update?id=${row.original.id}&reviewProfile=${value}`
                         );
                         toast.success(
                             `Vendor profile ${value ? "approved" : "unapproved"}`

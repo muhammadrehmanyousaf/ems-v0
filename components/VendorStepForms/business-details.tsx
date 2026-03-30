@@ -458,21 +458,6 @@ const BusinessDetails = () => {
                     /> */}
                 </section>}
             <section className="space-y-3">
-                <Label>Minimum Price</Label>
-                <Input
-                    type="number"
-                    placeholder="Enter Minimum Price"
-                    value={formData.minimumPrice || ""}
-                    onChange={(e) =>
-                        setFormData((prevData) => ({
-                            ...prevData,
-                            minimumPrice: Number(e.target.value),
-                        }))
-                    }
-                />
-
-            </section>
-            <section className="space-y-3">
                 <Label>Description</Label>
                 <Textarea
                     placeholder="Enter Description"

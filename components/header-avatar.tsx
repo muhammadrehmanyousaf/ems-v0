@@ -95,30 +95,30 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
               <ChevronDown className="w-4 h-4 ml-2 group-hover:scale-110 transition-transform duration-200" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56 bg-white border border-purple-100 shadow-xl rounded-xl mr-8">
+        <DropdownMenuContent className="w-56 bg-white dark:bg-neutral-900 border border-purple-100 dark:border-neutral-800 shadow-xl rounded-xl mr-8">
             <DropdownMenuLabel className="flex items-center gap-2 text-purple-900 font-semibold">
               <Shield className="w-4 h-4 text-purple-500" />
               Admin Panel
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/dashboard" className="flex items-center gap-3 w-full cursor-pointer">
+            <Link href="/dashboard" className="flex items-center gap-3 w-full cursor-pointer dark:hover:bg-neutral-800">
                 <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
                   <Building className="w-4 h-4 text-purple-600" />
                 </div>
                 <div>
-                  <div className="font-semibold text-neutral-900">Dashboard</div>
+                <div className="font-semibold text-neutral-900 dark:text-neutral-100">Dashboard</div>
                   <div className="text-xs text-neutral-500">Manage platform</div>
                 </div>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/dashboard/settings" className="flex items-center gap-3 w-full cursor-pointer">
+            <Link href="/dashboard/settings" className="flex items-center gap-3 w-full cursor-pointer dark:hover:bg-neutral-800">
                 <div className="w-8 h-8 bg-gold-100 rounded-lg flex items-center justify-center">
                   <Settings className="w-4 h-4 text-gold-600" />
                 </div>
                 <div>
-                  <div className="font-semibold text-neutral-900">Settings</div>
+                <div className="font-semibold text-neutral-900 dark:text-neutral-100">Settings</div>
                   <div className="text-xs text-neutral-500">Configure system</div>
                 </div>
               </Link>
@@ -126,7 +126,7 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleLogout}
-              className="flex items-center gap-3 cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
+            className="flex items-center gap-3 cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50"
             >
               <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
                 <LogOut className="w-4 h-4 text-red-600" />
@@ -147,7 +147,7 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
             <Button
               variant="ghost"
               size="sm"
-              className="p-0 h-auto hover:bg-purple-50 transition-all duration-200 group"
+            className="p-0 h-auto hover:bg-purple-50 dark:hover:bg-neutral-800 transition-all duration-200 group"
             >
               <Avatar className="w-10 h-10 border-2 border-purple-200 group-hover:border-purple-400 transition-all duration-200 shadow-lg group-hover:shadow-xl">
                 <AvatarImage src={displayUser.profileImage} alt={displayUser.fullName} />
@@ -157,8 +157,8 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-64 bg-white border border-purple-100 shadow-xl rounded-xl mr-8">
-            <DropdownMenuLabel className="flex items-start gap-3 p-4 border-b border-purple-50">
+        <DropdownMenuContent className="w-64 bg-white dark:bg-neutral-900 border border-purple-100 dark:border-neutral-800 shadow-xl rounded-xl mr-8">
+          <DropdownMenuLabel className="flex items-start gap-3 p-4 border-b border-purple-50 dark:border-neutral-800">
               <Avatar className="w-12 h-12 border-2 border-purple-200 flex-shrink-0">
                 <AvatarImage src={displayUser.profileImage} alt={displayUser.fullName} />
                 <AvatarFallback className="bg-gradient-to-br from-purple-600 to-purple-700 text-white font-semibold text-xl">
@@ -166,7 +166,7 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
-                <div className="font-bold text-neutral-900 text-lg truncate">{displayUser.fullName}</div>
+              <div className="font-bold text-neutral-900 dark:text-neutral-100 text-lg truncate">{displayUser.fullName}</div>
                 <div className="text-sm text-neutral-500 break-words leading-tight">{displayUser.email}</div>
               </div>
             </DropdownMenuLabel>
@@ -184,13 +184,13 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
                 <DropdownMenuItem key={item.href} asChild>
                   <Link
                     href={item.href}
-                    className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-purple-50 hover:text-purple-600 transition-all duration-200"
+                  className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-purple-50 dark:hover:bg-neutral-800 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200"
                   >
                     <div className={`w-8 h-8 ${item.color === "gold" ? "bg-gold-100" : "bg-purple-100"} rounded-lg flex items-center justify-center`}>
                       <item.icon className={`w-4 h-4 ${item.color === "gold" ? "text-gold-600" : "text-purple-600"}`} />
                     </div>
                     <div>
-                      <div className="font-semibold text-neutral-900">{item.name}</div>
+                    <div className="font-semibold text-neutral-900 dark:text-neutral-100">{item.name}</div>
                       <div className="text-xs text-neutral-500">{item.desc}</div>
                     </div>
                   </Link>
@@ -203,7 +203,7 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
             <div className="p-2">
               <DropdownMenuItem
                 onClick={handleLogout}
-                className="flex items-center gap-3 cursor-pointer p-3 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200"
+              className="flex items-center gap-3 cursor-pointer p-3 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 transition-all duration-200"
               >
                 <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
                   <LogOut className="w-4 h-4 text-red-600" />
@@ -234,13 +234,13 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
           <ChevronDown className="w-4 h-4 ml-2 group-hover:scale-110 transition-transform duration-200" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-64 bg-white border border-purple-100 shadow-xl rounded-xl mr-8">
-        <DropdownMenuLabel className="flex items-center gap-3 p-4 border-b border-purple-50">
+    <DropdownMenuContent className="w-64 bg-white dark:bg-neutral-900 border border-purple-100 dark:border-neutral-800 shadow-xl rounded-xl mr-8">
+      <DropdownMenuLabel className="flex items-center gap-3 p-4 border-b border-purple-50 dark:border-neutral-800">
           <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg">
             <Award className="w-6 h-6 text-gold-300" />
           </div>
           <div>
-            <div className="font-bold text-neutral-900 text-lg">Join Our Platform</div>
+          <div className="font-bold text-neutral-900 dark:text-neutral-100 text-lg">Join Our Platform</div>
             <div className="text-sm text-neutral-500">Grow your business</div>
           </div>
         </DropdownMenuLabel>
@@ -249,13 +249,13 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
           <DropdownMenuItem asChild>
             <Link
               href="/login"
-              className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-purple-50 hover:text-purple-600 transition-all duration-200"
+            className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-purple-50 dark:hover:bg-neutral-800 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200"
             >
               <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
                 <User className="w-4 h-4 text-purple-600" />
               </div>
               <div>
-                <div className="font-semibold text-neutral-900">Sign In</div>
+              <div className="font-semibold text-neutral-900 dark:text-neutral-100">Sign In</div>
                 <div className="text-xs text-neutral-500">Access your account</div>
               </div>
             </Link>
@@ -264,13 +264,13 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
           <DropdownMenuItem asChild>
             <Link
               href="/business-registration"
-              className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-purple-50 hover:text-purple-600 transition-all duration-200"
+            className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-purple-50 dark:hover:bg-neutral-800 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200"
             >
               <div className="w-8 h-8 bg-gold-100 rounded-lg flex items-center justify-center">
                 <Building className="w-4 h-4 text-gold-600" />
               </div>
               <div>
-                <div className="font-semibold text-neutral-900">Register Business</div>
+              <div className="font-semibold text-neutral-900 dark:text-neutral-100">Register Business</div>
                 <div className="text-xs text-neutral-500">Create new account</div>
               </div>
             </Link>
@@ -279,13 +279,13 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
           <DropdownMenuItem asChild>
             <Link
               href="/vendor-guide"
-              className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-purple-50 hover:text-purple-600 transition-all duration-200"
+            className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-purple-50 dark:hover:bg-neutral-800 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200"
             >
               <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
                 <Star className="w-4 h-4 text-purple-600" />
               </div>
               <div>
-                <div className="font-semibold text-neutral-900">Vendor Guide</div>
+              <div className="font-semibold text-neutral-900 dark:text-neutral-100">Vendor Guide</div>
                 <div className="text-xs text-neutral-500">Learn how to succeed</div>
               </div>
             </Link>

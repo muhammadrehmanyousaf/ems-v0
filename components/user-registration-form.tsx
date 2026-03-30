@@ -178,7 +178,7 @@ export function UserRegistrationForm() {
         initial={{ opacity: 0, x: 30 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="flex-1 flex items-center justify-center bg-gradient-to-br from-purple-50/30 to-white px-4 py-8"
+        className="flex-1 flex items-center justify-center bg-gradient-to-br from-purple-50/30 to-white dark:from-neutral-950 dark:to-neutral-900 px-4 py-8"
       >
         <div className="w-full max-w-md space-y-6">
           {/* Mobile logo */}
@@ -189,10 +189,10 @@ export function UserRegistrationForm() {
           </div>
 
           <div className="space-y-2 text-center lg:text-left">
-            <h1 className="text-3xl font-heading font-bold text-neutral-900">
+            <h1 className="text-3xl font-heading font-bold text-neutral-900 dark:text-neutral-100">
               Create an account
             </h1>
-            <p className="text-neutral-500">
+            <p className="text-neutral-500 dark:text-neutral-400">
               Enter your details to get started
             </p>
           </div>
@@ -209,13 +209,13 @@ export function UserRegistrationForm() {
                 autoCorrect="off"
                 {...register("fullName")}
                 className={cn(
-                  "peer h-12 w-full rounded-xl border bg-white px-4 pt-4 pb-1 text-sm placeholder-transparent focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200",
-                  errors.fullName ? "border-red-400" : "border-neutral-200",
+                  "peer h-12 w-full rounded-xl border bg-white dark:bg-neutral-900 px-4 pt-4 pb-1 text-sm placeholder-transparent focus:border-purple-500 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 transition-all duration-200",
+                  errors.fullName ? "border-red-400" : "border-neutral-200 dark:border-neutral-700",
                 )}
               />
               <Label
                 htmlFor="name"
-                className="absolute left-4 top-1 text-[10px] text-neutral-400 transition-all duration-200 peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-purple-600"
+                className="absolute left-4 top-1 text-[10px] text-neutral-400 transition-all duration-200 peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-purple-600 dark:peer-focus:text-purple-400"
               >
                 Full Name
               </Label>
@@ -237,13 +237,13 @@ export function UserRegistrationForm() {
                 autoCorrect="off"
                 {...register("email")}
                 className={cn(
-                  "peer h-12 w-full rounded-xl border bg-white px-4 pt-4 pb-1 text-sm placeholder-transparent focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200",
-                  errors.email ? "border-red-400" : "border-neutral-200",
+                  "peer h-12 w-full rounded-xl border bg-white dark:bg-neutral-900 px-4 pt-4 pb-1 text-sm placeholder-transparent focus:border-purple-500 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 transition-all duration-200",
+                  errors.email ? "border-red-400" : "border-neutral-200 dark:border-neutral-700",
                 )}
               />
               <Label
                 htmlFor="email"
-                className="absolute left-4 top-1 text-[10px] text-neutral-400 transition-all duration-200 peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-purple-600"
+                className="absolute left-4 top-1 text-[10px] text-neutral-400 transition-all duration-200 peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-purple-600 dark:peer-focus:text-purple-400"
               >
                 Email address
               </Label>
@@ -263,13 +263,13 @@ export function UserRegistrationForm() {
                 autoCorrect="off"
                 {...register("phoneNumber")}
                 className={cn(
-                  "peer h-12 w-full rounded-xl border bg-white px-4 pt-4 pb-1 text-sm placeholder-transparent focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200",
-                  errors.phoneNumber ? "border-red-400" : "border-neutral-200",
+                  "peer h-12 w-full rounded-xl border bg-white dark:bg-neutral-900 px-4 pt-4 pb-1 text-sm placeholder-transparent focus:border-purple-500 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 transition-all duration-200",
+                  errors.phoneNumber ? "border-red-400" : "border-neutral-200 dark:border-neutral-700",
                 )}
               />
               <Label
                 htmlFor="phoneNumber"
-                className="absolute left-4 top-1 text-[10px] text-neutral-400 transition-all duration-200 peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-purple-600"
+                className="absolute left-4 top-1 text-[10px] text-neutral-400 transition-all duration-200 peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-purple-600 dark:peer-focus:text-purple-400"
               >
                 Phone Number
               </Label>
@@ -290,13 +290,13 @@ export function UserRegistrationForm() {
                 autoComplete="new-password"
                 {...register("password")}
                 className={cn(
-                  "peer h-12 w-full rounded-xl border bg-white px-4 pt-4 pb-1 text-sm placeholder-transparent focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200",
-                  errors.password ? "border-red-400" : "border-neutral-200",
+                  "peer h-12 w-full rounded-xl border bg-white dark:bg-neutral-900 px-4 pt-4 pb-1 text-sm placeholder-transparent focus:border-purple-500 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 transition-all duration-200",
+                  errors.password ? "border-red-400" : "border-neutral-200 dark:border-neutral-700",
                 )}
               />
               <Label
                 htmlFor="password"
-                className="absolute left-4 top-1 text-[10px] text-neutral-400 transition-all duration-200 peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-purple-600"
+                className="absolute left-4 top-1 text-[10px] text-neutral-400 transition-all duration-200 peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-purple-600 dark:peer-focus:text-purple-400"
               >
                 Password
               </Label>
@@ -317,15 +317,15 @@ export function UserRegistrationForm() {
                 autoComplete="new-password"
                 {...register("confirmPassword")}
                 className={cn(
-                  "peer h-12 w-full rounded-xl border bg-white px-4 pt-4 pb-1 text-sm placeholder-transparent focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200",
+                  "peer h-12 w-full rounded-xl border bg-white dark:bg-neutral-900 px-4 pt-4 pb-1 text-sm placeholder-transparent focus:border-purple-500 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 transition-all duration-200",
                   errors.confirmPassword
                     ? "border-red-400"
-                    : "border-neutral-200",
+                    : "border-neutral-200 dark:border-neutral-700",
                 )}
               />
               <Label
                 htmlFor="confirmPassword"
-                className="absolute left-4 top-1 text-[10px] text-neutral-400 transition-all duration-200 peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-purple-600"
+                className="absolute left-4 top-1 text-[10px] text-neutral-400 transition-all duration-200 peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-purple-600 dark:peer-focus:text-purple-400"
               >
                 Confirm Password
               </Label>
@@ -351,10 +351,10 @@ export function UserRegistrationForm() {
           {/* Divider */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-neutral-200" />
+              <span className="w-full border-t border-neutral-200 dark:border-neutral-800" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="px-3 bg-gradient-to-br from-purple-50/30 to-white text-neutral-400">
+              <span className="px-3 bg-gradient-to-br from-purple-50/30 to-white dark:from-neutral-950 dark:to-neutral-900 text-neutral-400 dark:text-neutral-500">
                 Or continue with
               </span>
             </div>
@@ -365,7 +365,7 @@ export function UserRegistrationForm() {
             <Button
               variant="outline"
               type="button"
-              className="h-11 rounded-xl border-neutral-200 hover:border-purple-300 hover:bg-purple-50 transition-all duration-200"
+              className="h-11 rounded-xl border-neutral-200 dark:border-neutral-800 hover:border-purple-300 dark:hover:border-neutral-700 hover:bg-purple-50 dark:hover:bg-neutral-800 transition-all duration-200"
             >
               <Icons.google className="w-4 h-4 mr-2" />
               Google
@@ -373,7 +373,7 @@ export function UserRegistrationForm() {
             <Button
               variant="outline"
               type="button"
-              className="h-11 rounded-xl border-neutral-200 hover:border-purple-300 hover:bg-purple-50 transition-all duration-200"
+              className="h-11 rounded-xl border-neutral-200 dark:border-neutral-800 hover:border-purple-300 dark:hover:border-neutral-700 hover:bg-purple-50 dark:hover:bg-neutral-800 transition-all duration-200"
             >
               <Icons.facebook className="w-4 h-4 mr-2" />
               Facebook
@@ -382,11 +382,11 @@ export function UserRegistrationForm() {
 
           {/* Footer links */}
           <div className="space-y-2 text-center">
-            <p className="text-sm text-neutral-500">
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
               Already have an account?{" "}
               <Link
                 href="/login"
-                className="text-purple-600 hover:text-purple-700 font-semibold"
+                className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-semibold"
               >
                 Sign in
               </Link>
@@ -394,7 +394,7 @@ export function UserRegistrationForm() {
             <p className="text-sm">
               <Link
                 href="/business-registration"
-                className="text-purple-600 hover:text-purple-700 font-medium"
+                className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium"
               >
                 Register your business
               </Link>

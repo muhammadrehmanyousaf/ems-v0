@@ -174,19 +174,6 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                         <h3 className="text-lg font-semibold text-neutral-800 mb-4">Pricing Information</h3>
                         <div className="space-y-4">
                             <div>
-                                <Label htmlFor="minimumPrice" className="text-sm font-medium text-neutral-700">Starting Price (PKR)</Label>
-                                <Input
-                                    id="minimumPrice"
-                                    type="number"
-                                    placeholder="Enter starting price"
-                                    value={formData.minimumPrice}
-                                    onChange={(e) => setFormData((prev) => ({ ...prev, minimumPrice: parseInt(e.target.value) }))}
-                                    className={`mt-1 ${errors.minimumPrice ? "border-red-500" : "border-neutral-300"}`}
-                                />
-                                {errors.minimumPrice && <p className="text-red-500 text-sm mt-1">{errors.minimumPrice}</p>}
-                            </div>
-
-                            <div>
                                 <Label htmlFor="downPayment" className="text-sm font-medium text-neutral-700">Down Payment</Label>
                                 <div className="flex gap-3 mt-1">
                                     <Input

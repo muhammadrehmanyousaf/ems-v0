@@ -75,8 +75,8 @@ export function Header() {
     <header
       className={`sticky top-0 z-50 transition-all duration-500 ease-out ${
         scrolled
-          ? "bg-white/80 backdrop-blur-2xl shadow-lg shadow-purple-500/8 border-b border-purple-100/50"
-          : "bg-white/95 backdrop-blur-sm border-b border-purple-100/20"
+          ? "bg-white/80 dark:bg-neutral-900/80 backdrop-blur-2xl shadow-lg shadow-purple-500/8 border-b border-purple-100/50 dark:border-neutral-800"
+          : "bg-white/95 dark:bg-neutral-950/95 backdrop-blur-sm border-b border-purple-100/20 dark:border-neutral-800/50"
       }`}
     >
       <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
@@ -89,7 +89,7 @@ export function Header() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="lg:hidden h-10 w-10 hover:bg-purple-50 hover:text-purple-600 rounded-xl transition-colors duration-200"
+                className="lg:hidden h-10 w-10 hover:bg-purple-50 dark:hover:bg-neutral-800 hover:text-purple-600 dark:hover:text-purple-400 rounded-xl transition-colors duration-200"
                   aria-label="Open menu"
                 >
                   <Menu className="h-5 w-5" />
@@ -133,14 +133,14 @@ export function Header() {
                             key={item.name}
                             href={item.href}
                             onClick={() => setIsOpen(false)}
-                            className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-purple-50 transition-all duration-200 group text-center"
+                          className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-purple-50 dark:hover:bg-neutral-800 transition-all duration-200 group text-center"
                           >
                             <div
                               className={`w-10 h-10 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:scale-110 transition-all duration-200`}
                             >
                               <item.icon className="w-[18px] h-[18px] text-white" />
                             </div>
-                            <span className="text-[11px] font-semibold text-neutral-600 group-hover:text-purple-700 leading-tight">
+                          <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-300 group-hover:text-purple-700 dark:group-hover:text-purple-400 leading-tight">
                               {item.name}
                             </span>
                           </Link>
@@ -159,7 +159,7 @@ export function Header() {
                             key={item.name}
                             href={item.href}
                             onClick={() => setIsOpen(false)}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-purple-50 transition-all duration-200 group"
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-purple-50 dark:hover:bg-neutral-800 transition-all duration-200 group"
                           >
                             <div
                               className={`w-9 h-9 rounded-lg bg-gradient-to-br ${item.gradient} flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform duration-200`}
@@ -167,10 +167,10 @@ export function Header() {
                               <item.icon className="w-4 h-4 text-white" />
                             </div>
                             <div>
-                              <div className="text-sm font-semibold text-neutral-700 group-hover:text-purple-700">
+                            <div className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 group-hover:text-purple-700 dark:group-hover:text-purple-400">
                                 {item.name}
                               </div>
-                              <div className="text-[11px] text-neutral-400">{item.desc}</div>
+                            <div className="text-[11px] text-neutral-400 dark:text-neutral-500">{item.desc}</div>
                             </div>
                           </Link>
                         ))}
@@ -194,7 +194,7 @@ export function Header() {
                             key={item.name}
                             href={item.href}
                             onClick={() => setIsOpen(false)}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-purple-50 transition-all duration-200 group text-sm font-medium text-neutral-600 hover:text-purple-600"
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-purple-50 dark:hover:bg-neutral-800 transition-all duration-200 group text-sm font-medium text-neutral-600 dark:text-neutral-300 hover:text-purple-600 dark:hover:text-purple-400"
                           >
                             <item.icon className="w-4 h-4 text-neutral-400 group-hover:text-purple-500" />
                             {item.name}
@@ -205,12 +205,12 @@ export function Header() {
                   </div>
 
                   {/* Mobile Auth */}
-                  <div className="mt-auto p-4 border-t border-neutral-100 bg-neutral-50/50">
+              <div className="mt-auto p-4 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
                     <div className="flex gap-2.5">
                       <Link href="/login" onClick={() => setIsOpen(false)} className="flex-1">
                         <Button
                           variant="outline"
-                          className="w-full h-11 text-sm font-semibold border-purple-200 text-purple-700 hover:bg-purple-50 hover:border-purple-300 rounded-xl transition-all duration-200"
+                      className="w-full h-11 text-sm font-semibold border-purple-200 dark:border-neutral-700 text-purple-700 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-neutral-800 hover:border-purple-300 dark:hover:border-neutral-600 rounded-xl transition-all duration-200"
                         >
                           Sign In
                         </Button>
@@ -242,7 +242,7 @@ export function Header() {
             <NavigationMenuList className="gap-0.5">
               {/* Vendors Mega Menu */}
               <NavigationMenuItem>
-                <NavigationMenuTrigger className="text-[13px] font-semibold text-neutral-600 hover:text-purple-700 data-[state=open]:text-purple-700 bg-transparent hover:bg-purple-50/80 data-[state=open]:bg-purple-50/80 rounded-lg px-3.5 py-2 h-9 transition-all duration-200">
+            <NavigationMenuTrigger className="text-[13px] font-semibold text-neutral-600 dark:text-neutral-300 hover:text-purple-700 dark:hover:text-purple-400 data-[state=open]:text-purple-700 dark:data-[state=open]:text-purple-400 bg-transparent hover:bg-purple-50/80 dark:hover:bg-neutral-800/80 data-[state=open]:bg-purple-50/80 dark:data-[state=open]:bg-neutral-800/80 rounded-lg px-3.5 py-2 h-9 transition-all duration-200">
                   Vendors
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
@@ -277,7 +277,7 @@ export function Header() {
                           <NavigationMenuLink key={item.name} asChild>
                             <Link
                               href={item.href}
-                              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-purple-50/80 transition-all duration-200 group/item"
+                          className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-purple-50/80 dark:hover:bg-neutral-800/80 transition-all duration-200 group/item"
                             >
                               <div
                                 className={`w-8 h-8 rounded-lg bg-gradient-to-br ${item.gradient} flex items-center justify-center flex-shrink-0 group-hover/item:scale-110 group-hover/item:shadow-md transition-all duration-200`}
@@ -285,7 +285,7 @@ export function Header() {
                                 <item.icon className="w-3.5 h-3.5 text-white" />
                               </div>
                               <div className="min-w-0">
-                                <div className="text-[13px] font-semibold text-neutral-800 group-hover/item:text-purple-700 truncate">
+                            <div className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200 group-hover/item:text-purple-700 dark:group-hover/item:text-purple-400 truncate">
                                   {item.name}
                                 </div>
                                 <div className="text-[11px] text-neutral-400 truncate">{item.desc}</div>
@@ -301,7 +301,7 @@ export function Header() {
 
               {/* Planning Tools Dropdown */}
               <NavigationMenuItem>
-                <NavigationMenuTrigger className="text-[13px] font-semibold text-neutral-600 hover:text-purple-700 data-[state=open]:text-purple-700 bg-transparent hover:bg-purple-50/80 data-[state=open]:bg-purple-50/80 rounded-lg px-3.5 py-2 h-9 transition-all duration-200">
+            <NavigationMenuTrigger className="text-[13px] font-semibold text-neutral-600 dark:text-neutral-300 hover:text-purple-700 dark:hover:text-purple-400 data-[state=open]:text-purple-700 dark:data-[state=open]:text-purple-400 bg-transparent hover:bg-purple-50/80 dark:hover:bg-neutral-800/80 data-[state=open]:bg-purple-50/80 dark:data-[state=open]:bg-neutral-800/80 rounded-lg px-3.5 py-2 h-9 transition-all duration-200">
                   Planning
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
@@ -311,7 +311,7 @@ export function Header() {
                         <NavigationMenuLink key={item.name} asChild>
                           <Link
                             href={item.href}
-                            className="flex items-center gap-3 p-3 rounded-xl hover:bg-purple-50/80 transition-all duration-200 group/item border border-transparent hover:border-purple-100/80"
+                        className="flex items-center gap-3 p-3 rounded-xl hover:bg-purple-50/80 dark:hover:bg-neutral-800/80 transition-all duration-200 group/item border border-transparent hover:border-purple-100/80 dark:hover:border-neutral-700"
                           >
                             <div
                               className={`w-10 h-10 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center flex-shrink-0 shadow-sm group-hover/item:shadow-md group-hover/item:scale-110 transition-all duration-200`}
@@ -319,7 +319,7 @@ export function Header() {
                               <item.icon className="w-[18px] h-[18px] text-white" />
                             </div>
                             <div>
-                              <div className="text-sm font-semibold text-neutral-800 group-hover/item:text-purple-700">
+                          <div className="text-sm font-semibold text-neutral-800 dark:text-neutral-200 group-hover/item:text-purple-700 dark:group-hover/item:text-purple-400">
                                 {item.name}
                               </div>
                               <div className="text-xs text-neutral-400">{item.desc}</div>
@@ -337,7 +337,7 @@ export function Header() {
                 <NavigationMenuLink asChild>
                   <Link
                     href="/venues"
-                    className="inline-flex h-9 items-center rounded-lg px-3.5 py-2 text-[13px] font-semibold text-neutral-600 hover:text-purple-700 hover:bg-purple-50/80 transition-all duration-200"
+                className="inline-flex h-9 items-center rounded-lg px-3.5 py-2 text-[13px] font-semibold text-neutral-600 dark:text-neutral-300 hover:text-purple-700 dark:hover:text-purple-400 hover:bg-purple-50/80 dark:hover:bg-neutral-800/80 transition-all duration-200"
                   >
                     Venues
                   </Link>
@@ -348,7 +348,7 @@ export function Header() {
                 <NavigationMenuLink asChild>
                   <Link
                     href="/vendors"
-                    className="inline-flex h-9 items-center rounded-lg px-3.5 py-2 text-[13px] font-semibold text-neutral-600 hover:text-purple-700 hover:bg-purple-50/80 transition-all duration-200"
+                className="inline-flex h-9 items-center rounded-lg px-3.5 py-2 text-[13px] font-semibold text-neutral-600 dark:text-neutral-300 hover:text-purple-700 dark:hover:text-purple-400 hover:bg-purple-50/80 dark:hover:bg-neutral-800/80 transition-all duration-200"
                   >
                     All Vendors
                   </Link>
@@ -359,7 +359,7 @@ export function Header() {
                 <NavigationMenuLink asChild>
                   <Link
                     href="/events"
-                    className="inline-flex h-9 items-center rounded-lg px-3.5 py-2 text-[13px] font-semibold text-neutral-600 hover:text-purple-700 hover:bg-purple-50/80 transition-all duration-200"
+                className="inline-flex h-9 items-center rounded-lg px-3.5 py-2 text-[13px] font-semibold text-neutral-600 dark:text-neutral-300 hover:text-purple-700 dark:hover:text-purple-400 hover:bg-purple-50/80 dark:hover:bg-neutral-800/80 transition-all duration-200"
                   >
                     Events
                   </Link>
@@ -380,7 +380,7 @@ export function Header() {
                       ? "/dashboard/chat"
                       : "/user/conversations"
                   }
-                  className="relative h-9 w-9 flex items-center justify-center rounded-xl hover:bg-purple-50 text-neutral-400 hover:text-purple-600 transition-all duration-200"
+              className="relative h-9 w-9 flex items-center justify-center rounded-xl hover:bg-purple-50 dark:hover:bg-neutral-800 text-neutral-400 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200"
                   aria-label="Messages"
                 >
                   <MessageCircle className="w-[18px] h-[18px]" />
@@ -403,7 +403,7 @@ export function Header() {
             )}
             <Link
               href="/favorites"
-              className="hidden sm:flex h-9 w-9 items-center justify-center rounded-xl hover:bg-purple-50 text-neutral-400 hover:text-purple-600 transition-all duration-200"
+          className="hidden sm:flex h-9 w-9 items-center justify-center rounded-xl hover:bg-purple-50 dark:hover:bg-neutral-800 text-neutral-400 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200"
               aria-label="Favorites"
             >
               <Heart className="w-[18px] h-[18px]" />

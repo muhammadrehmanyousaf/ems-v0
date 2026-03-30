@@ -13,7 +13,7 @@ import { X } from "lucide-react"
 interface BookingModalProps {
   isOpen: boolean
   onClose: () => void
-  vendorId: string
+  vendorId: string | number
   vendorName: string
 }
 
@@ -47,25 +47,22 @@ export function BookingModal({ isOpen, onClose, vendorId, vendorName }: BookingM
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 0))
 
   return (
-    <Dialog open={isOpen}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>Book {vendorName}</DialogTitle>
-            <X onClick={onClose} className="size-7 p-1 hover:bg-gray-100 cursor-pointer" />
-          </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl text-neutral-900 dark:text-neutral-100">
+        <DialogHeader className="flex flex-row items-center justify-between">
+          <DialogTitle>Book {vendorName}</DialogTitle>
+          <X className="h-4 w-4 cursor-pointer opacity-70 hover:opacity-100 transition-opacity" onClick={onClose} />
         </DialogHeader>
-
         <div className="mt-4">
           <div className="flex justify-between mb-4">
-            {steps.map((s, i) => (
+            {steps.map((stepName, i) => (
               <div
-                key={s}
+                key={i}
                 className={`text-sm ${
-                  i === step ? "text-primary font-bold" : "text-gray-500"
+                  i === step ? "text-primary font-bold" : "text-gray-500 dark:text-gray-400"
                 }`}
               >
-                {s}
+                {stepName}
               </div>
             ))}
           </div>
@@ -121,15 +118,15 @@ export function BookingModal({ isOpen, onClose, vendorId, vendorName }: BookingM
                     value={formData.package}
                     onValueChange={handlePackageSelection}
                   >
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 mt-2">
                       <RadioGroupItem value="basic" id="basic" />
                       <Label htmlFor="basic">Basic Package</Label>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 mt-2">
                       <RadioGroupItem value="standard" id="standard" />
                       <Label htmlFor="standard">Standard Package</Label>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 mt-2">
                       <RadioGroupItem value="premium" id="premium" />
                       <Label htmlFor="premium">Premium Package</Label>
                     </div>
@@ -145,6 +142,7 @@ export function BookingModal({ isOpen, onClose, vendorId, vendorName }: BookingM
                     value={formData.additionalInfo}
                     onChange={handleInputChange}
                     rows={4}
+                    className="mt-2"
                   />
                 </div>
               )}
@@ -173,10 +171,12 @@ export function BookingModal({ isOpen, onClose, vendorId, vendorName }: BookingM
           </AnimatePresence>
         </div>
         <div className="mt-4 flex justify-between">
-          {step > 0 && (
+          {step > 0 ? (
             <Button onClick={prevStep} variant="outline">
               Previous
             </Button>
+          ) : (
+            <div />
           )}
           {step < steps.length - 1 ? (
             <Button onClick={nextStep}>Next</Button>
@@ -188,4 +188,3 @@ export function BookingModal({ isOpen, onClose, vendorId, vendorName }: BookingM
     </Dialog>
   );
 }
-

@@ -58,17 +58,6 @@ export function BusinessDetailsStep() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="minimumPrice">Minimum Price</Label>
-        <Input
-          id="minimumPrice"
-          type="number"
-          value={formData.minimumPrice}
-          onChange={(e) => updateFormData({ minimumPrice: Number.parseInt(e.target.value) })}
-          placeholder="Enter minimum price"
-        />
-      </div>
-
-      <div className="space-y-2">
         <Label htmlFor="description">Description *</Label>
         <Textarea
           id="description"

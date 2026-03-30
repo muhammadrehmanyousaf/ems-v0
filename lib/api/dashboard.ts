@@ -84,7 +84,6 @@ export interface ApiBusiness {
   description: string | null;
   additionalInfo: string | null;
   minimumPrice: number | null;
-  starterPrice: number | null;
   images: string[];
   maxCapacity: number | null;
   minCapacity: number | null;

@@ -52,6 +52,8 @@ export interface Review {
   comment: string;
   date: string;
   images?: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Package {
@@ -237,7 +239,6 @@ export interface EventVenue {
   minCapacity: number;
   maxCapacity: number;
   minimumPrice: number;
-  starterPrice: number;
   downPayment: number;
   downPaymentType: "Percentage" | "Fixed" | string;
   cancelationPolicy: string;

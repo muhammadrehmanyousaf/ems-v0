@@ -81,8 +81,8 @@ function NotificationItem({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -10 }}
       transition={{ duration: 0.2 }}
-      className={`group relative flex items-start gap-3 px-4 py-3 cursor-pointer transition-all duration-200 hover:bg-purple-50/60 ${
-        !notification.isRead ? "bg-purple-50/40" : ""
+      className={`group relative flex items-start gap-3 px-4 py-3 cursor-pointer transition-all duration-200 hover:bg-purple-50/60 dark:hover:bg-neutral-800/60 ${
+        !notification.isRead ? "bg-purple-50/40 dark:bg-neutral-800/40" : ""
       }`}
       onClick={() => {
         if (!notification.isRead) onRead(notification.id);
@@ -103,7 +103,7 @@ function NotificationItem({
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <p className={`text-[13px] leading-snug line-clamp-2 ${
-            !notification.isRead ? "font-semibold text-neutral-900" : "text-neutral-600"
+          !notification.isRead ? "font-semibold text-neutral-900 dark:text-neutral-100" : "text-neutral-600 dark:text-neutral-400"
           }`}>
             {notification.title}
           </p>
@@ -111,7 +111,7 @@ function NotificationItem({
             {formatTimeAgo(notification.createdAt)}
           </span>
         </div>
-        <p className="text-[12px] text-neutral-400 line-clamp-1 mt-0.5">
+      <p className="text-[12px] text-neutral-400 dark:text-neutral-500 line-clamp-1 mt-0.5">
           {notification.message}
         </p>
         <span className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded-md mt-1.5 ${config.bg} ${config.color}`}>
@@ -126,7 +126,7 @@ function NotificationItem({
           e.stopPropagation();
           onDelete(notification.id);
         }}
-        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 rounded-md text-neutral-300 hover:text-red-500 hover:bg-red-50 transition-all duration-150"
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 rounded-md text-neutral-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950 transition-all duration-150"
         title="Remove"
       >
         <Trash2 className="h-3.5 w-3.5" />
@@ -177,7 +177,7 @@ export default function NotificationDropdown({ notificationsPageUrl }: Notificat
       <PopoverContent
         align="end"
         sideOffset={8}
-        className="w-[380px] p-0 rounded-2xl shadow-2xl border-neutral-200/80 overflow-hidden"
+        className="w-[380px] p-0 rounded-2xl shadow-2xl border-neutral-200/80 dark:border-neutral-800 dark:bg-neutral-900 overflow-hidden"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-700">
@@ -220,13 +220,13 @@ export default function NotificationDropdown({ notificationsPageUrl }: Notificat
               <div className="h-14 w-14 rounded-2xl bg-purple-50 flex items-center justify-center mb-3">
                 <Bell className="h-6 w-6 text-purple-300" />
               </div>
-              <p className="text-sm font-medium text-neutral-500">All caught up!</p>
+            <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">All caught up!</p>
               <p className="text-xs text-neutral-400 mt-1 text-center">
                 No new notifications right now. We&apos;ll notify you when something happens.
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-neutral-100">
+          <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
               <AnimatePresence initial={false}>
                 {displayedNotifications.map((notification) => (
                   <NotificationItem
@@ -243,11 +243,11 @@ export default function NotificationDropdown({ notificationsPageUrl }: Notificat
         </ScrollArea>
 
         {/* Footer */}
-        <div className="border-t border-neutral-100 bg-neutral-50/80">
+        <div className="border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/80 dark:bg-neutral-900/80">
           <Link
             href={notificationsPageUrl}
             onClick={() => setOpen(false)}
-            className="flex items-center justify-center gap-1.5 py-3 text-[13px] font-semibold text-purple-600 hover:text-purple-700 hover:bg-purple-50 transition-all duration-200"
+            className="flex items-center justify-center gap-1.5 py-3 text-[13px] font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-neutral-800 transition-all duration-200"
           >
             View all notifications
             <ArrowRight className="h-3.5 w-3.5" />

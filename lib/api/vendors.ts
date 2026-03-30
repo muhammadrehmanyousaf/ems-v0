@@ -19,7 +19,7 @@ function normalizeBusiness(raw: any): any {
     location: raw.location || raw.subArea || raw.city || vendor.city || '',
     rating: raw.rating ?? 0,
     reviews: raw.reviews || [],
-    price: raw.price ?? raw.minimumPrice ?? raw.starterPrice ?? 0,
+    price: raw.price ?? raw.minimumPrice ?? 0,
     staff: raw.staff || [],
     amenities: raw.amenities || [],
     cancellationPolicy: raw.cancellationPolicy || raw.cancelationPolicy || '',

@@ -27,7 +27,8 @@ const formSchema = z.object({
     description: z.string().optional(),
     additionalInfo: z.string().optional(),
     minimumPrice: z.string().optional(),
-    starterPrice: z.string().optional(),
+    maxCapacity: z.string().optional(),
+    minCapacity: z.string().optional(),
     downPaymentType: z.string().optional(),
     downPayment: z.string().optional(),
     cancelationPolicy: z.string().optional(),
@@ -52,7 +53,8 @@ const BasicInfoTab = ({ business, onSuccess }: BasicInfoTabProps) => {
             description: business.description || '',
             additionalInfo: business.additionalInfo || '',
             minimumPrice: business.minimumPrice?.toString() || '',
-            starterPrice: business.starterPrice?.toString() || '',
+            maxCapacity: business.maxCapacity?.toString() || '',
+            minCapacity: business.minCapacity?.toString() || '',
             downPaymentType: business.downPaymentType || '',
             downPayment: business.downPayment?.toString() || '',
             cancelationPolicy: business.cancelationPolicy || '',
@@ -71,7 +73,8 @@ const BasicInfoTab = ({ business, onSuccess }: BasicInfoTabProps) => {
                 description: values.description || null,
                 additionalInfo: values.additionalInfo || null,
                 minimumPrice: values.minimumPrice ? Number(values.minimumPrice) : null,
-                starterPrice: values.starterPrice ? Number(values.starterPrice) : null,
+                maxCapacity: values.maxCapacity ? Number(values.maxCapacity) : null,
+                minCapacity: values.minCapacity ? Number(values.minCapacity) : null,
                 downPaymentType: (values.downPaymentType as ApiBusiness['downPaymentType']) || null,
                 downPayment: values.downPayment ? Number(values.downPayment) : null,
                 cancelationPolicy: values.cancelationPolicy || null,
@@ -197,20 +200,6 @@ const BasicInfoTab = ({ business, onSuccess }: BasicInfoTabProps) => {
                         <div className="grid md:grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
-                                name="starterPrice"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Starter Price (Rs.)</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" placeholder="100000" {...field} />
-                                        </FormControl>
-                                        <FormDescription>Starting price shown to customers.</FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
                                 name="minimumPrice"
                                 render={({ field }) => (
                                     <FormItem>
@@ -219,6 +208,34 @@ const BasicInfoTab = ({ business, onSuccess }: BasicInfoTabProps) => {
                                             <Input type="number" placeholder="50000" {...field} />
                                         </FormControl>
                                         <FormDescription>Lowest price you accept for a booking.</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="maxCapacity"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Max Capacity</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" placeholder="500" {...field} />
+                                        </FormControl>
+                                        <FormDescription>Maximum number of guests.</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="minCapacity"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Min Capacity</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" placeholder="50" {...field} />
+                                        </FormControl>
+                                        <FormDescription>Minimum number of guests.</FormDescription>
                                         <FormMessage />
                                     </FormItem>
                                 )}

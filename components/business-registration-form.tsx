@@ -151,8 +151,6 @@ export function BusinessRegistrationForm() {
       if (currentStep === 3) {
         if (!formData.description)
           currentErrors.description = "Business description is required";
-        if (!formData.minimumPrice)
-          currentErrors.minimumPrice = "Starting price is required";
         if (!formData.subBusinessType)
           currentErrors.subBusinessType = "Business type is required";
         if (formData.staff.length < 1)
@@ -165,17 +163,11 @@ export function BusinessRegistrationForm() {
             Number(formData.downPayment) > 100)
         ) {
           currentErrors.downPayment = "Percentage must be between 0 and 100";
-        } else if (
-          formData.downPaymentType === "Fixed Amount" &&
-          (Number(formData.downPayment) <= 0 ||
-            Number(formData.downPayment) > Number(formData.minimumPrice))
-        ) {
-          currentErrors.downPayment = "Down payment cannot exceed the starting price";
         }
       }
       if (currentStep === 4) {
         if (formData.packages) {
-          formData.packages.forEach((pkg: Package, index: number) => {
+          formData.packages.forEach((pkg: any, index: number) => {
             if (!pkg.name) {
               currentErrors[`packages[${index}].name`] =
                 "Package name is required";
@@ -288,7 +280,6 @@ export function BusinessRegistrationForm() {
         amenities: formData.amenities,
         staff: formData.staff,
         maxCapacity: formData.maxCapacity || 1,
-        minimumPrice: formData.minimumPrice,
         description: formData.description,
         additionalInfo: formData.additionalInfo || undefined,
         downPaymentType: formData.downPaymentType,
@@ -297,7 +288,6 @@ export function BusinessRegistrationForm() {
         covidComplaint: formData.covidComplaint,
         parking: formData.parking,
         catering: formData.catering === "internal",
-        starterPrice: formData.starterPrice || undefined,
         images:
           uploadedImageUrls.length > 0 ? uploadedImageUrls : formData.images,
         packages:
@@ -349,14 +339,12 @@ export function BusinessRegistrationForm() {
           officeAddress: "",
           officeGoogleLink: "",
           staff: [],
-          minimumPrice: 0,
           description: "",
           additionalInfo: "",
           downPaymentType: "",
           downPayment: 0,
           covidComplaint: false,
           cancelationPolicy: "",
-          starterPrice: 0,
           images: [],
           imageFiles: [],
           subBusinessType: [],
@@ -424,14 +412,12 @@ export function BusinessRegistrationForm() {
           officeAddress: "",
           officeGoogleLink: "",
           staff: [],
-          minimumPrice: 0,
           description: "",
           additionalInfo: "",
           downPaymentType: "",
           downPayment: 0,
           covidComplaint: false,
           cancelationPolicy: "",
-          starterPrice: 0,
           images: [],
           imageFiles: [],
           subBusinessType: [],
@@ -477,9 +463,9 @@ export function BusinessRegistrationForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-purple-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-purple-50/30 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-neutral-200 shadow-sm">
+      <header className="sticky top-0 z-50 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800 shadow-sm">
         <div className="w-[90%] mx-auto sm:container sm:mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <Link
@@ -495,7 +481,7 @@ export function BusinessRegistrationForm() {
                 <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">
                   Perfect Wedding
                 </h1>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
                   Business Registration
                 </p>
               </div>
@@ -503,7 +489,7 @@ export function BusinessRegistrationForm() {
 
             <Link
               href="/get-help"
-              className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-all duration-200"
+              className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-neutral-800 rounded-lg transition-all duration-200"
             >
               <HelpCircle className="w-4 h-4" />
               <span className="hidden sm:inline">Need Help?</span>
@@ -519,11 +505,11 @@ export function BusinessRegistrationForm() {
           <div className="lg:col-span-5 order-2 lg:order-1">
             <div className="lg:sticky lg:top-24 space-y-4 sm:space-y-6 lg:space-y-8">
               {/* Progress Section */}
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+              <Card className="bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm border-0 shadow-xl">
                 <CardContent className="p-4 sm:p-6">
                   <div className="space-y-3 sm:space-y-4">
                     <div className="flex items-center justify-between">
-                      <h2 className="text-base sm:text-lg font-semibold text-neutral-900">
+                      <h2 className="text-base sm:text-lg font-semibold text-neutral-900 dark:text-neutral-100">
                         Registration Progress
                       </h2>
                       <span className="text-sm font-medium text-purple-600">
@@ -531,7 +517,7 @@ export function BusinessRegistrationForm() {
                       </span>
                     </div>
                     <Progress value={getProgressPercentage()} className="h-2" />
-                    <div className="flex items-center gap-2 text-sm text-neutral-600">
+                    <div className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
                       <CheckCircle className="w-4 h-4 text-green-500" />
                       <span>
                         Step {currentStep + 1} of{" "}
@@ -596,15 +582,15 @@ export function BusinessRegistrationForm() {
               </Card>
 
               {/* Stats cards */}
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+              <Card className="bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm border-0 shadow-xl">
                 <CardContent className="p-4 sm:p-6">
                   <div className="space-y-3 sm:space-y-4">
-                    <h3 className="text-base sm:text-lg font-semibold text-neutral-900 flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-semibold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
                       <Star className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
                       Platform Statistics
                     </h3>
                     <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                      <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
+                      <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 rounded-xl">
                         <div className="text-xl sm:text-2xl font-bold text-blue-600">
                           {stats ? stats.vendors : 0}
                           {"+"}
@@ -613,7 +599,7 @@ export function BusinessRegistrationForm() {
                           Active Vendors
                         </div>
                       </div>
-                      <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl">
+                      <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/50 dark:to-emerald-950/50 rounded-xl">
                         <div className="text-xl sm:text-2xl font-bold text-green-600">
                           {stats ? stats.couplesServed : 0}
                           {"+"}
@@ -631,7 +617,7 @@ export function BusinessRegistrationForm() {
 
           {/* Right Side - Form Section */}
           <div className="lg:col-span-7 order-1 lg:order-2">
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+            <Card className="bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm border-0 shadow-xl">
               <CardContent className="p-4 sm:p-6 lg:p-8">
                 {/* Step Content */}
                 <div className="min-h-[400px] sm:min-h-[500px]">
@@ -642,10 +628,10 @@ export function BusinessRegistrationForm() {
                           <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                         </div>
                         <div>
-                          <h2 className="text-xl sm:text-2xl font-bold text-neutral-900 mb-2">
+                          <h2 className="text-xl sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">
                             Choose Your Business Type
                           </h2>
-                          <p className="text-sm sm:text-base text-neutral-600">
+                          <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400">
                             Select the category that best describes your wedding
                             services
                           </p>
@@ -666,10 +652,10 @@ export function BusinessRegistrationForm() {
                           </span>
                         </div>
                         <div>
-                          <h2 className="text-lg sm:text-xl font-bold text-neutral-900">
+                          <h2 className="text-lg sm:text-xl font-bold text-neutral-900 dark:text-neutral-100">
                             {businessType} Registration
                           </h2>
-                          <p className="text-sm sm:text-base text-neutral-600">
+                          <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400">
                             Complete your business profile
                           </p>
                         </div>
@@ -739,12 +725,12 @@ export function BusinessRegistrationForm() {
                 </div>
 
                 {/* Navigation Buttons */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 pt-4 sm:pt-6 border-t border-neutral-200 mt-6 sm:mt-8">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 pt-4 sm:pt-6 border-t border-neutral-200 dark:border-neutral-800 mt-6 sm:mt-8">
                   <Button
                     disabled={currentStep === 0}
                     onClick={handleBack}
                     variant="outline"
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 border-neutral-200 hover:border-purple-500 hover:text-purple-600 transition-all duration-200 py-3 sm:py-2"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 border-neutral-200 dark:border-neutral-700 hover:border-purple-500 dark:hover:border-purple-500 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200 py-3 sm:py-2"
                   >
                     <ArrowLeft className="w-4 h-4" />
                     Back

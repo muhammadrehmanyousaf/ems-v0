@@ -57,10 +57,6 @@ export function ReviewStep() {
           <p>{formData.description}</p>
         </div>
         <div>
-          <p className="text-sm text-gray-500">Minimum Price</p>
-          <p>{formData.minimumPrice}</p>
-        </div>
-        <div>
           <p className="text-sm text-gray-500">Payment Type</p>
           <p>{formData.paymentType}</p>
         </div>

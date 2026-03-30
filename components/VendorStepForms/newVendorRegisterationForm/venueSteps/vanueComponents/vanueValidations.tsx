@@ -48,8 +48,7 @@ export const vanueValidations = ({currentStep, formData, currentErrors }: Valida
         if (formData.amenities.length === 0) currentErrors.amenities = "Amenities is required";
         if (formData.staff.length === 0) currentErrors.staff = "Staff is required";
         if (!formData.maxCapacity) currentErrors.maxCapacity = "Maximum Capacity is required";
-        if (!formData.minimumPrice) currentErrors.minimumPrice = "Minimum Price is required";
-        if (!formData.description) currentErrors.description = "Description is required";
+if (!formData.description) currentErrors.description = "Description is required";
         if (!formData.downPaymentType) currentErrors.downPaymentType = "Down Payment Type is required";
         if (!formData.downPayment) currentErrors.downPayment = "Down Payment is required";
         if (!formData.cancelationPolicy) currentErrors.cancelationPolicy = "Cancelation Policy is required";

@@ -72,10 +72,6 @@ const AdditionalInfoCard = ({ business }: AdditionalInfoCardProps) => {
                             </p>
                         </div>
                         <TextField
-                            label="Starter Price"
-                            value={business.starterPrice ? `Rs. ${business.starterPrice.toLocaleString()}` : null}
-                        />
-                        <TextField
                             label="Minimum Price"
                             value={business.minimumPrice ? `Rs. ${business.minimumPrice.toLocaleString()}` : null}
                         />

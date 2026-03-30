@@ -52,7 +52,6 @@ export type FormType = {
   officeAddress: string;
   officeGoogleLink: string;
   staff: string[];
-  minimumPrice: number;
   description: string;
   additionalInfo: string;
   downPaymentType: string;
@@ -60,7 +59,6 @@ export type FormType = {
   covidComplaint: boolean;
   cancelationPolicy: string;
   // packageName: string[];
-  starterPrice: number;
   // services: string;
   images: string[];
   imageFiles: File[];
@@ -129,7 +127,6 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     officeAddress: "",
     officeGoogleLink: "",
     staff: [],
-    minimumPrice: 0,
     description: "",
     additionalInfo: "",
     downPaymentType: "",
@@ -137,7 +134,6 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     covidComplaint: false,
     cancelationPolicy: "",
     // packageName: [],
-    starterPrice: 0,
     // services: "",
     images: [],
     imageFiles: [],

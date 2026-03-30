@@ -277,22 +277,6 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                 {errors.staff && <p className="text-xs text-red-500">{errors.staff}</p>}
             </section>
             <section className="space-y-3">
-                <Label>Minimum Price</Label>
-                <Input
-                    type="number"
-                    placeholder="Enter Minimum Price"
-                    value={formData.minimumPrice || ""}
-                    onChange={(e) => {
-                        setFormData((prevData) => ({
-                            ...prevData,
-                            minimumPrice: Number(e.target.value),
-                        }));
-                        setErrors((prevErrors) => ({ ...prevErrors, minimumPrice: "" }));
-                    }}
-                />
-                {errors.minimumPrice && <p className="text-xs text-red-500">{errors.minimumPrice}</p>}
-            </section>
-            <section className="space-y-3">
                 <Label>Description</Label>
                 <Textarea
                     placeholder="Enter Description"

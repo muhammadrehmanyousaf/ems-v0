@@ -286,7 +286,7 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
                 <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-600">
                   <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {previewVendorDetail.location || previewVendorDetail.city}</span>
                   <span className="flex items-center gap-1 text-gold-600"><Star className="w-3.5 h-3.5 fill-current" /> {previewVendorDetail.rating || 0}</span>
-                  <Badge variant="outline" className="text-xs">Rs. {previewVendorDetail.minimumPrice || (previewVendorDetail as any).starterPrice || 0}</Badge>
+                  <Badge variant="outline" className="text-xs">Rs. {previewVendorDetail.minimumPrice || 0}</Badge>
                 </div>
                 {previewVendorDetail.description && (
                   <p className="text-sm text-neutral-500 line-clamp-2">{previewVendorDetail.description}</p>
