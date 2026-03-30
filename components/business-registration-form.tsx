@@ -166,6 +166,14 @@ export function BusinessRegistrationForm() {
         }
       }
       if (currentStep === 4) {
+        const validPackages =
+          formData.packages?.filter(
+            (pkg: any) => pkg.name && pkg.price && pkg.features,
+          ) ?? [];
+        if (validPackages.length === 0) {
+          currentErrors.packages =
+            "At least one package with a name and price is required";
+        }
         if (formData.packages) {
           formData.packages.forEach((pkg: any, index: number) => {
             if (!pkg.name) {
