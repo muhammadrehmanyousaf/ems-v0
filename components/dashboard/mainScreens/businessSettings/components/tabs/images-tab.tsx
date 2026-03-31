@@ -33,7 +33,7 @@ const ImagesTab = ({ business, onSuccess }: ImagesTabProps) => {
 
         setUploading(true);
         try {
-            const uploadedUrls = await BusinessesAPI.uploadImages(fileArray);
+            const uploadedUrls = await BusinessesAPI.uploadImages(fileArray, Number(business.id));
             const updatedImages = [...images, ...uploadedUrls];
             await BusinessesAPI.update(business.id, { images: updatedImages });
             setImages(updatedImages);

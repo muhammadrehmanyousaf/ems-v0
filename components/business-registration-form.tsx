@@ -166,23 +166,25 @@ export function BusinessRegistrationForm() {
         }
       }
       if (currentStep === 4) {
+        const isMenuType = formData.businessType === "Wedding venue" || formData.businessType === "Catering";
+        const itemLabel = isMenuType ? "menu" : "package";
         const validPackages =
           formData.packages?.filter(
-            (pkg: any) => pkg.name && pkg.price && pkg.features,
+            (pkg: any) => pkg.name && pkg.price,
           ) ?? [];
         if (validPackages.length === 0) {
           currentErrors.packages =
-            "At least one package with a name and price is required";
+            `At least one ${itemLabel} with a name and price is required`;
         }
         if (formData.packages) {
           formData.packages.forEach((pkg: any, index: number) => {
             if (!pkg.name) {
               currentErrors[`packages[${index}].name`] =
-                "Package name is required";
+                `${itemLabel.charAt(0).toUpperCase() + itemLabel.slice(1)} name is required`;
             }
             if (!pkg.price) {
               currentErrors[`packages[${index}].price`] =
-                "Package price is required";
+                `${itemLabel.charAt(0).toUpperCase() + itemLabel.slice(1)} price is required`;
             }
             // Features Validation: Ensure checked categories are not empty
             if (pkg.features) {
@@ -200,6 +202,14 @@ export function BusinessRegistrationForm() {
               });
             }
           });
+        }
+      }
+      if (currentStep === 5) {
+        const imageCount = formData.imageFiles?.length ?? 0;
+        if (imageCount === 0) {
+          currentErrors.images = "Please upload at least one image";
+        } else if (imageCount > 20) {
+          currentErrors.images = `Maximum 20 images allowed. You have uploaded ${imageCount}. Please remove ${imageCount - 20} image(s).`;
         }
       }
       setErrors(currentErrors);
@@ -246,14 +256,17 @@ export function BusinessRegistrationForm() {
     try {
       // Upload image files first if any
       let uploadedImageUrls: string[] = [];
+      let uploadTempId: string | undefined;
       if (formData.imageFiles && formData.imageFiles.length > 0) {
+        const imageFiles = formData.imageFiles.slice(0, 20); // hard cap at 20
+        uploadTempId = crypto.randomUUID();
         const imgFormData = new FormData();
-        formData.imageFiles.forEach((file: File) => {
+        imageFiles.forEach((file: File) => {
           imgFormData.append("images", file);
         });
         try {
           const uploadRes = await axios.post(
-            `${BACKEND_URL}api/v1/businesses/upload-images`,
+            `${BACKEND_URL}api/v1/businesses/upload-images?tempId=${uploadTempId}`,
             imgFormData,
             { headers: { "Content-Type": "multipart/form-data" } },
           );
@@ -300,6 +313,7 @@ export function BusinessRegistrationForm() {
           uploadedImageUrls.length > 0 ? uploadedImageUrls : formData.images,
         packages:
           formData.packages?.filter((p: any) => p.name && p.price) || [],
+        ...(uploadTempId ? { tempId: uploadTempId } : {}),
       };
 
       const rentalData = {

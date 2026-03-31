@@ -31,7 +31,9 @@ export class UsersAPI {
   }
 
   static async changeStatus(id: number, active: boolean): Promise<void> {
-    await axiosInstance.patch(`/api/v1/users/change-status?id=${id}&active=${active}`);
+    await axiosInstance.patch(
+      `/api/v1/users/change-status?id=${id}&active=${active}`,
+    );
   }
 
   static async delete(id: number): Promise<void> {
@@ -56,7 +58,7 @@ export class UsersAPI {
 export class VendorsAPI {
   static async getAll(): Promise<ApiUser[]> {
     const res = await axiosInstance.get("/api/v1/vendors");
-    return res.data?.data ?? [];
+    return res.data?.data.data ?? [];
   }
 
   static async getById(id: number): Promise<ApiUser> {
@@ -66,10 +68,10 @@ export class VendorsAPI {
 
   static async changeProfileStatus(
     id: number,
-    reviewProfile: boolean
+    reviewProfile: boolean,
   ): Promise<void> {
     await axiosInstance.patch(
-      `/api/v1/users/vendor-profile-update?id=${id}&reviewProfile=${reviewProfile}`
+      `/api/v1/users/vendor-profile-update?id=${id}&reviewProfile=${reviewProfile}`,
     );
   }
 }
@@ -130,15 +132,25 @@ export interface ApiBusiness {
 export class BusinessesAPI {
   static async getAll(
     page = 1,
-    limit = 20
+    limit = 20,
   ): Promise<{
     data: ApiBusiness[];
-    pagination: { page: number; limit: number; total: number; totalPages: number };
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
   }> {
     const res = await axiosInstance.get(
-      `/api/v1/businesses?page=${page}&limit=${limit}`
+      `/api/v1/businesses?page=${page}&limit=${limit}`,
     );
-    return res.data?.data ?? { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+    return (
+      res.data?.data ?? {
+        data: [],
+        pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+      }
+    );
   }
 
   static async getUserBusinesses(): Promise<ApiBusiness[]> {
@@ -153,23 +165,24 @@ export class BusinessesAPI {
 
   static async update(
     id: number,
-    data: Partial<ApiBusiness>
+    data: Partial<ApiBusiness>,
   ): Promise<ApiBusiness> {
     const res = await axiosInstance.patch(
       `/api/v1/businesses/user-business/${id}`,
-      data
+      data,
     );
     return res.data?.data;
   }
 
-  static async uploadImages(files: File[]): Promise<string[]> {
+  static async uploadImages(files: File[], businessId?: number): Promise<string[]> {
     const formData = new FormData();
     files.forEach((file) => formData.append("images", file));
-    const res = await axiosInstance.post(
-      "/api/v1/businesses/upload-images",
-      formData,
-      { headers: { "Content-Type": "multipart/form-data" } }
-    );
+    const url = businessId
+      ? `/api/v1/businesses/upload-images?businessId=${businessId}`
+      : "/api/v1/businesses/upload-images";
+    const res = await axiosInstance.post(url, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     return res.data?.data ?? [];
   }
 
@@ -211,7 +224,7 @@ export class RolesAPI {
 
   static async update(
     id: number,
-    data: { name?: string; description?: string; type?: string }
+    data: { name?: string; description?: string; type?: string },
   ): Promise<ApiRole> {
     const res = await axiosInstance.patch(`/api/v1/roles?id=${id}`, data);
     return res.data?.data;
@@ -294,9 +307,14 @@ export class PaymentsAPI {
     if (params?.dateFrom) qs.set("dateFrom", params.dateFrom);
     if (params?.dateTo) qs.set("dateTo", params.dateTo);
     const res = await axiosInstance.get(
-      `/api/v1/payments/vendor-payouts?${qs.toString()}`
+      `/api/v1/payments/vendor-payouts?${qs.toString()}`,
     );
-    return res.data?.data ?? { payouts: [], summary: { total: 0, totalAmount: 0, totalFees: 0 } };
+    return (
+      res.data?.data ?? {
+        payouts: [],
+        summary: { total: 0, totalAmount: 0, totalFees: 0 },
+      }
+    );
   }
 
   static async getAllPayouts(params?: {
@@ -315,7 +333,7 @@ export class PaymentsAPI {
     if (params?.limit) qs.set("limit", String(params.limit));
     if (params?.offset) qs.set("offset", String(params.offset));
     const res = await axiosInstance.get(
-      `/api/v1/payments/all-payouts?${qs.toString()}`
+      `/api/v1/payments/all-payouts?${qs.toString()}`,
     );
     return res.data?.data;
   }
@@ -338,15 +356,25 @@ export interface ApiReviewRow {
 export class ReviewsAPI {
   static async getAll(
     page = 1,
-    limit = 20
+    limit = 20,
   ): Promise<{
     reviews: ApiReviewRow[];
-    pagination: { page: number; limit: number; total: number; totalPages: number };
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
   }> {
     const res = await axiosInstance.get(
-      `/api/v1/analytics/reviews?page=${page}&limit=${limit}`
+      `/api/v1/analytics/reviews?page=${page}&limit=${limit}`,
     );
-    return res.data?.data ?? { reviews: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+    return (
+      res.data?.data ?? {
+        reviews: [],
+        pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+      }
+    );
   }
 
   static async getBusinessReviews(businessId: number): Promise<{
@@ -379,10 +407,15 @@ export class CustomersAPI {
   static async getAll(
     page = 1,
     limit = 20,
-    search = ""
+    search = "",
   ): Promise<{
     customers: ApiCustomer[];
-    pagination: { page: number; limit: number; total: number; totalPages: number };
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
   }> {
     const qs = new URLSearchParams({
       page: String(page),
@@ -390,9 +423,14 @@ export class CustomersAPI {
     });
     if (search) qs.set("search", search);
     const res = await axiosInstance.get(
-      `/api/v1/analytics/customers?${qs.toString()}`
+      `/api/v1/analytics/customers?${qs.toString()}`,
     );
-    return res.data?.data ?? { customers: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+    return (
+      res.data?.data ?? {
+        customers: [],
+        pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+      }
+    );
   }
 }
 
@@ -416,19 +454,26 @@ export interface CreateBookingPayload {
   vendors: CreateBookingVendor[];
 }
 
-export type PaymentType = 'down_payment' | 'remaining' | 'full_payment';
+export type PaymentType = "down_payment" | "remaining" | "full_payment";
 
 export class BookingsAPI {
   static async create(data: CreateBookingPayload) {
-    const res = await axiosInstance.post('/api/v1/bookings', data);
+    const res = await axiosInstance.post("/api/v1/bookings", data);
     return res.data;
   }
 
-  static async recordPayment(id: number, paymentType: PaymentType, paymentMethod: string) {
-    const res = await axiosInstance.patch(`/api/v1/bookings/${id}/record-payment`, {
-      paymentType,
-      paymentMethod,
-    });
+  static async recordPayment(
+    id: number,
+    paymentType: PaymentType,
+    paymentMethod: string,
+  ) {
+    const res = await axiosInstance.patch(
+      `/api/v1/bookings/${id}/record-payment`,
+      {
+        paymentType,
+        paymentMethod,
+      },
+    );
     return res.data;
   }
 
@@ -464,13 +509,21 @@ export class PackagesAPI {
     features?: string[];
     businessId: number;
   }): Promise<ApiPackage> {
-    const res = await axiosInstance.post("/api/v1/packages/single-package", data);
+    const res = await axiosInstance.post(
+      "/api/v1/packages/single-package",
+      data,
+    );
     return res.data?.data;
   }
 
   static async update(
     id: number,
-    data: { name?: string; price?: number; features?: string[]; businessId: number }
+    data: {
+      name?: string;
+      price?: number;
+      features?: string[];
+      businessId: number;
+    },
   ): Promise<ApiPackage> {
     const res = await axiosInstance.patch(`/api/v1/packages/${id}`, data);
     return res.data?.data;
@@ -512,7 +565,7 @@ export class MenusAPI {
 
   static async update(
     id: number,
-    data: { title?: string; price?: number; data?: Record<string, unknown> }
+    data: { title?: string; price?: number; data?: Record<string, unknown> },
   ): Promise<ApiMenu> {
     const res = await axiosInstance.patch(`/api/v1/menus/${id}`, data);
     return res.data?.data;

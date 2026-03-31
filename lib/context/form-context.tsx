@@ -23,12 +23,7 @@ interface Package {
   id?: number;
   name: string;
   price: number;
-  features: {
-    deliverables: string[];
-    photography: string[];
-    team: string[];
-    videography: string[];
-  };
+  features: Record<string, string[]>;
 }
 
 export type FormType = {
@@ -154,12 +149,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         id: undefined,
         name: "",
         price: 0,
-        features: {
-          deliverables: [],
-          photography: [],
-          team: [],
-          videography: [],
-        },
+        features: {},
       },
     ],
     amenities: [],

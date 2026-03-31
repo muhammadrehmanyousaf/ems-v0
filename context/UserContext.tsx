@@ -86,7 +86,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       if (storedUserData && userId) {
         try {
           const userData = JSON.parse(storedUserData);
-          setUser(userData);
+          // Always derive isSuperAdmin from roles so it survives serialization
+          const isSuperAdmin = userData.roles?.some(
+            (r: any) => r.name?.toLowerCase() === "super admin"
+          ) ?? false;
+          setUser({ ...userData, isSuperAdmin });
           setIsAuthenticated(true);
           verifyWithServer();
         } catch {
@@ -107,16 +111,24 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       const userData = await getLoggedInUser();
 
       if (userData && userData.data) {
-        const user = userData.data;
-        localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
-        Cookies.set(STORAGE_KEYS.USER_DATA, JSON.stringify(user), { expires: 1 });
-        setUser(user);
+        const freshUser = userData.data;
+
+        // Preserve isSuperAdmin flag — the /users/:id endpoint returns the plain
+        // DB user; it doesn't re-compute isSuperAdmin. Derive it from roles instead.
+        const isSuperAdmin = freshUser.roles?.some(
+          (r: any) => r.name?.toLowerCase() === "super admin"
+        ) ?? false;
+        const mergedUser = { ...freshUser, isSuperAdmin };
+
+        localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(mergedUser));
+        Cookies.set(STORAGE_KEYS.USER_DATA, JSON.stringify(mergedUser), { expires: 1 });
+        setUser(mergedUser);
         setIsAuthenticated(true);
-      } else {
-        clearAuthData();
       }
+      // If server returns no data (non-auth error like 400/404/500), keep the
+      // local session intact — only the axios 401 interceptor should clear auth.
     } catch {
-      // Don't clear data on network errors, keep local session
+      // Network error or non-401 response — keep local session, don't log out
     }
   };
 
@@ -124,19 +136,25 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     try {
       const sessionExpiry = Date.now() + SESSION_DURATION;
 
-      localStorage.setItem(STORAGE_KEYS.USER_ID, userData.id.toString());
+      // Derive isSuperAdmin from roles consistently so it persists correctly
+      const isSuperAdmin = userData.roles?.some(
+        (r: any) => r.name?.toLowerCase() === "super admin"
+      ) ?? false;
+      const userToStore = { ...userData, isSuperAdmin };
+
+      localStorage.setItem(STORAGE_KEYS.USER_ID, userToStore.id.toString());
       localStorage.setItem(STORAGE_KEYS.TOKEN, token);
-      localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
+      localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userToStore));
       localStorage.setItem(STORAGE_KEYS.SESSION_EXPIRY, sessionExpiry.toString());
 
-      Cookies.set(STORAGE_KEYS.USER_ID, userData.id.toString(), { expires: 1 });
+      Cookies.set(STORAGE_KEYS.USER_ID, userToStore.id.toString(), { expires: 1 });
       Cookies.set(STORAGE_KEYS.TOKEN, token, { expires: 1 });
       Cookies.set(STORAGE_KEYS.SESSION_EXPIRY, sessionExpiry.toString(), { expires: 1 });
 
-      setUser(userData);
+      setUser(userToStore);
       setIsAuthenticated(true);
 
-      window.dispatchEvent(new CustomEvent('userLogin', { detail: userData }));
+      window.dispatchEvent(new CustomEvent('userLogin', { detail: userToStore }));
       window.dispatchEvent(new CustomEvent('user-login'));
     } catch {
       clearAuthData();
