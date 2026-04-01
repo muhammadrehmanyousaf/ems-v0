@@ -40,7 +40,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
             ...prevData,
             staff: selectedstaff,
             expertise: selectedExpertise,
-            subBusinessType: selectedTypes,
+            subBusinessType: selectedTypes ? [selectedTypes] : [],
             cancelationPolicy: cancellation,
             covidComplaint: covid === 'yes',
             parking: parking === 'yes',

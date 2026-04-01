@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/hooks/use-toast";
-import { User, Mail, Phone, Save, Edit3, CheckCircle, AlertCircle, Shield, Lock, Key, Eye, EyeOff } from "lucide-react";
+import { User, Mail, Phone, Save, Edit3, CheckCircle, AlertCircle, Shield, Lock, Key, Eye, EyeOff, Camera } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import axiosInstance from "@/lib/axiosConfig";
@@ -17,6 +17,7 @@ interface UserProfile {
   fullName: string;
   email: string;
   phoneNumber: string;
+  profileImage?: string;
   roleIds: Array<number>;
 }
 
@@ -72,7 +73,15 @@ const ProfilePage = () => {
   const [showRepeatPassword, setShowRepeatPassword] = useState(false);
   const [originalProfile, setOriginalProfile] = useState<UserProfile | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  // profileImage upload is only for simple customers (not vendors or admins)
+  const isSimpleUser = !user?.isVendor &&
+    !user?.isSuperAdmin &&
+    !user?.roles?.some((r: any) => r.name === "super admin" || r.name === "vendor" || r.name === "admin");
 
   // Fetch user profile on component mount
   useEffect(() => {
@@ -272,6 +281,47 @@ const ProfilePage = () => {
     setIsEditing(false);
   };
 
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Show preview immediately
+    const previewUrl = URL.createObjectURL(file);
+    setImagePreview(previewUrl);
+
+    // Upload to server
+    try {
+      setIsUploadingImage(true);
+      const formData = new FormData();
+      formData.append("picture", file);
+
+      const res = await axiosInstance.post(`${BACKEND_URL}api/v1/users/upload-profile-picture`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const serverImageUrl = res.data?.data?.profileImage;
+      if (serverImageUrl) {
+        setProfile(prev => ({ ...prev, profileImage: serverImageUrl }));
+        // Update header avatar in real-time
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("profileUpdated", { detail: { profileImage: serverImageUrl } }));
+          const currentUser = JSON.parse(localStorage.getItem("user_data") || "{}");
+          currentUser.profileImage = serverImageUrl;
+          localStorage.setItem("user_data", JSON.stringify(currentUser));
+        }
+      }
+
+      toast({ title: "Profile picture updated!" });
+    } catch {
+      setImagePreview(null);
+      toast({ title: "Upload failed", description: "Could not upload profile picture.", variant: "destructive" });
+    } finally {
+      setIsUploadingImage(false);
+      // Reset input so same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const getPasswordStrength = (password: string): { score: number; label: string; color: string } => {
     if (!password) return { score: 0, label: "", color: "" };
     let score = 0;
@@ -421,9 +471,48 @@ const ProfilePage = () => {
           <CardHeader className="bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-t-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                  <User className="w-6 h-6" />
-                </div>
+                {isSimpleUser ? (
+                  /* Clickable avatar with camera upload — simple customers only */
+                  <div className="relative group">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/jpg"
+                      className="hidden"
+                      onChange={handleImageFileChange}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploadingImage}
+                      className="w-14 h-14 rounded-full overflow-hidden border-2 border-white/40 hover:border-white transition-all duration-200 block"
+                    >
+                      {imagePreview || profile.profileImage ? (
+                        <img
+                          src={imagePreview || profile.profileImage}
+                          alt="Profile"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-white/20 flex items-center justify-center text-white font-bold text-xl">
+                          {profile.fullName?.charAt(0).toUpperCase() || <User className="w-6 h-6" />}
+                        </div>
+                      )}
+                      <span className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+                        {isUploadingImage ? (
+                          <Spinner size="sm" className="text-white" />
+                        ) : (
+                          <Camera className="w-5 h-5 text-white" />
+                        )}
+                      </span>
+                    </button>
+                  </div>
+                ) : (
+                  /* Static avatar for vendors / admins — no upload here */
+                  <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                    {profile.fullName?.charAt(0).toUpperCase() || <User className="w-6 h-6" />}
+                  </div>
+                )}
                                  <div>
                    <CardTitle className="text-xl">Personal Information</CardTitle>
                    <CardDescription className="text-purple-100">

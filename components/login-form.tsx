@@ -15,7 +15,7 @@ import axiosInstance from "@/lib/axiosConfig"
 import { useRouter } from "next/navigation"
 import { toast } from "./ui/use-toast"
 import { useUser } from "@/context/UserContext"
-import { Heart, Star, Quote } from "lucide-react"
+import { Heart, Star, Quote, Eye, EyeOff } from "lucide-react"
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -26,6 +26,7 @@ type FormData = z.infer<typeof formSchema>
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const { login } = useUser()
   const {
     register,
@@ -204,12 +205,12 @@ export function LoginForm() {
               <Input
                 id="password"
                 placeholder=" "
-                type="password"
+                type={showPassword ? "text" : "password"}
                 autoCapitalize="none"
                 autoComplete="current-password"
                 {...register("password")}
                 className={cn(
-                  "peer h-12 w-full rounded-xl border bg-white px-4 pt-4 pb-1 text-sm placeholder-transparent focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200",
+                  "peer h-12 w-full rounded-xl border bg-white px-4 pt-4 pb-1 pr-10 text-sm placeholder-transparent focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all duration-200",
                   errors.password ? "border-red-400" : "border-neutral-200"
                 )}
               />
@@ -219,6 +220,15 @@ export function LoginForm() {
               >
                 Password
               </Label>
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-[22px] -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
               <div className="flex justify-end mt-1">
                 <Link href="/forgot-password" className="text-xs text-purple-600 hover:text-purple-700 font-medium">
                   Forgot password?

@@ -1,6 +1,7 @@
 import React from "react";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
+import { PasswordInput } from "../ui/password-input";
 import { Flag } from "lucide-react";
 import { useFormContext } from "@/lib/context/form-context";
 
@@ -103,6 +104,15 @@ const PersonalDetails = ({
                 onChange={(e) => handleChange(e, field.name)}
               />
             </div>
+          ) : field.type === "password" ? (
+            <PasswordInput
+              placeholder={field.place}
+              value={String(
+                formData[field.name as keyof typeof formData] ?? "",
+              )}
+              onChange={(e) => handleChange(e as React.ChangeEvent<HTMLInputElement>, field.name)}
+              onBlur={(e) => handleBlur(e as React.FocusEvent<HTMLInputElement>, field.name)}
+            />
           ) : (
             <Input
               type={field.type || "text"}

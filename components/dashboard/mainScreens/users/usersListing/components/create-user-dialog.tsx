@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import axiosInstance from '@/lib/axiosConfig';
 import { toast } from 'sonner';
@@ -91,9 +92,8 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
                     </div>
                     <div>
                         <Label htmlFor="new-password">Password</Label>
-                        <Input
+                        <PasswordInput
                             id="new-password"
-                            type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="Minimum 6 characters"

@@ -11,9 +11,17 @@ type ValidationTypes = {
 export const CarRentalOrBridleWearValidations = ({currentStep, formData, currentErrors }: ValidationTypes) => {
     if (currentStep === 1) {
         if (!formData.fullName) currentErrors.fullName = "Full Name is required";
-        if (!formData.email) currentErrors.email = "Email is required";
+        if (!formData.email) {
+          currentErrors.email = "Email is required";
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+          currentErrors.email = "Invalid email address";
+        }
         if (!formData.phoneNumber) currentErrors.phoneNumber = "Phone number is required";
-        if (!formData.password) currentErrors.password = "Password is required";
+        if (!formData.password) {
+          currentErrors.password = "Password is required";
+        } else if (formData.password.length < 8) {
+          currentErrors.password = "Password must be at least 8 characters";
+        }
         if (!formData.re_enterPassword) {
           currentErrors.re_enterPassword = "Re-Enter your Password";
         } else if (formData.password !== formData.re_enterPassword) {

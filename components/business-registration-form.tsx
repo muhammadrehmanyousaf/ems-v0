@@ -145,36 +145,55 @@ export function BusinessRegistrationForm() {
       }
       if (currentStep === 2) {
         if (!formData.name) currentErrors.name = "Business name is required";
+        if (!formData.secondaryContactNumber) {
+          currentErrors.secondaryContactNumber = "Secondary contact number is required";
+        } else if (!/^\d+$/.test(String(formData.secondaryContactNumber))) {
+          currentErrors.secondaryContactNumber = "Invalid phone number format";
+        }
         if (!formData.city) currentErrors.city = "City is required";
         if (!formData.subArea) currentErrors.subArea = "Sub area is required";
+        if (!formData.officeAddress) currentErrors.officeAddress = "Office address is required";
+        const urlPattern = /^(https?:\/\/)/;
+        if (!formData.instagram) {
+          currentErrors.instagram = "Instagram link is required";
+        } else if (!urlPattern.test(formData.instagram)) {
+          currentErrors.instagram = "Invalid Instagram link";
+        }
+        if (!formData.officeGoogleLink) {
+          currentErrors.officeGoogleLink = "Google Maps link is required";
+        } else if (!urlPattern.test(formData.officeGoogleLink)) {
+          currentErrors.officeGoogleLink = "Invalid Google Maps link";
+        }
       }
       if (currentStep === 3) {
         if (!formData.description)
           currentErrors.description = "Business description is required";
-        if (!formData.subBusinessType)
+        if (!Array.isArray(formData.subBusinessType) || formData.subBusinessType.length === 0)
           currentErrors.subBusinessType = "Business type is required";
-        if (formData.staff.length < 1)
+        if (!formData.staff || formData.staff.length < 1)
           currentErrors.staff = "Staff is required";
-        if (!formData.downPayment)
+        if (!formData.cancelationPolicy)
+          currentErrors.cancelationPolicy = "Cancellation policy is required";
+        if (!formData.downPaymentType)
+          currentErrors.downPaymentType = "Down payment type is required";
+        if (!formData.downPayment || Number(formData.downPayment) <= 0)
           currentErrors.downPayment = "Down payment is required";
         else if (
           formData.downPaymentType === "Percentage" &&
-          (Number(formData.downPayment) <= 0 ||
-            Number(formData.downPayment) > 100)
+          Number(formData.downPayment) > 100
         ) {
           currentErrors.downPayment = "Percentage must be between 0 and 100";
         }
       }
       if (currentStep === 4) {
-        const isMenuType = formData.businessType === "Wedding venue" || formData.businessType === "Catering";
+        const isMenuType =
+          formData.businessType === "Wedding venue" ||
+          formData.businessType === "Catering";
         const itemLabel = isMenuType ? "menu" : "package";
         const validPackages =
-          formData.packages?.filter(
-            (pkg: any) => pkg.name && pkg.price,
-          ) ?? [];
+          formData.packages?.filter((pkg: any) => pkg.name && pkg.price) ?? [];
         if (validPackages.length === 0) {
-          currentErrors.packages =
-            `At least one ${itemLabel} with a name and price is required`;
+          currentErrors.packages = `At least one ${itemLabel} with a name and price is required`;
         }
         if (formData.packages) {
           formData.packages.forEach((pkg: any, index: number) => {
@@ -186,17 +205,17 @@ export function BusinessRegistrationForm() {
               currentErrors[`packages[${index}].price`] =
                 `${itemLabel.charAt(0).toUpperCase() + itemLabel.slice(1)} price is required`;
             }
-            // Features Validation: Ensure checked categories are not empty
+            // Features Validation: every item in a selected feature must be filled
             if (pkg.features) {
               Object.keys(pkg.features).forEach((feature) => {
                 const items = pkg.features[feature];
                 if (items && items.length > 0) {
-                  const hasValidItem = items.some(
-                    (item: string) => item.trim() !== "",
+                  const hasEmptyItem = items.some(
+                    (item: string) => item.trim() === "",
                   );
-                  if (!hasValidItem) {
+                  if (hasEmptyItem) {
                     currentErrors[`packages[${index}].features.${feature}`] =
-                      `At least one ${feature} item is required`;
+                      `All ${feature} fields must be filled in`;
                   }
                 }
               });
@@ -254,15 +273,36 @@ export function BusinessRegistrationForm() {
     });
 
     try {
-      // Upload image files first if any
+      // Single tempId used for both logo and image uploads
+      const uploadTempId = crypto.randomUUID();
       let uploadedImageUrls: string[] = [];
-      let uploadTempId: string | undefined;
+
+      // Upload brand logo if a file was selected
+      if (file) {
+        const logoFormData = new FormData();
+        logoFormData.append("images", file);
+        try {
+          await axios.post(
+            `${BACKEND_URL}api/v1/businesses/upload-images?tempId=${uploadTempId}&type=logo`,
+            logoFormData,
+            { headers: { "Content-Type": "multipart/form-data" } },
+          );
+        } catch {
+          toast({
+            title: "Error",
+            description: "Failed to upload logo. Please try again.",
+          });
+          loadingToastId.dismiss();
+          return;
+        }
+      }
+
+      // Upload business images
       if (formData.imageFiles && formData.imageFiles.length > 0) {
         const imageFiles = formData.imageFiles.slice(0, 20); // hard cap at 20
-        uploadTempId = crypto.randomUUID();
         const imgFormData = new FormData();
-        imageFiles.forEach((file: File) => {
-          imgFormData.append("images", file);
+        imageFiles.forEach((f: File) => {
+          imgFormData.append("images", f);
         });
         try {
           const uploadRes = await axios.post(
@@ -393,6 +433,7 @@ export function BusinessRegistrationForm() {
         setSuccessMessage(response.data?.message || "");
         setOpenModal(true);
         setCurrentStep(0);
+        return;
       }
       const responseData = response.data;
       const vendorData = responseData.data;

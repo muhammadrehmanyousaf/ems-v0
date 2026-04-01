@@ -101,10 +101,14 @@ const Packages = ({ setErrors, errors }: PackagesProps) => {
         pkgFeatures[categoryId][itemIndex] = value;
         newPackages[pkgIndex].features = pkgFeatures;
         setFormData({ ...formData, packages: newPackages });
-        setErrors((prevErrors) => ({
-            ...prevErrors,
-            [`packages[${pkgIndex}].features.${categoryId}`]: ""
-        }));
+        // Only clear the error once all items in this feature are filled
+        const allFilled = pkgFeatures[categoryId].every((item: string) => item.trim() !== "");
+        if (allFilled) {
+            setErrors((prevErrors) => ({
+                ...prevErrors,
+                [`packages[${pkgIndex}].features.${categoryId}`]: ""
+            }));
+        }
     };
 
     const addFeatureItem = (pkgIndex: number, categoryId: string) => {

@@ -15,7 +15,7 @@ import Link from "next/link";
 import { BACKEND_URL } from "@/lib/backend-url";
 import { toast } from "./ui/use-toast";
 import { useRouter } from "next/navigation";
-import { Heart, Sparkles, Users, Calendar } from "lucide-react";
+import { Heart, Sparkles, Users, Calendar, Eye, EyeOff } from "lucide-react";
 import { usePlatformStats } from "@/hooks/use-platform-stats";
 
 const formSchema = z
@@ -44,6 +44,8 @@ type FormData = z.infer<typeof formSchema>;
 
 export function UserRegistrationForm() {
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { data: stats, isLoading: isLoadingStats } = usePlatformStats();
   const {
     register,
@@ -285,12 +287,12 @@ export function UserRegistrationForm() {
               <Input
                 id="password"
                 placeholder=" "
-                type="password"
+                type={showPassword ? "text" : "password"}
                 autoCapitalize="none"
                 autoComplete="new-password"
                 {...register("password")}
                 className={cn(
-                  "peer h-12 w-full rounded-xl border bg-white dark:bg-neutral-900 px-4 pt-4 pb-1 text-sm placeholder-transparent focus:border-purple-500 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 transition-all duration-200",
+                  "peer h-12 w-full rounded-xl border bg-white dark:bg-neutral-900 px-4 pt-4 pb-1 pr-10 text-sm placeholder-transparent focus:border-purple-500 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 transition-all duration-200",
                   errors.password ? "border-red-400" : "border-neutral-200 dark:border-neutral-700",
                 )}
               />
@@ -300,6 +302,15 @@ export function UserRegistrationForm() {
               >
                 Password
               </Label>
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-[22px] -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
               {errors.password && (
                 <p className="text-xs text-red-500 mt-1 ml-1">
                   {errors.password.message}
@@ -312,12 +323,12 @@ export function UserRegistrationForm() {
               <Input
                 id="confirmPassword"
                 placeholder=" "
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 autoCapitalize="none"
                 autoComplete="new-password"
                 {...register("confirmPassword")}
                 className={cn(
-                  "peer h-12 w-full rounded-xl border bg-white dark:bg-neutral-900 px-4 pt-4 pb-1 text-sm placeholder-transparent focus:border-purple-500 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 transition-all duration-200",
+                  "peer h-12 w-full rounded-xl border bg-white dark:bg-neutral-900 px-4 pt-4 pb-1 pr-10 text-sm placeholder-transparent focus:border-purple-500 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 transition-all duration-200",
                   errors.confirmPassword
                     ? "border-red-400"
                     : "border-neutral-200 dark:border-neutral-700",
@@ -329,6 +340,15 @@ export function UserRegistrationForm() {
               >
                 Confirm Password
               </Label>
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                className="absolute right-3 top-[22px] -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
+                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+              >
+                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
               {errors.confirmPassword && (
                 <p className="text-xs text-red-500 mt-1 ml-1">
                   {errors.confirmPassword.message}

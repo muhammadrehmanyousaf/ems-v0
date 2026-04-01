@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormData, formSchema } from "@/lib/formSchema/vendor-schema";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
@@ -76,9 +77,8 @@ export function PersonalDetailsStep({ onSubmit }: FormInterface) {
       {/* Password */}
       <div className="space-y-2">
         <Label htmlFor="password">Password *</Label>
-        <Input
+        <PasswordInput
           id="password"
-          type="password"
           {...register("password")}
           placeholder="Enter your password"
         />
@@ -88,9 +88,8 @@ export function PersonalDetailsStep({ onSubmit }: FormInterface) {
       {/* Confirm Password */}
       <div className="space-y-2">
         <Label htmlFor="confirmPassword">Retype Password *</Label>
-        <Input
+        <PasswordInput
           id="confirmPassword"
-          type="password"
           {...register("confirmPassword")}
           placeholder="Confirm your password"
         />
