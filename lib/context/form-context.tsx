@@ -57,6 +57,7 @@ export type FormType = {
   // services: string;
   images: string[];
   imageFiles: File[];
+  profileImageFile?: File | null;
   subBusinessType: string[];
   // cityCovered: string[];
   // travelToClientHome: string;
@@ -132,6 +133,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     // services: "",
     images: [],
     imageFiles: [],
+    profileImageFile: null,
     subBusinessType: [],
     // cityCovered: [],
     // travelToClientHome: "",

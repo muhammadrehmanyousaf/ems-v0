@@ -54,7 +54,7 @@ export function ChatHeader({ onBack, showBackButton }: ChatHeaderProps) {
         <div className="relative">
           <Avatar className="h-10 w-10">
             <AvatarImage
-              src={activeConvo.otherUser.brandLogo || undefined}
+              src={activeConvo.otherUser.profileImage || undefined}
               alt={activeConvo.otherUser.fullName}
             />
             <AvatarFallback className="bg-gradient-to-br from-purple-500 to-purple-700 text-white text-xs font-semibold">

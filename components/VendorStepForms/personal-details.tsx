@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useRef, useState } from "react";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { PasswordInput } from "../ui/password-input";
-import { Flag } from "lucide-react";
+import { Flag, Camera, User } from "lucide-react";
 import { useFormContext } from "@/lib/context/form-context";
 
 const PersonalDetails = ({
@@ -13,6 +13,16 @@ const PersonalDetails = ({
   setErrors: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>;
 }) => {
   const { setFormData, formData } = useFormContext();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  const handleProfileImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImagePreview(URL.createObjectURL(file));
+    setFormData((prev) => ({ ...prev, profileImageFile: file }));
+    e.target.value = "";
+  };
 
   const formFields = [
     {
@@ -85,6 +95,37 @@ const PersonalDetails = ({
 
   return (
     <div className="space-y-6">
+      {/* Profile Image Picker */}
+      <div className="flex flex-col items-center gap-2">
+        <Label className="self-start">Profile Photo <span className="text-neutral-400 text-xs">(optional)</span></Label>
+        <div className="relative group">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/jpg,image/webp"
+            className="hidden"
+            onChange={handleProfileImageSelect}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="w-20 h-20 rounded-full overflow-hidden border-2 border-dashed border-neutral-300 hover:border-purple-400 transition-colors duration-200 block"
+          >
+            {imagePreview ? (
+              <img src={imagePreview} alt="Profile preview" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-neutral-100 flex flex-col items-center justify-center gap-1">
+                <User className="w-7 h-7 text-neutral-400" />
+                <span className="text-[9px] text-neutral-400 leading-tight text-center px-1">Add Photo</span>
+              </div>
+            )}
+          </button>
+          <div className="absolute bottom-0 right-0 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center border-2 border-white pointer-events-none">
+            <Camera className="w-3 h-3 text-white" />
+          </div>
+        </div>
+      </div>
+
       {formFields.map((field) => (
         <div key={field.name} className="space-y-2">
           <Label>{field.label}</Label>

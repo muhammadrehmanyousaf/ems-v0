@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,7 +15,7 @@ import Link from "next/link";
 import { BACKEND_URL } from "@/lib/backend-url";
 import { toast } from "./ui/use-toast";
 import { useRouter } from "next/navigation";
-import { Heart, Sparkles, Users, Calendar, Eye, EyeOff } from "lucide-react";
+import { Heart, Sparkles, Users, Calendar, Eye, EyeOff, Camera, User } from "lucide-react";
 import { usePlatformStats } from "@/hooks/use-platform-stats";
 
 const formSchema = z
@@ -46,6 +46,9 @@ export function UserRegistrationForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { data: stats, isLoading: isLoadingStats } = usePlatformStats();
   const {
     register,
@@ -58,17 +61,40 @@ export function UserRegistrationForm() {
 
   const router = useRouter();
 
+  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setProfileImageFile(file);
+    setProfileImagePreview(URL.createObjectURL(file));
+    // Reset input so same file can be re-selected
+    e.target.value = "";
+  }
+
   async function onSubmit(data: FormData) {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(`${BACKEND_URL}api/v1/auth/signup`, {
-        ...data,
-        roleIds: [3],
-      });
+      // Build multipart form so the profile image can be sent in the same request
+      const formData = new globalThis.FormData();
+      formData.append("fullName", data.fullName);
+      formData.append("email", data.email);
+      formData.append("phoneNumber", data.phoneNumber);
+      formData.append("password", data.password);
+      formData.append("roleIds", JSON.stringify([3]));
+      if (profileImageFile) {
+        formData.append("profileImage", profileImageFile);
+      }
+
+      const response = await axios.post(
+        `${BACKEND_URL}api/v1/auth/signup`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
 
       if (response.status === 200) {
         reset();
+        setProfileImageFile(null);
+        setProfileImagePreview(null);
         toast({
           title: "Account Created!",
           description:
@@ -77,7 +103,6 @@ export function UserRegistrationForm() {
         router.push("/login");
       }
     } catch (error: any) {
-      // Extract error message from backend response
       const errorMessage =
         error.response?.data?.message ||
         "Something went wrong. Please try again.";
@@ -200,6 +225,40 @@ export function UserRegistrationForm() {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {/* Profile Image */}
+            <div className="flex justify-center">
+              <div className="relative group">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/jpg,image/webp"
+                  className="hidden"
+                  onChange={handleImageSelect}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-20 h-20 rounded-full overflow-hidden border-2 border-dashed border-neutral-300 dark:border-neutral-600 hover:border-purple-400 transition-colors duration-200 block"
+                >
+                  {profileImagePreview ? (
+                    <img
+                      src={profileImagePreview}
+                      alt="Profile preview"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-neutral-100 dark:bg-neutral-800 flex flex-col items-center justify-center gap-1">
+                      <User className="w-7 h-7 text-neutral-400" />
+                      <span className="text-[9px] text-neutral-400 leading-tight text-center px-1">Add Photo</span>
+                    </div>
+                  )}
+                </button>
+                <div className="absolute bottom-0 right-0 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center border-2 border-white dark:border-neutral-900 pointer-events-none">
+                  <Camera className="w-3 h-3 text-white" />
+                </div>
+              </div>
+            </div>
+
             {/* Full Name */}
             <div className="relative">
               <Input

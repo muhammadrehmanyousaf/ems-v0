@@ -135,7 +135,7 @@ function MessageBubble({ message, isOwn, showAvatar, showName, isLastInGroup }: 
           {showAvatar && (
             <Avatar className="h-7 w-7">
               <AvatarImage
-                src={message.sender.brandLogo || undefined}
+                src={message.sender.profileImage || undefined}
                 alt={message.sender.fullName}
               />
               <AvatarFallback className="bg-gradient-to-br from-gray-400 to-gray-600 text-white text-[10px] font-semibold">

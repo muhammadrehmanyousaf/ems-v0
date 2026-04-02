@@ -311,7 +311,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
           sender: {
             id: Number(user?.id),
             fullName: user?.fullName || "",
-            brandLogo: null,
+            profileImage: null,
           },
           _optimistic: true,
         };

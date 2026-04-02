@@ -373,11 +373,32 @@ export function BusinessRegistrationForm() {
         brandLogo: formData.profilePicture,
         roleIds: [2],
       };
+      // Build the payload — use FormData so vendor profile image can be included
+      const submitPayload = carRentalOrBridleWear ? rentalData : formatedData;
+      let requestBody: FormData | object = submitPayload;
+      let requestHeaders: Record<string, string> = {};
+
+      if (formData.profileImageFile) {
+        const fd = new globalThis.FormData();
+        // Append simple scalar fields
+        Object.entries(submitPayload).forEach(([key, val]) => {
+          if (val === undefined || val === null) return;
+          if (val instanceof File) return; // skip, handled separately
+          if (typeof val === "object") {
+            fd.append(key, JSON.stringify(val));
+          } else {
+            fd.append(key, String(val));
+          }
+        });
+        fd.append("profileImage", formData.profileImageFile);
+        requestBody = fd;
+        requestHeaders["Content-Type"] = "multipart/form-data";
+      }
+
       const response = await axios.post(
         `${BACKEND_URL}api/v1/businesses/create-business-with-vendor`,
-        {
-          ...(carRentalOrBridleWear ? rentalData : formatedData),
-        },
+        requestBody,
+        requestHeaders["Content-Type"] ? { headers: requestHeaders } : undefined,
       );
 
       if (carRentalOrBridleWear) {
@@ -409,6 +430,7 @@ export function BusinessRegistrationForm() {
           cancelationPolicy: "",
           images: [],
           imageFiles: [],
+          profileImageFile: null,
           subBusinessType: [],
           expertise: [],
           packages: [
@@ -483,6 +505,7 @@ export function BusinessRegistrationForm() {
           cancelationPolicy: "",
           images: [],
           imageFiles: [],
+          profileImageFile: null,
           subBusinessType: [],
           expertise: [],
           packages: [

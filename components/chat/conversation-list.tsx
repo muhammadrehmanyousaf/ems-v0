@@ -155,7 +155,7 @@ export function ConversationList() {
                 >
                   <div className="relative">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={contact.brandLogo || undefined} alt={contact.fullName} />
+                      <AvatarImage src={contact.profileImage || undefined} alt={contact.fullName} />
                       <AvatarFallback className="bg-gradient-to-br from-purple-500 to-purple-700 text-white text-xs font-semibold">
                         {getInitials(contact.fullName)}
                       </AvatarFallback>
@@ -258,7 +258,7 @@ export function ConversationList() {
                   <div className="relative shrink-0">
                     <Avatar className="h-11 w-11">
                       <AvatarImage
-                        src={convo.otherUser.brandLogo || undefined}
+                        src={convo.otherUser.profileImage || undefined}
                         alt={convo.otherUser.fullName}
                       />
                       <AvatarFallback

@@ -5,7 +5,7 @@ export interface ChatUser {
   id: number;
   fullName: string;
   email: string;
-  brandLogo: string | null;
+  profileImage: string | null;
   isVendor: boolean;
   vendorType: string | null;
   isOnline?: boolean;
@@ -39,7 +39,7 @@ export interface ChatMessageItem {
   sender: {
     id: number;
     fullName: string;
-    brandLogo: string | null;
+    profileImage: string | null;
   };
 }
 
