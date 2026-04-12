@@ -17,7 +17,7 @@ const ContactDetails = ({ setErrors, errors, setFile, file }: ContactDetailsProp
 
     const formFields = [
         { name: 'name', label: 'Brand Name', place: 'Enter your Brand Name' },
-        { name: 'secondaryContactNumber', label: 'Secondary Contact Number', place: 'Enter your Secondary Contact Number', type: 'number' },
+        { name: 'secondaryContactNumber', label: 'Secondary Contact Number (optional)', place: '3001234567', type: 'tel' },
         { name: 'instagram', label: 'Instagram Link', place: 'Enter your Instagram link' },
         { name: 'facebook', label: 'Facebook Link', place: 'Enter your Facebook link' },
         { name: 'city', label: 'City', place: 'Enter your city' },
@@ -27,10 +27,51 @@ const ContactDetails = ({ setErrors, errors, setFile, file }: ContactDetailsProp
     ];
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
-        const { value } = e.target;
-        setFormData((prevData) => ({ ...prevData, [fieldName]: value }));
+        let { value } = e.target;
 
+        if (fieldName === "secondaryContactNumber") {
+            value = value.replace(/\D/g, "").slice(0, 10);
+        }
+
+        setFormData((prevData) => ({ ...prevData, [fieldName]: value }));
         setErrors((prevErrors) => ({ ...prevErrors, [fieldName]: "" }));
+    };
+
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement>, fieldName: string) => {
+        const value = e.target.value;
+        if (!value) return;
+
+        const errorMap: { [key: string]: string } = {};
+
+        if (fieldName === "secondaryContactNumber" && !/^3\d{9}$/.test(value)) {
+            errorMap.secondaryContactNumber = "Enter a valid 10-digit number starting with 3 (e.g. 3001234567)";
+        }
+        if (fieldName === "instagram" && !/^https?:\/\/(www\.)?instagram\.com\/.+/i.test(value)) {
+            errorMap.instagram = "Must be a valid Instagram link (e.g. https://instagram.com/youraccount)";
+        }
+        if (fieldName === "facebook" && !/^https?:\/\/(www\.)?facebook\.com\/.+/i.test(value)) {
+            errorMap.facebook = "Must be a valid Facebook link (e.g. https://facebook.com/yourpage)";
+        }
+        if (fieldName === "city" && !/^[a-zA-Z\s\-]+$/.test(value)) {
+            errorMap.city = "City must contain letters only";
+        }
+        if (fieldName === "subArea" && !/^[a-zA-Z0-9\s\-]+$/.test(value)) {
+            errorMap.subArea = "Sub Area must contain letters, numbers, or hyphens only";
+        }
+        if (fieldName === "officeAddress") {
+            if (value.includes("@") || /^https?:\/\//i.test(value)) {
+                errorMap.officeAddress = "Please enter a valid office address";
+            } else if (value.trim().length < 5) {
+                errorMap.officeAddress = "Office Address is too short";
+            }
+        }
+        if (fieldName === "officeGoogleLink" && !/google\.com\/maps|maps\.google\.com|maps\.app\.goo\.gl|goo\.gl/i.test(value)) {
+            errorMap.officeGoogleLink = "Must be a valid Google Maps link";
+        }
+
+        if (Object.keys(errorMap).length > 0) {
+            setErrors((prev) => ({ ...prev, ...errorMap }));
+        }
     };
 
     const handleFileUpload = (uploadedFile: File | null) => {
@@ -38,9 +79,9 @@ const ContactDetails = ({ setErrors, errors, setFile, file }: ContactDetailsProp
         if (uploadedFile) {
             const fileUrl = URL.createObjectURL(uploadedFile);
             setFormData((prevData) => ({ ...prevData, profilePicture: fileUrl }));
-
-            // ✅ Clear error when a file is uploaded
             setErrors((prevErrors) => ({ ...prevErrors, profilePicture: "" }));
+        } else {
+            setFormData((prevData) => ({ ...prevData, profilePicture: "" }));
         }
     };
 
@@ -74,10 +115,13 @@ const ContactDetails = ({ setErrors, errors, setFile, file }: ContactDetailsProp
                             </div>
                             <Input
                                 type={field.type}
+                                inputMode="numeric"
+                                maxLength={10}
                                 placeholder={field.place}
                                 className="rounded-l-none"
                                 value={String(formData[field.name as keyof typeof formData]) ?? ''}
                                 onChange={(e) => handleChange(e, field.name)}
+                                onBlur={(e) => handleBlur(e, field.name)}
                             />
                         </div>
                         {errors[field.name] && <p className="text-xs text-red-500">{errors[field.name]}</p>}
@@ -102,6 +146,7 @@ const ContactDetails = ({ setErrors, errors, setFile, file }: ContactDetailsProp
                         className='w-full'
                         value={String(formData[field.name as keyof typeof formData]) ?? ''}
                         onChange={(e) => handleChange(e, field.name)}
+                        onBlur={(e) => handleBlur(e, field.name)}
                     />
                     {errors[field.name] && <p className="text-xs text-red-500">{errors[field.name]}</p>}
                 </div>

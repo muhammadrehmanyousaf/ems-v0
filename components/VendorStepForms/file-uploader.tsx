@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { MdCloudUpload } from "react-icons/md";
+import { X } from "lucide-react";
 
 interface FileUploaderProps {
   rounded?: boolean;
@@ -21,12 +22,16 @@ export default function FileUploader({ rounded = false, setFile, file }: FileUpl
     accept: { "image/*": [".jpeg", ".png", ".jpg"] },
   });
 
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFile(null);
+  };
+
   return (
-    <div className="">
+    <div className="relative inline-block">
       <div
         {...getRootProps()}
-        className={`size-20 p-2 border-2 border-dashed cursor-pointer flex items-center justify-center rounded-full
-        } ${isDragActive ? "border-blue-500 bg-blue-100" : "border-gray-300"}`}
+        className={`size-20 p-2 border-2 border-dashed cursor-pointer flex items-center justify-center rounded-full ${isDragActive ? "border-blue-500 bg-blue-100" : "border-gray-300"}`}
       >
         {file ? (
           <div className="w-full h-full relative group">
@@ -51,6 +56,16 @@ export default function FileUploader({ rounded = false, setFile, file }: FileUpl
           </div>
         )}
       </div>
+      {file && (
+        <button
+          type="button"
+          onClick={handleDelete}
+          className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 shadow-md transition-colors"
+          aria-label="Remove logo"
+        >
+          <X size={12} />
+        </button>
+      )}
     </div>
   );
 }

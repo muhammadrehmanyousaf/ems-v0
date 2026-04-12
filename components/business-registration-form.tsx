@@ -133,8 +133,11 @@ export function BusinessRegistrationForm() {
         if (!formData.email) currentErrors.email = "Email is required";
         if (formData.email && !validateEmail(formData.email))
           currentErrors.email = "Invalid email address";
-        if (!formData.phoneNumber)
+        if (!formData.phoneNumber) {
           currentErrors.phoneNumber = "Phone number is required";
+        } else if (!/^3\d{9}$/.test(String(formData.phoneNumber))) {
+          currentErrors.phoneNumber = "Enter a valid 10-digit number starting with 3 (e.g. 3001234567)";
+        }
         if (!formData.password) currentErrors.password = "Password is required";
         if (formData.password && formData.password.length < 8)
           currentErrors.password = "Password must be at least 8 characters";
@@ -144,25 +147,39 @@ export function BusinessRegistrationForm() {
           currentErrors.re_enterPassword = "Passwords do not match";
       }
       if (currentStep === 2) {
-        if (!formData.name) currentErrors.name = "Business name is required";
-        if (!formData.secondaryContactNumber) {
-          currentErrors.secondaryContactNumber = "Secondary contact number is required";
-        } else if (!/^\d+$/.test(String(formData.secondaryContactNumber))) {
-          currentErrors.secondaryContactNumber = "Invalid phone number format";
+        if (!formData.name) currentErrors.name = "Brand Name is required";
+        if (formData.secondaryContactNumber && !/^3\d{9}$/.test(String(formData.secondaryContactNumber))) {
+          currentErrors.secondaryContactNumber = "Enter a valid 10-digit number starting with 3 (e.g. 3001234567)";
         }
-        if (!formData.city) currentErrors.city = "City is required";
-        if (!formData.subArea) currentErrors.subArea = "Sub area is required";
-        if (!formData.officeAddress) currentErrors.officeAddress = "Office address is required";
-        const urlPattern = /^(https?:\/\/)/;
+        if (!formData.city) {
+          currentErrors.city = "City is required";
+        } else if (!/^[a-zA-Z\s\-]+$/.test(formData.city)) {
+          currentErrors.city = "City must contain letters only";
+        }
+        if (!formData.subArea) {
+          currentErrors.subArea = "Sub area is required";
+        } else if (!/^[a-zA-Z0-9\s\-]+$/.test(formData.subArea)) {
+          currentErrors.subArea = "Sub Area must contain letters, numbers, or hyphens only";
+        }
+        if (!formData.officeAddress) {
+          currentErrors.officeAddress = "Office address is required";
+        } else if (formData.officeAddress.includes("@") || /^https?:\/\//i.test(formData.officeAddress)) {
+          currentErrors.officeAddress = "Please enter a valid office address";
+        } else if (formData.officeAddress.trim().length < 5) {
+          currentErrors.officeAddress = "Office address is too short";
+        }
         if (!formData.instagram) {
           currentErrors.instagram = "Instagram link is required";
-        } else if (!urlPattern.test(formData.instagram)) {
-          currentErrors.instagram = "Invalid Instagram link";
+        } else if (!/^https?:\/\/(www\.)?instagram\.com\/.+/i.test(formData.instagram)) {
+          currentErrors.instagram = "Must be a valid Instagram link (e.g. https://instagram.com/youraccount)";
+        }
+        if (formData.facebook && !/^https?:\/\/(www\.)?facebook\.com\/.+/i.test(formData.facebook)) {
+          currentErrors.facebook = "Must be a valid Facebook link (e.g. https://facebook.com/yourpage)";
         }
         if (!formData.officeGoogleLink) {
           currentErrors.officeGoogleLink = "Google Maps link is required";
-        } else if (!urlPattern.test(formData.officeGoogleLink)) {
-          currentErrors.officeGoogleLink = "Invalid Google Maps link";
+        } else if (!/google\.com\/maps|maps\.google\.com|maps\.app\.goo\.gl|goo\.gl/i.test(formData.officeGoogleLink)) {
+          currentErrors.officeGoogleLink = "Must be a valid Google Maps link";
         }
       }
       if (currentStep === 3) {

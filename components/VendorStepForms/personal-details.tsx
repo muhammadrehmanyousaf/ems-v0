@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { PasswordInput } from "../ui/password-input";
-import { Flag, Camera, User } from "lucide-react";
+import { Flag, Camera, User, X } from "lucide-react";
 import { useFormContext } from "@/lib/context/form-context";
 
 const PersonalDetails = ({
@@ -24,6 +24,12 @@ const PersonalDetails = ({
     e.target.value = "";
   };
 
+  const handleProfileImageDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setImagePreview(null);
+    setFormData((prev) => ({ ...prev, profileImageFile: null }));
+  };
+
   const formFields = [
     {
       label: "Full Name",
@@ -38,8 +44,8 @@ const PersonalDetails = ({
     },
     {
       label: "Phone Number",
-      place: "+92 123xxxxxx",
-      type: "number",
+      place: "3001234567",
+      type: "tel",
       name: "phoneNumber",
     },
     {
@@ -65,11 +71,15 @@ const PersonalDetails = ({
     e: React.ChangeEvent<HTMLInputElement>,
     fieldName: string,
   ) => {
-    const { value, type } = e.target;
+    let { value } = e.target;
+
+    if (fieldName === "phoneNumber") {
+      value = value.replace(/\D/g, "").slice(0, 10);
+    }
 
     setFormData((prevData) => ({
       ...prevData,
-      [fieldName]: type === "number" ? Number(value) : value,
+      [fieldName]: value,
     }));
 
     setErrors((prevErrors) => ({
@@ -88,6 +98,15 @@ const PersonalDetails = ({
         setErrors((prevErrors) => ({
           ...prevErrors,
           email: "Please enter a valid email address",
+        }));
+      }
+    }
+    if (fieldName === "phoneNumber") {
+      const value = e.target.value;
+      if (value && !/^3\d{9}$/.test(value)) {
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          phoneNumber: "Enter a valid 10-digit number starting with 3 (e.g. 3001234567)",
         }));
       }
     }
@@ -120,9 +139,20 @@ const PersonalDetails = ({
               </div>
             )}
           </button>
-          <div className="absolute bottom-0 right-0 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center border-2 border-white pointer-events-none">
-            <Camera className="w-3 h-3 text-white" />
-          </div>
+          {imagePreview ? (
+            <button
+              type="button"
+              onClick={handleProfileImageDelete}
+              className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center border-2 border-white shadow-md transition-colors"
+              aria-label="Remove profile photo"
+            >
+              <X className="w-3 h-3 text-white" />
+            </button>
+          ) : (
+            <div className="absolute bottom-0 right-0 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center border-2 border-white pointer-events-none">
+              <Camera className="w-3 h-3 text-white" />
+            </div>
+          )}
         </div>
       </div>
 
@@ -137,12 +167,15 @@ const PersonalDetails = ({
               </div>
               <Input
                 type={field.type}
+                inputMode="numeric"
+                maxLength={10}
                 placeholder={field.place}
                 className="rounded-l-none"
                 value={
                   String(formData[field.name as keyof typeof formData]) ?? ""
                 }
                 onChange={(e) => handleChange(e, field.name)}
+                onBlur={(e) => handleBlur(e, field.name)}
               />
             </div>
           ) : field.type === "password" ? (
