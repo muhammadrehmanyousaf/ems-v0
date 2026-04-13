@@ -172,6 +172,84 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
 
   const VendorIcon = getVendorIcon(vendor.type);
 
+  const getVendorSpecificDetails = (): { label: string; value: string }[] => {
+    const details: { label: string; value: string }[] = [];
+    const type = vendor.type;
+
+    // Capacity range
+    if (vendor.minCapacity || vendor.maxCapacity) {
+      const cap =
+        vendor.minCapacity && vendor.maxCapacity
+          ? `${vendor.minCapacity} – ${vendor.maxCapacity}`
+          : `${vendor.maxCapacity ?? vendor.minCapacity}`;
+      details.push({ label: "Guest Capacity", value: `${cap} guests` });
+    }
+
+    // Venue-specific
+    if (type === "Wedding venue") {
+      if (vendor.catering != null)
+        details.push({ label: "In-house Catering", value: vendor.catering ? "Available" : "Not Available" });
+      if (vendor.parking != null) {
+        const parkVal = vendor.parking
+          ? vendor.carParkingCapacity
+            ? `Available (${vendor.carParkingCapacity} cars)`
+            : "Available"
+          : "Not Available";
+        details.push({ label: "Parking", value: parkVal });
+      }
+    }
+
+    // Catering-specific
+    if (type === "Catering") {
+      if (vendor.provideFoodTesting != null)
+        details.push({ label: "Food Tasting", value: vendor.provideFoodTesting ? "Available" : "Not Available" });
+      if (vendor.provideWaiter != null)
+        details.push({ label: "Waiter Service", value: vendor.provideWaiter ? "Included" : "Not Included" });
+      if (vendor.providePlate != null)
+        details.push({ label: "Crockery & Plates", value: vendor.providePlate ? "Provided" : "Not Provided" });
+      if (vendor.provideSeatingArrangement != null)
+        details.push({ label: "Seating Arrangement", value: vendor.provideSeatingArrangement ? "Provided" : "Not Provided" });
+      if (vendor.provideSoundSystem != null)
+        details.push({ label: "Sound System", value: vendor.provideSoundSystem ? "Available" : "Not Available" });
+    }
+
+    // Henna artist
+    if (type === "Hena artist") {
+      if (vendor.sellMehndi != null)
+        details.push({ label: "Sells Mehndi Products", value: vendor.sellMehndi ? "Yes" : "No" });
+      if (vendor.hasTeam != null)
+        details.push({ label: "Has a Team", value: vendor.hasTeam ? "Yes" : "No" });
+    }
+
+    // Decorator
+    if (type === "Decorator") {
+      if (vendor.provideDecorationItem != null)
+        details.push({ label: "Provides Decoration Items", value: vendor.provideDecorationItem ? "Yes" : "No" });
+    }
+
+    // Travel to client
+    if (vendor.travelToClientHome != null)
+      details.push({ label: "Travel to Client Location", value: vendor.travelToClientHome ? "Available" : "Not Available" });
+
+    // Sub-business type (salon type, vehicle type, store type)
+    const subType = Array.isArray(vendor.subBusinessType)
+      ? vendor.subBusinessType[0]
+      : vendor.subBusinessType;
+    if (subType) {
+      const subLabel =
+        type === "Makeup artist" ? "Studio Type"
+        : type === "Car rental" ? "Vehicle Type"
+        : type === "Bridal wearing" ? "Store Type"
+        : type === "Wedding Invitations and Stationery" ? "Stationery Type"
+        : "Business Type";
+      details.push({ label: subLabel, value: subType });
+    }
+
+    return details;
+  };
+
+  const vendorSpecificDetails = getVendorSpecificDetails();
+
   // Mock function to check date availability
   const checkDateAvailability = (date: Date) => {
     const today = startOfToday();
@@ -429,7 +507,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                           </p>
                         </div>
                       </div>
-                      {vendor.capacity && (
+                      {(vendor.minCapacity || vendor.maxCapacity || vendor.capacity) && (
                         <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
                           <Users className="w-4 h-4 sm:w-6 sm:h-6 text-blue-500 flex-shrink-0" />
                           <div className="min-w-0">
@@ -437,22 +515,27 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                               Capacity
                             </p>
                             <p className="text-xs sm:text-sm text-neutral-600 truncate">
-                              {vendor.capacity} Guests
+                              {vendor.minCapacity && vendor.maxCapacity
+                                ? `${vendor.minCapacity}–${vendor.maxCapacity}`
+                                : vendor.maxCapacity ?? vendor.minCapacity ?? vendor.capacity}{" "}
+                              Guests
                             </p>
                           </div>
                         </div>
                       )}
-                      <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl">
-                        <Clock className="w-4 h-4 sm:w-6 sm:h-6 text-green-500 flex-shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-xs sm:text-sm font-semibold text-neutral-900 truncate">
-                            Cancellation
-                          </p>
-                          <p className="text-xs sm:text-sm text-neutral-600 truncate">
-                            Flexible
-                          </p>
+                      {(vendor.cancelationPolicy || vendor.cancellationPolicy) && (
+                        <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl">
+                          <Clock className="w-4 h-4 sm:w-6 sm:h-6 text-green-500 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-xs sm:text-sm font-semibold text-neutral-900 truncate">
+                              Cancellation
+                            </p>
+                            <p className="text-xs sm:text-sm text-neutral-600 truncate">
+                              {vendor.cancelationPolicy || vendor.cancellationPolicy}
+                            </p>
+                          </div>
                         </div>
-                      </div>
+                      )}
                       <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-r from-purple-50 to-violet-50 rounded-xl">
                         <DollarSign className="w-4 h-4 sm:w-6 sm:h-6 text-purple-500 flex-shrink-0" />
                         <div className="min-w-0">
@@ -464,17 +547,33 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl col-span-2 sm:col-span-1">
-                        <CalendarCheck className="w-4 h-4 sm:w-6 sm:h-6 text-orange-500 flex-shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-xs sm:text-sm font-semibold text-neutral-900 truncate">
-                            Availability
-                          </p>
-                          <p className="text-xs sm:text-sm text-neutral-600 truncate">
-                            Check Calendar
-                          </p>
+                      {vendor.downPayment ? (
+                        <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl col-span-2 sm:col-span-1">
+                          <DollarSign className="w-4 h-4 sm:w-6 sm:h-6 text-orange-500 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-xs sm:text-sm font-semibold text-neutral-900 truncate">
+                              Advance
+                            </p>
+                            <p className="text-xs sm:text-sm text-neutral-600 truncate">
+                              {vendor.downPaymentType === "Percentage"
+                                ? `${vendor.downPayment}%`
+                                : formatPrice(vendor.downPayment)}
+                            </p>
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl col-span-2 sm:col-span-1">
+                          <CalendarCheck className="w-4 h-4 sm:w-6 sm:h-6 text-orange-500 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-xs sm:text-sm font-semibold text-neutral-900 truncate">
+                              Availability
+                            </p>
+                            <p className="text-xs sm:text-sm text-neutral-600 truncate">
+                              Check Calendar
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -549,34 +648,108 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                   </TabsList>
 
                   <TabsContent value="overview" className="p-4 sm:p-6">
-                    <div className="space-y-4 sm:space-y-6">
-                      <div>
-                        <h3 className="text-lg sm:text-xl font-semibold mb-3">
-                          Description
-                        </h3>
-                        <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
-                          {vendor.description}
-                        </p>
-                      </div>
-
-                      <div>
-                        <h3 className="text-lg sm:text-xl font-semibold mb-3">
-                          Amenities
-                        </h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {vendor.amenities.map((amenity, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center gap-2 p-3 bg-neutral-50 rounded-lg"
-                            >
-                              <div className="w-2 h-2 bg-purple-500 rounded-full flex-shrink-0" />
-                              <span className="text-sm sm:text-base text-gray-600">
-                                {amenity}
-                              </span>
-                            </div>
-                          ))}
+                    <div className="space-y-6 sm:space-y-8">
+                      {/* Description */}
+                      {vendor.description ? (
+                        <div>
+                          <h3 className="text-lg sm:text-xl font-semibold mb-3">About</h3>
+                          <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
+                            {vendor.description}
+                          </p>
                         </div>
-                      </div>
+                      ) : null}
+
+                      {/* Expertise / Specializations */}
+                      {Array.isArray(vendor.expertise) && vendor.expertise.length > 0 && (
+                        <div>
+                          <h3 className="text-lg sm:text-xl font-semibold mb-3">Expertise</h3>
+                          <div className="flex flex-wrap gap-2">
+                            {vendor.expertise.map((item, i) => (
+                              <Badge
+                                key={i}
+                                variant="secondary"
+                                className="text-sm px-3 py-1 bg-purple-50 text-purple-700 border-purple-200"
+                              >
+                                {item}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Type-specific service details */}
+                      {vendorSpecificDetails.length > 0 && (
+                        <div>
+                          <h3 className="text-lg sm:text-xl font-semibold mb-3">Services & Features</h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {vendorSpecificDetails.map((detail, i) => (
+                              <div
+                                key={i}
+                                className="flex items-center gap-3 p-3 bg-neutral-50 rounded-lg border border-neutral-100"
+                              >
+                                <CheckCircle className="w-4 h-4 text-purple-500 shrink-0" />
+                                <div>
+                                  <p className="text-xs text-neutral-500">{detail.label}</p>
+                                  <p className="text-sm font-medium text-neutral-800">{detail.value}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Amenities */}
+                      {Array.isArray(vendor.amenities) && vendor.amenities.length > 0 && (
+                        <div>
+                          <h3 className="text-lg sm:text-xl font-semibold mb-3">Amenities</h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {vendor.amenities.map((amenity, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center gap-2 p-3 bg-neutral-50 rounded-lg"
+                              >
+                                <div className="w-2 h-2 bg-purple-500 rounded-full flex-shrink-0" />
+                                <span className="text-sm sm:text-base text-gray-600">{amenity}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Cities Covered */}
+                      {Array.isArray(vendor.cityCovered) && vendor.cityCovered.length > 0 && (
+                        <div>
+                          <h3 className="text-lg sm:text-xl font-semibold mb-3">Cities Covered</h3>
+                          <div className="flex flex-wrap gap-2">
+                            {vendor.cityCovered.map((city, i) => (
+                              <Badge key={i} variant="outline" className="text-sm px-3 py-1 gap-1">
+                                <MapPin className="w-3 h-3" />
+                                {city}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Additional Info */}
+                      {vendor.additionalInfo && (
+                        <div>
+                          <h3 className="text-lg sm:text-xl font-semibold mb-3">Additional Information</h3>
+                          <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
+                            {vendor.additionalInfo}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Special Instructions */}
+                      {vendor.instruction && (
+                        <div>
+                          <h3 className="text-lg sm:text-xl font-semibold mb-3">Special Instructions</h3>
+                          <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
+                            {vendor.instruction}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </TabsContent>
 
@@ -631,41 +804,21 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                                 </Badge>
                               </div>
                               <div className="space-y-4">
-                                {pkg.features &&
-                                  typeof pkg.features === "object" &&
-                                  Object.entries(pkg.features).map(
-                                    ([category, items]) => {
-                                      const featureItems =
-                                        items as unknown as string[];
-                                      if (
-                                        !Array.isArray(featureItems) ||
-                                        featureItems.length === 0
-                                      )
-                                        return null;
-                                      return (
+                                {Array.isArray(pkg.features) &&
+                                  pkg.features.length > 0 && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                      {pkg.features.map((item, fi) => (
                                         <div
-                                          key={category}
-                                          className="space-y-2"
+                                          key={fi}
+                                          className="flex items-start gap-2"
                                         >
-                                          <h5 className="text-sm font-semibold text-neutral-900 capitalize">
-                                            {category}
-                                          </h5>
-                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                            {featureItems.map((item, fi) => (
-                                              <div
-                                                key={fi}
-                                                className="flex items-start gap-2"
-                                              >
-                                                <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                                                <span className="text-sm sm:text-base text-gray-600">
-                                                  {item}
-                                                </span>
-                                              </div>
-                                            ))}
-                                          </div>
+                                          <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                                          <span className="text-sm sm:text-base text-gray-600">
+                                            {String(item)}
+                                          </span>
                                         </div>
-                                      );
-                                    },
+                                      ))}
+                                    </div>
                                   )}
                               </div>
                             </div>
@@ -842,6 +995,44 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                 </Button>
               </CardContent>
             </Card>
+
+            {/* Booking Terms */}
+            {(vendor.downPayment || vendor.cancelationPolicy || vendor.cancellationPolicy) && (
+              <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-xl font-bold text-neutral-900 flex items-center gap-2">
+                    <DollarSign className="w-5 h-5 text-purple-500" />
+                    Booking Terms
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {vendor.downPayment ? (
+                    <div className="flex items-start gap-3 p-3 bg-neutral-50 rounded-lg">
+                      <DollarSign className="w-4 h-4 text-purple-500 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-xs text-neutral-500">Advance Payment Required</p>
+                        <p className="text-sm font-semibold text-neutral-800">
+                          {vendor.downPaymentType === "Percentage"
+                            ? `${vendor.downPayment}% of total amount`
+                            : formatPrice(vendor.downPayment)}
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
+                  {(vendor.cancelationPolicy || vendor.cancellationPolicy) && (
+                    <div className="flex items-start gap-3 p-3 bg-neutral-50 rounded-lg">
+                      <Clock className="w-4 h-4 text-purple-500 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-xs text-neutral-500">Cancellation Policy</p>
+                        <p className="text-sm font-semibold text-neutral-800">
+                          {vendor.cancelationPolicy || vendor.cancellationPolicy}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>

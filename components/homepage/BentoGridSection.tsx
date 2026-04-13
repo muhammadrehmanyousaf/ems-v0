@@ -49,7 +49,7 @@ function BentoCard({ vendor, path, size }: { vendor: Vendor; path: string; size:
             </div>
             <div className="max-h-0 group-hover:max-h-12 overflow-hidden transition-all duration-500 ease-out">
               <p className="text-sm font-semibold text-gold-300 mt-2">
-                From ₹{(vendor.minimumPrice || vendor.price || 0).toLocaleString()}
+                From Rs. {(vendor.minimumPrice || vendor.price || 0).toLocaleString()}
               </p>
             </div>
           </div>

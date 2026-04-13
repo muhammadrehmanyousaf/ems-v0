@@ -20,6 +20,7 @@ import {
   Heart,
   Calendar,
   LogOut,
+  LogIn,
   Building,
   Star,
   Award,
@@ -222,77 +223,74 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
 
   // No user logged in
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+    <div className="hidden md:flex items-center gap-2">
+      <Link href="/login">
         <Button
+          variant="outline"
           size="sm"
-          className="hidden md:flex bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold group"
+          className="h-9 px-4 font-semibold border-purple-200 dark:border-neutral-700 text-purple-700 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-neutral-800 hover:border-purple-300 dark:hover:border-neutral-600 rounded-xl transition-all duration-200"
         >
-          <Award className="w-4 h-4 mr-2 text-gold-300 group-hover:scale-110 transition-transform duration-200" />
-          <span className="hidden lg:inline">List Your Business</span>
-          <span className="lg:hidden">Sign In</span>
-          <ChevronDown className="w-4 h-4 ml-2 group-hover:scale-110 transition-transform duration-200" />
+          <LogIn className="w-4 h-4 mr-2" />
+          Sign In
         </Button>
-      </DropdownMenuTrigger>
-    <DropdownMenuContent className="w-64 bg-white dark:bg-neutral-900 border border-purple-100 dark:border-neutral-800 shadow-xl rounded-xl mr-8">
-      <DropdownMenuLabel className="flex items-center gap-3 p-4 border-b border-purple-50 dark:border-neutral-800">
-          <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg">
-            <Award className="w-6 h-6 text-gold-300" />
+      </Link>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            size="sm"
+            className="h-9 px-4 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold rounded-xl group"
+          >
+            <Award className="w-4 h-4 mr-2 text-gold-300 group-hover:scale-110 transition-transform duration-200" />
+            List Your Business
+            <ChevronDown className="w-4 h-4 ml-2 group-hover:scale-110 transition-transform duration-200" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-64 bg-white dark:bg-neutral-900 border border-purple-100 dark:border-neutral-800 shadow-xl rounded-xl mr-8">
+          <DropdownMenuLabel className="flex items-center gap-3 p-4 border-b border-purple-50 dark:border-neutral-800">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg">
+              <Award className="w-6 h-6 text-gold-300" />
+            </div>
+            <div>
+              <div className="font-bold text-neutral-900 dark:text-neutral-100 text-lg">Join Our Platform</div>
+              <div className="text-sm text-neutral-500">Grow your business</div>
+            </div>
+          </DropdownMenuLabel>
+
+          <div className="p-2 space-y-1">
+            <DropdownMenuItem asChild>
+              <Link
+                href="/business-registration"
+                className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-purple-50 dark:hover:bg-neutral-800 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200"
+              >
+                <div className="w-8 h-8 bg-gold-100 rounded-lg flex items-center justify-center">
+                  <Building className="w-4 h-4 text-gold-600" />
+                </div>
+                <div>
+                  <div className="font-semibold text-neutral-900 dark:text-neutral-100">Register Business</div>
+                  <div className="text-xs text-neutral-500">Create new account</div>
+                </div>
+              </Link>
+            </DropdownMenuItem>
+
+            <DropdownMenuItem asChild>
+              <Link
+                href="/vendor-guide"
+                className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-purple-50 dark:hover:bg-neutral-800 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200"
+              >
+                <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Star className="w-4 h-4 text-purple-600" />
+                </div>
+                <div>
+                  <div className="font-semibold text-neutral-900 dark:text-neutral-100">Vendor Guide</div>
+                  <div className="text-xs text-neutral-500">Learn how to succeed</div>
+                </div>
+              </Link>
+            </DropdownMenuItem>
           </div>
-          <div>
-          <div className="font-bold text-neutral-900 dark:text-neutral-100 text-lg">Join Our Platform</div>
-            <div className="text-sm text-neutral-500">Grow your business</div>
-          </div>
-        </DropdownMenuLabel>
-
-        <div className="p-2 space-y-1">
-          <DropdownMenuItem asChild>
-            <Link
-              href="/login"
-            className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-purple-50 dark:hover:bg-neutral-800 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200"
-            >
-              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                <User className="w-4 h-4 text-purple-600" />
-              </div>
-              <div>
-              <div className="font-semibold text-neutral-900 dark:text-neutral-100">Sign In</div>
-                <div className="text-xs text-neutral-500">Access your account</div>
-              </div>
-            </Link>
-          </DropdownMenuItem>
-
-          <DropdownMenuItem asChild>
-            <Link
-              href="/business-registration"
-            className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-purple-50 dark:hover:bg-neutral-800 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200"
-            >
-              <div className="w-8 h-8 bg-gold-100 rounded-lg flex items-center justify-center">
-                <Building className="w-4 h-4 text-gold-600" />
-              </div>
-              <div>
-              <div className="font-semibold text-neutral-900 dark:text-neutral-100">Register Business</div>
-                <div className="text-xs text-neutral-500">Create new account</div>
-              </div>
-            </Link>
-          </DropdownMenuItem>
-
-          <DropdownMenuItem asChild>
-            <Link
-              href="/vendor-guide"
-            className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-purple-50 dark:hover:bg-neutral-800 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200"
-            >
-              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Star className="w-4 h-4 text-purple-600" />
-              </div>
-              <div>
-              <div className="font-semibold text-neutral-900 dark:text-neutral-100">Vendor Guide</div>
-                <div className="text-xs text-neutral-500">Learn how to succeed</div>
-              </div>
-            </Link>
-          </DropdownMenuItem>
-        </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 };
 

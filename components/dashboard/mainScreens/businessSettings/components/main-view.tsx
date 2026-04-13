@@ -16,7 +16,7 @@ import { getVendorTypeConfig, DEFAULT_VENDOR_CONFIG } from '@/lib/vendor-type-co
 
 const MainView = () => {
     const searchParams = useSearchParams();
-    const active = searchParams.get('tab') || 'overview';
+    const active = searchParams?.get('tab') || 'overview';
     const [business, setBusiness] = useState<ApiBusiness | null>(null);
     const [loading, setLoading] = useState(true);
     const { user } = useUser();

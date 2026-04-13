@@ -10,10 +10,11 @@ export interface Vendor {
   price: number;
   minimumPrice: number;
   type: string;
-  subBusinessType: string;
+  subBusinessType?: string | string[];
   capacity?: number;
   amenities: string[];
   cancellationPolicy: string;
+  cancelationPolicy?: string;
   sponsored: boolean;
   staff: string[];
   description: string;
@@ -22,6 +23,28 @@ export interface Vendor {
   video?: string;
   availability?: Availability;
   isFavorite?: boolean;
+  // Type-specific fields from backend
+  maxCapacity?: number;
+  minCapacity?: number;
+  catering?: boolean;
+  parking?: boolean;
+  carParkingCapacity?: number;
+  expertise?: string[];
+  travelToClientHome?: boolean;
+  cityCovered?: string[];
+  provideDecorationItem?: boolean;
+  provideFoodTesting?: boolean;
+  provideWaiter?: boolean;
+  providePlate?: boolean;
+  provideSeatingArrangement?: boolean;
+  provideSoundSystem?: boolean;
+  sellMehndi?: boolean;
+  hasTeam?: boolean;
+  downPayment?: number;
+  downPaymentType?: string;
+  additionalInfo?: string;
+  instruction?: string;
+  subArea?: string;
 }
 
 export interface Availability {

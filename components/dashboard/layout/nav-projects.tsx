@@ -68,7 +68,7 @@ export function NavProjects({
   const searchParams = useSearchParams()
 
   const isOnSettingsPage = getDashboardModule(normalizePath(pathname)) === "settings"
-  const currentTab = searchParams.get("tab") || "overview"
+  const currentTab = searchParams?.get("tab") || "overview"
 
   // Separate Business Settings from other controls
   const regularControls = vendorControls.filter((item) => item.name !== "Business Settings")
@@ -103,13 +103,28 @@ export function NavProjects({
           <SidebarMenu className="gap-0.5">
             <Collapsible asChild defaultOpen={isOnSettingsPage} className="group/collapsible">
               <SidebarMenuItem>
-                <CollapsibleTrigger asChild>
-                  <SidebarMenuButton size="sm" isActive={isOnSettingsPage} tooltip="Business Settings">
-                    <settingsItem.icon />
-                    <span>Business Settings</span>
-                    <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                {/* Split: label navigates, chevron toggles */}
+                <div className="flex items-center w-full">
+                  <SidebarMenuButton
+                    size="sm"
+                    isActive={isOnSettingsPage}
+                    asChild
+                    className="flex-1 pr-1"
+                  >
+                    <Link href="/dashboard/settings?tab=overview">
+                      <settingsItem.icon />
+                      <span>Business Settings</span>
+                    </Link>
                   </SidebarMenuButton>
-                </CollapsibleTrigger>
+                  <CollapsibleTrigger asChild>
+                    <button
+                      className="flex items-center justify-center h-7 w-7 rounded-sm hover:bg-sidebar-accent text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors shrink-0"
+                      aria-label="Toggle business settings menu"
+                    >
+                      <ChevronRight className="size-3.5 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                    </button>
+                  </CollapsibleTrigger>
+                </div>
                 <CollapsibleContent>
                   <SidebarMenuSub>
                     {settingsSubItems.map((sub) => (

@@ -268,15 +268,15 @@ function BudgetCalculator() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="p-6 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl text-white shadow-lg">
           <h4 className="font-semibold text-green-100">Total Budget</h4>
-          <p className="text-3xl font-bold">₹{totalBudget.toLocaleString()}</p>
+          <p className="text-3xl font-bold">Rs. {totalBudget.toLocaleString()}</p>
         </div>
         <div className="p-6 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl text-white shadow-lg">
           <h4 className="font-semibold text-blue-100">Estimated</h4>
-          <p className="text-3xl font-bold">₹{totalEstimated.toLocaleString()}</p>
+          <p className="text-3xl font-bold">Rs. {totalEstimated.toLocaleString()}</p>
         </div>
         <div className={`p-6 rounded-xl text-white shadow-lg ${overBudget ? 'bg-gradient-to-br from-red-500 to-red-600' : 'bg-gradient-to-br from-orange-500 to-amber-600'}`}>
           <h4 className="font-semibold">Remaining</h4>
-          <p className="text-3xl font-bold">₹{remaining.toLocaleString()}</p>
+          <p className="text-3xl font-bold">Rs. {remaining.toLocaleString()}</p>
         </div>
       </div>
 

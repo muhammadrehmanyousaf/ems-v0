@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { Suspense } from "react"
 
 import { NavProjects, type SettingsSubItem } from "./nav-projects"
 import { NavUser } from "./nav-user"
@@ -79,7 +80,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <div className={cn("transition-opacity px-2 py-0.5", open ? 'opacity-100 border-y' : 'opacity-0 -mt-10')}>
           <TeamSwitcher />
         </div>
-        <NavProjects mainNavs={filteredMainNav} vendorControls={filteredControls} adminItems={adminItems} settingsSubItems={settingsSubItems} />
+        <Suspense fallback={null}>
+          <NavProjects mainNavs={filteredMainNav} vendorControls={filteredControls} adminItems={adminItems} settingsSubItems={settingsSubItems} />
+        </Suspense>
       </SidebarContent>
       <SidebarFooter>
         <NavUser />

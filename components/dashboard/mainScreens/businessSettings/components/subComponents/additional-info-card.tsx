@@ -1,11 +1,11 @@
+'use client'
 import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { ApiBusiness } from '@/lib/api/dashboard'
 import { useUser } from '@/context/UserContext'
-import { getVendorTypeConfig } from '@/lib/vendor-type-config'
-import { VENDOR_TYPES } from '@/lib/vendor-types'
+import { getVendorTypeConfig, type TypeSpecificFieldDef } from '@/lib/vendor-type-config'
 import { Check, X } from 'lucide-react'
 
 interface AdditionalInfoCardProps {
@@ -16,12 +16,12 @@ function BoolField({ label, value }: { label: string; value: boolean | null | un
     if (value == null) return null;
     return (
         <div className='space-y-0.5'>
-            <Label className='text-primary'>{label}</Label>
+            <Label className='text-primary text-xs font-medium'>{label}</Label>
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 {value ? (
-                    <><Check className="h-3.5 w-3.5 text-emerald-500" /> Yes</>
+                    <><Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" /><span>Yes</span></>
                 ) : (
-                    <><X className="h-3.5 w-3.5 text-red-400" /> No</>
+                    <><X className="h-3.5 w-3.5 text-red-400 shrink-0" /><span>No</span></>
                 )}
             </div>
         </div>
@@ -32,10 +32,47 @@ function TextField({ label, value }: { label: string; value: string | number | n
     if (value == null || value === '') return null;
     return (
         <div className='space-y-0.5'>
-            <Label className='text-primary'>{label}</Label>
+            <Label className='text-primary text-xs font-medium'>{label}</Label>
             <p className="text-sm text-muted-foreground">{String(value)}</p>
         </div>
     );
+}
+
+function BadgesField({ label, values }: { label: string; values: string[] }) {
+    if (!values || values.length === 0) return null;
+    return (
+        <div className='space-y-1'>
+            <Label className='text-primary text-xs font-medium'>{label}</Label>
+            <div className="flex flex-wrap gap-1">
+                {values.map((v, i) => (
+                    <Badge key={i} variant="outline" className="text-xs">{v}</Badge>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function TypeSpecificField({ field, business }: { field: TypeSpecificFieldDef; business: ApiBusiness }) {
+    const value = (business as unknown as Record<string, unknown>)[field.key];
+
+    switch (field.type) {
+        case 'boolean':
+            return <BoolField label={field.label} value={value as boolean | null} />;
+        case 'number': {
+            const num = value as number | null;
+            if (num == null) return null;
+            return <TextField label={field.label} value={num} />;
+        }
+        case 'text':
+        case 'select':
+            return <TextField label={field.label} value={value as string | null} />;
+        case 'multi-select': {
+            const arr = Array.isArray(value) ? (value as string[]) : [];
+            return <BadgesField label={field.label} values={arr} />;
+        }
+        default:
+            return null;
+    }
 }
 
 const AdditionalInfoCard = ({ business }: AdditionalInfoCardProps) => {
@@ -49,111 +86,105 @@ const AdditionalInfoCard = ({ business }: AdditionalInfoCardProps) => {
         return String(business.downPayment);
     })();
 
+    // Determine if subBusinessType is handled via the vendor config fields
+    const configFieldKeys = new Set(vendorConfig?.typeSpecificFields.map(f => f.key) ?? []);
+    const subBusinessTypeInConfig = configFieldKeys.has('subBusinessType');
+
+    // Resolve subBusinessType value — may be a string or a string array from registration
+    const subBizRaw = business.subBusinessType as unknown;
+    const subBizBadges: string[] | null =
+        Array.isArray(subBizRaw) && (subBizRaw as string[]).length > 0
+            ? (subBizRaw as string[])
+            : typeof subBizRaw === 'string' && subBizRaw
+                ? [subBizRaw]
+                : null;
+
     return (
-        <Card className='col-span-2'>
+        <Card>
             <CardHeader className='pb-3'>
-                <CardTitle className='text-lg'>Additional Info</CardTitle>
+                <CardTitle className='text-base'>Additional Information</CardTitle>
             </CardHeader>
             <CardContent>
-                <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
-                    {/* Column 1: Location & Vendor */}
-                    <div className='space-y-3'>
-                        <TextField label="City" value={business.city} />
-                        <TextField label="Sub Area" value={business.subArea} />
-                        <TextField label="Vendor" value={business.vendor?.fullName} />
-                    </div>
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4'>
 
-                    {/* Column 2: Pricing & Payment */}
+                    {/* ── Column 1: Location & Contact ─────────────────── */}
                     <div className='space-y-3'>
+                        <p className='text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 border-b pb-1'>
+                            Location &amp; Contact
+                        </p>
+                        <TextField label="City" value={business.city} />
+                        <TextField label="Sub Area / Address" value={business.subArea} />
+                        <TextField label="Vendor Name" value={business.vendor?.fullName} />
                         <div className='space-y-0.5'>
-                            <Label className='text-primary'>Vendor Type</Label>
+                            <Label className='text-primary text-xs font-medium'>Vendor Type</Label>
                             <p className="text-sm text-muted-foreground capitalize">
-                                {business.vendor?.vendorType || '\u2014'}
+                                {business.vendor?.vendorType || '—'}
                             </p>
                         </div>
+
+                        {/* Staff (e.g., photographer gender preference) */}
+                        {Array.isArray(business.staff) && business.staff.length > 0 && (
+                            <BadgesField label="Staff" values={business.staff} />
+                        )}
+                    </div>
+
+                    {/* ── Column 2: Pricing & Policies ─────────────────── */}
+                    <div className='space-y-3'>
+                        <p className='text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 border-b pb-1'>
+                            Pricing &amp; Policies
+                        </p>
                         <TextField
                             label="Minimum Price"
                             value={business.minimumPrice ? `Rs. ${business.minimumPrice.toLocaleString()}` : null}
                         />
-                        <TextField label="Down Payment" value={downPaymentDisplay} />
+                        {downPaymentDisplay && (
+                            <div className='space-y-0.5'>
+                                <Label className='text-primary text-xs font-medium'>Down Payment</Label>
+                                <p className="text-sm text-muted-foreground">
+                                    {downPaymentDisplay}
+                                    {business.downPaymentType && (
+                                        <span className='text-xs text-muted-foreground/60 ml-1'>
+                                            ({business.downPaymentType})
+                                        </span>
+                                    )}
+                                </p>
+                            </div>
+                        )}
                         <TextField label="Cancellation Policy" value={business.cancelationPolicy} />
-                    </div>
 
-                    {/* Column 3: Type-specific info */}
-                    <div className='space-y-3'>
-                        {/* Show capacity for venue/catering */}
-                        {(vendorConfig?.key === VENDOR_TYPES.WEDDING_VENUE || vendorConfig?.key === VENDOR_TYPES.CATERING) && (
-                            <>
-                                <TextField label="Max Capacity" value={business.maxCapacity} />
-                                <TextField label="Min Capacity" value={business.minCapacity} />
-                            </>
+                        {/* subBusinessType when not handled by type-specific config */}
+                        {!subBusinessTypeInConfig && subBizBadges && (
+                            <BadgesField label="Business Type" values={subBizBadges} />
                         )}
 
-                        {/* Venue-specific */}
-                        {vendorConfig?.key === VENDOR_TYPES.WEDDING_VENUE && (
-                            <>
-                                <BoolField label="In-house Catering" value={business.catering} />
-                                <BoolField label="Parking" value={business.parking} />
-                            </>
-                        )}
-
-                        {/* Catering-specific */}
-                        {vendorConfig?.key === VENDOR_TYPES.CATERING && (
-                            <>
-                                <BoolField label="Food Tasting" value={business.provideFoodTesting} />
-                                <BoolField label="Waiter Service" value={business.provideWaiter} />
-                            </>
-                        )}
-
-                        {/* Henna-specific */}
-                        {vendorConfig?.key === VENDOR_TYPES.HENNA_ARTIST && (
-                            <>
-                                <BoolField label="Has a Team" value={business.hasTeam} />
-                                <BoolField label="Sells Mehndi" value={business.sellMehndi} />
-                            </>
-                        )}
-
-                        {/* Decorator-specific */}
-                        {vendorConfig?.key === VENDOR_TYPES.DECORATOR && (
-                            <BoolField label="Provides Decoration Items" value={business.provideDecorationItem} />
-                        )}
-
-                        {/* Packages & menus count for all */}
+                        {/* Packages & menus count */}
                         <TextField
-                            label="Packages"
+                            label="Total Packages"
                             value={`${business.packages?.length ?? 0} package${(business.packages?.length ?? 0) !== 1 ? 's' : ''}`}
                         />
                         {vendorConfig?.hasMenus && (
                             <TextField
-                                label="Menus"
+                                label="Total Menus"
                                 value={`${business.menus?.length ?? 0} menu${(business.menus?.length ?? 0) !== 1 ? 's' : ''}`}
                             />
                         )}
+                    </div>
 
-                        {/* Expertise badges */}
-                        {Array.isArray(business.expertise) && business.expertise.length > 0 && (
-                            <div className='space-y-1'>
-                                <Label className='text-primary'>Expertise</Label>
-                                <div className="flex flex-wrap gap-1">
-                                    {business.expertise.map((e, i) => (
-                                        <Badge key={i} variant="outline" className="text-xs">{e}</Badge>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                    {/* ── Column 3: Type-specific Details ──────────────── */}
+                    <div className='space-y-3'>
+                        <p className='text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 border-b pb-1'>
+                            {vendorConfig ? `${vendorConfig.displayName} Details` : 'Business Details'}
+                        </p>
 
-                        {/* Amenities badges */}
-                        {Array.isArray(business.amenities) && business.amenities.length > 0 && (
-                            <div className='space-y-1'>
-                                <Label className='text-primary'>Amenities</Label>
-                                <div className="flex flex-wrap gap-1">
-                                    {business.amenities.map((a, i) => (
-                                        <Badge key={i} variant="outline" className="text-xs">{a}</Badge>
-                                    ))}
-                                </div>
-                            </div>
+                        {vendorConfig?.typeSpecificFields && vendorConfig.typeSpecificFields.length > 0 ? (
+                            vendorConfig.typeSpecificFields.map((field) => (
+                                <TypeSpecificField key={field.key} field={field} business={business} />
+                            ))
+                        ) : (
+                            <p className="text-sm text-muted-foreground">No additional details.</p>
                         )}
                     </div>
+
                 </div>
             </CardContent>
         </Card>

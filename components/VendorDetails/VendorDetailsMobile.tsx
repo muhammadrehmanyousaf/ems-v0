@@ -420,6 +420,80 @@ export default function VendorDetailsMobile({
 
   const VendorIcon = getVendorIcon(vendor.type);
 
+  const getVendorSpecificDetails = (): { label: string; value: string }[] => {
+    const details: { label: string; value: string }[] = [];
+    const type = vendor.type;
+
+    // Capacity range
+    if (vendor.minCapacity || vendor.maxCapacity) {
+      const cap =
+        vendor.minCapacity && vendor.maxCapacity
+          ? `${vendor.minCapacity} – ${vendor.maxCapacity}`
+          : `${vendor.maxCapacity ?? vendor.minCapacity}`;
+      details.push({ label: "Guest Capacity", value: `${cap} guests` });
+    }
+
+    if (type === "Wedding venue") {
+      if (vendor.catering != null)
+        details.push({ label: "In-house Catering", value: vendor.catering ? "Available" : "Not Available" });
+      if (vendor.parking != null) {
+        const parkVal = vendor.parking
+          ? vendor.carParkingCapacity
+            ? `Available (${vendor.carParkingCapacity} cars)`
+            : "Available"
+          : "Not Available";
+        details.push({ label: "Parking", value: parkVal });
+      }
+    }
+
+    if (type === "Catering") {
+      if (vendor.provideFoodTesting != null)
+        details.push({ label: "Food Tasting", value: vendor.provideFoodTesting ? "Available" : "Not Available" });
+      if (vendor.provideWaiter != null)
+        details.push({ label: "Waiter Service", value: vendor.provideWaiter ? "Included" : "Not Included" });
+      if (vendor.providePlate != null)
+        details.push({ label: "Crockery & Plates", value: vendor.providePlate ? "Provided" : "Not Provided" });
+      if (vendor.provideSeatingArrangement != null)
+        details.push({ label: "Seating Arrangement", value: vendor.provideSeatingArrangement ? "Provided" : "Not Provided" });
+      if (vendor.provideSoundSystem != null)
+        details.push({ label: "Sound System", value: vendor.provideSoundSystem ? "Available" : "Not Available" });
+    }
+
+    if (type === "Hena artist") {
+      if (vendor.sellMehndi != null)
+        details.push({ label: "Sells Mehndi Products", value: vendor.sellMehndi ? "Yes" : "No" });
+      if (vendor.hasTeam != null)
+        details.push({ label: "Has a Team", value: vendor.hasTeam ? "Yes" : "No" });
+    }
+
+    if (type === "Decorator") {
+      if (vendor.provideDecorationItem != null)
+        details.push({ label: "Provides Decoration Items", value: vendor.provideDecorationItem ? "Yes" : "No" });
+    }
+
+    if (vendor.travelToClientHome != null)
+      details.push({ label: "Travel to Client Location", value: vendor.travelToClientHome ? "Available" : "Not Available" });
+
+    const subType = Array.isArray(vendor.subBusinessType)
+      ? vendor.subBusinessType[0]
+      : vendor.subBusinessType;
+    if (subType) {
+      const subLabel =
+        type === "Makeup artist" ? "Studio Type"
+        : type === "Car rental" ? "Vehicle Type"
+        : type === "Bridal wearing" ? "Store Type"
+        : type === "Wedding Invitations and Stationery" ? "Stationery Type"
+        : null;
+      if (subLabel) details.push({ label: subLabel, value: subType });
+    }
+
+    return details;
+  };
+
+  const vendorSpecificDetails = getVendorSpecificDetails();
+  const cancellationPolicy = vendor.cancelationPolicy || vendor.cancellationPolicy;
+  const startingPrice = vendor.minimumPrice || vendor.price;
+
   // Calendar functions
   const getDaysInMonth = (date: Date) =>
     new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
@@ -591,7 +665,7 @@ export default function VendorDetailsMobile({
                     Starting from
                   </span>
                   <p className="text-2xl sm:text-3xl font-bold text-gold-300">
-                    {formatPrice(vendor.minimumPrice || vendor.price)}
+                    {startingPrice ? formatPrice(startingPrice) : "See Packages"}
                   </p>
                 </div>
                 <Button
@@ -668,46 +742,109 @@ export default function VendorDetailsMobile({
                         {vendor.type || "Vendor"}
                       </p>
                     </div>
-                    {vendor.capacity && (
+                    {(vendor.minCapacity || vendor.maxCapacity || vendor.capacity) ? (
                       <div className="p-4 bg-blue-50/80 rounded-2xl text-center">
                         <Users className="w-5 h-5 text-blue-500 mx-auto mb-1.5" />
                         <p className="text-xs text-neutral-500">Capacity</p>
                         <p className="text-sm font-semibold text-neutral-800">
-                          {vendor.capacity} Guests
+                          {vendor.minCapacity && vendor.maxCapacity
+                            ? `${vendor.minCapacity}–${vendor.maxCapacity}`
+                            : vendor.maxCapacity ?? vendor.minCapacity ?? vendor.capacity}{" "}
+                          Guests
                         </p>
                       </div>
-                    )}
-                    <div className="p-4 bg-green-50/80 rounded-2xl text-center">
-                      <Clock className="w-5 h-5 text-green-500 mx-auto mb-1.5" />
-                      <p className="text-xs text-neutral-500">Cancellation</p>
-                      <p className="text-sm font-semibold text-neutral-800">
-                        Flexible
-                      </p>
-                    </div>
+                    ) : null}
+                    {cancellationPolicy ? (
+                      <div className="p-4 bg-green-50/80 rounded-2xl text-center">
+                        <Clock className="w-5 h-5 text-green-500 mx-auto mb-1.5" />
+                        <p className="text-xs text-neutral-500">Cancellation</p>
+                        <p className="text-sm font-semibold text-neutral-800 truncate">
+                          {cancellationPolicy}
+                        </p>
+                      </div>
+                    ) : null}
                     <div className="p-4 bg-orange-50/80 rounded-2xl text-center">
                       <DollarSign className="w-5 h-5 text-orange-500 mx-auto mb-1.5" />
                       <p className="text-xs text-neutral-500">Starting</p>
                       <p className="text-sm font-semibold text-neutral-800">
-                        {formatPrice(vendor.minimumPrice || vendor.price)}
+                        {startingPrice ? formatPrice(startingPrice) : "See Packages"}
                       </p>
                     </div>
+                    {vendor.downPayment ? (
+                      <div className="p-4 bg-amber-50/80 rounded-2xl text-center">
+                        <DollarSign className="w-5 h-5 text-amber-500 mx-auto mb-1.5" />
+                        <p className="text-xs text-neutral-500">Advance</p>
+                        <p className="text-sm font-semibold text-neutral-800">
+                          {vendor.downPaymentType === "Percentage"
+                            ? `${vendor.downPayment}%`
+                            : formatPrice(vendor.downPayment)}
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
 
                   {/* Description */}
-                  <div>
-                    <h2 className="text-xl font-heading font-bold text-neutral-900 mb-3">
-                      About
-                    </h2>
-                    <p className="text-neutral-600 leading-relaxed">
-                      {vendor.description}
-                    </p>
-                  </div>
+                  {vendor.description ? (
+                    <div>
+                      <h2 className="text-xl font-heading font-bold text-neutral-900 mb-3">
+                        About
+                      </h2>
+                      <p className="text-neutral-600 leading-relaxed">
+                        {vendor.description}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {/* Expertise / Specializations */}
+                  {Array.isArray(vendor.expertise) && vendor.expertise.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-heading font-semibold text-neutral-900 mb-3">
+                        Expertise
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {vendor.expertise.map((item, i) => (
+                          <Badge
+                            key={i}
+                            variant="secondary"
+                            className="text-sm px-3 py-1 bg-purple-50 text-purple-700 border-purple-200"
+                          >
+                            {item}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Type-specific service details */}
+                  {vendorSpecificDetails.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-heading font-semibold text-neutral-900 mb-4">
+                        Services & Features
+                      </h3>
+                      <StaggerContainer
+                        staggerDelay={0.05}
+                        className="grid grid-cols-1 sm:grid-cols-2 gap-2.5"
+                      >
+                        {vendorSpecificDetails.map((detail, i) => (
+                          <StaggerItem key={i}>
+                            <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-neutral-100 hover:border-purple-200 hover:shadow-sm transition-all duration-200">
+                              <CheckCircle className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                              <div className="min-w-0">
+                                <p className="text-xs text-neutral-400">{detail.label}</p>
+                                <p className="text-sm font-medium text-neutral-800 truncate">{detail.value}</p>
+                              </div>
+                            </div>
+                          </StaggerItem>
+                        ))}
+                      </StaggerContainer>
+                    </div>
+                  )}
 
                   {/* Amenities */}
                   {vendor.amenities?.length > 0 && (
                     <div>
                       <h3 className="text-lg font-heading font-semibold text-neutral-900 mb-4">
-                        Amenities & Services
+                        Amenities
                       </h3>
                       <StaggerContainer
                         staggerDelay={0.05}
@@ -724,6 +861,76 @@ export default function VendorDetailsMobile({
                           </StaggerItem>
                         ))}
                       </StaggerContainer>
+                    </div>
+                  )}
+
+                  {/* Cities Covered */}
+                  {Array.isArray(vendor.cityCovered) && vendor.cityCovered.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-heading font-semibold text-neutral-900 mb-3">
+                        Cities Covered
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {vendor.cityCovered.map((city, i) => (
+                          <Badge key={i} variant="outline" className="text-sm px-3 py-1 gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {city}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Booking Terms */}
+                  {(vendor.downPayment || cancellationPolicy) && (
+                    <div>
+                      <h3 className="text-lg font-heading font-semibold text-neutral-900 mb-4">
+                        Booking Terms
+                      </h3>
+                      <div className="space-y-2.5">
+                        {vendor.downPayment ? (
+                          <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-xl border border-amber-100">
+                            <DollarSign className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                            <div>
+                              <p className="text-xs text-neutral-400">Advance Payment Required</p>
+                              <p className="text-sm font-medium text-neutral-800">
+                                {vendor.downPaymentType === "Percentage"
+                                  ? `${vendor.downPayment}% of total amount`
+                                  : formatPrice(vendor.downPayment)}
+                              </p>
+                            </div>
+                          </div>
+                        ) : null}
+                        {cancellationPolicy && (
+                          <div className="flex items-center gap-3 p-3 bg-green-50 rounded-xl border border-green-100">
+                            <Clock className="w-4 h-4 text-green-600 flex-shrink-0" />
+                            <div>
+                              <p className="text-xs text-neutral-400">Cancellation Policy</p>
+                              <p className="text-sm font-medium text-neutral-800">{cancellationPolicy}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Additional Information */}
+                  {vendor.additionalInfo && (
+                    <div>
+                      <h3 className="text-lg font-heading font-semibold text-neutral-900 mb-3">
+                        Additional Information
+                      </h3>
+                      <p className="text-neutral-600 leading-relaxed">{vendor.additionalInfo}</p>
+                    </div>
+                  )}
+
+                  {/* Special Instructions */}
+                  {vendor.instruction && (
+                    <div>
+                      <h3 className="text-lg font-heading font-semibold text-neutral-900 mb-3">
+                        Special Instructions
+                      </h3>
+                      <p className="text-neutral-600 leading-relaxed">{vendor.instruction}</p>
                     </div>
                   )}
                 </div>
@@ -800,40 +1007,19 @@ export default function VendorDetailsMobile({
                             {/* {pkg.duration && <p className="text-xs text-neutral-400">{pkg.duration}</p>} */}
                           </div>
                         </div>
-                        <div className="space-y-4 mb-5">
-                          {pkg.features &&
-                            typeof pkg.features === "object" &&
-                            Object.entries(pkg.features).map(
-                              ([category, items]) => {
-                                const featureItems =
-                                  items as unknown as string[];
-                                if (
-                                  !Array.isArray(featureItems) ||
-                                  featureItems.length === 0
-                                )
-                                  return null;
-                                return (
-                                  <div key={category} className="space-y-2">
-                                    <h4 className="text-sm font-semibold text-neutral-900 capitalize">
-                                      {category}
-                                    </h4>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                      {featureItems.map((item, fi) => (
-                                        <div
-                                          key={fi}
-                                          className="flex items-start gap-2"
-                                        >
-                                          <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                                          <span className="text-sm text-neutral-600">
-                                            {item}
-                                          </span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                );
-                              },
-                            )}
+                        <div className="mb-5">
+                          {Array.isArray(pkg.features) && pkg.features.length > 0 && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {pkg.features.map((item, fi) => (
+                                <div key={fi} className="flex items-start gap-2">
+                                  <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                                  <span className="text-sm text-neutral-600">
+                                    {String(item)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                         <Button
                           onClick={handleBookNow}

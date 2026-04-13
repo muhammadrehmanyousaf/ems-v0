@@ -214,7 +214,7 @@ export default function BudgetPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-green-100 mb-1">Total Budget</p>
-                <p className="text-2xl sm:text-3xl font-bold">₹{totalBudget.toLocaleString()}</p>
+                <p className="text-2xl sm:text-3xl font-bold">Rs. {totalBudget.toLocaleString()}</p>
               </div>
               <DollarSign className="w-8 h-8 text-green-200" />
             </div>
@@ -226,7 +226,7 @@ export default function BudgetPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-blue-100 mb-1">Estimated</p>
-                <p className="text-2xl sm:text-3xl font-bold">₹{totalEstimated.toLocaleString()}</p>
+                <p className="text-2xl sm:text-3xl font-bold">Rs. {totalEstimated.toLocaleString()}</p>
               </div>
               <TrendingUp className="w-8 h-8 text-blue-200" />
             </div>
@@ -238,7 +238,7 @@ export default function BudgetPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-purple-100 mb-1">Spent</p>
-                <p className="text-2xl sm:text-3xl font-bold">₹{totalActual.toLocaleString()}</p>
+                <p className="text-2xl sm:text-3xl font-bold">Rs. {totalActual.toLocaleString()}</p>
               </div>
               <TrendingDown className="w-8 h-8 text-purple-200" />
             </div>
@@ -250,7 +250,7 @@ export default function BudgetPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium mb-1">Remaining</p>
-                <p className="text-2xl sm:text-3xl font-bold">₹{remaining.toLocaleString()}</p>
+                <p className="text-2xl sm:text-3xl font-bold">Rs. {remaining.toLocaleString()}</p>
               </div>
               <BarChart3 className="w-8 h-8 opacity-80" />
             </div>
@@ -294,8 +294,8 @@ export default function BudgetPage() {
         
         <Progress value={budgetUsage} className="h-3" />
         <div className="flex justify-between text-sm text-neutral-600 mt-2">
-          <span>₹0</span>
-          <span>₹{totalBudget.toLocaleString()}</span>
+          <span>Rs. 0</span>
+          <span>Rs. {totalBudget.toLocaleString()}</span>
         </div>
       </motion.div>
 
@@ -375,7 +375,7 @@ export default function BudgetPage() {
                         ? 'bg-green-100 text-green-700'
                         : 'bg-neutral-100 text-neutral-700'
                     }`}>
-                      ₹{item.actual - item.estimated}
+                      Rs. {item.actual - item.estimated}
                     </div>
                   </div>
                 </div>

@@ -499,7 +499,7 @@ export class PackagesAPI {
   static async getAll(businessId?: number): Promise<ApiPackage[]> {
     const qs = businessId ? `?businessId=${businessId}` : "";
     const res = await axiosInstance.get(`/api/v1/packages${qs}`);
-    return res.data?.data ?? [];
+    return res.data?.data?.results ?? [];
   }
 
   static async create(data: {

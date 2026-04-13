@@ -362,8 +362,8 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                           className="w-full"
                         />
                         <div className="flex justify-between text-xs text-neutral-500 mt-3">
-                          <span className="font-medium">₹{filters.priceRange[0].toLocaleString()}</span>
-                          <span className="font-medium">₹{filters.priceRange[1].toLocaleString()}</span>
+                          <span className="font-medium">Rs. {filters.priceRange[0].toLocaleString()}</span>
+                          <span className="font-medium">Rs. {filters.priceRange[1].toLocaleString()}</span>
                         </div>
                       </div>
                     </div>

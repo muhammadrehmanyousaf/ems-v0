@@ -152,9 +152,9 @@ export default function VendorCard({
 
   const formatPrice = (price: number | string) => {
     if (typeof price === 'number') {
-      return `₹${price.toLocaleString()}`
+      return `Rs. ${price.toLocaleString()}`
     }
-    return `₹${price}`
+    return `Rs. ${price}`
   }
 
   const getRatingColor = (rating: number) => {
