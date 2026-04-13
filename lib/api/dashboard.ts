@@ -550,7 +550,9 @@ export class MenusAPI {
   static async getAll(businessId?: number): Promise<ApiMenu[]> {
     const qs = businessId ? `?businessId=${businessId}` : "";
     const res = await axiosInstance.get(`/api/v1/menus${qs}`);
-    return res.data?.data ?? [];
+    const payload = res.data?.data;
+    // Backend wraps paginated results as { data: rows[], meta: {...} }
+    return Array.isArray(payload) ? payload : (payload?.data ?? []);
   }
 
   static async create(data: {
