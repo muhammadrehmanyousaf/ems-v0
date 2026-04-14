@@ -71,7 +71,7 @@ export const vanueValidations = ({currentStep, formData, currentErrors }: Valida
         }
       }
       else if (currentStep == 3) {
-        if (!Array.isArray(formData.subBusinessType) || formData.subBusinessType.length === 0) currentErrors.subBusinessType = "Venue Type is required";
+        if (!formData.subBusinessType || (Array.isArray(formData.subBusinessType) ? formData.subBusinessType.length === 0 : formData.subBusinessType.trim() === '')) currentErrors.subBusinessType = "Venue Type is required";
         if (!Array.isArray(formData.expertise) || formData.expertise.length === 0) currentErrors.expertise = "Expertise is required";
         if (!Array.isArray(formData.amenities) || formData.amenities.length === 0) currentErrors.amenities = "Amenities is required";
         if (!Array.isArray(formData.staff) || formData.staff.length === 0) currentErrors.staff = "Staff is required";
