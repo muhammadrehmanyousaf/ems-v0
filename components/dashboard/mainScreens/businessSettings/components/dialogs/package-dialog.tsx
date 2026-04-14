@@ -16,6 +16,28 @@ import { PackagesAPI, type ApiPackage } from '@/lib/api/dashboard';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
+/** Normalize features to a newline-separated string regardless of shape:
+ *  - flat array:  ["HD Photography", "Video Coverage"]
+ *  - object:      { Starter: ["Starter 1"], "Main Course": ["Main Course 1"] }
+ *  - string:      already a single feature
+ */
+function flattenFeatures(features: unknown): string {
+    if (!features) return '';
+    if (Array.isArray(features)) {
+        return (features as unknown[])
+            .flatMap((item) =>
+                typeof item === 'string' ? [item] : Array.isArray(item) ? item : []
+            )
+            .join('\n');
+    }
+    if (typeof features === 'object') {
+        return Object.values(features as Record<string, unknown>)
+            .flatMap((val) => (Array.isArray(val) ? val : [String(val)]))
+            .join('\n');
+    }
+    return String(features);
+}
+
 interface PackageDialogProps {
     open: boolean;
     onOpenChange: (v: boolean) => void;
@@ -42,11 +64,7 @@ export function PackageDialog({
         if (editingPackage) {
             setName(editingPackage.name || '');
             setPrice(editingPackage.price?.toString() || '');
-            setFeatures(
-                Array.isArray(editingPackage.features)
-                    ? editingPackage.features.join('\n')
-                    : ''
-            );
+            setFeatures(flattenFeatures(editingPackage.features));
         } else {
             setName('');
             setPrice('');
