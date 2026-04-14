@@ -125,7 +125,9 @@ const TypeSpecificTab = ({ business, config, onSuccess }: TypeSpecificTabProps) 
                     </div>
                 );
 
-            case 'select':
+            case 'select': {
+                // subBusinessType may be stored as a single-item array from registration form
+                const selectVal = Array.isArray(val) ? ((val as string[])[0] ?? '') : ((val as string) || '');
                 return (
                     <div key={field.key} className="space-y-1.5">
                         <Label className="text-sm font-medium">{field.label}</Label>
@@ -133,7 +135,7 @@ const TypeSpecificTab = ({ business, config, onSuccess }: TypeSpecificTabProps) 
                             <p className="text-xs text-muted-foreground">{field.description}</p>
                         )}
                         <Select
-                            value={(val as string) || ''}
+                            value={selectVal}
                             onValueChange={(v) => setValue(field.key, v)}
                         >
                             <SelectTrigger>
@@ -149,6 +151,7 @@ const TypeSpecificTab = ({ business, config, onSuccess }: TypeSpecificTabProps) 
                         </Select>
                     </div>
                 );
+            }
 
             case 'multi-select': {
                 const selected = Array.isArray(val) ? (val as string[]) : [];

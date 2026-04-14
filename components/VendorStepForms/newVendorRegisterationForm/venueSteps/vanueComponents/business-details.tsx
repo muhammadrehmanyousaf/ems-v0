@@ -40,7 +40,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
             ...prevData,
             staff: selectedstaff,
             expertise: selectedExpertise,
-            subBusinessType: selectedTypes ? [selectedTypes] : [],
+            subBusinessType: selectedTypes || '',
             cancelationPolicy: cancellation,
             covidComplaint: covid === 'yes',
             parking: parking === 'yes',
@@ -88,7 +88,13 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
     ];
 
     const amenitiesData = [
-        { value: "Air Condition", label: "Air Condition" },
+        { value: "AC", label: "AC" },
+        { value: "Stage", label: "Stage" },
+        { value: "Sound System", label: "Sound System" },
+        { value: "LED Wall", label: "LED Wall" },
+        { value: "Bridal Room", label: "Bridal Room" },
+        { value: "Generator", label: "Generator" },
+        { value: "Valet Parking", label: "Valet Parking" },
         { value: "Wheelchair", label: "Wheelchair" },
         { value: "Wifi", label: "Wifi" },
     ];
@@ -231,10 +237,28 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                                 ...prevErrors,
                                 maxCapacity: "",
                             }));
-                        }
-                        }
+                        }}
                     />
                     {errors.maxCapacity && <p className="text-xs text-red-500">{errors.maxCapacity}</p>}
+                </section>
+                <section className="space-y-3">
+                    <Label>Minimum People Capacity</Label>
+                    <Input
+                        type="number"
+                        placeholder="Enter minimum people capacity"
+                        value={formData.minCapacity || ""}
+                        onChange={(e) => {
+                            setFormData((prevData) => ({
+                                ...prevData,
+                                minCapacity: String(e.target.value),
+                            }));
+                            setErrors((prevErrors) => ({
+                                ...prevErrors,
+                                minCapacity: "",
+                            }));
+                        }}
+                    />
+                    {errors.minCapacity && <p className="text-xs text-red-500">{errors.minCapacity}</p>}
                 </section>
                 <section>
                     <Label>Catering</Label>
@@ -266,6 +290,27 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                     />
                     {errors.parking && <p className="text-xs text-red-500">{errors.parking}</p>}
                 </section>
+                {parking === 'yes' && (
+                    <section className="space-y-3">
+                        <Label>Car Parking Capacity</Label>
+                        <Input
+                            type="number"
+                            placeholder="Enter car parking capacity"
+                            value={formData.carParkingCapacity || ""}
+                            onChange={(e) => {
+                                setFormData((prevData) => ({
+                                    ...prevData,
+                                    carParkingCapacity: String(e.target.value),
+                                }));
+                                setErrors((prevErrors) => ({
+                                    ...prevErrors,
+                                    carParkingCapacity: "",
+                                }));
+                            }}
+                        />
+                        {errors.carParkingCapacity && <p className="text-xs text-red-500">{errors.carParkingCapacity}</p>}
+                    </section>
+                )}
             </div>
             <section>
                 <MultipleRadio

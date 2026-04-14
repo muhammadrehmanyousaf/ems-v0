@@ -89,12 +89,16 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     hasMenus: true,
     pricingLabel: "per event",
     typeSpecificFields: [
+      { key: "subBusinessType", label: "Venue Type", type: "select", options: ["Marquee", "Hall", "Outdoor", "Others"] },
+      { key: "expertise", label: "Expertise", type: "multi-select", options: ["Engagement", "Wedding", "Parties", "Fashion Show", "Dinner"] },
       { key: "maxCapacity", label: "Maximum Capacity", type: "number", placeholder: "500" },
       { key: "minCapacity", label: "Minimum Capacity", type: "number", placeholder: "50" },
       { key: "catering", label: "In-house Catering", type: "boolean", description: "Does the venue provide catering?" },
       { key: "parking", label: "Parking Available", type: "boolean" },
       { key: "carParkingCapacity", label: "Car Parking Capacity", type: "number", placeholder: "100" },
       { key: "amenities", label: "Amenities", type: "multi-select", options: ["AC", "Stage", "Sound System", "LED Wall", "Bridal Room", "Generator", "Valet Parking", "Wheelchair", "Wifi"] },
+      { key: "staff", label: "Staff", type: "multi-select", options: ["Male", "Female", "Transgender"] },
+      { key: "covidComplaint", label: "Covid Compliant", type: "boolean", description: "Is the venue Covid compliant?" },
     ],
   },
 
