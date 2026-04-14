@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BusinessesAPI, type ApiBusiness } from '@/lib/api/dashboard';
 import { type VendorTypeConfig, type TypeSpecificFieldDef } from '@/lib/vendor-type-config';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,16 @@ const TypeSpecificTab = ({ business, config, onSuccess }: TypeSpecificTabProps) 
         return initial;
     });
     const [saving, setSaving] = useState(false);
+
+    // Re-sync local state when business prop changes (e.g. after save + refetch)
+    useEffect(() => {
+        const synced: Record<string, unknown> = {};
+        for (const field of config.typeSpecificFields) {
+            synced[field.key] = getFieldValue(business, field.key) ?? (field.type === 'boolean' ? false : field.type === 'multi-select' ? [] : '');
+        }
+        setValues(synced);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [business]);
 
     const setValue = (key: string, val: unknown) => {
         setValues((prev) => ({ ...prev, [key]: val }));
