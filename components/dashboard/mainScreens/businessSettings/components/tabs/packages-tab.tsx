@@ -140,6 +140,7 @@ const PackagesTab = ({ business, onSuccess }: PackagesTabProps) => {
                 open={createOpen}
                 onOpenChange={setCreateOpen}
                 businessId={business.id}
+                vendorType={business.vendor?.vendorType}
                 onSuccess={handleSuccess}
             />
 
@@ -147,6 +148,7 @@ const PackagesTab = ({ business, onSuccess }: PackagesTabProps) => {
                 open={!!editingPackage}
                 onOpenChange={(v) => { if (!v) setEditingPackage(null); }}
                 businessId={business.id}
+                vendorType={business.vendor?.vendorType}
                 editingPackage={editingPackage}
                 onSuccess={handleSuccess}
             />
