@@ -84,9 +84,9 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     displayName: "Wedding Venue",
     mainNavItems: COMMON_MAIN_NAV,
     controlNavItems: VENDOR_CONTROLS,
-    settingsTabs: ["overview", "basic", "images", "packages", "menus", "type-specific"],
+    settingsTabs: ["overview", "basic", "images", "packages", "type-specific"],
     hasPackages: true,
-    hasMenus: true,
+    hasMenus: false,
     pricingLabel: "per event",
     typeSpecificFields: [
       { key: "subBusinessType", label: "Venue Type", type: "select", options: ["Marquee", "Hall", "Outdoor", "Others"] },
