@@ -168,10 +168,13 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     hasMenus: false,
     pricingLabel: "per session",
     typeSpecificFields: [
+      { key: "subBusinessType", label: "Henna Style", type: "multi-select", options: ["Traditional", "Modern", "Arabic", "Indo-Arabic", "Fusion"] },
+      { key: "expertise", label: "Expertise", type: "multi-select", options: ["Bridal Henna", "Party Henna", "Engagement Henna", "Traditional Designs", "Modern Designs", "Arabic Designs", "Indo-Arabic Designs"] },
+      { key: "amenities", label: "Services & Amenities", type: "multi-select", options: ["Natural Henna", "Design Consultation", "Travel Service", "Henna Cones", "Aftercare Kit", "Touch-ups", "Custom Designs"] },
+      { key: "staff", label: "Staff", type: "multi-select", options: ["Male", "Female", "Transgender"] },
+      { key: "travelToClientHome", label: "Travel to Client", type: "boolean" },
       { key: "sellMehndi", label: "Sell Mehndi Products", type: "boolean", description: "Do you sell mehndi/henna cones?" },
       { key: "hasTeam", label: "Has a Team", type: "boolean", description: "Do you have a team of artists?" },
-      { key: "travelToClientHome", label: "Travel to Client", type: "boolean" },
-      { key: "expertise", label: "Design Styles", type: "multi-select", options: ["Arabic", "Indian", "Pakistani", "Moroccan", "Indo-Arabic", "Bridal", "Party"] },
     ],
   },
 
