@@ -13,13 +13,21 @@ import { ConfirmDeleteDialog } from '@/components/dashboard/globalComponents/con
 
 // Category label lookup — mirrors registration form
 const CATEGORY_LABELS: Record<string, string> = {
-    deliverables: 'Deliverables', photography: 'Photography', team: 'Team',
-    videography: 'Videography', services: 'Services', makeupBy: 'Makeup By',
-    eyelashes: 'Eyelashes', hair: 'Hair', nails: 'Nails',
-    otherDetails: 'Other Details', stage: 'Stage', entrance: 'Entrance',
-    seating: 'Seating', aisle: 'Aisle / Walkway', hands: 'Hands', feet: 'Feet',
+    // Photographer
+    deliverables: 'Deliverables', photography: 'Photography', team: 'Team', videography: 'Videography',
+    // Makeup artist
+    services: 'Services', makeupBy: 'Makeup By', eyelashes: 'Eyelashes', hair: 'Hair', nails: 'Nails',
+    // Decorator
+    otherDetails: 'Other Details', stage: 'Stage', entrance: 'Entrance', seating: 'Seating', aisle: 'Aisle / Walkway',
+    // Henna artist
+    hands: 'Hands', feet: 'Feet',
+    // Car rental
     withDecoration: 'With Decoration', withoutDecoration: 'Without Decoration',
-    starter: 'Starter', mainCourse: 'Main Course', drinks: 'Drinks', desserts: 'Desserts',
+    // Wedding venue
+    hall: 'Hall / Venue', decoration: 'Decoration', seatingArrangement: 'Seating Arrangement',
+    soundLighting: 'Sound & Lighting', catering: 'Catering', additionalServices: 'Additional Services',
+    // Catering
+    starter: 'Starter', mainCourse: 'Main Course', desserts: 'Desserts', drinks: 'Drinks',
 };
 
 /** Render features for a package — handles both flat arrays and category objects */

@@ -37,10 +37,12 @@ const BUSINESS_CATEGORIES: Record<string, { id: string; label: string }[]> = {
     { id: "withoutDecoration", label: "Without Decoration" },
   ],
   "Wedding venue": [
-    { id: "starter", label: "Starter" },
-    { id: "mainCourse", label: "Main Course" },
-    { id: "drinks", label: "Drinks" },
-    { id: "desserts", label: "Desserts" },
+    { id: "hall", label: "Hall / Venue" },
+    { id: "decoration", label: "Decoration" },
+    { id: "seatingArrangement", label: "Seating Arrangement" },
+    { id: "soundLighting", label: "Sound & Lighting" },
+    { id: "catering", label: "Catering" },
+    { id: "additionalServices", label: "Additional Services" },
   ],
   "Catering": [
     { id: "starter", label: "Starter" },
@@ -52,7 +54,7 @@ const BUSINESS_CATEGORIES: Record<string, { id: string; label: string }[]> = {
   "Wedding Invitations and Stationery": [],
 };
 
-const MENU_TYPES = ["Wedding venue", "Catering"];
+const MENU_TYPES = ["Catering"];
 
 interface PackagesProps {
     setErrors: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>;
