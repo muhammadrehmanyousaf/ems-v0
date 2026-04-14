@@ -134,7 +134,10 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     hasMenus: false,
     pricingLabel: "per event",
     typeSpecificFields: [
-      { key: "expertise", label: "Expertise", type: "multi-select", options: ["Wedding", "Pre-wedding", "Engagement", "Nikah", "Mehndi", "Walima", "Drone", "Cinematic Video"] },
+      { key: "subBusinessType", label: "Photography Type", type: "multi-select", options: ["Portrait", "Event", "Wedding", "Commercial", "Fashion"] },
+      { key: "expertise", label: "Expertise", type: "multi-select", options: ["Engagement", "Wedding", "Parties", "Fashion Show", "Corporate Events", "Birthday", "Anniversary"] },
+      { key: "amenities", label: "Services", type: "multi-select", options: ["Drone Photography", "Video Recording", "Photo Editing", "Album Design", "Online Gallery", "Print Services"] },
+      { key: "staff", label: "Staff", type: "multi-select", options: ["Male", "Female", "Transgender"] },
       { key: "travelToClientHome", label: "Travel to Client", type: "boolean", description: "Willing to travel to client location?" },
       { key: "cityCovered", label: "Cities Covered", type: "multi-select", options: ["Lahore", "Karachi", "Islamabad", "Rawalpindi", "Faisalabad", "Multan"] },
     ],
@@ -151,8 +154,11 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     hasMenus: false,
     pricingLabel: "per event",
     typeSpecificFields: [
+      { key: "subBusinessType", label: "Decoration Type", type: "multi-select", options: ["Wedding", "Event", "Theme", "Outdoor", "Indoor"] },
+      { key: "expertise", label: "Expertise", type: "multi-select", options: ["Wedding Decoration", "Engagement Decoration", "Birthday Decoration", "Corporate Events", "Outdoor Events", "Indoor Events", "Theme Decoration"] },
+      { key: "amenities", label: "Services", type: "multi-select", options: ["Flower Decoration", "Lighting Setup", "Backdrop Design", "Table Decoration", "Stage Decoration", "Balloon Decoration", "Fabric Decoration", "Props & Accessories"] },
+      { key: "staff", label: "Staff", type: "multi-select", options: ["Male", "Female", "Transgender"] },
       { key: "provideDecorationItem", label: "Provide Decoration Items", type: "boolean", description: "Do you provide all decoration items?" },
-      { key: "expertise", label: "Decoration Styles", type: "multi-select", options: ["Traditional", "Modern", "Floral", "Themed", "Outdoor", "Indoor", "Minimal"] },
       { key: "travelToClientHome", label: "Travel to Venue", type: "boolean" },
     ],
   },
@@ -189,9 +195,11 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     hasMenus: false,
     pricingLabel: "per session",
     typeSpecificFields: [
-      { key: "subBusinessType", label: "Salon Type", type: "select", options: ["Home-based", "Salon", "Freelance"] },
+      { key: "subBusinessType", label: "Makeup Type", type: "multi-select", options: ["Bridal", "Party", "Fashion", "Commercial", "Hair"] },
+      { key: "expertise", label: "Expertise", type: "multi-select", options: ["Bridal Makeup", "Groom Makeup", "Party Makeup", "Engagement Makeup", "Fashion Show", "Photoshoot", "Hair Styling"] },
+      { key: "amenities", label: "Services", type: "multi-select", options: ["Hair Styling", "Nail Art", "Hair Extensions", "Makeup Trial", "Touch-ups", "Travel Service", "Premium Products"] },
+      { key: "staff", label: "Staff", type: "multi-select", options: ["Male", "Female", "Transgender"] },
       { key: "travelToClientHome", label: "Travel to Client", type: "boolean" },
-      { key: "expertise", label: "Specializations", type: "multi-select", options: ["Bridal", "Party", "Engagement", "Mehndi", "Walima", "Nikkah", "Editorial"] },
     ],
   },
 
