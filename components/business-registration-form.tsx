@@ -338,17 +338,26 @@ export function BusinessRegistrationForm() {
         }
       }
 
+      const socialLinks = (formData.instagram || formData.facebook)
+        ? {
+            ...(formData.instagram ? { instagram: formData.instagram } : {}),
+            ...(formData.facebook ? { facebook: formData.facebook } : {}),
+          }
+        : undefined;
+
       const formatedData = {
         fullName: formData.fullName,
         email: formData.email,
         phoneNumber: formData.phoneNumber,
         password: formData.password,
-        bookingEmail: formData.bookingEmail,
+        bookingEmail: formData.bookingEmail || undefined,
+        website: formData.website || undefined,
+        socialLinks,
         officeAddress: formData.officeAddress,
         officeGoogleLink: formData.officeGoogleLink,
         city: formData.city,
         subArea: formData.subArea,
-        secondaryContactNumber: formData.secondaryContactNumber,
+        secondaryContactNumber: formData.secondaryContactNumber || undefined,
         vendorType: formData.businessType,
         name: formData.name,
         brandLogo: formData.profilePicture,
@@ -378,14 +387,15 @@ export function BusinessRegistrationForm() {
         email: formData.email,
         phoneNumber: formData.phoneNumber,
         password: formData.password,
-        bookingEmail: formData.bookingEmail,
+        bookingEmail: formData.bookingEmail || undefined,
+        website: formData.website || undefined,
+        socialLinks,
         officeAddress: formData.officeAddress,
         officeGoogleLink: formData.officeGoogleLink,
         city: formData.city,
         subArea: formData.subArea,
-        secondaryContactNumber: formData.secondaryContactNumber,
+        secondaryContactNumber: formData.secondaryContactNumber || undefined,
         vendorType: formData.businessType,
-        // "isVendor": true,
         name: formData.name,
         brandLogo: formData.profilePicture,
         roleIds: [2],

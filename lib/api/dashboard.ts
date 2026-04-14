@@ -81,6 +81,7 @@ export interface ApiBusiness {
   id: number;
   userId: number;
   name: string;
+  brandLogo: string | null;
   city: string | null;
   subArea: string | null;
   description: string | null;

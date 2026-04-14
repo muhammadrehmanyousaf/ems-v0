@@ -79,9 +79,9 @@ const BasicDetailsCard = ({ business }: BasicDetailsCardProps) => {
                                 decoding="async"
                                 className="h-full w-full object-cover transition-transform duration-300 hover:scale-[1.02]"
                             />
-                        ) : business.vendor?.brandLogo ? (
+                        ) : business.brandLogo ? (
                             <img
-                                src={business.vendor.brandLogo}
+                                src={business.brandLogo}
                                 alt={business.name}
                                 loading="lazy"
                                 decoding="async"
