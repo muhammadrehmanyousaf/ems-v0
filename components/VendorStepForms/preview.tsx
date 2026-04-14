@@ -169,7 +169,7 @@ const Preview = () => {
                             <Field label="Description" value={formData.description} />
                         </div>
                     )}
-                    <Tags label={businessTypeLabel} items={formData.subBusinessType} color="purple" />
+                    <Tags label={businessTypeLabel} items={Array.isArray(formData.subBusinessType) ? formData.subBusinessType : formData.subBusinessType ? [formData.subBusinessType] : []} color="purple" />
                     <Tags label="Staff" items={formData.staff} color="blue" />
                     <Tags label="Expertise" items={formData.expertise} color="gray" />
                     <Tags label="Amenities" items={formData.amenities} color="green" />
