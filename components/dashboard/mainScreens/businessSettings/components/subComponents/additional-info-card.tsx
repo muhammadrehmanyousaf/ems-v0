@@ -45,7 +45,7 @@ function BadgesField({ label, values }: { label: string; values: string[] }) {
             <Label className='text-primary text-xs font-medium'>{label}</Label>
             <div className="flex flex-wrap gap-1">
                 {values.map((v, i) => (
-                    <Badge key={i} variant="outline" className="text-xs">{v}</Badge>
+                    <Badge key={i} className="text-xs bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20">{v}</Badge>
                 ))}
             </div>
         </div>
