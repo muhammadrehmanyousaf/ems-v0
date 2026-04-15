@@ -65,8 +65,11 @@ const MainView = () => {
                 {active === 'overview' && <OverviewTab business={business} />}
                 {active === 'basic' && <BasicInfoTab business={business} onSuccess={fetchBusiness} />}
                 {active === 'images' && <ImagesTab business={business} onSuccess={fetchBusiness} />}
+                {active === 'fleet' && (
+                    <PackagesTab business={business} onSuccess={fetchBusiness} mode="fleet" />
+                )}
                 {active === 'packages' && hasPackages && (
-                    <PackagesTab business={business} onSuccess={fetchBusiness} />
+                    <PackagesTab business={business} onSuccess={fetchBusiness} mode="packages" />
                 )}
                 {active === 'menus' && hasMenus && (
                     <MenusTab business={business} onSuccess={fetchBusiness} />

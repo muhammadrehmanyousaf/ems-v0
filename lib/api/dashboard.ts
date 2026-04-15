@@ -484,12 +484,15 @@ export class BookingsAPI {
 }
 
 // ─── Packages ─────────────────────────────────────────────────
+export type PackageFeatures = string[] | Record<string, unknown> | null;
+
 export interface ApiPackage {
   id: number;
   name: string;
   description: string | null;
   price: number;
-  features: string[] | null;
+  features: PackageFeatures;
+  images: string[] | null;
   businessId: number;
   createdAt: string;
   updatedAt: string;
@@ -507,7 +510,8 @@ export class PackagesAPI {
     name: string;
     description?: string;
     price: number;
-    features?: string[];
+    features?: PackageFeatures;
+    images?: string[];
     businessId: number;
   }): Promise<ApiPackage> {
     const res = await axiosInstance.post(
@@ -521,13 +525,26 @@ export class PackagesAPI {
     id: number,
     data: {
       name?: string;
+      description?: string;
       price?: number;
-      features?: string[];
+      features?: PackageFeatures;
+      images?: string[];
       businessId: number;
     },
   ): Promise<ApiPackage> {
     const res = await axiosInstance.patch(`/api/v1/packages/${id}`, data);
     return res.data?.data;
+  }
+
+  static async uploadImages(files: File[], businessId: number): Promise<string[]> {
+    const formData = new FormData();
+    files.forEach((file) => formData.append("images", file));
+    const res = await axiosInstance.post(
+      `/api/v1/businesses/upload-images?businessId=${businessId}`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return res.data?.data ?? [];
   }
 
   static async delete(id: number): Promise<void> {

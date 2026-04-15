@@ -26,6 +26,7 @@ const TAB_LABELS: Record<SettingsTabKey, string> = {
   overview: "Overview",
   basic: "Basic Information",
   images: "Images",
+  fleet: "Fleet / Cars",
   packages: "Packages",
   menus: "Menus",
   "type-specific": "Details",

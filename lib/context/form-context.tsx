@@ -26,6 +26,19 @@ interface Package {
   features: Record<string, string[]>;
 }
 
+export interface CarRentalPackageCar {
+  carIndex: number;   // index into formData.packages (fleet)
+  quantity: number;
+}
+
+export interface CarRentalPackage {
+  name: string;
+  description: string;
+  totalPrice: number;
+  cars: CarRentalPackageCar[];
+  citiesCovered: string[];
+}
+
 export type FormType = {
   fullName: string;
   email: string;
@@ -57,29 +70,33 @@ export type FormType = {
   // services: string;
   images: string[];
   imageFiles: File[];
+  packageImageFiles: File[][];
   profileImageFile?: File | null;
   subBusinessType: string[];
-  // cityCovered: string[];
+  cityCovered: string[];
   // travelToClientHome: string;
   // serviceProvided: string[];
   expertise: string[];
   packages: Package[];
+  carRentalPackages: CarRentalPackage[];
   amenities: string[];
   maxCapacity: string;
   // minCapacity: string;
   catering: string;
   parking: boolean;
-  // carParkingCapacity: string;
-  // sellMehndi: boolean;
-  // hasTeam: boolean;
-  // instruction: string;
-  // provideDecorationItem: boolean;
-  // provideFoodTesting: boolean;
-  // provideSounSystem: boolean;
-  // provideSeatingArrangement: boolean;
-  // provideWaiter: boolean;
-  // providePlate: boolean;
-  // active: boolean;
+  // Bridal Wear specific service fields (reuse existing DB boolean columns)
+  travelToClientHome: boolean;
+  sellMehndi: boolean;
+  hasTeam: boolean;
+  provideDecorationItem: boolean;
+  provideFoodTesting: boolean;
+  provideWaiter: boolean;
+  provideSoundSystem: boolean;
+  provideSeatingArrangement: boolean;
+  providePlate: boolean;
+  instruction: string;
+  serviceProvided: string[];
+  minimumPrice: number;
 };
 type FormContextType = {
   businessType: BusinessType | string;
@@ -133,9 +150,10 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     // services: "",
     images: [],
     imageFiles: [],
+    packageImageFiles: [],
     profileImageFile: null,
     subBusinessType: [],
-    // cityCovered: [],
+    cityCovered: [],
     // travelToClientHome: "",
     // serviceProvided: [],
     expertise: [],
@@ -154,22 +172,23 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         features: {},
       },
     ],
+    carRentalPackages: [],
     amenities: [],
     maxCapacity: "",
-    // minCapacity: "",
     catering: "",
     parking: false,
-    // carParkingCapacity: "",
-    // sellMehndi: false,
-    // hasTeam: false,
-    // instruction: "",
-    // provideDecorationItem: false,
-    // provideFoodTesting: false,
-    // provideSounSystem: false,
-    // provideSeatingArrangement: false,
-    // provideWaiter: false,
-    // providePlate: false,
-    // active: true,
+    travelToClientHome: false,
+    sellMehndi: false,
+    hasTeam: false,
+    provideDecorationItem: false,
+    provideFoodTesting: false,
+    provideWaiter: false,
+    provideSoundSystem: false,
+    provideSeatingArrangement: false,
+    providePlate: false,
+    instruction: "",
+    serviceProvided: [],
+    minimumPrice: 0,
   });
 
   let currentErrors: { [key: string]: string } = {};

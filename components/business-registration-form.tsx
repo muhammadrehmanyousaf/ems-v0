@@ -39,8 +39,10 @@ import axios from "axios";
 import { BACKEND_URL } from "@/lib/backend-url";
 import { vanueValidations } from "./VendorStepForms/newVendorRegisterationForm/venueSteps/vanueComponents/vanueValidations";
 import SuccessModal from "./VendorStepForms/components/SuccessModal";
-import FormSteps from "./VendorStepForms/newVendorRegisterationForm/CarRentalAndBridleWear/form-steps";
-import { CarRentalOrBridleWearValidations } from "./VendorStepForms/newVendorRegisterationForm/CarRentalAndBridleWear/components/validations";
+import CarRentalSteps from "./VendorStepForms/newVendorRegisterationForm/CarRental/car-rental-steps";
+import { CarRentalValidations } from "./VendorStepForms/newVendorRegisterationForm/CarRental/components/validations";
+import BridalWearSteps from "./VendorStepForms/newVendorRegisterationForm/BridalWear/bridal-wear-steps";
+import { BridalWearValidations } from "./VendorStepForms/newVendorRegisterationForm/BridalWear/components/validations";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useFetchData } from "@/hooks/use-fetch-data";
@@ -70,8 +72,8 @@ export function BusinessRegistrationForm() {
   const [successMessage, setSuccessMessage] = useState("");
   const { data: stats, isLoading: isLoadingStats } = usePlatformStats();
 
-  const carRentalOrBridleWear =
-    businessType === "Car rental" || businessType === "Bridal wearing";
+  const carRental = businessType === "Car rental";
+  const bridalWear = businessType === "Bridal wearing";
   const photographer = businessType === "Photographer";
   const makeupArtist = businessType === "Makeup artist";
   const hennaArtist = businessType === "Henna artist";
@@ -81,7 +83,8 @@ export function BusinessRegistrationForm() {
   // Calculate progress percentage
   const getProgressPercentage = () => {
     if (currentStep === 0) return 0;
-    if (carRentalOrBridleWear && currentStep === 2) return 100;
+    if (bridalWear && currentStep === 8) return 100;
+    if (carRental && currentStep === 7) return 100;
     if (
       (photographer || makeupArtist || hennaArtist || decorator || catering) &&
       currentStep === 6
@@ -89,7 +92,7 @@ export function BusinessRegistrationForm() {
       return 100;
     if (currentStep === 6) return 100;
 
-    const maxSteps = carRentalOrBridleWear ? 2 : 6;
+    const maxSteps = bridalWear ? 8 : carRental ? 7 : 6;
     return Math.round((currentStep / maxSteps) * 100);
   };
 
@@ -116,12 +119,13 @@ export function BusinessRegistrationForm() {
       setErrors(currentErrors);
       return currentErrors;
     }
-    if (carRentalOrBridleWear) {
-      CarRentalOrBridleWearValidations({
-        currentStep,
-        formData,
-        currentErrors,
-      });
+    if (carRental) {
+      CarRentalValidations({ currentStep, formData, currentErrors });
+      setErrors(currentErrors);
+      return currentErrors;
+    }
+    if (bridalWear) {
+      BridalWearValidations({ currentStep, formData, currentErrors });
       setErrors(currentErrors);
       return currentErrors;
     }
@@ -338,6 +342,37 @@ export function BusinessRegistrationForm() {
         }
       }
 
+      // Upload per-package images (Car Rental fleet / Bridal Wear outfits)
+      // Keep original-index mapping so filtered packages use the right image array.
+      const allRawPackages: any[] = formData.packages || [];
+      const rawPkgImageFiles: File[][] = formData.packageImageFiles || [];
+      const validPkgsWithIdx = allRawPackages
+        .map((p: any, originalIdx: number) => ({ p, originalIdx }))
+        .filter(({ p }) => p.name && p.price);
+
+      let packagesWithImages: any[] = validPkgsWithIdx.map(({ p }) => ({ ...p }));
+
+      if (rawPkgImageFiles.some((files) => files?.length > 0)) {
+        packagesWithImages = await Promise.all(
+          validPkgsWithIdx.map(async ({ p, originalIdx }) => {
+            const files: File[] = rawPkgImageFiles[originalIdx] ?? [];
+            if (!files.length) return p;
+            const fd = new FormData();
+            files.slice(0, 10).forEach((f) => fd.append("images", f));
+            try {
+              const res = await axios.post(
+                `${BACKEND_URL}api/v1/businesses/upload-images?tempId=${uploadTempId}`,
+                fd,
+                { headers: { "Content-Type": "multipart/form-data" } },
+              );
+              return { ...p, images: res.data?.data ?? [] };
+            } catch {
+              return p;
+            }
+          })
+        );
+      }
+
       const socialLinks = (formData.instagram || formData.facebook)
         ? {
             ...(formData.instagram ? { instagram: formData.instagram } : {}),
@@ -363,6 +398,7 @@ export function BusinessRegistrationForm() {
         brandLogo: formData.profilePicture,
         roleIds: [2],
         subBusinessType: formData.subBusinessType,
+        cityCovered: formData.cityCovered,
         expertise: formData.expertise,
         amenities: formData.amenities,
         staff: formData.staff,
@@ -375,33 +411,41 @@ export function BusinessRegistrationForm() {
         covidComplaint: formData.covidComplaint,
         parking: formData.parking,
         catering: formData.catering === "internal",
+        // Bridal wear specific fields
+        travelToClientHome: formData.travelToClientHome,
+        sellMehndi: formData.sellMehndi,
+        hasTeam: formData.hasTeam,
+        provideDecorationItem: formData.provideDecorationItem,
+        provideFoodTesting: formData.provideFoodTesting,
+        provideWaiter: formData.provideWaiter,
+        provideSoundSystem: formData.provideSoundSystem,
+        provideSeatingArrangement: formData.provideSeatingArrangement,
+        providePlate: formData.providePlate,
+        instruction: formData.instruction || undefined,
+        serviceProvided: formData.serviceProvided,
+        minimumPrice: formData.minimumPrice || undefined,
         images:
           uploadedImageUrls.length > 0 ? uploadedImageUrls : formData.images,
-        packages:
-          formData.packages?.filter((p: any) => p.name && p.price) || [],
+        packages: packagesWithImages,
+        carRentalPackages: (formData.carRentalPackages ?? [])
+          .filter((pkg) => pkg.name?.trim() && pkg.totalPrice > 0)
+          .map((pkg) => ({
+            name: pkg.name,
+            description: pkg.description || undefined,
+            totalPrice: pkg.totalPrice,
+            citiesCovered: pkg.citiesCovered,
+            cars: pkg.cars
+              .filter((c) => c.carIndex >= 0)
+              .map((c) => ({
+                carName: formData.packages[c.carIndex]?.name ?? '',
+                quantity: c.quantity,
+              })),
+          })),
         ...(uploadTempId ? { tempId: uploadTempId } : {}),
       };
 
-      const rentalData = {
-        fullName: formData.fullName,
-        email: formData.email,
-        phoneNumber: formData.phoneNumber,
-        password: formData.password,
-        bookingEmail: formData.bookingEmail || undefined,
-        website: formData.website || undefined,
-        socialLinks,
-        officeAddress: formData.officeAddress,
-        officeGoogleLink: formData.officeGoogleLink,
-        city: formData.city,
-        subArea: formData.subArea,
-        secondaryContactNumber: formData.secondaryContactNumber || undefined,
-        vendorType: formData.businessType,
-        name: formData.name,
-        brandLogo: formData.profilePicture,
-        roleIds: [2],
-      };
       // Build the payload — use FormData so vendor profile image can be included
-      const submitPayload = carRentalOrBridleWear ? rentalData : formatedData;
+      const submitPayload = formatedData;
       let requestBody: FormData | object = submitPayload;
       let requestHeaders: Record<string, string> = {};
 
@@ -428,69 +472,12 @@ export function BusinessRegistrationForm() {
         requestHeaders["Content-Type"] ? { headers: requestHeaders } : undefined,
       );
 
-      if (carRentalOrBridleWear) {
-        setFormData({
-          fullName: "",
-          email: "",
-          phoneNumber: "",
-          password: "",
-          re_enterPassword: "",
-          businessType: "",
-          name: "",
-          profilePicture: "",
-          city: "",
-          subArea: "",
-          roleIds: [2],
-          secondaryContactNumber: "",
-          instagram: "",
-          facebook: "",
-          bookingEmail: "",
-          website: "",
-          officeAddress: "",
-          officeGoogleLink: "",
-          staff: [],
-          description: "",
-          additionalInfo: "",
-          downPaymentType: "",
-          downPayment: 0,
-          covidComplaint: false,
-          cancelationPolicy: "",
-          images: [],
-          imageFiles: [],
-          profileImageFile: null,
-          subBusinessType: [],
-          expertise: [],
-          packages: [
-            {
-              id: undefined,
-              name: "",
-              price: 0,
-              features: {
-                deliverables: [],
-                photography: [],
-                team: [],
-                videography: [],
-              },
-            },
-          ],
-          amenities: [],
-          maxCapacity: "",
-          catering: "",
-          parking: false,
-        });
-        loadingToastId.dismiss();
-        setSuccessMessage(response.data?.message || "");
-        setOpenModal(true);
-        setCurrentStep(0);
-        return;
-      }
       const responseData = response.data;
       const vendorData = responseData.data;
 
       if (
         response.status === 201 &&
-        vendorData.business &&
-        !carRentalOrBridleWear
+        vendorData.business
       ) {
         // Packages are now included in the business creation payload above,
         // so no separate auth-required API call is needed.
@@ -532,26 +519,29 @@ export function BusinessRegistrationForm() {
           cancelationPolicy: "",
           images: [],
           imageFiles: [],
+          packageImageFiles: [],
           profileImageFile: null,
           subBusinessType: [],
+          cityCovered: [],
           expertise: [],
-          packages: [
-            {
-              id: undefined,
-              name: "",
-              price: 0,
-              features: {
-                deliverables: [],
-                photography: [],
-                team: [],
-                videography: [],
-              },
-            },
-          ],
+          packages: [{ id: undefined, name: "", price: 0, features: {} }],
+          carRentalPackages: [],
           amenities: [],
           maxCapacity: "",
           catering: "",
           parking: false,
+          travelToClientHome: false,
+          sellMehndi: false,
+          hasTeam: false,
+          provideDecorationItem: false,
+          provideFoodTesting: false,
+          provideWaiter: false,
+          provideSoundSystem: false,
+          provideSeatingArrangement: false,
+          providePlate: false,
+          instruction: "",
+          serviceProvided: [],
+          minimumPrice: 0,
         });
         loadingToastId.dismiss();
         setSuccessMessage(response.data?.message || "");
@@ -634,7 +624,7 @@ export function BusinessRegistrationForm() {
                       <CheckCircle className="w-4 h-4 text-green-500" />
                       <span>
                         Step {currentStep + 1} of{" "}
-                        {carRentalOrBridleWear ? 3 : 7}
+                        {bridalWear ? 9 : carRental ? 8 : 7}
                       </span>
                     </div>
                   </div>
@@ -782,8 +772,16 @@ export function BusinessRegistrationForm() {
                           setErrors={setErrors}
                           currentStep={currentStep}
                         />
-                      ) : carRentalOrBridleWear ? (
-                        <FormSteps
+                      ) : carRental ? (
+                        <CarRentalSteps
+                          setFile={setFile}
+                          file={file}
+                          error={errors}
+                          setErrors={setErrors}
+                          currentStep={currentStep}
+                        />
+                      ) : bridalWear ? (
+                        <BridalWearSteps
                           setFile={setFile}
                           file={file}
                           error={errors}
@@ -852,29 +850,19 @@ export function BusinessRegistrationForm() {
                   <Button
                     type="button"
                     onClick={
-                      (carRentalOrBridleWear && currentStep === 2) ||
-                      (photographer && currentStep === 6) ||
-                      (makeupArtist && currentStep === 6) ||
-                      (hennaArtist && currentStep === 6) ||
-                      (decorator && currentStep === 6) ||
-                      (catering && currentStep === 6)
+                      (bridalWear && currentStep === 8) ||
+                      (carRental && currentStep === 7) ||
+                      (!bridalWear && !carRental && currentStep === 6)
                         ? handleSubmit
-                        : currentStep === 6
-                          ? handleSubmit
-                          : handleNext
+                        : handleNext
                     }
                     className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 px-6 sm:px-8 py-3 sm:py-2 font-semibold"
                   >
-                    {(carRentalOrBridleWear && currentStep === 2) ||
-                    (photographer && currentStep === 6) ||
-                    (makeupArtist && currentStep === 6) ||
-                    (hennaArtist && currentStep === 6) ||
-                    (decorator && currentStep === 6) ||
-                    (catering && currentStep === 6)
+                    {(bridalWear && currentStep === 8) ||
+                    (carRental && currentStep === 7) ||
+                    (!bridalWear && !carRental && currentStep === 6)
                       ? "Submit Registration"
-                      : currentStep === 6
-                        ? "Submit Registration"
-                        : "Continue"}
+                      : "Continue"}
                   </Button>
                 </div>
               </CardContent>

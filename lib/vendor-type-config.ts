@@ -33,6 +33,7 @@ export type SettingsTabKey =
   | "overview"
   | "basic"
   | "images"
+  | "fleet"
   | "packages"
   | "menus"
   | "type-specific";
@@ -209,14 +210,11 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     displayName: "Car Rental",
     mainNavItems: COMMON_MAIN_NAV,
     controlNavItems: VENDOR_CONTROLS,
-    settingsTabs: ["overview", "basic", "images", "type-specific"],
-    hasPackages: false,
+    settingsTabs: ["overview", "basic", "images", "fleet", "packages"],
+    hasPackages: true,
     hasMenus: false,
-    pricingLabel: "per day",
-    typeSpecificFields: [
-      { key: "subBusinessType", label: "Vehicle Type", type: "select", options: ["Sedan", "SUV", "Luxury", "Classic", "Limousine", "Bus", "Van"] },
-      { key: "cityCovered", label: "Cities Covered", type: "multi-select", options: ["Lahore", "Karachi", "Islamabad", "Rawalpindi", "Faisalabad"] },
-    ],
+    pricingLabel: "per event",
+    typeSpecificFields: [],
   },
 
   [VENDOR_TYPES.BRIDAL_WEAR]: {
@@ -225,13 +223,27 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     displayName: "Bridal Wear",
     mainNavItems: COMMON_MAIN_NAV,
     controlNavItems: VENDOR_CONTROLS,
-    settingsTabs: ["overview", "basic", "images", "type-specific"],
-    hasPackages: false,
+    settingsTabs: ["overview", "basic", "images", "packages", "type-specific"],
+    hasPackages: true,
     hasMenus: false,
-    pricingLabel: "per item",
+    pricingLabel: "per outfit",
     typeSpecificFields: [
-      { key: "subBusinessType", label: "Store Type", type: "select", options: ["Boutique", "Designer", "Rental", "Multi-brand"] },
-      { key: "expertise", label: "Specializations", type: "multi-select", options: ["Bridal Lehenga", "Sharara", "Gharara", "Maxi", "Anarkali", "Western"] },
+      { key: "subBusinessType", label: "Store Type", type: "select", options: ["Boutique", "Designer Studio", "Rental Store", "Multi-brand Outlet", "Online Boutique"] },
+      { key: "expertise", label: "Occasions Catered", type: "multi-select", options: ["Bridal (Barat)", "Walima", "Engagement", "Mehndi / Mayun", "Nikah", "Post-wedding", "Bridesmaid"] },
+      { key: "amenities", label: "Outfit Categories", type: "multi-select", options: ["Bridal Lehenga", "Sharara", "Gharara", "Farshi Gharara", "Maxi", "Anarkali", "Saree", "Western Bridal", "Groom Sherwani", "Nikah Dress"] },
+      { key: "serviceProvided", label: "Fabrics Available", type: "multi-select", options: ["Silk", "Organza", "Net", "Velvet", "Chiffon", "Cotton", "Khaddar", "Banarsi", "Jamawar", "Tissue", "Karandi"] },
+      { key: "minimumPrice", label: "Starting Price (PKR)", type: "number", placeholder: "25000" },
+      { key: "instruction", label: "Order Lead Time", type: "select", options: ["1 Week", "2 Weeks", "1 Month", "2 Months", "3 Months", "4+ Months"] },
+      { key: "travelToClientHome", label: "Home Delivery", type: "boolean", description: "Deliver outfits to client's home?" },
+      { key: "sellMehndi", label: "Rental Available", type: "boolean", description: "Can customers rent outfits?" },
+      { key: "hasTeam", label: "Bridesmaid Outfits", type: "boolean", description: "Also cater bridesmaid / family dressing?" },
+      { key: "provideDecorationItem", label: "Design Consultation", type: "boolean", description: "Offer personalized design consultation?" },
+      { key: "provideFoodTesting", label: "Trial / Fitting Session", type: "boolean", description: "Allow trial before final order?" },
+      { key: "provideWaiter", label: "Alteration Service", type: "boolean", description: "Provide in-house alterations?" },
+      { key: "provideSoundSystem", label: "Accessory Matching", type: "boolean", description: "Help match jewellery and accessories?" },
+      { key: "provideSeatingArrangement", label: "Dupatta Styling", type: "boolean", description: "Offer dupatta draping service?" },
+      { key: "providePlate", label: "Groom Wear Available", type: "boolean", description: "Also carry groom outfits?" },
+      { key: "parking", label: "Rush Orders Accepted", type: "boolean", description: "Accept urgent last-minute orders?" },
     ],
   },
 

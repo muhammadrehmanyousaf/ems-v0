@@ -12,9 +12,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { PackagesAPI, type ApiPackage } from '@/lib/api/dashboard';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { PackagesAPI, type ApiPackage, type PackageFeatures } from '@/lib/api/dashboard';
 import { toast } from 'sonner';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { ImagePlus, Loader2, Plus, Trash2, X } from 'lucide-react';
+import Image from 'next/image';
+import { getImageUrl } from '@/lib/utils/image-utils';
 
 // ── Feature categories per vendor type (mirrors registration form) ────────────
 const BUSINESS_CATEGORIES: Record<string, { id: string; label: string }[]> = {
@@ -42,10 +45,8 @@ const BUSINESS_CATEGORIES: Record<string, { id: string; label: string }[]> = {
         { id: 'hands', label: 'Hands' },
         { id: 'feet', label: 'Feet' },
     ],
-    'Car rental': [
-        { id: 'withDecoration', label: 'With Decoration' },
-        { id: 'withoutDecoration', label: 'Without Decoration' },
-    ],
+    // Car rental uses a dedicated form — not the generic category UI
+    'Car rental': [],
     'Wedding venue': [
         { id: 'hall', label: 'Hall / Venue' },
         { id: 'decoration', label: 'Decoration' },
@@ -103,6 +104,69 @@ function toFlatText(features: unknown): string {
     return String(features);
 }
 
+// ── Car rental fleet car form state ──────────────────────────────────────────
+interface CarFleetFields {
+    make: string;
+    model: string;
+    year: string;
+    vehicleType: string;
+    color: string;
+    seatingCapacity: string;
+    unitsAvailable: string;
+    withDriver: boolean;
+    acAvailable: boolean;
+    decorationAvailable: boolean;
+}
+
+const DEFAULT_CAR_FIELDS: CarFleetFields = {
+    make: '', model: '', year: '', vehicleType: '', color: '',
+    seatingCapacity: '', unitsAvailable: '',
+    withDriver: false, acAvailable: true, decorationAvailable: false,
+};
+
+const VEHICLE_TYPES = ['Sedan', 'SUV', 'Luxury', 'Classic', 'Limousine', 'Bus', 'Van'];
+const COLORS = ['White', 'Black', 'Silver', 'Grey', 'Red', 'Blue', 'Gold', 'Beige', 'Other'];
+
+/** Match a stored value to a list option case-insensitively; returns the canonical option or the original value */
+function matchOption(value: string, options: string[]): string {
+    if (!value) return '';
+    const lower = value.toLowerCase();
+    return options.find((o) => o.toLowerCase() === lower) ?? value;
+}
+
+function carFieldsFromFeatures(features: unknown): CarFleetFields {
+    if (!features || typeof features !== 'object' || Array.isArray(features)) return DEFAULT_CAR_FIELDS;
+    const f = features as Record<string, string[]>;
+    const first = (key: string) => f[key]?.[0] ?? '';
+    return {
+        make: first('make'),
+        model: first('model'),
+        year: first('year'),
+        vehicleType: matchOption(first('vehicleType'), VEHICLE_TYPES),
+        color: matchOption(first('color'), COLORS),
+        seatingCapacity: first('seatingCapacity').replace(' Seats', ''),
+        unitsAvailable: first('unitsAvailable').replace(' Units', ''),
+        withDriver: first('driver') === 'Yes',
+        acAvailable: first('ac') !== 'No',
+        decorationAvailable: first('decoration') === 'Available',
+    };
+}
+
+function carFieldsToFeatures(f: CarFleetFields): Record<string, string[]> {
+    return {
+        make: [f.make],
+        model: [f.model],
+        year: [f.year],
+        vehicleType: [f.vehicleType],
+        color: [f.color],
+        seatingCapacity: [f.seatingCapacity ? `${f.seatingCapacity} Seats` : ''],
+        unitsAvailable: [f.unitsAvailable ? `${f.unitsAvailable} Units` : ''],
+        driver: [f.withDriver ? 'Yes' : 'No'],
+        ac: [f.acAvailable ? 'Yes' : 'No'],
+        decoration: [f.decorationAvailable ? 'Available' : 'Not Available'],
+    };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface PackageDialogProps {
@@ -112,6 +176,8 @@ interface PackageDialogProps {
     vendorType?: string | null;
     editingPackage?: ApiPackage | null;
     onSuccess: () => void;
+    /** When true, forces the generic package form even for Car Rental vendors */
+    forceGenericMode?: boolean;
 }
 
 export function PackageDialog({
@@ -121,9 +187,11 @@ export function PackageDialog({
     vendorType,
     editingPackage,
     onSuccess,
+    forceGenericMode = false,
 }: PackageDialogProps) {
+    const isCarRental = vendorType === 'Car rental' && !forceGenericMode;
     const categories = BUSINESS_CATEGORIES[vendorType ?? ''] ?? [];
-    const hasCategoryUI = categories.length > 0;
+    const hasCategoryUI = !isCarRental && categories.length > 0;
 
     const [name, setName] = useState('');
     const [price, setPrice] = useState('');
@@ -131,16 +199,26 @@ export function PackageDialog({
     const [featureMap, setFeatureMap] = useState<FeatureMap>({});
     // Plain-text features (used when no categories defined for vendor type)
     const [featuresText, setFeaturesText] = useState('');
+    // Car rental fleet fields
+    const [carFields, setCarFields] = useState<CarFleetFields>(DEFAULT_CAR_FIELDS);
+    // Images — existing URLs + pending new files
+    const [existingImages, setExistingImages] = useState<string[]>([]);
+    const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
+    const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
     const [saving, setSaving] = useState(false);
 
     const isEditing = !!editingPackage;
+    const totalImages = existingImages.length + newImageFiles.length;
 
     // ── Populate form when opening for edit ───────────────────────────────────
     useEffect(() => {
         if (editingPackage) {
             setName(editingPackage.name || '');
             setPrice(editingPackage.price?.toString() || '');
-            if (hasCategoryUI) {
+            setExistingImages(editingPackage.images ?? []);
+            if (isCarRental) {
+                setCarFields(carFieldsFromFeatures(editingPackage.features));
+            } else if (hasCategoryUI) {
                 setFeatureMap(toFeatureMap(editingPackage.features, categories));
             } else {
                 setFeaturesText(toFlatText(editingPackage.features));
@@ -150,7 +228,11 @@ export function PackageDialog({
             setPrice('');
             setFeatureMap({});
             setFeaturesText('');
+            setCarFields(DEFAULT_CAR_FIELDS);
+            setExistingImages([]);
         }
+        setNewImageFiles([]);
+        setNewImagePreviews([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [editingPackage, open]);
 
@@ -195,41 +277,86 @@ export function PackageDialog({
         });
     };
 
+    // ── Image handlers ────────────────────────────────────────────────────────
+    const handleImageFiles = (files: FileList | null) => {
+        if (!files) return;
+        const remaining = 10 - totalImages;
+        if (remaining <= 0) { toast.error('Maximum 10 images allowed per vehicle'); return; }
+        const selected = Array.from(files).slice(0, remaining);
+        const previews = selected.map((f) => URL.createObjectURL(f));
+        setNewImageFiles((prev) => [...prev, ...selected]);
+        setNewImagePreviews((prev) => [...prev, ...previews]);
+    };
+
+    const removeExistingImage = (idx: number) =>
+        setExistingImages((prev) => prev.filter((_, i) => i !== idx));
+
+    const removeNewImage = (idx: number) => {
+        URL.revokeObjectURL(newImagePreviews[idx]);
+        setNewImageFiles((prev) => prev.filter((_, i) => i !== idx));
+        setNewImagePreviews((prev) => prev.filter((_, i) => i !== idx));
+    };
+
+    // ── Car fleet field helpers ───────────────────────────────────────────────
+    const setCar = (patch: Partial<CarFleetFields>) => {
+        setCarFields((prev) => {
+            const next = { ...prev, ...patch };
+            // Auto-sync name from make + model + year
+            const autoName = [next.make, next.model, next.year].filter(Boolean).join(' ');
+            if (autoName) setName(autoName);
+            return next;
+        });
+    };
+
     // ── Submit ────────────────────────────────────────────────────────────────
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name.trim() || !price) return;
 
-        const features: string[] | FeatureMap = hasCategoryUI
-            ? featureMap
-            : featuresText
-                .split('\n')
-                .map((f) => f.trim())
-                .filter(Boolean);
+        const features: PackageFeatures = isCarRental
+            ? carFieldsToFeatures(carFields)
+            : hasCategoryUI
+                ? featureMap
+                : featuresText
+                    .split('\n')
+                    .map((f) => f.trim())
+                    .filter(Boolean);
 
         setSaving(true);
         try {
+            // Upload any new image files first
+            let uploadedUrls: string[] = [];
+            if (newImageFiles.length > 0) {
+                uploadedUrls = await PackagesAPI.uploadImages(newImageFiles, businessId);
+            }
+            const allImages = [...existingImages, ...uploadedUrls];
+
             if (isEditing) {
                 await PackagesAPI.update(editingPackage!.id, {
                     name: name.trim(),
                     price: Number(price),
-                    features: features as string[],
+                    features,
+                    images: allImages,
                     businessId,
                 });
-                toast.success('Package updated');
+                toast.success(isCarRental ? 'Vehicle updated' : 'Package updated');
             } else {
                 await PackagesAPI.create({
                     name: name.trim(),
                     price: Number(price),
-                    features: features as string[],
+                    features,
+                    images: allImages.length > 0 ? allImages : undefined,
                     businessId,
                 });
-                toast.success('Package created');
+                toast.success(isCarRental ? 'Vehicle added' : 'Package created');
             }
             onSuccess();
             onOpenChange(false);
         } catch {
-            toast.error(isEditing ? 'Failed to update package' : 'Failed to create package');
+            toast.error(isEditing
+                ? (isCarRental ? 'Failed to update vehicle' : 'Failed to update package')
+                : (isCarRental ? 'Failed to add vehicle' : 'Failed to create package')
+            );
         } finally {
             setSaving(false);
         }
@@ -240,24 +367,33 @@ export function PackageDialog({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>{isEditing ? 'Edit Package' : 'Add Package'}</DialogTitle>
+                    <DialogTitle>
+                        {isCarRental
+                            ? (isEditing ? 'Edit Vehicle' : 'Add Vehicle')
+                            : (isEditing ? 'Edit Package' : 'Add Package')
+                        }
+                    </DialogTitle>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                     {/* Name + Price */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                            <Label htmlFor="pkg-name">Package Name</Label>
+                            <Label htmlFor="pkg-name">
+                                {isCarRental ? 'Car Make & Model' : 'Package Name'}
+                            </Label>
                             <Input
                                 id="pkg-name"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                placeholder="e.g. Basic Package"
+                                placeholder={isCarRental ? 'e.g. Toyota Corolla 2022' : 'e.g. Basic Package'}
                                 required
                             />
                         </div>
                         <div className="space-y-1.5">
-                            <Label htmlFor="pkg-price">Price (Rs.)</Label>
+                            <Label htmlFor="pkg-price">
+                                {isCarRental ? 'Price per Event (Rs.)' : 'Price (Rs.)'}
+                            </Label>
                             <Input
                                 id="pkg-price"
                                 type="number"
@@ -270,8 +406,174 @@ export function PackageDialog({
                         </div>
                     </div>
 
-                    {/* Features */}
-                    {hasCategoryUI ? (
+                    {/* Car Rental — dedicated fleet form */}
+                    {isCarRental && (
+                        <div className="space-y-4">
+                            <Label className="text-sm font-semibold">Vehicle Details</Label>
+
+                            {/* Make / Model / Year */}
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="car-make" className="text-xs">Make</Label>
+                                    <Input
+                                        id="car-make"
+                                        value={carFields.make}
+                                        onChange={(e) => setCar({ make: e.target.value })}
+                                        placeholder="Toyota"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="car-model" className="text-xs">Model</Label>
+                                    <Input
+                                        id="car-model"
+                                        value={carFields.model}
+                                        onChange={(e) => setCar({ model: e.target.value })}
+                                        placeholder="Corolla"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="car-year" className="text-xs">Year</Label>
+                                    <Input
+                                        id="car-year"
+                                        value={carFields.year}
+                                        onChange={(e) => setCar({ year: e.target.value })}
+                                        placeholder="2022"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Vehicle Type / Color */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs">Vehicle Type</Label>
+                                    <Select
+                                        value={carFields.vehicleType}
+                                        onValueChange={(v) => setCar({ vehicleType: v })}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {VEHICLE_TYPES.map((t) => (
+                                                <SelectItem key={t} value={t}>{t}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs">Color</Label>
+                                    <Select
+                                        value={carFields.color}
+                                        onValueChange={(v) => setCar({ color: v })}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select color" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {COLORS.map((c) => (
+                                                <SelectItem key={c} value={c}>{c}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            {/* Seating Capacity / Units Available */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="car-seats" className="text-xs">Seating Capacity</Label>
+                                    <Input
+                                        id="car-seats"
+                                        type="number"
+                                        min="1"
+                                        value={carFields.seatingCapacity}
+                                        onChange={(e) => setCar({ seatingCapacity: e.target.value })}
+                                        placeholder="4"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="car-units" className="text-xs">Units Available</Label>
+                                    <Input
+                                        id="car-units"
+                                        type="number"
+                                        min="1"
+                                        value={carFields.unitsAvailable}
+                                        onChange={(e) => setCar({ unitsAvailable: e.target.value })}
+                                        placeholder="2"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Toggles: Driver / AC / Decoration */}
+                            <div className="grid grid-cols-3 gap-3">
+                                {/* With Driver */}
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs">With Driver</Label>
+                                    <div className="flex rounded-md border overflow-hidden">
+                                        {(['Yes', 'No'] as const).map((opt) => {
+                                            const active = opt === 'Yes' ? carFields.withDriver : !carFields.withDriver;
+                                            return (
+                                                <button
+                                                    key={opt}
+                                                    type="button"
+                                                    className={`flex-1 py-1.5 text-sm font-medium transition-colors ${active ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted'}`}
+                                                    onClick={() => setCar({ withDriver: opt === 'Yes' })}
+                                                >
+                                                    {opt}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* AC Available */}
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs">AC Available</Label>
+                                    <div className="flex rounded-md border overflow-hidden">
+                                        {(['Yes', 'No'] as const).map((opt) => {
+                                            const active = opt === 'Yes' ? carFields.acAvailable : !carFields.acAvailable;
+                                            return (
+                                                <button
+                                                    key={opt}
+                                                    type="button"
+                                                    className={`flex-1 py-1.5 text-sm font-medium transition-colors ${active ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted'}`}
+                                                    onClick={() => setCar({ acAvailable: opt === 'Yes' })}
+                                                >
+                                                    {opt}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Decoration */}
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs">Decoration</Label>
+                                    <div className="flex rounded-md border overflow-hidden">
+                                        {([
+                                            { label: 'Available', val: true },
+                                            { label: 'No', val: false },
+                                        ]).map(({ label, val }) => {
+                                            const active = carFields.decorationAvailable === val;
+                                            return (
+                                                <button
+                                                    key={label}
+                                                    type="button"
+                                                    className={`flex-1 py-1.5 text-xs font-medium transition-colors ${active ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted'}`}
+                                                    onClick={() => setCar({ decorationAvailable: val })}
+                                                >
+                                                    {label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Features — other vendor types */}
+                    {!isCarRental && hasCategoryUI ? (
                         <div className="space-y-2">
                             <Label>Features</Label>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -342,7 +644,7 @@ export function PackageDialog({
                                 })}
                             </div>
                         </div>
-                    ) : (
+                    ) : !isCarRental ? (
                         <div className="space-y-1.5">
                             <Label htmlFor="pkg-features">Features (one per line)</Label>
                             <textarea
@@ -353,6 +655,109 @@ export function PackageDialog({
                                 rows={5}
                                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
                             />
+                        </div>
+                    ) : null}
+
+                    {/* ── Images section (car rental only) ──────────────────────────── */}
+                    {isCarRental && (
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-sm font-semibold">
+                                    Vehicle Photos
+                                    <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                                        ({totalImages}/10)
+                                    </span>
+                                </Label>
+                                {totalImages < 10 && (
+                                    <label className="cursor-pointer">
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            className="hidden"
+                                            onChange={(e) => handleImageFiles(e.target.files)}
+                                        />
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-input bg-background text-xs font-medium hover:bg-muted transition-colors">
+                                            <ImagePlus className="h-3.5 w-3.5" />
+                                            Add Photos
+                                        </span>
+                                    </label>
+                                )}
+                            </div>
+
+                            {totalImages === 0 ? (
+                                <label className="cursor-pointer block">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        className="hidden"
+                                        onChange={(e) => handleImageFiles(e.target.files)}
+                                    />
+                                    <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed rounded-lg bg-muted/10 hover:bg-muted/20 hover:border-primary/40 transition-colors text-center">
+                                        <ImagePlus className="h-8 w-8 text-muted-foreground mb-2" />
+                                        <p className="text-sm font-medium">Click to upload photos</p>
+                                        <p className="text-xs text-muted-foreground mt-0.5">Up to 10 images</p>
+                                    </div>
+                                </label>
+                            ) : (
+                                <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                                    {/* Existing images */}
+                                    {existingImages.map((url, i) => (
+                                        <div key={`ex-${i}`} className="relative group aspect-square rounded-lg overflow-hidden border bg-muted">
+                                            <Image
+                                                src={getImageUrl(url)}
+                                                alt={`Vehicle photo ${i + 1}`}
+                                                fill
+                                                className="object-cover"
+                                                sizes="80px"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => removeExistingImage(i)}
+                                                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {/* New image previews */}
+                                    {newImagePreviews.map((src, i) => (
+                                        <div key={`new-${i}`} className="relative group aspect-square rounded-lg overflow-hidden border-2 border-primary/30 bg-muted">
+                                            <Image
+                                                src={src}
+                                                alt={`New photo ${i + 1}`}
+                                                fill
+                                                className="object-cover"
+                                                sizes="80px"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => removeNewImage(i)}
+                                                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                            <div className="absolute bottom-1 left-1 px-1 py-0.5 rounded text-[9px] bg-primary text-primary-foreground font-medium leading-none">
+                                                new
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {/* Add more slot */}
+                                    {totalImages < 10 && (
+                                        <label className="cursor-pointer aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center hover:border-primary/50 hover:bg-muted/40 transition-colors">
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                multiple
+                                                className="hidden"
+                                                onChange={(e) => handleImageFiles(e.target.files)}
+                                            />
+                                            <ImagePlus className="h-5 w-5 text-muted-foreground" />
+                                        </label>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -366,7 +771,7 @@ export function PackageDialog({
                         </Button>
                         <Button type="submit" disabled={saving}>
                             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isEditing ? 'Update' : 'Create'}
+                            {isEditing ? 'Update' : isCarRental ? 'Add Vehicle' : 'Create'}
                         </Button>
                     </DialogFooter>
                 </form>
