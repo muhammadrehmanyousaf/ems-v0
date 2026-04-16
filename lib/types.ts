@@ -45,6 +45,7 @@ export interface Vendor {
   additionalInfo?: string;
   instruction?: string;
   subArea?: string;
+  serviceProvided?: string[];
 }
 
 export interface Availability {
@@ -83,8 +84,9 @@ export interface Package {
   id: string;
   name: string;
   price: number;
-  features: string[];
+  features: string[] | Record<string, string[]>;
   businessId: number;
+  images?: string[] | null;
 }
 
 export interface VendorMenu {

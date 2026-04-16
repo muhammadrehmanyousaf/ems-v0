@@ -9,6 +9,25 @@ const BASE = '/api/v1/businesses'
  * The backend returns { id, name, city, subBusinessType, vendor: { vendorType, ... }, ... }
  * but the frontend expects { type, location, userId, rating, ... } at the top level.
  */
+function safeParseJson(val: any): any {
+  if (val == null) return val
+  if (typeof val !== 'string') return val
+  try { return JSON.parse(val) } catch { return val }
+}
+
+function normalizePackages(packages: any[]): any[] {
+  if (!Array.isArray(packages)) return []
+  return packages.map((pkg) => {
+    const features = safeParseJson(pkg.features)
+    const images = safeParseJson(pkg.images)
+    return {
+      ...pkg,
+      features: features ?? [],
+      images: Array.isArray(images) ? images : (images ? [images] : []),
+    }
+  })
+}
+
 function normalizeBusiness(raw: any): any {
   if (!raw) return raw
   const vendor = raw.vendor || {}
@@ -22,10 +41,12 @@ function normalizeBusiness(raw: any): any {
     price: raw.price ?? raw.minimumPrice ?? 0,
     staff: raw.staff || [],
     amenities: raw.amenities || [],
+    serviceProvided: raw.serviceProvided || [],
     cancellationPolicy: raw.cancellationPolicy || raw.cancelationPolicy || '',
     sponsored: raw.sponsored ?? false,
     description: raw.description || '',
     images: raw.images || [],
+    packages: normalizePackages(raw.packages),
   }
 }
 

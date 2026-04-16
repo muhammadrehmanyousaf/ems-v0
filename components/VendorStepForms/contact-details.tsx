@@ -18,12 +18,12 @@ const ContactDetails = ({ setErrors, errors, setFile, file }: ContactDetailsProp
     const formFields = [
         { name: 'name', label: 'Brand Name', place: 'Enter your Brand Name' },
         { name: 'secondaryContactNumber', label: 'Secondary Contact Number (optional)', place: '3001234567', type: 'tel' },
-        { name: 'instagram', label: 'Instagram Link', place: 'Enter your Instagram link' },
-        { name: 'facebook', label: 'Facebook Link', place: 'Enter your Facebook link' },
+        { name: 'instagram', label: 'Instagram Link (optional)', place: 'Enter your Instagram link' },
+        { name: 'facebook', label: 'Facebook Link (optional)', place: 'Enter your Facebook link' },
         { name: 'city', label: 'City', place: 'Enter your city' },
         { name: 'subArea', label: 'Sub Area', place: 'Enter your sub area (e.g., G-10 Markaz)' },
         { name: 'officeAddress', label: 'Office Address', place: 'Enter your office address here' },
-        { name: 'officeGoogleLink', label: 'Office Google map link', place: 'Enter here your Google map link' },
+        { name: 'officeGoogleLink', label: 'Office Google map link (optional)', place: 'Enter here your Google map link' },
     ];
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
@@ -43,8 +43,12 @@ const ContactDetails = ({ setErrors, errors, setFile, file }: ContactDetailsProp
 
         const errorMap: { [key: string]: string } = {};
 
-        if (fieldName === "secondaryContactNumber" && !/^3\d{9}$/.test(value)) {
-            errorMap.secondaryContactNumber = "Enter a valid 10-digit number starting with 3 (e.g. 3001234567)";
+        if (fieldName === "secondaryContactNumber") {
+            if (!/^3\d{9}$/.test(value)) {
+                errorMap.secondaryContactNumber = "Enter a valid 10-digit number starting with 3 (e.g. 3001234567)";
+            } else if (value === formData.phoneNumber) {
+                errorMap.secondaryContactNumber = "Secondary number must be different from your primary phone number";
+            }
         }
         if (fieldName === "instagram" && !/^https?:\/\/(www\.)?instagram\.com\/.+/i.test(value)) {
             errorMap.instagram = "Must be a valid Instagram link (e.g. https://instagram.com/youraccount)";

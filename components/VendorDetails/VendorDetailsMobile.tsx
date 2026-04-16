@@ -45,8 +45,9 @@ import {
   X,
   Expand,
 } from "lucide-react";
-import type { Vendor, Review, AvailabilityDay, VendorMenu } from "@/lib/types";
+import type { Vendor, Review, AvailabilityDay, VendorMenu, Package } from "@/lib/types";
 import Image from "next/image";
+import { BACKEND_URL } from "@/lib/backend-url";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/use-toast";
 import Link from "next/link";
@@ -192,6 +193,110 @@ function CircularRating({
   );
 }
 
+// ─── Package Card ────────────────────────────────────────────
+
+/** One collapsible group row inside a package card */
+function FeatureGroup({ label, items }: { label: string; items: string[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const VISIBLE = 5;
+  const visible = expanded ? items : items.slice(0, VISIBLE);
+  const overflow = items.length - VISIBLE;
+
+  return (
+    <div className="space-y-1.5">
+      <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">
+        {label}
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {visible.map((item, i) => (
+          <span
+            key={i}
+            className="inline-flex items-center gap-1 bg-purple-50 text-purple-700 text-xs font-medium px-2.5 py-1 rounded-full border border-purple-100"
+          >
+            <CheckCircle className="w-3 h-3 shrink-0" />
+            {item}
+          </span>
+        ))}
+        {!expanded && overflow > 0 && (
+          <button
+            onClick={() => setExpanded(true)}
+            className="inline-flex items-center bg-neutral-100 hover:bg-purple-50 text-neutral-500 hover:text-purple-600 text-xs font-medium px-2.5 py-1 rounded-full border border-neutral-200 transition-colors"
+          >
+            +{overflow} more
+          </button>
+        )}
+        {expanded && overflow > 0 && (
+          <button
+            onClick={() => setExpanded(false)}
+            className="inline-flex items-center bg-neutral-100 hover:bg-purple-50 text-neutral-500 hover:text-purple-600 text-xs font-medium px-2.5 py-1 rounded-full border border-neutral-200 transition-colors"
+          >
+            Show less
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PackageCard({
+  pkg,
+  formatPrice,
+  onBook,
+  pricingLabel = "per event",
+}: {
+  pkg: Package;
+  formatPrice: (n: number) => string;
+  onBook: () => void;
+  pricingLabel?: string;
+}) {
+  // Grouped features: object → [{label, items}]
+  // Flat features: array → single group with no label
+  const isGrouped = pkg.features && !Array.isArray(pkg.features);
+  const groups: { label: string; items: string[] }[] = isGrouped
+    ? Object.entries(pkg.features as Record<string, string[]>)
+        .filter(([, vals]) => Array.isArray(vals) && vals.length > 0)
+        .map(([key, vals]) => ({
+          label: key.charAt(0).toUpperCase() + key.slice(1),
+          items: vals.filter(Boolean),
+        }))
+    : Array.isArray(pkg.features) && (pkg.features as string[]).filter(Boolean).length > 0
+      ? [{ label: "Included", items: (pkg.features as string[]).filter(Boolean) }]
+      : [];
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-neutral-100 bg-white shadow-sm hover:shadow-lg transition-all duration-300">
+      {/* Top accent */}
+      <div className="h-1 bg-gradient-to-r from-purple-400 via-purple-600 to-purple-700" />
+      <div className="p-5 sm:p-6">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 mb-5">
+          <h3 className="text-xl font-bold text-neutral-900 leading-tight">{pkg.name}</h3>
+          <div className="shrink-0 text-right">
+            <p className="text-2xl font-extrabold text-purple-700">{formatPrice(pkg.price)}</p>
+            <p className="text-xs text-neutral-400 mt-0.5">{pricingLabel}</p>
+          </div>
+        </div>
+
+        {/* Feature groups */}
+        {groups.length > 0 && (
+          <div className="space-y-4 mb-5 pt-4 border-t border-neutral-100">
+            {groups.map((g, gi) => (
+              <FeatureGroup key={gi} label={g.label} items={g.items} />
+            ))}
+          </div>
+        )}
+
+        <Button
+          onClick={onBook}
+          className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl font-semibold shadow-sm shadow-purple-200/50"
+        >
+          Select Package
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function VendorDetailsMobile({
   vendor,
 }: VendorDetailsMobileProps) {
@@ -202,6 +307,8 @@ export default function VendorDetailsMobile({
   const [activeSection, setActiveSection] = useState("overview");
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const lightboxSwiperRef = useRef<any>(null);
+  const thumbStripRef = useRef<HTMLDivElement>(null);
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -492,6 +599,50 @@ export default function VendorDetailsMobile({
 
   const vendorSpecificDetails = getVendorSpecificDetails();
   const cancellationPolicy = vendor.cancelationPolicy || vendor.cancellationPolicy;
+
+  const BACKEND_BASE = BACKEND_URL.replace(/\/$/, "");
+  const resolveImg = (url: string) => {
+    if (!url) return "/placeholder.jpg";
+    if (url.startsWith("http")) return url;
+    return `${BACKEND_BASE}${url}`;
+  };
+
+  const BRIDAL_SERVICES: { key: keyof Vendor; label: string }[] = [
+    { key: "travelToClientHome", label: "Home Delivery" },
+    { key: "sellMehndi", label: "Rental Available" },
+    { key: "hasTeam", label: "Bridesmaid Outfits" },
+    { key: "provideDecorationItem", label: "Design Consultation" },
+    { key: "provideFoodTesting", label: "Trial / Fitting" },
+    { key: "provideWaiter", label: "Alteration Service" },
+    { key: "provideSoundSystem", label: "Accessory Matching" },
+    { key: "provideSeatingArrangement", label: "Dupatta Styling" },
+    { key: "providePlate", label: "Groom Wear Available" },
+    { key: "parking", label: "Rush Orders Accepted" },
+  ];
+  const enabledBridalServices =
+    vendor.type === "Bridal wearing"
+      ? BRIDAL_SERVICES.filter((s) => vendor[s.key] === true)
+      : [];
+
+  const getFeatureBadges = (pkg: Package): { label: string; values: string[] }[] => {
+    if (!pkg.features) return [];
+    if (Array.isArray(pkg.features)) return [];
+    const obj = pkg.features as Record<string, string[]>;
+    return Object.entries(obj)
+      .filter(([, vals]) => Array.isArray(vals) && vals.length > 0)
+      .map(([key, vals]) => ({
+        label: key.charAt(0).toUpperCase() + key.slice(1),
+        values: vals,
+      }));
+  };
+
+  const getFlatFeatures = (pkg: Package): string[] => {
+    if (!pkg.features) return [];
+    if (Array.isArray(pkg.features)) return pkg.features.map(String).filter(Boolean);
+    // Object features — flatten all values into one list
+    const obj = pkg.features as Record<string, string[]>;
+    return Object.values(obj).flat().filter(Boolean);
+  };
   const startingPrice = vendor.minimumPrice || vendor.price;
 
   // Calendar functions
@@ -529,6 +680,24 @@ export default function VendorDetailsMobile({
   const openLightbox = (index: number) => {
     setLightboxIndex(index);
     setLightboxOpen(true);
+    // Swiper will receive initialSlide on mount; after open we navigate imperatively
+    setTimeout(() => {
+      lightboxSwiperRef.current?.slideTo(index, 0);
+      scrollThumbIntoView(index);
+    }, 50);
+  };
+
+  const goToLightboxSlide = (index: number) => {
+    setLightboxIndex(index);
+    lightboxSwiperRef.current?.slideTo(index);
+    scrollThumbIntoView(index);
+  };
+
+  const scrollThumbIntoView = (index: number) => {
+    const strip = thumbStripRef.current;
+    if (!strip) return;
+    const thumb = strip.children[0]?.children[index] as HTMLElement | undefined;
+    thumb?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
   };
 
   // Review stats calculation
@@ -924,13 +1093,57 @@ export default function VendorDetailsMobile({
                     </div>
                   )}
 
-                  {/* Special Instructions */}
+                  {/* Instruction — label varies by type */}
                   {vendor.instruction && (
                     <div>
                       <h3 className="text-lg font-heading font-semibold text-neutral-900 mb-3">
-                        Special Instructions
+                        {vendor.type === "Bridal wearing"
+                          ? "Order Lead Time"
+                          : "Special Instructions"}
                       </h3>
                       <p className="text-neutral-600 leading-relaxed">{vendor.instruction}</p>
+                    </div>
+                  )}
+
+                  {/* Bridal Wear — Fabrics Available */}
+                  {vendor.type === "Bridal wearing" &&
+                    Array.isArray(vendor.serviceProvided) &&
+                    vendor.serviceProvided.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-heading font-semibold text-neutral-900 mb-3">
+                          Fabrics Available
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          {vendor.serviceProvided.map((fabric, i) => (
+                            <Badge
+                              key={i}
+                              variant="outline"
+                              className="text-sm px-3 py-1 border-purple-200 text-purple-700"
+                            >
+                              {fabric}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                  {/* Bridal Wear — Services Offered */}
+                  {enabledBridalServices.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-heading font-semibold text-neutral-900 mb-3">
+                        Services Offered
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {enabledBridalServices.map((s, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-700 rounded-full px-3 py-1 text-sm font-medium"
+                          >
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            {s.label}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -940,98 +1153,338 @@ export default function VendorDetailsMobile({
             {/* ===== GALLERY SECTION ===== */}
             <section ref={galleryRef} id="gallery">
               <ScrollReveal>
-                <h2 className="text-xl font-heading font-bold text-neutral-900 mb-5">
-                  Gallery
-                </h2>
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="text-xl font-heading font-bold text-neutral-900">
+                    Gallery
+                  </h2>
+                  <span className="flex items-center gap-1.5 text-xs font-medium text-purple-600 bg-purple-50 border border-purple-100 px-3 py-1 rounded-full">
+                    <Camera className="w-3.5 h-3.5" />
+                    {galleryImages.length} photos
+                  </span>
+                </div>
               </ScrollReveal>
-              <div className="columns-2 sm:columns-3 gap-3 space-y-3">
-                {galleryImages.map((img, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true, margin: "-30px" }}
-                    transition={{ duration: 0.4, delay: i * 0.08 }}
-                    className="break-inside-avoid cursor-pointer group relative rounded-xl overflow-hidden"
-                    onClick={() => openLightbox(i)}
-                  >
-                    <div
-                      className={`relative ${i % 3 === 0 ? "aspect-[3/4]" : i % 3 === 1 ? "aspect-square" : "aspect-[4/3]"}`}
-                    >
-                      <Image
-                        src={img}
-                        alt={`${vendor.name} gallery ${i + 1}`}
-                        fill
-                        className="object-cover transition-transform duration-700 group-hover:scale-110"
-                        sizes="(max-width: 640px) 50vw, 33vw"
-                      />
-                      <div className="absolute inset-0 bg-purple-950/0 group-hover:bg-purple-950/30 transition-colors duration-300 flex items-center justify-center">
-                        <Expand className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      </div>
+
+              {galleryImages.length > 0 && (
+                <>
+                  {/* Featured hero layout: big left + 2 stacked right */}
+                  {galleryImages.length >= 3 ? (
+                    <div className="grid grid-cols-3 gap-2 rounded-2xl overflow-hidden mb-2">
+                      {/* Hero image — spans 2 rows on the left */}
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.97 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.5 }}
+                        className="col-span-2 row-span-2 relative cursor-pointer group"
+                        style={{ aspectRatio: "4/3" }}
+                        onClick={() => openLightbox(0)}
+                      >
+                        <Image
+                          src={galleryImages[0]}
+                          alt={`${vendor.name} - 1`}
+                          fill
+                          className="object-cover transition-transform duration-700 group-hover:scale-105"
+                          sizes="66vw"
+                          priority
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/20 backdrop-blur-sm rounded-full p-3">
+                            <Expand className="w-5 h-5 text-white" />
+                          </div>
+                        </div>
+                      </motion.div>
+
+                      {/* Top-right image */}
+                      <motion.div
+                        initial={{ opacity: 0, x: 10 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.4, delay: 0.1 }}
+                        className="relative cursor-pointer group overflow-hidden"
+                        style={{ aspectRatio: "4/3" }}
+                        onClick={() => openLightbox(1)}
+                      >
+                        <Image
+                          src={galleryImages[1]}
+                          alt={`${vendor.name} - 2`}
+                          fill
+                          className="object-cover transition-transform duration-700 group-hover:scale-110"
+                          sizes="33vw"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors duration-300 flex items-center justify-center">
+                          <Expand className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        </div>
+                      </motion.div>
+
+                      {/* Bottom-right image — shows count badge if more exist */}
+                      <motion.div
+                        initial={{ opacity: 0, x: 10 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.4, delay: 0.2 }}
+                        className="relative cursor-pointer group overflow-hidden"
+                        style={{ aspectRatio: "4/3" }}
+                        onClick={() => openLightbox(galleryImages.length > 3 ? 2 : 2)}
+                      >
+                        <Image
+                          src={galleryImages[2]}
+                          alt={`${vendor.name} - 3`}
+                          fill
+                          className={`object-cover transition-transform duration-700 group-hover:scale-110 ${galleryImages.length > 3 ? "brightness-50" : ""}`}
+                          sizes="33vw"
+                        />
+                        {galleryImages.length > 3 ? (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className="text-white text-xl font-bold leading-none">+{galleryImages.length - 3}</span>
+                            <span className="text-white/80 text-xs mt-0.5">more</span>
+                          </div>
+                        ) : (
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors duration-300 flex items-center justify-center">
+                            <Expand className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                          </div>
+                        )}
+                      </motion.div>
                     </div>
-                  </motion.div>
-                ))}
-              </div>
+                  ) : (
+                    /* Fallback: simple grid for < 3 images */
+                    <div className="grid grid-cols-2 gap-2 rounded-2xl overflow-hidden mb-2">
+                      {galleryImages.map((img, i) => (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0 }}
+                          whileInView={{ opacity: 1 }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 0.4, delay: i * 0.1 }}
+                          className="relative cursor-pointer group overflow-hidden rounded-xl aspect-[4/3]"
+                          onClick={() => openLightbox(i)}
+                        >
+                          <Image
+                            src={img}
+                            alt={`${vendor.name} - ${i + 1}`}
+                            fill
+                            className="object-cover transition-transform duration-700 group-hover:scale-110"
+                            sizes="50vw"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors duration-300 flex items-center justify-center">
+                            <Expand className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* View all button */}
+                  {galleryImages.length > 1 && (
+                    <button
+                      onClick={() => openLightbox(0)}
+                      className="w-full mt-1 py-2.5 rounded-xl border border-neutral-200 text-sm font-medium text-neutral-600 hover:border-purple-300 hover:text-purple-700 hover:bg-purple-50 transition-all duration-200 flex items-center justify-center gap-2"
+                    >
+                      <Camera className="w-4 h-4" />
+                      View all {galleryImages.length} photos
+                    </button>
+                  )}
+                </>
+              )}
             </section>
 
             {/* ===== PACKAGES SECTION ===== */}
             <section ref={packagesRef} id="packages">
               <ScrollReveal>
                 <h2 className="text-xl font-heading font-bold text-neutral-900 mb-5">
-                  Packages & Pricing
+                  {vendor.type === "Bridal wearing"
+                    ? "Outfit Listings"
+                    : vendor.type === "Car rental"
+                      ? "Fleet"
+                      : "Packages & Pricing"}
                 </h2>
               </ScrollReveal>
-              <StaggerContainer staggerDelay={0.1} className="space-y-4">
-                {vendor.packages?.map((pkg, index) => (
-                  <StaggerItem key={index}>
-                    <Card className="border-neutral-100 hover:border-purple-200 hover:shadow-lg transition-all duration-300 overflow-hidden">
-                      {/* {index === 0 && (
-                        <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white text-center py-1.5 text-xs font-semibold tracking-wide uppercase">
-                          Most Popular
-                        </div>
-                      )} */}
-                      <CardContent className="p-5 sm:p-6">
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
-                          <div>
-                            <h3 className="text-lg font-semibold text-neutral-900">
-                              {pkg.name}
-                            </h3>
-                            {/* <p className="text-sm text-neutral-500 mt-1">
-                              {pkg.price}
-                            </p> */}
-                          </div>
-                          <div className="text-right">
-                            <p className="text-2xl font-bold text-purple-700">
-                              {formatPrice(pkg.price)}
-                            </p>
-                            {/* {pkg.duration && <p className="text-xs text-neutral-400">{pkg.duration}</p>} */}
-                          </div>
-                        </div>
-                        <div className="mb-5">
-                          {Array.isArray(pkg.features) && pkg.features.length > 0 && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              {pkg.features.map((item, fi) => (
-                                <div key={fi} className="flex items-start gap-2">
-                                  <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                                  <span className="text-sm text-neutral-600">
-                                    {String(item)}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <Button
-                          onClick={handleBookNow}
-                          className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl"
+
+              {/* Bridal Wear — Outfit cards with images */}
+              {vendor.type === "Bridal wearing" && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {(vendor.packages || []).length > 0 ? (
+                    (vendor.packages || []).map((pkg, index) => {
+                      const imgs = (pkg.images ?? []).map(resolveImg);
+                      const badges = getFeatureBadges(pkg);
+                      return (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, y: 20 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          viewport={{ once: true, margin: "-30px" }}
+                          transition={{ duration: 0.4, delay: index * 0.08 }}
+                          className="border border-neutral-200 rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-300"
                         >
-                          Select Package
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </StaggerItem>
-                ))}
-              </StaggerContainer>
+                          {/* Image */}
+                          <div className="relative aspect-[4/3] bg-neutral-100">
+                            {imgs.length > 0 ? (
+                              <>
+                                <Image
+                                  src={imgs[0]}
+                                  alt={pkg.name}
+                                  fill
+                                  className="object-cover"
+                                  sizes="(max-width: 640px) 100vw, 50vw"
+                                />
+                                {imgs.length > 1 && (
+                                  <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">
+                                    +{imgs.length - 1} photos
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <div className="absolute inset-0 flex items-center justify-center bg-purple-50">
+                                <Sparkles className="w-10 h-10 text-purple-200" />
+                              </div>
+                            )}
+                          </div>
+                          {/* Body */}
+                          <div className="p-4 space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <h3 className="font-semibold text-neutral-900 text-base leading-tight">
+                                {pkg.name}
+                              </h3>
+                              <span className="shrink-0 text-lg font-bold text-purple-700">
+                                {formatPrice(pkg.price)}
+                              </span>
+                            </div>
+                            {badges.map((group, gi) => (
+                              <div key={gi} className="flex flex-wrap gap-1.5">
+                                {group.values.map((val, vi) => (
+                                  <span
+                                    key={vi}
+                                    className="inline-block bg-neutral-100 text-neutral-600 text-xs px-2 py-0.5 rounded-full border border-neutral-200"
+                                  >
+                                    {val}
+                                  </span>
+                                ))}
+                              </div>
+                            ))}
+                            <Button
+                              onClick={handleBookNow}
+                              size="sm"
+                              className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl mt-1"
+                            >
+                              Book Now
+                            </Button>
+                          </div>
+                        </motion.div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-neutral-500 col-span-2 text-center py-6">
+                      No outfit listings yet. Contact the store for details.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Car Rental — Fleet cards with images */}
+              {vendor.type === "Car rental" && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {(vendor.packages || []).length > 0 ? (
+                    (vendor.packages || []).map((pkg, index) => {
+                      const imgs = (pkg.images ?? []).map(resolveImg);
+                      const features = !Array.isArray(pkg.features)
+                        ? (pkg.features as Record<string, string[]>)
+                        : {};
+                      const carType = features.carType?.[0];
+                      const year = features.year?.[0];
+                      const units = features.unitsAvailable?.[0];
+                      return (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, y: 20 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          viewport={{ once: true, margin: "-30px" }}
+                          transition={{ duration: 0.4, delay: index * 0.08 }}
+                          className="border border-neutral-200 rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-300"
+                        >
+                          <div className="relative aspect-video bg-neutral-100">
+                            {imgs.length > 0 ? (
+                              <Image
+                                src={imgs[0]}
+                                alt={pkg.name}
+                                fill
+                                className="object-cover"
+                                sizes="(max-width: 640px) 100vw, 50vw"
+                              />
+                            ) : (
+                              <div className="absolute inset-0 flex items-center justify-center bg-blue-50">
+                                <Car className="w-10 h-10 text-blue-200" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-4 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <h3 className="font-semibold text-neutral-900 text-base">
+                                {pkg.name}
+                              </h3>
+                              <span className="shrink-0 text-lg font-bold text-purple-700">
+                                {formatPrice(pkg.price)}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {carType && (
+                                <span className="inline-block bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full border border-blue-200">
+                                  {carType}
+                                </span>
+                              )}
+                              {year && (
+                                <span className="inline-block bg-neutral-100 text-neutral-600 text-xs px-2 py-0.5 rounded-full border border-neutral-200">
+                                  {year}
+                                </span>
+                              )}
+                              {units && (
+                                <span className="inline-block bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full border border-green-200">
+                                  {units}
+                                </span>
+                              )}
+                            </div>
+                            <Button
+                              onClick={handleBookNow}
+                              size="sm"
+                              className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl mt-1"
+                            >
+                              Book Now
+                            </Button>
+                          </div>
+                        </motion.div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-neutral-500 col-span-2 text-center py-6">
+                      No fleet listed yet. Contact the vendor for availability.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Generic — all other vendor types */}
+              {vendor.type !== "Bridal wearing" && vendor.type !== "Car rental" && (
+                <StaggerContainer staggerDelay={0.1} className="space-y-4">
+                  {(vendor.packages || []).length > 0 ? (
+                    vendor.packages.map((pkg, index) => (
+                      <StaggerItem key={index}>
+                        <PackageCard
+                          pkg={pkg}
+                          formatPrice={formatPrice}
+                          onBook={handleBookNow}
+                          pricingLabel={
+                            vendor.type === "Catering" ? "per head"
+                            : vendor.type === "Makeup artist" || vendor.type === "Hena artist" ? "per session"
+                            : "per event"
+                          }
+                        />
+                      </StaggerItem>
+                    ))
+                  ) : (
+                    <p className="text-sm text-neutral-500 text-center py-6">
+                      No packages available yet. Contact the vendor for pricing.
+                    </p>
+                  )}
+                </StaggerContainer>
+              )}
             </section>
 
             {/* ===== MENUS SECTION ===== */}
@@ -1501,36 +1954,85 @@ export default function VendorDetailsMobile({
 
       {/* ===== LIGHTBOX DIALOG ===== */}
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-0 rounded-2xl overflow-hidden">
-          <DialogTitle className="sr-only">Gallery - {vendor.name}</DialogTitle>
-          <button
-            onClick={() => setLightboxOpen(false)}
-            aria-label="Close gallery"
-            className="absolute top-4 right-4 z-50 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-          <Swiper
-            modules={[Navigation, Pagination]}
-            navigation
-            pagination={{ clickable: true }}
-            initialSlide={lightboxIndex}
-            className="h-[85vh] w-full lightbox-swiper"
-          >
-            {galleryImages.map((img, i) => (
-              <SwiperSlide key={i} className="flex items-center justify-center">
-                <div className="relative w-full h-full flex items-center justify-center p-8">
-                  <Image
-                    src={img}
-                    alt={`${vendor.name} - ${i + 1}`}
-                    fill
-                    className="object-contain"
-                    sizes="95vw"
-                  />
-                </div>
-              </SwiperSlide>
-            ))}
-          </Swiper>
+        <DialogContent className="max-w-screen max-h-screen w-screen h-screen p-0 bg-black border-0 rounded-none overflow-hidden flex flex-col">
+          <DialogTitle className="sr-only">Gallery — {vendor.name}</DialogTitle>
+
+          {/* Top bar: counter + vendor name + close */}
+          <div className="flex items-center justify-between px-5 py-3 bg-black/60 backdrop-blur-sm z-50 shrink-0">
+            <div>
+              <p className="text-white font-semibold text-sm leading-tight">{vendor.name}</p>
+              <p className="text-white/50 text-xs mt-0.5">Gallery</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-white/70 text-sm font-medium tabular-nums">
+                {lightboxIndex + 1} / {galleryImages.length}
+              </span>
+              <button
+                onClick={() => setLightboxOpen(false)}
+                aria-label="Close gallery"
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+              >
+                <X className="w-4.5 h-4.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Main image swiper */}
+          <div className="flex-1 min-h-0">
+            <Swiper
+              modules={[Navigation, Pagination]}
+              navigation
+              pagination={false}
+              initialSlide={lightboxIndex}
+              onSwiper={(swiper) => { lightboxSwiperRef.current = swiper; }}
+              onSlideChange={(swiper) => {
+                setLightboxIndex(swiper.activeIndex);
+                scrollThumbIntoView(swiper.activeIndex);
+              }}
+              className="h-full w-full lightbox-swiper"
+            >
+              {galleryImages.map((img, i) => (
+                <SwiperSlide key={i} className="flex items-center justify-center bg-black">
+                  <div className="relative w-full h-full">
+                    <Image
+                      src={img}
+                      alt={`${vendor.name} — ${i + 1}`}
+                      fill
+                      className="object-contain"
+                      sizes="100vw"
+                    />
+                  </div>
+                </SwiperSlide>
+              ))}
+            </Swiper>
+          </div>
+
+          {/* Thumbnail strip */}
+          {galleryImages.length > 1 && (
+            <div ref={thumbStripRef} className="shrink-0 bg-black/80 backdrop-blur-sm py-3 px-4 overflow-x-auto scrollbar-none">
+              <div className="flex gap-2 w-max mx-auto">
+                {galleryImages.map((img, i) => (
+                  <button
+                    key={i}
+                    onClick={() => goToLightboxSlide(i)}
+                    className={`relative w-14 h-14 rounded-lg overflow-hidden shrink-0 transition-all duration-200 ${
+                      i === lightboxIndex
+                        ? "ring-2 ring-purple-400 ring-offset-1 ring-offset-black opacity-100 scale-105"
+                        : "opacity-40 hover:opacity-70"
+                    }`}
+                  >
+                    <Image
+                      src={img}
+                      alt={`Thumbnail ${i + 1}`}
+                      fill
+                      className="object-cover"
+                      sizes="56px"
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

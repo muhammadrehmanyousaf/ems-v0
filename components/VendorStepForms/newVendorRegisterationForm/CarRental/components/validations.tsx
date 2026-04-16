@@ -37,8 +37,12 @@ export const CarRentalValidations = ({ currentStep, formData, currentErrors }: V
         }
     } else if (currentStep === 2) {
         if (!formData.name) currentErrors.name = 'Business Name is required';
-        if (formData.secondaryContactNumber && !/^3\d{9}$/.test(String(formData.secondaryContactNumber))) {
-            currentErrors.secondaryContactNumber = 'Enter a valid 10-digit number starting with 3 (e.g. 3001234567)';
+        if (formData.secondaryContactNumber) {
+            if (!/^3\d{9}$/.test(String(formData.secondaryContactNumber))) {
+                currentErrors.secondaryContactNumber = 'Enter a valid 10-digit number starting with 3 (e.g. 3001234567)';
+            } else if (String(formData.secondaryContactNumber) === String(formData.phoneNumber)) {
+                currentErrors.secondaryContactNumber = 'Secondary number must be different from your primary phone number';
+            }
         }
         if (!formData.city) {
             currentErrors.city = 'City is required';
@@ -50,17 +54,13 @@ export const CarRentalValidations = ({ currentStep, formData, currentErrors }: V
         } else if (formData.officeAddress.trim().length < 5) {
             currentErrors.officeAddress = 'Office Address is too short';
         }
-        if (!formData.instagram) {
-            currentErrors.instagram = 'Instagram link is required';
-        } else if (!/^https?:\/\/(www\.)?instagram\.com\/.+/i.test(formData.instagram)) {
+        if (formData.instagram && !/^https?:\/\/(www\.)?instagram\.com\/.+/i.test(formData.instagram)) {
             currentErrors.instagram = 'Must be a valid Instagram link';
         }
         if (formData.facebook && !/^https?:\/\/(www\.)?facebook\.com\/.+/i.test(formData.facebook)) {
             currentErrors.facebook = 'Must be a valid Facebook link';
         }
-        if (!formData.officeGoogleLink) {
-            currentErrors.officeGoogleLink = 'Google Maps link is required';
-        } else if (!/google\.com\/maps|maps\.google\.com|maps\.app\.goo\.gl|goo\.gl/i.test(formData.officeGoogleLink)) {
+        if (formData.officeGoogleLink && !/google\.com\/maps|maps\.google\.com|maps\.app\.goo\.gl|goo\.gl/i.test(formData.officeGoogleLink)) {
             currentErrors.officeGoogleLink = 'Must be a valid Google Maps link';
         }
     } else if (currentStep === 3) {
