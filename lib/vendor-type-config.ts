@@ -39,6 +39,13 @@ export type SettingsTabKey =
   | "type-specific";
 
 // ─── Type-specific field definition ─────────────────────────
+export interface OptionGroup {
+  group: string;
+  emoji: string;
+  description: string;
+  items: string[];
+}
+
 export interface TypeSpecificFieldDef {
   key: string;
   label: string;
@@ -46,6 +53,7 @@ export interface TypeSpecificFieldDef {
   placeholder?: string;
   options?: string[];
   description?: string;
+  groups?: OptionGroup[]; // grouped options for large multi-selects
 }
 
 // ─── Vendor type config ─────────────────────────────────────
@@ -258,8 +266,56 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     hasMenus: false,
     pricingLabel: "per set",
     typeSpecificFields: [
-      { key: "subBusinessType", label: "Stationery Type", type: "select", options: ["Digital", "Printed", "Calligraphy", "Custom Design"] },
-      { key: "expertise", label: "Product Types", type: "multi-select", options: ["Invitations", "Save the Date", "Thank You Cards", "Programs", "Menus", "Escort Cards", "Signage"] },
+      { key: "subBusinessType", label: "Shop Type", type: "select", options: ["Print Studio", "Digital Design Studio", "Boutique Stationery", "Full-Service Wedding Stationery", "Online Store", "Home-Based Business"] },
+      { key: "expertise", label: "Products Offered", type: "multi-select", options: [], groups: [
+        { group: "Invitation Cards — by Event", emoji: "✉️", description: "Event-specific invitation cards for each Pakistani wedding ceremony", items: [
+          "Nikkah Cards (نکاح کارڈ)", "Barat Invitation Cards (برات کارڈ)", "Walima Cards (ولیمہ کارڈ)",
+          "Mehndi Cards (مہندی کارڈ)", "Mayun / Ubtan Cards (مایوں کارڈ)", "Engagement / Baat Pakki Cards (منگنی کارڈ)",
+          "Dholki Invitation Cards (ڈھولکی کارڈ)", "Multi-Event Combined Card", "Save the Date Cards",
+        ]},
+        { group: "Card Formats & Styles", emoji: "🎨", description: "Different physical formats and premium finishes for invitation cards", items: [
+          "Scroll / Box Invitations", "Laser-Cut Cards", "Acrylic Cards",
+          "Velvet Pocket Cards", "Foil / Metallic Cards", "Digital / WhatsApp Invitations",
+        ]},
+        { group: "Bid Boxes & Favour Boxes", emoji: "🎁", description: "Bid boxes (بِد کی ڈبی) and favour boxes distributed at Nikkah and other events", items: [
+          "Bid Boxes / Nikkah Favour Boxes (بِد کی ڈبی)", "Mehndi Favour Bags / Boxes",
+          "Sweet Boxes (مٹھائی ڈبی)", "Chocolate Boxes", "Dry Fruit Boxes",
+          "Tin / Velvet Boxes", "Pyramid / Pillow Boxes", "Jute / Jammawar Pouches",
+        ]},
+        { group: "Nikkah Ceremony Stationery", emoji: "📜", description: "Specialised stationery items specifically for the Nikkah ceremony", items: [
+          "Nikkah Nama Booklet / Folder", "Nikkah Pen (نکاح قلم)",
+          "Nikkah Certificate Frame", "Thumb Board (acrylic)", "Haq Mehar Envelope / Box (حق مہر)",
+        ]},
+        { group: "Pakistani Ceremony Items", emoji: "🕌", description: "Culture-specific items for Barat, Doodh Pilai, Salami, and other traditions", items: [
+          "Doodh Pilai Glass & Tray Set (دودھ پلائی)", "Salami Envelope / Box (سلامی)", "Zamzam Bottle Stickers / Labels",
+        ]},
+        { group: "Venue / On-the-Day Stationery", emoji: "🏛️", description: "Stationery displayed at the wedding venue on the event day", items: [
+          "Welcome Signs / Boards", "Seating Charts", "Place Cards & Table Numbers",
+          "Table Menu Cards", "Nikkah Ceremony Programmes",
+        ]},
+        { group: "Gift Packaging & Wrapping", emoji: "🎀", description: "Decorative boxes, baskets, and tags for presenting gifts and favours", items: [
+          "Gift Boxes (Jahez / Trousseau)", "Shagun Baskets / Trays (شگن)",
+          "Gift Tags & Favour Tags", "Chocolate / Sweet Wrappers", "Wax Seals & Stamps",
+        ]},
+        { group: "Post-Wedding Stationery", emoji: "💌", description: "Cards and stationery sent to guests after the wedding", items: [
+          "Thank You Cards (شکریہ کارڈ)", "Wedding Announcement Cards",
+        ]},
+      ]},
+      { key: "amenities", label: "Printing Techniques", type: "multi-select", options: ["Digital Printing", "Offset Printing", "Laser Cutting", "Letterpress", "Foil Stamping", "Embossing / Debossing", "Screen Printing", "Hand-Block Printing", "UV Printing", "Calligraphy (Hand-written)"] },
+      { key: "serviceProvided", label: "Languages for Printing", type: "multi-select", options: ["Urdu (اردو)", "English", "Bilingual (Urdu + English)", "Arabic", "Punjabi"] },
+      { key: "minimumPrice", label: "Starting Price (PKR)", type: "number", placeholder: "3000" },
+      { key: "minCapacity", label: "Minimum Order Quantity", type: "number", placeholder: "50", description: "Minimum number of cards or pieces per order" },
+      { key: "instruction", label: "Production Turnaround", type: "select", options: ["3-5 Days", "1 Week", "2 Weeks", "3 Weeks", "1 Month", "2 Months", "3+ Months"] },
+      { key: "travelToClientHome", label: "Home / Courier Delivery", type: "boolean", description: "Deliver orders to client's home or via courier?" },
+      { key: "sellMehndi", label: "Customisation Available", type: "boolean", description: "Custom names, wording, and personalised designs?" },
+      { key: "hasTeam", label: "Digital Invitation Files", type: "boolean", description: "Provide WhatsApp-ready / social media digital invites?" },
+      { key: "provideDecorationItem", label: "Wax Seal / Stamp Available", type: "boolean", description: "Offer custom wax seals or pre-made wax coins?" },
+      { key: "provideFoodTesting", label: "Calligraphy Available", type: "boolean", description: "Hand-written or printed calligraphy text?" },
+      { key: "provideWaiter", label: "Envelope Included", type: "boolean", description: "Matching envelopes provided with every card?" },
+      { key: "provideSoundSystem", label: "Rush Orders Accepted", type: "boolean", description: "Can fulfil urgent orders on short notice?" },
+      { key: "provideSeatingArrangement", label: "Bilingual Printing", type: "boolean", description: "Urdu + English text on the same card?" },
+      { key: "providePlate", label: "Acrylic Cards Available", type: "boolean", description: "Offer premium clear or frosted acrylic invitations?" },
+      { key: "parking", label: "Nationwide Delivery", type: "boolean", description: "Deliver orders across all cities in Pakistan?" },
     ],
   },
 };

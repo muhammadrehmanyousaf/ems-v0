@@ -61,6 +61,11 @@ const BUSINESS_CATEGORIES: Record<string, { id: string; label: string }[]> = {
         { id: 'desserts', label: 'Desserts' },
         { id: 'drinks', label: 'Drinks' },
     ],
+    'Bridal wearing': [],
+    'Wedding Invitations and Stationery': [
+        { id: 'productType', label: 'Product Type' },
+        { id: 'event', label: 'Suitable For (Event)' },
+    ],
 };
 
 type FeatureMap = Record<string, string[]>;
@@ -190,6 +195,7 @@ export function PackageDialog({
     forceGenericMode = false,
 }: PackageDialogProps) {
     const isCarRental = vendorType === 'Car rental' && !forceGenericMode;
+    const isStationery = vendorType === 'Wedding Invitations and Stationery';
     const categories = BUSINESS_CATEGORIES[vendorType ?? ''] ?? [];
     const hasCategoryUI = !isCarRental && categories.length > 0;
 
@@ -339,7 +345,7 @@ export function PackageDialog({
                     images: allImages,
                     businessId,
                 });
-                toast.success(isCarRental ? 'Vehicle updated' : 'Package updated');
+                toast.success(isCarRental ? 'Vehicle updated' : isStationery ? 'Product updated' : 'Package updated');
             } else {
                 await PackagesAPI.create({
                     name: name.trim(),
@@ -348,14 +354,14 @@ export function PackageDialog({
                     images: allImages.length > 0 ? allImages : undefined,
                     businessId,
                 });
-                toast.success(isCarRental ? 'Vehicle added' : 'Package created');
+                toast.success(isCarRental ? 'Vehicle added' : isStationery ? 'Product added' : 'Package created');
             }
             onSuccess();
             onOpenChange(false);
         } catch {
             toast.error(isEditing
-                ? (isCarRental ? 'Failed to update vehicle' : 'Failed to update package')
-                : (isCarRental ? 'Failed to add vehicle' : 'Failed to create package')
+                ? (isCarRental ? 'Failed to update vehicle' : isStationery ? 'Failed to update product' : 'Failed to update package')
+                : (isCarRental ? 'Failed to add vehicle' : isStationery ? 'Failed to add product' : 'Failed to create package')
             );
         } finally {
             setSaving(false);
@@ -370,7 +376,9 @@ export function PackageDialog({
                     <DialogTitle>
                         {isCarRental
                             ? (isEditing ? 'Edit Vehicle' : 'Add Vehicle')
-                            : (isEditing ? 'Edit Package' : 'Add Package')
+                            : isStationery
+                                ? (isEditing ? 'Edit Product' : 'Add Product')
+                                : (isEditing ? 'Edit Package' : 'Add Package')
                         }
                     </DialogTitle>
                 </DialogHeader>
@@ -380,13 +388,13 @@ export function PackageDialog({
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
                             <Label htmlFor="pkg-name">
-                                {isCarRental ? 'Car Make & Model' : 'Package Name'}
+                                {isCarRental ? 'Car Make & Model' : isStationery ? 'Product Name' : 'Package Name'}
                             </Label>
                             <Input
                                 id="pkg-name"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                placeholder={isCarRental ? 'e.g. Toyota Corolla 2022' : 'e.g. Basic Package'}
+                                placeholder={isCarRental ? 'e.g. Toyota Corolla 2022' : isStationery ? 'e.g. Nikkah Card Suite' : 'e.g. Basic Package'}
                                 required
                             />
                         </div>
@@ -771,7 +779,7 @@ export function PackageDialog({
                         </Button>
                         <Button type="submit" disabled={saving}>
                             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isEditing ? 'Update' : isCarRental ? 'Add Vehicle' : 'Create'}
+                            {isEditing ? 'Update' : isCarRental ? 'Add Vehicle' : isStationery ? 'Add Product' : 'Create'}
                         </Button>
                     </DialogFooter>
                 </form>

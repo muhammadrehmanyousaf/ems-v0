@@ -54,11 +54,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Build settings sub-items from vendor config
   const settingsTabs = vendorConfig?.settingsTabs ?? DEFAULT_VENDOR_CONFIG.settingsTabs
+  const isStationery = user?.vendorType === 'Wedding Invitations and Stationery'
+
   const settingsSubItems: SettingsSubItem[] = settingsTabs.map((tabKey) => ({
     id: tabKey,
     label: tabKey === "type-specific" && vendorConfig
       ? `${vendorConfig.displayName} Details`
-      : TAB_LABELS[tabKey],
+      : tabKey === "packages" && isStationery
+        ? "Products"
+        : TAB_LABELS[tabKey],
   }))
 
   return (

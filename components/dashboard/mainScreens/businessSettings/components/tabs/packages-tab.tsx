@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Car, Check, Flower2, Layers, MapPin, Package, Pencil, Plus, Trash2, Users, Wind } from 'lucide-react';
 import { PackageDialog } from '../dialogs/package-dialog';
 import { CarPackageDialog } from '../dialogs/car-package-dialog';
+import { StationeryProductDialog } from '../dialogs/stationery-product-dialog';
 import { ConfirmDeleteDialog } from '@/components/dashboard/globalComponents/confirm-delete-dialog';
 
 // Category label lookup — mirrors registration form
@@ -296,6 +297,7 @@ const PackagesTab = ({ business, onSuccess, mode }: PackagesTabProps) => {
     const isFleetMode = mode === 'fleet';
     const isPackagesMode = mode === 'packages';
     const isCarRental = business.vendor?.vendorType === 'Car rental';
+    const isStationery = business.vendor?.vendorType === 'Wedding Invitations and Stationery';
     // Use CarPackageDialog when car rental vendor is on the packages tab
     const useCarPkgDialog = isCarRental && isPackagesMode;
 
@@ -318,8 +320,8 @@ const PackagesTab = ({ business, onSuccess, mode }: PackagesTabProps) => {
             </div>
         );
     }
-    const entityLabel = isFleetMode ? 'Vehicle' : 'Package';
-    const tabTitle = isFleetMode ? 'Fleet / Cars' : 'Packages';
+    const entityLabel = isFleetMode ? 'Vehicle' : isStationery ? 'Product' : 'Package';
+    const tabTitle = isFleetMode ? 'Fleet / Cars' : isStationery ? 'Products' : 'Packages';
 
     return (
         <div className="space-y-5">
@@ -350,7 +352,9 @@ const PackagesTab = ({ business, onSuccess, mode }: PackagesTabProps) => {
                     <p className="text-sm text-muted-foreground mt-1 max-w-xs">
                         {isFleetMode
                             ? 'Add vehicles to your fleet to showcase your cars to customers.'
-                            : 'Create packages to showcase your services and pricing to customers.'}
+                            : isStationery
+                                ? 'Add your stationery products with pricing for customers to browse.'
+                                : 'Create packages to showcase your services and pricing to customers.'}
                     </p>
                     <Button size="sm" className="mt-5" onClick={() => setCreateOpen(true)}>
                         <Plus className="h-4 w-4 mr-1" />
@@ -434,7 +438,7 @@ const PackagesTab = ({ business, onSuccess, mode }: PackagesTabProps) => {
                                         Rs.&nbsp;{pkg.price?.toLocaleString()}
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                        {isFleetCar ? 'per event' : isComboPackage ? 'per package' : 'per booking'}
+                                        {isFleetCar ? 'per event' : isComboPackage ? 'per package' : isStationery ? 'per set' : 'per booking'}
                                     </p>
                                 </div>
 
@@ -513,8 +517,24 @@ const PackagesTab = ({ business, onSuccess, mode }: PackagesTabProps) => {
                 </div>
             )}
 
-            {/* Car rental combo package dialogs */}
-            {useCarPkgDialog ? (
+            {/* Stationery product dialogs */}
+            {isStationery ? (
+                <>
+                    <StationeryProductDialog
+                        open={createOpen}
+                        onOpenChange={setCreateOpen}
+                        businessId={business.id}
+                        onSuccess={handleSuccess}
+                    />
+                    <StationeryProductDialog
+                        open={!!editingPackage}
+                        onOpenChange={(v) => { if (!v) setEditingPackage(null); }}
+                        businessId={business.id}
+                        editingPackage={editingPackage}
+                        onSuccess={handleSuccess}
+                    />
+                </>
+            ) : useCarPkgDialog ? (
                 <>
                     <CarPackageDialog
                         open={createOpen}
@@ -559,7 +579,7 @@ const PackagesTab = ({ business, onSuccess, mode }: PackagesTabProps) => {
             <ConfirmDeleteDialog
                 open={!!deleteTarget}
                 onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}
-                title="Delete Package"
+                title={isStationery ? 'Delete Product' : 'Delete Package'}
                 description={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
                 onConfirm={handleDelete}
             />

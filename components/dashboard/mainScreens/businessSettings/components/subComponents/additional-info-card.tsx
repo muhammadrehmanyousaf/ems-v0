@@ -52,6 +52,38 @@ function BadgesField({ label, values }: { label: string; values: string[] }) {
     );
 }
 
+function GroupedBadgesField({ label, values, groups }: { label: string; values: string[]; groups: import('@/lib/vendor-type-config').OptionGroup[] }) {
+    if (!values || values.length === 0) return null;
+    return (
+        <div className='space-y-2 md:col-span-3'>
+            <div className="flex items-center justify-between">
+                <Label className='text-primary text-xs font-medium'>{label}</Label>
+                <span className="text-xs text-muted-foreground">{values.length} selected</span>
+            </div>
+            <div className="space-y-3">
+                {groups.map(({ group, emoji, items }) => {
+                    const selected = items.filter((item) => values.includes(item));
+                    if (selected.length === 0) return null;
+                    return (
+                        <div key={group} className="border border-neutral-200 rounded-lg overflow-hidden">
+                            <div className="flex items-center gap-2 px-3 py-2 bg-neutral-50 border-b border-neutral-200">
+                                <span className="text-sm">{emoji}</span>
+                                <p className="text-xs font-semibold text-neutral-700">{group}</p>
+                                <span className="ml-auto text-xs text-muted-foreground">{selected.length}/{items.length}</span>
+                            </div>
+                            <div className="px-3 py-2 flex flex-wrap gap-1.5">
+                                {selected.map((v, i) => (
+                                    <Badge key={i} className="text-xs bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20">{v}</Badge>
+                                ))}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
 function TypeSpecificField({ field, business }: { field: TypeSpecificFieldDef; business: ApiBusiness }) {
     const value = (business as unknown as Record<string, unknown>)[field.key];
 
@@ -68,6 +100,9 @@ function TypeSpecificField({ field, business }: { field: TypeSpecificFieldDef; b
             return <TextField label={field.label} value={value as string | null} />;
         case 'multi-select': {
             const arr = Array.isArray(value) ? (value as string[]) : [];
+            if (field.groups && field.groups.length > 0) {
+                return <GroupedBadgesField label={field.label} values={arr} groups={field.groups} />;
+            }
             return <BadgesField label={field.label} values={arr} />;
         }
         default:
@@ -99,12 +134,20 @@ const AdditionalInfoCard = ({ business }: AdditionalInfoCardProps) => {
                 ? [subBizRaw]
                 : null;
 
+    // Split fields: grouped multi-selects render full-width below the grid
+    const inlineFields = vendorConfig?.typeSpecificFields.filter(
+        (f) => !(f.type === 'multi-select' && f.groups && f.groups.length > 0)
+    ) ?? [];
+    const groupedFields = vendorConfig?.typeSpecificFields.filter(
+        (f) => f.type === 'multi-select' && f.groups && f.groups.length > 0
+    ) ?? [];
+
     return (
         <Card>
             <CardHeader className='pb-3'>
                 <CardTitle className='text-base'>Additional Information</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className='space-y-6'>
                 <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4'>
 
                     {/* ── Column 1: Location & Contact ─────────────────── */}
@@ -121,8 +164,6 @@ const AdditionalInfoCard = ({ business }: AdditionalInfoCardProps) => {
                                 {business.vendor?.vendorType || '—'}
                             </p>
                         </div>
-
-                        {/* Staff (e.g., photographer gender preference) */}
                         {Array.isArray(business.staff) && business.staff.length > 0 && (
                             <BadgesField label="Staff" values={business.staff} />
                         )}
@@ -151,13 +192,9 @@ const AdditionalInfoCard = ({ business }: AdditionalInfoCardProps) => {
                             </div>
                         )}
                         <TextField label="Cancellation Policy" value={business.cancelationPolicy} />
-
-                        {/* subBusinessType when not handled by type-specific config */}
                         {!subBusinessTypeInConfig && subBizBadges && (
                             <BadgesField label="Business Type" values={subBizBadges} />
                         )}
-
-                        {/* Packages & menus count */}
                         <TextField
                             label="Total Packages"
                             value={`${business.packages?.length ?? 0} package${(business.packages?.length ?? 0) !== 1 ? 's' : ''}`}
@@ -170,22 +207,61 @@ const AdditionalInfoCard = ({ business }: AdditionalInfoCardProps) => {
                         )}
                     </div>
 
-                    {/* ── Column 3: Type-specific Details ──────────────── */}
+                    {/* ── Column 3: Type-specific Details (inline fields only) ── */}
                     <div className='space-y-3'>
                         <p className='text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 border-b pb-1'>
                             {vendorConfig ? `${vendorConfig.displayName} Details` : 'Business Details'}
                         </p>
-
-                        {vendorConfig?.typeSpecificFields && vendorConfig.typeSpecificFields.length > 0 ? (
-                            vendorConfig.typeSpecificFields.map((field) => (
+                        {inlineFields.length > 0 ? (
+                            inlineFields.map((field) => (
                                 <TypeSpecificField key={field.key} field={field} business={business} />
                             ))
                         ) : (
                             <p className="text-sm text-muted-foreground">No additional details.</p>
                         )}
                     </div>
-
                 </div>
+
+                {/* ── Full-width: grouped multi-select fields (e.g. stationery products) ── */}
+                {groupedFields.map((field) => {
+                    const value = (business as unknown as Record<string, unknown>)[field.key];
+                    const arr = Array.isArray(value) ? (value as string[]) : [];
+                    if (arr.length === 0) return null;
+                    return (
+                        <div key={field.key} className='space-y-3'>
+                            <div className='flex items-center justify-between border-b pb-2'>
+                                <p className='text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70'>
+                                    {field.label}
+                                </p>
+                                <span className='text-xs text-muted-foreground'>{arr.length} selected</span>
+                            </div>
+                            <div className='space-y-3'>
+                                {field.groups!.map(({ group, emoji, items }) => {
+                                    const selected = items.filter((item) => arr.includes(item));
+                                    if (selected.length === 0) return null;
+                                    return (
+                                        <div key={group} className='border border-neutral-200 rounded-xl overflow-hidden'>
+                                            <div className='flex items-center justify-between px-4 py-2.5 bg-neutral-50 border-b border-neutral-200'>
+                                                <div className='flex items-center gap-2'>
+                                                    <span className='text-sm'>{emoji}</span>
+                                                    <p className='text-xs font-semibold text-neutral-800'>{group}</p>
+                                                </div>
+                                                <span className='text-xs text-primary font-medium'>{selected.length}/{items.length}</span>
+                                            </div>
+                                            <div className='px-4 py-3 flex flex-wrap gap-2'>
+                                                {selected.map((v, i) => (
+                                                    <Badge key={i} className='text-xs bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20'>
+                                                        {v}
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    );
+                })}
             </CardContent>
         </Card>
     )

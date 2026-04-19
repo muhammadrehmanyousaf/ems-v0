@@ -15,6 +15,7 @@ import {
   Users,
   CheckCircle,
   MailWarning,
+  Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import React from "react";
@@ -100,6 +101,16 @@ const businessTypes = [
     bgColor: "from-yellow-50 to-amber-50",
     borderColor: "border-yellow-200",
     textColor: "text-yellow-600",
+  },
+  {
+    id: "Wedding Invitations and Stationery",
+    title: "Wedding Stationery",
+    subtitle: "Invitations, Bid Boxes & More",
+    icon: Mail,
+    color: "from-rose-500 to-pink-600",
+    bgColor: "from-rose-50 to-pink-50",
+    borderColor: "border-rose-200",
+    textColor: "text-rose-600",
   },
 ];
 

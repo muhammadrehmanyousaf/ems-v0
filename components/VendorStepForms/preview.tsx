@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { useFormContext } from '@/lib/context/form-context';
+import { getVendorTypeConfig, type OptionGroup } from '@/lib/vendor-type-config';
 import {
     User, Mail, Phone, Building2, MapPin, Instagram, Facebook,
     Globe, AtSign, ExternalLink, CheckCircle,
@@ -41,6 +42,35 @@ const Tags = ({ label, items, color = 'gray' }: { label: string; items: string[]
         </div>
     );
 };
+
+// ── Stationery grouped expertise ──────────────────────────────────────────────
+
+function GroupedExpertise({ groups, selected }: { groups: OptionGroup[]; selected: string[] }) {
+    if (!selected?.length) return null;
+    return (
+        <div className='sm:col-span-2 space-y-3'>
+            <span className='text-[11px] uppercase tracking-wide text-gray-400'>Products Offered</span>
+            {groups.map(({ group, emoji, items }) => {
+                const picked = items.filter((i) => selected.includes(i));
+                if (!picked.length) return null;
+                return (
+                    <div key={group} className='border border-neutral-200 rounded-xl overflow-hidden'>
+                        <div className='flex items-center gap-2 px-3 py-2 bg-neutral-50 border-b border-neutral-200'>
+                            <span className='text-sm'>{emoji}</span>
+                            <p className='text-xs font-semibold text-neutral-700'>{group}</p>
+                            <span className='ml-auto text-xs text-gray-400'>{picked.length}/{items.length}</span>
+                        </div>
+                        <div className='px-3 py-2 flex flex-wrap gap-1.5'>
+                            {picked.map((v, i) => (
+                                <span key={i} className='text-xs px-2.5 py-1 rounded-full bg-purple-50 text-purple-700'>{v}</span>
+                            ))}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
 
 // ── Bridal Wear outfit card ────────────────────────────────────────────────────
 
@@ -148,6 +178,14 @@ const Preview = () => {
     const hasPricing = formData.downPaymentType || formData.downPayment > 0 || formData.cancelationPolicy || hasPackages;
     const isCarRental = formData.businessType === 'Car rental';
     const isBridalWear = formData.businessType === 'Bridal wearing';
+    const isWeddingStationery = formData.businessType === 'Wedding Invitations and Stationery';
+
+    const stationeryExpertiseGroups = useMemo(() => {
+        if (!isWeddingStationery) return [];
+        const cfg = getVendorTypeConfig('Wedding Invitations and Stationery');
+        const field = cfg?.typeSpecificFields.find((f) => f.key === 'expertise');
+        return (field?.groups ?? []) as OptionGroup[];
+    }, [isWeddingStationery]);
 
     const tableHeaders = { col1: 'Package', col2: 'Price', col3: 'Specifications' };
 
@@ -175,6 +213,19 @@ const Preview = () => {
         { key: 'provideSeatingArrangement', label: 'Dupatta Styling' },
         { key: 'providePlate',            label: 'Groom Wear' },
         { key: 'parking',                 label: 'Rush Orders' },
+    ].filter(({ key }) => (formData as Record<string, unknown>)[key] === true) : [];
+
+    const stationeryServices = isWeddingStationery ? [
+        { key: 'travelToClientHome',        label: 'Home / Courier Delivery' },
+        { key: 'sellMehndi',                label: 'Customisation Available' },
+        { key: 'hasTeam',                   label: 'Digital Invitation Files' },
+        { key: 'provideDecorationItem',     label: 'Wax Seal / Stamp Available' },
+        { key: 'provideFoodTesting',        label: 'Calligraphy Available' },
+        { key: 'provideWaiter',             label: 'Envelope Included' },
+        { key: 'provideSoundSystem',        label: 'Rush Orders Accepted' },
+        { key: 'provideSeatingArrangement', label: 'Bilingual Printing' },
+        { key: 'providePlate',              label: 'Acrylic Cards Available' },
+        { key: 'parking',                   label: 'Nationwide Delivery' },
     ].filter(({ key }) => (formData as Record<string, unknown>)[key] === true) : [];
 
     return (
@@ -277,12 +328,20 @@ const Preview = () => {
                         </div>
                     )}
                     <Tags label={businessTypeLabel} items={Array.isArray(formData.subBusinessType) ? formData.subBusinessType : formData.subBusinessType ? [formData.subBusinessType] : []} color="purple" />
-                    {!isBridalWear && <Tags label="Staff" items={formData.staff} color="blue" />}
-                    <Tags label={isBridalWear ? 'Occasions' : 'Expertise'} items={formData.expertise} color="gray" />
-                    <Tags label={isBridalWear ? 'Outfit Categories' : 'Amenities'} items={formData.amenities} color="green" />
-                    {!isBridalWear && <Field label="Max Capacity" value={formData.maxCapacity} />}
-                    {!isBridalWear && formData.catering && <Field label="Catering" value={formData.catering} />}
-                    {!isBridalWear && (formData.parking === true || formData.parking === false) && formData.maxCapacity && (
+                    {!isBridalWear && !isWeddingStationery && <Tags label="Staff" items={formData.staff} color="blue" />}
+
+                    {/* Expertise — grouped for stationery, flat for everyone else */}
+                    {isWeddingStationery
+                        ? <GroupedExpertise groups={stationeryExpertiseGroups} selected={formData.expertise ?? []} />
+                        : <Tags label={isBridalWear ? 'Occasions' : 'Expertise'} items={formData.expertise} color="gray" />
+                    }
+
+                    {!isWeddingStationery && (
+                        <Tags label={isBridalWear ? 'Outfit Categories' : 'Amenities'} items={formData.amenities} color="green" />
+                    )}
+                    {!isBridalWear && !isWeddingStationery && <Field label="Max Capacity" value={formData.maxCapacity} />}
+                    {!isBridalWear && !isWeddingStationery && formData.catering && <Field label="Catering" value={formData.catering} />}
+                    {!isBridalWear && !isWeddingStationery && (formData.parking === true || formData.parking === false) && formData.maxCapacity && (
                         <Field label="Parking" value={formData.parking ? 'Available' : 'Not Available'} />
                     )}
                     {formData.additionalInfo && (
@@ -300,15 +359,29 @@ const Preview = () => {
                             )}
                         </>
                     )}
+                    {/* Wedding Stationery extras */}
+                    {isWeddingStationery && (
+                        <>
+                            <Tags label="Printing Techniques" items={formData.amenities ?? []} color="green" />
+                            <Tags label="Languages for Printing" items={formData.serviceProvided ?? []} color="blue" />
+                            {formData.instruction && <Field label="Production Turnaround" value={formData.instruction} />}
+                            {(formData.minCapacity ?? 0) > 0 && (
+                                <Field label="Minimum Order Qty" value={`${formData.minCapacity} pieces`} />
+                            )}
+                            {(formData.minimumPrice ?? 0) > 0 && (
+                                <Field label="Starting Price" value={`PKR ${Number(formData.minimumPrice).toLocaleString()}`} />
+                            )}
+                        </>
+                    )}
                 </div>
             </section>
 
-            {/* ── Bridal Wear Services ── */}
-            {isBridalWear && bridalServices.length > 0 && (
+            {/* ── Services Offered (Bridal Wear & Wedding Stationery) ── */}
+            {(isBridalWear && bridalServices.length > 0) || (isWeddingStationery && stationeryServices.length > 0) ? (
                 <section>
                     <SectionTitle title="Services Offered" />
                     <div className='flex flex-wrap gap-2'>
-                        {bridalServices.map(({ key, label }) => (
+                        {(isBridalWear ? bridalServices : stationeryServices).map(({ key, label }) => (
                             <span
                                 key={key}
                                 className='flex items-center gap-1.5 text-xs bg-green-50 text-green-700 border border-green-200 px-3 py-1.5 rounded-full font-medium'
@@ -319,7 +392,7 @@ const Preview = () => {
                         ))}
                     </div>
                 </section>
-            )}
+            ) : null}
 
             {/* ── Pricing & Policies ── */}
             {hasPricing && (

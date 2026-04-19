@@ -250,7 +250,7 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
                         onChange={(e) => {
                             setFormData((prevData) => ({
                                 ...prevData,
-                                minCapacity: String(e.target.value),
+                                minCapacity: Number(e.target.value) || 0,
                             }));
                             setErrors((prevErrors) => ({
                                 ...prevErrors,

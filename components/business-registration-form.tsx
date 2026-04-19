@@ -43,6 +43,8 @@ import CarRentalSteps from "./VendorStepForms/newVendorRegisterationForm/CarRent
 import { CarRentalValidations } from "./VendorStepForms/newVendorRegisterationForm/CarRental/components/validations";
 import BridalWearSteps from "./VendorStepForms/newVendorRegisterationForm/BridalWear/bridal-wear-steps";
 import { BridalWearValidations } from "./VendorStepForms/newVendorRegisterationForm/BridalWear/components/validations";
+import WeddingStationerySteps from "./VendorStepForms/newVendorRegisterationForm/WeddingStationery/wedding-stationery-steps";
+import { WeddingStationeryValidations } from "./VendorStepForms/newVendorRegisterationForm/WeddingStationery/components/validations";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useFetchData } from "@/hooks/use-fetch-data";
@@ -74,6 +76,7 @@ export function BusinessRegistrationForm() {
 
   const carRental = businessType === "Car rental";
   const bridalWear = businessType === "Bridal wearing";
+  const weddingStationery = businessType === "Wedding Invitations and Stationery";
   const photographer = businessType === "Photographer";
   const makeupArtist = businessType === "Makeup artist";
   const hennaArtist = businessType === "Henna artist";
@@ -84,6 +87,7 @@ export function BusinessRegistrationForm() {
   const getProgressPercentage = () => {
     if (currentStep === 0) return 0;
     if (bridalWear && currentStep === 8) return 100;
+    if (weddingStationery && currentStep === 8) return 100;
     if (carRental && currentStep === 7) return 100;
     if (
       (photographer || makeupArtist || hennaArtist || decorator || catering) &&
@@ -92,7 +96,7 @@ export function BusinessRegistrationForm() {
       return 100;
     if (currentStep === 6) return 100;
 
-    const maxSteps = bridalWear ? 8 : carRental ? 7 : 6;
+    const maxSteps = bridalWear || weddingStationery ? 8 : carRental ? 7 : 6;
     return Math.round((currentStep / maxSteps) * 100);
   };
 
@@ -126,6 +130,11 @@ export function BusinessRegistrationForm() {
     }
     if (bridalWear) {
       BridalWearValidations({ currentStep, formData, currentErrors });
+      setErrors(currentErrors);
+      return currentErrors;
+    }
+    if (weddingStationery) {
+      WeddingStationeryValidations({ currentStep, formData, currentErrors });
       setErrors(currentErrors);
       return currentErrors;
     }
@@ -528,6 +537,7 @@ export function BusinessRegistrationForm() {
           carRentalPackages: [],
           amenities: [],
           maxCapacity: "",
+          minCapacity: 0,
           catering: "",
           parking: false,
           travelToClientHome: false,
@@ -624,7 +634,7 @@ export function BusinessRegistrationForm() {
                       <CheckCircle className="w-4 h-4 text-green-500" />
                       <span>
                         Step {currentStep + 1} of{" "}
-                        {bridalWear ? 9 : carRental ? 8 : 7}
+                        {bridalWear || weddingStationery ? 9 : carRental ? 8 : 7}
                       </span>
                     </div>
                   </div>
@@ -788,6 +798,14 @@ export function BusinessRegistrationForm() {
                           setErrors={setErrors}
                           currentStep={currentStep}
                         />
+                      ) : weddingStationery ? (
+                        <WeddingStationerySteps
+                          setFile={setFile}
+                          file={file}
+                          error={errors}
+                          setErrors={setErrors}
+                          currentStep={currentStep}
+                        />
                       ) : photographer ? (
                         <PhotographerSteps
                           setFile={setFile}
@@ -850,17 +868,17 @@ export function BusinessRegistrationForm() {
                   <Button
                     type="button"
                     onClick={
-                      (bridalWear && currentStep === 8) ||
+                      ((bridalWear || weddingStationery) && currentStep === 8) ||
                       (carRental && currentStep === 7) ||
-                      (!bridalWear && !carRental && currentStep === 6)
+                      (!bridalWear && !weddingStationery && !carRental && currentStep === 6)
                         ? handleSubmit
                         : handleNext
                     }
                     className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 px-6 sm:px-8 py-3 sm:py-2 font-semibold"
                   >
-                    {(bridalWear && currentStep === 8) ||
+                    {((bridalWear || weddingStationery) && currentStep === 8) ||
                     (carRental && currentStep === 7) ||
-                    (!bridalWear && !carRental && currentStep === 6)
+                    (!bridalWear && !weddingStationery && !carRental && currentStep === 6)
                       ? "Submit Registration"
                       : "Continue"}
                   </Button>

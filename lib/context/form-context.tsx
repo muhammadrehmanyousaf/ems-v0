@@ -81,7 +81,7 @@ export type FormType = {
   carRentalPackages: CarRentalPackage[];
   amenities: string[];
   maxCapacity: string;
-  // minCapacity: string;
+  minCapacity: number;
   catering: string;
   parking: boolean;
   // Bridal Wear specific service fields (reuse existing DB boolean columns)
@@ -175,6 +175,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     carRentalPackages: [],
     amenities: [],
     maxCapacity: "",
+    minCapacity: 0,
     catering: "",
     parking: false,
     travelToClientHome: false,
