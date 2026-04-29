@@ -11,7 +11,6 @@ import { Badge } from "@/components/ui/badge"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useRouter } from "next/navigation"
-import { useToast } from "@/hooks/use-toast"
 import type { Vendor } from "@/lib/types"
 import { VENDOR_TYPES, VENDOR_TYPE_DISPLAY_NAMES, VENDOR_TYPE_DESCRIPTIONS, getAllVendorPaths, VENDOR_TYPE_PATHS } from "@/lib/vendor-types"
 import { useVendors } from "@/hooks/use-vendors"
@@ -51,7 +50,6 @@ const venueTypes = [
 
 export function HeroSection() {
   const router = useRouter()
-  const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("vendors")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedVenueType, setSelectedVenueType] = useState("all")
@@ -70,6 +68,148 @@ export function HeroSection() {
   // Use React Query hook for vendors
   const { data: allVendors = [], isLoading } = useVendors()
   const { data: stats } = usePlatformStats()
+
+  // ── Recent searches (per-user, falls back to "guest") ──
+  // Persist the last 5 unique searches in localStorage so users can rerun
+  // common queries with a single click.
+  type RecentSearch = {
+    tab: "vendors" | "venues"
+    category?: string
+    venueType?: string
+    location?: string
+    query?: string
+    ts: number
+  }
+  const RECENT_LIMIT = 5
+  const recentKey = useCallback(() => {
+    if (typeof window === "undefined") return "recent_searches:guest"
+    const uid = localStorage.getItem("user_id") || "guest"
+    return `recent_searches:${uid}`
+  }, [])
+
+  const [recent, setRecent] = useState<RecentSearch[]>([])
+
+  // Load on mount + whenever the auth identity changes.
+  const loadRecent = useCallback(() => {
+    if (typeof window === "undefined") return
+    try {
+      const raw = localStorage.getItem(recentKey())
+      const parsed: RecentSearch[] = raw ? JSON.parse(raw) : []
+      setRecent(Array.isArray(parsed) ? parsed.slice(0, RECENT_LIMIT) : [])
+    } catch {
+      setRecent([])
+    }
+  }, [recentKey])
+
+  useEffect(() => {
+    loadRecent()
+    const onLogin = () => loadRecent()
+    const onLogout = () => loadRecent()
+    window.addEventListener("userLogin", onLogin as EventListener)
+    window.addEventListener("user-login", onLogin as EventListener)
+    window.addEventListener("userLogout", onLogout)
+    window.addEventListener("user-logout", onLogout)
+    return () => {
+      window.removeEventListener("userLogin", onLogin as EventListener)
+      window.removeEventListener("user-login", onLogin as EventListener)
+      window.removeEventListener("userLogout", onLogout)
+      window.removeEventListener("user-logout", onLogout)
+    }
+  }, [loadRecent])
+
+  // Build a stable signature so we can dedupe identical searches.
+  const recentSig = (s: RecentSearch) =>
+    [
+      s.tab,
+      s.category || "",
+      s.venueType || "",
+      (s.location || "").trim().toLowerCase(),
+      (s.query || "").trim().toLowerCase(),
+    ].join("|")
+
+  const pushRecent = useCallback(
+    (entry: Omit<RecentSearch, "ts">) => {
+      // Skip empty searches — pure "browse" intents aren't worth saving.
+      const isEmpty =
+        !entry.location?.trim() &&
+        !entry.query?.trim() &&
+        (!entry.category || entry.category === "all") &&
+        (!entry.venueType || entry.venueType === "all")
+      if (isEmpty) return
+      const next: RecentSearch = { ...entry, ts: Date.now() }
+      const sig = recentSig(next)
+      const merged = [next, ...recent.filter((r) => recentSig(r) !== sig)].slice(
+        0,
+        RECENT_LIMIT
+      )
+      setRecent(merged)
+      try {
+        if (typeof window !== "undefined") {
+          localStorage.setItem(recentKey(), JSON.stringify(merged))
+        }
+      } catch {
+        // Ignore quota errors etc — recent searches are best-effort.
+      }
+    },
+    [recent, recentKey]
+  )
+
+  const clearRecent = () => {
+    setRecent([])
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(recentKey())
+      }
+    } catch {}
+  }
+
+  const recentLabel = (s: RecentSearch) => {
+    if (s.tab === "venues") {
+      const t = s.venueType && s.venueType !== "all"
+        ? venueTypes.find((v) => v.value === s.venueType)?.label
+        : "Venues"
+      return [t, s.location].filter(Boolean).join(" · ")
+    }
+    const cat =
+      s.category && s.category !== "all"
+        ? vendorCategories.find((c) => c.value === s.category)?.label
+        : null
+    return [s.query, cat, s.location].filter(Boolean).join(" · ")
+  }
+
+  const applyRecent = (s: RecentSearch) => {
+    if (s.tab === "venues") {
+      setActiveTab("venues")
+      setSelectedVenueType(s.venueType || "all")
+      setVenueLocation(s.location || "")
+      // Defer routing one tick so the state has updated before submit picks
+      // up the new values from closure.
+      setTimeout(() => {
+        const params = new URLSearchParams()
+        if (s.venueType && s.venueType !== "all") params.set("type", s.venueType)
+        if (s.location?.trim()) params.set("location", s.location.trim())
+        const qs = params.toString()
+        router.push(`/venues${qs ? `?${qs}` : ""}`)
+      }, 0)
+      return
+    }
+    setActiveTab("vendors")
+    setSelectedCategory(s.category || "all")
+    setLocation(s.location || "")
+    setSearchQuery(s.query || "")
+    setTimeout(() => {
+      const params = new URLSearchParams()
+      if (s.query?.trim()) params.set("q", s.query.trim())
+      if (s.location?.trim()) params.set("location", s.location.trim())
+      const qs = params.toString()
+      const querySuffix = qs ? `?${qs}` : ""
+      if (s.category && s.category !== "all") {
+        router.push(`/${s.category}${querySuffix}`)
+      } else {
+        router.push(`/search${querySuffix}`)
+      }
+    }, 0)
+  }
 
   // Get popular cities from vendor data - memoized
   const popularCities = useMemo(() => {
@@ -195,62 +335,77 @@ export function HeroSection() {
     }
   }
 
-  // Filter vendors based on search query and category - memoized
-  const filteredVendors = useMemo(() => {
+  // Filter vendors against the current form state. We compute the FULL list
+  // once (used for the live "X matches" counter) and then slice 10 for the
+  // suggestions popover.
+  const filteredVendorsAll = useMemo(() => {
     let filtered = allVendors
 
-    // Filter by category
     if (selectedCategory && selectedCategory !== 'all') {
       filtered = filtered.filter(vendor => vendorMatchesCategory(vendor, selectedCategory))
     }
 
-    // Filter by location
     if (location) {
       filtered = filtered.filter(vendor => {
         const vendorCity = vendor.city?.toLowerCase() || ''
         const vendorLocation = vendor.location?.toLowerCase() || ''
         const searchLocation = location.toLowerCase()
-        
         return vendorCity.includes(searchLocation) || vendorLocation.includes(searchLocation)
       })
     }
 
-    // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter(vendor => {
         const vendorName = vendor.name?.toLowerCase() || ''
         const vendorDescription = vendor.description?.toLowerCase() || ''
         const query = searchQuery.toLowerCase()
-        
         return vendorName.includes(query) || vendorDescription.includes(query)
       })
     }
-    
-    return filtered.slice(0, 10) // Limit to 10 for dropdown
+
+    return filtered
   }, [allVendors, selectedCategory, location, searchQuery])
 
-  // Filter venues based on search query and type - memoized
-  const filteredVenues = useMemo(() => {
+  const filteredVendors = useMemo(
+    () => filteredVendorsAll.slice(0, 10),
+    [filteredVendorsAll]
+  )
+
+  // Filter venues for the live count + dropdown.
+  const filteredVenuesAll = useMemo(() => {
     let filtered = venues
 
-    // Filter by venue type
     if (selectedVenueType && selectedVenueType !== 'all') {
       filtered = filtered.filter(venue => venueMatchesType(venue, selectedVenueType))
     }
 
-    // Filter by location
     if (venueLocation) {
       filtered = filtered.filter(venue => {
         const venueCity = venue.city?.toLowerCase() || ''
         const venueLocationText = venue.location?.toLowerCase() || ''
         const searchLocation = venueLocation.toLowerCase()
-        
         return venueCity.includes(searchLocation) || venueLocationText.includes(searchLocation)
       })
     }
 
-    return filtered.slice(0, 10) // Limit to 10 for dropdown
+    return filtered
   }, [venues, selectedVenueType, venueLocation])
+
+  const filteredVenues = useMemo(
+    () => filteredVenuesAll.slice(0, 10),
+    [filteredVenuesAll]
+  )
+
+  // Has the user actually filtered anything in the active tab? (Used to
+  // decide when to surface the live "X matches" counter — we don't want it
+  // shouting "500 vendors match" when nothing's been entered yet.)
+  const hasActiveVendorFilter =
+    (selectedCategory && selectedCategory !== 'all') ||
+    !!location.trim() ||
+    !!searchQuery.trim()
+  const hasActiveVenueFilter =
+    (selectedVenueType && selectedVenueType !== 'all') ||
+    !!venueLocation.trim()
 
   // Create reverse mapping from vendor type to path
   const getVendorTypeToPath = (vendorType: string): string => {
@@ -343,43 +498,59 @@ export function HeroSection() {
     router.push(finalUrl)
   }
 
-  // Handle vendor search submission
+  // Handle vendor search submission. We don't gate on "all + empty" — sending
+  // the user to the unfiltered /search page is a perfectly valid intent
+  // (browse mode). When they DID pick a category, route directly to that
+  // category's listing page instead of the generic /search so the URL is
+  // shareable and the filter chips on that page reflect the choice.
   const handleVendorSearch = () => {
-    if (!searchQuery.trim() && !selectedCategory && !location) {
-      toast({
-        title: "Search Required",
-        description: "Please enter a search term, select a category, or choose a location.",
-        variant: "destructive"
-      })
+    setShowVendorDropdown(false)
+    setShowLocationDropdown(false)
+
+    pushRecent({
+      tab: "vendors",
+      category: selectedCategory,
+      location: location.trim(),
+      query: searchQuery.trim(),
+    })
+
+    const params = new URLSearchParams()
+    if (searchQuery.trim()) params.set("q", searchQuery.trim())
+    if (location.trim()) params.set("location", location.trim())
+
+    const qs = params.toString()
+    const querySuffix = qs ? `?${qs}` : ""
+
+    if (selectedCategory && selectedCategory !== "all") {
+      // Category-scoped listing (e.g. /photographers, /venues).
+      router.push(`/${selectedCategory}${querySuffix}`)
       return
     }
 
-    const searchParams = new URLSearchParams()
-    if (searchQuery) searchParams.set('q', searchQuery)
-    if (selectedCategory) searchParams.set('category', selectedCategory)
-    if (location) searchParams.set('location', location)
-
-    const searchUrl = `/search?${searchParams.toString()}`
-    router.push(searchUrl)
+    if (params.has("q")) params.set("category", "all")
+    router.push(`/search${qs ? `?${params.toString()}` : ""}`)
   }
 
-  // Handle venue search submission
+  // Handle venue search submission. Always lands on /venues — /venues is
+  // already a category-scoped listing, so type/location are passed as
+  // params for the listing page to consume.
   const handleVenueSearch = () => {
-    if (!selectedVenueType && !venueLocation) {
-      toast({
-        title: "Search Required",
-        description: "Please select a venue type or choose a location.",
-        variant: "destructive"
-      })
-      return
+    setShowVenueLocationDropdown(false)
+
+    pushRecent({
+      tab: "venues",
+      venueType: selectedVenueType,
+      location: venueLocation.trim(),
+    })
+
+    const params = new URLSearchParams()
+    if (selectedVenueType && selectedVenueType !== "all") {
+      params.set("type", selectedVenueType)
     }
+    if (venueLocation.trim()) params.set("location", venueLocation.trim())
 
-    const searchParams = new URLSearchParams()
-    if (selectedVenueType && selectedVenueType !== 'all') searchParams.set('type', selectedVenueType)
-    if (venueLocation) searchParams.set('location', venueLocation)
-
-    const searchUrl = `/venues?${searchParams.toString()}`
-    router.push(searchUrl)
+    const qs = params.toString()
+    router.push(`/venues${qs ? `?${qs}` : ""}`)
   }
 
   // Handle category selection
@@ -567,6 +738,12 @@ export function HeroSection() {
                               placeholder="City"
                               value={location}
                               onChange={(e) => setLocation(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault()
+                                  handleVendorSearch()
+                                }
+                              }}
                               className="pl-9 h-11 border-purple-100/80 bg-white rounded-xl text-sm focus:ring-2 focus:ring-purple-400/30 focus:border-purple-300 transition-all"
                             />
                           </div>
@@ -576,28 +753,25 @@ export function HeroSection() {
                             <CommandInput placeholder="Search cities..." />
                             <CommandList>
                               <CommandEmpty>No cities found.</CommandEmpty>
-                              <CommandGroup>
-                                <div className="p-2">
-                                  <h4 className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Popular Cities</h4>
-                                  <div className="grid grid-cols-2 gap-1">
-                                    {popularCities.length > 0 ? (
-                                      popularCities.map((city) => (
-                                        <Button
-                                          key={city}
-                                          variant="ghost"
-                                          size="sm"
-                                          className="justify-start text-left hover:bg-purple-50 text-sm"
-                                          onClick={() => handleLocationSelect(city)}
-                                        >
-                                          {city}
-                                        </Button>
-                                      ))
-                                    ) : (
-                                      <div className="text-sm text-gray-500 p-2">Loading...</div>
-                                    )}
-                                  </div>
+                              {popularCities.length > 0 ? (
+                                <CommandGroup heading="Popular Cities">
+                                  {popularCities.map((city) => (
+                                    <CommandItem
+                                      key={city}
+                                      value={city}
+                                      onSelect={() => handleLocationSelect(city)}
+                                      className="cursor-pointer"
+                                    >
+                                      <MapPin className="w-3.5 h-3.5 mr-2 text-purple-400" />
+                                      {city}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              ) : (
+                                <div className="text-sm text-gray-500 p-3">
+                                  No cities yet — type one in.
                                 </div>
-                              </CommandGroup>
+                              )}
                             </CommandList>
                           </Command>
                         </PopoverContent>
@@ -630,8 +804,26 @@ export function HeroSection() {
                             placeholder="Or search by vendor name..."
                             value={searchQuery}
                             onChange={(e) => {
-                              setSearchQuery(e.target.value)
-                              setShowVendorDropdown(true)
+                              const v = e.target.value
+                              setSearchQuery(v)
+                              // Only auto-open the suggestions when there's
+                              // something to suggest. Avoids the empty popover
+                              // hovering over the page on focus.
+                              setShowVendorDropdown(v.trim().length > 0)
+                            }}
+                            onFocus={() => {
+                              if (searchQuery.trim().length > 0) {
+                                setShowVendorDropdown(true)
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault()
+                                setShowVendorDropdown(false)
+                                handleVendorSearch()
+                              } else if (e.key === "Escape") {
+                                setShowVendorDropdown(false)
+                              }
                             }}
                             className="pl-9 pr-10 h-10 border-purple-100/60 bg-purple-50/40 rounded-xl text-sm focus:ring-2 focus:ring-purple-400/30 focus:border-purple-300 focus:bg-white transition-all"
                           />
@@ -647,9 +839,14 @@ export function HeroSection() {
                           )}
                         </div>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[500px] p-0 rounded-xl" align="start">
-                        <Command>
-                          <CommandInput placeholder="Search vendors..." />
+                      <PopoverContent
+                        className="w-[500px] p-0 rounded-xl"
+                        align="start"
+                        // Don't steal focus from the input — user must keep
+                        // typing while the suggestions list updates live.
+                        onOpenAutoFocus={(e) => e.preventDefault()}
+                      >
+                        <Command shouldFilter={false}>
                           <CommandList>
                             <CommandEmpty>No vendors found.</CommandEmpty>
                             <CommandGroup>
@@ -700,6 +897,65 @@ export function HeroSection() {
                       </PopoverContent>
                     </Popover>
                   </div>
+
+                  {/* Live results count + recent searches (vendors tab) */}
+                  <div className="flex flex-col gap-2 px-1">
+                    {/* Live count — only when there's something filtered */}
+                    {hasActiveVendorFilter && !isLoading && (
+                      <div className="text-xs text-gray-500 flex items-center gap-1.5">
+                        <span
+                          className={`inline-flex w-1.5 h-1.5 rounded-full ${
+                            filteredVendorsAll.length > 0
+                              ? "bg-emerald-500"
+                              : "bg-amber-500"
+                          }`}
+                        />
+                        <span>
+                          <span className="font-semibold text-gray-700">
+                            {filteredVendorsAll.length}
+                          </span>{" "}
+                          {filteredVendorsAll.length === 1 ? "vendor" : "vendors"}{" "}
+                          match{" "}
+                          <button
+                            type="button"
+                            onClick={handleVendorSearch}
+                            className="text-purple-600 hover:text-purple-700 font-medium underline-offset-2 hover:underline"
+                          >
+                            view all →
+                          </button>
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Recent searches (vendors tab) */}
+                    {recent.filter((r) => r.tab === "vendors").length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[11px] font-medium uppercase tracking-wider text-gray-400 mr-1">
+                          Recent
+                        </span>
+                        {recent
+                          .filter((r) => r.tab === "vendors")
+                          .map((r) => (
+                            <button
+                              key={recentSig(r)}
+                              type="button"
+                              onClick={() => applyRecent(r)}
+                              className="px-2.5 py-1 text-xs rounded-full bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors border border-purple-100/80"
+                            >
+                              {recentLabel(r)}
+                            </button>
+                          ))}
+                        <button
+                          type="button"
+                          onClick={clearRecent}
+                          className="px-2 py-1 text-xs text-gray-400 hover:text-gray-600 ml-auto"
+                          aria-label="Clear recent searches"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </TabsContent>
 
                 {/* ── Venues Tab ── */}
@@ -731,6 +987,12 @@ export function HeroSection() {
                               placeholder="City"
                               value={venueLocation}
                               onChange={(e) => setVenueLocation(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault()
+                                  handleVenueSearch()
+                                }
+                              }}
                               className="pl-9 h-11 border-purple-100/80 bg-white rounded-xl text-sm focus:ring-2 focus:ring-purple-400/30 focus:border-purple-300 transition-all"
                             />
                           </div>
@@ -740,28 +1002,25 @@ export function HeroSection() {
                             <CommandInput placeholder="Search cities..." />
                             <CommandList>
                               <CommandEmpty>No cities found.</CommandEmpty>
-                              <CommandGroup>
-                                <div className="p-2">
-                                  <h4 className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Popular Cities</h4>
-                                  <div className="grid grid-cols-2 gap-1">
-                                    {popularCities.length > 0 ? (
-                                      popularCities.map((city) => (
-                                        <Button
-                                          key={city}
-                                          variant="ghost"
-                                          size="sm"
-                                          className="justify-start text-left hover:bg-purple-50 text-sm"
-                                          onClick={() => handleVenueLocationSelect(city)}
-                                        >
-                                          {city}
-                                        </Button>
-                                      ))
-                                    ) : (
-                                      <div className="text-sm text-gray-500 p-2">Loading...</div>
-                                    )}
-                                  </div>
+                              {popularCities.length > 0 ? (
+                                <CommandGroup heading="Popular Cities">
+                                  {popularCities.map((city) => (
+                                    <CommandItem
+                                      key={city}
+                                      value={city}
+                                      onSelect={() => handleVenueLocationSelect(city)}
+                                      className="cursor-pointer"
+                                    >
+                                      <MapPin className="w-3.5 h-3.5 mr-2 text-purple-400" />
+                                      {city}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              ) : (
+                                <div className="text-sm text-gray-500 p-3">
+                                  No cities yet — type one in.
                                 </div>
-                              </CommandGroup>
+                              )}
                             </CommandList>
                           </Command>
                         </PopoverContent>
@@ -780,6 +1039,63 @@ export function HeroSection() {
                       )}
                       Search
                     </Button>
+                  </div>
+
+                  {/* Live results count + recent searches (venues tab) */}
+                  <div className="flex flex-col gap-2 px-1">
+                    {hasActiveVenueFilter && !isLoading && (
+                      <div className="text-xs text-gray-500 flex items-center gap-1.5">
+                        <span
+                          className={`inline-flex w-1.5 h-1.5 rounded-full ${
+                            filteredVenuesAll.length > 0
+                              ? "bg-emerald-500"
+                              : "bg-amber-500"
+                          }`}
+                        />
+                        <span>
+                          <span className="font-semibold text-gray-700">
+                            {filteredVenuesAll.length}
+                          </span>{" "}
+                          {filteredVenuesAll.length === 1 ? "venue" : "venues"}{" "}
+                          match{" "}
+                          <button
+                            type="button"
+                            onClick={handleVenueSearch}
+                            className="text-purple-600 hover:text-purple-700 font-medium underline-offset-2 hover:underline"
+                          >
+                            view all →
+                          </button>
+                        </span>
+                      </div>
+                    )}
+
+                    {recent.filter((r) => r.tab === "venues").length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[11px] font-medium uppercase tracking-wider text-gray-400 mr-1">
+                          Recent
+                        </span>
+                        {recent
+                          .filter((r) => r.tab === "venues")
+                          .map((r) => (
+                            <button
+                              key={recentSig(r)}
+                              type="button"
+                              onClick={() => applyRecent(r)}
+                              className="px-2.5 py-1 text-xs rounded-full bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors border border-purple-100/80"
+                            >
+                              {recentLabel(r)}
+                            </button>
+                          ))}
+                        <button
+                          type="button"
+                          onClick={clearRecent}
+                          className="px-2 py-1 text-xs text-gray-400 hover:text-gray-600 ml-auto"
+                          aria-label="Clear recent searches"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Venue Results Preview */}

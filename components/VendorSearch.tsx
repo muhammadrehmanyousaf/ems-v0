@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import { useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -62,11 +63,29 @@ const DEFAULT_FILTERS: Filters = {
 }
 
 export default function VendorSearch({ vendorType }: VendorSearchProps) {
+  const searchParams = useSearchParams()
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
   const [sortOption, setSortOption] = useState("default")
-  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
+
+  // Seed initial filters from URL — lets the hero search hand off
+  // ?q=&location=&type= and have the grid render pre-filtered on first paint.
+  const initialFilters: Filters = useMemo(() => {
+    const q = searchParams?.get("q") || searchParams?.get("search") || ""
+    const loc = searchParams?.get("location") || ""
+    const type = searchParams?.get("type") || ""
+    return {
+      ...DEFAULT_FILTERS,
+      search: q,
+      location: loc,
+      subTypes: type ? [type] : [],
+    }
+    // We intentionally compute this once on first mount — the URL is the
+    // source of truth for the *initial* state, not for ongoing user edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const [filters, setFilters] = useState<Filters>(initialFilters)
 
   const vendorTypeFromPath = getVendorTypeFromPath(vendorType)
   const displayName = getVendorTypeDisplayName(vendorTypeFromPath)
@@ -662,7 +681,9 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                         image={vendor.images?.[0] || "/placeholder.svg"}
                         location={vendor.location || vendor.city}
                         rating={vendor.rating}
-                        reviews={vendor.reviews?.length || 0}
+                        reviews={
+                          (vendor as any).reviewCount ?? vendor.reviews?.length ?? 0
+                        }
                         price={
                           vendor.minimumPrice ||
                           (vendor.packages?.length > 0

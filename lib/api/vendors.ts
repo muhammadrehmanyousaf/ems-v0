@@ -31,12 +31,18 @@ function normalizePackages(packages: any[]): any[] {
 function normalizeBusiness(raw: any): any {
   if (!raw) return raw
   const vendor = raw.vendor || {}
+  // Backend now returns `rating` (avg) and `reviewCount` aggregated by SQL.
+  // Coerce safely — Postgres can hand them back as numeric strings.
+  const rating = Number(raw.rating ?? 0) || 0
+  const reviewCount =
+    Number(raw.reviewCount ?? (Array.isArray(raw.reviews) ? raw.reviews.length : 0)) || 0
   return {
     ...raw,
     userId: raw.userId ?? vendor.id,
     type: raw.type || vendor.vendorType || raw.subBusinessType || '',
     location: raw.location || raw.subArea || raw.city || vendor.city || '',
-    rating: raw.rating ?? 0,
+    rating,
+    reviewCount,
     reviews: raw.reviews || [],
     price: (raw.price || raw.minimumPrice) ||
       (Array.isArray(raw.packages) && raw.packages.length > 0

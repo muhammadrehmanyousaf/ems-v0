@@ -35,9 +35,12 @@ export default function FavoritesPage() {
     }
   }, []);
 
+  // Always force a fresh fetch when the page mounts so the IDs hook and the
+  // favorites grid stay in sync after a heart click on a listing/detail page.
   useEffect(() => {
+    refreshFavorites();
     loadVendors();
-  }, [loadVendors]);
+  }, [loadVendors, refreshFavorites]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -273,7 +276,10 @@ export default function FavoritesPage() {
                     image={vendor.images?.[0] || "/placeholder.svg"}
                     location={vendor.location || vendor.city || "Location not specified"}
                     rating={vendor.rating || 0}
-                    reviews={Array.isArray(vendor.reviews) ? vendor.reviews.length : 0}
+                    reviews={
+                      vendor.reviewCount ??
+                      (Array.isArray(vendor.reviews) ? vendor.reviews.length : 0)
+                    }
                     price={vendor.minimumPrice || vendor.price || null}
                     type={vendor.type || vendor.subBusinessType || "Vendor"}
                     vendorType={vendor.subBusinessType}

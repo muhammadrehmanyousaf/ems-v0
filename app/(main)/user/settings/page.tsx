@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from "react"
 import { useUser } from "@/context/UserContext"
 import { useRouter } from "next/navigation"
 import axiosInstance from "@/lib/axiosConfig"
-import { BACKEND_URL } from "@/lib/backend-url"
 import { toast } from "@/hooks/use-toast"
 import { Spinner } from "@/components/ui/spinner"
 import { Button } from "@/components/ui/button"
@@ -99,6 +98,13 @@ export default function UserSettingsPage() {
     !user?.isSuperAdmin &&
     !user?.roles?.some((r: any) => r.name === "super admin" || r.name === "vendor" || r.name === "admin")
 
+  // Pull the latest user once on mount so cached `user_data` from an older
+  // login can't keep stale fields (e.g. city) from showing in the form.
+  useEffect(() => {
+    refreshUser()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     if (user) {
       const initial: ProfileForm = {
@@ -123,24 +129,33 @@ export default function UserSettingsPage() {
     if (!user?.id) return
     try {
       setIsSaving(true)
-      await axiosInstance.patch(`${BACKEND_URL}api/v1/users?id=${user.id}`, {
-        ...profile,
-        roleIds: [3],
-        id: user.id,
+      // Self-update endpoint — uses req.user.id on the server, no role tampering.
+      const res = await axiosInstance.patch("/api/v1/users/profile", {
+        fullName: profile.fullName,
+        email: profile.email,
+        phoneNumber: profile.phoneNumber,
+        city: profile.city,
       })
+      const updatedUser = res.data?.data ?? null
       setOriginalProfile(profile)
       setIsEditing(false)
       setSavedAt(new Date())
       // Sync to localStorage so header updates
       if (typeof window !== "undefined") {
         const stored = JSON.parse(localStorage.getItem("user_data") || "{}")
-        localStorage.setItem("user_data", JSON.stringify({ ...stored, ...profile }))
-        window.dispatchEvent(new CustomEvent("profileUpdated", { detail: profile }))
+        const merged = updatedUser
+          ? { ...stored, ...updatedUser }
+          : { ...stored, ...profile }
+        localStorage.setItem("user_data", JSON.stringify(merged))
+        window.dispatchEvent(new CustomEvent("profileUpdated", { detail: merged }))
       }
       await refreshUser()
       toast({ title: "Profile saved", description: "Your changes have been applied." })
-    } catch {
-      toast({ title: "Save failed", description: "Please try again.", variant: "destructive" })
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        "Please try again."
+      toast({ title: "Save failed", description: msg, variant: "destructive" })
     } finally {
       setIsSaving(false)
     }
@@ -156,10 +171,14 @@ export default function UserSettingsPage() {
       toast({ title: "Passwords don't match", variant: "destructive" })
       return
     }
+    if (passwords.newPassword.length < 8) {
+      toast({ title: "Password too short", description: "Use at least 8 characters.", variant: "destructive" })
+      return
+    }
     if (!user?.id) return
     try {
       setIsChangingPassword(true)
-      await axiosInstance.patch(`${BACKEND_URL}api/v1/users/change-password`, {
+      await axiosInstance.patch("/api/v1/users/change-password", {
         currentPassword: passwords.oldPassword,
         newPassword: passwords.newPassword,
       })
@@ -169,8 +188,11 @@ export default function UserSettingsPage() {
         logout()
         router.push("/login")
       }, 2000)
-    } catch {
-      toast({ title: "Failed to change password", description: "Please check your current password.", variant: "destructive" })
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        "Please check your current password."
+      toast({ title: "Failed to change password", description: msg, variant: "destructive" })
     } finally {
       setIsChangingPassword(false)
     }
@@ -179,28 +201,68 @@ export default function UserSettingsPage() {
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setImagePreview(URL.createObjectURL(file))
+    // Frontend size guard so we don't hit the multer limit blindly.
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Image too large",
+        description: "Please choose an image under 5 MB.",
+        variant: "destructive",
+      })
+      if (fileInputRef.current) fileInputRef.current.value = ""
+      return
+    }
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Unsupported file",
+        description: "Please choose an image file (PNG/JPG).",
+        variant: "destructive",
+      })
+      if (fileInputRef.current) fileInputRef.current.value = ""
+      return
+    }
+
+    const objectUrl = URL.createObjectURL(file)
+    setImagePreview(objectUrl)
     try {
       setIsUploadingImage(true)
       const form = new FormData()
       form.append("picture", file)
-      const res = await axiosInstance.post(`${BACKEND_URL}api/v1/users/upload-profile-picture`, form, {
-        headers: { "Content-Type": "multipart/form-data" },
-      })
+      // Don't set Content-Type manually — axios + FormData adds the multipart
+      // boundary automatically. Setting it by hand drops the boundary and the
+      // server returns "Unexpected end of form".
+      const res = await axiosInstance.post(
+        "/api/v1/users/upload-profile-picture",
+        form
+      )
       const serverUrl = res.data?.data?.profileImage
       if (serverUrl) {
+        // Cache-bust so the <img> swaps to the new file (the URL pattern is
+        // stable per-user, so the browser would otherwise reuse the cached
+        // previous photo).
+        const bustedUrl = `${serverUrl}${serverUrl.includes("?") ? "&" : "?"}v=${Date.now()}`
+        setImagePreview(bustedUrl)
         if (typeof window !== "undefined") {
           const stored = JSON.parse(localStorage.getItem("user_data") || "{}")
-          localStorage.setItem("user_data", JSON.stringify({ ...stored, profileImage: serverUrl }))
-          window.dispatchEvent(new CustomEvent("profileUpdated", { detail: { profileImage: serverUrl } }))
+          localStorage.setItem(
+            "user_data",
+            JSON.stringify({ ...stored, profileImage: bustedUrl })
+          )
+          window.dispatchEvent(
+            new CustomEvent("profileUpdated", {
+              detail: { profileImage: bustedUrl },
+            })
+          )
         }
       }
       await refreshUser()
       toast({ title: "Profile picture updated" })
-    } catch {
+    } catch (err: any) {
       setImagePreview(null)
-      toast({ title: "Upload failed", variant: "destructive" })
+      const msg = err?.response?.data?.message || "Please try again."
+      toast({ title: "Upload failed", description: msg, variant: "destructive" })
     } finally {
+      // Free the temporary object URL we created from the local file.
+      try { URL.revokeObjectURL(objectUrl) } catch {}
       setIsUploadingImage(false)
       if (fileInputRef.current) fileInputRef.current.value = ""
     }

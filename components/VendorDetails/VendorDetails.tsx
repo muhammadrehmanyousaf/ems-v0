@@ -54,6 +54,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/use-toast";
 import Link from "next/link";
 import { useUser } from "@/context/UserContext";
+import { useFavorites } from "@/hooks/use-favorites";
 import { ChatDrawer } from "@/components/chat/chat-drawer";
 import { toast as sonnerToast } from "sonner";
 
@@ -178,7 +179,19 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
       : null;
   const startingPrice = vendor.minimumPrice || lowestPackagePrice || vendor.price || null;
   const [date, setDate] = useState<Date | undefined>(undefined);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const { isFavorited, toggleFavorite, isLoading: favLoading } = useFavorites();
+  const isFavorite = isFavorited(vendor.id);
+  const handleFavoriteClick = async () => {
+    const isLoggedIn =
+      typeof window !== "undefined" &&
+      localStorage.getItem("user_id") &&
+      localStorage.getItem("auth_token");
+    if (!isLoggedIn) {
+      router.push("/login");
+      return;
+    }
+    await toggleFavorite(vendor.id);
+  };
   const [selectedImage, setSelectedImage] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -650,7 +663,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setIsFavorite(!isFavorite)}
+              onClick={handleFavoriteClick}
               className="p-2 rounded-full bg-white/20 backdrop-blur-sm"
             >
               <Heart
@@ -729,7 +742,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
               <Button
                 variant="outline"
                 size="lg"
-                onClick={() => setIsFavorite(!isFavorite)}
+                onClick={handleFavoriteClick}
                 className="w-full sm:w-auto border-purple-200 text-purple-600 hover:bg-purple-600 hover:text-white backdrop-blur-sm px-6 sm:px-8 py-3 text-base sm:text-lg font-semibold rounded-xl transition-all duration-200"
               >
                 <Heart

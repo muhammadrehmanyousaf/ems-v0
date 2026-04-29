@@ -101,7 +101,7 @@ export class FavoritesAPI {
       return rows
         .filter(f => f.business)
         .map(f => {
-          const b = f.business;
+          const b: any = f.business;
           const images = Array.isArray(b.images) ? b.images : (b.images ? [b.images] : []);
 
           // subBusinessType is a PostgreSQL array — unwrap to first string
@@ -114,13 +114,18 @@ export class FavoritesAPI {
             : [];
           const price = b.minimumPrice || (pkgPrices.length > 0 ? Math.min(...pkgPrices) : null) || null;
 
+          const rating = Number(b.rating ?? 0) || 0;
+          const reviewCount =
+            Number(b.reviewCount ?? (Array.isArray(b.reviews) ? b.reviews.length : 0)) || 0;
+
           return {
             ...b,
             id: f.businessId,
             type,
             location: b.subArea || b.city || '',
             price,
-            rating: b.rating ?? 0,
+            rating,
+            reviewCount,
             reviews: Array.isArray(b.reviews) ? b.reviews : [],
             amenities: Array.isArray(b.amenities) ? b.amenities : [],
             images,

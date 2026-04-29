@@ -58,6 +58,7 @@ import {
   StaggerItem,
 } from "@/components/ui/motion-wrapper";
 import { useUser } from "@/context/UserContext";
+import { useFavorites } from "@/hooks/use-favorites";
 import { ChatDrawer } from "@/components/chat/chat-drawer";
 import { toast as sonnerToast } from "sonner";
 import { VendorAPI } from "@/lib/api/vendors";
@@ -308,7 +309,8 @@ function PackageCard({
 export default function VendorDetailsMobile({
   vendor,
 }: VendorDetailsMobileProps) {
-  const [isFavorite, setIsFavorite] = useState(false);
+  const { isFavorited, toggleFavorite } = useFavorites();
+  const isFavorite = isFavorited(vendor.id);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [monthAvailability, setMonthAvailability] = useState<Record<string, {
@@ -390,15 +392,6 @@ export default function VendorDetailsMobile({
     [hasMenus],
   );
 
-  // Load favorite status from localStorage on component mount
-  useEffect(() => {
-    const savedFavorites = localStorage.getItem("favorites");
-    if (savedFavorites) {
-      const favorites = JSON.parse(savedFavorites);
-      setIsFavorite(favorites.includes(vendor.id));
-    }
-  }, [vendor.id]);
-
   // Scroll-spy IntersectionObserver
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
@@ -424,23 +417,16 @@ export default function VendorDetailsMobile({
     return () => observers.forEach((o) => o.disconnect());
   }, [sectionRefs]);
 
-  // Save favorite status to localStorage
-  const handleFavoriteToggle = () => {
-    const newFavoriteStatus = !isFavorite;
-    setIsFavorite(newFavoriteStatus);
-
-    const savedFavorites = localStorage.getItem("favorites");
-    let favorites = savedFavorites ? JSON.parse(savedFavorites) : [];
-
-    if (newFavoriteStatus) {
-      if (!favorites.includes(vendor.id)) {
-        favorites.push(vendor.id);
-      }
-    } else {
-      favorites = favorites.filter((id: string) => id !== vendor.id);
+  const handleFavoriteToggle = async () => {
+    const isLoggedIn =
+      typeof window !== "undefined" &&
+      localStorage.getItem("user_id") &&
+      localStorage.getItem("auth_token");
+    if (!isLoggedIn) {
+      router.push("/login");
+      return;
     }
-
-    localStorage.setItem("favorites", JSON.stringify(favorites));
+    await toggleFavorite(vendor.id);
   };
 
   const primaryImage = useMemo(

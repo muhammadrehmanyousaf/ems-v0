@@ -12,62 +12,87 @@ interface UseFavoritesReturn {
   refreshFavorites: () => Promise<void>
 }
 
-// Cache constants
-const FAVORITES_CACHE_KEY = 'user_favorites_cache'
-const FAVORITES_CACHE_TIMESTAMP_KEY = 'user_favorites_cache_timestamp'
+// Cache TTL
 const CACHE_DURATION = 2 * 60 * 1000 // 2 minutes
+
+// Cache keys are scoped per user so a logout/login doesn't surface
+// a previous user's favorite IDs.
+const cacheKey = (userId: string) => `user_favorites_cache:${userId}`
+const cacheTimestampKey = (userId: string) =>
+  `user_favorites_cache_timestamp:${userId}`
+
+const getUserId = (): string => {
+  if (typeof window === 'undefined') return ''
+  return localStorage.getItem('user_id') || ''
+}
 
 // Check if user is authenticated
 const isAuthenticated = (): boolean => {
+  const userId = getUserId()
   if (typeof window === 'undefined') return false
-  const userId = localStorage.getItem('user_id')
   const token = localStorage.getItem('auth_token')
   return !!(userId && token)
 }
 
-// Get cached favorites
+// Get cached favorites (only for the current user)
 const getCachedFavorites = (): number[] | null => {
   if (typeof window === 'undefined') return null
-  
+  const userId = getUserId()
+  if (!userId) return null
+
   try {
-    const timestamp = localStorage.getItem(FAVORITES_CACHE_TIMESTAMP_KEY)
-    const cached = localStorage.getItem(FAVORITES_CACHE_KEY)
-    
+    const timestamp = localStorage.getItem(cacheTimestampKey(userId))
+    const cached = localStorage.getItem(cacheKey(userId))
+
     if (timestamp && cached) {
       const now = Date.now()
       const cacheTime = parseInt(timestamp)
-      
+
       if (now - cacheTime < CACHE_DURATION) {
-        const favorites = JSON.parse(cached)
-        return favorites
+        return JSON.parse(cached)
       }
     }
   } catch (error) {
     console.error('Error reading cached favorites:', error)
   }
-  
+
   return null
 }
 
-// Set cached favorites
+// Set cached favorites for the current user
 const setCachedFavorites = (favorites: number[]) => {
   if (typeof window === 'undefined') return
-  
+  const userId = getUserId()
+  if (!userId) return
+
   try {
-    localStorage.setItem(FAVORITES_CACHE_KEY, JSON.stringify(favorites))
-    localStorage.setItem(FAVORITES_CACHE_TIMESTAMP_KEY, Date.now().toString())
+    localStorage.setItem(cacheKey(userId), JSON.stringify(favorites))
+    localStorage.setItem(cacheTimestampKey(userId), Date.now().toString())
   } catch (error) {
     console.error('Error caching favorites:', error)
   }
 }
 
-// Clear cached favorites
+// Clear all favorites cache entries (used on logout — we don't know which
+// user just logged out, so we wipe every scoped key plus the legacy ones).
 const clearCachedFavorites = () => {
   if (typeof window === 'undefined') return
-  
+
   try {
-    localStorage.removeItem(FAVORITES_CACHE_KEY)
-    localStorage.removeItem(FAVORITES_CACHE_TIMESTAMP_KEY)
+    const keys: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i)
+      if (
+        k &&
+        (k.startsWith('user_favorites_cache:') ||
+          k.startsWith('user_favorites_cache_timestamp:') ||
+          k === 'user_favorites_cache' ||
+          k === 'user_favorites_cache_timestamp')
+      ) {
+        keys.push(k)
+      }
+    }
+    keys.forEach((k) => localStorage.removeItem(k))
   } catch (error) {
     console.error('Error clearing cached favorites:', error)
   }
@@ -113,12 +138,13 @@ export function useFavorites(): UseFavoritesReturn {
     loadFavorites()
   }, [loadFavorites])
 
-  // Listen for authentication changes
+  // Listen for authentication changes (cross-tab via 'storage', same-tab via
+  // the custom events fired by UserContext.login/logout).
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'user_id' || e.key === 'auth_token') {
         if (isAuthenticated()) {
-          loadFavorites()
+          loadFavorites(true)
         } else {
           setFavorites([])
           clearCachedFavorites()
@@ -126,8 +152,29 @@ export function useFavorites(): UseFavoritesReturn {
       }
     }
 
+    const handleLogin = () => {
+      // A new user just logged in — drop any previously-cached IDs and refetch.
+      clearCachedFavorites()
+      loadFavorites(true)
+    }
+
+    const handleLogout = () => {
+      setFavorites([])
+      clearCachedFavorites()
+    }
+
     window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
+    window.addEventListener('userLogin', handleLogin as EventListener)
+    window.addEventListener('user-login', handleLogin as EventListener)
+    window.addEventListener('userLogout', handleLogout)
+    window.addEventListener('user-logout', handleLogout)
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('userLogin', handleLogin as EventListener)
+      window.removeEventListener('user-login', handleLogin as EventListener)
+      window.removeEventListener('userLogout', handleLogout)
+      window.removeEventListener('user-logout', handleLogout)
+    }
   }, [loadFavorites])
 
   // Check if business is favorited
@@ -154,25 +201,39 @@ export function useFavorites(): UseFavoritesReturn {
     
     try {
       let success = false
-      
+
       if (isCurrentlyFavorited) {
         success = await FavoritesAPI.removeFromFavorites(businessId)
         if (success) {
-          setCachedFavorites(favorites.filter(id => id !== businessIdNum))
+          // Persist via functional update so we read the latest state, not a
+          // stale closure value.
+          setFavorites((prev) => {
+            const next = prev.filter((id) => id !== businessIdNum)
+            setCachedFavorites(next)
+            return next
+          })
         } else {
           // Revert optimistic update on failure
-          setFavorites(prev => [...prev, businessIdNum])
+          setFavorites((prev) =>
+            prev.includes(businessIdNum) ? prev : [...prev, businessIdNum]
+          )
         }
       } else {
         success = await FavoritesAPI.addToFavorites(businessId)
         if (success) {
-          setCachedFavorites([...favorites, businessIdNum])
+          setFavorites((prev) => {
+            const next = prev.includes(businessIdNum)
+              ? prev
+              : [...prev, businessIdNum]
+            setCachedFavorites(next)
+            return next
+          })
         } else {
           // Revert optimistic update on failure
-          setFavorites(prev => prev.filter(id => id !== businessIdNum))
+          setFavorites((prev) => prev.filter((id) => id !== businessIdNum))
         }
       }
-      
+
       return success
     } catch (error) {
       console.error('Error toggling favorite:', error)
