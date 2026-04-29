@@ -165,7 +165,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     clearAuthData();
     window.dispatchEvent(new CustomEvent('userLogout'));
     window.dispatchEvent(new CustomEvent('user-logout'));
-    window.location.reload();
+    window.location.href = "/";
   };
 
   const refreshUser = async () => {

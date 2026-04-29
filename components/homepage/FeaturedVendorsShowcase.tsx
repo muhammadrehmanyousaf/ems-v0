@@ -78,7 +78,7 @@ export function FeaturedVendorsShowcase({ vendorPath, title, subtitle, descripti
                     </span>
                   </div>
                   <p className="text-lg font-bold mt-2 text-gold-300">
-                    From Rs. {(hero.minimumPrice || hero.price || 0).toLocaleString()}
+                    From Rs. {(hero.minimumPrice || hero.price)?.toLocaleString() ?? 'Contact us'}
                   </p>
                 </div>
               </div>

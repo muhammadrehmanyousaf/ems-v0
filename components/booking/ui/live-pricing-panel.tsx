@@ -24,13 +24,22 @@ export default function LivePricingPanel({
 
   const breakdown = useMemo(() => {
     const items: { label: string; type: string; amount: number }[] = []
+    const isCarRental = venue?.vendor?.vendorType === "Car rental"
+    const isBridalWear = venue?.vendor?.vendorType === "Bridal wearing"
+    const isWeddingStationery = venue?.vendor?.vendorType === "Wedding Invitations and Stationery"
+    const vehicleQty = (isCarRental || isBridalWear || isWeddingStationery)
+      ? (formData.vehicleQuantity || 1) : 1
 
-    // Venue package
+    // Venue / vehicle / outfit / product package
     if (selectedPackageObj) {
+      const unitPrice = Number(selectedPackageObj.price) || 0
+      const pkgType = isCarRental ? "Vehicle" : isBridalWear ? "Outfit" : isWeddingStationery ? "Product" : "Package"
       items.push({
-        label: `${venue?.name || "Venue"} — ${selectedPackageObj.name}`,
-        type: "Package",
-        amount: Number(selectedPackageObj.price) || 0,
+        label: vehicleQty > 1
+          ? `${venue?.name || "Vendor"} — ${selectedPackageObj.name} ×${vehicleQty}`
+          : `${venue?.name || "Vendor"} — ${selectedPackageObj.name}`,
+        type: pkgType,
+        amount: unitPrice * vehicleQty,
       })
     }
 
@@ -52,10 +61,11 @@ export default function LivePricingPanel({
       })
     }
 
-    // Vendor packages
+    // Vendor / service packages
     const vendorIdsWithPackages = new Set<string>()
     if (formData.selectedVendorPackages?.length) {
       formData.selectedVendorPackages.forEach((pkgId) => {
+        // Try external vendorDetails first
         const owner = vendorsDetails.find((v) =>
           (v.packages || []).some((p: any) => String(p.id) === String(pkgId))
         )
@@ -67,6 +77,18 @@ export default function LivePricingPanel({
             type: "Vendor Pkg",
             amount: Number(pkg.price) || 0,
           })
+        } else {
+          // Car rental service packages live on the venue itself
+          const venuePkg = (venue?.packages || []).find(
+            (p: any) => String(p.id) === String(pkgId)
+          )
+          if (venuePkg) {
+            items.push({
+              label: `${venue?.name || "Vendor"} — ${(venuePkg as any).name}`,
+              type: "Service Pkg",
+              amount: Number((venuePkg as any).price) || 0,
+            })
+          }
         }
       })
     }
@@ -94,7 +116,7 @@ export default function LivePricingPanel({
     if (venue) {
       const dpType = (venue.downPaymentType || "").toLowerCase()
       const dpValue = Number(venue.downPayment) || 0
-      if (dpType.includes("percent")) {
+      if (dpType === "percentage" || dpType === "percent") {
         downPayment = Math.round(subtotal * (dpValue / 100))
       } else {
         downPayment = dpValue

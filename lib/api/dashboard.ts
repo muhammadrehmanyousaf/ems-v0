@@ -338,6 +338,20 @@ export class PaymentsAPI {
     );
     return res.data?.data;
   }
+
+  static async getVendorRevenue(params?: {
+    source?: 'offline' | 'online';
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<import('@/lib/dashboard-types').VendorRevenueResponse> {
+    const qs = new URLSearchParams();
+    if (params?.source)   qs.set('source',   params.source);
+    if (params?.dateFrom) qs.set('dateFrom', params.dateFrom);
+    if (params?.dateTo)   qs.set('dateTo',   params.dateTo);
+    const res = await axiosInstance.get(`/api/v1/payments/vendor-revenue?${qs.toString()}`);
+    const empty = { count: 0, total: 0, received: 0, due: 0 };
+    return res.data?.data ?? { payments: [], stats: { offline: empty, online: empty, all: empty } };
+  }
 }
 
 // ─── Reviews ──────────────────────────────────────────────────
@@ -440,6 +454,7 @@ export interface CreateBookingVendor {
   businessId: number;
   packageId?: number | null;
   menuId?: number | null;
+  vehicleQuantity?: number;
   totalAmount: number;
   downPayment: number;
   specialRequests?: string | null;
@@ -453,6 +468,7 @@ export interface CreateBookingPayload {
   bookingTime: string;
   guestCount?: number;
   vendors: CreateBookingVendor[];
+  isOfflineBooking?: boolean;
 }
 
 export type PaymentType = "down_payment" | "remaining" | "full_payment";
@@ -585,7 +601,7 @@ export class MenusAPI {
 
   static async update(
     id: number,
-    data: { title?: string; price?: number; data?: Record<string, unknown> },
+    data: { title?: string; price?: number; businessId?: number; data?: Record<string, unknown> },
   ): Promise<ApiMenu> {
     const res = await axiosInstance.patch(`/api/v1/menus/${id}`, data);
     return res.data?.data;
@@ -593,5 +609,34 @@ export class MenusAPI {
 
   static async delete(id: number): Promise<void> {
     await axiosInstance.delete(`/api/v1/menus/${id}`);
+  }
+}
+
+// ─── Vendor Blocked Dates ─────────────────────────────────────
+
+export interface BlockedDate {
+  id: number;
+  businessId: number;
+  blockedDate: string; // "YYYY-MM-DD"
+  reason: string | null;
+}
+
+export class BlockedDatesAPI {
+  static async getAll(month?: string): Promise<BlockedDate[]> {
+    const params = month ? { month } : {};
+    const res = await axiosInstance.get("/api/v1/bookings/blocked-dates", { params });
+    return res.data?.data?.blockedDates ?? [];
+  }
+
+  static async block(blockedDate: string, reason?: string): Promise<BlockedDate[]> {
+    const res = await axiosInstance.post("/api/v1/bookings/blocked-dates", {
+      blockedDate,
+      reason: reason || null,
+    });
+    return res.data?.data?.blockedDates ?? [];
+  }
+
+  static async unblock(date: string): Promise<void> {
+    await axiosInstance.delete(`/api/v1/bookings/blocked-dates/${date}`);
   }
 }

@@ -252,56 +252,48 @@ export class PaymentAPI {
       const pendingPayments: PendingPayment[] = [];
       const paymentHistory: PaymentHistory[] = [];
       
-      bookings.forEach((booking: any, index: number) => {
-        // Extract business info from bookingDetails
+      bookings.forEach((booking: any) => {
+        const statusLower  = String(booking.status        || '').toLowerCase();
+        const paymentLower = String(booking.paymentStatus || '').toLowerCase();
+
+        // Skip cancelled bookings entirely
+        if (statusLower === 'cancelled') return;
+
         const businesses = booking.bookingDetails?.map((detail: any) => ({
           id: detail.businessId,
-          name: detail.business?.name || 'Business'
-        })) || [{
-          id: booking.vendorId,
-          name: 'Business'
-        }];
-        
-              // Use the payment type from the backend if available, otherwise determine it
-              // Use the payment type and amount from the backend if available
-        const determinedPaymentType = booking.paymentType || this.determinePaymentType(booking.status, booking.paymentStatus);
-        
-        // For full payments, use the total amount; for others, calculate based on status
-        let calculatedAmount: number;
-        if (determinedPaymentType === 'full_payment') {
-          calculatedAmount = booking.totalAmount;
-        } else {
-          calculatedAmount = this.calculatePaymentAmount(booking.status, booking.paymentStatus, booking.totalAmount, booking.downPayment);
-        }
-        
+          name: detail.business?.name || 'Business',
+        })) || [];
+
+        const determinedPaymentType = this.determinePaymentType(booking.status, booking.paymentStatus);
+        const calculatedAmount      = this.calculatePaymentAmount(booking.status, booking.paymentStatus, booking.totalAmount, booking.downPayment);
+
         const paymentData = {
-          id: booking.id,
-          bookingId: booking.id,
-          customerName: booking.customerName || 'Customer',
-          bookingDate: booking.bookingDate,
+          id:            booking.id,
+          bookingId:     booking.id,
+          customerName:  booking.customerName  || 'Customer',
+          bookingDate:   booking.bookingDate,
+          bookingTime:   booking.bookingTime,
           businesses,
-          paymentType: determinedPaymentType,
-          amount: calculatedAmount,
-          currency: 'usd', // Default currency
-          status: booking.status,
+          paymentType:   determinedPaymentType,
+          amount:        calculatedAmount,
+          currency:      'usd',
+          status:        booking.status,
           paymentStatus: booking.paymentStatus,
-          createdAt: booking.createdAt,
-          totalAmount: booking.totalAmount
+          createdAt:     booking.createdAt,
+          totalAmount:   booking.totalAmount,
+          downPayment:   booking.downPayment,
         };
-        
-        // Treat any completed booking as done (history), regardless of paymentStatus
-        const statusLower = String(booking.status || '').toLowerCase();
-        const paymentLower = String(booking.paymentStatus || '').toLowerCase();
-        if (statusLower === 'completed' || paymentLower === 'paid' || paymentLower === 'completed') {
+
+        if (paymentLower === 'paid' || statusLower === 'completed') {
           paymentHistory.push({
             ...paymentData,
-            status: 'completed',
-            updatedAt: paymentData.createdAt,
+            status:     'completed',
+            updatedAt:  paymentData.createdAt,
             bookingDetails: {
               customerName: paymentData.customerName,
-              bookingDate: paymentData.bookingDate,
-              businesses: paymentData.businesses
-            }
+              bookingDate:  paymentData.bookingDate,
+              businesses:   paymentData.businesses,
+            },
           });
         } else {
           pendingPayments.push(paymentData);
@@ -317,45 +309,25 @@ export class PaymentAPI {
   
   // Determine payment type based on booking and payment status (case-insensitive)
   private static determinePaymentType(bookingStatus: string, paymentStatus: string): 'down_payment' | 'remaining_payment' | 'full_payment' {
-    const status = bookingStatus?.toLowerCase();
-    const payment = paymentStatus?.toLowerCase();
-    
-    // If booking is completed, treat as full payment regardless of payment status
-    if (status === 'completed') {
-      return 'full_payment';
-    }
-    
-    if (payment === 'pending' && status === 'pending') {
-      // Check if this should be a full payment or down payment
-      // For now, we'll treat pending/pending as down_payment by default
-      // The backend can determine if it should be full_payment based on business logic
-      return 'down_payment';
-    } else if (payment === 'partial' && status === 'confirmed') {
-      return 'remaining_payment';
-    } else if (payment === 'paid' && status === 'completed') {
-      return 'full_payment'; // For completed bookings
-    } else {
-      return 'down_payment'; // fallback
-    }
+    const status  = (bookingStatus  || '').toLowerCase();
+    const payment = (paymentStatus || '').toLowerCase();
+
+    if (status === 'completed' || payment === 'paid') return 'full_payment';
+    if ((status === 'confirmed') && payment === 'partial') return 'remaining_payment';
+    // "awaiting payment" or "pending" with pending payment → down payment
+    return 'down_payment';
   }
   
   // Calculate payment amount based on status and downPayment field (case-insensitive)
   private static calculatePaymentAmount(bookingStatus: string, paymentStatus: string, totalAmount: number, downPayment: number): number {
-    const status = bookingStatus?.toLowerCase();
-    const payment = paymentStatus?.toLowerCase();
-    
-    if (payment === 'pending' && status === 'pending') {
-      // For pending payments, we need to check if it's a full payment or down payment
-      // The backend should determine this, but for now we'll use down payment logic
-      return downPayment || Math.round(totalAmount * 0.2);
-    } else if (payment === 'partial' && status === 'confirmed') {
-      // Remaining amount = total - downPayment
-      return totalAmount - (downPayment || Math.round(totalAmount * 0.2));
-    } else if (payment === 'paid' && status === 'completed') {
-      // Completed booking - show total amount
-      return totalAmount;
-    } else {
-      return totalAmount;
+    const status  = (bookingStatus  || '').toLowerCase();
+    const payment = (paymentStatus || '').toLowerCase();
+
+    if (payment === 'paid' || status === 'completed') return Number(totalAmount) || 0;
+    if (status === 'confirmed' && payment === 'partial') {
+      return Number(totalAmount) - Number(downPayment || 0);
     }
+    // awaiting payment or pending → down payment amount
+    return Number(downPayment) || Number(totalAmount) || 0;
   }
 }

@@ -46,20 +46,32 @@ export default function PreviewStep({
     )
     .filter(Boolean);
 
+  const isCarRental = venue?.vendor?.vendorType === "Car rental"
+  const isBridalWear = venue?.vendor?.vendorType === "Bridal wearing"
+  const isWeddingStationery = venue?.vendor?.vendorType === "Wedding Invitations and Stationery"
+  const vehicleQty = (isCarRental || isBridalWear || isWeddingStationery)
+    ? (formData.vehicleQuantity || 1) : 1
+
   const selectedVendorPackages = (formData.selectedVendorPackages || [])
     .map((packageId) => {
+      // First try external vendorDetails
       const ownerVendor = vendorDetails.find((v) =>
         (v as any).packages?.some(
           (p: any) => String(p.id) === String(packageId),
         ),
       );
-      const pkg = ownerVendor
-        ? (ownerVendor as any).packages.find(
-            (p: any) => String(p.id) === String(packageId),
-          )
-        : null;
-      if (!pkg) return null;
-      return { ...pkg, vendorName: ownerVendor?.name || "" };
+      if (ownerVendor) {
+        const pkg = (ownerVendor as any).packages.find(
+          (p: any) => String(p.id) === String(packageId),
+        );
+        return pkg ? { ...pkg, vendorName: ownerVendor.name || "" } : null;
+      }
+      // Fallback: service packages on the venue itself (e.g. car rental service packages)
+      const venuePkg = (venue?.packages || []).find(
+        (p: any) => String(p.id) === String(packageId),
+      );
+      if (venuePkg) return { ...venuePkg, vendorName: venue?.name || "" };
+      return null;
     })
     .filter(Boolean);
 
@@ -68,10 +80,14 @@ export default function PreviewStep({
   const vendorIdsWithPackages = new Set<string>();
 
   if (selectedPackageObj) {
+    const unitPrice = Number(selectedPackageObj.price) || 0
+    const pkgType = isCarRental ? "Vehicle" : isBridalWear ? "Outfit" : isWeddingStationery ? "Product" : "Package"
     invoiceLines.push({
-      label: `${venue?.name || "Venue"} — ${selectedPackageObj.name}`,
-      type: "Package",
-      amount: Number(selectedPackageObj.price) || 0,
+      label: vehicleQty > 1
+        ? `${venue?.name || "Vendor"} — ${selectedPackageObj.name} ×${vehicleQty}`
+        : `${venue?.name || "Vendor"} — ${selectedPackageObj.name}`,
+      type: pkgType,
+      amount: unitPrice * vehicleQty,
     });
   }
   if (selectedMenuObj) {
@@ -84,7 +100,7 @@ export default function PreviewStep({
   if (!selectedPackageObj && !selectedMenuObj && venue) {
     invoiceLines.push({
       label: venue.name,
-      type: "Venue Base",
+      type: "Base Price",
       amount: Number(venue.minimumPrice) || 0,
     });
   }
@@ -92,7 +108,7 @@ export default function PreviewStep({
   selectedVendorPackages.forEach((p: any) => {
     invoiceLines.push({
       label: `${p?.vendorName} — ${p?.name}`,
-      type: "Vendor Pkg",
+      type: isCarRental ? "Service Pkg" : "Vendor Pkg",
       amount: Number(p?.price || 0),
     });
     if (p?.vendorName) {
@@ -120,7 +136,7 @@ export default function PreviewStep({
   if (venue) {
     const dpType = (venue.downPaymentType || "").toLowerCase();
     const dpValue = Number(venue.downPayment) || 0;
-    if (dpType.includes("percent")) {
+    if (dpType === "percentage" || dpType === "percent") {
       downPayment = Math.round(computedTotal * (dpValue / 100));
     } else {
       downPayment = dpValue;
@@ -234,12 +250,14 @@ export default function PreviewStep({
                 {getTimeSlotDisplay(formData.timeSlot)}
               </p>
             </div>
-            <div className="min-w-0">
-              <p className="text-xs text-neutral-400">Guests</p>
-              <p className="text-sm font-medium text-neutral-800 break-words">
-                {formData.guestCount}
-              </p>
-            </div>
+            {["Wedding venue", "Catering", "Decorator"].includes(venue?.vendor?.vendorType ?? "") && !isBridalWear && !isWeddingStationery && (
+              <div className="min-w-0">
+                <p className="text-xs text-neutral-400">Guests</p>
+                <p className="text-sm font-medium text-neutral-800 break-words">
+                  {formData.guestCount}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

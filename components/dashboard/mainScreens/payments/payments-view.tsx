@@ -1,100 +1,65 @@
 'use client'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import PageContainer from '../../layout/page-container'
 import { Heading } from '@/components/heading'
 import PaymentsTable from './components/payments-table'
 import { Separator } from '@/components/ui/separator'
 import { Card, CardContent } from '@/components/ui/card'
-import { DollarSign, TrendingUp, Clock, Wallet, AlertCircle, RefreshCw } from 'lucide-react'
+import { Store, Globe, TrendingUp, Clock, AlertCircle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import axiosInstance from '@/lib/axiosConfig'
-import { BACKEND_URL } from '@/lib/backend-url'
 import { Skeleton } from '@/components/ui/skeleton'
+import { PaymentsAPI } from '@/lib/api/dashboard'
+import type { VendorRevenueResponse, VendorPayment } from '@/lib/dashboard-types'
 
-interface PayoutSummary {
-    total: number
-    totalAmount: number
-    totalFees: number
-    byStatus: Record<string, { count: number; amount: number }>
-}
-
-const formatRs = (value: unknown): string => {
-    const num = Number(value) || 0
-    return `Rs. ${num.toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
-}
+const fmt = (n: number) =>
+    `Rs. ${n.toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 
 const PaymentsView = () => {
-    const [summary, setSummary] = useState<PayoutSummary | null>(null)
-    const [balance, setBalance] = useState<number>(0)
+    const [data, setData]       = useState<VendorRevenueResponse | null>(null)
+    const [payments, setPayments] = useState<VendorPayment[]>([])
     const [loading, setLoading] = useState(true)
-    const [error, setError] = useState(false)
+    const [error, setError]     = useState(false)
 
-    const fetchPayoutSummary = async () => {
+    const fetchData = useCallback(async () => {
         setError(false)
         setLoading(true)
         try {
-            const res = await axiosInstance.get(`${BACKEND_URL}api/v1/payments/vendor-payouts`)
-            const data = res.data?.data
-            const s = data?.summary
-            if (s) {
-                setSummary({
-                    total: Number(s.total) || 0,
-                    totalAmount: Number(s.totalAmount) || 0,
-                    totalFees: Number(s.totalFees) || 0,
-                    byStatus: s.byStatus || {},
-                })
-                setBalance(Number(s.totalAmount) || 0)
-            }
+            const res = await PaymentsAPI.getVendorRevenue()
+            setData(res)
+            setPayments(res.payments)
         } catch {
             setError(true)
         } finally {
             setLoading(false)
         }
-    }
-
-    useEffect(() => {
-        fetchPayoutSummary()
     }, [])
 
-    const stats = [
+    useEffect(() => { fetchData() }, [fetchData])
+
+    const s = data?.stats
+
+    const sourceCards = [
         {
-            label: "Available Balance",
-            value: formatRs(balance),
-            icon: Wallet,
-            color: "text-green-600",
-            bg: "bg-green-50",
+            label:   'Offline Revenue',
+            icon:    Store,
+            theme:   { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', sub: 'text-orange-500' },
+            stats:   s?.offline,
         },
         {
-            label: "Total Earned",
-            value: summary ? formatRs(summary.totalAmount) : "Rs. 0",
-            icon: TrendingUp,
-            color: "text-blue-600",
-            bg: "bg-blue-50",
-        },
-        {
-            label: "Platform Fees",
-            value: summary ? formatRs(summary.totalFees) : "Rs. 0",
-            icon: DollarSign,
-            color: "text-amber-600",
-            bg: "bg-amber-50",
-        },
-        {
-            label: "Total Payouts",
-            value: summary?.total?.toString() || "0",
-            icon: Clock,
-            color: "text-purple-600",
-            bg: "bg-purple-50",
+            label:   'Online Revenue',
+            icon:    Globe,
+            theme:   { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', sub: 'text-blue-500' },
+            stats:   s?.online,
         },
     ]
 
     return (
         <div>
             <PageContainer>
-                <div className='space-y-4'>
+                <div className='space-y-5'>
                     <Heading title="Payments" />
                     <Separator />
 
-                    {/* Error Banner */}
                     {error && (
                         <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
                             <AlertCircle className="h-5 w-5 text-red-600 shrink-0" />
@@ -102,37 +67,76 @@ const PaymentsView = () => {
                                 <p className="text-sm font-medium text-red-800">Unable to load payment data</p>
                                 <p className="text-xs text-red-600">Please check your connection and try again.</p>
                             </div>
-                            <Button variant="outline" size="sm" onClick={fetchPayoutSummary} className="shrink-0">
+                            <Button variant="outline" size="sm" onClick={fetchData} className="shrink-0">
                                 <RefreshCw className="h-4 w-4 mr-1" />
                                 Retry
                             </Button>
                         </div>
                     )}
 
-                    {/* Payout Summary Cards */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                        {loading ? (
-                            Array.from({ length: 4 }).map((_, i) => (
-                                <Skeleton key={i} className="h-20 rounded-lg" />
-                            ))
-                        ) : (
-                            stats.map((stat) => (
-                                <Card key={stat.label} className="border-0 shadow-sm">
+                    {/* Overall summary row */}
+                    {loading ? (
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            {[
+                                { label: 'Total Bookings', value: String(s?.all.count ?? 0), icon: Clock,     color: 'text-purple-600', bg: 'bg-purple-50' },
+                                { label: 'Total Revenue',  value: fmt(s?.all.total    ?? 0), icon: TrendingUp, color: 'text-neutral-700', bg: 'bg-neutral-100' },
+                                { label: 'Total Received', value: fmt(s?.all.received ?? 0), icon: TrendingUp, color: 'text-green-600',  bg: 'bg-green-50' },
+                                { label: 'Total Due',      value: fmt(s?.all.due      ?? 0), icon: AlertCircle,color: 'text-red-500',   bg: 'bg-red-50' },
+                            ].map((stat) => (
+                                <Card key={stat.label} className="border shadow-sm">
                                     <CardContent className="p-4 flex items-center gap-3">
-                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stat.bg}`}>
+                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${stat.bg}`}>
                                             <stat.icon className={`w-5 h-5 ${stat.color}`} />
                                         </div>
-                                        <div className="min-w-0 flex-1">
+                                        <div className="min-w-0">
                                             <p className="text-xs text-muted-foreground truncate">{stat.label}</p>
-                                            <p className={`text-lg font-bold ${stat.color}`}>{stat.value}</p>
+                                            <p className={`text-base font-bold ${stat.color}`}>{stat.value}</p>
                                         </div>
                                     </CardContent>
                                 </Card>
-                            ))
-                        )}
-                    </div>
+                            ))}
+                        </div>
+                    )}
 
-                    <PaymentsTable />
+                    {/* Offline / Online split cards */}
+                    {loading ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Skeleton className="h-36 rounded-xl" />
+                            <Skeleton className="h-36 rounded-xl" />
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {sourceCards.map(({ label, icon: Icon, theme, stats }) => (
+                                <div key={label} className={`rounded-xl border ${theme.border} ${theme.bg} p-5 space-y-3`}>
+                                    <div className={`flex items-center gap-2 font-semibold text-sm ${theme.text}`}>
+                                        <Icon className="h-4 w-4" />
+                                        {label}
+                                        <span className={`ml-auto text-xs font-medium px-2 py-0.5 rounded-full bg-white/60 ${theme.text}`}>
+                                            {stats?.count ?? 0} bookings
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[
+                                            { label: 'Total',    value: stats?.total    ?? 0 },
+                                            { label: 'Received', value: stats?.received ?? 0 },
+                                            { label: 'Due',      value: stats?.due      ?? 0 },
+                                        ].map(({ label: l, value }) => (
+                                            <div key={l} className="bg-white/70 rounded-lg px-3 py-2">
+                                                <p className={`text-[11px] ${theme.sub}`}>{l}</p>
+                                                <p className={`text-sm font-bold ${theme.text}`}>{fmt(value)}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <PaymentsTable payments={payments} loading={loading} onRefresh={fetchData} />
                 </div>
             </PageContainer>
         </div>

@@ -67,30 +67,68 @@ interface CreateFavoriteResponse {
 
 // API service for favorites
 export class FavoritesAPI {
-  // Get all user favorites
+  // Get all user favorites (IDs only)
   static async getUserFavorites(): Promise<number[]> {
     try {
       const token = getAuthToken();
-      if (!token) {
-        return [];
-      }
+      if (!token) return [];
 
-      const response = await axios.get<FavoritesResponse>(API_ENDPOINTS.GET_FAVORITES, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        }
+      const response = await axios.get(API_ENDPOINTS.GET_FAVORITES, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
-      
-      if (response.data.status && response.data.data) {
-        // Extract business IDs from the favorites
-        const favoriteBusinessIds = response.data.data.map(favorite => favorite.businessId);
-        return favoriteBusinessIds;
-      }
-      
-      return [];
+
+      // Response shape: { status, data: { results: [...], meta: {} } }
+      const rows: FavoriteBusiness[] = response.data?.data?.results ?? [];
+      return rows.map(f => f.businessId);
     } catch (error) {
       console.error('Error fetching user favorites:', error);
+      return [];
+    }
+  }
+
+  // Get full vendor data for all favorites (uses embedded business from the same endpoint)
+  static async getFavoriteVendors(): Promise<any[]> {
+    try {
+      const token = getAuthToken();
+      if (!token) return [];
+
+      const response = await axios.get(API_ENDPOINTS.GET_FAVORITES, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      });
+
+      // Response shape: { status, data: { results: [...], meta: {} } }
+      const rows: FavoriteBusiness[] = response.data?.data?.results ?? [];
+      return rows
+        .filter(f => f.business)
+        .map(f => {
+          const b = f.business;
+          const images = Array.isArray(b.images) ? b.images : (b.images ? [b.images] : []);
+
+          // subBusinessType is a PostgreSQL array — unwrap to first string
+          const rawType = b.subBusinessType;
+          const type = Array.isArray(rawType) ? (rawType[0] || '') : (rawType || '');
+
+          // Derive price: minimumPrice first, then min package price
+          const pkgPrices = Array.isArray(b.packages)
+            ? b.packages.map((p: any) => Number(p.price)).filter((p: number) => p > 0)
+            : [];
+          const price = b.minimumPrice || (pkgPrices.length > 0 ? Math.min(...pkgPrices) : null) || null;
+
+          return {
+            ...b,
+            id: f.businessId,
+            type,
+            location: b.subArea || b.city || '',
+            price,
+            rating: b.rating ?? 0,
+            reviews: Array.isArray(b.reviews) ? b.reviews : [],
+            amenities: Array.isArray(b.amenities) ? b.amenities : [],
+            images,
+            sponsored: b.sponsored ?? false,
+          };
+        });
+    } catch (error) {
+      console.error('Error fetching favorite vendors:', error);
       return [];
     }
   }

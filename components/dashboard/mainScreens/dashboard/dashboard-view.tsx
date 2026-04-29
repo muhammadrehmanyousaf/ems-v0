@@ -6,6 +6,8 @@ import DashboardDateFilter from "../../globalComponents/dashboard-date-filter";
 import { Button } from "@/components/ui/button";
 import CardsSection from "./sections/cards-section";
 import ChartsSections from "./sections/charts-sections";
+import RevenueSplitSection from "./sections/revenue-split-section";
+import UpcomingAndDueSection from "./sections/upcoming-and-due-section";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import TableAndReviewSection from "./sections/table-and-review-section";
 import {
@@ -14,14 +16,16 @@ import {
   type DashboardKpis,
   type BookingTrendsData,
   type StatusDistributionData,
-  type RevenueTrendsData,
   type RecentBookingsData,
   type ReviewSummaryData,
   type TodaysBookingsData,
   type TodaysBookingItem,
+  type UpcomingBookings7DaysData,
 } from "@/lib/api/analytics";
+import { PaymentsAPI } from "@/lib/api/dashboard";
+import type { VendorRevenueResponse, VendorPayment } from "@/lib/dashboard-types";
 import { useUser } from "@/context/UserContext";
-import { CalendarCheck, Clock, Phone, Building2, DollarSign, AlertTriangle } from "lucide-react";
+import { CalendarCheck, Clock, Phone, Building2, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import {
@@ -92,64 +96,66 @@ function TodayBookingItem({ item }: { item: TodaysBookingItem }) {
 const DashboardView = () => {
   const { user } = useUser();
 
-  // Super admin gets a dedicated dashboard
   if (user?.isSuperAdmin) {
     return <AdminDashboardView />;
   }
-  const [dateRange, setDateRange] = useState<DateRange>("this_month");
+
+  const [dateRange, setDateRange] = useState<DateRange>("this_year");
   const [customStart, setCustomStart] = useState<string | undefined>();
   const [customEnd, setCustomEnd] = useState<string | undefined>();
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  // Data states
-  const [kpis, setKpis] = useState<DashboardKpis | null>(null);
-  const [bookingTrends, setBookingTrends] = useState<BookingTrendsData | null>(null);
-  const [statusDist, setStatusDist] = useState<StatusDistributionData | null>(null);
-  const [revenueTrends, setRevenueTrends] = useState<RevenueTrendsData | null>(null);
+  const [kpis, setKpis]                   = useState<DashboardKpis | null>(null);
+  const [bookingTrends, setBookingTrends]  = useState<BookingTrendsData | null>(null);
+  const [statusDist, setStatusDist]        = useState<StatusDistributionData | null>(null);
   const [recentBookings, setRecentBookings] = useState<RecentBookingsData | null>(null);
-  const [reviewSummary, setReviewSummary] = useState<ReviewSummaryData | null>(null);
+  const [reviewSummary, setReviewSummary]  = useState<ReviewSummaryData | null>(null);
   const [todaysBookings, setTodaysBookings] = useState<TodaysBookingsData | null>(null);
+  const [vendorRevenue, setVendorRevenue]  = useState<VendorRevenueResponse | null>(null);
+  const [upcoming7Days, setUpcoming7Days]  = useState<UpcomingBookings7DaysData | null>(null);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]              = useState(true);
+  const [revenueLoading, setRevenueLoading] = useState(true);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
+    setRevenueLoading(true);
 
-    // Use this_year for trend charts so they show full monthly data
-    const chartRange: DateRange = "this_year";
-
-    const results = await Promise.allSettled([
-      AnalyticsAPI.getDashboardKpis(dateRange, customStart, customEnd),
-      AnalyticsAPI.getBookingTrends(chartRange),
-      AnalyticsAPI.getBookingStatusDistribution(chartRange),
-      AnalyticsAPI.getRevenueTrends(chartRange),
-      AnalyticsAPI.getRecentBookings(10),
-      AnalyticsAPI.getReviewSummary(),
-      AnalyticsAPI.getTodaysBookings(),
+    const [analyticsResults, revenueResult] = await Promise.all([
+      Promise.allSettled([
+        AnalyticsAPI.getDashboardKpis(dateRange, customStart, customEnd),
+        AnalyticsAPI.getBookingTrends(dateRange, customStart, customEnd),
+        AnalyticsAPI.getBookingStatusDistribution(dateRange, customStart, customEnd),
+        AnalyticsAPI.getRecentBookings(10),
+        AnalyticsAPI.getReviewSummary(),
+        AnalyticsAPI.getTodaysBookings(),
+        AnalyticsAPI.getUpcomingBookings7Days(),
+      ]),
+      PaymentsAPI.getVendorRevenue().catch(() => null),
     ]);
 
-    const labels = ["KPIs", "Booking Trends", "Status Distribution", "Revenue Trends", "Recent Bookings", "Reviews", "Today's Bookings"];
+    const labels = ["KPIs", "Booking Trends", "Status Distribution", "Recent Bookings", "Reviews", "Today's Bookings", "Upcoming 7 Days"];
     const failed: string[] = [];
 
-    const getValue = <T,>(r: PromiseSettledResult<T>, fallback: T, idx: number): T => {
+    const get = <T,>(r: PromiseSettledResult<T>, fb: T, idx: number): T => {
       if (r.status === "fulfilled") return r.value;
       failed.push(labels[idx]);
-      return fallback;
+      return fb;
     };
 
-    setKpis(getValue(results[0], null, 0));
-    setBookingTrends(getValue(results[1], null, 1));
-    setStatusDist(getValue(results[2], null, 2));
-    setRevenueTrends(getValue(results[3], null, 3));
-    setRecentBookings(getValue(results[4], null, 4));
-    setReviewSummary(getValue(results[5], null, 5));
-    setTodaysBookings(getValue(results[6], null, 6));
+    setKpis(get(analyticsResults[0], null, 0));
+    setBookingTrends(get(analyticsResults[1], null, 1));
+    setStatusDist(get(analyticsResults[2], null, 2));
+    setRecentBookings(get(analyticsResults[3], null, 3));
+    setReviewSummary(get(analyticsResults[4], null, 4));
+    setTodaysBookings(get(analyticsResults[5], null, 5));
+    setUpcoming7Days(get(analyticsResults[6], null, 6));
+    setVendorRevenue(revenueResult);
 
-    if (failed.length > 0) {
-      toast.error(`Failed to load: ${failed.join(", ")}`);
-    }
+    if (failed.length > 0) toast.error(`Failed to load: ${failed.join(", ")}`);
 
     setLoading(false);
+    setRevenueLoading(false);
   }, [dateRange, customStart, customEnd]);
 
   useEffect(() => {
@@ -161,6 +167,10 @@ const DashboardView = () => {
     setCustomStart(start);
     setCustomEnd(end);
   };
+
+  const paymentsDue: VendorPayment[] = (vendorRevenue?.payments ?? [])
+    .filter((p) => p.due > 0)
+    .sort((a, b) => b.due - a.due);
 
   const firstName = user?.fullName?.split(" ")[0] || "there";
 
@@ -181,17 +191,32 @@ const DashboardView = () => {
           </Button>
         </span>
       </div>
+
       <ScrollArea className="h-[calc(100dvh-200px)] md:h-[calc(100dvh-140px)] overflow-auto px-4 md:px-6">
         <div className="space-y-4">
+          {/* Row 1: KPI cards */}
           <CardsSection data={kpis} loading={loading} />
+
+          {/* Row 2: Offline / Online revenue split */}
+          <RevenueSplitSection data={vendorRevenue} loading={revenueLoading} />
+
+          {/* Row 3: Upcoming 7 days + Payments Due */}
+          <UpcomingAndDueSection
+            upcoming={upcoming7Days}
+            due={paymentsDue}
+            loading={loading}
+          />
+
+          {/* Row 4: Booking trends chart + Status donut */}
           <ChartsSections
             bookingTrends={bookingTrends}
             statusDist={statusDist}
             loading={loading}
           />
+
+          {/* Row 5: Recent bookings table + Reviews */}
           <TableAndReviewSection
             recentBookings={recentBookings}
-            revenueTrends={revenueTrends}
             reviewSummary={reviewSummary}
             loading={loading}
           />

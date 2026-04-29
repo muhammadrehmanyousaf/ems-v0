@@ -29,7 +29,7 @@ interface VendorCardProps {
   location: string
   rating?: number
   reviews?: number
-  price: number | string
+  price: number | string | null | undefined
   type: string
   vendorType?: string
   capacity?: number
@@ -39,6 +39,7 @@ interface VendorCardProps {
   showBookButton?: boolean
   showDetails?: boolean
   className?: string
+  onFavoriteToggle?: (id: string | number, nowFavorited: boolean) => void
 }
 
 export default function VendorCard({
@@ -58,6 +59,7 @@ export default function VendorCard({
   showBookButton = true,
   showDetails = true,
   className = "",
+  onFavoriteToggle,
 }: VendorCardProps) {
   const [openAlert, setOpenAlert] = useState(false)
   const router = useRouter()
@@ -81,7 +83,7 @@ export default function VendorCard({
         'Photographer': 'photographers',
         'Decorator': 'decor',
         'Henna artist': 'henna-artists',
-        'Hena artist': 'henna-artists',
+        'Henna artist': 'henna-artists',
         'Makeup artist': 'makeup-artists',
         'Wedding venue': 'venues',
         'Car rental': 'car-rental',
@@ -142,6 +144,7 @@ export default function VendorCard({
     if (isLoggedIn) {
       try {
         await toggleFavorite(id)
+        onFavoriteToggle?.(id, !isFavorite)
       } catch (error) {
         // favorite toggle failed silently
       }
@@ -150,11 +153,12 @@ export default function VendorCard({
     }
   }
 
-  const formatPrice = (price: number | string) => {
+  const formatPrice = (price: number | string | null | undefined) => {
+    if (!price && price !== 0) return null;
     if (typeof price === 'number') {
-      return `Rs. ${price.toLocaleString()}`
+      return price > 0 ? `Rs. ${price.toLocaleString()}` : null;
     }
-    return `Rs. ${price}`
+    return `Rs. ${price}`;
   }
 
   const getRatingColor = (rating: number) => {
@@ -274,8 +278,8 @@ export default function VendorCard({
                       <Heart
                         className={`w-4 h-4 transition-all duration-200 ${
                           isFavorite
-                            ? "fill-purple-500 text-purple-500"
-                            : "text-gray-600 hover:text-purple-500"
+                            ? "fill-red-500 text-red-500"
+                            : "text-gray-600 hover:text-red-500"
                         }`}
                       />
                     )}
@@ -333,7 +337,7 @@ export default function VendorCard({
                   <div>
                     <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Starting from</p>
                     <p className="text-xl sm:text-2xl font-bold text-gradient-purple-gold">
-                      {formatPrice(price)}
+                      {formatPrice(price) ?? <span className="text-base text-gray-400">Contact us</span>}
                     </p>
                   </div>
                   <div className="flex items-center text-xs text-emerald-600 font-medium">

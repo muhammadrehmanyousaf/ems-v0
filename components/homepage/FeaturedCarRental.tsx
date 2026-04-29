@@ -48,7 +48,7 @@ export function FeaturedCarRental() {
                   location={vendor.location || vendor.city}
                   rating={vendor.rating}
                   reviews={vendor.reviews?.length || 0}
-                  price={vendor.minimumPrice || vendor.price}
+                  price={vendor.minimumPrice || (vendor.packages?.length > 0 ? Math.min(...vendor.packages.map((p) => p.price).filter((p) => p > 0)) : null) || vendor.price || null}
                   type={vendor.type || vendor.subBusinessType}
                   capacity={vendor.capacity}
                   amenities={vendor.amenities}

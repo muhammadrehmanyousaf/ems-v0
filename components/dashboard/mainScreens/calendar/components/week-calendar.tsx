@@ -1,6 +1,7 @@
 'use client';
 import * as React from 'react';
 import { CalendarEvent, cn, diffMinutes, formatWeekdayShort, getWeekDays, HOUR_PX, HOURS_24, minutesSinceStart, startOfDay, tzLabel } from '@/lib/utils';
+import { Store } from 'lucide-react';
 
 type WeekCalendarProps = {
     current: Date;
@@ -57,11 +58,14 @@ export default function WeekCalendar({ current, startOnMonday = false, events = 
                                     return (
                                         <div
                                             key={ev.id}
-                                            className="absolute left-1 right-1 top-0 rounded-md bg-emerald-600/15 text-emerald-700 text-xs px-2 py-1 truncate"
+                                            className="absolute left-1 right-1 top-0 rounded-md bg-emerald-600/15 text-emerald-700 text-xs px-2 py-1 flex items-start gap-1 overflow-hidden"
                                             style={{ top, height: h }}
-                                            title={`${ev.title}`}
+                                            title={`${ev.title}${ev.bookingSource === 'offline' ? ' · Offline' : ''}`}
                                         >
-                                            {ev.title}
+                                            {ev.bookingSource === 'offline' && (
+                                                <Store className="h-3 w-3 shrink-0 mt-px text-orange-500" />
+                                            )}
+                                            <span className="truncate">{ev.title}</span>
                                         </div>
                                     );
                                 })}

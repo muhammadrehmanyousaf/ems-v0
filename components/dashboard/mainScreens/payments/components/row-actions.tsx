@@ -10,11 +10,11 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Payment } from "@/lib/dashboard-types"
+import { VendorPayment } from "@/lib/dashboard-types"
 
 interface DataTableRowActionsProps {
-    data: Payment;
-    onView: (payment: Payment) => void;
+    data: VendorPayment;
+    onView: (payment: VendorPayment) => void;
 }
 
 export function RowActions({ data, onView }: DataTableRowActionsProps) {

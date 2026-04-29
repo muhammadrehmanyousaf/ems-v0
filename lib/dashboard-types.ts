@@ -1,5 +1,5 @@
 // ─── Booking ──────────────────────────────────────────────────
-export type BookingStatus = "Pending" | "Completed" | "Cancelled" | "Confirmed";
+export type BookingStatus = "Awaiting Payment" | "Pending" | "Completed" | "Cancelled" | "Confirmed";
 
 export type Booking = {
   _id: string;
@@ -64,6 +64,40 @@ export interface Payment {
   paymentDate: string | null;
   dueDate: string;
   notes?: string;
+}
+
+// ─── Vendor Revenue Payment ───────────────────────────────────
+export interface VendorPayment {
+  bookingId:     number;
+  customerName:  string;
+  customerPhone: string;
+  customerEmail: string | null;
+  bookingDate:   string;
+  bookingTime:   string;
+  paymentStatus: string;
+  status:        string;
+  bookingSource: 'online' | 'offline';
+  businessName:  string;
+  totalAmount:   number;
+  downPayment:   number;
+  received:      number;
+  due:           number;
+}
+
+export interface VendorRevenueStats {
+  count:    number;
+  total:    number;
+  received: number;
+  due:      number;
+}
+
+export interface VendorRevenueResponse {
+  payments: VendorPayment[];
+  stats: {
+    offline: VendorRevenueStats;
+    online:  VendorRevenueStats;
+    all:     VendorRevenueStats;
+  };
 }
 
 // ─── Review ───────────────────────────────────────────────────
@@ -188,10 +222,12 @@ export interface BookingData {
   paymentMethod: PaymentMethod;
   totalAmount: number;
   downPayment: number;
+  guestCount: number | null;
   specialRequests: string | null;
   additionalRequests: string | null;
   cancellationReason: string | null;
   vendorIds: number[];
+  bookingSource: 'online' | 'offline';
   createdAt: string;
   updatedAt: string;
   bookingDetails: BookingDetail[];

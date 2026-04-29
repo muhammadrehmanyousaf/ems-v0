@@ -48,7 +48,7 @@ export function FeaturedVendors() {
                 location={vendor.city || vendor.location || "Location not specified"}
                 rating={vendor.rating || 0}
                 reviews={vendor.reviews || 0}
-                price={vendor.minimumPrice || 0}
+                price={vendor.minimumPrice || (vendor.packages?.length > 0 ? Math.min(...vendor.packages.map((p) => p.price).filter((p) => p > 0)) : null) || vendor.price || null}
                 type={vendor.type || vendor.subBusinessType || "Vendor"}
                 vendorType={vendor.subBusinessType}
                 capacity={vendor.maxCapacity}

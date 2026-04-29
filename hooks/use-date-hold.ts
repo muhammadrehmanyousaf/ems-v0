@@ -7,6 +7,8 @@ interface UseDateHoldReturn {
   holdId: number | null
   timeRemaining: number // seconds
   isHolding: boolean
+  holdFailed: boolean
+  holdFailedUntil: Date | null
   createHold: (businessId: number, date: string, time: string) => Promise<void>
   releaseHold: () => Promise<void>
 }
@@ -16,6 +18,8 @@ export function useDateHold(): UseDateHoldReturn {
   const [expiresAt, setExpiresAt] = useState<number | null>(null)
   const [timeRemaining, setTimeRemaining] = useState(0)
   const [isHolding, setIsHolding] = useState(false)
+  const [holdFailed, setHoldFailed] = useState(false)
+  const [holdFailedUntil, setHoldFailedUntil] = useState<Date | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Countdown timer
@@ -43,6 +47,9 @@ export function useDateHold(): UseDateHoldReturn {
   }, [expiresAt])
 
   const createHold = useCallback(async (businessId: number, date: string, time: string) => {
+    // Reset failed state on new attempt
+    setHoldFailed(false)
+    setHoldFailedUntil(null)
     try {
       // Release existing hold first
       if (holdId) {
@@ -62,11 +69,22 @@ export function useDateHold(): UseDateHoldReturn {
       const data = response.data?.data
       if (data?.holdId) {
         setHoldId(data.holdId)
-        setExpiresAt(new Date(data.expiresAt).getTime())
+        setHoldFailed(false)
+        setHoldFailedUntil(null)
+        // Enforce 15-minute hold regardless of backend expiry
+        const fifteenMins = Date.now() + 15 * 60 * 1000
+        const backendExpiry = data.expiresAt ? new Date(data.expiresAt).getTime() : fifteenMins
+        setExpiresAt(Math.min(backendExpiry, fifteenMins))
         setIsHolding(true)
       }
-    } catch {
-      // Hold creation failed — not critical, proceed without hold
+    } catch (error: any) {
+      if (error?.response?.status === 409) {
+        // Slot is held by another user
+        setHoldFailed(true)
+        const heldUntil = error.response.data?.data?.heldUntil
+        setHoldFailedUntil(heldUntil ? new Date(heldUntil) : null)
+      }
+      // Other errors — not critical, proceed without hold
     }
   }, [holdId])
 
@@ -92,5 +110,5 @@ export function useDateHold(): UseDateHoldReturn {
     }
   }, [holdId])
 
-  return { holdId, timeRemaining, isHolding, createHold, releaseHold }
+  return { holdId, timeRemaining, isHolding, holdFailed, holdFailedUntil, createHold, releaseHold }
 }

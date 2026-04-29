@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import "swiper/css";
@@ -49,6 +49,7 @@ import {
 import type { Vendor, Review, Package } from "@/lib/types";
 import Image from "next/image";
 import { BACKEND_URL } from "@/lib/backend-url";
+import { VendorAPI } from "@/lib/api/vendors";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/use-toast";
 import Link from "next/link";
@@ -111,16 +112,24 @@ function PackageCard({
   onBook: () => void;
   pricingLabel?: string;
 }) {
+  const toStr = (v: any): string => {
+    if (v === null || v === undefined) return ""
+    if (typeof v === "object") {
+      if (v.carName && v.quantity) return `${v.carName} ×${v.quantity}`
+      return Object.values(v).filter(Boolean).join(" · ")
+    }
+    return String(v)
+  }
   const isGrouped = pkg.features && !Array.isArray(pkg.features);
   const groups: { label: string; items: string[] }[] = isGrouped
-    ? Object.entries(pkg.features as Record<string, string[]>)
+    ? Object.entries(pkg.features as Record<string, any[]>)
         .filter(([, vals]) => Array.isArray(vals) && vals.length > 0)
         .map(([key, vals]) => ({
-          label: key.charAt(0).toUpperCase() + key.slice(1),
-          items: vals.filter(Boolean),
+          label: key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, " $1"),
+          items: vals.map(toStr).filter(Boolean),
         }))
-    : Array.isArray(pkg.features) && (pkg.features as string[]).filter(Boolean).length > 0
-      ? [{ label: "Included", items: (pkg.features as string[]).filter(Boolean) }]
+    : Array.isArray(pkg.features) && (pkg.features as any[]).filter(Boolean).length > 0
+      ? [{ label: "Included", items: (pkg.features as any[]).map(toStr).filter(Boolean) }]
       : [];
 
   return (
@@ -152,8 +161,22 @@ function PackageCard({
   );
 }
 
+interface LiveReview {
+  id: number
+  rating: number
+  comment: string
+  createdAt: string
+  reply?: string
+  user?: { id: number; fullName: string }
+  booking?: { id: number; bookingDate: string; bookingTime: string }
+}
+
 export default function VendorDetails({ vendor }: VendorDetailsProps) {
-  const reviews = vendor.reviews || [];
+  const lowestPackagePrice =
+    vendor.packages?.length > 0
+      ? Math.min(...vendor.packages.map((p) => p.price).filter((p) => p > 0))
+      : null;
+  const startingPrice = vendor.minimumPrice || lowestPackagePrice || vendor.price || null;
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -164,12 +187,31 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [isDateAvailable, setIsDateAvailable] = useState<boolean | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
+  const [availability, setAvailability] = useState<Record<string, {
+    availableSlots: string[];
+    bookedSlots: string[];
+    isBlocked?: boolean;
+    blockReason?: string;
+  }>>({});
   const [activeTab, setActiveTab] = useState("overview");
   const [isStickyHeader, setIsStickyHeader] = useState(false);
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
+
+  // ── Live Reviews ──
+  const [liveReviews, setLiveReviews] = useState<LiveReview[]>([])
+  const [avgRating, setAvgRating] = useState<number | null>(null)
+  const [reviewsLoading, setReviewsLoading] = useState(false)
+  const [userBookingId, setUserBookingId] = useState<number | null>(null)
+  const [reviewRating, setReviewRating] = useState(0)
+  const [reviewHover, setReviewHover] = useState(0)
+  const [reviewComment, setReviewComment] = useState("")
+  const [reviewSubmitting, setReviewSubmitting] = useState(false)
+  const [alreadyReviewed, setAlreadyReviewed] = useState(false)
+
   const router = useRouter();
   const { toast } = useToast();
-  const { isAuthenticated } = useUser();
+  const { isAuthenticated, user } = useUser();
   const isLoggedIn =
     typeof window !== "undefined" &&
     localStorage.getItem("user_id") &&
@@ -200,7 +242,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
     "Wedding venue": "venues",
     "Bridal wearing": "bridal-wear",
     "Car rental": "car-rental",
-    "Hena artist": "henna-artists",
+    "Henna artist": "henna-artists",
     "Wedding Invitations and Stationery": "wedding-stationery",
   };
 
@@ -294,7 +336,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
       "Wedding venue": Crown,
       "Bridal wearing": Sparkles,
       "Car rental": Car,
-      "Hena artist": Palette,
+      "Henna artist": Palette,
       "Wedding Invitations and Stationery": Gift,
     };
     return iconMap[type] || Package;
@@ -306,8 +348,8 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
     const details: { label: string; value: string }[] = [];
     const type = vendor.type;
 
-    // Capacity range
-    if (vendor.minCapacity || vendor.maxCapacity) {
+    // Capacity range — only for venue, catering, and decorator
+    if (["Wedding venue", "Catering", "Decorator"].includes(type) && (vendor.minCapacity || vendor.maxCapacity)) {
       const cap =
         vendor.minCapacity && vendor.maxCapacity
           ? `${vendor.minCapacity} – ${vendor.maxCapacity}`
@@ -344,7 +386,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
     }
 
     // Henna artist
-    if (type === "Hena artist") {
+    if (type === "Henna artist") {
       if (vendor.sellMehndi != null)
         details.push({ label: "Sells Mehndi Products", value: vendor.sellMehndi ? "Yes" : "No" });
       if (vendor.hasTeam != null)
@@ -426,52 +468,158 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
     return Object.values(obj).flat().filter(Boolean);
   };
 
-  // Mock function to check date availability
-  const checkDateAvailability = (date: Date) => {
-    const today = startOfToday();
-    const isPast = isBefore(date, today);
+  const toDateKey = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-    if (isPast) {
-      return false;
+  // Fetch real availability (booked + vendor-blocked) for the displayed month
+  const fetchAvailability = useCallback(async (monthDate: Date) => {
+    if (!vendor.id) return;
+    const yyyy = monthDate.getFullYear();
+    const mm = String(monthDate.getMonth() + 1).padStart(2, "0");
+    try {
+      const data = await VendorAPI.getMonthAvailability([Number(vendor.id)], `${yyyy}-${mm}`);
+      setAvailability(data[Number(vendor.id)] || {});
+    } catch {
+      // silently fail — calendar still works, just no availability data
     }
+  }, [vendor.id]);
 
-    const dayOfWeek = date.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+  useEffect(() => {
+    fetchAvailability(calendarMonth);
+  }, [calendarMonth, fetchAvailability]);
 
-    const day = date.getDate();
-    const month = date.getMonth();
+  // ── Fetch live reviews ──
+  useEffect(() => {
+    if (!vendor.id) return
+    setReviewsLoading(true)
+    fetch(`${BACKEND_URL}api/v1/reviews/${vendor.id}`)
+      .then(r => r.json())
+      .then(data => {
+        const rows: LiveReview[] = data?.data?.reviews ?? []
+        setLiveReviews(rows)
+        setAvgRating(data?.data?.averageRating ?? null)
+      })
+      .catch(() => {})
+      .finally(() => setReviewsLoading(false))
+  }, [vendor.id])
 
-    const unavailableDates = [
-      new Date(2024, 11, 25),
-      new Date(2024, 11, 31),
-      new Date(2025, 0, 1),
-    ];
+  // ── Fetch user's booking for this vendor (needed to submit review) ──
+  useEffect(() => {
+    if (!isAuthenticated || !vendor.id) return
+    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
+    if (!token) return
+    fetch(`${BACKEND_URL}api/v1/bookings/simple-user-bookings`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(data => {
+        const bookings: any[] = data?.data ?? []
+        // Only Completed bookings are eligible for reviews (backend enforces this)
+        const match = bookings.find((b: any) =>
+          b.status === "Completed" &&
+          b.bookingDetails?.some((d: any) => Number(d.businessId) === Number(vendor.id))
+        )
+        if (match) {
+          setUserBookingId(match.id)
+          // Check if already reviewed
+          const alreadyDone = liveReviews.some(r => r.booking?.id === match.id)
+          setAlreadyReviewed(alreadyDone)
+        }
+      })
+      .catch(() => {})
+  }, [isAuthenticated, vendor.id, liveReviews])
 
-    const isUnavailableDate = unavailableDates.some(
-      (unavailableDate) =>
-        unavailableDate.getDate() === day &&
-        unavailableDate.getMonth() === month,
-    );
+  const handleReviewSubmit = async () => {
+    if (!userBookingId || reviewRating === 0) return
+    setReviewSubmitting(true)
+    try {
+      const token = localStorage.getItem("auth_token")
+      const res = await fetch(`${BACKEND_URL}api/v1/reviews`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          businessId: vendor.id,
+          bookingId: userBookingId,
+          rating: reviewRating,
+          comment: reviewComment,
+        }),
+      })
+      const data = await res.json()
+      if (data.status) {
+        toast({ title: "Review submitted!", description: "Thank you for your feedback." })
+        setReviewRating(0)
+        setReviewComment("")
+        setAlreadyReviewed(true)
+        // Refresh reviews
+        fetch(`${BACKEND_URL}api/v1/reviews/${vendor.id}`)
+          .then(r => r.json())
+          .then(d => {
+            setLiveReviews(d?.data?.reviews ?? [])
+            setAvgRating(d?.data?.averageRating ?? null)
+          })
+          .catch(() => {})
+      } else {
+        toast({ title: "Failed", description: data.message || "Please try again.", variant: "destructive" })
+      }
+    } catch {
+      toast({ title: "Failed", description: "Please try again.", variant: "destructive" })
+    } finally {
+      setReviewSubmitting(false)
+    }
+  }
 
-    return !isWeekend && !isUnavailableDate;
+  const isDateDisabled = (d: Date) => {
+    const today = startOfToday();
+    if (isBefore(d, today)) return true;
+    const avail = availability[toDateKey(d)];
+    if (avail && (avail.isBlocked || avail.availableSlots.length === 0)) return true;
+    return false;
   };
+
+  // Build modifier date lists for calendar styling
+  const fullyBookedDates: Date[] = [];
+  const vendorBlockedDates: Date[] = [];
+  Object.entries(availability).forEach(([dateStr, avail]) => {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    if (avail.isBlocked) {
+      vendorBlockedDates.push(dateObj);
+    } else if (avail.availableSlots.length === 0) {
+      fullyBookedDates.push(dateObj);
+    }
+  });
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
     if (date) {
-      const isAvailable = checkDateAvailability(date);
-      setIsDateAvailable(isAvailable);
+      const avail = availability[toDateKey(date)];
+      const blocked = avail?.isBlocked;
+      const booked = !blocked && avail && avail.availableSlots.length === 0;
+      const available = !blocked && !booked;
 
-      if (isAvailable) {
+      setIsDateAvailable(available);
+
+      if (blocked) {
         toast({
-          title: "Date Available!",
-          description: `${format(date, "MMMM dd, yyyy")} is available for booking.`,
+          title: "Vendor Unavailable",
+          description: avail?.blockReason
+            ? `${avail.blockReason} — please choose a different date.`
+            : `${format(date, "MMMM dd, yyyy")} — the vendor is not available this day.`,
+          variant: "destructive",
+        });
+      } else if (booked) {
+        toast({
+          title: "Fully Booked",
+          description: `${format(date, "MMMM dd, yyyy")} is fully booked. Please select another date.`,
+          variant: "destructive",
         });
       } else {
         toast({
-          title: "Date Unavailable",
-          description: `${format(date, "MMMM dd, yyyy")} is not available. Please select another date.`,
-          variant: "destructive",
+          title: "Date Available!",
+          description: `${format(date, "MMMM dd, yyyy")} is available for booking.`,
         });
       }
     } else {
@@ -556,10 +704,10 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
               <div className="flex items-center gap-1 sm:gap-2">
                 <Star className="w-4 h-4 sm:w-6 sm:h-6 text-yellow-400 fill-current" />
                 <span className="text-sm sm:text-xl font-semibold">
-                  {vendor.rating}
+                  {avgRating !== null ? avgRating.toFixed(1) : vendor.rating || "0.0"}
                 </span>
                 <span className="text-xs sm:text-lg opacity-80">
-                  ({reviews.length})
+                  ({liveReviews.length || 0})
                 </span>
               </div>
               <div className="flex items-center gap-1 sm:gap-2">
@@ -654,10 +802,10 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                           <div className="flex items-center">
                             <Star className="w-4 h-4 sm:w-6 sm:h-6 text-yellow-400 fill-current" />
                             <span className="ml-1 sm:ml-2 text-sm sm:text-xl font-semibold">
-                              {vendor.rating}
+                              {avgRating !== null ? avgRating.toFixed(1) : vendor.rating || "0.0"}
                             </span>
                             <span className="ml-1 sm:ml-2 text-xs sm:text-base text-neutral-600">
-                              ({reviews.length} reviews)
+                              ({liveReviews.length || 0} reviews)
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
@@ -683,7 +831,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                           </p>
                         </div>
                       </div>
-                      {(vendor.minCapacity || vendor.maxCapacity || vendor.capacity) && (
+                      {["Wedding venue", "Catering", "Decorator"].includes(vendor.type) && (vendor.minCapacity || vendor.maxCapacity || vendor.capacity) && (
                         <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
                           <Users className="w-4 h-4 sm:w-6 sm:h-6 text-blue-500 flex-shrink-0" />
                           <div className="min-w-0">
@@ -719,7 +867,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                             Starting Price
                           </p>
                           <p className="text-xs sm:text-sm text-neutral-600 truncate">
-                            {formatPrice(vendor.minimumPrice || vendor.price)}
+                            {startingPrice ? formatPrice(startingPrice) : "See Packages"}
                           </p>
                         </div>
                       </div>
@@ -1159,78 +1307,130 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                         </div>
                       )}
 
-                      {/* Car Rental — Fleet Cards */}
-                      {vendor.type === "Car rental" && (
-                        <div className="space-y-4">
-                          <h3 className="text-lg font-semibold">Fleet</h3>
-                          {(vendor.packages || []).length > 0 ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                              {(vendor.packages || []).map((pkg, index) => {
-                                const imgs = (pkg.images ?? []).map(resolveImg);
-                                const features = !Array.isArray(pkg.features)
-                                  ? (pkg.features as Record<string, string[]>)
-                                  : {};
-                                const carType = features.carType?.[0];
-                                const year = features.year?.[0];
-                                const units = features.unitsAvailable?.[0];
-                                return (
-                                  <div
-                                    key={index}
-                                    className="border border-neutral-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow"
-                                  >
-                                    <div className="relative aspect-video bg-neutral-100">
-                                      {imgs.length > 0 ? (
-                                        <Image
-                                          src={imgs[0]}
-                                          alt={pkg.name}
-                                          fill
-                                          className="object-cover"
-                                        />
-                                      ) : (
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                          <Car className="w-10 h-10 text-neutral-300" />
+                      {/* Car Rental — Cars + Packages (two separate sections) */}
+                      {vendor.type === "Car rental" && (() => {
+                        const allPkgs = vendor.packages || [];
+                        const carPkgs = allPkgs.filter(pkg => {
+                          const f = !Array.isArray(pkg.features) ? (pkg.features as Record<string, string[]>) : {};
+                          return !!f.vehicleType?.[0];
+                        });
+                        const servicePkgs = allPkgs.filter(pkg => {
+                          const f = !Array.isArray(pkg.features) ? (pkg.features as Record<string, string[]>) : {};
+                          return !f.vehicleType?.[0];
+                        });
+                        return (
+                          <>
+                            {/* Cars section */}
+                            <div className="space-y-4">
+                              <h3 className="text-lg font-semibold flex items-center gap-2">
+                                <Car className="w-5 h-5 text-blue-500" />
+                                Cars
+                              </h3>
+                              {carPkgs.length > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                  {carPkgs.map((pkg, index) => {
+                                    const imgs = (pkg.images ?? []).map(resolveImg);
+                                    const f = !Array.isArray(pkg.features)
+                                      ? (pkg.features as Record<string, string[]>)
+                                      : {};
+                                    const vehicleType = f.vehicleType?.[0];
+                                    const year = f.year?.[0];
+                                    const color = f.color?.[0];
+                                    const seats = f.seatingCapacity?.[0];
+                                    const units = f.unitsAvailable?.[0];
+                                    const withDriver = f.driver?.[0] === "Yes";
+                                    const hasAC = f.ac?.[0] === "Yes";
+                                    const hasDecor = f.decoration?.[0] === "Available";
+                                    return (
+                                      <div
+                                        key={index}
+                                        className="border border-neutral-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow bg-white"
+                                      >
+                                        <div className="relative aspect-video bg-neutral-100">
+                                          {imgs.length > 0 ? (
+                                            <Image src={imgs[0]} alt={pkg.name} fill className="object-cover" />
+                                          ) : (
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                              <Car className="w-10 h-10 text-neutral-300" />
+                                            </div>
+                                          )}
+                                          {vehicleType && (
+                                            <span className="absolute top-2 left-2 text-[11px] font-semibold bg-blue-600 text-white px-2 py-0.5 rounded-full">
+                                              {vehicleType}
+                                            </span>
+                                          )}
                                         </div>
-                                      )}
-                                    </div>
-                                    <div className="p-4 space-y-2">
-                                      <div className="flex items-start justify-between gap-2">
-                                        <h4 className="font-semibold text-neutral-900 text-base">
-                                          {pkg.name}
-                                        </h4>
-                                        <Badge className="shrink-0 bg-purple-100 text-purple-700 border-purple-200 text-sm">
-                                          {formatPrice(pkg.price)}
-                                        </Badge>
+                                        <div className="p-4 space-y-3">
+                                          <div className="flex items-start justify-between gap-2">
+                                            <div>
+                                              <h4 className="font-bold text-neutral-900 text-base leading-tight">{pkg.name}</h4>
+                                              <p className="text-xs text-neutral-400 mt-0.5">{[year, color].filter(Boolean).join(" · ")}</p>
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                              <p className="text-base font-extrabold text-purple-600">{formatPrice(pkg.price)}</p>
+                                              <p className="text-[10px] text-neutral-400">per event</p>
+                                            </div>
+                                          </div>
+                                          <div className="flex flex-wrap gap-1.5">
+                                            {seats && (
+                                              <span className="inline-flex items-center gap-1 text-[11px] bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full border border-neutral-200">
+                                                👥 {seats} seats
+                                              </span>
+                                            )}
+                                            {units && (
+                                              <span className="inline-flex items-center gap-1 text-[11px] bg-green-50 text-green-700 px-2 py-0.5 rounded-full border border-green-200">
+                                                🚗 {units} available
+                                              </span>
+                                            )}
+                                          </div>
+                                          <div className="flex flex-wrap gap-1.5 pt-1 border-t border-neutral-100">
+                                            <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border ${withDriver ? "bg-purple-50 text-purple-700 border-purple-200" : "bg-neutral-50 text-neutral-400 border-neutral-200"}`}>
+                                              🧑 Driver {withDriver ? "Included" : "Not Included"}
+                                            </span>
+                                            <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border ${hasAC ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-neutral-50 text-neutral-400 border-neutral-200"}`}>
+                                              ❄️ {hasAC ? "AC" : "No AC"}
+                                            </span>
+                                            {hasDecor && (
+                                              <span className="inline-flex items-center gap-1 text-[11px] bg-pink-50 text-pink-700 px-2 py-0.5 rounded-full border border-pink-200">
+                                                🌸 Decoration
+                                              </span>
+                                            )}
+                                          </div>
+                                          {pkg.description && (
+                                            <p className="text-xs text-neutral-500 leading-relaxed pt-1 border-t border-neutral-100">
+                                              {pkg.description}
+                                            </p>
+                                          )}
+                                        </div>
                                       </div>
-                                      <div className="flex flex-wrap gap-1.5">
-                                        {carType && (
-                                          <span className="inline-block bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full border border-blue-200">
-                                            {carType}
-                                          </span>
-                                        )}
-                                        {year && (
-                                          <span className="inline-block bg-neutral-100 text-neutral-600 text-xs px-2 py-0.5 rounded-full border border-neutral-200">
-                                            {year}
-                                          </span>
-                                        )}
-                                        {units && (
-                                          <span className="inline-block bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full border border-green-200">
-                                            {units}
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <p className="text-sm text-neutral-500 text-center py-4">
+                                  No cars listed yet. Contact the vendor for availability.
+                                </p>
+                              )}
                             </div>
-                          ) : (
-                            <p className="text-sm text-neutral-500 text-center py-4">
-                              No fleet listed yet. Contact the vendor for
-                              availability.
-                            </p>
-                          )}
-                        </div>
-                      )}
+
+                            {/* Packages section */}
+                            {servicePkgs.length > 0 && (
+                              <div className="space-y-4">
+                                <h3 className="text-lg font-semibold">Packages</h3>
+                                {servicePkgs.map((pkg, index) => (
+                                  <PackageCard
+                                    key={index}
+                                    pkg={pkg}
+                                    formatPrice={formatPrice}
+                                    onBook={handleBookNow}
+                                    pricingLabel="per event"
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
 
                       {/* Generic Packages — all other vendor types */}
                       {vendor.type !== "Bridal wearing" &&
@@ -1246,7 +1446,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                                 onBook={handleBookNow}
                                 pricingLabel={
                                   vendor.type === "Catering" ? "per head"
-                                  : vendor.type === "Makeup artist" || vendor.type === "Hena artist" ? "per session"
+                                  : vendor.type === "Makeup artist" || vendor.type === "Henna artist" ? "per session"
                                   : "per event"
                                 }
                               />
@@ -1311,45 +1511,120 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                   </TabsContent>
 
                   <TabsContent value="reviews" className="p-4 sm:p-6">
-                    <div className="space-y-4 sm:space-y-6">
-                      {reviews.length === 0 && (
-                        <p className="text-sm text-neutral-500 text-center py-8">
-                          No reviews yet. Be the first to book and leave a
-                          review!
+                    <div className="space-y-5">
+                      {/* Summary bar */}
+                      {liveReviews.length > 0 && (
+                        <div className="flex items-center gap-4 p-4 bg-yellow-50 border border-yellow-100 rounded-xl">
+                          <div className="text-center">
+                            <p className="text-3xl font-extrabold text-yellow-500">{avgRating?.toFixed(1) ?? "—"}</p>
+                            <div className="flex items-center justify-center gap-0.5 mt-0.5">
+                              {[1,2,3,4,5].map(s => (
+                                <Star key={s} className={`w-3.5 h-3.5 ${s <= Math.round(avgRating ?? 0) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                              ))}
+                            </div>
+                          </div>
+                          <div className="text-sm text-neutral-500">
+                            Based on <span className="font-semibold text-neutral-700">{liveReviews.length}</span> {liveReviews.length === 1 ? "review" : "reviews"}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Write a review */}
+                      {isAuthenticated && userBookingId && !alreadyReviewed && (
+                        <div className="border border-purple-100 rounded-xl p-4 sm:p-5 bg-purple-50/40 space-y-4">
+                          <h4 className="font-semibold text-neutral-800">Write a Review</h4>
+                          {/* Star picker */}
+                          <div className="flex items-center gap-1">
+                            {[1,2,3,4,5].map(s => (
+                              <button
+                                key={s}
+                                type="button"
+                                onClick={() => setReviewRating(s)}
+                                onMouseEnter={() => setReviewHover(s)}
+                                onMouseLeave={() => setReviewHover(0)}
+                                className="p-0.5"
+                              >
+                                <Star className={`w-7 h-7 transition-colors ${s <= (reviewHover || reviewRating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                              </button>
+                            ))}
+                            {reviewRating > 0 && (
+                              <span className="ml-2 text-sm text-neutral-500">
+                                {["","Poor","Fair","Good","Very Good","Excellent"][reviewRating]}
+                              </span>
+                            )}
+                          </div>
+                          {/* Comment */}
+                          <textarea
+                            value={reviewComment}
+                            onChange={e => setReviewComment(e.target.value)}
+                            placeholder="Share your experience with this vendor..."
+                            rows={3}
+                            className="w-full text-sm border border-purple-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-purple-400/20 focus:border-purple-400 resize-none bg-white"
+                          />
+                          <Button
+                            onClick={handleReviewSubmit}
+                            disabled={reviewRating === 0 || reviewSubmitting}
+                            className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white"
+                          >
+                            {reviewSubmitting ? "Submitting…" : "Submit Review"}
+                          </Button>
+                        </div>
+                      )}
+
+                      {isAuthenticated && alreadyReviewed && (
+                        <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                          <CheckCircle className="w-4 h-4 shrink-0" />
+                          You've already reviewed this vendor. Thank you!
+                        </div>
+                      )}
+
+                      {!isAuthenticated && (
+                        <p className="text-sm text-neutral-500 text-center py-2">
+                          <button onClick={() => router.push("/login")} className="text-purple-600 font-medium hover:underline">Log in</button> to leave a review after your booking.
                         </p>
                       )}
-                      {reviews.map((review) => (
-                        <div
-                          key={review.id}
-                          className="border border-neutral-200 rounded-xl p-4 sm:p-6"
-                        >
-                          <div className="flex items-start justify-between mb-3">
+
+                      {/* Reviews list */}
+                      {reviewsLoading && (
+                        <div className="flex justify-center py-8">
+                          <div className="w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
+
+                      {!reviewsLoading && liveReviews.length === 0 && (
+                        <p className="text-sm text-neutral-500 text-center py-8">
+                          No reviews yet. Be the first to book and leave a review!
+                        </p>
+                      )}
+
+                      {liveReviews.map((review) => (
+                        <div key={review.id} className="border border-neutral-200 rounded-xl p-4 sm:p-5 space-y-2">
+                          <div className="flex items-start justify-between gap-2">
                             <div>
-                              <h4 className="font-semibold text-sm sm:text-base">
-                                {review.userName}
-                              </h4>
-                              <div className="flex items-center gap-2 mt-1">
-                                <div className="flex items-center">
-                                  {[...Array(5)].map((_, i) => (
-                                    <Star
-                                      key={i}
-                                      className={`w-3 h-3 sm:w-4 sm:h-4 ${
-                                        i < review.rating
-                                          ? "text-yellow-400 fill-current"
-                                          : "text-gray-300"
-                                      }`}
-                                    />
+                              <p className="font-semibold text-sm text-neutral-800">
+                                {review.user?.fullName || "Anonymous"}
+                              </p>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <div className="flex">
+                                  {[1,2,3,4,5].map(s => (
+                                    <Star key={s} className={`w-3.5 h-3.5 ${s <= review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
                                   ))}
                                 </div>
-                                <span className="text-xs sm:text-sm text-gray-500">
-                                  {review.date}
+                                <span className="text-xs text-gray-400">
+                                  {new Date(review.createdAt).toLocaleDateString("en-PK", { year:"numeric", month:"short", day:"numeric" })}
                                 </span>
                               </div>
                             </div>
                           </div>
-                          <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
-                            {review.comment}
-                          </p>
+                          {review.comment && (
+                            <p className="text-sm text-gray-600 leading-relaxed">{review.comment}</p>
+                          )}
+                          {review.reply && (
+                            <div className="mt-2 pl-3 border-l-2 border-purple-200 text-sm text-neutral-600 bg-purple-50/40 rounded-r-lg py-2 pr-3">
+                              <span className="font-semibold text-purple-700 text-xs uppercase tracking-wide">Vendor reply: </span>
+                              {review.reply}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1373,19 +1648,58 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                 <Calendar18
                   selected={selectedDate}
                   onSelect={handleDateSelect}
-                  disabled={(date) => !checkDateAvailability(date)}
+                  disabled={isDateDisabled}
+                  month={calendarMonth}
+                  onMonthChange={setCalendarMonth}
+                  modifiers={{
+                    fullyBooked: fullyBookedDates,
+                    vendorBlocked: vendorBlockedDates,
+                  }}
+                  modifiersClassNames={{
+                    fullyBooked: "bg-red-50 text-red-300 line-through",
+                    vendorBlocked: "bg-orange-50 text-orange-300 line-through opacity-60",
+                  }}
                 />
+
+                {/* Legend */}
+                <div className="flex flex-wrap gap-3 mt-3 text-[11px] text-neutral-400">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-white border-2 border-neutral-300" />
+                    Available
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-100 border border-red-300" />
+                    Fully booked
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-orange-100 border border-orange-300" />
+                    Vendor unavailable
+                  </span>
+                </div>
+
                 {selectedDate && (
-                  <div className="mt-4 p-3 rounded-lg bg-neutral-50">
-                    <p className="text-sm font-medium">
+                  <div className={`mt-4 p-3 rounded-lg border ${
+                    availability[toDateKey(selectedDate)]?.isBlocked
+                      ? "bg-orange-50 border-orange-200"
+                      : isDateAvailable
+                      ? "bg-green-50 border-green-200"
+                      : "bg-red-50 border-red-200"
+                  }`}>
+                    <p className="text-sm font-medium text-neutral-700">
                       {format(selectedDate, "MMMM dd, yyyy")}
                     </p>
-                    <p
-                      className={`text-sm ${isDateAvailable ? "text-green-600" : "text-red-600"}`}
-                    >
-                      {isDateAvailable
+                    <p className={`text-sm mt-0.5 ${
+                      availability[toDateKey(selectedDate)]?.isBlocked
+                        ? "text-orange-600"
+                        : isDateAvailable
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}>
+                      {availability[toDateKey(selectedDate)]?.isBlocked
+                        ? (availability[toDateKey(selectedDate)]?.blockReason || "Vendor not available this day")
+                        : isDateAvailable
                         ? "Available for booking"
-                        : "Not available"}
+                        : "Fully booked"}
                     </p>
                   </div>
                 )}

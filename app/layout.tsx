@@ -1,6 +1,8 @@
 import type { Metadata } from "next"
 import { Toaster } from "@/components/ui/toaster"
+import { Toaster as SonnerToaster } from "sonner"
 import { UserProvider } from "@/context/UserContext"
+import { BusinessProvider } from "@/context/BusinessContext"
 import { NotificationProvider } from "@/context/NotificationContext"
 import { ChatProvider } from "@/context/ChatContext"
 import { QueryProvider } from "@/lib/providers/query-provider"
@@ -55,13 +57,16 @@ export default function RootLayout({
       <body className={`${inter.variable} ${playfair.variable} font-sans`} suppressHydrationWarning>
         <QueryProvider>
           <UserProvider>
+            <BusinessProvider>
             <NotificationProvider>
               <ChatProvider>
                 <main>{children}</main>
                 <Toaster />
+                <SonnerToaster richColors position="top-right" />
                 <PerformanceMonitor />
               </ChatProvider>
             </NotificationProvider>
+            </BusinessProvider>
           </UserProvider>
         </QueryProvider>
       </body>

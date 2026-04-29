@@ -686,7 +686,7 @@ export function HeroSection() {
                                           {vendor.rating || 0}
                                         </span>
                                         <span className="font-medium text-purple-600">
-                                          Rs. {(vendor.minimumPrice || vendor.price || 0).toLocaleString()}
+                                          Rs. {(vendor.minimumPrice || vendor.price)?.toLocaleString() ?? 'Contact us'}
                                         </span>
                                       </div>
                                     </div>

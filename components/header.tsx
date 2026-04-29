@@ -188,7 +188,7 @@ export function Header() {
                           { name: "Search", href: "/search", icon: Search },
                           { name: "Messages", href: "/user/conversations", icon: MessageCircle },
                           { name: "My Bookings", href: "/user/bookings", icon: Calendar },
-                          { name: "Favorites", href: "/favorites", icon: Heart },
+                          { name: "Favorites", href: "/user/favorites", icon: Heart },
                         ].map((item) => (
                           <Link
                             key={item.name}
@@ -402,7 +402,7 @@ export function Header() {
               </>
             )}
             <Link
-              href="/favorites"
+              href="/user/favorites"
           className="hidden sm:flex h-9 w-9 items-center justify-center rounded-xl hover:bg-purple-50 dark:hover:bg-neutral-800 text-neutral-400 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200"
               aria-label="Favorites"
             >

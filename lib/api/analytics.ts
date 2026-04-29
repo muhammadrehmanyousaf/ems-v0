@@ -20,7 +20,8 @@ export interface KpiItem {
 export interface DashboardKpis {
   totalBookings: KpiItem;
   totalRevenue: KpiItem;
-  totalCustomers: KpiItem;
+  revenueDue: KpiItem;
+  todaysEvents: KpiItem;
   upcomingBookings: KpiItem;
 }
 
@@ -108,6 +109,23 @@ export interface TodaysBookingsData {
   bookings: TodaysBookingItem[];
 }
 
+export interface UpcomingBookingItem {
+  id: number;
+  customerName: string;
+  customerPhone: string;
+  bookingDate: string;
+  time: string;
+  status: string;
+  paymentStatus: string;
+  totalAmount: number;
+  business: string;
+}
+
+export interface UpcomingBookings7DaysData {
+  count: number;
+  bookings: UpcomingBookingItem[];
+}
+
 // ─── Super Admin Types ─────────────────────────────────────────
 
 export interface VendorRevenueItem {
@@ -169,7 +187,7 @@ function buildQuery(range: DateRange, startDate?: string, endDate?: string) {
 
 export class AnalyticsAPI {
   static async getDashboardKpis(
-    range: DateRange = "this_month",
+    range: DateRange = "this_year",
     startDate?: string,
     endDate?: string
   ): Promise<DashboardKpis | null> {
@@ -254,6 +272,17 @@ export class AnalyticsAPI {
     try {
       const res = await axiosInstance.get(
         `${BACKEND_URL}api/v1/analytics/todays-bookings`
+      );
+      return res.data.data;
+    } catch {
+      return null;
+    }
+  }
+
+  static async getUpcomingBookings7Days(): Promise<UpcomingBookings7DaysData | null> {
+    try {
+      const res = await axiosInstance.get(
+        `${BACKEND_URL}api/v1/analytics/upcoming-7-days`
       );
       return res.data.data;
     } catch {

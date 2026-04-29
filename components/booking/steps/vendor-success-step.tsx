@@ -76,8 +76,9 @@ export default function VendorSuccessStep({
     }
   }
 
-  const getVendorIcon = (vendorType?: string) => {
-    switch (vendorType?.toLowerCase()) {
+  const getVendorIcon = (vendorType?: string | string[]) => {
+    const vt = Array.isArray(vendorType) ? vendorType[0] : vendorType
+    switch (vt?.toLowerCase()) {
       case 'photographer':
         return <Camera className="h-8 w-8" />
       case 'makeup artist':
@@ -93,8 +94,9 @@ export default function VendorSuccessStep({
     }
   }
 
-  const getVendorColor = (vendorType?: string) => {
-    switch (vendorType?.toLowerCase()) {
+  const getVendorColor = (vendorType?: string | string[]) => {
+    const vt = Array.isArray(vendorType) ? vendorType[0] : vendorType
+    switch (vt?.toLowerCase()) {
       case 'photographer':
         return 'from-blue-500 to-indigo-600'
       case 'makeup artist':
@@ -131,14 +133,14 @@ export default function VendorSuccessStep({
       {/* Main Booking Card */}
       <div className="mb-10 w-full max-w-3xl overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl">
         {/* Vendor Header */}
-        <div className={`bg-gradient-to-r ${getVendorColor(vendorData?.type || vendorData?.subBusinessType)} px-8 py-6 text-left`}>
+        <div className={`bg-gradient-to-r ${getVendorColor(vendor?.vendor?.vendorType || vendorData?.type || vendorData?.subBusinessType)} px-8 py-6 text-left`}>
           <div className="flex items-center gap-4">
             <div className="rounded-full bg-white/20 p-3">
-              {getVendorIcon(vendorData?.type || vendorData?.subBusinessType)}
+              {getVendorIcon(vendor?.vendor?.vendorType || vendorData?.type || vendorData?.subBusinessType)}
             </div>
             <div>
-              <h3 className="text-xl font-bold text-white">{vendorData?.name || vendorData?.businessName || 'Vendor'}</h3>
-              <p className="text-white/90 capitalize">{vendorData?.type || vendorData?.subBusinessType || 'Service Provider'}</p>
+              <h3 className="text-xl font-bold text-white">{vendorData?.name || vendorData?.businessName || vendor?.name || 'Vendor'}</h3>
+              <p className="text-white/90 capitalize">{vendor?.vendor?.vendorType || vendorData?.type || 'Service Provider'}</p>
             </div>
           </div>
         </div>

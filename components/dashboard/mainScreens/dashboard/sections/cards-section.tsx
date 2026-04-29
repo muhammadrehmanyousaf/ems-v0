@@ -5,8 +5,8 @@ import { KpiCard } from "../components/data-card";
 import {
     CalendarDays,
     DollarSign,
-    Users,
-    CalendarCheck2,
+    CalendarClock,
+    AlertCircle,
 } from "lucide-react";
 import type { DashboardKpis } from "@/lib/api/analytics";
 
@@ -35,10 +35,10 @@ export default function CardsSection({ data, loading }: CardsSectionProps) {
             />
 
             <KpiCard
-                title="Total Revenue"
+                title="Revenue Collected"
                 value={data?.totalRevenue.value ?? 0}
                 isCurrency
-                subtitle="Total collected revenue"
+                subtitle="Payments received (PKR)"
                 icon={DollarSign}
                 iconColor="bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
                 delta={data?.totalRevenue.delta}
@@ -47,26 +47,28 @@ export default function CardsSection({ data, loading }: CardsSectionProps) {
             />
 
             <KpiCard
-                title="Total Customers"
-                value={data?.totalCustomers.value ?? 0}
-                subtitle="Unique customers"
-                icon={Users}
-                iconColor="bg-violet-100 text-violet-600 dark:bg-violet-950 dark:text-violet-400"
-                delta={data?.totalCustomers.delta}
-                direction={deltaDirection(data?.totalCustomers.delta)}
+                title="Revenue Due"
+                value={data?.revenueDue?.value ?? 0}
+                isCurrency
+                subtitle="Pending payments (PKR)"
+                icon={AlertCircle}
+                iconColor="bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400"
+                delta={undefined}
+                direction="flat"
                 loading={loading}
             />
 
             <KpiCard
-                title="Upcoming Bookings"
-                value={data?.upcomingBookings.value ?? 0}
-                subtitle="Pending & confirmed"
-                icon={CalendarCheck2}
-                iconColor="bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400"
-                delta={data?.upcomingBookings.delta}
-                direction={deltaDirection(data?.upcomingBookings.delta)}
+                title="Today's Events"
+                value={data?.todaysEvents.value ?? 0}
+                subtitle="Bookings scheduled today"
+                icon={CalendarClock}
+                iconColor="bg-violet-100 text-violet-600 dark:bg-violet-950 dark:text-violet-400"
+                delta={undefined}
+                direction="flat"
                 loading={loading}
             />
+
         </div>
     );
 }

@@ -74,7 +74,7 @@ function GalleryRow({ path, label }: VendorTypeConfig) {
                       {vendor.rating?.toFixed(1)}
                     </span>
                     <span className="font-semibold text-gold-300">
-                      Rs. {(vendor.minimumPrice || vendor.price || 0).toLocaleString()}
+                      Rs. {(vendor.minimumPrice || vendor.price)?.toLocaleString() ?? 'Contact us'}
                     </span>
                   </div>
                 </div>

@@ -19,12 +19,12 @@ export default function EventTabs({ events, activeEventIndex, onTabChange }: Eve
         return (
           <button
             key={`${event.eventType}-${index}`}
-            className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
+            className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-200 ${
               isActive
-                ? 'bg-purple-600 text-white shadow-sm'
+                ? 'bg-purple-600 text-white shadow-md shadow-purple-300 scale-105'
                 : isCompleted
-                  ? 'bg-green-50 text-green-700 border border-green-200'
-                  : 'bg-white text-neutral-500 border border-neutral-200 hover:text-neutral-700 hover:border-neutral-300'
+                  ? 'bg-purple-400 text-white shadow-sm'
+                  : 'bg-purple-500 text-white shadow-sm hover:bg-purple-600'
             }`}
             onClick={() => onTabChange(index)}
           >

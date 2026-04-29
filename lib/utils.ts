@@ -32,6 +32,7 @@ export type CalendarEvent = {
     title: string;
     start: Date; // must be Date objects (convert from ISO in your data layer)
     end: Date;
+    bookingSource?: 'online' | 'offline';
 };
 
 export const ymd = (d: Date) =>

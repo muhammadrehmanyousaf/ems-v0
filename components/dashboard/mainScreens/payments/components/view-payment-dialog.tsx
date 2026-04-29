@@ -6,100 +6,108 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Payment } from '@/lib/dashboard-types';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Globe, Store } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import type { VendorPayment } from '@/lib/dashboard-types';
 
 interface ViewPaymentDialogProps {
     open: boolean;
     onOpenChange: (v: boolean) => void;
-    payment: Payment | null;
+    payment: VendorPayment | null;
 }
 
-const statusColor: Record<string, string> = {
-    completed: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-    pending: 'bg-yellow-500/10 text-yellow-600 border-yellow-200',
-    scheduled: 'bg-blue-500/10 text-blue-600 border-blue-200',
-    failed: 'bg-red-500/10 text-red-600 border-red-200',
-    hold: 'bg-orange-500/10 text-orange-600 border-orange-200',
-    refunded: 'bg-purple-500/10 text-purple-600 border-purple-200',
-};
+const fmt = (n: number) => `Rs. ${n.toLocaleString()}`
+
+const paymentStatusColors: Record<string, string> = {
+    Pending: 'bg-amber-50 text-amber-700 border-amber-300',
+    Partial: 'bg-blue-50 text-blue-700 border-blue-300',
+    Paid:    'bg-green-50 text-green-700 border-green-300',
+}
+
+const formatTime = (time?: string) => {
+    if (!time) return ''
+    const [h, m] = time.split(':').map(Number)
+    if (isNaN(h)) return time
+    const period = h >= 12 ? 'PM' : 'AM'
+    const hour = h % 12 || 12
+    return `${hour}:${String(m ?? 0).padStart(2, '0')} ${period}`
+}
+
+const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
+    <div className="flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-medium text-right">{value}</span>
+    </div>
+)
 
 export function ViewPaymentDialog({ open, onOpenChange, payment }: ViewPaymentDialogProps) {
-    if (!payment) return null;
+    if (!payment) return null
+
+    const isOffline = payment.bookingSource === 'offline'
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-lg">
+            <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Payment Details</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Payment ID</span>
-                        <span className="font-mono text-sm">{payment.paymentId}</span>
+                        <DialogTitle>Payment Details</DialogTitle>
+                        <span className={cn(
+                            'flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border',
+                            isOffline
+                                ? 'bg-orange-50 text-orange-700 border-orange-300'
+                                : 'bg-blue-50 text-blue-700 border-blue-300'
+                        )}>
+                            {isOffline ? <Store className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
+                            {isOffline ? 'Offline' : 'Online'}
+                        </span>
                     </div>
-                    <Separator />
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
-                            <p className="text-muted-foreground">Customer</p>
-                            <p className="font-medium">{payment.customerName}</p>
-                        </div>
-                        <div>
-                            <p className="text-muted-foreground">Booking ID</p>
-                            <p className="font-medium">{payment.orderId}</p>
-                        </div>
-                        <div>
-                            <p className="text-muted-foreground">Business</p>
-                            <p className="font-medium">{payment.eventType || '—'}</p>
-                        </div>
-                        <div>
-                            <p className="text-muted-foreground">Method</p>
-                            <p className="font-medium capitalize">{payment.paymentMethod || '—'}</p>
-                        </div>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                    {/* Customer */}
+                    <div className="space-y-2">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer</p>
+                        <Row label="Name"  value={payment.customerName} />
+                        <Row label="Phone" value={payment.customerPhone || '—'} />
+                        {payment.customerEmail && (
+                            <Row label="Email" value={payment.customerEmail} />
+                        )}
                     </div>
+
                     <Separator />
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
-                            <p className="text-muted-foreground">Payout Amount</p>
-                            <p className="font-semibold text-lg text-green-600">{payment.currency} {(Number(payment.advanceAmount) || 0).toLocaleString()}</p>
-                        </div>
-                        <div>
-                            <p className="text-muted-foreground">Booking Amount</p>
-                            <p className="font-medium">{payment.currency} {(Number(payment.totalAmount) || 0).toLocaleString()}</p>
-                        </div>
-                        <div>
-                            <p className="text-muted-foreground">Platform Fee</p>
-                            <p className="font-medium">{payment.currency} {(Number(payment.balanceAmount) || 0).toLocaleString()}</p>
-                        </div>
-                        <div>
-                            <p className="text-muted-foreground">Status</p>
-                            <Badge className={`capitalize ${statusColor[payment.paymentStatus?.toLowerCase()] || ''}`}>
-                                {payment.paymentStatus}
-                            </Badge>
-                        </div>
+
+                    {/* Booking */}
+                    <div className="space-y-2">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Booking</p>
+                        <Row label="Booking ID" value={<span className="font-mono">#{payment.bookingId}</span>} />
+                        <Row label="Business"   value={payment.businessName || '—'} />
+                        <Row label="Date"       value={payment.bookingDate ? new Date(payment.bookingDate).toLocaleDateString() : '—'} />
+                        <Row label="Time"       value={formatTime(payment.bookingTime) || '—'} />
+                        <Row label="Status"     value={payment.status} />
                     </div>
+
                     <Separator />
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
-                            <p className="text-muted-foreground">Payout ID</p>
-                            <p className="font-mono text-xs">{payment.transactionId || '—'}</p>
-                        </div>
-                        <div>
-                            <p className="text-muted-foreground">Payout Date</p>
-                            <p className="font-medium">
-                                {payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString() : 'Pending'}
-                            </p>
-                        </div>
-                        <div>
-                            <p className="text-muted-foreground">Scheduled Date</p>
-                            <p className="font-medium">
-                                {payment.dueDate ? new Date(payment.dueDate).toLocaleDateString() : '—'}
-                            </p>
-                        </div>
+
+                    {/* Financials */}
+                    <div className="space-y-2">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Financials</p>
+                        <Row label="Total Amount" value={<span className="font-semibold">{fmt(payment.totalAmount)}</span>} />
+                        <Row label="Received"     value={<span className="text-green-600 font-semibold">{fmt(payment.received)}</span>} />
+                        {payment.due > 0 && (
+                            <Row label="Due" value={<span className="text-orange-500 font-semibold">{fmt(payment.due)}</span>} />
+                        )}
+                        <Row
+                            label="Payment Status"
+                            value={
+                                <span className={cn('px-2.5 py-0.5 border text-xs rounded-md font-medium', paymentStatusColors[payment.paymentStatus] || 'border-neutral-300 text-neutral-600 bg-neutral-50')}>
+                                    {payment.paymentStatus}
+                                </span>
+                            }
+                        />
                     </div>
                 </div>
             </DialogContent>
         </Dialog>
-    );
+    )
 }

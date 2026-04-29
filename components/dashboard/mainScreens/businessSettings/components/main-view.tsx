@@ -1,5 +1,4 @@
 'use client'
-import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation';
 import OverviewTab from './tabs/overview-tab';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -8,33 +7,19 @@ import ImagesTab from './tabs/images-tab';
 import PackagesTab from './tabs/packages-tab';
 import MenusTab from './tabs/menus-tab';
 import TypeSpecificTab from './tabs/type-specific-tab';
-import { BusinessesAPI, type ApiBusiness } from '@/lib/api/dashboard';
 import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from 'sonner';
 import { useUser } from '@/context/UserContext';
+import { useBusiness } from '@/context/BusinessContext';
 import { getVendorTypeConfig, DEFAULT_VENDOR_CONFIG } from '@/lib/vendor-type-config';
 
 const MainView = () => {
     const searchParams = useSearchParams();
     const active = searchParams?.get('tab') || 'overview';
-    const [business, setBusiness] = useState<ApiBusiness | null>(null);
-    const [loading, setLoading] = useState(true);
     const { user } = useUser();
+    const { business, loading, refreshBusiness } = useBusiness();
     const vendorConfig = getVendorTypeConfig(user?.vendorType);
 
-    const fetchBusiness = () => {
-        setLoading(true);
-        BusinessesAPI.getUserBusinesses()
-            .then((businesses) => {
-                if (businesses.length > 0) {
-                    setBusiness(businesses[0]);
-                }
-            })
-            .catch(() => { setBusiness(null); toast.error('Failed to load business settings'); })
-            .finally(() => setLoading(false));
-    };
-
-    useEffect(() => { fetchBusiness(); }, []);
+    const onSuccess = () => refreshBusiness(true);
 
     const hasPackages = vendorConfig?.hasPackages ?? DEFAULT_VENDOR_CONFIG.hasPackages;
     const hasMenus = vendorConfig?.hasMenus ?? DEFAULT_VENDOR_CONFIG.hasMenus;
@@ -63,19 +48,19 @@ const MainView = () => {
         <ScrollArea className='h-[calc(100dvh-200px)]'>
             <div className='pt-1 pb-1'>
                 {active === 'overview' && <OverviewTab business={business} />}
-                {active === 'basic' && <BasicInfoTab business={business} onSuccess={fetchBusiness} />}
-                {active === 'images' && <ImagesTab business={business} onSuccess={fetchBusiness} />}
+                {active === 'basic' && <BasicInfoTab business={business} onSuccess={onSuccess} />}
+                {active === 'images' && <ImagesTab business={business} onSuccess={onSuccess} />}
                 {active === 'fleet' && (
-                    <PackagesTab business={business} onSuccess={fetchBusiness} mode="fleet" />
+                    <PackagesTab business={business} onSuccess={onSuccess} mode="fleet" />
                 )}
                 {active === 'packages' && hasPackages && (
-                    <PackagesTab business={business} onSuccess={fetchBusiness} mode="packages" />
+                    <PackagesTab business={business} onSuccess={onSuccess} mode="packages" />
                 )}
                 {active === 'menus' && hasMenus && (
-                    <MenusTab business={business} onSuccess={fetchBusiness} />
+                    <MenusTab business={business} onSuccess={onSuccess} />
                 )}
                 {active === 'type-specific' && vendorConfig && (
-                    <TypeSpecificTab business={business} config={vendorConfig} onSuccess={fetchBusiness} />
+                    <TypeSpecificTab business={business} config={vendorConfig} onSuccess={onSuccess} />
                 )}
             </div>
         </ScrollArea>

@@ -68,6 +68,7 @@ export function MenuDialog({
                 await MenusAPI.update(editingMenu!.id, {
                     title: title.trim(),
                     price: Number(price),
+                    businessId: editingMenu!.businessId,
                     data: { items: itemsArray },
                 });
                 toast.success('Menu updated');

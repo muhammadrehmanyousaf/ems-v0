@@ -38,7 +38,11 @@ function normalizeBusiness(raw: any): any {
     location: raw.location || raw.subArea || raw.city || vendor.city || '',
     rating: raw.rating ?? 0,
     reviews: raw.reviews || [],
-    price: raw.price ?? raw.minimumPrice ?? 0,
+    price: (raw.price || raw.minimumPrice) ||
+      (Array.isArray(raw.packages) && raw.packages.length > 0
+        ? Math.min(...raw.packages.map((p: any) => Number(p.price)).filter((p: number) => p > 0))
+        : null) ||
+      null,
     staff: raw.staff || [],
     amenities: raw.amenities || [],
     serviceProvided: raw.serviceProvided || [],

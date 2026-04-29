@@ -165,6 +165,7 @@ export interface BookingFormData {
 
   // Package
   selectedPackage: string;
+  vehicleQuantity?: number; // how many units of the selected car to book
   eventType: string;
   // Menu
   selectedMenu: string;
@@ -367,6 +368,7 @@ export interface PendingPayment {
   bookingId: number;
   customerName: string;
   bookingDate: string;
+  bookingTime?: string;
   businesses: Array<{
     id: number;
     name: string;
@@ -378,6 +380,7 @@ export interface PendingPayment {
   paymentStatus: string;
   createdAt: string;
   totalAmount?: number;
+  downPayment?: number;
 }
 
 export interface PlatformStats {

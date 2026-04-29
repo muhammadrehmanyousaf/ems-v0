@@ -8,20 +8,26 @@ interface Calendar18Props {
   selected?: Date | undefined
   onSelect?: (date: Date | undefined) => void
   disabled?: (date: Date) => boolean
+  month?: Date
+  onMonthChange?: (month: Date) => void
+  modifiers?: Record<string, Date[]>
+  modifiersClassNames?: Record<string, string>
 }
 
-export default function Calendar18({ 
-  selected, 
-  onSelect, 
-  disabled 
+export default function Calendar18({
+  selected,
+  onSelect,
+  disabled,
+  month,
+  onMonthChange,
+  modifiers,
+  modifiersClassNames,
 }: Calendar18Props) {
-  const [date, setDate] = React.useState<Date | undefined>(selected || new Date(2025, 5, 12))
+  const [date, setDate] = React.useState<Date | undefined>(selected || new Date())
 
   const handleSelect = (newDate: Date | undefined) => {
     setDate(newDate)
-    if (onSelect) {
-      onSelect(newDate)
-    }
+    if (onSelect) onSelect(newDate)
   }
 
   const defaultDisabled = (date: Date) => {
@@ -35,6 +41,10 @@ export default function Calendar18({
       selected={selected || date}
       onSelect={handleSelect}
       disabled={disabled || defaultDisabled}
+      month={month}
+      onMonthChange={onMonthChange}
+      modifiers={modifiers}
+      modifiersClassNames={modifiersClassNames}
       className="rounded-lg border [--cell-size:2.75rem] md:[--cell-size:3rem] w-full"
       buttonVariant="ghost"
     />

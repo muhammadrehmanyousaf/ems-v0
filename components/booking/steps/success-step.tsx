@@ -110,7 +110,10 @@ export default function SuccessStep({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 { label: "Name", value: formData.username },
-                { label: "Guests", value: `${formData.guestCount}` },
+                ...( ["Wedding venue", "Catering", "Decorator"].includes(venue?.vendor?.vendorType ?? "")
+                  ? [{ label: "Guests", value: `${formData.guestCount}` }]
+                  : []
+                ),
                 { label: "Date", value: formData.bookingDate ? new Date(formData.bookingDate).toLocaleDateString() : "N/A" },
                 { label: "Time", value: formData.timeSlot ? getTimeSlotText(formData.timeSlot) : "N/A" },
               ].map((row) => (

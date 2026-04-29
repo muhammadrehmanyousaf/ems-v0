@@ -46,6 +46,14 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, onSuccess }: 
     const isPaid = booking.paymentStatus === 'Paid';
     const isPartial = booking.paymentStatus === 'Partial';
 
+    // Derive accurate amounts from bookingDetails (booking-level fields can be 0)
+    const details = booking.bookingDetails || [];
+    const vendorTotal = details.reduce((sum, d) => sum + (Number(d.totalAmount) || 0), 0);
+    const vendorDP    = details.reduce((sum, d) => sum + (Number(d.downPayment)  || 0), 0);
+    const total       = vendorTotal > 0 ? vendorTotal : Number(booking.totalAmount)  || 0;
+    const dp          = vendorDP    > 0 ? vendorDP    : Number(booking.downPayment)  || 0;
+    const remaining   = isPaid ? 0 : isPartial ? Math.max(0, total - dp) : total;
+
     // Filter payment types based on current status
     const availableTypes = PAYMENT_TYPES.filter((t) => {
         if (isPaid) return false;
@@ -100,11 +108,11 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, onSuccess }: 
                     <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-muted/50 text-sm">
                         <div>
                             <p className="text-muted-foreground">Total Amount</p>
-                            <p className="font-semibold">Rs. {(booking.totalAmount || 0).toLocaleString()}</p>
+                            <p className="font-semibold">Rs. {total.toLocaleString()}</p>
                         </div>
                         <div>
                             <p className="text-muted-foreground">Down Payment</p>
-                            <p className="font-semibold">Rs. {(booking.downPayment || 0).toLocaleString()}</p>
+                            <p className="font-semibold">Rs. {dp.toLocaleString()}</p>
                         </div>
                         <div>
                             <p className="text-muted-foreground">Current Status</p>
@@ -112,12 +120,7 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, onSuccess }: 
                         </div>
                         <div>
                             <p className="text-muted-foreground">Remaining</p>
-                            <p className="font-semibold">
-                                Rs. {(
-                                    (booking.totalAmount || 0) -
-                                    (booking.paymentStatus === 'Partial' ? (booking.downPayment || 0) : 0)
-                                ).toLocaleString()}
-                            </p>
+                            <p className="font-semibold">Rs. {remaining.toLocaleString()}</p>
                         </div>
                     </div>
 

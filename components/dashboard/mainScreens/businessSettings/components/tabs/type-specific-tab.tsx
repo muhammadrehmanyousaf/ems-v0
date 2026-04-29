@@ -69,7 +69,7 @@ const TypeSpecificTab = ({ business, config, onSuccess }: TypeSpecificTabProps) 
             for (const field of config.typeSpecificFields) {
                 const val = values[field.key];
                 if (field.type === 'number') {
-                    updateData[field.key] = val ? Number(val) : null;
+                    updateData[field.key] = (val === '' || val == null) ? null : Number(val);
                 } else if (field.type === 'select') {
                     // Some fields (e.g. subBusinessType) are stored as ARRAY in PostgreSQL.
                     // If the original DB value was an array, re-wrap the selected string as an array.

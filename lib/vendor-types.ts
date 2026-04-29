@@ -2,7 +2,7 @@
 export const VENDOR_TYPES = {
   PHOTOGRAPHER: 'Photographer',
   DECORATOR: 'Decorator',
-  HENNA_ARTIST: 'Hena artist',
+  HENNA_ARTIST: 'Henna artist',
   MAKEUP_ARTIST: 'Makeup artist',
   WEDDING_VENUE: 'Wedding venue',
   CAR_RENTAL: 'Car rental',

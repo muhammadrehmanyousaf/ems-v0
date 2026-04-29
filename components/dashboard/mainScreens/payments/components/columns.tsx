@@ -2,25 +2,38 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { RowActions } from './row-actions';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Payment } from '@/lib/dashboard-types';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { cn, formatDateTime } from '@/lib/utils';
+import { Globe, Store } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import type { VendorPayment } from '@/lib/dashboard-types';
+
+const fmt = (n: number) => `Rs. ${n.toLocaleString()}`
+
+const paymentStatusColors: Record<string, string> = {
+    Pending:  'border-amber-400 text-amber-700 bg-amber-50',
+    Partial:  'border-blue-400 text-blue-700 bg-blue-50',
+    Paid:     'border-green-400 text-green-700 bg-green-50',
+}
+
+const formatTime = (time?: string) => {
+    if (!time) return ''
+    const [h, m] = time.split(':').map(Number)
+    if (isNaN(h)) return time
+    const period = h >= 12 ? 'PM' : 'AM'
+    const hour = h % 12 || 12
+    return `${hour}:${String(m ?? 0).padStart(2, '0')} ${period}`
+}
 
 export const columns = (
-    onView: (payment: Payment) => void,
-): ColumnDef<Payment>[] => [
+    onView: (p: VendorPayment) => void,
+): ColumnDef<VendorPayment>[] => [
     {
-        id: "select",
+        id: 'select',
         header: ({ table }) => (
             <Checkbox
                 checked={table.getIsAllPageRowsSelected()}
                 onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
                 aria-label="Select all"
-                aria-checked={
-                    table.getIsSomePageRowsSelected()
-                        ? "mixed"
-                        : table.getIsAllPageRowsSelected()
-                }
+                aria-checked={table.getIsSomePageRowsSelected() ? 'mixed' : table.getIsAllPageRowsSelected()}
             />
         ),
         cell: ({ row }) => (
@@ -35,105 +48,89 @@ export const columns = (
         size: 36,
     },
     {
-        accessorKey: "customerName",
-        header: "Full Name",
+        accessorKey: 'customerName',
+        header: 'Customer',
         cell: ({ row }) => (
-            <div className="flex items-center gap-2">
-                <Avatar className="h-[34px] w-[34px]">
-                    <AvatarFallback className="bg-primary/20 text-primary">
-                        {row.original.customerName?.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                </Avatar>
+            <div>
+                <p className="font-medium text-sm text-neutral-900">{row.original.customerName}</p>
+                <p className="text-xs text-neutral-400">{row.original.customerPhone}</p>
+            </div>
+        ),
+    },
+    {
+        id: 'bookingId',
+        header: 'Booking ID',
+        cell: ({ row }) => (
+            <span className="text-sm text-neutral-600 font-mono">#{row.original.bookingId}</span>
+        ),
+    },
+    {
+        accessorKey: 'businessName',
+        header: 'Business',
+        cell: ({ row }) => (
+            <span className="text-sm text-neutral-700">{row.original.businessName || '—'}</span>
+        ),
+    },
+    {
+        id: 'amount',
+        header: 'Amount',
+        cell: ({ row }) => {
+            const { totalAmount, received, due } = row.original
+            return (
                 <div>
-                    <span className="font-medium">{row.original.customerName}</span>
-                    {row.original.email && (
-                        <p className="text-xs text-muted-foreground">{row.original.email}</p>
-                    )}
+                    <p className="text-sm font-semibold text-neutral-900">{fmt(totalAmount)}</p>
+                    <p className="text-xs mt-0.5 space-x-1">
+                        <span className="text-green-600 font-medium">Paid {received.toLocaleString()}</span>
+                        {due > 0 && <span className="text-orange-500">· Due {due.toLocaleString()}</span>}
+                    </p>
                 </div>
-            </div>
-        ),
+            )
+        },
     },
-    { accessorKey: "orderId", header: "Booking ID" },
-    { accessorKey: "eventType", header: "Business" },
     {
-        id: "paymentStatus",
-        header: "Payment Status",
+        id: 'paymentStatus',
+        header: 'Payment',
         cell: ({ row }) => {
-            const status = row.original.paymentStatus;
-            const statusColors: Record<string, string> = {
-                pending: "border-amber-500 text-amber-800 bg-amber-50",
-                scheduled: "border-blue-500 text-blue-600 bg-blue-50",
-                completed: "border-green-500 text-green-600 bg-green-50",
-                failed: "border-red-500 text-red-600 bg-red-50",
-                hold: "border-orange-500 text-orange-600 bg-orange-50",
-                refunded: "border-purple-500 text-purple-600 bg-purple-50",
-            };
-            const color =
-                statusColors[status] ||
-                "border-gray-400 text-gray-600 bg-gray-50";
-
+            const ps = row.original.paymentStatus || 'Pending'
             return (
-                <span
-                    className={cn(
-                        "px-2 border h-7 flex items-center justify-center rounded-md font-medium dark:bg-transparent text-sm whitespace-nowrap capitalize",
-                        color
-                    )}
-                >
-                    {status}
+                <span className={cn('px-2.5 py-1 border text-xs rounded-md font-medium inline-flex items-center', paymentStatusColors[ps] || 'border-neutral-300 text-neutral-600 bg-neutral-50')}>
+                    {ps}
                 </span>
-            );
+            )
         },
     },
     {
-        id: "payout_amount",
-        header: "Payout Amount",
+        id: 'source',
+        header: 'Source',
         cell: ({ row }) => {
-            const amount = Number(row.original.advanceAmount) || 0;
+            const isOffline = row.original.bookingSource === 'offline'
             return (
-                <div className="max-w-32 flex justify-center">
-                    {amount > 0 ? `Rs. ${amount.toLocaleString()}` : '—'}
-                </div>
-            );
+                <span className={cn(
+                    'px-2 py-0.5 border text-xs rounded-md font-medium inline-flex items-center gap-1',
+                    isOffline
+                        ? 'border-orange-300 text-orange-700 bg-orange-50'
+                        : 'border-blue-300 text-blue-700 bg-blue-50'
+                )}>
+                    {isOffline ? <><Store className="h-3 w-3" />Offline</> : <><Globe className="h-3 w-3" />Online</>}
+                </span>
+            )
         },
     },
     {
-        accessorKey: "totalAmount",
-        header: "Booking Amount",
+        id: 'date',
+        header: 'Date',
         cell: ({ row }) => (
-            <div className="max-w-32 flex justify-center">
-                {`Rs. ${(Number(row.original.totalAmount) || 0).toLocaleString()}`}
+            <div>
+                <p className="text-sm text-neutral-800">
+                    {row.original.bookingDate ? new Date(row.original.bookingDate).toLocaleDateString() : '—'}
+                </p>
+                <p className="text-xs text-neutral-400">{formatTime(row.original.bookingTime)}</p>
             </div>
         ),
     },
     {
-        id: "platform_fee",
-        header: "Platform Fee",
-        cell: ({ row }) => {
-            const fee = Number(row.original.balanceAmount) || 0;
-            return (
-                <div className="max-w-32 flex justify-center">
-                    {fee > 0 ? `Rs. ${fee.toLocaleString()}` : '—'}
-                </div>
-            );
-        },
-    },
-    {
-        accessorKey: "paymentDate",
-        header: "Payment Date",
-        cell: ({ row }) => (
-            <div className="max-w-32 flex justify-center whitespace-nowrap">
-                {row.original.paymentDate ?
-                    formatDateTime(row.original.paymentDate)
-                    : 'Not Paid'
-                }
-            </div>
-        ),
-    },
-    {
-        id: "actions",
+        id: 'actions',
         enableHiding: false,
-        cell: ({ row }) => (
-            <RowActions data={row.original} onView={onView} />
-        ),
+        cell: ({ row }) => <RowActions data={row.original} onView={onView} />,
     },
 ];

@@ -3,8 +3,7 @@
 import { useCallback, useRef } from "react"
 import type { BookingFormData, EventBooking } from "@/lib/types"
 
-const STORAGE_KEY = "booking_draft_v1"
-const DRAFT_EXPIRY_MS = 24 * 60 * 60 * 1000 // 24 hours
+const DRAFT_EXPIRY_MS = 15 * 60 * 1000 // 15 minutes — matches slot hold timer
 
 interface DraftData {
   formData: BookingFormData
@@ -12,55 +11,58 @@ interface DraftData {
   globalStep: number
   activeEventIndex: number
   venueId: string
+  userId: string
   savedAt: number
 }
 
-export function useBookingDraft(venueId: string | null) {
+function getDraftKey(venueId: string, userId: string) {
+  return `booking_draft_v1_${venueId}_${userId}`
+}
+
+export function useBookingDraft(venueId: string | null, userId?: string | null) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const save = useCallback(
-    (data: Omit<DraftData, "savedAt" | "venueId">) => {
-      if (!venueId) return
-      // Debounce: clear previous timer
+    (data: Omit<DraftData, "savedAt" | "venueId" | "userId">) => {
+      if (!venueId || !userId) return
       if (timerRef.current) clearTimeout(timerRef.current)
       timerRef.current = setTimeout(() => {
         try {
-          const draft: DraftData = { ...data, venueId, savedAt: Date.now() }
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(draft))
+          const draft: DraftData = { ...data, venueId, userId, savedAt: Date.now() }
+          localStorage.setItem(getDraftKey(venueId, userId), JSON.stringify(draft))
         } catch {
           // localStorage full or unavailable — silently ignore
         }
       }, 500)
     },
-    [venueId]
+    [venueId, userId]
   )
 
   const load = useCallback((): DraftData | null => {
+    if (!venueId || !userId) return null
     try {
-      const raw = localStorage.getItem(STORAGE_KEY)
+      const raw = localStorage.getItem(getDraftKey(venueId, userId))
       if (!raw) return null
       const draft: DraftData = JSON.parse(raw)
-      // Expired?
       if (Date.now() - draft.savedAt > DRAFT_EXPIRY_MS) {
-        localStorage.removeItem(STORAGE_KEY)
+        localStorage.removeItem(getDraftKey(venueId, userId))
         return null
       }
-      // Different venue?
-      if (venueId && draft.venueId !== venueId) return null
       return draft
     } catch {
       return null
     }
-  }, [venueId])
+  }, [venueId, userId])
 
   const clear = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
+    if (!venueId || !userId) return
     try {
-      localStorage.removeItem(STORAGE_KEY)
+      localStorage.removeItem(getDraftKey(venueId, userId))
     } catch {
       // ignore
     }
-  }, [])
+  }, [venueId, userId])
 
   return { save, load, clear }
 }

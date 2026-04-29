@@ -101,7 +101,7 @@ function AlternatingRow({ path, label, tagline, reversed }: VendorTypeConfig & {
                     <span className="font-semibold">{vendor.rating?.toFixed(1)}</span>
                   </div>
                   <p className="text-xs font-semibold text-purple-600 mt-0.5">
-                    Rs. {(vendor.minimumPrice || vendor.price || 0).toLocaleString()}
+                    Rs. {(vendor.minimumPrice || vendor.price)?.toLocaleString() ?? 'Contact us'}
                   </p>
                 </div>
               </Link>

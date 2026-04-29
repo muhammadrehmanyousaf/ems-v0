@@ -16,13 +16,19 @@ export function middleware(request: NextRequest) {
     '/user/notifications',
     '/user/settings',
     '/dashboard',
+    '/booking',
   ];
 
-  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
+  // Also protect dynamic vendor booking routes: /[id]/booking
+  const isVendorBookingRoute = /^\/\d+\/booking/.test(pathname);
+
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route)) || isVendorBookingRoute;
 
   // If accessing a protected route without authentication, redirect to login
   if (isProtectedRoute && !isAuthenticated) {
-    return NextResponse.redirect(new URL('/login', request.url));
+    const loginUrl = new URL('/login', request.url)
+    loginUrl.searchParams.set('redirect', pathname)
+    return NextResponse.redirect(loginUrl);
   }
 
   // If accessing login/register pages while authenticated, redirect to dashboard

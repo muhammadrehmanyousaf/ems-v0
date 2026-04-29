@@ -1,20 +1,19 @@
 "use client"
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { BookingData } from "@/lib/dashboard-types"
-import { User, CalendarDays, Package, CreditCard, Building, CheckCircle } from "lucide-react"
+import { User, CalendarDays, Package, CreditCard, Building } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface BookingDetailSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   booking: BookingData
-  onApprove?: () => void
 }
 
 const statusColors: Record<string, string> = {
+  'Awaiting Payment': 'bg-orange-50 text-orange-700 border-orange-200',
   Pending: 'bg-amber-50 text-amber-800 border-amber-200',
   Confirmed: 'bg-blue-50 text-blue-700 border-blue-200',
   Completed: 'bg-green-50 text-green-700 border-green-200',
@@ -30,12 +29,23 @@ const paymentColors: Record<string, string> = {
 const formatDate = (iso?: string) =>
   iso ? new Date(iso).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) : "-"
 
-export function BookingDetailSheet({ open, onOpenChange, booking, onApprove }: BookingDetailSheetProps) {
+const formatTime = (t?: string) => {
+  if (!t) return "-"
+  const [h, m] = t.split(":").map(Number)
+  const ampm = h >= 12 ? "PM" : "AM"
+  const hour = h % 12 || 12
+  return `${hour}:${String(m).padStart(2, "0")} ${ampm}`
+}
+
+export function BookingDetailSheet({ open, onOpenChange, booking }: BookingDetailSheetProps) {
   const details = booking.bookingDetails || []
   const vendorTotal = details.reduce((sum, d) => sum + (Number(d.totalAmount) || 0), 0)
   const vendorDownPayment = details.reduce((sum, d) => sum + (Number(d.downPayment) || 0), 0)
   const amount = vendorTotal > 0 ? vendorTotal : Number(booking.totalAmount) || 0
   const dp = vendorDownPayment > 0 ? vendorDownPayment : Number(booking.downPayment) || 0
+  const isPaid = booking.paymentStatus === 'Paid'
+  const isPartial = booking.paymentStatus === 'Partial'
+  const remaining = isPaid ? 0 : isPartial ? Math.max(0, amount - dp) : amount
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -92,8 +102,14 @@ export function BookingDetailSheet({ open, onOpenChange, booking, onApprove }: B
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-neutral-500">Time</span>
-                <span className="font-medium text-neutral-800">{booking.bookingTime}</span>
+                <span className="font-medium text-neutral-800">{formatTime(booking.bookingTime)}</span>
               </div>
+              {booking.guestCount != null && booking.guestCount > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-neutral-500">Guests</span>
+                  <span className="font-medium text-neutral-800">{booking.guestCount.toLocaleString()}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -127,7 +143,9 @@ export function BookingDetailSheet({ open, onOpenChange, booking, onApprove }: B
                       </div>
                     )}
                     {detail.specialRequests && (
-                      <p className="text-xs text-neutral-400 italic">"{detail.specialRequests}"</p>
+                      <div className="flex items-center gap-1.5 rounded-md bg-blue-50 border border-blue-100 px-2 py-1">
+                        <span className="text-xs font-semibold text-blue-700">{detail.specialRequests}</span>
+                      </div>
                     )}
                     <div className="flex justify-between text-xs text-neutral-400">
                       <span>Down Payment</span>
@@ -160,7 +178,7 @@ export function BookingDetailSheet({ open, onOpenChange, booking, onApprove }: B
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-neutral-600">Remaining</span>
-                <span className="font-medium text-neutral-700">Rs. {Math.max(0, amount - dp).toLocaleString()}</span>
+                <span className="font-medium text-neutral-700">Rs. {remaining.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -176,13 +194,6 @@ export function BookingDetailSheet({ open, onOpenChange, booking, onApprove }: B
             </>
           )}
 
-          {/* Approve Action */}
-          {onApprove && (
-            <Button onClick={onApprove} className="w-full bg-green-600 hover:bg-green-700">
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Approve Booking
-            </Button>
-          )}
         </div>
       </SheetContent>
     </Sheet>

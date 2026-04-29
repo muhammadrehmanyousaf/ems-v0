@@ -48,7 +48,7 @@ const BookingTable = ({ search }: Props) => {
   });
 
   const handleBookingCreated = () => {
-    queryClient.invalidateQueries({ queryKey: ['/api/v1/bookings'] });
+    queryClient.refetchQueries({ queryKey: ['/api/v1/bookings'] });
   };
 
   if (isLoading) {

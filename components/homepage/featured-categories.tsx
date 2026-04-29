@@ -10,6 +10,7 @@ import {
   Utensils,
   Crown,
   Mail,
+  Brush,
   ArrowRight,
 } from "lucide-react"
 import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ui/motion-wrapper"
@@ -45,6 +46,12 @@ const categoryData = [
     icon: Utensils,
     title: "Catering",
     gradient: "from-amber-500 via-orange-600 to-red-700",
+  },
+  {
+    path: "henna-artists",
+    icon: Brush,
+    title: "Henna Artists",
+    gradient: "from-orange-500 via-amber-600 to-yellow-700",
   },
   {
     path: "car-rental",
@@ -86,7 +93,7 @@ export function FeaturedCategories() {
           </div>
         </ScrollReveal>
 
-        <StaggerContainer staggerDelay={0.06} className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
+        <StaggerContainer staggerDelay={0.06} className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-3 sm:gap-4">
           {categoryData.map((category) => {
             const IconComponent = category.icon
             return (

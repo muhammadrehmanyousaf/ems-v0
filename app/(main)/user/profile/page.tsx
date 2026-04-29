@@ -232,9 +232,8 @@ const ProfilePage = () => {
         throw new Error('User ID not found');
       }
 
-      await axiosInstance.post(`${BACKEND_URL}api/v1/users/change-password`, {
-        userId: user.id,
-        oldPassword: passwordForm.oldPassword,
+      await axiosInstance.patch(`${BACKEND_URL}api/v1/users/change-password`, {
+        currentPassword: passwordForm.oldPassword,
         newPassword: passwordForm.newPassword,
       });
 
