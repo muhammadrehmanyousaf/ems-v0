@@ -10,6 +10,7 @@ import { Business } from '@/lib/dashboard-types';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Building2, MapPin, Package, UserCircle } from 'lucide-react';
+import { AvailabilitySettingsCard } from '@/components/bookings/availability-settings-card';
 
 interface ViewBusinessDialogProps {
     open: boolean;
@@ -22,7 +23,7 @@ export function ViewBusinessDialog({ open, onOpenChange, business }: ViewBusines
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Business Details</DialogTitle>
                 </DialogHeader>
@@ -65,6 +66,23 @@ export function ViewBusinessDialog({ open, onOpenChange, business }: ViewBusines
                             </p>
                         </>
                     )}
+
+                    {/* BK-048 vacation mode + BK-011 recurring blocks. */}
+                    {typeof business.id === 'number' ? (
+                        <>
+                            <Separator />
+                            <AvailabilitySettingsCard
+                                businessId={business.id}
+                                initial={{
+                                    vacationMode: (business as any).vacationMode,
+                                    vacationStartsAt: (business as any).vacationStartsAt,
+                                    vacationEndsAt: (business as any).vacationEndsAt,
+                                    vacationMessage: (business as any).vacationMessage,
+                                    honorMarketplaceBlackouts: (business as any).honorMarketplaceBlackouts,
+                                }}
+                            />
+                        </>
+                    ) : null}
                 </div>
             </DialogContent>
         </Dialog>

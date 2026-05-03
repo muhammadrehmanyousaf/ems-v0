@@ -6,7 +6,7 @@ import Link from "next/link"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Star, MapPin, Users, Calendar, Clock, Award, Heart, Loader2, Eye } from "lucide-react"
+import { Star, MapPin, Users, Calendar, Clock, Award, Heart, Loader2, Eye, Plane } from "lucide-react"
 import Image from "next/image"
 import {
   AlertDialog,
@@ -21,6 +21,10 @@ import {
 import { useRouter } from "next/navigation"
 import { useFavorites } from "@/hooks/use-favorites"
 import { getFirstImage } from "@/lib/utils/image-utils"
+import {
+  ListingBadges,
+  type ListingBadgeBusiness,
+} from "@/components/listings/listing-badges"
 
 interface VendorCardProps {
   id: string | number
@@ -40,6 +44,13 @@ interface VendorCardProps {
   showDetails?: boolean
   className?: string
   onFavoriteToggle?: (id: string | number, nowFavorited: boolean) => void
+  /**
+   * Raw listing-response fields used to drive backend-signal badges
+   * (vacation mode, permit required, last-spot urgency). Optional —
+   * cards rendered without it stay backwards-compatible. Typed as a
+   * Partial so callers can pass the full Vendor / Business object directly.
+   */
+  business?: ListingBadgeBusiness
 }
 
 export default function VendorCard({
@@ -60,7 +71,21 @@ export default function VendorCard({
   showDetails = true,
   className = "",
   onFavoriteToggle,
+  business,
 }: VendorCardProps) {
+  // BK-048 — vacation mode dims the card and replaces the booking CTA with
+  // a disabled "Back on …" button. Listing stays visible per BK-048's spec
+  // (customer can still favourite, just can't book inside the window).
+  const onVacation = business?.vacationMode === true
+  const vacationBackOn = (() => {
+    const raw = business?.vacationEndsAt
+    if (!raw) return null
+    const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(raw)
+    const d = dateOnly ? new Date(`${raw}T00:00:00`) : new Date(raw)
+    if (Number.isNaN(d.getTime())) return null
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`
+  })()
   const [openAlert, setOpenAlert] = useState(false)
   const router = useRouter()
   
@@ -127,8 +152,13 @@ export default function VendorCard({
 
   const handleBookNow = (e: React.MouseEvent) => {
     e.stopPropagation()
+    // BK-048 — vacation mode disables the booking CTA. The disabled button
+    // below is also rendered via `disabled`, but stop propagation here too
+    // so a click on a stale CTA never routes to /booking.
+    if (onVacation) return
+
     const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('user_id') && localStorage.getItem('auth_token')
-    
+
     if (isLoggedIn) {
       // Route to the main booking page
       router.push(`/${id}/booking`)
@@ -159,13 +189,6 @@ export default function VendorCard({
       return price > 0 ? `Rs. ${price.toLocaleString()}` : null;
     }
     return `Rs. ${price}`;
-  }
-
-  const getRatingColor = (rating: number) => {
-    if (rating >= 4.5) return "#10b981" // emerald
-    if (rating >= 4.0) return "#7C3AED" // purple
-    if (rating >= 3.5) return "#D4AF37" // gold
-    return "#9ca3af" // gray
   }
 
   const getRatingLabel = (rating: number) => {
@@ -215,9 +238,16 @@ export default function VendorCard({
           >
             <Card
               onClick={handleCardClick}
-              className="group h-full cursor-pointer overflow-hidden border border-purple-100/50 shadow-md hover:shadow-2xl hover:shadow-purple-200/30 transition-all duration-500 bg-white/80 backdrop-blur-sm rounded-2xl relative flex flex-col w-full"
+              className={`
+                group h-full cursor-pointer overflow-hidden relative flex flex-col w-full
+                bg-bridal-cream border border-bridal-beige rounded-md
+                transition-all duration-500
+                hover:border-bridal-gold/55
+                hover:shadow-[0_28px_50px_-32px_rgba(176,125,84,0.5)]
+                ${onVacation ? "opacity-70" : ""}
+              `}
             >
-              {/* ── Image Section with Ken Burns ── */}
+              {/* ── Image Section ── */}
               <div className="relative aspect-[4/3] overflow-hidden">
                 <Image
                   src={getFirstImage(Array.isArray(image) ? image : [image])}
@@ -227,59 +257,63 @@ export default function VendorCard({
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
 
-                {/* ── Quick-view overlay on hover ── */}
-                <div className="absolute inset-0 bg-gradient-to-t from-purple-950/80 via-purple-900/40 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-end p-4">
+                {/* Bridal hover veil — gold/charcoal/blush instead of purple */}
+                <div className="absolute inset-0 bg-gradient-to-t from-bridal-charcoal/85 via-bridal-charcoal/15 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-end p-4">
                   <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
                     <div className="flex flex-wrap gap-1.5 mb-3">
-                      <Badge className="bg-white/20 backdrop-blur-sm text-white border-0 text-xs">{type}</Badge>
-                      <Badge className="bg-white/20 backdrop-blur-sm text-white border-0 text-xs">
-                        <MapPin className="w-3 h-3 mr-1" />
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-bridal-cream/95 border border-bridal-gold/55 text-bridal-charcoal text-[10px] font-bridal font-medium uppercase tracking-[0.2em] backdrop-blur-sm">
+                        {type}
+                      </span>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-bridal-blush/95 border border-bridal-rose/55 text-bridal-mauve text-[10px] font-bridal font-medium uppercase tracking-[0.2em] backdrop-blur-sm">
+                        <MapPin className="w-3 h-3" />
                         {location}
-                      </Badge>
+                      </span>
                       {capacity && (
-                        <Badge className="bg-white/20 backdrop-blur-sm text-white border-0 text-xs">
-                          <Users className="w-3 h-3 mr-1" />
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-bridal-ivory/15 backdrop-blur-sm border border-bridal-ivory/25 text-bridal-ivory text-[10px] font-bridal font-medium uppercase tracking-[0.2em]">
+                          <Users className="w-3 h-3" />
                           {capacity}
-                        </Badge>
+                        </span>
                       )}
                     </div>
                     <button
+                      type="button"
                       onClick={(e) => { e.stopPropagation(); handleCardClick(e) }}
-                      className="inline-flex items-center gap-1.5 text-sm font-semibold text-white hover:text-gold-300 transition-colors"
+                      className="inline-flex items-center gap-1.5 font-bridal text-[11px] uppercase tracking-[0.22em] font-medium text-bridal-gold hover:text-bridal-rose transition-colors"
                       data-no-navigate
                     >
-                      <Eye className="w-4 h-4" />
+                      <Eye className="w-3.5 h-3.5" />
                       Quick View
                     </button>
                   </div>
                 </div>
 
-                {/* Top Badges */}
+                {/* Top: Featured ribbon + favourite button */}
                 <div className="absolute top-3 left-3 right-3 flex justify-between items-start z-10">
-                  {sponsored && (
-                    <Badge className="bg-gradient-to-r from-gold-500 to-gold-600 text-white border-0 shadow-lg font-semibold text-xs px-3 py-1">
-                      <Award className="w-3 h-3 mr-1" />
+                  {sponsored ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-bridal-gold/95 border border-bridal-gold-dark/30 text-bridal-charcoal text-[10px] font-bridal font-medium uppercase tracking-[0.22em] backdrop-blur-sm">
+                      <Award className="w-3 h-3" />
                       Featured
-                    </Badge>
+                    </span>
+                  ) : (
+                    <span />
                   )}
-                  {!sponsored && <span />}
 
                   <Button
                     onClick={handleFavoriteToggle}
                     variant="ghost"
                     size="sm"
                     disabled={isLoading}
-                    className="w-9 h-9 p-0 bg-white/90 backdrop-blur-sm hover:bg-white border-0 shadow-md rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50"
+                    className="w-9 h-9 p-0 bg-bridal-cream/95 backdrop-blur-sm hover:bg-bridal-cream border border-bridal-beige hover:border-bridal-gold/55 shadow-sm rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50"
                     data-no-navigate
                   >
                     {isLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-purple-500" />
+                      <Loader2 className="w-4 h-4 animate-spin text-bridal-gold" />
                     ) : (
                       <Heart
                         className={`w-4 h-4 transition-all duration-200 ${
                           isFavorite
-                            ? "fill-red-500 text-red-500"
-                            : "text-gray-600 hover:text-red-500"
+                            ? "fill-bridal-coral text-bridal-coral"
+                            : "text-bridal-text-soft hover:text-bridal-coral"
                         }`}
                       />
                     )}
@@ -291,26 +325,26 @@ export default function VendorCard({
               <CardContent className="p-4 sm:p-5 space-y-3 flex-1 flex flex-col">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-base sm:text-lg leading-tight group-hover:text-purple-700 transition-colors duration-300 line-clamp-2">
+                    <h3 className="font-display italic text-[18px] sm:text-[20px] leading-tight text-bridal-charcoal group-hover:text-bridal-gold-dark transition-colors duration-300 line-clamp-2">
                       {name}
                     </h3>
-                    <div className="flex items-center text-gray-500 text-xs sm:text-sm mt-1.5">
-                      <MapPin className="w-3.5 h-3.5 mr-1 flex-shrink-0 text-purple-400" />
+                    <div className="flex items-center font-bridal text-bridal-text-soft text-[12px] mt-1">
+                      <MapPin className="w-3.5 h-3.5 mr-1 flex-shrink-0 text-bridal-gold/80" />
                       <span className="truncate">{location}</span>
                     </div>
                   </div>
 
-                  {/* ── Circular progress rating ── */}
+                  {/* Circular gold rating progress */}
                   <div className="flex-shrink-0 flex flex-col items-center">
                     <div className="relative w-12 h-12">
                       <svg className="w-12 h-12 -rotate-90" viewBox="0 0 40 40">
-                        <circle cx="20" cy="20" r="18" fill="none" stroke="#f3f4f6" strokeWidth="3" />
+                        <circle cx="20" cy="20" r="18" fill="none" stroke="#EDD9C3" strokeWidth="3" />
                         <circle
                           cx="20"
                           cy="20"
                           r="18"
                           fill="none"
-                          stroke={getRatingColor(rating)}
+                          stroke="#C9956A"
                           strokeWidth="3"
                           strokeLinecap="round"
                           strokeDasharray={circumference}
@@ -319,45 +353,95 @@ export default function VendorCard({
                         />
                       </svg>
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-xs font-bold">{rating.toFixed(1)}</span>
+                        <span className="font-display italic text-[14px] text-bridal-charcoal">
+                          {rating.toFixed(1)}
+                        </span>
                       </div>
                     </div>
-                    <span className="text-[10px] font-medium text-gray-400 mt-0.5">{getRatingLabel(rating)}</span>
+                    <span className="font-bridal text-[9.5px] uppercase tracking-[0.2em] font-medium text-bridal-gold mt-1">
+                      {getRatingLabel(rating)}
+                    </span>
                   </div>
                 </div>
 
                 {/* Reviews count */}
-                <div className="flex items-center gap-1 text-xs text-gray-500">
-                  <Star className="w-3 h-3 text-gold-500 fill-gold-500" />
+                <div className="flex items-center gap-1.5 font-bridal text-[12px] text-bridal-text-soft">
+                  <Star className="w-3 h-3 text-bridal-gold fill-bridal-gold" />
                   <span className="font-medium">{reviews} reviews</span>
                 </div>
 
-                {/* Price & Availability */}
-                <div className="flex items-end justify-between mt-auto pt-2 border-t border-gray-100/80">
+                {/* Backend-signal pills (BK-048 vacation, BK-074 permit, BK-053 last-spot).
+                    Wrapper renders nothing when no signal applies, so existing layouts
+                    of vendors with none of these flags are unaffected. */}
+                <ListingBadges business={business} />
+
+                {/* Price + availability */}
+                <div className="flex items-end justify-between mt-auto pt-3 border-t border-bridal-beige/70">
                   <div>
-                    <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Starting from</p>
-                    <p className="text-xl sm:text-2xl font-bold text-gradient-purple-gold">
-                      {formatPrice(price) ?? <span className="text-base text-gray-400">Contact us</span>}
+                    <p className="font-bridal text-[10px] uppercase tracking-[0.2em] font-medium text-bridal-text-label">
+                      Starting from
+                    </p>
+                    <p className="font-display italic text-[22px] sm:text-[24px] text-bridal-gold-dark mt-0.5 leading-none">
+                      {formatPrice(price) ?? (
+                        <span className="text-[15px] text-bridal-text-soft">
+                          Contact us
+                        </span>
+                      )}
                     </p>
                   </div>
-                  <div className="flex items-center text-xs text-emerald-600 font-medium">
-                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5 animate-pulse" />
+                  <div className="flex items-center font-bridal text-[11px] text-[#3F6B43] font-medium">
+                    <div className="w-1.5 h-1.5 bg-bridal-sage rounded-full mr-1.5 animate-pulse" />
                     Available
                   </div>
                 </div>
               </CardContent>
 
-              {/* ── Book Now CTA ── */}
+              {/* Book Now CTA — replaced by a disabled "Back on …" button while
+                  the vendor is on vacation (BK-048). Card itself stays clickable
+                  so the customer can still browse details / favourite. */}
               {showBookButton && (
                 <CardFooter className="p-4 sm:p-5 pt-0">
-                  <Button
-                    onClick={handleBookNow}
-                    size="lg"
-                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 via-purple-700 to-purple-800 hover:from-purple-700 hover:via-purple-800 hover:to-purple-900 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:shadow-purple-300/30 transition-all duration-300 min-h-[44px] sm:min-h-[48px]"
-                  >
-                    <Calendar className="w-4 h-4" />
-                    Book Now
-                  </Button>
+                  {onVacation ? (
+                    <button
+                      type="button"
+                      disabled
+                      onClick={(e) => e.stopPropagation()}
+                      title={
+                        business?.vacationMessage?.trim()
+                          ? business.vacationMessage.trim()
+                          : "This vendor is on vacation — bookings inside the window will be refused. You can still favourite for later."
+                      }
+                      className="
+                        w-full flex items-center justify-center gap-2
+                        h-11 px-6 rounded-[4px]
+                        bg-amber-100 border border-amber-300 text-amber-800
+                        font-bridal text-[12px] uppercase tracking-[0.22em] font-medium
+                        cursor-not-allowed
+                      "
+                      data-no-navigate
+                    >
+                      <Plane className="w-3.5 h-3.5" />
+                      {vacationBackOn ? `Back on ${vacationBackOn}` : "On vacation"}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleBookNow}
+                      className="
+                        w-full flex items-center justify-center gap-2
+                        h-11 px-6 rounded-[4px]
+                        bg-bridal-gold text-bridal-charcoal
+                        font-bridal text-[12px] uppercase tracking-[0.22em] font-medium
+                        hover:bg-bridal-gold-dark hover:text-bridal-ivory
+                        shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)]
+                        hover:shadow-[0_12px_28px_-12px_rgba(176,125,84,0.7)]
+                        transition-all duration-300
+                      "
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      Book Now
+                    </button>
+                  )}
                 </CardFooter>
               )}
             </Card>
@@ -367,16 +451,23 @@ export default function VendorCard({
 
       {/* Login Alert Dialog */}
       <AlertDialog open={openAlert} onOpenChange={setOpenAlert}>
-        <AlertDialogContent className="rounded-2xl">
+        <AlertDialogContent className="rounded-md bg-bridal-cream border border-bridal-beige">
           <AlertDialogHeader>
-            <AlertDialogTitle>Login Required</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="font-display italic text-bridal-charcoal text-[22px]">
+              Login Required
+            </AlertDialogTitle>
+            <AlertDialogDescription className="font-bridal text-bridal-text-soft">
               Please log in to {showBookButton ? "book this vendor or add it to your favorites" : "add this vendor to your favorites"}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => router.push("/login")} className="rounded-xl bg-purple-600 hover:bg-purple-700">
+            <AlertDialogCancel className="rounded-[4px] border-bridal-beige bg-bridal-ivory hover:bg-bridal-cream font-bridal uppercase tracking-[0.2em] text-[11px] text-bridal-charcoal">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => router.push("/login")}
+              className="rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal uppercase tracking-[0.22em] text-[11px]"
+            >
               Login
             </AlertDialogAction>
           </AlertDialogFooter>

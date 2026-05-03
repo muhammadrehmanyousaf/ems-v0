@@ -146,37 +146,54 @@ const Packages = ({ setErrors, errors }: PackagesProps) => {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-5">
             {formData.packages.map((pkg, index) => (
-                <div key={index} className="border p-5 space-y-4 rounded-xl relative">
-                    <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-semibold">{itemLabel} {index + 1}</h3>
+                <div key={index} className="bridal-card p-5 sm:p-6 relative">
+                    <div className="flex justify-between items-start mb-5 pb-4 border-b border-bridal-beige/70">
+                        <div className="flex items-center gap-3">
+                            <span className="inline-flex w-9 h-9 rounded-full bg-bridal-gold/15 border border-bridal-gold/40 items-center justify-center font-display italic text-bridal-gold">
+                                {index + 1}
+                            </span>
+                            <div>
+                                <p className="text-[11px] uppercase tracking-[0.18em] text-bridal-text-label font-medium">
+                                    {itemLabel}
+                                </p>
+                                <h3 className="font-display italic text-[18px] sm:text-[20px] text-bridal-charcoal leading-tight">
+                                    {pkg.name?.trim() || `Untitled ${itemLabel.toLowerCase()}`}
+                                </h3>
+                            </div>
+                        </div>
                         <Button
-                            variant="outline"
+                            variant="ghost"
                             size="icon"
                             onClick={() => removePackage(index)}
-                            className={`text-roze-default hover:bg-red-100 hover:text-roze-default ${formData.packages.length > 1 ? 'opacity-100' : 'opacity-0'}`}
+                            className={`text-bridal-coral hover:bg-bridal-coral/10 hover:text-bridal-coral ${formData.packages.length > 1 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                             disabled={formData.packages.length <= 1}
+                            aria-label={`Remove ${itemLabel.toLowerCase()}`}
                         >
-                            <Trash className="size-5" />
+                            <Trash className="size-4" />
                         </Button>
                     </div>
 
-                    <section className="grid grid-cols-2 gap-5">
-                        <div className="space-y-2">
-                            <Label>{itemLabel} Name</Label>
+                    <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                            <Label className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label">
+                                {itemLabel} Name
+                            </Label>
                             <Input
                                 placeholder={`Enter ${itemLabel.toLowerCase()} name`}
                                 value={pkg.name}
                                 onChange={(e) => handlePackageChange(index, "name", e.target.value)}
-                                className={errors[`packages[${index}].name`] ? "border-red-500" : ""}
+                                className={`h-11 ${errors[`packages[${index}].name`] ? "border-bridal-coral" : "border-bridal-beige focus:border-bridal-gold"}`}
                             />
                             {errors[`packages[${index}].name`] && (
-                                <p className="text-red-500 text-xs mt-1">{errors[`packages[${index}].name`]}</p>
+                                <p className="text-bridal-coral text-[12px]">{errors[`packages[${index}].name`]}</p>
                             )}
                         </div>
-                        <div className="space-y-2">
-                            <Label>Price</Label>
+                        <div className="space-y-1.5">
+                            <Label className="text-[11px] uppercase tracking-[0.18em] font-medium text-bridal-text-label">
+                                Price (Rs.)
+                            </Label>
                             <Input
                                 type="number"
                                 min="0"
@@ -189,67 +206,86 @@ const Packages = ({ setErrors, errors }: PackagesProps) => {
                                     }
                                 }}
                                 onChange={(e) => handlePackageChange(index, "price", e.target.value ? Math.abs(parseInt(e.target.value, 10)) : "")}
-                                className={errors[`packages[${index}].price`] ? "border-red-500" : ""}
+                                className={`h-11 ${errors[`packages[${index}].price`] ? "border-bridal-coral" : "border-bridal-beige focus:border-bridal-gold"}`}
                             />
                             {errors[`packages[${index}].price`] && (
-                                <p className="text-red-500 text-xs mt-1">{errors[`packages[${index}].price`]}</p>
+                                <p className="text-bridal-coral text-[12px]">{errors[`packages[${index}].price`]}</p>
                             )}
                         </div>
                     </section>
 
                     {categories.length > 0 && (
-                        <section className="space-y-3">
-                            <Label>Features</Label>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <section className="space-y-3 mt-6">
+                            <div className="flex items-center gap-3">
+                                <span className="bridal-label">What&apos;s included</span>
+                                <span className="flex-1 h-px bg-gradient-to-r from-bridal-beige via-bridal-beige/40 to-transparent" />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 {categories.map((category) => {
                                     const featuresList = pkg.features?.[category.id] || [];
                                     const isActive = featuresList.length > 0;
 
                                     return (
-                                        <div key={category.id} className="space-y-2 border p-3 rounded-md bg-gray-50">
+                                        <div
+                                            key={category.id}
+                                            className={`rounded-md border p-3.5 transition-colors ${
+                                                isActive
+                                                    ? "border-bridal-gold/50 bg-bridal-blush/40"
+                                                    : "border-bridal-beige bg-bridal-ivory/40"
+                                            }`}
+                                        >
                                             <div className="flex items-center gap-2">
                                                 <Checkbox
                                                     checked={isActive}
                                                     onCheckedChange={(checked) => handleFeatureToggle(index, category.id, checked as boolean)}
                                                     id={`category-${index}-${category.id}`}
+                                                    className="data-[state=checked]:bg-bridal-gold data-[state=checked]:border-bridal-gold border-bridal-beige"
                                                 />
-                                                <label htmlFor={`category-${index}-${category.id}`} className="text-sm font-medium cursor-pointer">
+                                                <label
+                                                    htmlFor={`category-${index}-${category.id}`}
+                                                    className="text-sm font-medium cursor-pointer text-bridal-charcoal"
+                                                >
                                                     {category.label}
                                                 </label>
                                             </div>
 
                                             {isActive && (
-                                                <div className="space-y-2 mt-2 pl-6">
+                                                <div className="space-y-2 mt-3 pl-6">
                                                     {featuresList.map((item: string, itemIdx: number) => (
                                                         <div key={itemIdx} className="flex items-center gap-2">
                                                             <Input
                                                                 value={item}
                                                                 onChange={(e) => handleFeatureItemChange(index, category.id, itemIdx, e.target.value)}
-                                                                placeholder={`Enter ${category.label.toLowerCase()} item`}
-                                                                className={`h-8 text-sm ${errors[`packages[${index}].features.${category.id}`] && !item.trim() ? "border-red-500" : ""}`}
+                                                                placeholder={`${category.label} item`}
+                                                                className={`h-9 text-sm ${
+                                                                    errors[`packages[${index}].features.${category.id}`] && !item.trim()
+                                                                        ? "border-bridal-coral"
+                                                                        : "border-bridal-beige focus:border-bridal-gold"
+                                                                }`}
                                                             />
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                className="h-8 w-8 text-red-500 hover:text-red-700"
+                                                                className="h-8 w-8 text-bridal-coral hover:bg-bridal-coral/10 hover:text-bridal-coral flex-shrink-0"
                                                                 onClick={() => removeFeatureItem(index, category.id, itemIdx)}
+                                                                aria-label="Remove item"
                                                             >
-                                                                <Trash2 className="w-4 h-4" />
+                                                                <Trash2 className="w-3.5 h-3.5" />
                                                             </Button>
                                                         </div>
                                                     ))}
                                                     {errors[`packages[${index}].features.${category.id}`] && (
-                                                        <p className="text-red-500 text-xs mt-1">
+                                                        <p className="text-bridal-coral text-[12px]">
                                                             {errors[`packages[${index}].features.${category.id}`]}
                                                         </p>
                                                     )}
                                                     <Button
-                                                        variant="outline"
+                                                        variant="ghost"
                                                         size="sm"
-                                                        className="w-full text-xs"
+                                                        className="w-full text-[12px] tracking-wide text-bridal-mauve hover:bg-bridal-blush/60 hover:text-bridal-charcoal h-8"
                                                         onClick={() => addFeatureItem(index, category.id)}
                                                     >
-                                                        <Plus className="w-3 h-3 mr-1" /> Add More
+                                                        <Plus className="w-3 h-3 mr-1" /> Add another
                                                     </Button>
                                                 </div>
                                             )}
@@ -262,14 +298,17 @@ const Packages = ({ setErrors, errors }: PackagesProps) => {
                 </div>
             ))}
 
-            {errors.packages && <p className="text-red-500 text-sm mt-1">{errors.packages}</p>}
+            {errors.packages && (
+                <p className="text-bridal-coral text-[13px]">{errors.packages}</p>
+            )}
+
             <Button
                 variant="outline"
                 onClick={addPackage}
-                className="flex items-center gap-2 text-roze-default border-roze-default hover:bg-roze-default hover:text-white"
+                className="w-full sm:w-auto flex items-center gap-2 border-dashed border-bridal-gold/55 bg-bridal-cream hover:bg-bridal-blush/60 text-bridal-mauve hover:text-bridal-charcoal hover:border-bridal-gold transition-colors"
             >
-                <Plus size={18} />
-                Add {itemLabel}
+                <Plus size={16} />
+                Add another {itemLabel.toLowerCase()}
             </Button>
         </div>
     );

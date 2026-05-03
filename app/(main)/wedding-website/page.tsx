@@ -18,11 +18,11 @@ const features = [
 export default function WeddingWebsitePage() {
   return (
     <div className="min-h-screen">
-      <section className="bg-gradient-to-br from-purple-600 to-purple-800 text-white py-16 px-4">
+      <section className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <Globe className="w-12 h-12 mx-auto mb-4 text-purple-200" />
+          <Globe className="w-12 h-12 mx-auto mb-4 text-bridal-gold/40" />
           <h1 className="text-4xl sm:text-5xl font-bold mb-4">Wedding Website</h1>
-          <p className="text-lg text-purple-100 max-w-xl mx-auto">
+          <p className="text-lg text-bridal-cream max-w-xl mx-auto">
             Create a beautiful, personalized wedding website to share your love story and event details with guests.
           </p>
         </div>
@@ -31,7 +31,7 @@ export default function WeddingWebsitePage() {
       <section className="py-12 px-4 bg-neutral-50">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10">
-            <Badge className="bg-purple-100 text-purple-700 mb-3">
+            <Badge className="bg-bridal-gold/15 text-bridal-gold-dark mb-3">
               <Sparkles className="w-3 h-3 mr-1" />Coming Soon
             </Badge>
             <h2 className="text-2xl font-bold text-neutral-900 mb-3">Everything You Need in One Place</h2>
@@ -44,8 +44,8 @@ export default function WeddingWebsitePage() {
             {features.map((f) => (
               <Card key={f.title} className="border-0 shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="p-6 text-center">
-                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-                    <f.icon className="w-6 h-6 text-purple-600" />
+                  <div className="w-12 h-12 bg-bridal-gold/15 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <f.icon className="w-6 h-6 text-bridal-gold-dark" />
                   </div>
                   <h3 className="font-semibold text-neutral-900 mb-2">{f.title}</h3>
                   <p className="text-sm text-neutral-600">{f.desc}</p>
@@ -56,14 +56,14 @@ export default function WeddingWebsitePage() {
 
           <Card className="border-0 shadow-lg overflow-hidden">
             <CardContent className="p-0">
-              <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-8 sm:p-12 text-center">
+              <div className="bg-gradient-to-r from-bridal-cream to-pink-50 p-8 sm:p-12 text-center">
                 <h3 className="text-2xl font-bold text-neutral-900 mb-3">Be the First to Know</h3>
                 <p className="text-neutral-600 mb-6 max-w-md mx-auto">
                   We&apos;re building something special. Wedding websites are launching soon on AJOINT. Start planning your wedding now and your website will be ready when you need it.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <Link href="/planning-tools">
-                    <Button className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white gap-2">
+                    <Button className="bg-gradient-to-r from-bridal-gold to-bridal-gold-dark hover:from-bridal-gold-dark hover:to-bridal-gold-dark text-white gap-2">
                       Explore Planning Tools <ArrowRight className="w-4 h-4" />
                     </Button>
                   </Link>

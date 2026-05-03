@@ -85,7 +85,7 @@ function PackageOption({ pkg }: { pkg: ApiPackage }) {
         <div className="flex flex-col gap-0.5 py-0.5 w-full">
             <div className="flex items-center justify-between gap-3">
                 <span className="font-medium text-sm truncate">{pkg.name}</span>
-                <span className="text-xs font-semibold text-purple-600 shrink-0">{formatPKR(pkg.price)}</span>
+                <span className="text-xs font-semibold text-bridal-gold-dark shrink-0">{formatPKR(pkg.price)}</span>
             </div>
             {pkg.description && (
                 <p className="text-[11px] text-muted-foreground line-clamp-1">{pkg.description}</p>
@@ -93,7 +93,7 @@ function PackageOption({ pkg }: { pkg: ApiPackage }) {
             {preview.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-0.5">
                     {preview.map((f, i) => (
-                        <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600 border border-purple-100">
+                        <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full bg-bridal-cream text-bridal-gold-dark border border-bridal-beige">
                             {f}
                         </span>
                     ))}
@@ -413,7 +413,7 @@ export function EditBookingDialog({ open, onOpenChange, booking, onSuccess }: Ed
                                     type="button"
                                     onClick={() => { setCarMode('package'); setSelectedPackageId(''); setQuantity(1); }}
                                     className={cn('flex-1 py-2 text-sm font-medium transition-colors',
-                                        carMode === 'package' ? 'bg-purple-600 text-white' : 'bg-white text-neutral-600 hover:bg-neutral-50'
+                                        carMode === 'package' ? 'bg-bridal-gold text-white' : 'bg-white text-neutral-600 hover:bg-neutral-50'
                                     )}
                                 >
                                     Package
@@ -422,7 +422,7 @@ export function EditBookingDialog({ open, onOpenChange, booking, onSuccess }: Ed
                                     type="button"
                                     onClick={() => { setCarMode('single'); setSelectedPackageId(''); setQuantity(1); }}
                                     className={cn('flex-1 py-2 text-sm font-medium border-l border-neutral-200 transition-colors',
-                                        carMode === 'single' ? 'bg-purple-600 text-white' : 'bg-white text-neutral-600 hover:bg-neutral-50'
+                                        carMode === 'single' ? 'bg-bridal-gold text-white' : 'bg-white text-neutral-600 hover:bg-neutral-50'
                                     )}
                                 >
                                     Single Car
@@ -524,8 +524,8 @@ export function EditBookingDialog({ open, onOpenChange, booking, onSuccess }: Ed
 
                         {/* Live price preview */}
                         {priceBreakdown && (
-                            <div className="rounded-lg border border-purple-100 bg-purple-50 px-4 py-3 space-y-1.5">
-                                <div className="flex items-center gap-1.5 text-xs font-medium text-purple-600 mb-2">
+                            <div className="rounded-lg border border-bridal-beige bg-bridal-cream px-4 py-3 space-y-1.5">
+                                <div className="flex items-center gap-1.5 text-xs font-medium text-bridal-gold-dark mb-2">
                                     <Receipt className="h-3.5 w-3.5" />
                                     Price Preview
                                 </div>
@@ -535,7 +535,7 @@ export function EditBookingDialog({ open, onOpenChange, booking, onSuccess }: Ed
                                         <span className="font-medium">{formatPKR(item.amount)}</span>
                                     </div>
                                 ))}
-                                <div className="border-t border-purple-100 pt-1.5 flex justify-between text-sm font-bold text-purple-700">
+                                <div className="border-t border-bridal-beige pt-1.5 flex justify-between text-sm font-bold text-bridal-gold-dark">
                                     <span>Total</span>
                                     <span>{formatPKR(priceBreakdown.subtotal)}</span>
                                 </div>

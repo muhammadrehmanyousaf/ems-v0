@@ -83,7 +83,7 @@ export const columns: ColumnDef<BookingData>[] = [
         <div>
           <p className="text-sm text-neutral-800 truncate max-w-[160px]">{first.business?.name || '-'}</p>
           {first.package?.name && (
-            <p className="text-xs text-purple-600 truncate max-w-[160px]">{first.package.name}</p>
+            <p className="text-xs text-bridal-gold-dark truncate max-w-[160px]">{first.package.name}</p>
           )}
         </div>
       )

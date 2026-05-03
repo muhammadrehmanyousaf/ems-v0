@@ -1,6 +1,5 @@
 import { HeroSection } from "@/components/homepage/hero-section"
 import { FeaturedCategories } from "@/components/homepage/featured-categories"
-import { FeaturedVendors } from "@/components/homepage/featured-vendors"
 import { FeaturedVendorsShowcase } from "@/components/homepage/FeaturedVendorsShowcase"
 import { EditorialGallerySection } from "@/components/homepage/EditorialGallerySection"
 import { TestimonialBand } from "@/components/homepage/TestimonialBand"
@@ -9,43 +8,86 @@ import { EditorialAlternatingSection } from "@/components/homepage/EditorialAlte
 import { PlanningTools } from "@/components/homepage/planning-tools"
 import { RealWeddings } from "@/components/homepage/real-weddings"
 import { WeddingTips } from "@/components/homepage/wedding-tips"
+import {
+  HowItWorks,
+  PremiumPartnersStrip,
+  SponsoredSpotlight,
+  CitySpotlights,
+  FeaturedVenueShowcase,
+  BridalLookbook,
+  VendorAwards,
+  PromotedDeals,
+  TrustStrip,
+  VendorCTABanner,
+  FreeTools,
+  FinalNewsletterCTA,
+} from "@/components/homepage/monetization-sections"
 
+/**
+ * Homepage — 20 sections of bridal-grade flow.
+ *
+ * Composition logic: alternate ivory ↔ blush ↔ ivory ↔ mauve so adjacent
+ * sections never share a background and the page reads like layered tissue
+ * paper in a luxury invitation box (per the brief).
+ *
+ * Monetization placements are spread through the page, not stacked, so each
+ * paid surface gets meaningful airtime without feeling like an ad reel:
+ *   • Premium Partners Strip       — top-of-fold paid carousel
+ *   • Sponsored Spotlight          — full-bleed mid-page takeover
+ *   • Featured Venue Showcase      — paid premium venue feature
+ *   • Promoted Deals               — flash deals in the discovery flow
+ *   • Bridal Lookbook              — paid bridal-wear lookbook
+ *   • Vendor Awards                — annual paid Hall of Fame
+ *   • City Spotlights              — paid sponsor per city
+ */
 export default function Home() {
   return (
     <>
-      {/* 1. Hero with Swiper Ken Burns + glassmorphism search */}
+      {/* 1 · Hero — cinematic photography + Playfair italic + bridal search */}
       <HeroSection />
 
-      {/* 2. Category icon grid with stagger animation */}
+      {/* 2 · Featured Categories — single-line carousel, 9 categories */}
       <FeaturedCategories />
 
-      {/* 3. Layout A: Editorial hero+grid showcase (Photographers) */}
+      {/* 3 · Premium Partners — paid placement carousel ($$) */}
+      <PremiumPartnersStrip />
+
+      {/* 4 · How It Works — 3 steps with Playfair italic gold numbers */}
+      <HowItWorks />
+
+      {/* 5 · Featured Photographers showcase (existing) */}
       <FeaturedVendorsShowcase
         vendorPath="photographers"
         title="Featured Photographers"
         subtitle="Capture Every Moment"
-        description="Professional wedding photographers to capture your special moments"
+        description="Pakistan's most beloved wedding photographers, hand-picked for their craft."
       />
 
-      {/* 4. Layout B: Horizontal scroll galleries (Venues + Makeup Artists) */}
+      {/* 6 · Sponsored Spotlight — full-bleed paid takeover ($$) */}
+      <SponsoredSpotlight />
+
+      {/* 7 · Editorial Gallery — venues + makeup artists strip (existing) */}
       <EditorialGallerySection
         title="Explore Top Vendors"
         subtitle="Curated Picks"
-        description="Swipe through our handpicked selection of premium wedding vendors"
+        description="Swipe through our handpicked selection of premium wedding partners."
         vendorTypes={[
           { path: "venues", label: "Wedding Venues" },
           { path: "makeup-artists", label: "Makeup Artists" },
         ]}
       />
 
-      {/* 5. Social proof band */}
+      {/* 8 · City Spotlights — paid sponsor per city ($) */}
+      <CitySpotlights />
+
+      {/* 9 · Couple testimonials (existing) */}
       <TestimonialBand />
 
-      {/* 6. Layout C: Bento masonry grid (Decorators + Henna + Bridal Wear) */}
+      {/* 10 · Bento masonry — decorators + henna + bridal wear (existing) */}
       <BentoGridSection
         title="Discover More"
         subtitle="Visual Showcase"
-        description="Browse our curated collection of talented wedding professionals"
+        description="Browse our curated collection of talented wedding professionals."
         vendorTypes={[
           { path: "decor", label: "Decorators" },
           { path: "henna-artists", label: "Henna Artists" },
@@ -53,25 +95,43 @@ export default function Home() {
         ]}
       />
 
-      {/* 7. Layout D: Alternating left-right editorial rows */}
+      {/* 11 · Featured Venue Showcase — paid premium venue feature ($$) */}
+      <FeaturedVenueShowcase />
+
+      {/* 12 · Promoted Deals — flash deals carousel ($) */}
+      <PromotedDeals />
+
+      {/* 13 · Editorial alternating rows — catering, car-rental, stationery (existing) */}
       <EditorialAlternatingSection
         title="More Wedding Services"
         subtitle="Complete Your Day"
         vendorTypes={[
-          { path: "catering", label: "Catering Services", tagline: "Delicious food for your guests" },
-          { path: "car-rental", label: "Luxury Car Rental", tagline: "Elegant transportation for your big day" },
-          { path: "wedding-stationery", label: "Wedding Stationery", tagline: "Beautiful invitations and cards" },
+          { path: "catering",            label: "Catering Services",   tagline: "Delicious food for your guests" },
+          { path: "car-rental",          label: "Luxury Car Rental",   tagline: "Elegant transportation for your big day" },
+          { path: "wedding-stationery",  label: "Wedding Stationery",  tagline: "Beautiful invitations and cards" },
         ]}
       />
 
-      {/* 8. Planning tools with dialogs */}
-      <PlanningTools />
+      {/* 14 · Bridal Lookbook — paid bridal-wear placement ($) */}
+      <BridalLookbook />
 
-      {/* 9. Real wedding stories */}
+      {/* 15 · Trust strip — verified vendors, secure payments */}
+      <TrustStrip />
+
+      {/* 16 · Vendor Awards — annual paid Hall of Fame ($$$) */}
+      <VendorAwards />
+
+      {/* 17 · Real Weddings — masonry photo gallery (existing) */}
       <RealWeddings />
 
-      {/* 10. Wedding tips */}
-      <WeddingTips />
+      {/* 18 · Free Planning Tools — checklist, budget, etc. */}
+      <FreeTools />
+
+      {/* 19 · Vendor acquisition CTA — mauve background, gold button */}
+      <VendorCTABanner />
+
+      {/* 20 · Final newsletter CTA — homepage closer */}
+      <FinalNewsletterCTA />
     </>
   )
 }

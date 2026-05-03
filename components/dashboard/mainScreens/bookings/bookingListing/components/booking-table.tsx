@@ -11,6 +11,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Loader2, ClipboardList, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { OfflineBookingDialog } from './offline-booking-dialog'
+import { useUser } from '@/context/UserContext'
+import { isAdminLike, getDashboardRole } from '@/lib/dashboard-role'
 
 type Props = {
   search: string | null;
@@ -20,13 +22,20 @@ const BookingTable = ({ search }: Props) => {
   const [addOpen, setAddOpen] = useState(false);
   const queryClient = useQueryClient();
   const { setPage, searchQuery, setSearchQuery } = BookingTableFilters()
+  const { user } = useUser();
+
+  // Super-admin / admin gets the platform-wide endpoint (every booking on the
+  // platform). Vendors hit the default endpoint that scopes to their own
+  // businesses. Backend route: GET /api/v1/bookings/admin/bookings.
+  const isAdmin = isAdminLike(getDashboardRole(user));
+  const endpoint = isAdmin ? `/api/v1/bookings/admin/bookings` : `/api/v1/bookings`;
 
   const urlPagination = useDataTable<BookingData>({ data: [], columns, totalItems: 0 });
   const { currentPage, pageSizeValue } = urlPagination;
 
   const { data, isLoading } = useFetchData({
-    endpoint: `/api/v1/bookings`,
-    queryKey: ['bookings'],
+    endpoint,
+    queryKey: ['bookings', isAdmin ? 'admin' : 'vendor'],
     Params: {
       page: currentPage,
       limit: pageSizeValue,

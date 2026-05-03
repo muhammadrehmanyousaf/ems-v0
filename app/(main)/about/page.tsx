@@ -18,7 +18,7 @@ export default function AboutPage() {
 
   return (
     <div className="min-h-screen">
-      <section className="bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 text-white py-20 px-4">
+      <section className="bg-gradient-to-br from-bridal-gold via-bridal-gold-dark to-bridal-gold-dark text-white py-20 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 bg-white/10 rounded-full px-4 py-2 mb-6">
             <Sparkles className="w-4 h-4" />
@@ -27,7 +27,7 @@ export default function AboutPage() {
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
             Making Every Event<br />Unforgettable
           </h1>
-          <p className="text-lg sm:text-xl text-purple-100 max-w-2xl mx-auto">
+          <p className="text-lg sm:text-xl text-bridal-cream max-w-2xl mx-auto">
             We connect event planners with the best vendors in Pakistan — from wedding venues
             and photographers to caterers and decorators. All in one place.
           </p>
@@ -38,7 +38,7 @@ export default function AboutPage() {
         <div className="max-w-5xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-6">
           {stats.map((stat) => (
             <div key={stat.label} className="text-center">
-              <p className="text-3xl sm:text-4xl font-bold text-purple-600">{stat.value}</p>
+              <p className="text-3xl sm:text-4xl font-bold text-bridal-gold-dark">{stat.value}</p>
               <p className="text-sm text-neutral-600 mt-1">{stat.label}</p>
             </div>
           ))}
@@ -48,8 +48,8 @@ export default function AboutPage() {
       <section className="py-16 px-4 bg-neutral-50">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center gap-2 mb-4">
-            <Target className="w-5 h-5 text-purple-600" />
-            <h2 className="text-sm font-semibold text-purple-600 uppercase tracking-wider">Our Mission</h2>
+            <Target className="w-5 h-5 text-bridal-gold-dark" />
+            <h2 className="text-sm font-semibold text-bridal-gold-dark uppercase tracking-wider">Our Mission</h2>
           </div>
           <h3 className="text-3xl sm:text-4xl font-bold text-neutral-900 mb-6">
             Simplify Event Planning Across Pakistan
@@ -70,8 +70,8 @@ export default function AboutPage() {
             {values.map((v) => (
               <Card key={v.title} className="border-0 shadow-md hover:shadow-lg transition-shadow">
                 <CardContent className="p-6 flex gap-4">
-                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <v.icon className="w-6 h-6 text-purple-600" />
+                  <div className="w-12 h-12 bg-bridal-gold/15 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <v.icon className="w-6 h-6 text-bridal-gold-dark" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-neutral-900 mb-1">{v.title}</h3>

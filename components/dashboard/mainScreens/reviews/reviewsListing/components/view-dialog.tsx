@@ -37,8 +37,8 @@ function ViewDialog({ open, setOpen, review }: ViewDialogProps) {
                 )}
 
                 {review.vendorReply && (
-                    <div className="bg-purple-50 rounded-lg p-3 border border-purple-100">
-                        <p className="text-xs font-semibold text-purple-700 mb-1">Your Reply</p>
+                    <div className="bg-bridal-cream rounded-lg p-3 border border-bridal-beige">
+                        <p className="text-xs font-semibold text-bridal-gold-dark mb-1">Your Reply</p>
                         <p className="text-sm text-neutral-700">{review.vendorReply}</p>
                         {review.vendorReplyDate && (
                             <p className="text-xs text-muted-foreground mt-1">

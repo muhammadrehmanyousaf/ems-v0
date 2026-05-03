@@ -18,10 +18,12 @@ export function GradientButton({
   size = "default",
   ...props
 }: GradientButtonProps) {
+  // Bridal palette — kept the same variant keys so existing call sites keep
+  // working. "purple" / "purple-gold" now render the bridal gold treatment.
   const variants = {
-    purple: "bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40",
-    gold: "bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 text-white shadow-lg shadow-gold-500/25 hover:shadow-gold-500/40",
-    "purple-gold": "bg-gradient-to-r from-purple-600 via-purple-700 to-purple-800 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 border border-gold-400/20",
+    purple: "bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] hover:shadow-[0_14px_30px_-12px_rgba(176,125,84,0.7)]",
+    gold: "bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] hover:shadow-[0_14px_30px_-12px_rgba(176,125,84,0.7)]",
+    "purple-gold": "bg-bridal-charcoal hover:bg-bridal-charcoal/90 text-bridal-ivory shadow-[0_10px_28px_-14px_rgba(44,24,16,0.6)] border border-bridal-gold/45",
   }
 
   const sizes = {

@@ -30,7 +30,7 @@ export function ImagesStep() {
       <div
         {...getRootProps()}
         className={`border-2 border-dashed rounded-lg p-10 text-center cursor-pointer ${
-          isDragActive ? "border-purple-600 bg-purple-50" : "border-gray-300"
+          isDragActive ? "border-bridal-gold-dark bg-bridal-cream" : "border-gray-300"
         }`}
       >
         <input {...getInputProps()} />

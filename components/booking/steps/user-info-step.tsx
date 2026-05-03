@@ -53,27 +53,34 @@ export default function UserInfoStep({ formData, updateFormData }: UserInfoStepP
   ]
 
   return (
-    <motion.div className="space-y-6" variants={container} initial="hidden" animate="visible">
+    <motion.div className="space-y-7" variants={container} initial="hidden" animate="visible">
       <motion.div variants={item}>
-        <h2 className="font-heading text-2xl font-bold text-neutral-900">Your Details</h2>
-        <p className="mt-1 text-sm text-neutral-500">We&apos;ll use this to confirm your booking</p>
+        <p className="font-bridal text-[10.5px] uppercase tracking-[0.32em] font-medium text-bridal-gold-dark mb-2">
+          Step · Your details
+        </p>
+        <h2 className="font-display italic text-[28px] sm:text-[32px] text-bridal-charcoal leading-tight">
+          Tell us a little about you
+        </h2>
+        <p className="mt-2 font-bridal text-[14px] text-bridal-text-soft">
+          We&apos;ll use this to confirm your booking and send your invoice.
+        </p>
       </motion.div>
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         {fields.map((field) => (
-          <motion.div key={field.id} variants={item} className="space-y-1.5">
-            <Label htmlFor={field.id} className="text-sm font-medium text-neutral-700">
+          <motion.div key={field.id} variants={item} className="space-y-2">
+            <Label htmlFor={field.id} className="font-bridal text-[10.5px] uppercase tracking-[0.25em] font-medium text-bridal-text-label">
               {field.label}
             </Label>
             <div className="relative">
-              <field.icon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+              <field.icon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-bridal-gold" />
               <Input
                 id={field.id}
                 type={field.type}
                 placeholder={field.placeholder}
                 value={field.value}
                 onChange={(e) => field.onChange(e.target.value)}
-                className="pl-10 h-11 rounded-lg border-neutral-200 bg-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 transition-all"
+                className="pl-10 h-12 rounded-[4px] border-bridal-beige bg-bridal-ivory font-bridal text-bridal-charcoal placeholder:text-bridal-text-soft focus-visible:border-bridal-gold/55 focus-visible:ring-1 focus-visible:ring-bridal-gold transition-all"
                 required
               />
             </div>
@@ -81,8 +88,8 @@ export default function UserInfoStep({ formData, updateFormData }: UserInfoStepP
         ))}
       </div>
 
-      <motion.div variants={item} className="flex items-center gap-2 text-xs text-neutral-400">
-        <Lock className="w-3.5 h-3.5 flex-shrink-0" />
+      <motion.div variants={item} className="flex items-center gap-2 font-bridal text-[12px] text-bridal-text-soft px-4 py-3 rounded-md bg-bridal-cream border border-bridal-beige">
+        <Lock className="w-3.5 h-3.5 flex-shrink-0 text-bridal-gold" />
         <span>Your information is encrypted and only used for booking confirmation.</span>
       </motion.div>
     </motion.div>

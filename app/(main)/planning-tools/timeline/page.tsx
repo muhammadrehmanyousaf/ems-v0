@@ -178,14 +178,14 @@ export default function TimelinePage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-6 sm:mb-8"
       >
-        <Link href="/planning-tools" className="inline-flex items-center gap-2 text-purple-600 hover:text-purple-700 mb-4 transition-colors duration-200">
+        <Link href="/planning-tools" className="inline-flex items-center gap-2 text-bridal-gold-dark hover:text-bridal-gold-dark mb-4 transition-colors duration-200">
           <ArrowLeft className="w-4 h-4" />
           <span className="text-sm sm:text-base">Back to Planning Tools</span>
         </Link>
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-6">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-purple-50 rounded-2xl flex items-center justify-center shadow-lg">
-            <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
+          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-bridal-cream rounded-2xl flex items-center justify-center shadow-lg">
+            <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-bridal-gold-dark" />
           </div>
           <div className="flex-1">
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900 mb-2">Timeline Creator</h1>
@@ -213,13 +213,13 @@ export default function TimelinePage() {
         transition={{ delay: 0.1 }}
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8"
       >
-        <Card className="bg-gradient-to-br from-purple-500 to-violet-600 text-white border-0">
+        <Card className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white border-0">
           <CardContent className="p-4 sm:p-6 text-center">
             <div className="flex items-center justify-center mb-2">
               <Clock className="w-6 h-6 mr-2" />
               <p className="text-2xl sm:text-3xl font-bold">{timeline.length}</p>
             </div>
-            <p className="text-sm text-purple-100">Total Events</p>
+            <p className="text-sm text-bridal-cream">Total Events</p>
           </CardContent>
         </Card>
 
@@ -235,7 +235,7 @@ export default function TimelinePage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-600 to-purple-700 text-white border-0">
+        <Card className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white border-0">
           <CardContent className="p-4 sm:p-6 text-center">
             <div className="flex items-center justify-center mb-2">
               <Clock className="w-6 h-6 mr-2" />
@@ -243,7 +243,7 @@ export default function TimelinePage() {
                 {timeline.length > 0 ? timeline[timeline.length - 1].time : '--'}
               </p>
             </div>
-            <p className="text-sm text-purple-100">End Time</p>
+            <p className="text-sm text-bridal-cream">End Time</p>
           </CardContent>
         </Card>
 
@@ -357,7 +357,7 @@ export default function TimelinePage() {
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2">
-                        <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-lg text-purple-600 font-bold text-sm">
+                        <div className="flex items-center justify-center w-12 h-12 bg-bridal-gold/15 rounded-lg text-bridal-gold-dark font-bold text-sm">
                           {item.time}
                         </div>
                         <div>

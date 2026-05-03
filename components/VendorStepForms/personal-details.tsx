@@ -128,7 +128,7 @@ const PersonalDetails = ({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="w-20 h-20 rounded-full overflow-hidden border-2 border-dashed border-neutral-300 hover:border-purple-400 transition-colors duration-200 block"
+            className="w-20 h-20 rounded-full overflow-hidden border-2 border-dashed border-neutral-300 hover:border-bridal-gold/55 transition-colors duration-200 block"
           >
             {imagePreview ? (
               <img src={imagePreview} alt="Profile preview" className="w-full h-full object-cover" />
@@ -149,7 +149,7 @@ const PersonalDetails = ({
               <X className="w-3 h-3 text-white" />
             </button>
           ) : (
-            <div className="absolute bottom-0 right-0 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center border-2 border-white pointer-events-none">
+            <div className="absolute bottom-0 right-0 w-6 h-6 bg-bridal-gold rounded-full flex items-center justify-center border-2 border-white pointer-events-none">
               <Camera className="w-3 h-3 text-white" />
             </div>
           )}

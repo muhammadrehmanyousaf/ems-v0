@@ -94,7 +94,7 @@ export function ChatDrawer({
                 src={vendorImage ? getImageUrl(vendorImage) : undefined}
                 alt={vendorName}
               />
-              <AvatarFallback className="bg-gradient-to-br from-purple-500 to-purple-700 text-white text-xs font-semibold">
+              <AvatarFallback className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white text-xs font-semibold">
                 {getInitials(vendorName)}
               </AvatarFallback>
             </Avatar>
@@ -125,7 +125,7 @@ export function ChatDrawer({
         {/* Chat Body */}
         {initializing ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3">
-            <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
+            <Loader2 className="h-6 w-6 animate-spin text-bridal-gold" />
             <p className="text-sm text-gray-500">Starting conversation...</p>
           </div>
         ) : error ? (
@@ -134,7 +134,7 @@ export function ChatDrawer({
             <button
               type="button"
               onClick={initConversation}
-              className="text-sm font-medium text-purple-600 hover:text-purple-700"
+              className="text-sm font-medium text-bridal-gold-dark hover:text-bridal-gold-dark"
             >
               Try again
             </button>

@@ -158,7 +158,7 @@ function MessageBubble({ message, isOwn, showAvatar, showName, isLastInGroup }: 
             "relative px-3.5 py-2 text-sm leading-relaxed",
             isOwn
               ? cn(
-                  "bg-gradient-to-br from-purple-600 to-purple-700 text-white",
+                  "bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white",
                   showAvatar || isLastInGroup
                     ? "rounded-2xl rounded-br-md"
                     : "rounded-2xl"
@@ -181,13 +181,13 @@ function MessageBubble({ message, isOwn, showAvatar, showName, isLastInGroup }: 
             <span
               className={cn(
                 "text-[10px]",
-                isOwn ? "text-purple-200" : "text-gray-400"
+                isOwn ? "text-bridal-gold/40" : "text-gray-400"
               )}
             >
               {formatMessageTime(message.createdAt)}
             </span>
             {message.isEdited && (
-              <span className={cn("text-[10px]", isOwn ? "text-purple-200" : "text-gray-400")}>
+              <span className={cn("text-[10px]", isOwn ? "text-bridal-gold/40" : "text-gray-400")}>
                 · edited
               </span>
             )}
@@ -260,8 +260,8 @@ export function ChatMessageArea() {
   if (!activeConversationId) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-gray-50/50 dark:bg-gray-900/50">
-        <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/30 dark:to-purple-800/30 flex items-center justify-center mb-4">
-          <MessageCircle className="h-10 w-10 text-purple-500" />
+        <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-bridal-cream to-bridal-gold/40 dark:from-bridal-charcoal/30 dark:to-bridal-gold-dark/30 flex items-center justify-center mb-4">
+          <MessageCircle className="h-10 w-10 text-bridal-gold" />
         </div>
         <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300">
           Your Messages
@@ -286,15 +286,15 @@ export function ChatMessageArea() {
         {/* Loading indicator for older messages */}
         {isLoadingMessages && messages.length > 0 && (
           <div className="flex justify-center py-3">
-            <Loader2 className="h-4 w-4 animate-spin text-purple-500" />
+            <Loader2 className="h-4 w-4 animate-spin text-bridal-gold" />
           </div>
         )}
 
         {/* Empty state */}
         {!isLoadingMessages && messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full py-12">
-            <div className="h-16 w-16 rounded-2xl bg-purple-50 dark:bg-purple-950/30 flex items-center justify-center mb-3">
-              <MessageCircle className="h-8 w-8 text-purple-400" />
+            <div className="h-16 w-16 rounded-2xl bg-bridal-cream dark:bg-bridal-charcoal/40 flex items-center justify-center mb-3">
+              <MessageCircle className="h-8 w-8 text-bridal-gold/70" />
             </div>
             <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
               No messages yet
@@ -308,7 +308,7 @@ export function ChatMessageArea() {
         {/* Loading full chat */}
         {isLoadingMessages && messages.length === 0 && (
           <div className="flex items-center justify-center h-full">
-            <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
+            <Loader2 className="h-6 w-6 animate-spin text-bridal-gold" />
           </div>
         )}
 

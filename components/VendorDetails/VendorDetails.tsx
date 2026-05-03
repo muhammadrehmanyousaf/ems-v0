@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef, useCallback } from "react";
+import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import "swiper/css";
@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Calendar18 from "@/components/calendar-18";
-import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -43,10 +42,9 @@ import {
   DollarSign,
   Package,
   Gift,
-  Camera as CameraIcon,
   ArrowLeft,
 } from "lucide-react";
-import type { Vendor, Review, Package } from "@/lib/types";
+import type { Vendor, Review, Package as PkgType } from "@/lib/types";
 import Image from "next/image";
 import { BACKEND_URL } from "@/lib/backend-url";
 import { VendorAPI } from "@/lib/api/vendors";
@@ -62,6 +60,15 @@ interface VendorDetailsProps {
   vendor: Vendor;
 }
 
+// ── Helper: pill section card with corner brackets (bridal motif) ──
+function BridalSectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <Card className={`relative overflow-hidden border border-bridal-beige bg-bridal-cream rounded-md shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)] ${className}`}>
+      {children}
+    </Card>
+  );
+}
+
 function FeatureGroup({ label, items }: { label: string; items: string[] }) {
   const [expanded, setExpanded] = React.useState(false);
   const VISIBLE = 5;
@@ -69,30 +76,34 @@ function FeatureGroup({ label, items }: { label: string; items: string[] }) {
   const overflow = items.length - VISIBLE;
 
   return (
-    <div className="space-y-1.5">
-      <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">{label}</p>
+    <div className="space-y-2">
+      <p className="font-bridal text-[10.5px] font-medium uppercase tracking-[0.25em] text-bridal-text-label">
+        {label}
+      </p>
       <div className="flex flex-wrap gap-1.5">
         {visible.map((item, i) => (
           <span
             key={i}
-            className="inline-flex items-center gap-1 bg-purple-50 text-purple-700 text-xs font-medium px-2.5 py-1 rounded-full border border-purple-100"
+            className="inline-flex items-center gap-1 bg-bridal-ivory text-bridal-charcoal text-[11.5px] font-medium px-2.5 py-1 rounded-full border border-bridal-beige"
           >
-            <CheckCircle className="w-3 h-3 shrink-0" />
+            <CheckCircle className="w-3 h-3 shrink-0 text-bridal-gold" />
             {item}
           </span>
         ))}
         {!expanded && overflow > 0 && (
           <button
+            type="button"
             onClick={() => setExpanded(true)}
-            className="inline-flex items-center bg-neutral-100 hover:bg-purple-50 text-neutral-500 hover:text-purple-600 text-xs font-medium px-2.5 py-1 rounded-full border border-neutral-200 transition-colors"
+            className="inline-flex items-center bg-bridal-cream hover:bg-bridal-blush text-bridal-gold-dark hover:text-bridal-mauve text-[11.5px] font-medium px-2.5 py-1 rounded-full border border-bridal-gold/45 transition-colors"
           >
             +{overflow} more
           </button>
         )}
         {expanded && overflow > 0 && (
           <button
+            type="button"
             onClick={() => setExpanded(false)}
-            className="inline-flex items-center bg-neutral-100 hover:bg-purple-50 text-neutral-500 hover:text-purple-600 text-xs font-medium px-2.5 py-1 rounded-full border border-neutral-200 transition-colors"
+            className="inline-flex items-center bg-bridal-cream hover:bg-bridal-blush text-bridal-gold-dark hover:text-bridal-mauve text-[11.5px] font-medium px-2.5 py-1 rounded-full border border-bridal-gold/45 transition-colors"
           >
             Show less
           </button>
@@ -108,19 +119,19 @@ function PackageCard({
   onBook,
   pricingLabel = "per event",
 }: {
-  pkg: Package;
+  pkg: PkgType;
   formatPrice: (n: number) => string;
   onBook: () => void;
   pricingLabel?: string;
 }) {
   const toStr = (v: any): string => {
-    if (v === null || v === undefined) return ""
+    if (v === null || v === undefined) return "";
     if (typeof v === "object") {
-      if (v.carName && v.quantity) return `${v.carName} ×${v.quantity}`
-      return Object.values(v).filter(Boolean).join(" · ")
+      if (v.carName && v.quantity) return `${v.carName} ×${v.quantity}`;
+      return Object.values(v).filter(Boolean).join(" · ");
     }
-    return String(v)
-  }
+    return String(v);
+  };
   const isGrouped = pkg.features && !Array.isArray(pkg.features);
   const groups: { label: string; items: string[] }[] = isGrouped
     ? Object.entries(pkg.features as Record<string, any[]>)
@@ -134,42 +145,63 @@ function PackageCard({
       : [];
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-neutral-100 bg-white shadow-sm hover:shadow-lg transition-all duration-300">
-      <div className="h-1 bg-gradient-to-r from-purple-400 via-purple-600 to-purple-700" />
+    <div className="group relative overflow-hidden rounded-md border border-bridal-beige bg-bridal-cream shadow-[0_18px_44px_-32px_rgba(176,125,84,0.4)] hover:shadow-[0_28px_52px_-30px_rgba(176,125,84,0.55)] hover:border-bridal-gold/55 transition-all duration-500">
+      {/* Gold accent strip */}
+      <div className="h-[3px] bg-gradient-to-r from-transparent via-bridal-gold to-transparent" />
+
+      {/* Corner brackets */}
+      <div className="absolute top-3 left-3 w-3.5 h-3.5 border-l border-t border-bridal-gold/45 pointer-events-none" />
+      <div className="absolute top-3 right-3 w-3.5 h-3.5 border-r border-t border-bridal-gold/45 pointer-events-none" />
+
       <div className="p-5 sm:p-6">
         <div className="flex items-start justify-between gap-4 mb-5">
-          <h3 className="text-xl font-bold text-neutral-900 leading-tight">{pkg.name}</h3>
+          <div className="min-w-0">
+            <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold-dark font-medium mb-1.5">
+              Package
+            </p>
+            <h3 className="font-display italic text-[22px] sm:text-[24px] text-bridal-charcoal leading-tight">
+              {pkg.name}
+            </h3>
+          </div>
           <div className="shrink-0 text-right">
-            <p className="text-2xl font-extrabold text-purple-700">{formatPrice(pkg.price)}</p>
-            <p className="text-xs text-neutral-400 mt-0.5">{pricingLabel}</p>
+            <p className="font-display italic text-[26px] sm:text-[28px] text-bridal-gold-dark leading-none">
+              {formatPrice(pkg.price)}
+            </p>
+            <p className="font-bridal text-[10px] uppercase tracking-[0.22em] text-bridal-text-soft mt-1">
+              {pricingLabel}
+            </p>
           </div>
         </div>
+
         {groups.length > 0 && (
-          <div className="space-y-4 mb-5 pt-4 border-t border-neutral-100">
+          <div className="space-y-4 mb-5 pt-5 border-t border-bridal-beige/70">
             {groups.map((g, gi) => (
               <FeatureGroup key={gi} label={g.label} items={g.items} />
             ))}
           </div>
         )}
-        <Button
+
+        <button
+          type="button"
           onClick={onBook}
-          className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl font-semibold shadow-sm shadow-purple-200/50"
+          className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] hover:shadow-[0_14px_30px_-12px_rgba(176,125,84,0.7)] transition-all duration-300"
         >
-          Select Package
-        </Button>
+          <CalendarCheck className="w-3.5 h-3.5" />
+          Select package
+        </button>
       </div>
     </div>
   );
 }
 
 interface LiveReview {
-  id: number
-  rating: number
-  comment: string
-  createdAt: string
-  reply?: string
-  user?: { id: number; fullName: string }
-  booking?: { id: number; bookingDate: string; bookingTime: string }
+  id: number;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  reply?: string;
+  user?: { id: number; fullName: string };
+  booking?: { id: number; bookingDate: string; bookingTime: string };
 }
 
 export default function VendorDetails({ vendor }: VendorDetailsProps) {
@@ -178,9 +210,10 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
       ? Math.min(...vendor.packages.map((p) => p.price).filter((p) => p > 0))
       : null;
   const startingPrice = vendor.minimumPrice || lowestPackagePrice || vendor.price || null;
-  const [date, setDate] = useState<Date | undefined>(undefined);
   const { isFavorited, toggleFavorite, isLoading: favLoading } = useFavorites();
   const isFavorite = isFavorited(vendor.id);
+  const router = useRouter();
+
   const handleFavoriteClick = async () => {
     const isLoggedIn =
       typeof window !== "undefined" &&
@@ -192,14 +225,13 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
     }
     await toggleFavorite(vendor.id);
   };
-  const [selectedImage, setSelectedImage] = useState(0);
+
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const lightboxSwiperRef = useRef<any>(null);
   const thumbStripRef = useRef<HTMLDivElement>(null);
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [isDateAvailable, setIsDateAvailable] = useState<boolean | null>(null);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
   const [availability, setAvailability] = useState<Record<string, {
     availableSlots: string[];
@@ -212,17 +244,16 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
 
   // ── Live Reviews ──
-  const [liveReviews, setLiveReviews] = useState<LiveReview[]>([])
-  const [avgRating, setAvgRating] = useState<number | null>(null)
-  const [reviewsLoading, setReviewsLoading] = useState(false)
-  const [userBookingId, setUserBookingId] = useState<number | null>(null)
-  const [reviewRating, setReviewRating] = useState(0)
-  const [reviewHover, setReviewHover] = useState(0)
-  const [reviewComment, setReviewComment] = useState("")
-  const [reviewSubmitting, setReviewSubmitting] = useState(false)
-  const [alreadyReviewed, setAlreadyReviewed] = useState(false)
+  const [liveReviews, setLiveReviews] = useState<LiveReview[]>([]);
+  const [avgRating, setAvgRating] = useState<number | null>(null);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [userBookingId, setUserBookingId] = useState<number | null>(null);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewHover, setReviewHover] = useState(0);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [alreadyReviewed, setAlreadyReviewed] = useState(false);
 
-  const router = useRouter();
   const { toast } = useToast();
   const { isAuthenticated, user } = useUser();
   const isLoggedIn =
@@ -258,14 +289,10 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
     "Henna artist": "henna-artists",
     "Wedding Invitations and Stationery": "wedding-stationery",
   };
-
   const vendorTypePath = typeToPathMap[vendor.type] || "vendors";
 
-  // Handle scroll for sticky header
   useEffect(() => {
-    const handleScroll = () => {
-      setIsStickyHeader(window.scrollY > 100);
-    };
+    const handleScroll = () => setIsStickyHeader(window.scrollY > 100);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -298,19 +325,8 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
   };
 
   const handleBookNow = () => {
-    if (isLoggedIn) {
-      router.push(`/${vendor.id}/booking`);
-    } else {
-      router.push("/login");
-    }
-  };
-
-  const handleGetQuote = () => {
-    if (isLoggedIn) {
-      router.push(`/${vendor.id}/booking`);
-    } else {
-      router.push("/login");
-    }
+    if (isLoggedIn) router.push(`/${vendor.id}/booking`);
+    else router.push("/login");
   };
 
   const handleShare = async () => {
@@ -323,22 +339,15 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
         });
       } else {
         await navigator.clipboard.writeText(window.location.href);
-        toast({
-          title: "Link Copied!",
-          description: "Vendor link has been copied to clipboard",
-        });
+        toast({ title: "Link copied!", description: "Vendor link copied to clipboard." });
       }
-    } catch (error) {
-      // share failed silently
+    } catch {
+      // share cancelled
     }
   };
 
-  const formatPrice = (price: number) => {
-    return `Rs. ${new Intl.NumberFormat("en-PK", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price)}`;
-  };
+  const formatPrice = (price: number) =>
+    `Rs. ${new Intl.NumberFormat("en-PK", { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(price)}`;
 
   const getVendorIcon = (type: string) => {
     const iconMap: { [key: string]: any } = {
@@ -354,14 +363,12 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
     };
     return iconMap[type] || Package;
   };
-
   const VendorIcon = getVendorIcon(vendor.type);
 
   const getVendorSpecificDetails = (): { label: string; value: string }[] => {
     const details: { label: string; value: string }[] = [];
     const type = vendor.type;
 
-    // Capacity range — only for venue, catering, and decorator
     if (["Wedding venue", "Catering", "Decorator"].includes(type) && (vendor.minCapacity || vendor.maxCapacity)) {
       const cap =
         vendor.minCapacity && vendor.maxCapacity
@@ -369,8 +376,6 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
           : `${vendor.maxCapacity ?? vendor.minCapacity}`;
       details.push({ label: "Guest Capacity", value: `${cap} guests` });
     }
-
-    // Venue-specific
     if (type === "Wedding venue") {
       if (vendor.catering != null)
         details.push({ label: "In-house Catering", value: vendor.catering ? "Available" : "Not Available" });
@@ -383,8 +388,6 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
         details.push({ label: "Parking", value: parkVal });
       }
     }
-
-    // Catering-specific
     if (type === "Catering") {
       if (vendor.provideFoodTesting != null)
         details.push({ label: "Food Tasting", value: vendor.provideFoodTesting ? "Available" : "Not Available" });
@@ -397,29 +400,20 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
       if (vendor.provideSoundSystem != null)
         details.push({ label: "Sound System", value: vendor.provideSoundSystem ? "Available" : "Not Available" });
     }
-
-    // Henna artist
     if (type === "Henna artist") {
       if (vendor.sellMehndi != null)
         details.push({ label: "Sells Mehndi Products", value: vendor.sellMehndi ? "Yes" : "No" });
       if (vendor.hasTeam != null)
         details.push({ label: "Has a Team", value: vendor.hasTeam ? "Yes" : "No" });
     }
-
-    // Decorator
     if (type === "Decorator") {
       if (vendor.provideDecorationItem != null)
         details.push({ label: "Provides Decoration Items", value: vendor.provideDecorationItem ? "Yes" : "No" });
     }
-
-    // Travel to client
     if (vendor.travelToClientHome != null)
       details.push({ label: "Travel to Client Location", value: vendor.travelToClientHome ? "Available" : "Not Available" });
 
-    // Sub-business type (salon type, vehicle type, store type)
-    const subType = Array.isArray(vendor.subBusinessType)
-      ? vendor.subBusinessType[0]
-      : vendor.subBusinessType;
+    const subType = Array.isArray(vendor.subBusinessType) ? vendor.subBusinessType[0] : vendor.subBusinessType;
     if (subType) {
       const subLabel =
         type === "Makeup artist" ? "Studio Type"
@@ -429,13 +423,10 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
         : "Business Type";
       details.push({ label: subLabel, value: subType });
     }
-
     return details;
   };
-
   const vendorSpecificDetails = getVendorSpecificDetails();
 
-  // Resolve relative image URLs to the backend base
   const BACKEND_BASE = BACKEND_URL.replace(/\/$/, "");
   const resolveImg = (url: string) => {
     if (!url) return "/placeholder.jpg";
@@ -443,7 +434,6 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
     return `${BACKEND_BASE}${url}`;
   };
 
-  // Bridal wear service toggles
   const BRIDAL_SERVICES: { key: keyof Vendor; label: string }[] = [
     { key: "travelToClientHome", label: "Home Delivery" },
     { key: "sellMehndi", label: "Rental Available" },
@@ -461,8 +451,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
       ? BRIDAL_SERVICES.filter((s) => vendor[s.key] === true)
       : [];
 
-  // Parse package features object into flat badge groups (bridal wear / car rental)
-  const getFeatureBadges = (pkg: Package): { label: string; values: string[] }[] => {
+  const getFeatureBadges = (pkg: PkgType): { label: string; values: string[] }[] => {
     if (!pkg.features || Array.isArray(pkg.features)) return [];
     const obj = pkg.features as Record<string, string[]>;
     return Object.entries(obj)
@@ -473,18 +462,9 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
       }));
   };
 
-  // Flatten features to a simple string list (generic packages)
-  const getFlatFeatures = (pkg: Package): string[] => {
-    if (!pkg.features) return [];
-    if (Array.isArray(pkg.features)) return pkg.features.map(String).filter(Boolean);
-    const obj = pkg.features as Record<string, string[]>;
-    return Object.values(obj).flat().filter(Boolean);
-  };
-
   const toDateKey = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-  // Fetch real availability (booked + vendor-blocked) for the displayed month
   const fetchAvailability = useCallback(async (monthDate: Date) => {
     if (!vendor.id) return;
     const yyyy = monthDate.getFullYear();
@@ -492,97 +472,85 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
     try {
       const data = await VendorAPI.getMonthAvailability([Number(vendor.id)], `${yyyy}-${mm}`);
       setAvailability(data[Number(vendor.id)] || {});
-    } catch {
-      // silently fail — calendar still works, just no availability data
-    }
+    } catch {}
   }, [vendor.id]);
 
-  useEffect(() => {
-    fetchAvailability(calendarMonth);
-  }, [calendarMonth, fetchAvailability]);
+  useEffect(() => { fetchAvailability(calendarMonth); }, [calendarMonth, fetchAvailability]);
 
-  // ── Fetch live reviews ──
   useEffect(() => {
-    if (!vendor.id) return
-    setReviewsLoading(true)
+    if (!vendor.id) return;
+    setReviewsLoading(true);
     fetch(`${BACKEND_URL}api/v1/reviews/${vendor.id}`)
       .then(r => r.json())
       .then(data => {
-        const rows: LiveReview[] = data?.data?.reviews ?? []
-        setLiveReviews(rows)
-        setAvgRating(data?.data?.averageRating ?? null)
+        const rows: LiveReview[] = data?.data?.reviews ?? [];
+        setLiveReviews(rows);
+        setAvgRating(data?.data?.averageRating ?? null);
       })
       .catch(() => {})
-      .finally(() => setReviewsLoading(false))
-  }, [vendor.id])
+      .finally(() => setReviewsLoading(false));
+  }, [vendor.id]);
 
-  // ── Fetch user's booking for this vendor (needed to submit review) ──
   useEffect(() => {
-    if (!isAuthenticated || !vendor.id) return
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
-    if (!token) return
+    if (!isAuthenticated || !vendor.id) return;
+    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    if (!token) return;
     fetch(`${BACKEND_URL}api/v1/bookings/simple-user-bookings`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.json())
       .then(data => {
-        const bookings: any[] = data?.data ?? []
-        // Only Completed bookings are eligible for reviews (backend enforces this)
+        const bookings: any[] = data?.data ?? [];
         const match = bookings.find((b: any) =>
           b.status === "Completed" &&
           b.bookingDetails?.some((d: any) => Number(d.businessId) === Number(vendor.id))
-        )
+        );
         if (match) {
-          setUserBookingId(match.id)
-          // Check if already reviewed
-          const alreadyDone = liveReviews.some(r => r.booking?.id === match.id)
-          setAlreadyReviewed(alreadyDone)
+          setUserBookingId(match.id);
+          const alreadyDone = liveReviews.some(r => r.booking?.id === match.id);
+          setAlreadyReviewed(alreadyDone);
         }
       })
-      .catch(() => {})
-  }, [isAuthenticated, vendor.id, liveReviews])
+      .catch(() => {});
+  }, [isAuthenticated, vendor.id, liveReviews]);
 
   const handleReviewSubmit = async () => {
-    if (!userBookingId || reviewRating === 0) return
-    setReviewSubmitting(true)
+    if (!userBookingId || reviewRating === 0) return;
+    setReviewSubmitting(true);
     try {
-      const token = localStorage.getItem("auth_token")
+      const token = localStorage.getItem("auth_token");
       const res = await fetch(`${BACKEND_URL}api/v1/reviews`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           businessId: vendor.id,
           bookingId: userBookingId,
           rating: reviewRating,
           comment: reviewComment,
         }),
-      })
-      const data = await res.json()
+      });
+      const data = await res.json();
       if (data.status) {
-        toast({ title: "Review submitted!", description: "Thank you for your feedback." })
-        setReviewRating(0)
-        setReviewComment("")
-        setAlreadyReviewed(true)
-        // Refresh reviews
+        toast({ title: "Review submitted!", description: "Thank you for your feedback." });
+        setReviewRating(0);
+        setReviewComment("");
+        setAlreadyReviewed(true);
         fetch(`${BACKEND_URL}api/v1/reviews/${vendor.id}`)
           .then(r => r.json())
           .then(d => {
-            setLiveReviews(d?.data?.reviews ?? [])
-            setAvgRating(d?.data?.averageRating ?? null)
+            setLiveReviews(d?.data?.reviews ?? []);
+            setAvgRating(d?.data?.averageRating ?? null);
           })
-          .catch(() => {})
+          .catch(() => {});
       } else {
-        toast({ title: "Failed", description: data.message || "Please try again.", variant: "destructive" })
+        toast({ title: "Failed", description: data.message || "Please try again.", variant: "destructive" });
       }
     } catch {
-      toast({ title: "Failed", description: "Please try again.", variant: "destructive" })
+      toast({ title: "Failed", description: "Please try again.", variant: "destructive" });
     } finally {
-      setReviewSubmitting(false)
+      setReviewSubmitting(false);
     }
-  }
+  };
 
   const isDateDisabled = (d: Date) => {
     const today = startOfToday();
@@ -592,17 +560,13 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
     return false;
   };
 
-  // Build modifier date lists for calendar styling
   const fullyBookedDates: Date[] = [];
   const vendorBlockedDates: Date[] = [];
   Object.entries(availability).forEach(([dateStr, avail]) => {
     const [y, m, d] = dateStr.split("-").map(Number);
     const dateObj = new Date(y, m - 1, d);
-    if (avail.isBlocked) {
-      vendorBlockedDates.push(dateObj);
-    } else if (avail.availableSlots.length === 0) {
-      fullyBookedDates.push(dateObj);
-    }
+    if (avail.isBlocked) vendorBlockedDates.push(dateObj);
+    else if (avail.availableSlots.length === 0) fullyBookedDates.push(dateObj);
   });
 
   const handleDateSelect = (date: Date | undefined) => {
@@ -612,7 +576,6 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
       const blocked = avail?.isBlocked;
       const booked = !blocked && avail && avail.availableSlots.length === 0;
       const available = !blocked && !booked;
-
       setIsDateAvailable(available);
 
       if (blocked) {
@@ -630,151 +593,173 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
           variant: "destructive",
         });
       } else {
-        toast({
-          title: "Date Available!",
-          description: `${format(date, "MMMM dd, yyyy")} is available for booking.`,
-        });
+        toast({ title: "Date Available!", description: `${format(date, "MMMM dd, yyyy")} is available for booking.` });
       }
     } else {
       setIsDateAvailable(null);
     }
   };
 
+  const ratingValue = avgRating !== null ? avgRating : Number(vendor.rating || 0);
+  const reviewsCount = liveReviews.length || 0;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-purple-50/30">
-      {/* Mobile Sticky Header */}
+    <div className="min-h-screen bg-bridal-ivory">
+      {/* ===== Mobile Sticky Header ===== */}
       <div
         className={`lg:hidden fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           isStickyHeader
-            ? "bg-white/95 backdrop-blur-md shadow-lg"
+            ? "bg-bridal-cream/95 backdrop-blur-md shadow-[0_4px_20px_-12px_rgba(176,125,84,0.45)] border-b border-bridal-beige"
             : "bg-transparent"
         }`}
       >
-        <div className="flex items-center justify-between p-4">
-          <Button
-            variant="ghost"
-            size="sm"
+        <div className="flex items-center justify-between px-4 py-3">
+          <button
+            type="button"
             onClick={() => router.back()}
-            className="p-2 rounded-full bg-white/20 backdrop-blur-sm"
+            className={`w-10 h-10 inline-flex items-center justify-center rounded-full transition-colors ${
+              isStickyHeader
+                ? "bg-bridal-cream border border-bridal-beige text-bridal-charcoal hover:border-bridal-gold/55"
+                : "bg-bridal-charcoal/40 backdrop-blur-sm text-bridal-ivory"
+            }`}
           >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
+            <ArrowLeft className="w-4.5 h-4.5" />
+          </button>
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
+              type="button"
               onClick={handleFavoriteClick}
-              className="p-2 rounded-full bg-white/20 backdrop-blur-sm"
+              className={`w-10 h-10 inline-flex items-center justify-center rounded-full transition-colors ${
+                isStickyHeader
+                  ? "bg-bridal-cream border border-bridal-beige hover:border-bridal-gold/55"
+                  : "bg-bridal-charcoal/40 backdrop-blur-sm"
+              }`}
             >
               <Heart
-                className={`w-5 h-5 ${isFavorite ? "fill-red-500 text-red-500" : "text-white"}`}
+                className={`w-4.5 h-4.5 ${
+                  isFavorite ? "fill-bridal-coral text-bridal-coral" : isStickyHeader ? "text-bridal-charcoal" : "text-bridal-ivory"
+                }`}
               />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
+            </button>
+            <button
+              type="button"
               onClick={handleShare}
-              className="p-2 rounded-full bg-white/20 backdrop-blur-sm"
+              className={`w-10 h-10 inline-flex items-center justify-center rounded-full transition-colors ${
+                isStickyHeader
+                  ? "bg-bridal-cream border border-bridal-beige hover:border-bridal-gold/55"
+                  : "bg-bridal-charcoal/40 backdrop-blur-sm"
+              }`}
             >
-              <Share2 className="w-5 h-5 text-white" />
-            </Button>
+              <Share2 className={`w-4.5 h-4.5 ${isStickyHeader ? "text-bridal-charcoal" : "text-bridal-ivory"}`} />
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Hero Section - Mobile Optimized */}
-      <div className="relative h-[60vh] sm:h-[70vh] overflow-hidden">
+      {/* ===== Editorial Hero ===== */}
+      <section className="relative h-[68vh] sm:h-[75vh] min-h-[520px] max-h-[720px] overflow-hidden">
         <Image
           src={primaryImage}
           alt={`${vendor.name} hero image`}
           fill
           priority
           className="object-cover"
+          sizes="100vw"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-950/80 via-purple-900/70 to-purple-900/60" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+        {/* Bridal vignette: charcoal base + gold highlight + blush wash */}
+        <div className="absolute inset-0 bg-gradient-to-t from-bridal-charcoal/85 via-bridal-charcoal/35 to-bridal-charcoal/55" />
+        <div className="absolute inset-0 bg-gradient-to-b from-bridal-charcoal/30 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-mughal-jaal opacity-[0.08] pointer-events-none" />
 
-        {/* Mobile Hero Content */}
-        <div className="relative h-full flex items-end justify-center pb-20 sm:pb-32">
-          <div className="text-center text-white max-w-4xl mx-auto px-4">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <VendorIcon className="w-6 h-6 sm:w-8 sm:h-8 text-purple-300" />
-              <Badge
-                variant="secondary"
-                className="bg-white/20 text-white border-white/30 backdrop-blur-sm text-xs sm:text-sm"
-              >
+        {/* Hero copy — anchored to bottom-left for editorial framing */}
+        <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 flex items-end pb-14 sm:pb-20">
+          <div className="max-w-4xl">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-bridal-gold/95 text-bridal-charcoal">
+                <VendorIcon className="w-4.5 h-4.5" />
+              </div>
+              <span className="font-bridal text-[11px] sm:text-[12px] uppercase tracking-[0.4em] text-bridal-ivory/90">
                 {vendor.type}
-              </Badge>
+              </span>
+              {vendor.sponsored && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-bridal-gold/95 text-bridal-charcoal text-[10px] font-bridal font-medium uppercase tracking-[0.22em] backdrop-blur-sm">
+                  <Crown className="w-3 h-3" />
+                  Featured
+                </span>
+              )}
             </div>
-            <h1 className="text-2xl sm:text-4xl md:text-6xl font-bold mb-4 leading-tight">
+
+            <h1 className="font-display italic text-[40px] sm:text-[58px] lg:text-[78px] leading-[0.98] text-bridal-ivory mb-5 drop-shadow-[0_4px_30px_rgba(0,0,0,0.35)]">
               {vendor.name}
             </h1>
-            <p className="text-sm sm:text-xl md:text-2xl opacity-90 mb-6 flex items-center justify-center gap-2">
-              <MapPin className="w-4 h-4 sm:w-6 sm:h-6 text-purple-300" />
-              {vendor.location || vendor.city}
-            </p>
-            <div className="flex items-center justify-center gap-4 mb-6">
-              <div className="flex items-center gap-1 sm:gap-2">
-                <Star className="w-4 h-4 sm:w-6 sm:h-6 text-yellow-400 fill-current" />
-                <span className="text-sm sm:text-xl font-semibold">
-                  {avgRating !== null ? avgRating.toFixed(1) : vendor.rating || "0.0"}
-                </span>
-                <span className="text-xs sm:text-lg opacity-80">
-                  ({liveReviews.length || 0})
-                </span>
-              </div>
-              <div className="flex items-center gap-1 sm:gap-2">
-                <Award className="w-4 h-4 sm:w-6 sm:h-6 text-purple-300" />
-                <span className="text-xs sm:text-lg opacity-80">Verified</span>
-              </div>
+
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-7 font-bridal text-bridal-ivory/95">
+              <span className="inline-flex items-center gap-2 text-[14px] sm:text-[15px]">
+                <MapPin className="w-4 h-4 text-bridal-gold" />
+                {vendor.location || vendor.city}
+              </span>
+              <span className="inline-flex items-center gap-2 text-[14px] sm:text-[15px]">
+                <Star className="w-4 h-4 fill-bridal-gold text-bridal-gold" />
+                <span className="font-display italic text-[18px] not-italic">{ratingValue.toFixed(1)}</span>
+                <span className="text-bridal-ivory/70 text-[12px]">({reviewsCount} reviews)</span>
+              </span>
+              <span className="inline-flex items-center gap-2 text-[14px] sm:text-[15px]">
+                <Shield className="w-4 h-4 text-bridal-sage" />
+                Verified Vendor
+              </span>
             </div>
 
-            {/* Mobile Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Button
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
                 onClick={handleBookNow}
-                size="lg"
-                className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-6 sm:px-8 py-3 text-base sm:text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                className="inline-flex items-center gap-2 h-12 px-7 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium shadow-[0_14px_30px_-12px_rgba(176,125,84,0.65)] hover:shadow-[0_18px_36px_-12px_rgba(176,125,84,0.8)] transition-all duration-300"
               >
-                <CalendarCheck className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                Book Now
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
+                <CalendarCheck className="w-4 h-4" />
+                Book this vendor
+              </button>
+              <button
+                type="button"
                 onClick={handleFavoriteClick}
-                className="w-full sm:w-auto border-purple-200 text-purple-600 hover:bg-purple-600 hover:text-white backdrop-blur-sm px-6 sm:px-8 py-3 text-base sm:text-lg font-semibold rounded-xl transition-all duration-200"
+                disabled={favLoading}
+                className="inline-flex items-center gap-2 h-12 px-6 rounded-[4px] bg-bridal-cream/15 hover:bg-bridal-cream/25 border border-bridal-ivory/40 hover:border-bridal-gold/55 text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium backdrop-blur-sm transition-all duration-300 disabled:opacity-60"
               >
-                <Heart
-                  className={`w-4 h-4 sm:w-5 sm:h-5 mr-2 ${isFavorite ? "fill-red-500 text-red-500" : ""}`}
-                />
+                <Heart className={`w-4 h-4 ${isFavorite ? "fill-bridal-coral text-bridal-coral" : ""}`} />
                 {isFavorite ? "Saved" : "Save"}
-              </Button>
+              </button>
+              <button
+                type="button"
+                onClick={handleShare}
+                className="hidden sm:inline-flex items-center gap-2 h-12 px-5 rounded-[4px] bg-bridal-cream/10 hover:bg-bridal-cream/20 border border-bridal-ivory/30 hover:border-bridal-gold/55 text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium backdrop-blur-sm transition-all duration-300"
+              >
+                <Share2 className="w-4 h-4" />
+                Share
+              </button>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-6 sm:py-8 -mt-16 sm:-mt-20 relative z-10">
-        {/* Mobile Breadcrumbs */}
-        <div className="mb-4 sm:mb-6">
+      {/* ===== Main Content ===== */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-8 sm:py-12 lg:py-14">
+        {/* Breadcrumbs */}
+        <div className="mb-6 sm:mb-8">
           <Breadcrumb>
-            <BreadcrumbList className="text-xs sm:text-sm">
+            <BreadcrumbList className="font-bridal text-[12px] uppercase tracking-[0.18em] text-bridal-text-soft">
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <Link href="/">Home</Link>
+                  <Link href="/" className="hover:text-bridal-gold-dark transition-colors">Home</Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
-              <BreadcrumbSeparator />
+              <BreadcrumbSeparator className="text-bridal-gold/55" />
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <Link href={`/${vendorTypePath}`}>{vendor.type}</Link>
+                  <Link href={`/${vendorTypePath}`} className="hover:text-bridal-gold-dark transition-colors">{vendor.type}</Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
-              <BreadcrumbSeparator />
+              <BreadcrumbSeparator className="text-bridal-gold/55" />
               <BreadcrumbItem>
-                <BreadcrumbPage className="truncate max-w-[120px] sm:max-w-none">
+                <BreadcrumbPage className="truncate max-w-[140px] sm:max-w-none normal-case font-display italic text-[15px] tracking-normal text-bridal-charcoal">
                   {vendor.name}
                 </BreadcrumbPage>
               </BreadcrumbItem>
@@ -782,414 +767,321 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
           </Breadcrumb>
         </div>
 
-        {/* Mobile-First Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-8 space-y-4 sm:space-y-6 lg:space-y-8">
-            {/* Vendor Info Card - Mobile Optimized */}
-            <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm">
-              <CardContent className="p-4 sm:p-6 lg:p-8">
-                <div className="space-y-4 sm:space-y-6">
-                  {/* Vendor Header */}
-                  <div className="space-y-3 sm:space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                      <div className="space-y-2 sm:space-y-3">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-neutral-900">
-                            {vendor.name}
-                          </h2>
-                          {vendor.sponsored && (
-                            <Badge className="w-fit bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 px-2 sm:px-3 py-1 text-xs sm:text-sm">
-                              <Crown className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                              Featured
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center text-neutral-600">
-                          <MapPin className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-purple-500 flex-shrink-0" />
-                          <p className="text-sm sm:text-lg truncate">
-                            {vendor.location || vendor.city}
-                          </p>
-                        </div>
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
-                          <div className="flex items-center">
-                            <Star className="w-4 h-4 sm:w-6 sm:h-6 text-yellow-400 fill-current" />
-                            <span className="ml-1 sm:ml-2 text-sm sm:text-xl font-semibold">
-                              {avgRating !== null ? avgRating.toFixed(1) : vendor.rating || "0.0"}
-                            </span>
-                            <span className="ml-1 sm:ml-2 text-xs sm:text-base text-neutral-600">
-                              ({liveReviews.length || 0} reviews)
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-                            <span className="text-xs sm:text-base text-neutral-600">
-                              Verified
-                            </span>
-                          </div>
-                        </div>
+        {/* Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+          {/* Left column */}
+          <div className="lg:col-span-8 space-y-6 lg:space-y-8">
+            {/* ── Vendor Info Card ── */}
+            <BridalSectionCard>
+              <CardContent className="p-5 sm:p-7 lg:p-8">
+                <div className="space-y-6">
+                  {/* Header row */}
+                  <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+                    <div>
+                      <p className="font-bridal text-[10.5px] uppercase tracking-[0.32em] font-medium text-bridal-gold-dark mb-2">
+                        Vendor profile
+                      </p>
+                      <h2 className="font-display italic text-[28px] sm:text-[34px] lg:text-[40px] leading-[1.05] text-bridal-charcoal">
+                        {vendor.name}
+                      </h2>
+                      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3 font-bridal text-bridal-text-soft">
+                        <span className="inline-flex items-center gap-1.5 text-[13px]">
+                          <MapPin className="w-4 h-4 text-bridal-gold" />
+                          {vendor.location || vendor.city}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 text-[13px]">
+                          <Star className="w-4 h-4 fill-bridal-gold text-bridal-gold" />
+                          <span className="font-display italic text-[16px] text-bridal-charcoal">{ratingValue.toFixed(1)}</span>
+                          ({reviewsCount} reviews)
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 text-[13px]">
+                          <Shield className="w-4 h-4 text-bridal-sage" />
+                          Verified
+                        </span>
                       </div>
                     </div>
 
-                    {/* Quick Stats - Mobile Grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 pt-4 sm:pt-6 border-t border-neutral-200">
-                      <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-r from-purple-50 to-purple-50/80 rounded-xl">
-                        <VendorIcon className="w-4 h-4 sm:w-6 sm:h-6 text-purple-500 flex-shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-xs sm:text-sm font-semibold text-neutral-900 truncate">
-                            Type
-                          </p>
-                          <p className="text-xs sm:text-sm text-neutral-600 truncate">
-                            {vendor.type}
-                          </p>
-                        </div>
+                    {startingPrice ? (
+                      <div className="text-left sm:text-right">
+                        <p className="font-bridal text-[10px] uppercase tracking-[0.25em] text-bridal-text-label">
+                          Starting from
+                        </p>
+                        <p className="font-display italic text-[28px] sm:text-[32px] text-bridal-gold-dark leading-none mt-1">
+                          {formatPrice(startingPrice)}
+                        </p>
                       </div>
-                      {["Wedding venue", "Catering", "Decorator"].includes(vendor.type) && (vendor.minCapacity || vendor.maxCapacity || vendor.capacity) && (
-                        <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
-                          <Users className="w-4 h-4 sm:w-6 sm:h-6 text-blue-500 flex-shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-xs sm:text-sm font-semibold text-neutral-900 truncate">
-                              Capacity
-                            </p>
-                            <p className="text-xs sm:text-sm text-neutral-600 truncate">
-                              {vendor.minCapacity && vendor.maxCapacity
-                                ? `${vendor.minCapacity}–${vendor.maxCapacity}`
-                                : vendor.maxCapacity ?? vendor.minCapacity ?? vendor.capacity}{" "}
-                              Guests
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                      {(vendor.cancelationPolicy || vendor.cancellationPolicy) && (
-                        <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl">
-                          <Clock className="w-4 h-4 sm:w-6 sm:h-6 text-green-500 flex-shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-xs sm:text-sm font-semibold text-neutral-900 truncate">
-                              Cancellation
-                            </p>
-                            <p className="text-xs sm:text-sm text-neutral-600 truncate">
-                              {vendor.cancelationPolicy || vendor.cancellationPolicy}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-r from-purple-50 to-violet-50 rounded-xl">
-                        <DollarSign className="w-4 h-4 sm:w-6 sm:h-6 text-purple-500 flex-shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-xs sm:text-sm font-semibold text-neutral-900 truncate">
-                            Starting Price
-                          </p>
-                          <p className="text-xs sm:text-sm text-neutral-600 truncate">
-                            {startingPrice ? formatPrice(startingPrice) : "See Packages"}
-                          </p>
-                        </div>
-                      </div>
-                      {vendor.downPayment ? (
-                        <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl col-span-2 sm:col-span-1">
-                          <DollarSign className="w-4 h-4 sm:w-6 sm:h-6 text-orange-500 flex-shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-xs sm:text-sm font-semibold text-neutral-900 truncate">
-                              Advance
-                            </p>
-                            <p className="text-xs sm:text-sm text-neutral-600 truncate">
-                              {vendor.downPaymentType === "Percentage"
-                                ? `${vendor.downPayment}%`
-                                : formatPrice(vendor.downPayment)}
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl col-span-2 sm:col-span-1">
-                          <CalendarCheck className="w-4 h-4 sm:w-6 sm:h-6 text-orange-500 flex-shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-xs sm:text-sm font-semibold text-neutral-900 truncate">
-                              Availability
-                            </p>
-                            <p className="text-xs sm:text-sm text-neutral-600 truncate">
-                              Check Calendar
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                    ) : null}
                   </div>
 
-                  {/* Mobile Action Buttons */}
-                  <div className="flex flex-col sm:flex-row gap-3 pt-4 sm:pt-6 border-t border-neutral-200">
-                    <Button
-                      variant="outline"
-                      size="lg"
+                  {/* Stat tiles */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-6 border-t border-bridal-beige/70">
+                    <StatTile
+                      icon={<VendorIcon className="w-4 h-4" />}
+                      iconBg="bg-bridal-gold/15"
+                      iconColor="text-bridal-gold-dark"
+                      label="Type"
+                      value={vendor.type}
+                    />
+                    {["Wedding venue", "Catering", "Decorator"].includes(vendor.type) &&
+                      (vendor.minCapacity || vendor.maxCapacity || vendor.capacity) && (
+                        <StatTile
+                          icon={<Users className="w-4 h-4" />}
+                          iconBg="bg-bridal-rose/30"
+                          iconColor="text-bridal-mauve"
+                          label="Capacity"
+                          value={`${
+                            vendor.minCapacity && vendor.maxCapacity
+                              ? `${vendor.minCapacity}–${vendor.maxCapacity}`
+                              : vendor.maxCapacity ?? vendor.minCapacity ?? vendor.capacity
+                          } guests`}
+                        />
+                      )}
+                    {(vendor.cancelationPolicy || vendor.cancellationPolicy) && (
+                      <StatTile
+                        icon={<Clock className="w-4 h-4" />}
+                        iconBg="bg-bridal-sage/25"
+                        iconColor="text-[#3F6B43]"
+                        label="Cancellation"
+                        value={vendor.cancelationPolicy || vendor.cancellationPolicy}
+                      />
+                    )}
+                    <StatTile
+                      icon={<DollarSign className="w-4 h-4" />}
+                      iconBg="bg-bridal-blush"
+                      iconColor="text-bridal-mauve"
+                      label="Price"
+                      value={startingPrice ? formatPrice(startingPrice) : "On request"}
+                    />
+                    {vendor.downPayment ? (
+                      <StatTile
+                        icon={<DollarSign className="w-4 h-4" />}
+                        iconBg="bg-bridal-coral/20"
+                        iconColor="text-bridal-coral"
+                        label="Advance"
+                        value={
+                          vendor.downPaymentType === "Percentage"
+                            ? `${vendor.downPayment}%`
+                            : formatPrice(vendor.downPayment)
+                        }
+                      />
+                    ) : (
+                      <StatTile
+                        icon={<CalendarCheck className="w-4 h-4" />}
+                        iconBg="bg-bridal-gold/15"
+                        iconColor="text-bridal-gold-dark"
+                        label="Availability"
+                        value="Check calendar"
+                      />
+                    )}
+                  </div>
+
+                  {/* Action row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-6 border-t border-bridal-beige/70">
+                    <button
+                      type="button"
                       onClick={handleShare}
-                      className="flex items-center justify-center gap-2 border-neutral-200 hover:border-purple-500 hover:text-purple-600 transition-all duration-200 h-12"
+                      className="inline-flex items-center justify-center gap-2 h-12 rounded-[4px] border border-bridal-beige bg-bridal-ivory hover:border-bridal-gold/55 hover:text-bridal-gold-dark text-bridal-charcoal font-bridal text-[12px] uppercase tracking-[0.22em] font-medium transition-colors"
                     >
-                      <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="hidden sm:inline">Share</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="lg"
+                      <Share2 className="w-4 h-4" />
+                      Share
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setActiveTab("availability")}
-                      className="flex items-center justify-center gap-2 border-neutral-200 hover:border-purple-500 hover:text-purple-600 transition-all duration-200 h-12"
+                      className="inline-flex items-center justify-center gap-2 h-12 rounded-[4px] border border-bridal-beige bg-bridal-ivory hover:border-bridal-gold/55 hover:text-bridal-gold-dark text-bridal-charcoal font-bridal text-[12px] uppercase tracking-[0.22em] font-medium transition-colors"
                     >
-                      <CalendarCheck className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="hidden sm:inline">
-                        Check Availability
-                      </span>
-                    </Button>
-                    <Button
+                      <CalendarCheck className="w-4 h-4" />
+                      Check availability
+                    </button>
+                    <button
+                      type="button"
                       onClick={handleBookNow}
-                      size="lg"
-                      className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 h-12"
+                      className="inline-flex items-center justify-center gap-2 h-12 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] hover:shadow-[0_14px_30px_-12px_rgba(176,125,84,0.7)] transition-all duration-300"
                     >
-                      <CalendarCheck className="w-4 h-4 sm:w-5 sm:h-5" />
-                      Book Now
-                    </Button>
+                      <CalendarCheck className="w-4 h-4" />
+                      Book now
+                    </button>
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </BridalSectionCard>
 
-            {/* Mobile Tabs */}
-            <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm">
+            {/* ── Tabs Card ── */}
+            <BridalSectionCard>
               <CardContent className="p-0">
-                <Tabs
-                  value={activeTab}
-                  onValueChange={setActiveTab}
-                  className="w-full"
-                >
-                  <TabsList className="grid w-full grid-cols-4 h-12 sm:h-14 bg-neutral-100 p-1">
-                    <TabsTrigger
-                      value="overview"
-                      className="text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:text-purple-600"
-                    >
-                      Overview
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="gallery"
-                      className="text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:text-purple-600"
-                    >
-                      Gallery
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="pricing"
-                      className="text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:text-purple-600"
-                    >
-                      Pricing
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="reviews"
-                      className="text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:text-purple-600"
-                    >
-                      Reviews
-                    </TabsTrigger>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <TabsList className="h-auto p-0 bg-transparent border-b border-bridal-beige rounded-none w-full grid grid-cols-4 gap-0">
+                    {[
+                      { v: "overview", l: "Overview" },
+                      { v: "gallery", l: "Gallery" },
+                      { v: "pricing", l: "Pricing" },
+                      { v: "reviews", l: "Reviews" },
+                    ].map(t => (
+                      <TabsTrigger
+                        key={t.v}
+                        value={t.v}
+                        className="relative h-14 sm:h-16 rounded-none border-0 bg-transparent font-bridal text-[11px] sm:text-[12px] uppercase tracking-[0.25em] font-medium text-bridal-text-soft data-[state=active]:text-bridal-gold-dark data-[state=active]:shadow-none data-[state=active]:bg-bridal-cream transition-colors after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:h-[2px] after:w-0 data-[state=active]:after:w-12 after:bg-bridal-gold after:transition-all after:duration-300"
+                      >
+                        {t.l}
+                      </TabsTrigger>
+                    ))}
                   </TabsList>
 
-                  <TabsContent value="overview" className="p-4 sm:p-6">
-                    <div className="space-y-6 sm:space-y-8">
-                      {/* Description */}
-                      {vendor.description ? (
-                        <div>
-                          <h3 className="text-lg sm:text-xl font-semibold mb-3">About</h3>
-                          <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
+                  {/* ── OVERVIEW ── */}
+                  <TabsContent value="overview" className="p-5 sm:p-7 lg:p-8 mt-0">
+                    <div className="space-y-7">
+                      {vendor.description && (
+                        <SectionBlock title="About">
+                          <p className="font-bridal text-[14px] sm:text-[15px] text-bridal-charcoal/85 leading-[1.75]">
                             {vendor.description}
                           </p>
-                        </div>
-                      ) : null}
-
-                      {/* Expertise / Specializations */}
-                      {Array.isArray(vendor.expertise) && vendor.expertise.length > 0 && (
-                        <div>
-                          <h3 className="text-lg sm:text-xl font-semibold mb-3">Expertise</h3>
-                          <div className="flex flex-wrap gap-2">
-                            {vendor.expertise.map((item, i) => (
-                              <Badge
-                                key={i}
-                                variant="secondary"
-                                className="text-sm px-3 py-1 bg-purple-50 text-purple-700 border-purple-200"
-                              >
-                                {item}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
+                        </SectionBlock>
                       )}
 
-                      {/* Type-specific service details */}
+                      {Array.isArray(vendor.expertise) && vendor.expertise.length > 0 && (
+                        <SectionBlock title="Expertise">
+                          <div className="flex flex-wrap gap-2">
+                            {vendor.expertise.map((item, i) => (
+                              <span
+                                key={i}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-bridal-blush border border-bridal-rose/45 text-bridal-mauve font-bridal text-[12px] font-medium"
+                              >
+                                <Sparkles className="w-3 h-3" />
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        </SectionBlock>
+                      )}
+
                       {vendorSpecificDetails.length > 0 && (
-                        <div>
-                          <h3 className="text-lg sm:text-xl font-semibold mb-3">Services & Features</h3>
+                        <SectionBlock title="Services & Features">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {vendorSpecificDetails.map((detail, i) => (
-                              <div
-                                key={i}
-                                className="flex items-center gap-3 p-3 bg-neutral-50 rounded-lg border border-neutral-100"
-                              >
-                                <CheckCircle className="w-4 h-4 text-purple-500 shrink-0" />
-                                <div>
-                                  <p className="text-xs text-neutral-500">{detail.label}</p>
-                                  <p className="text-sm font-medium text-neutral-800">{detail.value}</p>
+                              <div key={i} className="flex items-start gap-3 p-3.5 bg-bridal-ivory rounded-md border border-bridal-beige">
+                                <div className="w-8 h-8 rounded-full bg-bridal-gold/15 inline-flex items-center justify-center shrink-0">
+                                  <CheckCircle className="w-4 h-4 text-bridal-gold-dark" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">{detail.label}</p>
+                                  <p className="font-bridal text-[13.5px] font-medium text-bridal-charcoal mt-0.5">{detail.value}</p>
                                 </div>
                               </div>
                             ))}
                           </div>
-                        </div>
+                        </SectionBlock>
                       )}
 
-                      {/* Amenities */}
                       {Array.isArray(vendor.amenities) && vendor.amenities.length > 0 && (
-                        <div>
-                          <h3 className="text-lg sm:text-xl font-semibold mb-3">Amenities</h3>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {vendor.amenities.map((amenity, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center gap-2 p-3 bg-neutral-50 rounded-lg"
-                              >
-                                <div className="w-2 h-2 bg-purple-500 rounded-full flex-shrink-0" />
-                                <span className="text-sm sm:text-base text-gray-600">{amenity}</span>
+                        <SectionBlock title="Amenities">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            {vendor.amenities.map((amenity, i) => (
+                              <div key={i} className="flex items-center gap-3 p-3 bg-bridal-ivory rounded-md border border-bridal-beige/70">
+                                <div className="w-1.5 h-1.5 rounded-full bg-bridal-gold shrink-0" />
+                                <span className="font-bridal text-[13.5px] text-bridal-charcoal/85">{amenity}</span>
                               </div>
                             ))}
                           </div>
-                        </div>
+                        </SectionBlock>
                       )}
 
-                      {/* Cities Covered */}
                       {Array.isArray(vendor.cityCovered) && vendor.cityCovered.length > 0 && (
-                        <div>
-                          <h3 className="text-lg sm:text-xl font-semibold mb-3">Cities Covered</h3>
+                        <SectionBlock title="Cities Covered">
                           <div className="flex flex-wrap gap-2">
                             {vendor.cityCovered.map((city, i) => (
-                              <Badge key={i} variant="outline" className="text-sm px-3 py-1 gap-1">
-                                <MapPin className="w-3 h-3" />
+                              <span
+                                key={i}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-bridal-ivory border border-bridal-beige text-bridal-charcoal font-bridal text-[12px] font-medium"
+                              >
+                                <MapPin className="w-3 h-3 text-bridal-gold" />
                                 {city}
-                              </Badge>
+                              </span>
                             ))}
                           </div>
-                        </div>
+                        </SectionBlock>
                       )}
 
-                      {/* Additional Info */}
                       {vendor.additionalInfo && (
-                        <div>
-                          <h3 className="text-lg sm:text-xl font-semibold mb-3">Additional Information</h3>
-                          <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
+                        <SectionBlock title="Additional Information">
+                          <p className="font-bridal text-[14px] text-bridal-charcoal/85 leading-[1.75]">
                             {vendor.additionalInfo}
                           </p>
-                        </div>
+                        </SectionBlock>
                       )}
 
-                      {/* Instruction — label changes per vendor type */}
                       {vendor.instruction && (
-                        <div>
-                          <h3 className="text-lg sm:text-xl font-semibold mb-3">
-                            {vendor.type === "Bridal wearing"
-                              ? "Order Lead Time"
-                              : "Special Instructions"}
-                          </h3>
-                          <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
+                        <SectionBlock title={vendor.type === "Bridal wearing" ? "Order Lead Time" : "Special Instructions"}>
+                          <p className="font-bridal text-[14px] text-bridal-charcoal/85 leading-[1.75]">
                             {vendor.instruction}
                           </p>
-                        </div>
+                        </SectionBlock>
                       )}
 
-                      {/* Bridal Wear — Fabrics Available */}
-                      {vendor.type === "Bridal wearing" &&
-                        Array.isArray(vendor.serviceProvided) &&
-                        vendor.serviceProvided.length > 0 && (
-                          <div>
-                            <h3 className="text-lg sm:text-xl font-semibold mb-3">
-                              Fabrics Available
-                            </h3>
-                            <div className="flex flex-wrap gap-2">
-                              {vendor.serviceProvided.map((fabric, i) => (
-                                <Badge
-                                  key={i}
-                                  variant="outline"
-                                  className="text-sm px-3 py-1 border-purple-200 text-purple-700"
-                                >
-                                  {fabric}
-                                </Badge>
-                              ))}
-                            </div>
+                      {vendor.type === "Bridal wearing" && Array.isArray(vendor.serviceProvided) && vendor.serviceProvided.length > 0 && (
+                        <SectionBlock title="Fabrics Available">
+                          <div className="flex flex-wrap gap-2">
+                            {vendor.serviceProvided.map((fabric, i) => (
+                              <span
+                                key={i}
+                                className="inline-flex items-center px-3 py-1.5 rounded-full bg-bridal-cream border border-bridal-gold/45 text-bridal-gold-dark font-bridal text-[12px] font-medium"
+                              >
+                                {fabric}
+                              </span>
+                            ))}
                           </div>
-                        )}
+                        </SectionBlock>
+                      )}
 
-                      {/* Bridal Wear — Services Offered */}
                       {enabledBridalServices.length > 0 && (
-                        <div>
-                          <h3 className="text-lg sm:text-xl font-semibold mb-3">
-                            Services Offered
-                          </h3>
+                        <SectionBlock title="Services Offered">
                           <div className="flex flex-wrap gap-2">
                             {enabledBridalServices.map((s, i) => (
-                              <div
+                              <span
                                 key={i}
-                                className="flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-700 rounded-full px-3 py-1 text-sm font-medium"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-bridal-sage/20 border border-bridal-sage/40 text-[#3F6B43] font-bridal text-[12px] font-medium"
                               >
                                 <CheckCircle className="w-3.5 h-3.5" />
                                 {s.label}
-                              </div>
+                              </span>
                             ))}
                           </div>
-                        </div>
+                        </SectionBlock>
                       )}
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="gallery" className="p-4 sm:p-6">
-                    {/* Header */}
+                  {/* ── GALLERY ── */}
+                  <TabsContent value="gallery" className="p-5 sm:p-7 lg:p-8 mt-0">
                     <div className="flex items-center justify-between mb-5">
-                      <h3 className="text-lg font-semibold text-neutral-900">Gallery</h3>
-                      <span className="flex items-center gap-1.5 text-xs font-medium text-purple-600 bg-purple-50 border border-purple-100 px-3 py-1 rounded-full">
+                      <h3 className="font-display italic text-[22px] text-bridal-charcoal">Gallery</h3>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-bridal-blush border border-bridal-rose/45 text-bridal-mauve font-bridal text-[11px] uppercase tracking-[0.22em] font-medium">
                         <Camera className="w-3.5 h-3.5" />
                         {galleryImages.length} photos
                       </span>
                     </div>
 
-                    {/* Featured hero layout */}
                     {galleryImages.length >= 3 ? (
-                      <div className="grid grid-cols-3 gap-2 rounded-2xl overflow-hidden mb-2">
+                      <div className="grid grid-cols-3 gap-2 rounded-md overflow-hidden">
                         <div
                           className="col-span-2 relative cursor-pointer group"
                           style={{ aspectRatio: "4/3" }}
                           onClick={() => openLightbox(0)}
                         >
-                          <Image
-                            src={galleryImages[0]}
-                            alt={`${vendor.name} - 1`}
-                            fill
-                            className="object-cover transition-transform duration-700 group-hover:scale-105"
-                            sizes="66vw"
-                            priority
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/20 backdrop-blur-sm rounded-full p-3">
-                              <Expand className="w-5 h-5 text-white" />
+                          <Image src={galleryImages[0]} alt={`${vendor.name} - 1`} fill className="object-cover transition-transform duration-700 group-hover:scale-105" sizes="66vw" priority />
+                          <div className="absolute inset-0 bg-bridal-charcoal/0 group-hover:bg-bridal-charcoal/30 transition-colors duration-300 flex items-center justify-center">
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-bridal-cream/95 rounded-full p-3">
+                              <Expand className="w-5 h-5 text-bridal-charcoal" />
                             </div>
                           </div>
                         </div>
                         <div className="grid grid-rows-2 gap-2">
-                          <div
-                            className="relative cursor-pointer group overflow-hidden"
-                            style={{ aspectRatio: "4/3" }}
-                            onClick={() => openLightbox(1)}
-                          >
-                            <Image
-                              src={galleryImages[1]}
-                              alt={`${vendor.name} - 2`}
-                              fill
-                              className="object-cover transition-transform duration-700 group-hover:scale-110"
-                              sizes="33vw"
-                            />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors flex items-center justify-center">
-                              <Expand className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <div className="relative cursor-pointer group overflow-hidden" style={{ aspectRatio: "4/3" }} onClick={() => openLightbox(1)}>
+                            <Image src={galleryImages[1]} alt={`${vendor.name} - 2`} fill className="object-cover transition-transform duration-700 group-hover:scale-110" sizes="33vw" />
+                            <div className="absolute inset-0 bg-bridal-charcoal/0 group-hover:bg-bridal-charcoal/35 transition-colors flex items-center justify-center">
+                              <Expand className="w-4 h-4 text-bridal-ivory opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
                           </div>
-                          <div
-                            className="relative cursor-pointer group overflow-hidden"
-                            style={{ aspectRatio: "4/3" }}
-                            onClick={() => openLightbox(2)}
-                          >
+                          <div className="relative cursor-pointer group overflow-hidden" style={{ aspectRatio: "4/3" }} onClick={() => openLightbox(2)}>
                             <Image
                               src={galleryImages[2]}
                               alt={`${vendor.name} - 3`}
@@ -1199,34 +1091,24 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                             />
                             {galleryImages.length > 3 ? (
                               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                <span className="text-white text-xl font-bold leading-none">+{galleryImages.length - 3}</span>
-                                <span className="text-white/80 text-xs mt-0.5">more</span>
+                                <span className="font-display italic text-bridal-ivory text-[24px] leading-none">+{galleryImages.length - 3}</span>
+                                <span className="font-bridal text-bridal-ivory/80 text-[10px] uppercase tracking-[0.22em] mt-1">more</span>
                               </div>
                             ) : (
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors flex items-center justify-center">
-                                <Expand className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <div className="absolute inset-0 bg-bridal-charcoal/0 group-hover:bg-bridal-charcoal/35 transition-colors flex items-center justify-center">
+                                <Expand className="w-4 h-4 text-bridal-ivory opacity-0 group-hover:opacity-100 transition-opacity" />
                               </div>
                             )}
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-2 gap-2 rounded-2xl overflow-hidden mb-2">
+                      <div className="grid grid-cols-2 gap-2 rounded-md overflow-hidden">
                         {galleryImages.map((img, i) => (
-                          <div
-                            key={i}
-                            className="relative cursor-pointer group overflow-hidden rounded-xl aspect-[4/3]"
-                            onClick={() => openLightbox(i)}
-                          >
-                            <Image
-                              src={img}
-                              alt={`${vendor.name} - ${i + 1}`}
-                              fill
-                              className="object-cover transition-transform duration-700 group-hover:scale-110"
-                              sizes="50vw"
-                            />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors flex items-center justify-center">
-                              <Expand className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <div key={i} className="relative cursor-pointer group overflow-hidden rounded-md aspect-[4/3]" onClick={() => openLightbox(i)}>
+                            <Image src={img} alt={`${vendor.name} - ${i + 1}`} fill className="object-cover transition-transform duration-700 group-hover:scale-110" sizes="50vw" />
+                            <div className="absolute inset-0 bg-bridal-charcoal/0 group-hover:bg-bridal-charcoal/30 transition-colors flex items-center justify-center">
+                              <Expand className="w-5 h-5 text-bridal-ivory opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
                           </div>
                         ))}
@@ -1235,8 +1117,9 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
 
                     {galleryImages.length > 1 && (
                       <button
+                        type="button"
                         onClick={() => openLightbox(0)}
-                        className="w-full mt-1 py-2.5 rounded-xl border border-neutral-200 text-sm font-medium text-neutral-600 hover:border-purple-300 hover:text-purple-700 hover:bg-purple-50 transition-all duration-200 flex items-center justify-center gap-2"
+                        className="w-full mt-4 py-3 rounded-[4px] border border-bridal-beige bg-bridal-ivory hover:border-bridal-gold/55 hover:bg-bridal-cream font-bridal text-[12px] uppercase tracking-[0.22em] font-medium text-bridal-charcoal hover:text-bridal-gold-dark transition-all flex items-center justify-center gap-2"
                       >
                         <Camera className="w-4 h-4" />
                         View all {galleryImages.length} photos
@@ -1244,63 +1127,47 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                     )}
                   </TabsContent>
 
-                  <TabsContent value="pricing" className="p-4 sm:p-6">
-                    <div className="space-y-6">
+                  {/* ── PRICING ── */}
+                  <TabsContent value="pricing" className="p-5 sm:p-7 lg:p-8 mt-0">
+                    <div className="space-y-7">
                       {/* Bridal Wear — Outfit Listings */}
                       {vendor.type === "Bridal wearing" && (
                         <div className="space-y-4">
-                          <h3 className="text-lg font-semibold">
-                            Outfit Listings
-                          </h3>
+                          <h3 className="font-display italic text-[22px] text-bridal-charcoal">Outfit Listings</h3>
                           {(vendor.packages || []).length > 0 ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               {(vendor.packages || []).map((pkg, index) => {
                                 const imgs = (pkg.images ?? []).map(resolveImg);
                                 const badges = getFeatureBadges(pkg);
                                 return (
-                                  <div
-                                    key={index}
-                                    className="border border-neutral-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow"
-                                  >
-                                    {/* Image section */}
-                                    <div className="relative aspect-[4/3] bg-neutral-100">
+                                  <div key={index} className="border border-bridal-beige bg-bridal-cream rounded-md overflow-hidden hover:shadow-[0_18px_36px_-26px_rgba(176,125,84,0.5)] hover:border-bridal-gold/55 transition-all duration-500 group">
+                                    <div className="relative aspect-[4/3] bg-bridal-ivory overflow-hidden">
                                       {imgs.length > 0 ? (
                                         <>
-                                          <Image
-                                            src={imgs[0]}
-                                            alt={pkg.name}
-                                            fill
-                                            className="object-cover"
-                                          />
+                                          <Image src={imgs[0]} alt={pkg.name} fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
                                           {imgs.length > 1 && (
-                                            <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">
+                                            <div className="absolute bottom-2 right-2 bg-bridal-charcoal/70 backdrop-blur-sm text-bridal-ivory text-[10px] font-bridal uppercase tracking-[0.2em] px-2.5 py-1 rounded-full">
                                               +{imgs.length - 1} photos
                                             </div>
                                           )}
                                         </>
                                       ) : (
                                         <div className="absolute inset-0 flex items-center justify-center">
-                                          <Sparkles className="w-10 h-10 text-neutral-300" />
+                                          <Sparkles className="w-10 h-10 text-bridal-gold/40" />
                                         </div>
                                       )}
                                     </div>
-                                    {/* Card body */}
                                     <div className="p-4 space-y-3">
                                       <div className="flex items-start justify-between gap-2">
-                                        <h4 className="font-semibold text-neutral-900 text-base leading-tight">
-                                          {pkg.name}
-                                        </h4>
-                                        <Badge className="shrink-0 bg-purple-100 text-purple-700 border-purple-200 text-sm">
+                                        <h4 className="font-display italic text-[18px] text-bridal-charcoal leading-tight">{pkg.name}</h4>
+                                        <span className="shrink-0 font-display italic text-[18px] text-bridal-gold-dark">
                                           {formatPrice(pkg.price)}
-                                        </Badge>
+                                        </span>
                                       </div>
                                       {badges.map((group, gi) => (
                                         <div key={gi} className="flex flex-wrap gap-1.5">
                                           {group.values.map((val, vi) => (
-                                            <span
-                                              key={vi}
-                                              className="inline-block bg-neutral-100 text-neutral-600 text-xs px-2 py-0.5 rounded-full border border-neutral-200"
-                                            >
+                                            <span key={vi} className="inline-block bg-bridal-ivory text-bridal-charcoal/80 text-[11px] px-2 py-0.5 rounded-full border border-bridal-beige font-bridal">
                                               {val}
                                             </span>
                                           ))}
@@ -1312,15 +1179,14 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                               })}
                             </div>
                           ) : (
-                            <p className="text-sm text-neutral-500 text-center py-4">
-                              No outfit listings yet. Contact the store for
-                              details.
+                            <p className="font-bridal text-[13px] text-bridal-text-soft text-center py-6">
+                              No outfit listings yet. Contact the store for details.
                             </p>
                           )}
                         </div>
                       )}
 
-                      {/* Car Rental — Cars + Packages (two separate sections) */}
+                      {/* Car Rental — Cars + Packages */}
                       {vendor.type === "Car rental" && (() => {
                         const allPkgs = vendor.packages || [];
                         const carPkgs = allPkgs.filter(pkg => {
@@ -1333,19 +1199,16 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                         });
                         return (
                           <>
-                            {/* Cars section */}
                             <div className="space-y-4">
-                              <h3 className="text-lg font-semibold flex items-center gap-2">
-                                <Car className="w-5 h-5 text-blue-500" />
+                              <h3 className="font-display italic text-[22px] text-bridal-charcoal flex items-center gap-2">
+                                <Car className="w-5 h-5 text-bridal-gold" />
                                 Cars
                               </h3>
                               {carPkgs.length > 0 ? (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                   {carPkgs.map((pkg, index) => {
                                     const imgs = (pkg.images ?? []).map(resolveImg);
-                                    const f = !Array.isArray(pkg.features)
-                                      ? (pkg.features as Record<string, string[]>)
-                                      : {};
+                                    const f = !Array.isArray(pkg.features) ? (pkg.features as Record<string, string[]>) : {};
                                     const vehicleType = f.vehicleType?.[0];
                                     const year = f.year?.[0];
                                     const color = f.color?.[0];
@@ -1355,20 +1218,17 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                                     const hasAC = f.ac?.[0] === "Yes";
                                     const hasDecor = f.decoration?.[0] === "Available";
                                     return (
-                                      <div
-                                        key={index}
-                                        className="border border-neutral-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow bg-white"
-                                      >
-                                        <div className="relative aspect-video bg-neutral-100">
+                                      <div key={index} className="border border-bridal-beige bg-bridal-cream rounded-md overflow-hidden hover:shadow-[0_18px_36px_-26px_rgba(176,125,84,0.5)] hover:border-bridal-gold/55 transition-all duration-500">
+                                        <div className="relative aspect-video bg-bridal-ivory">
                                           {imgs.length > 0 ? (
                                             <Image src={imgs[0]} alt={pkg.name} fill className="object-cover" />
                                           ) : (
                                             <div className="absolute inset-0 flex items-center justify-center">
-                                              <Car className="w-10 h-10 text-neutral-300" />
+                                              <Car className="w-10 h-10 text-bridal-gold/40" />
                                             </div>
                                           )}
                                           {vehicleType && (
-                                            <span className="absolute top-2 left-2 text-[11px] font-semibold bg-blue-600 text-white px-2 py-0.5 rounded-full">
+                                            <span className="absolute top-2 left-2 font-bridal text-[10px] uppercase tracking-[0.22em] bg-bridal-gold/95 text-bridal-charcoal px-2.5 py-1 rounded-full">
                                               {vehicleType}
                                             </span>
                                           )}
@@ -1376,68 +1236,56 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                                         <div className="p-4 space-y-3">
                                           <div className="flex items-start justify-between gap-2">
                                             <div>
-                                              <h4 className="font-bold text-neutral-900 text-base leading-tight">{pkg.name}</h4>
-                                              <p className="text-xs text-neutral-400 mt-0.5">{[year, color].filter(Boolean).join(" · ")}</p>
+                                              <h4 className="font-display italic text-[18px] text-bridal-charcoal leading-tight">{pkg.name}</h4>
+                                              <p className="font-bridal text-[11px] text-bridal-text-soft mt-0.5">{[year, color].filter(Boolean).join(" · ")}</p>
                                             </div>
                                             <div className="text-right shrink-0">
-                                              <p className="text-base font-extrabold text-purple-600">{formatPrice(pkg.price)}</p>
-                                              <p className="text-[10px] text-neutral-400">per event</p>
+                                              <p className="font-display italic text-[20px] text-bridal-gold-dark leading-none">{formatPrice(pkg.price)}</p>
+                                              <p className="font-bridal text-[10px] uppercase tracking-[0.2em] text-bridal-text-soft mt-1">per event</p>
                                             </div>
                                           </div>
                                           <div className="flex flex-wrap gap-1.5">
                                             {seats && (
-                                              <span className="inline-flex items-center gap-1 text-[11px] bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full border border-neutral-200">
-                                                👥 {seats} seats
+                                              <span className="inline-flex items-center gap-1 text-[11px] bg-bridal-ivory text-bridal-charcoal px-2 py-0.5 rounded-full border border-bridal-beige font-bridal">
+                                                <Users className="w-3 h-3" /> {seats} seats
                                               </span>
                                             )}
                                             {units && (
-                                              <span className="inline-flex items-center gap-1 text-[11px] bg-green-50 text-green-700 px-2 py-0.5 rounded-full border border-green-200">
-                                                🚗 {units} available
+                                              <span className="inline-flex items-center gap-1 text-[11px] bg-bridal-sage/20 text-[#3F6B43] px-2 py-0.5 rounded-full border border-bridal-sage/40 font-bridal">
+                                                {units} available
                                               </span>
                                             )}
                                           </div>
-                                          <div className="flex flex-wrap gap-1.5 pt-1 border-t border-neutral-100">
-                                            <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border ${withDriver ? "bg-purple-50 text-purple-700 border-purple-200" : "bg-neutral-50 text-neutral-400 border-neutral-200"}`}>
-                                              🧑 Driver {withDriver ? "Included" : "Not Included"}
+                                          <div className="flex flex-wrap gap-1.5 pt-2 border-t border-bridal-beige/70">
+                                            <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border font-bridal ${withDriver ? "bg-bridal-blush text-bridal-mauve border-bridal-rose/45" : "bg-bridal-ivory text-bridal-text-soft border-bridal-beige"}`}>
+                                              Driver {withDriver ? "Included" : "Not Included"}
                                             </span>
-                                            <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border ${hasAC ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-neutral-50 text-neutral-400 border-neutral-200"}`}>
-                                              ❄️ {hasAC ? "AC" : "No AC"}
+                                            <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border font-bridal ${hasAC ? "bg-bridal-cream text-bridal-gold-dark border-bridal-gold/45" : "bg-bridal-ivory text-bridal-text-soft border-bridal-beige"}`}>
+                                              {hasAC ? "AC" : "No AC"}
                                             </span>
                                             {hasDecor && (
-                                              <span className="inline-flex items-center gap-1 text-[11px] bg-pink-50 text-pink-700 px-2 py-0.5 rounded-full border border-pink-200">
-                                                🌸 Decoration
+                                              <span className="inline-flex items-center gap-1 text-[11px] bg-bridal-coral/15 text-bridal-coral px-2 py-0.5 rounded-full border border-bridal-coral/30 font-bridal">
+                                                Decoration
                                               </span>
                                             )}
                                           </div>
-                                          {pkg.description && (
-                                            <p className="text-xs text-neutral-500 leading-relaxed pt-1 border-t border-neutral-100">
-                                              {pkg.description}
-                                            </p>
-                                          )}
                                         </div>
                                       </div>
                                     );
                                   })}
                                 </div>
                               ) : (
-                                <p className="text-sm text-neutral-500 text-center py-4">
+                                <p className="font-bridal text-[13px] text-bridal-text-soft text-center py-6">
                                   No cars listed yet. Contact the vendor for availability.
                                 </p>
                               )}
                             </div>
 
-                            {/* Packages section */}
                             {servicePkgs.length > 0 && (
                               <div className="space-y-4">
-                                <h3 className="text-lg font-semibold">Packages</h3>
+                                <h3 className="font-display italic text-[22px] text-bridal-charcoal">Packages</h3>
                                 {servicePkgs.map((pkg, index) => (
-                                  <PackageCard
-                                    key={index}
-                                    pkg={pkg}
-                                    formatPrice={formatPrice}
-                                    onBook={handleBookNow}
-                                    pricingLabel="per event"
-                                  />
+                                  <PackageCard key={index} pkg={pkg} formatPrice={formatPrice} onBook={handleBookNow} pricingLabel="per event" />
                                 ))}
                               </div>
                             )}
@@ -1445,11 +1293,10 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                         );
                       })()}
 
-                      {/* Generic Packages — all other vendor types */}
-                      {vendor.type !== "Bridal wearing" &&
-                        vendor.type !== "Car rental" && (
+                      {/* Generic Packages */}
+                      {vendor.type !== "Bridal wearing" && vendor.type !== "Car rental" && (
                         <div className="space-y-4">
-                          <h3 className="text-lg font-semibold">Packages</h3>
+                          <h3 className="font-display italic text-[22px] text-bridal-charcoal">Packages</h3>
                           {(vendor.packages || []).length > 0 ? (
                             (vendor.packages || []).map((pkg, index) => (
                               <PackageCard
@@ -1465,90 +1312,85 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                               />
                             ))
                           ) : (
-                            <p className="text-sm text-neutral-500 text-center py-4">
-                              No packages available yet. Contact the vendor for
-                              pricing.
+                            <p className="font-bridal text-[13px] text-bridal-text-soft text-center py-6">
+                              No packages available yet. Contact the vendor for pricing.
                             </p>
                           )}
                         </div>
                       )}
 
                       {/* Menus */}
-                      {Array.isArray(vendor.menus) &&
-                        vendor.menus.length > 0 && (
-                          <div className="space-y-4">
-                            <h3 className="text-lg font-semibold flex items-center gap-2">
-                              <Utensils className="w-5 h-5 text-purple-500" />
-                              Menus
-                            </h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                              {vendor.menus.map((menu, index) => {
-                                const menuItems = Array.isArray(
-                                  menu.data?.items,
-                                )
-                                  ? menu.data!.items
-                                  : [];
-                                return (
-                                  <div
-                                    key={menu.id ?? index}
-                                    className="border border-neutral-200 rounded-xl p-4 sm:p-6"
-                                  >
-                                    <div className="flex items-start justify-between gap-3 mb-3">
-                                      <h4 className="text-base sm:text-lg font-semibold capitalize">
-                                        {menu.title}
-                                      </h4>
-                                      <Badge className="w-fit bg-purple-100 text-purple-700 border-purple-200 shrink-0">
-                                        Rs. {menu.price?.toLocaleString()}/head
-                                      </Badge>
-                                    </div>
-                                    {menuItems.length > 0 && (
-                                      <div className="flex flex-wrap gap-1.5 mt-2">
-                                        {menuItems.map((item, i) => (
-                                          <Badge
-                                            key={i}
-                                            variant="outline"
-                                            className="text-xs font-normal bg-neutral-50"
-                                          >
-                                            {String(item)}
-                                          </Badge>
-                                        ))}
-                                      </div>
-                                    )}
+                      {Array.isArray(vendor.menus) && vendor.menus.length > 0 && (
+                        <div className="space-y-4">
+                          <h3 className="font-display italic text-[22px] text-bridal-charcoal flex items-center gap-2">
+                            <Utensils className="w-5 h-5 text-bridal-gold" />
+                            Menus
+                          </h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {vendor.menus.map((menu, index) => {
+                              const menuItems = Array.isArray(menu.data?.items) ? menu.data!.items : [];
+                              return (
+                                <div key={menu.id ?? index} className="border border-bridal-beige bg-bridal-cream rounded-md p-5">
+                                  <div className="flex items-start justify-between gap-3 mb-3">
+                                    <h4 className="font-display italic text-[18px] text-bridal-charcoal capitalize leading-tight">{menu.title}</h4>
+                                    <span className="font-display italic text-[16px] text-bridal-gold-dark shrink-0">
+                                      Rs. {menu.price?.toLocaleString()}<span className="font-bridal text-[10px] uppercase tracking-[0.2em] text-bridal-text-soft ml-1">/head</span>
+                                    </span>
                                   </div>
-                                );
-                              })}
-                            </div>
+                                  {menuItems.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 pt-3 border-t border-bridal-beige/70">
+                                      {menuItems.map((item, i) => (
+                                        <span key={i} className="inline-block px-2.5 py-1 rounded-full bg-bridal-ivory border border-bridal-beige font-bridal text-[11.5px] text-bridal-charcoal/80">
+                                          {String(item)}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
-                        )}
+                        </div>
+                      )}
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="reviews" className="p-4 sm:p-6">
-                    <div className="space-y-5">
-                      {/* Summary bar */}
+                  {/* ── REVIEWS ── */}
+                  <TabsContent value="reviews" className="p-5 sm:p-7 lg:p-8 mt-0">
+                    <div className="space-y-6">
+                      {/* Summary band */}
                       {liveReviews.length > 0 && (
-                        <div className="flex items-center gap-4 p-4 bg-yellow-50 border border-yellow-100 rounded-xl">
-                          <div className="text-center">
-                            <p className="text-3xl font-extrabold text-yellow-500">{avgRating?.toFixed(1) ?? "—"}</p>
-                            <div className="flex items-center justify-center gap-0.5 mt-0.5">
-                              {[1,2,3,4,5].map(s => (
-                                <Star key={s} className={`w-3.5 h-3.5 ${s <= Math.round(avgRating ?? 0) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 p-5 rounded-md border border-bridal-gold/40 bg-bridal-cream">
+                          <div className="text-center min-w-[110px]">
+                            <p className="font-display italic text-[44px] text-bridal-gold-dark leading-none">
+                              {avgRating?.toFixed(1) ?? "—"}
+                            </p>
+                            <div className="flex items-center justify-center gap-0.5 mt-2">
+                              {[1, 2, 3, 4, 5].map(s => (
+                                <Star
+                                  key={s}
+                                  className={`w-4 h-4 ${s <= Math.round(avgRating ?? 0) ? "fill-bridal-gold text-bridal-gold" : "text-bridal-beige"}`}
+                                />
                               ))}
                             </div>
                           </div>
-                          <div className="text-sm text-neutral-500">
-                            Based on <span className="font-semibold text-neutral-700">{liveReviews.length}</span> {liveReviews.length === 1 ? "review" : "reviews"}
+                          <div className="flex-1">
+                            <p className="font-bridal text-[12px] uppercase tracking-[0.25em] font-medium text-bridal-text-label mb-1">
+                              Verified guest reviews
+                            </p>
+                            <p className="font-bridal text-[14px] text-bridal-charcoal/85">
+                              Based on <span className="font-display italic text-bridal-charcoal text-[16px]">{liveReviews.length}</span> {liveReviews.length === 1 ? "review" : "reviews"} from real bookings.
+                            </p>
                           </div>
                         </div>
                       )}
 
                       {/* Write a review */}
                       {isAuthenticated && userBookingId && !alreadyReviewed && (
-                        <div className="border border-purple-100 rounded-xl p-4 sm:p-5 bg-purple-50/40 space-y-4">
-                          <h4 className="font-semibold text-neutral-800">Write a Review</h4>
-                          {/* Star picker */}
+                        <div className="border border-bridal-gold/35 bg-bridal-cream rounded-md p-5 sm:p-6 space-y-4">
+                          <h4 className="font-display italic text-[20px] text-bridal-charcoal">Write a review</h4>
                           <div className="flex items-center gap-1">
-                            {[1,2,3,4,5].map(s => (
+                            {[1, 2, 3, 4, 5].map(s => (
                               <button
                                 key={s}
                                 type="button"
@@ -1557,85 +1399,89 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                                 onMouseLeave={() => setReviewHover(0)}
                                 className="p-0.5"
                               >
-                                <Star className={`w-7 h-7 transition-colors ${s <= (reviewHover || reviewRating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                                <Star className={`w-7 h-7 transition-colors ${s <= (reviewHover || reviewRating) ? "fill-bridal-gold text-bridal-gold" : "text-bridal-beige"}`} />
                               </button>
                             ))}
                             {reviewRating > 0 && (
-                              <span className="ml-2 text-sm text-neutral-500">
-                                {["","Poor","Fair","Good","Very Good","Excellent"][reviewRating]}
+                              <span className="ml-3 font-bridal text-[12px] uppercase tracking-[0.22em] text-bridal-gold-dark">
+                                {["", "Poor", "Fair", "Good", "Very Good", "Excellent"][reviewRating]}
                               </span>
                             )}
                           </div>
-                          {/* Comment */}
                           <textarea
                             value={reviewComment}
                             onChange={e => setReviewComment(e.target.value)}
-                            placeholder="Share your experience with this vendor..."
+                            placeholder="Share your experience with this vendor…"
                             rows={3}
-                            className="w-full text-sm border border-purple-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-purple-400/20 focus:border-purple-400 resize-none bg-white"
+                            className="w-full font-bridal text-[14px] border border-bridal-beige rounded-[4px] p-4 focus:outline-none focus:ring-1 focus:ring-bridal-gold focus:border-bridal-gold/55 resize-none bg-bridal-ivory text-bridal-charcoal placeholder:text-bridal-text-soft"
                           />
-                          <Button
+                          <button
+                            type="button"
                             onClick={handleReviewSubmit}
                             disabled={reviewRating === 0 || reviewSubmitting}
-                            className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white"
+                            className="inline-flex items-center justify-center gap-2 h-11 px-7 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {reviewSubmitting ? "Submitting…" : "Submit Review"}
-                          </Button>
+                            {reviewSubmitting ? "Submitting…" : "Submit review"}
+                          </button>
                         </div>
                       )}
 
                       {isAuthenticated && alreadyReviewed && (
-                        <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                        <div className="flex items-center gap-2 font-bridal text-[13px] text-[#3F6B43] bg-bridal-sage/15 border border-bridal-sage/40 rounded-md px-4 py-3">
                           <CheckCircle className="w-4 h-4 shrink-0" />
                           You've already reviewed this vendor. Thank you!
                         </div>
                       )}
 
                       {!isAuthenticated && (
-                        <p className="text-sm text-neutral-500 text-center py-2">
-                          <button onClick={() => router.push("/login")} className="text-purple-600 font-medium hover:underline">Log in</button> to leave a review after your booking.
+                        <p className="font-bridal text-[13px] text-bridal-text-soft text-center py-2">
+                          <button onClick={() => router.push("/login")} className="font-medium text-bridal-gold-dark hover:text-bridal-mauve underline-offset-4 hover:underline">
+                            Log in
+                          </button>{" "}
+                          to leave a review after your booking.
                         </p>
                       )}
 
-                      {/* Reviews list */}
                       {reviewsLoading && (
-                        <div className="flex justify-center py-8">
-                          <div className="w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                        <div className="flex justify-center py-10">
+                          <div className="w-6 h-6 border-2 border-bridal-gold border-t-transparent rounded-full animate-spin" />
                         </div>
                       )}
 
                       {!reviewsLoading && liveReviews.length === 0 && (
-                        <p className="text-sm text-neutral-500 text-center py-8">
+                        <p className="font-bridal text-[13px] text-bridal-text-soft text-center py-10">
                           No reviews yet. Be the first to book and leave a review!
                         </p>
                       )}
 
                       {liveReviews.map((review) => (
-                        <div key={review.id} className="border border-neutral-200 rounded-xl p-4 sm:p-5 space-y-2">
-                          <div className="flex items-start justify-between gap-2">
+                        <div key={review.id} className="border border-bridal-beige bg-bridal-ivory rounded-md p-5 space-y-3">
+                          <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="font-semibold text-sm text-neutral-800">
+                              <p className="font-display italic text-[17px] text-bridal-charcoal">
                                 {review.user?.fullName || "Anonymous"}
                               </p>
-                              <div className="flex items-center gap-1.5 mt-0.5">
+                              <div className="flex items-center gap-2 mt-1">
                                 <div className="flex">
-                                  {[1,2,3,4,5].map(s => (
-                                    <Star key={s} className={`w-3.5 h-3.5 ${s <= review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                                  {[1, 2, 3, 4, 5].map(s => (
+                                    <Star key={s} className={`w-3.5 h-3.5 ${s <= review.rating ? "fill-bridal-gold text-bridal-gold" : "text-bridal-beige"}`} />
                                   ))}
                                 </div>
-                                <span className="text-xs text-gray-400">
-                                  {new Date(review.createdAt).toLocaleDateString("en-PK", { year:"numeric", month:"short", day:"numeric" })}
+                                <span className="font-bridal text-[11px] text-bridal-text-soft">
+                                  {new Date(review.createdAt).toLocaleDateString("en-PK", { year: "numeric", month: "short", day: "numeric" })}
                                 </span>
                               </div>
                             </div>
                           </div>
                           {review.comment && (
-                            <p className="text-sm text-gray-600 leading-relaxed">{review.comment}</p>
+                            <p className="font-bridal text-[14px] text-bridal-charcoal/85 leading-[1.7]">{review.comment}</p>
                           )}
                           {review.reply && (
-                            <div className="mt-2 pl-3 border-l-2 border-purple-200 text-sm text-neutral-600 bg-purple-50/40 rounded-r-lg py-2 pr-3">
-                              <span className="font-semibold text-purple-700 text-xs uppercase tracking-wide">Vendor reply: </span>
-                              {review.reply}
+                            <div className="mt-2 pl-4 border-l-2 border-bridal-gold/45 text-bridal-charcoal/85 bg-bridal-cream rounded-r-md py-3 pr-3">
+                              <span className="font-bridal text-[10px] uppercase tracking-[0.25em] font-medium text-bridal-gold-dark mr-2">
+                                Vendor reply
+                              </span>
+                              <span className="font-bridal text-[13.5px]">{review.reply}</span>
                             </div>
                           )}
                         </div>
@@ -1644,152 +1490,156 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                   </TabsContent>
                 </Tabs>
               </CardContent>
-            </Card>
+            </BridalSectionCard>
           </div>
 
-          {/* Sidebar - Hidden on Mobile, Visible on Desktop */}
-          <div className="hidden lg:block lg:col-span-4 space-y-6">
-            {/* Availability Calendar */}
-            <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold text-neutral-900 flex items-center gap-2">
-                  <CalendarCheck className="w-5 h-5 text-purple-500" />
-                  Check Availability
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Calendar18
-                  selected={selectedDate}
-                  onSelect={handleDateSelect}
-                  disabled={isDateDisabled}
-                  month={calendarMonth}
-                  onMonthChange={setCalendarMonth}
-                  modifiers={{
-                    fullyBooked: fullyBookedDates,
-                    vendorBlocked: vendorBlockedDates,
-                  }}
-                  modifiersClassNames={{
-                    fullyBooked: "bg-red-50 text-red-300 line-through",
-                    vendorBlocked: "bg-orange-50 text-orange-300 line-through opacity-60",
-                  }}
-                />
-
-                {/* Legend */}
-                <div className="flex flex-wrap gap-3 mt-3 text-[11px] text-neutral-400">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-white border-2 border-neutral-300" />
-                    Available
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-100 border border-red-300" />
-                    Fully booked
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-orange-100 border border-orange-300" />
-                    Vendor unavailable
-                  </span>
-                </div>
-
-                {selectedDate && (
-                  <div className={`mt-4 p-3 rounded-lg border ${
-                    availability[toDateKey(selectedDate)]?.isBlocked
-                      ? "bg-orange-50 border-orange-200"
-                      : isDateAvailable
-                      ? "bg-green-50 border-green-200"
-                      : "bg-red-50 border-red-200"
-                  }`}>
-                    <p className="text-sm font-medium text-neutral-700">
-                      {format(selectedDate, "MMMM dd, yyyy")}
-                    </p>
-                    <p className={`text-sm mt-0.5 ${
-                      availability[toDateKey(selectedDate)]?.isBlocked
-                        ? "text-orange-600"
-                        : isDateAvailable
-                        ? "text-green-600"
-                        : "text-red-600"
-                    }`}>
-                      {availability[toDateKey(selectedDate)]?.isBlocked
-                        ? (availability[toDateKey(selectedDate)]?.blockReason || "Vendor not available this day")
-                        : isDateAvailable
-                        ? "Available for booking"
-                        : "Fully booked"}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Contact / Location */}
-            <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold text-neutral-900 flex items-center gap-2">
-                  <MessageCircle className="w-5 h-5 text-purple-500" />
-                  Get in Touch
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <MapPin className="w-5 h-5 text-purple-500" />
-                  <span className="text-sm">
-                    {vendor.location || vendor.city}
-                  </span>
-                </div>
-                <Button
-                  onClick={handleMessageVendor}
-                  variant="outline"
-                  className="w-full border-purple-200 text-purple-600 hover:bg-purple-50"
-                >
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Message Vendor
-                </Button>
-                <Button
-                  onClick={handleBookNow}
-                  className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white"
-                >
-                  <CalendarCheck className="w-4 h-4 mr-2" />
-                  Book & Get Contact Details
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Booking Terms */}
-            {(vendor.downPayment || vendor.cancelationPolicy || vendor.cancellationPolicy) && (
-              <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold text-neutral-900 flex items-center gap-2">
-                    <DollarSign className="w-5 h-5 text-purple-500" />
-                    Booking Terms
+          {/* ── Sidebar ── */}
+          <aside className="hidden lg:block lg:col-span-4 space-y-6">
+            <div className="sticky top-24 space-y-6">
+              {/* Availability Calendar */}
+              <BridalSectionCard>
+                <CardHeader className="border-b border-bridal-beige bg-bridal-ivory rounded-t-md">
+                  <CardTitle className="font-display italic text-[20px] text-bridal-charcoal flex items-center gap-2">
+                    <CalendarCheck className="w-5 h-5 text-bridal-gold" />
+                    Check availability
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  {vendor.downPayment ? (
-                    <div className="flex items-start gap-3 p-3 bg-neutral-50 rounded-lg">
-                      <DollarSign className="w-4 h-4 text-purple-500 mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-xs text-neutral-500">Advance Payment Required</p>
-                        <p className="text-sm font-semibold text-neutral-800">
-                          {vendor.downPaymentType === "Percentage"
-                            ? `${vendor.downPayment}% of total amount`
-                            : formatPrice(vendor.downPayment)}
-                        </p>
-                      </div>
-                    </div>
-                  ) : null}
-                  {(vendor.cancelationPolicy || vendor.cancellationPolicy) && (
-                    <div className="flex items-start gap-3 p-3 bg-neutral-50 rounded-lg">
-                      <Clock className="w-4 h-4 text-purple-500 mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-xs text-neutral-500">Cancellation Policy</p>
-                        <p className="text-sm font-semibold text-neutral-800">
-                          {vendor.cancelationPolicy || vendor.cancellationPolicy}
-                        </p>
-                      </div>
+                <CardContent className="p-5">
+                  <Calendar18
+                    selected={selectedDate}
+                    onSelect={handleDateSelect}
+                    disabled={isDateDisabled}
+                    month={calendarMonth}
+                    onMonthChange={setCalendarMonth}
+                    modifiers={{
+                      fullyBooked: fullyBookedDates,
+                      vendorBlocked: vendorBlockedDates,
+                    }}
+                    modifiersClassNames={{
+                      fullyBooked: "bg-bridal-coral/15 text-bridal-coral line-through",
+                      vendorBlocked: "bg-bridal-beige/60 text-bridal-text-soft line-through opacity-60",
+                    }}
+                  />
+
+                  <div className="flex flex-wrap gap-3 mt-4 font-bridal text-[10.5px] uppercase tracking-[0.18em] text-bridal-text-soft">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-bridal-cream border-2 border-bridal-gold/60" />
+                      Available
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-bridal-coral/20 border border-bridal-coral/45" />
+                      Fully booked
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-bridal-beige border border-bridal-beige" />
+                      Unavailable
+                    </span>
+                  </div>
+
+                  {selectedDate && (
+                    <div
+                      className={`mt-4 p-3.5 rounded-md border ${
+                        availability[toDateKey(selectedDate)]?.isBlocked
+                          ? "bg-bridal-beige/40 border-bridal-beige"
+                          : isDateAvailable
+                          ? "bg-bridal-sage/15 border-bridal-sage/40"
+                          : "bg-bridal-coral/15 border-bridal-coral/40"
+                      }`}
+                    >
+                      <p className="font-display italic text-[16px] text-bridal-charcoal">
+                        {format(selectedDate, "MMMM dd, yyyy")}
+                      </p>
+                      <p
+                        className={`font-bridal text-[12px] uppercase tracking-[0.22em] font-medium mt-1 ${
+                          availability[toDateKey(selectedDate)]?.isBlocked
+                            ? "text-bridal-text-soft"
+                            : isDateAvailable
+                            ? "text-[#3F6B43]"
+                            : "text-bridal-coral"
+                        }`}
+                      >
+                        {availability[toDateKey(selectedDate)]?.isBlocked
+                          ? availability[toDateKey(selectedDate)]?.blockReason || "Vendor not available"
+                          : isDateAvailable
+                          ? "Available for booking"
+                          : "Fully booked"}
+                      </p>
                     </div>
                   )}
                 </CardContent>
-              </Card>
-            )}
-          </div>
+              </BridalSectionCard>
+
+              {/* Get in Touch */}
+              <BridalSectionCard>
+                <CardHeader className="border-b border-bridal-beige bg-bridal-ivory rounded-t-md">
+                  <CardTitle className="font-display italic text-[20px] text-bridal-charcoal flex items-center gap-2">
+                    <MessageCircle className="w-5 h-5 text-bridal-gold" />
+                    Get in touch
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-5 space-y-4">
+                  <div className="flex items-center gap-3 font-bridal text-[13px] text-bridal-charcoal/85">
+                    <MapPin className="w-4 h-4 text-bridal-gold" />
+                    <span>{vendor.location || vendor.city}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleMessageVendor}
+                    className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-[4px] border border-bridal-gold/45 bg-bridal-cream hover:bg-bridal-blush hover:border-bridal-mauve text-bridal-gold-dark hover:text-bridal-mauve font-bridal text-[12px] uppercase tracking-[0.22em] font-medium transition-colors"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    Message vendor
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleBookNow}
+                    className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] hover:shadow-[0_12px_28px_-12px_rgba(176,125,84,0.7)] transition-all duration-300"
+                  >
+                    <CalendarCheck className="w-4 h-4" />
+                    Book &amp; get details
+                  </button>
+                </CardContent>
+              </BridalSectionCard>
+
+              {/* Booking Terms */}
+              {(vendor.downPayment || vendor.cancelationPolicy || vendor.cancellationPolicy) && (
+                <BridalSectionCard>
+                  <CardHeader className="border-b border-bridal-beige bg-bridal-ivory rounded-t-md">
+                    <CardTitle className="font-display italic text-[20px] text-bridal-charcoal flex items-center gap-2">
+                      <Award className="w-5 h-5 text-bridal-gold" />
+                      Booking terms
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-5 space-y-3">
+                    {vendor.downPayment ? (
+                      <div className="flex items-start gap-3 p-3 bg-bridal-ivory rounded-md border border-bridal-beige/70">
+                        <DollarSign className="w-4 h-4 text-bridal-gold-dark mt-0.5 shrink-0" />
+                        <div>
+                          <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Advance Payment</p>
+                          <p className="font-bridal text-[13.5px] font-medium text-bridal-charcoal mt-0.5">
+                            {vendor.downPaymentType === "Percentage"
+                              ? `${vendor.downPayment}% of total`
+                              : formatPrice(vendor.downPayment)}
+                          </p>
+                        </div>
+                      </div>
+                    ) : null}
+                    {(vendor.cancelationPolicy || vendor.cancellationPolicy) && (
+                      <div className="flex items-start gap-3 p-3 bg-bridal-ivory rounded-md border border-bridal-beige/70">
+                        <Clock className="w-4 h-4 text-bridal-gold-dark mt-0.5 shrink-0" />
+                        <div>
+                          <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Cancellation Policy</p>
+                          <p className="font-bridal text-[13.5px] font-medium text-bridal-charcoal mt-0.5">
+                            {vendor.cancelationPolicy || vendor.cancellationPolicy}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </BridalSectionCard>
+              )}
+            </div>
+          </aside>
         </div>
       </div>
 
@@ -1804,32 +1654,31 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
         />
       )}
 
-      {/* ===== LIGHTBOX DIALOG ===== */}
+      {/* ===== Lightbox ===== */}
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-        <DialogContent className="max-w-screen max-h-screen w-screen h-screen p-0 bg-black border-0 rounded-none overflow-hidden flex flex-col">
+        <DialogContent className="max-w-screen max-h-screen w-screen h-screen p-0 bg-bridal-charcoal border-0 rounded-none overflow-hidden flex flex-col">
           <DialogTitle className="sr-only">Gallery — {vendor.name}</DialogTitle>
 
-          {/* Top bar */}
-          <div className="flex items-center justify-between px-5 py-3 bg-black/60 backdrop-blur-sm z-50 shrink-0">
+          <div className="flex items-center justify-between px-5 py-3.5 bg-bridal-charcoal/85 backdrop-blur-sm z-50 shrink-0 border-b border-bridal-ivory/10">
             <div>
-              <p className="text-white font-semibold text-sm leading-tight">{vendor.name}</p>
-              <p className="text-white/50 text-xs mt-0.5">Gallery</p>
+              <p className="font-display italic text-bridal-ivory text-[18px] leading-tight">{vendor.name}</p>
+              <p className="font-bridal text-bridal-ivory/55 text-[11px] uppercase tracking-[0.25em] mt-0.5">Gallery</p>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-white/70 text-sm font-medium tabular-nums">
+              <span className="font-bridal text-bridal-ivory/70 text-[12px] uppercase tracking-[0.25em] tabular-nums">
                 {lightboxIndex + 1} / {galleryImages.length}
               </span>
               <button
+                type="button"
                 onClick={() => setLightboxOpen(false)}
                 aria-label="Close gallery"
-                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                className="w-9 h-9 rounded-full bg-bridal-ivory/10 hover:bg-bridal-gold hover:text-bridal-charcoal flex items-center justify-center text-bridal-ivory transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* Main swiper */}
           <div className="flex-1 min-h-0">
             <Swiper
               modules={[Navigation]}
@@ -1843,42 +1692,30 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
               className="h-full w-full lightbox-swiper"
             >
               {galleryImages.map((img, i) => (
-                <SwiperSlide key={i} className="flex items-center justify-center bg-black">
+                <SwiperSlide key={i} className="flex items-center justify-center bg-bridal-charcoal">
                   <div className="relative w-full h-full">
-                    <Image
-                      src={img}
-                      alt={`${vendor.name} — ${i + 1}`}
-                      fill
-                      className="object-contain"
-                      sizes="100vw"
-                    />
+                    <Image src={img} alt={`${vendor.name} — ${i + 1}`} fill className="object-contain" sizes="100vw" />
                   </div>
                 </SwiperSlide>
               ))}
             </Swiper>
           </div>
 
-          {/* Thumbnail strip */}
           {galleryImages.length > 1 && (
-            <div ref={thumbStripRef} className="shrink-0 bg-black/80 backdrop-blur-sm py-3 px-4 overflow-x-auto scrollbar-none">
+            <div ref={thumbStripRef} className="shrink-0 bg-bridal-charcoal/85 backdrop-blur-sm py-3 px-4 overflow-x-auto scrollbar-none border-t border-bridal-ivory/10">
               <div className="flex gap-2 w-max mx-auto">
                 {galleryImages.map((img, i) => (
                   <button
                     key={i}
+                    type="button"
                     onClick={() => goToLightboxSlide(i)}
-                    className={`relative w-14 h-14 rounded-lg overflow-hidden shrink-0 transition-all duration-200 ${
+                    className={`relative w-16 h-16 rounded-md overflow-hidden shrink-0 transition-all duration-200 ${
                       i === lightboxIndex
-                        ? "ring-2 ring-purple-400 ring-offset-1 ring-offset-black opacity-100 scale-105"
-                        : "opacity-40 hover:opacity-70"
+                        ? "ring-2 ring-bridal-gold ring-offset-2 ring-offset-bridal-charcoal opacity-100 scale-105"
+                        : "opacity-45 hover:opacity-80"
                     }`}
                   >
-                    <Image
-                      src={img}
-                      alt={`Thumbnail ${i + 1}`}
-                      fill
-                      className="object-cover"
-                      sizes="56px"
-                    />
+                    <Image src={img} alt={`Thumbnail ${i + 1}`} fill className="object-cover" sizes="64px" />
                   </button>
                 ))}
               </div>
@@ -1886,6 +1723,52 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// ── Reusable section block (consistent typographic rhythm in Overview tab) ──
+function SectionBlock({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <div className="flex items-center gap-3 mb-4">
+        <span className="h-[1px] w-8 bg-bridal-gold/55" />
+        <h3 className="font-bridal text-[10.5px] uppercase tracking-[0.32em] font-medium text-bridal-gold-dark">
+          {title}
+        </h3>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+// ── Stat tile in vendor info card ──
+function StatTile({
+  icon,
+  iconBg,
+  iconColor,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  iconBg: string;
+  iconColor: string;
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-3 p-3.5 bg-bridal-ivory rounded-md border border-bridal-beige/70 hover:border-bridal-gold/45 transition-colors">
+      <div className={`w-10 h-10 rounded-full ${iconBg} ${iconColor} inline-flex items-center justify-center shrink-0`}>
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-label truncate">
+          {label}
+        </p>
+        <p className="font-bridal text-[13px] font-medium text-bridal-charcoal mt-0.5 truncate">
+          {value}
+        </p>
+      </div>
     </div>
   );
 }

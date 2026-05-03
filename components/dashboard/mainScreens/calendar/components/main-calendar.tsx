@@ -12,6 +12,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { BlockedDatesAPI, type BlockedDate } from '@/lib/api/dashboard';
 import BlockDateDialog from './block-date-dialog';
+import {
+    BusinessAvailabilityAPI,
+    type RecurringBlock,
+    type SlotAvailabilityRow,
+} from '@/lib/api/businessAvailability';
 
 type Mode = 'month' | 'week' | 'day';
 
@@ -28,6 +33,25 @@ export default function MainCalendar() {
     const [blockDialogOpen, setBlockDialogOpen] = useState(false);
     const [blockDialogDate, setBlockDialogDate] = useState<Date | null>(null);
     const [blockDialogExisting, setBlockDialogExisting] = useState<BlockedDate | null>(null);
+
+    // BK-011 — recurring blocks across ALL of this vendor's businesses, unioned.
+    // We materialise them into a Set<YYYY-MM-DD> per visible cursor month
+    // rather than storing per-date rows; one rule covers years.
+    const [recurringRules, setRecurringRules] = useState<
+        Array<RecurringBlock & { businessName?: string | null }>
+    >([]);
+
+    // BK-008/15/19/53 + BK-CALENDAR-SLOT-CHIPS follow-up — slot availability
+    // per day for the SELECTED business. Toolbar's `<Building2>` picker is
+    // shown when the vendor owns >1 business; defaults to first-with-templates
+    // so single-business vendors see chips with zero clicks.
+    const [slotAvailabilityByDate, setSlotAvailabilityByDate] = useState<
+        Record<string, SlotAvailabilityRow[]>
+    >({});
+    const [slotBusinessId, setSlotBusinessId] = useState<number | null>(null);
+    const [businessOptions, setBusinessOptions] = useState<
+        Array<{ id: number; name: string; hasTemplates: boolean }>
+    >([]);
 
     const [cursor, setCursor] = useState<Date>(() => {
         const t = new Date();
@@ -123,6 +147,107 @@ export default function MainCalendar() {
         fetchBlockedDates(cursor);
     }, [cursor, fetchBlockedDates]);
 
+    // BK-011 — fetch recurring rules across all vendor's businesses once.
+    // Rules don't change per month; the materialisation does.
+    useEffect(() => {
+        let alive = true;
+        (async () => {
+            try {
+                const res = await axiosInstance.get('/api/v1/businesses/user-business');
+                const list: Array<{ id: number; name?: string }> =
+                    res.data?.data?.data ?? res.data?.data ?? [];
+                if (!Array.isArray(list) || list.length === 0) return;
+                const allRules: Array<RecurringBlock & { businessName?: string | null }> = [];
+                for (const biz of list) {
+                    try {
+                        const r = await BusinessAvailabilityAPI.listRecurringBlocks(biz.id);
+                        const blocks = r?.blocks ?? [];
+                        for (const b of blocks) {
+                            allRules.push({ ...b, businessName: biz.name ?? null });
+                        }
+                    } catch { /* swallow per-business; continue */ }
+                }
+                if (alive) setRecurringRules(allRules);
+            } catch { /* silent */ }
+        })();
+        return () => {
+            alive = false;
+        };
+    }, []);
+
+    // BK-008/15/19/53 — fetch bulk slot availability for the visible month
+    // when the vendor has at least one slot-template-aware business. Auto-picks
+    // the first business that has any active templates so single-business
+    // vendors get chips with zero clicks. Multi-business vendors can still
+    // manage availability per-business via the AvailabilityDrawer.
+    // Effect 1 — load the vendor's business list + mark which have active
+    // slot templates. Runs ONCE; auto-picks the first template-enabled biz
+    // as the initial `slotBusinessId` so single-business vendors see chips
+    // with zero clicks. The toolbar's <Select> shows whenever there are
+    // multiple businesses.
+    useEffect(() => {
+        let alive = true;
+        (async () => {
+            try {
+                const res = await axiosInstance.get('/api/v1/businesses/user-business');
+                const list: Array<{ id: number; name?: string }> =
+                    res.data?.data?.data ?? res.data?.data ?? [];
+                if (!Array.isArray(list) || list.length === 0) return;
+
+                const enriched: Array<{ id: number; name: string; hasTemplates: boolean }> = [];
+                let firstWithTemplates: number | null = null;
+                for (const biz of list) {
+                    let hasTemplates = false;
+                    try {
+                        const t = await axiosInstance.get(`/api/v1/businesses/${biz.id}/slots`);
+                        const templates: unknown[] =
+                            t.data?.data?.templates ?? t.data?.data ?? [];
+                        hasTemplates = Array.isArray(templates) && templates.length > 0;
+                    } catch { /* assume no templates */ }
+                    enriched.push({ id: biz.id, name: biz.name ?? `Business #${biz.id}`, hasTemplates });
+                    if (hasTemplates && firstWithTemplates == null) {
+                        firstWithTemplates = biz.id;
+                    }
+                }
+                if (!alive) return;
+                setBusinessOptions(enriched);
+                // Don't override an explicit user pick if state already has one.
+                setSlotBusinessId((curr) => (curr != null ? curr : firstWithTemplates));
+            } catch { /* silent — chips just don't render */ }
+        })();
+        return () => {
+            alive = false;
+        };
+    }, []);
+
+    // Effect 2 — fetch bulk slot availability whenever the SELECTED business
+    // OR visible month changes. Range = ~42 cells; backend caps at 60d.
+    useEffect(() => {
+        if (slotBusinessId == null) {
+            setSlotAvailabilityByDate({});
+            return;
+        }
+        let alive = true;
+        (async () => {
+            try {
+                const start = new Date(cursor);
+                start.setDate(1);
+                start.setDate(start.getDate() - 7);
+                const end = new Date(cursor);
+                end.setMonth(end.getMonth() + 1, 0);
+                end.setDate(end.getDate() + 7);
+                const bulk = await BusinessAvailabilityAPI.getBulkAvailability(
+                    slotBusinessId, ymd(start), ymd(end),
+                );
+                if (alive) setSlotAvailabilityByDate(bulk?.days ?? {});
+            } catch { /* silent */ }
+        })();
+        return () => {
+            alive = false;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [slotBusinessId, cursor.getMonth(), cursor.getFullYear()]);
+
     const blockedDateSet = useMemo(() => {
         const s = new Set<string>();
         blockedDates.forEach((bd) => s.add(bd.blockedDate));
@@ -134,6 +259,52 @@ export default function MainCalendar() {
         blockedDates.forEach((bd) => m.set(bd.blockedDate, bd));
         return m;
     }, [blockedDates]);
+
+    // Materialise BK-011 rules into a Set<YYYY-MM-DD> for the current cursor
+    // month (plus a Map<date,reason> for hover tooltips).
+    //
+    // weekdayMask uses Mon=1..Sun=64 (BusinessSlotTemplate convention).
+    // JS Date.getDay returns Sun=0..Sat=6; map at noon-local to dodge UTC drift.
+    const recurringBlockedMap = useMemo(() => {
+        const m = new Map<string, { reason: string; businessName: string | null }>();
+        if (!recurringRules.length) return m;
+        // Materialise across the visible month + a small buffer so prev/next
+        // month cells in the grid also paint.
+        const start = new Date(cursor);
+        start.setDate(1);
+        start.setDate(start.getDate() - 7); // padding for prev month leaks
+        const end = new Date(cursor);
+        end.setMonth(end.getMonth() + 1, 0);
+        end.setDate(end.getDate() + 7); // padding for next month leaks
+
+        for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            const probe = new Date(d);
+            probe.setHours(12, 0, 0, 0); // noon to dodge UTC drift
+            const jsDay = probe.getDay(); // Sun=0..Sat=6
+            const bit = jsDay === 0 ? 64 : 1 << (jsDay - 1);
+            const dateStr = ymd(probe);
+
+            for (const r of recurringRules) {
+                const startOk = !r.startDate || dateStr >= String(r.startDate);
+                const endOk = !r.endDate || dateStr <= String(r.endDate);
+                if (!startOk || !endOk) continue;
+                if ((Number(r.weekdayMask) & bit) === 0) continue;
+                // First match wins for the tooltip.
+                if (!m.has(dateStr)) {
+                    m.set(dateStr, {
+                        reason: r.reason || 'Recurring block',
+                        businessName: r.businessName ?? null,
+                    });
+                }
+            }
+        }
+        return m;
+    }, [recurringRules, cursor]);
+
+    const recurringBlockedDateSet = useMemo(
+        () => new Set(recurringBlockedMap.keys()),
+        [recurringBlockedMap],
+    );
 
     const { monthTitle, cells } = useMemo(() => {
         const built = buildMonth(cursor);
@@ -243,6 +414,9 @@ export default function MainCalendar() {
                 mode={mode}
                 monthTitle={monthTitle}
                 setMode={setMode}
+                businessOptions={businessOptions}
+                selectedBusinessId={slotBusinessId}
+                onBusinessChange={(id) => setSlotBusinessId(id)}
             />
 
             {mode === 'month' && (
@@ -251,6 +425,9 @@ export default function MainCalendar() {
                     events={events}
                     blockedDateSet={blockedDateSet}
                     blockedDateMap={blockedDateMap}
+                    recurringBlockedDateSet={recurringBlockedDateSet}
+                    recurringBlockedMap={recurringBlockedMap}
+                    slotAvailabilityByDate={slotAvailabilityByDate}
                     onOpenCellDialog={onOpenCellDialog}
                     onDateBlockToggle={onDateBlockToggle}
                 />

@@ -1,16 +1,18 @@
 "use client"
 
 import React, { useEffect, useMemo, useRef, useState } from "react"
-import DateSelectionStep from "@/components/booking/steps/date-selection-step"
-import PackageSelectionStep from "@/components/booking/steps/package-selection-step"
+import DateTimeStepV2 from "@/components/booking/steps-v2/date-time-step"
+import PackageStepV2 from "@/components/booking/steps-v2/package-step"
+import ReviewStepV2 from "@/components/booking/steps-v2/review-step"
 import MenuSelectionStep from "@/components/booking/steps/menu-selection-step"
 import VendorSelectionStep from "@/components/booking/steps/vendor-selection-step"
-import PreviewStep from "@/components/booking/steps/preview-step"
 import EventSelectionStep from "@/components/booking/steps/event-selection-step"
-import StepIndicator from "@/components/booking/ui/step-indicator"
 import EventTabs from "@/components/booking/ui/event-tabs"
+import BookingTopBar from "@/components/booking/ui/booking-rail"
+import MobileSummaryBar from "@/components/booking/ui/mobile-summary-bar"
 import type { BookingFormData, EventVenue, EventBooking, Vendor } from "@/lib/types"
-import { ArrowLeft, ArrowRight, Sparkles, MapPin, Star, RotateCcw, X, Timer, AlertTriangle } from "lucide-react"
+import { ArrowLeft, ArrowRight, Sparkles, Timer, AlertTriangle } from "lucide-react"
+import { BridalButton } from "@/components/bridal/bridal-button"
 import { useParams } from "next/navigation"
 import { BACKEND_URL } from "@/lib/backend-url"
 import { toast } from "../ui/use-toast"
@@ -21,9 +23,9 @@ import VendorSuccessStep from "./steps/vendor-success-step"
 import { VendorAPI } from "@/lib/api/vendors"
 import { useDateHold } from "@/hooks/use-date-hold"
 import { useBookingDraft } from "@/hooks/use-booking-draft"
-import LivePricingPanel from "./ui/live-pricing-panel"
 import PaymentSuccessScreen from "./steps/payment-success-screen"
 import BankTransferScreen from "./steps/bank-transfer-screen"
+import BookingPaymentScreen from "./steps-v2/booking-payment-screen"
 
 export default function BookingForm() {
   // Global steps: 1=Event Selection; Afterwards, per-event steps tracked in each event
@@ -61,12 +63,10 @@ export default function BookingForm() {
   const [paymentReturnBookingId, setPaymentReturnBookingId] = useState<number | null>(null)
   const [paymentReturnType, setPaymentReturnType] = useState<string>("down_payment")
   const [bankTransferData, setBankTransferData] = useState<{ bookingId: number; amount: number; paymentType: string; customerEmail?: string; bookingDate?: string } | null>(null)
-  const [showAllTags, setShowAllTags] = useState(false)
+  const [paymentScreenData, setPaymentScreenData] = useState<{ bookingId: number; amount: number; customerEmail: string; customerName: string; vendorName: string; bookingDate?: string } | null>(null)
   const { timeRemaining, isHolding, holdFailed, holdFailedUntil, createHold, releaseHold } = useDateHold()
   const { user, loading: userLoading } = getUser();
   const { save: saveDraft, load: loadDraft, clear: clearDraft } = useBookingDraft(venueId, user?.id ? String(user.id) : null)
-  const [showDraftBanner, setShowDraftBanner] = useState(false)
-  const [draftAge, setDraftAge] = useState("")
 
   const fetchVenue = async (id: string) => {
     try {
@@ -103,32 +103,6 @@ export default function BookingForm() {
       }))
     }
   }, [user])
-
-  // Check for saved draft once user is loaded
-  useEffect(() => {
-    if (userLoading || !user?.id) return
-    const draft = loadDraft()
-    if (draft && draft.globalStep >= 2) {
-      const mins = Math.round((Date.now() - draft.savedAt) / 60000)
-      setDraftAge(mins < 60 ? `${mins}m ago` : `${Math.round(mins / 60)}h ago`)
-      setShowDraftBanner(true)
-    }
-  }, [userLoading, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const resumeDraft = () => {
-    const draft = loadDraft()
-    if (!draft) return
-    setFormData(draft.formData)
-    setEvents(draft.events)
-    setGlobalStep(draft.globalStep)
-    setActiveEventIndex(draft.activeEventIndex)
-    setShowDraftBanner(false)
-  }
-
-  const discardDraft = () => {
-    clearDraft()
-    setShowDraftBanner(false)
-  }
 
   // Detect return from Stripe Checkout (payment_success / payment_cancelled in URL)
   useEffect(() => {
@@ -416,40 +390,42 @@ export default function BookingForm() {
           return
         }
 
-        // Create Stripe Checkout Session and redirect — booking confirmed only after payment
-        const origin = typeof window !== "undefined" ? window.location.origin : ""
-        const bookingPath = `/${venueId}/booking`
-        const successRedirect = `${origin}${bookingPath}?ps=1&sid={CHECKOUT_SESSION_ID}&bid=${realBookingId}&pt=down_payment`
-        const cancelRedirect = `${origin}${bookingPath}?pc=1&bid=${realBookingId}`
-
-        const checkoutResp = await axiosInstance.post(`${BACKEND_URL}api/v1/payments/create-checkout-session`, {
-          bookingId: realBookingId,
-          customerEmail: currentForm.email,
-          paymentType: "down_payment",
-          successUrl: successRedirect,
-          cancelUrl: cancelRedirect,
-        })
-
-        const checkoutData = checkoutResp.data?.data
-
-        // Large amounts (> Rs 999,999) cannot go through Stripe — show bank transfer instructions
-        if (checkoutData?.requiresBankTransfer) {
-          clearDraft()
+        // Bank-transfer threshold check — Stripe caps Pakistan card payments
+        // around Rs 999,999, so very large bookings get bank-transfer
+        // instructions instead of an inline payment screen.
+        const summedDownPayment = vendorsPayload.reduce((s, v) => s + (v.downPayment || 0), 0)
+        if (summedDownPayment > 999999) {
           setBankTransferData({
-            bookingId: checkoutData.bookingId,
-            amount: checkoutData.amount,
-            paymentType: checkoutData.paymentType,
-            customerEmail: checkoutData.customerEmail,
-            bookingDate: checkoutData.bookingDate,
+            bookingId: realBookingId,
+            amount: summedDownPayment,
+            paymentType: "down_payment",
+            customerEmail: currentForm.email,
+            bookingDate: typeof currentForm.bookingDate === "string"
+              ? currentForm.bookingDate
+              : currentForm.bookingDate instanceof Date
+                ? currentForm.bookingDate.toISOString()
+                : undefined,
           })
           return
         }
 
-        const checkoutUrl = checkoutData?.url
-        if (!checkoutUrl) throw new Error("No checkout URL received from payment service")
-
-        // Redirect to Stripe hosted checkout page
-        window.location.href = checkoutUrl
+        // Render the inline bridal-themed BookingPaymentScreen instead of
+        // redirecting to Stripe-hosted Checkout. The screen creates a
+        // PaymentIntent itself, mounts <PaymentElement>, and confirms the
+        // payment client-side. Stripe webhook (PA-001 signed) marks the
+        // booking paid server-side.
+        setPaymentScreenData({
+          bookingId: realBookingId,
+          amount: summedDownPayment,
+          customerEmail: currentForm.email,
+          customerName: currentForm.username,
+          vendorName: venue?.name || "",
+          bookingDate: typeof currentForm.bookingDate === "string"
+            ? currentForm.bookingDate
+            : currentForm.bookingDate instanceof Date
+              ? currentForm.bookingDate.toISOString()
+              : undefined,
+        })
       } else {
         throw new Error("Unexpected response")
       }
@@ -605,7 +581,7 @@ export default function BookingForm() {
     switch (stepKey) {
       case 'datetime':
         stepContent = (
-          <DateSelectionStep
+          <DateTimeStepV2
             formData={activeFormData}
             updateFormData={updateCurrentForm}
             venue={venue}
@@ -628,7 +604,7 @@ export default function BookingForm() {
         break
       case 'packages':
         stepContent = (
-          <PackageSelectionStep
+          <PackageStepV2
             formData={activeFormData}
             updateFormData={updateFormDataPartial}
             venue={venue}
@@ -647,7 +623,7 @@ export default function BookingForm() {
         break
       case 'review':
         stepContent = (
-          <PreviewStep
+          <ReviewStepV2
             formData={activeFormData}
             selectedPackageObj={selectedPackageObj}
             selectedMenuObj={selectedMenuObj}
@@ -770,8 +746,8 @@ export default function BookingForm() {
   // Show bank transfer instructions for large amounts (> Rs 999,999)
   if (bankTransferData) {
     return (
-      <div className="w-full mx-auto max-w-5xl">
-        <div className="rounded-2xl bg-white border border-neutral-200 overflow-hidden p-6 sm:p-8">
+      <div className="w-full">
+        <div className="rounded-xl bg-white border border-zinc-200 overflow-hidden p-6 sm:p-8 lg:p-10 shadow-sm">
           <BankTransferScreen
             bookingId={bankTransferData.bookingId}
             amount={bankTransferData.amount}
@@ -787,8 +763,8 @@ export default function BookingForm() {
   // Show payment success screen when returning from Stripe
   if (paymentReturnBookingId) {
     return (
-      <div className="w-full mx-auto max-w-5xl">
-        <div className="rounded-2xl bg-white border border-neutral-200 overflow-hidden p-6 sm:p-8">
+      <div className="w-full">
+        <div className="rounded-md bg-bridal-cream border border-bridal-beige overflow-hidden p-6 sm:p-8 lg:p-10 shadow-[0_18px_44px_-32px_rgba(176,125,84,0.4)]">
           <PaymentSuccessScreen
             bookingId={paymentReturnBookingId}
             venue={venue}
@@ -799,244 +775,184 @@ export default function BookingForm() {
     )
   }
 
+  // Inline bridal-themed payment screen (replaces redirect to Stripe Checkout).
+  if (paymentScreenData) {
+    return (
+      <div className="w-full">
+        <div className="rounded-md bg-bridal-cream border border-bridal-beige overflow-hidden p-5 sm:p-6 lg:p-8 shadow-[0_18px_44px_-32px_rgba(176,125,84,0.4)]">
+          <BookingPaymentScreen
+            bookingId={paymentScreenData.bookingId}
+            amount={paymentScreenData.amount}
+            customerEmail={paymentScreenData.customerEmail}
+            customerName={paymentScreenData.customerName}
+            vendorName={paymentScreenData.vendorName}
+            bookingDate={paymentScreenData.bookingDate}
+            paymentType="down_payment"
+            onSuccess={() => {
+              setPaymentReturnBookingId(paymentScreenData.bookingId)
+              setPaymentReturnType("down_payment")
+              setPaymentScreenData(null)
+            }}
+            onCancel={() => {
+              axiosInstance
+                .delete(`${BACKEND_URL}api/v1/bookings/${paymentScreenData.bookingId}/cancel-pending`)
+                .catch(() => {})
+              setPaymentScreenData(null)
+            }}
+          />
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="w-full mx-auto max-w-5xl space-y-4">
+    <div className="w-full space-y-4 sm:space-y-5">
       {(loading || userLoading) ? (
-        <div className="rounded-2xl bg-white border border-neutral-200 overflow-hidden">
-          <div className="h-24 bg-neutral-100 animate-pulse" />
+        <div className="rounded-xl bg-white border border-zinc-200 overflow-hidden shadow-sm">
+          <div className="h-16 bg-zinc-100 animate-pulse" />
           <div className="p-8 space-y-6">
             <div className="flex gap-3">
               {[1, 2, 3, 4].map(i => (
-                <div key={i} className="h-8 flex-1 bg-neutral-100 rounded-lg animate-pulse" />
+                <div key={i} className="h-7 flex-1 bg-zinc-100 rounded-md animate-pulse" />
               ))}
             </div>
             <div className="space-y-4">
-              <div className="h-5 w-48 bg-neutral-100 rounded animate-pulse" />
-              <div className="h-12 bg-neutral-100 rounded-xl animate-pulse" />
-              <div className="h-12 bg-neutral-100 rounded-xl animate-pulse" />
-              <div className="h-12 bg-neutral-100 rounded-xl animate-pulse" />
+              <div className="h-5 w-48 bg-zinc-100 rounded animate-pulse" />
+              <div className="h-12 bg-zinc-100 rounded-md animate-pulse" />
+              <div className="h-12 bg-zinc-100 rounded-md animate-pulse" />
+              <div className="h-12 bg-zinc-100 rounded-md animate-pulse" />
             </div>
           </div>
         </div>
       ) : error ? (
-        <div className="rounded-2xl bg-white p-10 text-center border border-neutral-200">
-          <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-red-50 flex items-center justify-center">
-            <svg className="w-7 h-7 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="rounded-xl bg-white p-12 text-center border border-zinc-200 shadow-sm">
+          <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-red-50 border border-red-100 flex items-center justify-center">
+            <svg className="w-7 h-7 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-neutral-900 mb-2">Something went wrong</h2>
-          <p className="text-sm text-neutral-500 max-w-sm mx-auto mb-6">{error || 'Unable to load booking details.'}</p>
+          <h2 className="text-xl font-semibold tracking-tight text-zinc-900 mb-2">Something went wrong</h2>
+          <p className="text-[13px] text-zinc-500 max-w-sm mx-auto mb-6">{error || 'Unable to load booking details.'}</p>
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="px-5 py-2.5 rounded-xl text-sm font-medium bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+            className="inline-flex items-center justify-center h-10 px-5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-[13px] font-medium transition-colors"
           >
-            Refresh Page
+            Refresh page
           </button>
         </div>
       ) : (
         <>
-          {/* Draft Resume Banner */}
-          {showDraftBanner && (
-            <div className="rounded-xl border border-purple-200 bg-purple-50 p-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <RotateCcw className="h-5 w-5 text-purple-600 shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-purple-900">Continue your booking?</p>
-                  <p className="text-xs text-purple-600">You have an unsaved booking from {draftAge}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <button type="button" onClick={resumeDraft} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors">
-                  Resume
-                </button>
-                <button type="button" aria-label="Discard draft" onClick={discardDraft} className="p-1.5 rounded-lg text-purple-400 hover:text-purple-600 hover:bg-purple-100 transition-colors">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          )}
-          {/* Slot Hold Timer Bar */}
+          {/* Slot Hold Timer Bar — minimal, semantic colors */}
           {isHolding && timeRemaining > 0 && (
-            <div className={`flex items-center justify-between gap-3 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            <div className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg border transition-colors ${
               timeRemaining <= 120
-                ? 'bg-red-50 border border-red-200 text-red-700'
+                ? 'bg-red-50 border-red-200 text-red-700'
                 : timeRemaining <= 300
-                  ? 'bg-amber-50 border border-amber-200 text-amber-700'
-                  : 'bg-purple-50 border border-purple-200 text-purple-700'
+                  ? 'bg-amber-50 border-amber-200 text-amber-700'
+                  : 'bg-emerald-50 border-emerald-200 text-emerald-700'
             }`}>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-[12.5px] font-medium">
                 {timeRemaining <= 120
                   ? <AlertTriangle className="w-4 h-4 shrink-0 animate-pulse" />
                   : <Timer className="w-4 h-4 shrink-0" />
                 }
                 <span>
                   {timeRemaining <= 120
-                    ? 'Slot expiring soon! Complete your booking.'
-                    : 'Your selected slot is reserved'}
+                    ? 'Slot expiring soon — complete your booking'
+                    : 'Your slot is reserved'}
                 </span>
               </div>
-              <div className="flex items-center gap-2.5 shrink-0">
-                {/* Progress bar */}
-                <div className="w-24 h-1.5 rounded-full bg-black/10 overflow-hidden">
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="w-20 h-1 rounded-full bg-current/10 overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all duration-1000 ${
-                      timeRemaining <= 120 ? 'bg-red-500' : timeRemaining <= 300 ? 'bg-amber-500' : 'bg-purple-500'
-                    }`}
+                    className="h-full rounded-full bg-current transition-all duration-1000"
                     style={{ width: `${Math.min(100, (timeRemaining / (15 * 60)) * 100)}%` }}
                   />
                 </div>
-                <span className="font-mono font-bold tabular-nums text-base">
+                <span className="text-[14px] font-semibold tabular-nums leading-none">
                   {String(Math.floor(timeRemaining / 60)).padStart(2, '0')}:{String(timeRemaining % 60).padStart(2, '0')}
                 </span>
               </div>
             </div>
           )}
-          {/* Venue Banner */}
-          <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-purple-700 via-purple-600 to-purple-800 text-white">
-            {(venue as any)?.coverImage && (
-              <img
-                src={(venue as any).coverImage}
-                alt={venue?.name || ''}
-                className="absolute inset-0 w-full h-full object-cover opacity-20"
-              />
-            )}
-            <div className="relative px-6 py-5 flex items-center justify-between">
-              <div className="flex items-center gap-4 min-w-0">
-                <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-                  <MapPin className="w-5 h-5" />
+
+          {/* Stacked layout: horizontal top bar on top, step body below at
+              full width. The top bar carries vendor identity + step list +
+              trust badges. */}
+          <div className="space-y-4 lg:space-y-5">
+
+            {/* Top bar */}
+            <BookingTopBar
+              venue={venue}
+              steps={allDisplaySteps}
+              currentStep={currentDisplayStep}
+              isVenueBooking={isVenueBooking}
+            />
+
+            {/* Step body — full-width bridal cream card */}
+            <div className="min-w-0 rounded-md bg-bridal-cream border border-bridal-beige shadow-[0_8px_24px_-20px_rgba(176,125,84,0.45)] overflow-hidden">
+
+              {/* Event Tabs */}
+              {events.length > 0 && globalStep >= 2 && (
+                <div className="border-b border-zinc-100 px-5 sm:px-7 py-2.5">
+                  <EventTabs
+                    events={events}
+                    activeEventIndex={activeEventIndex}
+                    onTabChange={setActiveEventIndex}
+                  />
                 </div>
-                <div className="min-w-0">
-                  <h1 className="text-lg font-bold truncate">{venue?.name || 'Book Now'}</h1>
-                  {(venue as any)?.location && (
-                    <p className="text-sm text-purple-200 truncate">{(venue as any).location}</p>
-                  )}
-                </div>
+              )}
+
+              {/* Step body — tightened padding so compressed steps don't sit
+                  in a sea of empty space */}
+              <div
+                className="p-4 sm:p-5 lg:p-6"
+                style={{ position: "relative", zIndex: 2, pointerEvents: "auto" }}
+              >
+                {stepContent}
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
-                {(venue as any)?.rating > 0 && (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-sm text-sm">
-                    <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-                    <span className="font-medium">{(venue as any).rating}</span>
+
+              {/* Footer — Back · Continue, homepage BridalButton language */}
+              {!isSuccessStep && (
+                <div className="border-t border-bridal-beige bg-bridal-ivory/60 px-5 sm:px-7 py-3 relative z-10">
+                  <div className="flex items-center justify-between gap-3">
+                    <BridalButton
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleBack}
+                      disabled={globalStep === 1}
+                      className={globalStep === 1 ? "invisible" : ""}
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" />
+                      Back
+                    </BridalButton>
+
+                    <BridalButton
+                      type="button"
+                      variant="primary"
+                      size="md"
+                      onClick={handleNext}
+                      loading={isSubmitting}
+                      disabled={!isStepValid && !isSubmitting}
+                    >
+                      {isSubmitting
+                        ? "Processing…"
+                        : isReviewStep
+                        ? "Pay & confirm"
+                        : "Continue"}
+                      {!isSubmitting && <ArrowRight className="h-3.5 w-3.5" />}
+                    </BridalButton>
                   </div>
-                )}
-                {/* Vendor type badge */}
-                <span className="px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-sm text-xs font-semibold">
-                  {isVenueBooking ? 'Venue' : (venue as any)?.type || 'Vendor'}
-                </span>
-                {/* Expertise / subBusinessType tags */}
-                {!isVenueBooking && (() => {
-                  const sub = (venue as any)?.subBusinessType
-                  const tags: string[] = Array.isArray(sub) ? sub : sub ? [sub] : []
-                  if (tags.length === 0) return null
-                  const visible = showAllTags ? tags : tags.slice(0, 3)
-                  const extra = tags.length - 3
-                  return (
-                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                      {visible.map((tag, i) => (
-                        <span key={i} className="px-2.5 py-1 rounded-full bg-white/10 border border-white/20 text-[11px] font-medium text-white/90">
-                          {tag}
-                        </span>
-                      ))}
-                      {extra > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setShowAllTags(v => !v)}
-                          className="px-2.5 py-1 rounded-full bg-white/20 border border-white/30 text-[11px] font-medium text-white hover:bg-white/30 transition-colors cursor-pointer"
-                        >
-                          {showAllTags ? 'Show less' : `+${extra} more`}
-                        </button>
-                      )}
-                    </div>
-                  )
-                })()}
-              </div>
-            </div>
-          </div>
-
-          {/* Main Content + Pricing Panel Grid */}
-          <div className={`grid grid-cols-1 gap-4 items-start ${globalStep >= 2 && !isSuccessStep ? 'lg:grid-cols-[1fr_280px]' : ''}`}>
-          {/* Main Card */}
-          <div className="rounded-2xl bg-white border border-neutral-200 overflow-hidden">
-            {/* Step Progress */}
-            {!isSuccessStep && (
-              <div className="border-b border-neutral-100 px-5 py-4 overflow-x-auto">
-                <StepIndicator steps={allDisplaySteps} currentStep={currentDisplayStep} />
-              </div>
-            )}
-
-            {/* Event Tabs */}
-            {events.length > 0 && globalStep >= 2 && (
-              <div className="border-b border-neutral-100 px-5 py-3">
-                <EventTabs
-                  events={events}
-                  activeEventIndex={activeEventIndex}
-                  onTabChange={setActiveEventIndex}
-                />
-              </div>
-            )}
-
-            {/* Step Content */}
-            <div className="p-6 sm:p-8" style={{ position: 'relative', zIndex: 2, pointerEvents: 'auto' }}>
-              {stepContent}
-            </div>
-
-            {/* Navigation Footer */}
-            {!isSuccessStep && (
-              <div className="border-t border-neutral-100 px-5 py-4 relative z-10">
-                <div className="flex items-center justify-between">
-                  <button
-                    type="button"
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                      globalStep === 1
-                        ? 'text-neutral-300 pointer-events-none'
-                        : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
-                    }`}
-                    onClick={handleBack}
-                    disabled={globalStep === 1}
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                    Back
-                  </button>
-
-                  <span className="text-xs text-neutral-400 hidden sm:block">
-                    Step {currentDisplayStep + 1} of {allDisplaySteps.length}
-                  </span>
-
-                  <button
-                    type="button"
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                      isSubmitting
-                        ? 'bg-neutral-100 text-neutral-400'
-                        : !isStepValid
-                          ? 'bg-purple-200 text-purple-400 hover:bg-purple-300'
-                          : isReviewStep
-                            ? 'bg-green-600 hover:bg-green-700 text-white shadow-sm'
-                            : 'bg-purple-600 hover:bg-purple-700 text-white shadow-sm'
-                    }`}
-                    onClick={handleNext}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        {isReviewStep ? 'Confirm & Pay' : 'Continue'}
-                        {!isReviewStep && <ArrowRight className="h-4 w-4" />}
-                      </>
-                    )}
-                  </button>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
-          {/* Live Pricing Panel */}
+          {/* Mobile bottom summary bar — replaces sticky desktop sidebar */}
           {globalStep >= 2 && !isSuccessStep && (
-            <LivePricingPanel
+            <MobileSummaryBar
               formData={activeFormData}
               venue={venue}
               vendorsDetails={vendorsDetails[activeEventIndex] || []}
@@ -1044,13 +960,17 @@ export default function BookingForm() {
               selectedMenuObj={selectedMenuObj}
             />
           )}
-          </div>{/* end grid */}
 
-          {/* Multi-event info */}
+          {/* Multi-event info banner */}
           {globalStep >= 2 && events.length > 1 && (
-            <div className="rounded-xl bg-purple-50 border border-purple-100 p-4 text-sm text-purple-700 flex items-start gap-3">
-              <Sparkles className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <p>Complete the form for each event tab and submit them individually.</p>
+            <div className="rounded-xl bg-white border border-zinc-200 p-4 text-[13px] text-zinc-700 flex items-start gap-3 shadow-sm">
+              <div className="w-8 h-8 rounded-full bg-zinc-100 inline-flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Sparkles className="w-3.5 h-3.5 text-zinc-700" />
+              </div>
+              <div>
+                <p className="text-[14px] font-semibold text-zinc-900 mb-0.5">Multiple events booked</p>
+                <p className="text-zinc-500">Complete the form for each event tab and submit them individually.</p>
+              </div>
             </div>
           )}
         </>

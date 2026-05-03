@@ -6,6 +6,122 @@ body {
   font-family: var(--font-inter), Arial, Helvetica, sans-serif;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   BRIDAL DESIGN SYSTEM — Phase 0 foundation
+   Pakistani wedding aesthetic: ivory silk, champagne gold, rose petals.
+   See DESIGN_REVAMP_PLAN.md for the full brief.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Bridal body utility — opt-in via class on a wrapper. Don't change <body>
+   defaults so existing screens stay visually identical until migrated. */
+.bridal-surface {
+  font-family: var(--font-dm-sans), 'Helvetica Neue', Arial, sans-serif;
+  color: #2C1810;
+  background-color: #FDF8F2;
+}
+
+/* Paper-grain texture (3% opacity SVG noise) — apply to ivory backgrounds.
+   The SVG is inlined as a data URI so there's no extra HTTP request. */
+.bg-bridal-grain {
+  background-color: #FDF8F2;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.17 0 0 0 0 0.09 0 0 0 0 0.06 0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.03'/></svg>");
+}
+
+/* Mughal jaal lattice pattern (5% opacity) — a single tile, repeats. */
+.bg-mughal-jaal {
+  background-color: #FDF8F2;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'><g fill='none' stroke='%23C9956A' stroke-width='1' opacity='0.06'><path d='M40 0 C 50 20, 60 30, 80 40 C 60 50, 50 60, 40 80 C 30 60, 20 50, 0 40 C 20 30, 30 20, 40 0 Z'/><circle cx='40' cy='40' r='6'/><path d='M0 40 H 80 M 40 0 V 80' stroke-dasharray='2 6'/></g></svg>");
+  background-size: 80px 80px;
+}
+
+/* Combined: ivory base + jaal at 5% + paper grain at 3%. The hero /
+   auth backgrounds reach for this. */
+.bg-bridal-hero {
+  background-color: #FDF8F2;
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'><g fill='none' stroke='%23C9956A' stroke-width='1' opacity='0.06'><path d='M40 0 C 50 20, 60 30, 80 40 C 60 50, 50 60, 40 80 C 30 60, 20 50, 0 40 C 20 30, 30 20, 40 0 Z'/><circle cx='40' cy='40' r='6'/><path d='M0 40 H 80 M 40 0 V 80' stroke-dasharray='2 6'/></g></svg>"),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.17 0 0 0 0 0.09 0 0 0 0 0.06 0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.03'/></svg>");
+  background-size: 80px 80px, 160px 160px;
+}
+
+/* Soft warm wash gradient — used behind hero copy and on auth side panels. */
+.bg-bridal-wash {
+  background-image:
+    radial-gradient(ellipse at top left, rgba(242, 181, 192, 0.35) 0%, rgba(242, 181, 192, 0) 55%),
+    radial-gradient(ellipse at bottom right, rgba(201, 149, 106, 0.18) 0%, rgba(201, 149, 106, 0) 55%),
+    linear-gradient(180deg, #FDF8F2 0%, #FFF0F3 100%);
+}
+
+/* Champagne gold shimmer text effect — for romantic phrases. */
+.text-bridal-shimmer {
+  background: linear-gradient(120deg, #C9956A 0%, #E8C99A 45%, #C9956A 90%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 4s linear infinite;
+}
+
+/* Bridal card — cream surface, soft beige border, gold-on-hover.
+   Use as a class so it can be composed with other utilities. */
+.bridal-card {
+  background-color: #FFF9F4;
+  border: 1px solid #EDD9C3;
+  border-radius: 6px;
+  transition: border-color 250ms ease, transform 250ms ease, box-shadow 250ms ease;
+}
+.bridal-card:hover {
+  border-color: rgba(201, 149, 106, 0.6);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px -16px rgba(176, 125, 84, 0.35);
+}
+
+/* Bridal input — cream background, gold focus border, no harsh ring. */
+.bridal-input {
+  background-color: #FFF9F4;
+  border: 1px solid #EDD9C3;
+  color: #2C1810;
+  font-family: var(--font-dm-sans), 'Helvetica Neue', Arial, sans-serif;
+  border-radius: 4px;
+  transition: border-color 250ms ease, box-shadow 250ms ease;
+}
+.bridal-input::placeholder { color: #A0694A; opacity: 0.7; }
+.bridal-input:focus {
+  outline: none;
+  border-color: #C9956A;
+  box-shadow: 0 0 0 3px rgba(201, 149, 106, 0.18);
+  background-color: #FFFCF8;
+}
+.bridal-input:disabled {
+  background-color: #FAF1E6;
+  color: #7A5040;
+  cursor: not-allowed;
+}
+
+/* Caps label — DM Sans 500, gold, wide tracking. */
+.bridal-label {
+  font-family: var(--font-dm-sans), 'Helvetica Neue', Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #C9956A;
+}
+
+/* Crown rule — short gold gradient line + caps label, used above titles. */
+.bridal-crown {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.bridal-crown::before,
+.bridal-crown::after {
+  content: '';
+  width: 28px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #C9956A, transparent);
+}
+
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -16,8 +132,11 @@ body {
   scrollbar-width: none; /* Firefox */
 }
 
-/* Playfair Display heading utility */
-.font-heading {
+/* Playfair Display heading utility — kept under both names so legacy call
+   sites that still write `font-heading` keep their typography. New code
+   should use `font-display italic` (Tailwind token). */
+.font-heading,
+.font-display {
   font-family: var(--font-playfair), Georgia, 'Times New Roman', serif;
 }
 
@@ -94,7 +213,7 @@ body {
   }
 
   .glass-dark {
-    @apply bg-purple-950/60 backdrop-blur-xl border border-purple-500/20;
+    @apply bg-purple-950/60 backdrop-blur-xl border border-bridal-gold-dark/20;
   }
 
   /* 3D perspective card container */
@@ -174,14 +293,16 @@ body {
     --chart-4: 46 75% 65%;
     --chart-5: 280 50% 50%;
     --radius: 0.5rem;
-    --sidebar-background: 263 40% 12%;
-    --sidebar-foreground: 263 5% 90%;
-    --sidebar-primary: 46 65% 52%;
-    --sidebar-primary-foreground: 263 40% 12%;
-    --sidebar-accent: 263 30% 18%;
-    --sidebar-accent-foreground: 263 5% 90%;
-    --sidebar-border: 263 25% 18%;
-    --sidebar-ring: 46 65% 52%;
+    /* Bridal sidebar — soft ivory surface, charcoal text, gold for active.
+       Light, editorial, calm. Tuned to feel like printed stationery. */
+    --sidebar-background: 36 33% 95%;          /* bridal-cream */
+    --sidebar-foreground: 24 18% 22%;          /* bridal-charcoal */
+    --sidebar-primary: 26 38% 60%;             /* bridal-gold */
+    --sidebar-primary-foreground: 24 18% 22%;  /* charcoal on gold */
+    --sidebar-accent: 18 50% 92%;              /* bridal-blush wash */
+    --sidebar-accent-foreground: 24 18% 22%;   /* charcoal on blush */
+    --sidebar-border: 30 30% 84%;              /* bridal-beige */
+    --sidebar-ring: 26 38% 60%;                /* bridal-gold focus ring */
   }
   .dark {
     --background: 263 30% 6%;

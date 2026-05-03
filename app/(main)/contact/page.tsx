@@ -36,10 +36,10 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen">
-      <section className="bg-gradient-to-br from-purple-600 to-purple-800 text-white py-16 px-4">
+      <section className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl sm:text-5xl font-bold mb-4">Get in Touch</h1>
-          <p className="text-lg text-purple-100 max-w-xl mx-auto">
+          <p className="text-lg text-bridal-cream max-w-xl mx-auto">
             Have a question, feedback, or need help? We'd love to hear from you.
           </p>
         </div>
@@ -52,13 +52,13 @@ export default function ContactPage() {
             {info.map((item) => (
               <Card key={item.label} className="border-0 shadow-sm">
                 <CardContent className="p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <item.icon className="w-5 h-5 text-purple-600" />
+                  <div className="w-10 h-10 bg-bridal-gold/15 rounded-lg flex items-center justify-center">
+                    <item.icon className="w-5 h-5 text-bridal-gold-dark" />
                   </div>
                   <div>
                     <p className="text-xs text-neutral-500">{item.label}</p>
                     {item.href ? (
-                      <a href={item.href} className="text-sm font-medium text-neutral-900 hover:text-purple-600">
+                      <a href={item.href} className="text-sm font-medium text-neutral-900 hover:text-bridal-gold-dark">
                         {item.value}
                       </a>
                     ) : (
@@ -109,7 +109,7 @@ export default function ContactPage() {
                       <Textarea id="message" placeholder="Tell us how we can help..." rows={5} value={form.message}
                         onChange={(e) => setForm((p) => ({ ...p, message: e.target.value }))} />
                     </div>
-                    <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white">
+                    <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-bridal-gold to-bridal-gold-dark hover:from-bridal-gold-dark hover:to-bridal-gold-dark text-white">
                       {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</> : <><Send className="mr-2 h-4 w-4" /> Send Message</>}
                     </Button>
                   </form>

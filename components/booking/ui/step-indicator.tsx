@@ -7,68 +7,71 @@ interface StepIndicatorProps {
   currentStep: number
 }
 
+/**
+ * Stripe-grade step indicator. Numbered circles, persistent labels on md+,
+ * thin rule connectors that fill as steps complete. Drops the bridal italic
+ * display font in favor of clean Inter weights.
+ */
 export default function StepIndicator({ steps, currentStep }: StepIndicatorProps) {
   return (
     <div className="w-full">
-      {/* Desktop: compact numbered circles with connecting lines */}
-      <div className="hidden sm:block">
-        <div className="flex items-center">
-          {steps.map((step, idx) => {
-            const isCompleted = idx < currentStep
-            const isCurrent = idx === currentStep
+      {/* Desktop / tablet */}
+      <ol className="hidden sm:flex items-center w-full">
+        {steps.map((step, idx) => {
+          const isCompleted = idx < currentStep
+          const isCurrent = idx === currentStep
 
-            return (
-              <div key={step.key + idx} className="flex items-center flex-1 last:flex-none">
-                <div className="flex items-center gap-1.5">
-                  <div
-                    style={isCurrent ? { boxShadow: '0 0 0 3px rgba(147, 51, 234, 0.12)' } : undefined}
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors duration-300 flex-shrink-0 ${
-                      isCompleted
-                        ? 'bg-purple-600 text-white'
-                        : isCurrent
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-neutral-100 text-neutral-400'
+          return (
+            <li
+              key={step.key + idx}
+              className={`flex items-center min-w-0 ${idx < steps.length - 1 ? "flex-1" : ""}`}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span
+                  aria-current={isCurrent ? "step" : undefined}
+                  className={`relative flex w-7 h-7 items-center justify-center rounded-full text-[12px] font-semibold tabular-nums shrink-0 transition-all
+                    ${isCompleted
+                      ? "bg-zinc-900 text-white"
+                      : isCurrent
+                        ? "bg-zinc-900 text-white ring-4 ring-zinc-900/10"
+                        : "bg-white text-zinc-500 border border-zinc-200"
                     }`}
-                  >
-                    {isCompleted ? (
-                      <Check className="w-3 h-3" />
-                    ) : (
-                      idx + 1
-                    )}
-                  </div>
-                  {isCurrent && (
-                    <span className="text-xs font-semibold text-neutral-800 whitespace-nowrap">
-                      {step.title}
-                    </span>
-                  )}
-                </div>
-                {idx < steps.length - 1 && (
-                  <div className="flex-1 mx-2 h-[2px] rounded-full bg-neutral-100 overflow-hidden min-w-[12px]">
-                    <div
-                      className="h-full rounded-full bg-purple-500 transition-all duration-400 ease-out"
-                      style={{ width: isCompleted ? '100%' : '0%' }}
-                    />
-                  </div>
-                )}
+                >
+                  {isCompleted ? <Check className="w-3.5 h-3.5" strokeWidth={2.5} /> : idx + 1}
+                </span>
+                <span
+                  className={`text-[13px] font-medium whitespace-nowrap transition-colors hidden md:inline
+                    ${isCurrent ? "text-zinc-900" : isCompleted ? "text-zinc-700" : "text-zinc-400"}`}
+                >
+                  {step.title}
+                </span>
               </div>
-            )
-          })}
-        </div>
-      </div>
+              {idx < steps.length - 1 && (
+                <div className="flex-1 mx-3 lg:mx-4 h-px bg-zinc-200 overflow-hidden min-w-[20px]">
+                  <div
+                    className="h-full bg-zinc-900 transition-all duration-500 ease-out"
+                    style={{ width: isCompleted ? "100%" : "0%" }}
+                  />
+                </div>
+              )}
+            </li>
+          )
+        })}
+      </ol>
 
-      {/* Mobile: progress bar with step info */}
+      {/* Mobile */}
       <div className="sm:hidden space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-purple-600">
+          <span className="text-[11px] uppercase tracking-[0.14em] font-medium text-zinc-500">
             Step {Math.min(currentStep + 1, steps.length)} of {steps.length}
           </span>
-          <span className="text-xs font-medium text-neutral-600">
+          <span className="text-[13px] font-semibold text-zinc-900">
             {steps[Math.min(currentStep, steps.length - 1)]?.title}
           </span>
         </div>
-        <div className="h-1.5 rounded-full bg-neutral-100 overflow-hidden">
+        <div className="h-1 rounded-full bg-zinc-200 overflow-hidden">
           <div
-            className="h-full rounded-full bg-purple-500 transition-all duration-400 ease-out"
+            className="h-full rounded-full bg-zinc-900 transition-all duration-500 ease-out"
             style={{ width: `${((Math.min(currentStep + 1, steps.length)) / steps.length) * 100}%` }}
           />
         </div>

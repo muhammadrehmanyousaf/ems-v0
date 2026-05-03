@@ -67,11 +67,11 @@ export default function HelpPage() {
 
   return (
     <div className="min-h-screen">
-      <section className="bg-gradient-to-br from-purple-600 to-purple-800 text-white py-16 px-4">
+      <section className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white py-16 px-4">
         <div className="max-w-3xl mx-auto text-center">
-          <HelpCircle className="w-12 h-12 mx-auto mb-4 text-purple-200" />
+          <HelpCircle className="w-12 h-12 mx-auto mb-4 text-bridal-gold/40" />
           <h1 className="text-4xl sm:text-5xl font-bold mb-4">Help Center</h1>
-          <p className="text-lg text-purple-100 mb-8">Find answers to common questions about using our platform.</p>
+          <p className="text-lg text-bridal-cream mb-8">Find answers to common questions about using our platform.</p>
           <div className="relative max-w-lg mx-auto">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
             <Input
@@ -95,7 +95,7 @@ export default function HelpPage() {
             filteredFaqs.map((cat) => (
               <div key={cat.category}>
                 <div className="flex items-center gap-2 mb-4">
-                  <cat.icon className="w-5 h-5 text-purple-600" />
+                  <cat.icon className="w-5 h-5 text-bridal-gold-dark" />
                   <h2 className="text-lg font-semibold text-neutral-900">{cat.category}</h2>
                 </div>
                 <div className="space-y-2">
@@ -130,11 +130,11 @@ export default function HelpPage() {
 
       <section className="py-12 px-4 bg-white border-t">
         <div className="max-w-2xl mx-auto text-center">
-          <MessageCircle className="w-10 h-10 text-purple-600 mx-auto mb-4" />
+          <MessageCircle className="w-10 h-10 text-bridal-gold-dark mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-neutral-900 mb-2">Still need help?</h2>
           <p className="text-neutral-600 mb-6">Our support team is ready to assist you.</p>
           <Link href="/contact">
-            <Button className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white">
+            <Button className="bg-gradient-to-r from-bridal-gold to-bridal-gold-dark hover:from-bridal-gold-dark hover:to-bridal-gold-dark text-white">
               Contact Support
             </Button>
           </Link>

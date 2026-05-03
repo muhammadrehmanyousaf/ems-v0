@@ -68,7 +68,7 @@ const DashboardDateFilter = ({ value, onChange }: DashboardDateFilterProps) => {
                                 className={cn(
                                     'font-medium w-full justify-start',
                                     value === btn.value
-                                        ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400'
+                                        ? 'bg-bridal-cream text-bridal-gold-dark dark:bg-bridal-charcoal/40 dark:text-bridal-gold/70'
                                         : 'text-muted-foreground hover:text-muted-foreground'
                                 )}
                             >

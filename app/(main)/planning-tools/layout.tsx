@@ -6,7 +6,7 @@ export default function PlanningToolsLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50/80">
+    <div className="min-h-screen bg-gradient-to-br from-bridal-cream via-white to-bridal-cream/80">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         {children}
       </div>

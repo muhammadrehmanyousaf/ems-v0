@@ -148,7 +148,7 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-heading text-2xl font-bold text-neutral-900">
+        <h2 className="font-display italic text-[24px] sm:text-[28px] text-bridal-charcoal leading-tight">
           {isCarRental
             ? 'Cars & Packages'
             : isBridalWear
@@ -159,7 +159,7 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                   ? 'Choose Your Package'
                   : 'Select Packages'}
         </h2>
-        <p className="mt-1 text-sm text-neutral-500">
+        <p className="mt-1.5 text-[13.5px] text-bridal-text-soft">
           {isCarRental
             ? 'Select a vehicle, and optionally add a service package'
             : isBridalWear
@@ -187,7 +187,7 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
             {/* Vehicles */}
             <div className="space-y-3">
               {carPkgs.length > 0 && (
-                <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Select a Vehicle</p>
+                <p className="font-bridal text-[10.5px] uppercase tracking-[0.32em] font-medium text-bridal-gold-dark">Select a Vehicle</p>
               )}
               <motion.div className="grid grid-cols-1 md:grid-cols-2 gap-4" variants={container} initial="hidden" animate="visible">
                 {carPkgs.length > 0 ? carPkgs.map((pkg) => {
@@ -210,11 +210,11 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                       onClick={() => handlePackageSelect(String(pkg.id))}
                       className={`relative cursor-pointer rounded-2xl border-2 overflow-hidden transition-all duration-200 ${
                         isSelected
-                          ? 'border-purple-500 shadow-md ring-2 ring-purple-200'
-                          : 'border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-sm'
+                          ? 'border-bridal-gold-dark bg-bridal-cream shadow-[0_14px_32px_-18px_rgba(176,125,84,0.5)] ring-1 ring-bridal-gold/40'
+                          : 'border-bridal-beige bg-bridal-ivory hover:border-bridal-gold/55 hover:bg-bridal-cream'
                       }`}
                     >
-                      <div className="relative aspect-video bg-neutral-100">
+                      <div className="relative aspect-video bg-bridal-ivory">
                         {imgs.length > 0 ? (
                           <Image src={imgs[0]} alt={pkg.name} fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
                         ) : (
@@ -223,43 +223,43 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                           </div>
                         )}
                         {vehicleType && (
-                          <span className="absolute top-2 left-2 bg-blue-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                          <span className="absolute top-2 left-2 bg-bridal-gold/95 text-bridal-charcoal font-bridal text-[10px] uppercase tracking-[0.22em] font-medium px-2.5 py-1 rounded-full">
                             {vehicleType}
                           </span>
                         )}
                         {isSelected && (
-                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-2 right-2 w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center shadow">
-                            <Check className="w-3.5 h-3.5 text-white" />
+                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-2 right-2 w-7 h-7 rounded-full bg-bridal-gold border border-bridal-gold-dark flex items-center justify-center shadow-[0_4px_12px_-6px_rgba(176,125,84,0.55)]">
+                            <Check className="w-3.5 h-3.5 text-bridal-charcoal" strokeWidth={3} />
                           </motion.div>
                         )}
                       </div>
                       <div className="p-4 space-y-2">
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <h4 className="text-base font-bold text-neutral-900">{pkg.name}</h4>
+                            <h4 className="font-display italic text-[18px] text-bridal-charcoal">{pkg.name}</h4>
                             {(year || color) && (
-                              <p className="text-xs text-neutral-400 mt-0.5">{[year, color].filter(Boolean).join(" · ")}</p>
+                              <p className="font-bridal text-[11.5px] text-bridal-text-soft mt-1">{[year, color].filter(Boolean).join(" · ")}</p>
                             )}
                           </div>
                           <div className="text-right shrink-0">
-                            <p className="text-lg font-extrabold text-purple-600">Rs. {Number(pkg.price)?.toLocaleString()}</p>
-                            <p className="text-[10px] text-neutral-400">per event</p>
+                            <p className="font-display italic text-[22px] text-bridal-gold-dark">Rs. {Number(pkg.price)?.toLocaleString()}</p>
+                            <p className="font-bridal text-[10px] uppercase tracking-[0.2em] text-bridal-text-soft">per event</p>
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                           {seats && (
-                            <span className="inline-flex items-center gap-1 bg-neutral-100 text-neutral-600 text-xs px-2 py-0.5 rounded-full border border-neutral-200">
+                            <span className="inline-flex items-center gap-1 bg-bridal-ivory text-bridal-charcoal/85 text-xs px-2 py-0.5 rounded-full border border-bridal-beige">
                               {seats} seats
                             </span>
                           )}
                           {units && (
-                            <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full border border-green-200">
+                            <span className="inline-flex items-center gap-1 bg-bridal-sage/20 text-[#3F6B43] text-xs px-2 py-0.5 rounded-full border border-bridal-sage/45">
                               {units} available
                             </span>
                           )}
                         </div>
                         {(withDriver || hasAC || hasDecor) && (
-                          <div className="flex flex-wrap gap-1 pt-1 border-t border-neutral-100">
+                          <div className="flex flex-wrap gap-1 pt-1 border-t border-bridal-beige/70">
                             {withDriver && <span className="text-[11px] bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-0.5 rounded-full">With Driver</span>}
                             {hasAC && <span className="text-[11px] bg-sky-50 text-sky-700 border border-sky-100 px-2 py-0.5 rounded-full">AC</span>}
                             {hasDecor && <span className="text-[11px] bg-pink-50 text-pink-700 border border-pink-100 px-2 py-0.5 rounded-full">Decoration</span>}
@@ -272,24 +272,24 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                           return (
                             <div
                               onClick={e => e.stopPropagation()}
-                              className="flex items-center justify-between pt-3 border-t border-purple-100"
+                              className="flex items-center justify-between pt-3 border-t border-bridal-gold/45"
                             >
-                              <span className="text-xs font-semibold text-neutral-600">How many units?</span>
+                              <span className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">How many units?</span>
                               <div className="flex items-center gap-2">
                                 <button
                                   type="button"
                                   onClick={() => handleVehicleQtyChange(-1, maxUnits)}
                                   disabled={vehicleQty <= 1}
-                                  className="w-7 h-7 rounded-lg border-2 border-neutral-200 bg-white flex items-center justify-center hover:border-purple-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-sm font-bold"
+                                  className="w-8 h-8 rounded-full border border-bridal-beige bg-bridal-cream inline-flex items-center justify-center hover:border-bridal-gold/55 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-display italic text-[14px] text-bridal-charcoal"
                                 >
                                   −
                                 </button>
-                                <span className="w-6 text-center text-sm font-bold text-neutral-900">{vehicleQty}</span>
+                                <span className="w-6 text-center font-display italic text-[16px] text-bridal-charcoal">{vehicleQty}</span>
                                 <button
                                   type="button"
                                   onClick={() => handleVehicleQtyChange(+1, maxUnits)}
                                   disabled={vehicleQty >= maxUnits}
-                                  className="w-7 h-7 rounded-lg border-2 border-neutral-200 bg-white flex items-center justify-center hover:border-purple-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-sm font-bold"
+                                  className="w-8 h-8 rounded-full border border-bridal-beige bg-bridal-cream inline-flex items-center justify-center hover:border-bridal-gold/55 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-display italic text-[14px] text-bridal-charcoal"
                                 >
                                   +
                                 </button>
@@ -301,9 +301,9 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                     </motion.div>
                   )
                 }) : (
-                  <div className="col-span-2 rounded-xl border-2 border-dashed border-neutral-200 p-8 text-center">
-                    <Car className="h-8 w-8 mx-auto mb-2 text-neutral-300" />
-                    <p className="text-sm text-neutral-500">No vehicles listed yet. Contact the vendor.</p>
+                  <div className="col-span-2 rounded-md border border-dashed border-bridal-beige bg-bridal-cream p-10 text-center">
+                    <Car className="h-8 w-8 mx-auto mb-2 text-bridal-text-soft/70" />
+                    <p className="font-bridal text-[13px] text-bridal-text-soft">No vehicles listed yet. Contact the vendor.</p>
                   </div>
                 )}
               </motion.div>
@@ -313,8 +313,8 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
             {servicePkgs.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Service Packages</p>
-                  <Badge variant="outline" className="text-xs text-neutral-500">Optional</Badge>
+                  <p className="font-bridal text-[10.5px] uppercase tracking-[0.32em] font-medium text-bridal-gold-dark">Service Packages</p>
+                  <Badge variant="outline" className="font-bridal text-[12px] text-bridal-text-soft">Optional</Badge>
                 </div>
                 <motion.div className="grid grid-cols-1 md:grid-cols-2 gap-3" variants={container} initial="hidden" animate="visible">
                   {servicePkgs.map((pkg) => {
@@ -328,30 +328,30 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                         onClick={() => handleVendorPackageToggle(String(pkg.id))}
                         className={`relative cursor-pointer rounded-xl border-2 p-4 transition-all duration-200 ${
                           isSelected
-                            ? 'border-green-500 bg-green-50/50 shadow-sm'
-                            : 'border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-sm'
+                            ? 'border-bridal-sage bg-bridal-sage/15 shadow-[0_14px_32px_-18px_rgba(63,107,67,0.4)]'
+                            : 'border-bridal-beige bg-bridal-ivory hover:border-bridal-gold/55 hover:bg-bridal-cream'
                         }`}
                       >
                         {isSelected && (
-                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-green-600 flex items-center justify-center">
-                            <Check className="w-3 h-3 text-white" />
+                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-bridal-sage border border-[#3F6B43] flex items-center justify-center">
+                            <Check className="w-3 h-3 text-bridal-charcoal" strokeWidth={3} />
                           </motion.div>
                         )}
                         <div className="flex items-start justify-between gap-2 pr-6">
-                          <h4 className="text-sm font-bold text-neutral-900">{pkg.name}</h4>
-                          <p className="text-base font-extrabold text-purple-600 shrink-0">Rs. {Number(pkg.price)?.toLocaleString()}</p>
+                          <h4 className="font-display italic text-[16px] text-bridal-charcoal">{pkg.name}</h4>
+                          <p className="font-display italic text-[18px] text-bridal-gold-dark shrink-0">Rs. {Number(pkg.price)?.toLocaleString()}</p>
                         </div>
                         {pkg.description && (
-                          <p className="text-xs text-neutral-500 mt-1 leading-relaxed">{pkg.description}</p>
+                          <p className="font-bridal text-[12.5px] text-bridal-text-soft mt-2 leading-relaxed">{pkg.description}</p>
                         )}
                         {flat.length > 0 && (
-                          <ul className="mt-2 space-y-1 pt-2 border-t border-neutral-100">
+                          <ul className="mt-2 space-y-1 pt-2 border-t border-bridal-beige/70">
                             {flat.slice(0, 3).map((f, i) => (
-                              <li key={i} className="flex items-center gap-1.5 text-xs text-neutral-500">
-                                <Check className="h-3 w-3 text-green-500 flex-shrink-0" />{f}
+                              <li key={i} className="flex items-center gap-1.5 font-bridal text-[12px] text-bridal-text-soft">
+                                <Check className="h-3 w-3 text-bridal-gold flex-shrink-0" />{f}
                               </li>
                             ))}
-                            {flat.length > 3 && <li className="text-xs text-neutral-400 pl-4">+{flat.length - 3} more</li>}
+                            {flat.length > 3 && <li className="font-bridal text-[11.5px] text-bridal-text-soft pl-4">+{flat.length - 3} more</li>}
                           </ul>
                         )}
                       </motion.div>
@@ -377,8 +377,8 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                 whileTap={{ scale: 0.98 }}
                 className={`relative cursor-pointer rounded-xl border-2 overflow-hidden transition-all duration-200 ${
                   isSelected
-                    ? 'border-purple-500 bg-purple-50/50 shadow-sm'
-                    : 'border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-sm'
+                    ? 'border-bridal-gold-dark bg-bridal-cream shadow-[0_14px_32px_-18px_rgba(176,125,84,0.5)]'
+                    : 'border-bridal-beige bg-bridal-ivory hover:border-bridal-gold/55 hover:bg-bridal-cream'
                 }`}
                 onClick={(e) => {
                   if ((e.target as HTMLElement).closest('button')) return
@@ -387,52 +387,48 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
               >
                 {/* Outfit / product image for bridal wear & stationery */}
                 {(isBridalWear || isWeddingStationery) && imgs.length > 0 && (
-                  <div className="relative aspect-video bg-neutral-100">
+                  <div className="relative aspect-video bg-bridal-ivory">
                     <Image src={imgs[0]} alt={pkg.name} fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
                     {isSelected && (
-                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-2 right-2 w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center shadow">
-                        <Check className="w-3.5 h-3.5 text-white" />
+                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-2 right-2 w-7 h-7 rounded-full bg-bridal-gold border border-bridal-gold-dark flex items-center justify-center shadow-[0_4px_12px_-6px_rgba(176,125,84,0.55)]">
+                        <Check className="w-3.5 h-3.5 text-bridal-charcoal" strokeWidth={3} />
                       </motion.div>
                     )}
                   </div>
                 )}
                 <div className="p-5 space-y-3">
-                {/* "Popular" badge only for standard package flows */}
-                {!isBridalWear && !isWeddingStationery && idx === 1 && venuePackages.length > 1 && (
-                  <span className="absolute -top-2.5 left-4 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-purple-600 text-white rounded-full">
-                    Popular
-                  </span>
-                )}
-
-                {/* Selected check — only shown when no image header (image header has its own check) */}
-                {isSelected && !(isBridalWear || isWeddingStationery) && (
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-3 right-3 w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center">
-                    <Check className="w-3.5 h-3.5 text-white" />
-                  </motion.div>
-                )}
-                {/* Selected check for cards without image header */}
-                {isSelected && (isBridalWear || isWeddingStationery) && imgs.length === 0 && (
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-3 right-3 w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center">
-                    <Check className="w-3.5 h-3.5 text-white" />
+                {/* Selected check */}
+                {isSelected && (
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-3 right-3 w-7 h-7 rounded-full bg-bridal-gold border border-bridal-gold-dark flex items-center justify-center shadow-[0_4px_10px_-4px_rgba(176,125,84,0.45)] z-10">
+                    <Check className="w-3.5 h-3.5 text-bridal-charcoal" strokeWidth={3} />
                   </motion.div>
                 )}
 
-                  <div className="flex items-start justify-between gap-2 pr-7">
-                    <div>
-                      <h4 className="text-base font-bold text-neutral-900">{pkg.name}</h4>
+                  <div className="flex items-start justify-between gap-3 pr-9">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-display italic text-[18px] text-bridal-charcoal leading-tight">{pkg.name}</h4>
+                        {/* Inline "Popular" pill — replaces the floating badge that
+                            was clipping at the top of the card. */}
+                        {!isBridalWear && !isWeddingStationery && idx === 1 && venuePackages.length > 1 && (
+                          <span className="inline-flex items-center px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] font-semibold bg-bridal-gold/95 text-bridal-charcoal rounded-full">
+                            Popular
+                          </span>
+                        )}
+                      </div>
                       {pkg.duration && (
-                        <div className="flex items-center gap-1 mt-0.5 text-xs text-neutral-400">
+                        <div className="flex items-center gap-1 mt-1 font-bridal text-[11.5px] text-bridal-text-soft">
                           <Clock className="h-3 w-3" /> {pkg.duration}
                         </div>
                       )}
                     </div>
-                    <p className="text-xl font-extrabold text-purple-600 shrink-0">
+                    <p className="font-display italic text-[22px] sm:text-[24px] text-bridal-gold-dark shrink-0 leading-tight">
                       Rs. {Number(pkg.price)?.toLocaleString()}
                     </p>
                   </div>
 
                   {pkg.description && (
-                    <p className="text-xs text-neutral-500 leading-relaxed">{pkg.description}</p>
+                    <p className="font-bridal text-[12.5px] text-bridal-text-soft leading-relaxed">{pkg.description}</p>
                   )}
 
                   {(() => {
@@ -443,15 +439,15 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
 
                     if (flat.length === 0) return null
                     return (
-                      <div className="pt-2 border-t border-neutral-100 space-y-2">
+                      <div className="pt-2 border-t border-bridal-beige/70 space-y-2">
                         {grouped.length > 0 ? (
                           <>
                             {grouped.slice(0, isExpanded ? grouped.length : 2).map((g, gi) => (
                               <div key={gi}>
-                                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">{g.label}</p>
+                                <p className="font-bridal text-[10px] uppercase tracking-[0.25em] font-medium text-bridal-text-label mb-1">{g.label}</p>
                                 <div className="flex flex-wrap gap-1">
                                   {g.items.map((item, ii) => (
-                                    <span key={ii} className="inline-flex items-center gap-0.5 text-[11px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full border border-purple-100">
+                                    <span key={ii} className="inline-flex items-center gap-0.5 text-[11px] bg-bridal-cream text-bridal-gold-dark px-2 py-0.5 rounded-full border border-bridal-gold/45 font-bridal">
                                       <Check className="w-2.5 h-2.5 shrink-0" />{item}
                                     </span>
                                   ))}
@@ -462,8 +458,8 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                         ) : (
                           <ul className="space-y-1">
                             {flat.slice(0, isExpanded ? flat.length : PREVIEW).map((f, i) => (
-                              <li key={i} className="flex items-start gap-1.5 text-xs text-neutral-600">
-                                <Check className="h-3 w-3 text-green-500 mt-0.5 shrink-0" />{f}
+                              <li key={i} className="flex items-start gap-1.5 font-bridal text-[12.5px] text-bridal-charcoal/85">
+                                <Check className="h-3 w-3 text-bridal-gold mt-0.5 shrink-0" />{f}
                               </li>
                             ))}
                           </ul>
@@ -472,7 +468,7 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                           <button
                             type="button"
                             onClick={(e) => toggleExpand(String(pkg.id), e)}
-                            className="flex items-center gap-1 text-[11px] text-purple-600 hover:text-purple-700 font-medium mt-1"
+                            className="flex items-center gap-1 font-bridal text-[11px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark hover:text-bridal-mauve mt-2"
                           >
                             {isExpanded ? <><ChevronUp className="w-3 h-3" />Show less</> : <><ChevronDown className="w-3 h-3" />+{grouped.length > 2 ? grouped.length - 2 : flat.length - PREVIEW} more</>}
                           </button>
@@ -485,9 +481,9 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                   {(isBridalWear || isWeddingStationery) && isSelected && (
                     <div
                       onClick={e => e.stopPropagation()}
-                      className="flex items-center justify-between pt-3 border-t border-purple-100"
+                      className="flex items-center justify-between pt-3 border-t border-bridal-gold/45"
                     >
-                      <span className="text-xs font-semibold text-neutral-600">
+                      <span className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">
                         {isBridalWear ? 'How many outfits?' : 'Quantity (sets)'}
                       </span>
                       <div className="flex items-center gap-2">
@@ -495,16 +491,16 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                           type="button"
                           onClick={() => handleVehicleQtyChange(-1, 99)}
                           disabled={vehicleQty <= 1}
-                          className="w-7 h-7 rounded-lg border-2 border-neutral-200 bg-white flex items-center justify-center hover:border-purple-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-sm font-bold"
+                          className="w-8 h-8 rounded-full border border-bridal-beige bg-bridal-cream inline-flex items-center justify-center hover:border-bridal-gold/55 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-display italic text-[14px] text-bridal-charcoal"
                         >
                           −
                         </button>
-                        <span className="w-6 text-center text-sm font-bold text-neutral-900">{vehicleQty}</span>
+                        <span className="w-6 text-center font-display italic text-[16px] text-bridal-charcoal">{vehicleQty}</span>
                         <button
                           type="button"
                           onClick={() => handleVehicleQtyChange(+1, 99)}
                           disabled={vehicleQty >= 99}
-                          className="w-7 h-7 rounded-lg border-2 border-neutral-200 bg-white flex items-center justify-center hover:border-purple-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-sm font-bold"
+                          className="w-8 h-8 rounded-full border border-bridal-beige bg-bridal-cream inline-flex items-center justify-center hover:border-bridal-gold/55 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-display italic text-[14px] text-bridal-charcoal"
                         >
                           +
                         </button>
@@ -520,12 +516,12 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
 
       {/* Empty state */}
       {venuePackages.length === 0 && (
-        <div className="rounded-xl border-2 border-dashed border-neutral-200 p-8 text-center">
-          <Package className="h-8 w-8 mx-auto mb-2 text-neutral-300" />
-          <p className="text-sm text-neutral-500 mb-1">
+        <div className="rounded-md border border-dashed border-bridal-beige bg-bridal-cream p-10 text-center">
+          <Package className="h-8 w-8 mx-auto mb-2 text-bridal-text-soft/70" />
+          <p className="font-bridal text-[13px] text-bridal-text-soft mb-1">
             {isBridalWear ? 'No outfits listed yet' : isWeddingStationery ? 'No products listed yet' : 'No packages available'}
           </p>
-          <p className="text-xs text-neutral-400 mb-4">
+          <p className="font-bridal text-[11.5px] text-bridal-text-soft mb-4">
             {isBridalWear ? 'Contact the shop for available outfits.' : isWeddingStationery ? 'Contact the vendor for available products.' : `Contact the ${!isVenueBooking ? 'vendor' : 'venue'} for pricing.`}
           </p>
           <Button variant="outline" size="sm" onClick={() => updateFormData({ selectedPackage: 'default' })}>
@@ -538,8 +534,8 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
       {isVenueBooking && vendorPackages.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-neutral-700">Vendor Add-ons</h3>
-            <Badge variant="outline" className="text-xs text-neutral-500">Optional</Badge>
+            <h3 className="font-display italic text-[18px] text-bridal-charcoal">Vendor Add-ons</h3>
+            <Badge variant="outline" className="font-bridal text-[12px] text-bridal-text-soft">Optional</Badge>
           </div>
           <motion.div className="grid grid-cols-1 md:grid-cols-2 gap-3" variants={container} initial="hidden" animate="visible">
             {vendorPackages.map((pkg) => {
@@ -553,33 +549,33 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                   className={`relative cursor-pointer rounded-xl border-2 p-4 transition-all duration-200 ${
                     isSelected
                       ? 'border-green-500 bg-green-50/50'
-                      : 'border-neutral-200 bg-white hover:border-neutral-300'
+                      : 'border-bridal-beige bg-bridal-ivory hover:border-bridal-gold/55 hover:bg-bridal-cream'
                   }`}
                   onClick={() => handleVendorPackageToggle(String(pkg.id))}
                 >
                   {isSelected && (
-                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-green-600 flex items-center justify-center">
-                      <Check className="w-3 h-3 text-white" />
+                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-bridal-sage border border-[#3F6B43] flex items-center justify-center">
+                      <Check className="w-3 h-3 text-bridal-charcoal" strokeWidth={3} />
                     </motion.div>
                   )}
                   <div className="flex items-start justify-between gap-2 pr-6">
                     <div>
-                      <h4 className="text-sm font-bold text-neutral-900">{pkg.name}</h4>
-                      {vendor && <p className="text-xs text-neutral-400 mt-0.5">by {vendor.name}</p>}
+                      <h4 className="font-display italic text-[16px] text-bridal-charcoal">{pkg.name}</h4>
+                      {vendor && <p className="font-bridal text-[11.5px] text-bridal-text-soft mt-1">by {vendor.name}</p>}
                     </div>
-                    <p className="text-base font-extrabold text-green-600 shrink-0">Rs. {Number(pkg.price)?.toLocaleString()}</p>
+                    <p className="font-display italic text-[20px] text-[#3F6B43] shrink-0">Rs. {Number(pkg.price)?.toLocaleString()}</p>
                   </div>
                   {(() => {
                     const flat = getFlatFeatures(pkg.features)
                     if (flat.length === 0) return null
                     return (
-                      <ul className="mt-2 space-y-1 pt-2 border-t border-neutral-100">
+                      <ul className="mt-2 space-y-1 pt-2 border-t border-bridal-beige/70">
                         {flat.slice(0, 3).map((f, i) => (
-                          <li key={i} className="flex items-center gap-1.5 text-xs text-neutral-500">
-                            <Check className="h-3 w-3 text-green-500 flex-shrink-0" />{f}
+                          <li key={i} className="flex items-center gap-1.5 font-bridal text-[12px] text-bridal-text-soft">
+                            <Check className="h-3 w-3 text-bridal-gold flex-shrink-0" />{f}
                           </li>
                         ))}
-                        {flat.length > 3 && <li className="text-xs text-neutral-400 pl-4">+{flat.length - 3} more included</li>}
+                        {flat.length > 3 && <li className="font-bridal text-[11.5px] text-bridal-text-soft pl-4">+{flat.length - 3} more included</li>}
                       </ul>
                     )
                   })()}
@@ -591,11 +587,11 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
       )}
 
       {/* Total */}
-      <div className="rounded-xl bg-neutral-50 border border-neutral-200 p-4">
+      <div className="rounded-md bg-bridal-cream border border-bridal-gold/45 p-5 shadow-[0_8px_24px_-20px_rgba(176,125,84,0.45)]">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-neutral-700">Total</p>
-            <p className="text-xs text-neutral-400">
+            <p className="font-bridal text-[10.5px] uppercase tracking-[0.25em] font-medium text-bridal-text-label">Total</p>
+            <p className="font-bridal text-[11.5px] text-bridal-text-soft">
               {isCarRental
                 ? selectedPackageId ? `${vehicleQty} vehicle${vehicleQty > 1 ? 's' : ''} selected` : 'No vehicle selected'
                 : isBridalWear
@@ -615,7 +611,7 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
               })()}
             </p>
           </div>
-          <p className="text-2xl font-bold text-purple-600">Rs. {calculateTotalPrice().toLocaleString()}</p>
+          <p className="font-display italic text-[28px] text-bridal-gold-dark">Rs. {calculateTotalPrice().toLocaleString()}</p>
         </div>
       </div>
     </div>

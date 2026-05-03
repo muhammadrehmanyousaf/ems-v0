@@ -17,7 +17,7 @@ export default function Error({
   }, [error])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-purple-50/30 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-bridal-cream/30 flex items-center justify-center px-4">
       <div className="max-w-lg w-full text-center">
         <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
           <AlertTriangle className="w-10 h-10 text-red-500" />
@@ -40,7 +40,7 @@ export default function Error({
             Try Again
           </Button>
           <Link href="/">
-            <Button className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white min-h-[44px]">
+            <Button className="w-full sm:w-auto bg-gradient-to-r from-bridal-gold to-bridal-gold-dark hover:from-bridal-gold-dark hover:to-bridal-gold-dark text-white min-h-[44px]">
               <Home className="w-4 h-4 mr-2" />
               Back to Home
             </Button>

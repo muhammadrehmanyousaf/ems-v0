@@ -38,7 +38,7 @@ const NOTIFICATION_ICONS: Record<string, { icon: React.ElementType; color: strin
   payment_refunded: { icon: RefreshCcw, color: "text-amber-600", bg: "bg-amber-50" },
   payout_processed: { icon: Wallet, color: "text-emerald-600", bg: "bg-emerald-50" },
   new_review: { icon: Star, color: "text-yellow-600", bg: "bg-yellow-50" },
-  welcome: { icon: Sparkles, color: "text-purple-600", bg: "bg-purple-50" },
+  welcome: { icon: Sparkles, color: "text-violet-600", bg: "bg-violet-50" },
   system: { icon: Info, color: "text-gray-600", bg: "bg-gray-50" },
 };
 
@@ -80,7 +80,7 @@ function NotificationItem({
   return (
     <DropdownMenuItem
       className={`flex items-start gap-3 py-3 px-3 cursor-pointer focus:bg-muted/50 ${
-        !notification.isRead ? "bg-purple-50/40 dark:bg-purple-950/10" : ""
+        !notification.isRead ? "bg-accent/60" : ""
       }`}
       onSelect={(e) => {
         e.preventDefault();
@@ -104,7 +104,7 @@ function NotificationItem({
             {notification.title}
           </h4>
           {!notification.isRead && (
-            <span className="h-2 w-2 shrink-0 rounded-full bg-purple-500" />
+            <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />
           )}
         </div>
         <p className="text-[11px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">
@@ -149,7 +149,7 @@ const NotificationsPopover = () => {
         <Button size="icon" variant="ghost" className="relative">
           <Bell className="size-4" />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-purple-600 px-1 text-[10px] font-bold text-white shadow-sm">
+            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground shadow-sm">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}
@@ -165,7 +165,7 @@ const NotificationsPopover = () => {
           <DropdownMenuLabel className="p-0 text-sm font-semibold">
             Notifications
             {unreadCount > 0 && (
-              <span className="ml-2 inline-flex items-center justify-center rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-medium text-purple-700">
+              <span className="ml-2 inline-flex items-center justify-center rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">
                 {unreadCount} new
               </span>
             )}
@@ -186,7 +186,7 @@ const NotificationsPopover = () => {
                   e.stopPropagation();
                   markAllAsRead();
                 }}
-                className="text-[11px] text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-purple-50 transition-colors"
+                className="text-[11px] text-muted-foreground hover:text-foreground font-medium flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-accent transition-colors"
               >
                 <CheckCheck className="h-3 w-3" />
                 Read all
@@ -233,7 +233,7 @@ const NotificationsPopover = () => {
                     loadMore();
                   }}
                   disabled={isLoading}
-                  className="w-full py-2.5 text-center text-[12px] font-medium text-purple-600 hover:text-purple-800 hover:bg-purple-50 transition-colors flex items-center justify-center gap-1.5"
+                  className="w-full py-2.5 text-center text-[12px] font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex items-center justify-center gap-1.5"
                 >
                   {isLoading ? (
                     <Loader2 className="h-3 w-3 animate-spin" />

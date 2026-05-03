@@ -42,7 +42,7 @@ const NOTIFICATION_CONFIG: Record<
   payment_refunded: { icon: RefreshCcw, color: "text-amber-600", bg: "bg-amber-50", label: "Refund" },
   payout_processed: { icon: Wallet, color: "text-emerald-600", bg: "bg-emerald-50", label: "Payout" },
   new_review: { icon: Star, color: "text-yellow-600", bg: "bg-yellow-50", label: "Review" },
-  welcome: { icon: Sparkles, color: "text-purple-600", bg: "bg-purple-50", label: "Welcome" },
+  welcome: { icon: Sparkles, color: "text-bridal-gold-dark", bg: "bg-bridal-cream", label: "Welcome" },
   system: { icon: Info, color: "text-gray-600", bg: "bg-gray-50", label: "System" },
 };
 
@@ -81,8 +81,8 @@ function NotificationItem({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -10 }}
       transition={{ duration: 0.2 }}
-      className={`group relative flex items-start gap-3 px-4 py-3 cursor-pointer transition-all duration-200 hover:bg-purple-50/60 dark:hover:bg-neutral-800/60 ${
-        !notification.isRead ? "bg-purple-50/40 dark:bg-neutral-800/40" : ""
+      className={`group relative flex items-start gap-3 px-4 py-3 cursor-pointer transition-all duration-200 hover:bg-bridal-cream/60 dark:hover:bg-neutral-800/60 ${
+        !notification.isRead ? "bg-bridal-cream/40 dark:bg-neutral-800/40" : ""
       }`}
       onClick={() => {
         if (!notification.isRead) onRead(notification.id);
@@ -91,7 +91,7 @@ function NotificationItem({
     >
       {/* Unread indicator line */}
       {!notification.isRead && (
-        <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full bg-purple-500" />
+        <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full bg-bridal-gold" />
       )}
 
       {/* Icon */}
@@ -158,18 +158,18 @@ export default function NotificationDropdown({ notificationsPageUrl }: Notificat
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
-          className="hidden sm:flex relative h-9 w-9 items-center justify-center rounded-xl hover:bg-purple-50 text-neutral-400 hover:text-purple-600 transition-all duration-200"
+          className="hidden sm:flex relative h-9 w-9 items-center justify-center rounded-xl hover:bg-bridal-cream text-neutral-400 hover:text-bridal-gold-dark transition-all duration-200"
           aria-label="Notifications"
         >
           <Bell className="w-[18px] h-[18px]" />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-purple-600 px-1 text-[10px] font-bold text-white animate-in fade-in zoom-in duration-200">
+            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-bridal-gold px-1 text-[10px] font-bold text-white animate-in fade-in zoom-in duration-200">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
           {/* Pulse ring for new notifications */}
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-purple-400 animate-ping opacity-30" />
+            <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-bridal-gold/55 animate-ping opacity-30" />
           )}
         </button>
       </PopoverTrigger>
@@ -180,7 +180,7 @@ export default function NotificationDropdown({ notificationsPageUrl }: Notificat
         className="w-[380px] p-0 rounded-2xl shadow-2xl border-neutral-200/80 dark:border-neutral-800 dark:bg-neutral-900 overflow-hidden"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-700">
+        <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-bridal-gold to-bridal-gold-dark">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-bold text-white">Notifications</h3>
             {unreadCount > 0 && (
@@ -200,7 +200,7 @@ export default function NotificationDropdown({ notificationsPageUrl }: Notificat
                 e.stopPropagation();
                 markAllAsRead();
               }}
-              className="flex items-center gap-1 text-[11px] font-medium text-purple-100 hover:text-white transition-colors"
+              className="flex items-center gap-1 text-[11px] font-medium text-bridal-cream hover:text-white transition-colors"
             >
               <CheckCheck className="h-3.5 w-3.5" />
               Mark all read
@@ -212,13 +212,13 @@ export default function NotificationDropdown({ notificationsPageUrl }: Notificat
         <ScrollArea className="max-h-[420px]">
           {isLoading && notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-purple-400 mb-2" />
+              <Loader2 className="h-6 w-6 animate-spin text-bridal-gold/70 mb-2" />
               <p className="text-xs text-neutral-400">Loading notifications...</p>
             </div>
           ) : displayedNotifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-4">
-              <div className="h-14 w-14 rounded-2xl bg-purple-50 flex items-center justify-center mb-3">
-                <Bell className="h-6 w-6 text-purple-300" />
+              <div className="h-14 w-14 rounded-2xl bg-bridal-cream flex items-center justify-center mb-3">
+                <Bell className="h-6 w-6 text-bridal-gold" />
               </div>
             <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">All caught up!</p>
               <p className="text-xs text-neutral-400 mt-1 text-center">
@@ -247,7 +247,7 @@ export default function NotificationDropdown({ notificationsPageUrl }: Notificat
           <Link
             href={notificationsPageUrl}
             onClick={() => setOpen(false)}
-            className="flex items-center justify-center gap-1.5 py-3 text-[13px] font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-neutral-800 transition-all duration-200"
+            className="flex items-center justify-center gap-1.5 py-3 text-[13px] font-semibold text-bridal-gold-dark dark:text-bridal-gold/70 hover:text-bridal-gold-dark dark:hover:text-bridal-gold hover:bg-bridal-cream dark:hover:bg-neutral-800 transition-all duration-200"
           >
             View all notifications
             <ArrowRight className="h-3.5 w-3.5" />

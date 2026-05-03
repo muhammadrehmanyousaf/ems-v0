@@ -62,7 +62,7 @@ export function ReplyDialog({ open, onOpenChange, review, onSuccess }: ReplyDial
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <MessageSquareReply className="w-5 h-5 text-purple-500" />
+                        <MessageSquareReply className="w-5 h-5 text-bridal-gold" />
                         Reply to Review
                     </DialogTitle>
                     <DialogDescription>

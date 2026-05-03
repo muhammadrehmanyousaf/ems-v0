@@ -1,60 +1,74 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import PageContainer from "@/components/dashboard/layout/page-container";
-import { Heading } from "@/components/heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { UsersAPI, type ApiUser } from "@/lib/api/dashboard";
 import axiosInstance from "@/lib/axiosConfig";
 import { BACKEND_URL } from "@/lib/backend-url";
 import { toast } from "sonner";
-import { User, Building2, Lock } from "lucide-react";
+import { User, Building2, Lock, Save } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 
-// ── Avatar ────────────────────────────────────────────────────────────────────
+import {
+  PageContainer,
+  PageHeader,
+  SectionCard,
+} from "@/components/user-dashboard";
+import { Card } from "@/components/ui/card";
+
 function ProfileAvatar({ name }: { name?: string }) {
   const initials = name
-    ? name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()
+    ? name
+        .split(" ")
+        .map((n) => n[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase()
     : "U";
-  const colors = [
-    "bg-violet-100 text-violet-700",
-    "bg-blue-100 text-blue-700",
-    "bg-emerald-100 text-emerald-700",
-    "bg-orange-100 text-orange-700",
-    "bg-rose-100 text-rose-700",
-  ];
-  const color = colors[(initials.charCodeAt(0) || 0) % colors.length];
   return (
-    <div className={`h-20 w-20 rounded-full flex items-center justify-center text-2xl font-bold shrink-0 ${color}`}>
+    <div className="h-20 w-20 rounded-full flex items-center justify-center font-display italic text-[26px] shrink-0 bg-bridal-cream border border-bridal-gold/55 text-bridal-gold-dark">
       {initials}
     </div>
   );
 }
 
-// ── Reusable field ─────────────────────────────────────────────────────────────
 function Field({
-  label, id, name, value, onChange, type = "text", placeholder,
+  label,
+  id,
+  name,
+  value,
+  onChange,
+  type = "text",
+  placeholder,
 }: {
-  label: string; id: string; name: string; value: string;
+  label: string;
+  id: string;
+  name: string;
+  value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  type?: string; placeholder?: string;
+  type?: string;
+  placeholder?: string;
 }) {
   return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id} className="text-sm font-medium">{label}</Label>
-      <Input id={id} name={name} type={type} value={value} onChange={onChange}
-        placeholder={placeholder} className="h-9" />
+    <div className="space-y-2">
+      <Label htmlFor={id} className="text-[11.5px] font-medium text-foreground">
+        {label}
+      </Label>
+      <Input
+        id={id}
+        name={name}
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+      />
     </div>
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
 export default function ProfilePage() {
   const { refreshUser } = useUser();
   const [user, setUser] = useState<ApiUser | null>(null);
@@ -63,13 +77,21 @@ export default function ProfilePage() {
   const [savingPassword, setSavingPassword] = useState(false);
 
   const [profile, setProfile] = useState({
-    fullName: "", phoneNumber: "", city: "", subArea: "",
-    bookingEmail: "", primaryContactNumber: "", secondaryContactNumber: "",
-    website: "", officeAddress: "",
+    fullName: "",
+    phoneNumber: "",
+    city: "",
+    subArea: "",
+    bookingEmail: "",
+    primaryContactNumber: "",
+    secondaryContactNumber: "",
+    website: "",
+    officeAddress: "",
   });
 
   const [passwords, setPasswords] = useState({
-    currentPassword: "", newPassword: "", confirmPassword: "",
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
 
   useEffect(() => {
@@ -78,15 +100,15 @@ export default function ProfilePage() {
         setUser(u);
         const x = u as unknown as Record<string, string>;
         setProfile({
-          fullName:               u.fullName          || "",
-          phoneNumber:            u.phoneNumber        || "",
-          city:                   u.city               || "",
-          subArea:                x.subArea            || "",
-          bookingEmail:           x.bookingEmail       || "",
-          primaryContactNumber:   x.primaryContactNumber   || "",
+          fullName: u.fullName || "",
+          phoneNumber: u.phoneNumber || "",
+          city: u.city || "",
+          subArea: x.subArea || "",
+          bookingEmail: x.bookingEmail || "",
+          primaryContactNumber: x.primaryContactNumber || "",
           secondaryContactNumber: x.secondaryContactNumber || "",
-          website:                x.website            || "",
-          officeAddress:          x.officeAddress      || "",
+          website: x.website || "",
+          officeAddress: x.officeAddress || "",
         });
       })
       .catch(() => toast.error("Failed to load profile"))
@@ -132,127 +154,226 @@ export default function ProfilePage() {
       toast.success("Password changed successfully");
       setPasswords({ currentPassword: "", newPassword: "", confirmPassword: "" });
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      const msg = (err as { response?: { data?: { message?: string } } })?.response
+        ?.data?.message;
       toast.error(msg || "Failed to change password");
     } finally {
       setSavingPassword(false);
     }
   };
 
-  // ── Loading skeleton ──────────────────────────────────────────────────────
+  const eyebrow = (
+    <>
+      <span>Console</span>
+      <span className="size-1 rounded-full bg-muted-foreground/40" />
+      <span>Profile</span>
+    </>
+  );
+
   if (loading) {
     return (
       <PageContainer>
-        <div className="max-w-3xl space-y-5">
-          <Skeleton className="h-8 w-40" />
-          <Skeleton className="h-28 w-full rounded-xl" />
-          <Skeleton className="h-72 w-full rounded-xl" />
-          <Skeleton className="h-52 w-full rounded-xl" />
-        </div>
+        <PageHeader
+          eyebrow={eyebrow}
+          title="Profile"
+          description="Manage your account, business contact and security."
+        />
+        <Skeleton className="h-32" />
+        <Skeleton className="h-72" />
+        <Skeleton className="h-56" />
       </PageContainer>
     );
   }
 
   return (
     <PageContainer>
-      <div className="max-w-3xl space-y-5">
-        <Heading title="Profile Settings" />
+      <PageHeader
+        eyebrow={eyebrow}
+        title="Profile"
+        description="Manage your account, business contact and security."
+      />
 
-        {/* ── Header card ──────────────────────────────── */}
-        <Card>
-          <CardContent className="flex items-center gap-5 py-5">
-            <ProfileAvatar name={user?.fullName} />
-            <div className="min-w-0">
-              <p className="text-xl font-semibold leading-tight truncate">
-                {user?.fullName || "—"}
-              </p>
-              <p className="text-sm text-muted-foreground mt-0.5">{user?.email}</p>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {user?.isVendor && user?.vendorType && (
-                  <Badge className="bg-violet-100 text-violet-700 border-violet-200 hover:bg-violet-100">
-                    {user.vendorType}
-                  </Badge>
-                )}
-                {user?.roles?.map((r) => (
-                  <Badge key={r.id} variant="outline" className="capitalize text-xs">
-                    {r.name}
-                  </Badge>
-                ))}
+      {/* Identity card */}
+      <Card className="p-5 flex items-center gap-5">
+        <ProfileAvatar name={user?.fullName} />
+        <div className="min-w-0 flex-1">
+          <p className="font-display italic text-[22px] text-foreground leading-tight truncate">
+            {user?.fullName || "—"}
+          </p>
+          <p className="text-[13px] text-muted-foreground mt-0.5 truncate">
+            {user?.email}
+          </p>
+          <div className="flex flex-wrap gap-1.5 mt-2.5">
+            {user?.isVendor && user?.vendorType ? (
+              <span className="inline-flex items-center rounded-full border border-bridal-gold/45 bg-bridal-cream px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-bridal-gold-dark">
+                {user.vendorType}
+              </span>
+            ) : null}
+            {user?.roles?.map((r) => (
+              <span
+                key={r.id}
+                className="inline-flex items-center rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground capitalize"
+              >
+                {r.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      </Card>
+
+      {/* Personal + business contact */}
+      <SectionCard
+        title="Personal information"
+        description="Your basic identity and where you operate."
+      >
+        <form onSubmit={saveProfile} className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <Field
+              label="Full name"
+              id="fullName"
+              name="fullName"
+              value={profile.fullName}
+              onChange={onProfileChange}
+              placeholder="Your full name"
+            />
+            <Field
+              label="Phone number"
+              id="phoneNumber"
+              name="phoneNumber"
+              value={profile.phoneNumber}
+              onChange={onProfileChange}
+              placeholder="+92 300 0000000"
+            />
+            <Field
+              label="City"
+              id="city"
+              name="city"
+              value={profile.city}
+              onChange={onProfileChange}
+              placeholder="e.g. Lahore"
+            />
+            <Field
+              label="Area / sub-area"
+              id="subArea"
+              name="subArea"
+              value={profile.subArea}
+              onChange={onProfileChange}
+              placeholder="e.g. DHA Phase 5"
+            />
+          </div>
+
+          <div className="pt-5 border-t border-border/60">
+            <p className="text-[10.5px] uppercase tracking-[0.28em] font-medium text-bridal-gold-dark mb-4 inline-flex items-center gap-1.5">
+              <Building2 className="size-3.5" />
+              Business contact
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <Field
+                label="Booking email"
+                id="bookingEmail"
+                name="bookingEmail"
+                value={profile.bookingEmail}
+                onChange={onProfileChange}
+                type="email"
+                placeholder="bookings@yourbusiness.com"
+              />
+              <Field
+                label="Primary contact"
+                id="primaryContactNumber"
+                name="primaryContactNumber"
+                value={profile.primaryContactNumber}
+                onChange={onProfileChange}
+                placeholder="+92 300 0000000"
+              />
+              <Field
+                label="Secondary contact"
+                id="secondaryContactNumber"
+                name="secondaryContactNumber"
+                value={profile.secondaryContactNumber}
+                onChange={onProfileChange}
+                placeholder="+92 300 0000000"
+              />
+              <Field
+                label="Website"
+                id="website"
+                name="website"
+                value={profile.website}
+                onChange={onProfileChange}
+                placeholder="https://yourbusiness.com"
+              />
+              <div className="sm:col-span-2">
+                <Field
+                  label="Office address"
+                  id="officeAddress"
+                  name="officeAddress"
+                  value={profile.officeAddress}
+                  onChange={onProfileChange}
+                  placeholder="Full office address"
+                />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* ── Personal & business info ──────────────────── */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <User className="h-4 w-4 text-muted-foreground" />
-              Personal Information
-            </CardTitle>
-          </CardHeader>
-          <Separator />
-          <CardContent className="pt-5">
-            <form onSubmit={saveProfile} className="space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Full Name"      id="fullName"    name="fullName"    value={profile.fullName}    onChange={onProfileChange} placeholder="Your full name" />
-                <Field label="Phone Number"   id="phoneNumber" name="phoneNumber" value={profile.phoneNumber} onChange={onProfileChange} placeholder="+92 300 0000000" />
-                <Field label="City"           id="city"        name="city"        value={profile.city}        onChange={onProfileChange} placeholder="e.g. Lahore" />
-                <Field label="Area / Sub-area" id="subArea"    name="subArea"     value={profile.subArea}     onChange={onProfileChange} placeholder="e.g. DHA Phase 5" />
-              </div>
+          <div className="flex justify-end pt-2">
+            <Button type="submit" size="sm" disabled={savingProfile} className="gap-1.5">
+              <Save className="size-3.5" />
+              {savingProfile ? "Saving…" : "Save changes"}
+            </Button>
+          </div>
+        </form>
+      </SectionCard>
 
-              <Separator />
-
-              <p className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-                <Building2 className="h-4 w-4" /> Business Contact
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Booking Email"       id="bookingEmail"           name="bookingEmail"           value={profile.bookingEmail}           onChange={onProfileChange} type="email" placeholder="bookings@yourbusiness.com" />
-                <Field label="Primary Contact"     id="primaryContactNumber"   name="primaryContactNumber"   value={profile.primaryContactNumber}   onChange={onProfileChange} placeholder="+92 300 0000000" />
-                <Field label="Secondary Contact"   id="secondaryContactNumber" name="secondaryContactNumber" value={profile.secondaryContactNumber} onChange={onProfileChange} placeholder="+92 300 0000000" />
-                <Field label="Website"             id="website"                name="website"                value={profile.website}                onChange={onProfileChange} placeholder="https://yourbusiness.com" />
-                <div className="sm:col-span-2">
-                  <Field label="Office Address" id="officeAddress" name="officeAddress" value={profile.officeAddress} onChange={onProfileChange} placeholder="Full office address" />
-                </div>
-              </div>
-
-              <div className="flex justify-end">
-                <Button type="submit" disabled={savingProfile} className="min-w-[120px]">
-                  {savingProfile ? "Saving…" : "Save Changes"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* ── Change password ───────────────────────────── */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Lock className="h-4 w-4 text-muted-foreground" />
-              Change Password
-            </CardTitle>
-          </CardHeader>
-          <Separator />
-          <CardContent className="pt-5">
-            <form onSubmit={savePassword} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2">
-                  <Field label="Current Password"   id="currentPassword"  name="currentPassword"  value={passwords.currentPassword}  onChange={onPasswordChange} type="password" placeholder="Enter current password" />
-                </div>
-                <Field label="New Password"          id="newPassword"      name="newPassword"      value={passwords.newPassword}      onChange={onPasswordChange} type="password" placeholder="Min 6 characters" />
-                <Field label="Confirm New Password"  id="confirmPassword"  name="confirmPassword"  value={passwords.confirmPassword}  onChange={onPasswordChange} type="password" placeholder="Repeat new password" />
-              </div>
-              <div className="flex justify-end">
-                <Button type="submit" variant="outline" disabled={savingPassword} className="min-w-[160px]">
-                  {savingPassword ? "Updating…" : "Update Password"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Password */}
+      <SectionCard
+        title="Change password"
+        description="Update your password to keep your account secure."
+      >
+        <form onSubmit={savePassword} className="space-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="sm:col-span-2">
+              <Field
+                label="Current password"
+                id="currentPassword"
+                name="currentPassword"
+                value={passwords.currentPassword}
+                onChange={onPasswordChange}
+                type="password"
+                placeholder="Enter current password"
+              />
+            </div>
+            <Field
+              label="New password"
+              id="newPassword"
+              name="newPassword"
+              value={passwords.newPassword}
+              onChange={onPasswordChange}
+              type="password"
+              placeholder="Min 6 characters"
+            />
+            <Field
+              label="Confirm new password"
+              id="confirmPassword"
+              name="confirmPassword"
+              value={passwords.confirmPassword}
+              onChange={onPasswordChange}
+              type="password"
+              placeholder="Repeat new password"
+            />
+          </div>
+          <div className="flex justify-end pt-2">
+            <Button
+              type="submit"
+              variant="outline"
+              size="sm"
+              disabled={savingPassword}
+              className="gap-1.5"
+            >
+              <Lock className="size-3.5" />
+              {savingPassword ? "Updating…" : "Update password"}
+            </Button>
+          </div>
+        </form>
+      </SectionCard>
     </PageContainer>
   );
 }

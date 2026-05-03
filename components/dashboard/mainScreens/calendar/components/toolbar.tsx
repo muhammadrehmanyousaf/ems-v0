@@ -1,10 +1,17 @@
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils';
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Building2 } from 'lucide-react'
 import React from 'react'
+import { AvailabilityDrawer } from './availability-drawer'
 
 type Mode = 'month' | 'week' | 'day';
+
+export interface CalendarBusinessOption {
+    id: number;
+    name: string;
+    hasTemplates: boolean;
+}
 
 type ToolbarProps = {
     goPrev: () => void;
@@ -14,9 +21,17 @@ type ToolbarProps = {
     mode: Mode;
     monthTitle: string;
     weekTitle: string;
-    dayTitle: string
+    dayTitle: string;
+    // BK-CALENDAR-SLOT-CHIPS follow-up — multi-business picker. Hidden when
+    // the vendor only owns one business (auto-pick from #162 still works).
+    businessOptions?: CalendarBusinessOption[];
+    selectedBusinessId?: number | null;
+    onBusinessChange?: (id: number) => void;
 }
-const Toolbar = ({ goNext, goPrev, goToday, setMode, mode, monthTitle, weekTitle, dayTitle }: ToolbarProps) => {
+const Toolbar = ({
+    goNext, goPrev, goToday, setMode, mode, monthTitle, weekTitle, dayTitle,
+    businessOptions, selectedBusinessId, onBusinessChange,
+}: ToolbarProps) => {
 
     const modes = [
         { value: 'month', label: 'Month' },
@@ -40,6 +55,29 @@ const Toolbar = ({ goNext, goPrev, goToday, setMode, mode, monthTitle, weekTitle
                 <Button className="hidden sm:block" variant="outline" size={'sm'} onClick={goToday}>
                     Today
                 </Button>
+                <span className="hidden md:block">
+                    <AvailabilityDrawer />
+                </span>
+                {businessOptions && businessOptions.length > 1 && onBusinessChange ? (
+                    <span className="hidden md:flex items-center gap-1.5">
+                        <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                        <Select
+                            value={selectedBusinessId != null ? String(selectedBusinessId) : ''}
+                            onValueChange={(v) => onBusinessChange(Number(v))}
+                        >
+                            <SelectTrigger className="h-8 w-[180px] text-[12.5px]">
+                                <SelectValue placeholder="Business" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {businessOptions.map((b) => (
+                                    <SelectItem key={b.id} value={String(b.id)} className="text-[12.5px]">
+                                        {b.name}{!b.hasTemplates ? ' (no slots)' : ''}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </span>
+                ) : null}
             </div>
 
             <div>

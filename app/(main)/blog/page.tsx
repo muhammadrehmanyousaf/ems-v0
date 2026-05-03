@@ -62,11 +62,11 @@ export default function BlogPage() {
 
   return (
     <div className="min-h-screen">
-      <section className="bg-gradient-to-br from-purple-600 to-purple-800 text-white py-16 px-4">
+      <section className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <BookOpen className="w-12 h-12 mx-auto mb-4 text-purple-200" />
+          <BookOpen className="w-12 h-12 mx-auto mb-4 text-bridal-gold/40" />
           <h1 className="text-4xl sm:text-5xl font-bold mb-4">Wedding Blog</h1>
-          <p className="text-lg text-purple-100 max-w-xl mx-auto">
+          <p className="text-lg text-bridal-cream max-w-xl mx-auto">
             Inspiring stories, expert tips, and the latest trends to help you plan the perfect wedding.
           </p>
         </div>
@@ -77,8 +77,8 @@ export default function BlogPage() {
           {featured && (
             <Card className="border-0 shadow-lg mb-10 overflow-hidden">
               <CardContent className="p-0">
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-8 sm:p-10">
-                  <Badge className="bg-purple-600 text-white mb-4">{featured.category}</Badge>
+                <div className="bg-gradient-to-r from-bridal-cream to-pink-50 p-8 sm:p-10">
+                  <Badge className="bg-bridal-gold text-white mb-4">{featured.category}</Badge>
                   <h2 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-3">{featured.title}</h2>
                   <p className="text-neutral-600 mb-4 max-w-2xl">{featured.excerpt}</p>
                   <div className="flex items-center gap-4 text-sm text-neutral-500">
@@ -94,8 +94,8 @@ export default function BlogPage() {
             {rest.map((post) => (
               <Card key={post.title} className="border-0 shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
-                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                    <post.icon className="w-5 h-5 text-purple-600" />
+                  <div className="w-10 h-10 bg-bridal-gold/15 rounded-lg flex items-center justify-center mb-4">
+                    <post.icon className="w-5 h-5 text-bridal-gold-dark" />
                   </div>
                   <Badge variant="secondary" className="mb-3">{post.category}</Badge>
                   <h3 className="text-lg font-semibold text-neutral-900 mb-2">{post.title}</h3>

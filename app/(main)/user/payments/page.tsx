@@ -3,25 +3,50 @@
 import { useState, useEffect, useRef, Suspense, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
-  Clock, CheckCircle2, CreditCard, Wallet, RefreshCw,
-  Calendar, MapPin, Building2, ChevronRight, AlertTriangle,
-  ArrowRight, TrendingUp, Loader2, Package,
+  Clock,
+  CheckCircle2,
+  CreditCard,
+  Wallet,
+  RefreshCw,
+  Calendar,
+  Building2,
+  ChevronRight,
+  ArrowRight,
+  TrendingUp,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { PaymentAPI } from "@/lib/api/payments";
-import type { PendingPayment, PaymentHistory } from "@/lib/types";
+import type { PendingPayment } from "@/lib/types";
 import dynamic from "next/dynamic";
 import { toast } from "@/components/ui/use-toast";
 import { getUser } from "@/hooks/getLoggedinUser";
 
-const StripePayment = dynamic(() => import("@/components/booking/stripe-payment"), { ssr: false });
+import {
+  PageContainer,
+  PageHeader,
+  KpiCard,
+  EmptyState,
+} from "@/components/user-dashboard";
 
-// ── helpers ────────────────────────────────────────────────────────────────
+const StripePayment = dynamic(
+  () => import("@/components/booking/stripe-payment"),
+  { ssr: false },
+);
+
 const fmt = (n: number | string | null | undefined) =>
   `Rs. ${Number(n || 0).toLocaleString()}`;
 
 const fmtDate = (s: string) =>
-  new Date(s).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  new Date(s).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 
 const sk = (s: string) => (s || "").toLowerCase();
 
@@ -31,124 +56,185 @@ const TIME_LABELS: Record<string, string> = {
   "18:00": "6 PM – 11 PM",
 };
 
-// Determine which payment action applies to a booking
 function resolvePaymentAction(booking: any): {
   type: "awaiting_down" | "remaining" | "done" | "none";
   amount: number;
   label: string;
 } {
-  const status  = sk(booking.status);
+  const status = sk(booking.status);
   const payment = sk(booking.paymentStatus);
 
   if (status === "awaiting payment" && payment === "pending") {
-    return { type: "awaiting_down", amount: Number(booking.downPayment || 0), label: "Pay Down Payment" };
+    return {
+      type: "awaiting_down",
+      amount: Number(booking.downPayment || 0),
+      label: "Pay down payment",
+    };
   }
   if (status === "pending" && payment === "pending") {
-    return { type: "awaiting_down", amount: Number(booking.downPayment || 0), label: "Pay Down Payment" };
+    return {
+      type: "awaiting_down",
+      amount: Number(booking.downPayment || 0),
+      label: "Pay down payment",
+    };
   }
   if (status === "confirmed" && payment === "partial") {
-    const remaining = Number(booking.totalAmount || 0) - Number(booking.downPayment || 0);
-    return { type: "remaining", amount: remaining, label: "Pay Remaining" };
+    const remaining =
+      Number(booking.totalAmount || 0) - Number(booking.downPayment || 0);
+    return { type: "remaining", amount: remaining, label: "Pay remaining" };
   }
   if (payment === "paid" || status === "completed") {
-    return { type: "done", amount: Number(booking.totalAmount || 0), label: "Paid" };
+    return {
+      type: "done",
+      amount: Number(booking.totalAmount || 0),
+      label: "Paid",
+    };
   }
   return { type: "none", amount: 0, label: "" };
 }
 
-// ── page wrapper ────────────────────────────────────────────────────────────
 export default function PaymentsPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <PageContainer>
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="size-6 animate-spin text-bridal-gold" />
+          </div>
+        </PageContainer>
+      }
+    >
       <PaymentsPageContent />
     </Suspense>
   );
 }
 
-// ── main content ────────────────────────────────────────────────────────────
 function PaymentsPageContent() {
   const { user } = getUser();
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionVerifiedRef = useRef(false);
 
-  const [bookings, setBookings]     = useState<any[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [activeTab, setActiveTab]   = useState<"pending" | "history">("pending");
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
   const [selectedPayment, setSelectedPayment] = useState<PendingPayment | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
 
-  // Handle Stripe return
   useEffect(() => {
-    const sessionId   = searchParams.get("session_id");
-    const bookingId   = searchParams.get("bookingId");
-    const paymentType = searchParams.get("paymentType");
-    const cancelled   = searchParams.get("cancelled");
+    const sessionId = searchParams?.get("session_id");
+    const bookingId = searchParams?.get("bookingId");
+    const paymentType = searchParams?.get("paymentType");
+    const cancelled = searchParams?.get("cancelled");
 
     if (cancelled) {
-      toast({ title: "Payment Cancelled", description: "You cancelled the payment. You can try again anytime.", variant: "destructive" });
+      toast({
+        title: "Payment cancelled",
+        description: "You cancelled the payment. You can try again anytime.",
+        variant: "destructive",
+      });
       router.replace("/user/payments");
       return;
     }
     if (sessionId && !sessionVerifiedRef.current) {
       sessionVerifiedRef.current = true;
-      verifyStripeSession(sessionId, bookingId ? Number(bookingId) : undefined, paymentType || undefined);
+      verifyStripeSession(
+        sessionId,
+        bookingId ? Number(bookingId) : undefined,
+        paymentType || undefined,
+      );
     }
   }, [searchParams]);
 
-  const verifyStripeSession = async (sessionId: string, bookingId?: number, paymentType?: string) => {
+  const verifyStripeSession = async (
+    sessionId: string,
+    bookingId?: number,
+    paymentType?: string,
+  ) => {
     try {
-      toast({ title: "Verifying Payment", description: "Please wait while we confirm your payment..." });
-      const result = await PaymentAPI.verifyCheckoutSession(sessionId, bookingId, paymentType);
+      toast({
+        title: "Verifying payment",
+        description: "Please wait while we confirm your payment…",
+      });
+      const result = await PaymentAPI.verifyCheckoutSession(
+        sessionId,
+        bookingId,
+        paymentType,
+      );
       if (!result.alreadyProcessed) {
         const pType = result.paymentType || paymentType || "down_payment";
         try {
-          if (pType === "down_payment")       await PaymentAPI.processDownPayment(result.bookingId);
-          else if (pType === "remaining_payment") await PaymentAPI.processRemainingPayment(result.bookingId);
-          else if (pType === "full_payment")  await PaymentAPI.processFullPayment(result.bookingId);
-        } catch (e) { /* non-critical */ }
-        toast({ title: "Payment Successful!", description: `Your payment of ${fmt(result.amount)} has been processed.` });
+          if (pType === "down_payment")
+            await PaymentAPI.processDownPayment(result.bookingId);
+          else if (pType === "remaining_payment")
+            await PaymentAPI.processRemainingPayment(result.bookingId);
+          else if (pType === "full_payment")
+            await PaymentAPI.processFullPayment(result.bookingId);
+        } catch {
+          /* non-critical */
+        }
+        toast({
+          title: "Payment successful",
+          description: `Your payment of ${fmt(result.amount)} has been processed.`,
+        });
       } else {
-        toast({ title: "Already Processed", description: "This payment was already recorded." });
+        toast({
+          title: "Already processed",
+          description: "This payment was already recorded.",
+        });
       }
       await fetchBookings();
     } catch (err: any) {
-      toast({ title: "Verification Failed", description: err.message || "Could not verify payment. Please contact support.", variant: "destructive" });
+      toast({
+        title: "Verification failed",
+        description: err.message || "Could not verify payment. Please contact support.",
+        variant: "destructive",
+      });
     } finally {
       router.replace("/user/payments");
     }
   };
 
-  useEffect(() => { fetchBookings(); }, []);
+  useEffect(() => {
+    fetchBookings();
+  }, []);
 
   const fetchBookings = async () => {
     setLoading(true);
     try {
       const res = await PaymentAPI.getUserBookings();
-      // Merge pending + history back into raw-ish list for unified rendering
       const all = [
-        ...res.pendingPayments.map(p => ({ ...p, _resolved: resolvePaymentAction(p) })),
-        ...res.paymentHistory.map(p  => ({ ...p, _resolved: resolvePaymentAction(p) })),
+        ...res.pendingPayments.map((p) => ({
+          ...p,
+          _resolved: resolvePaymentAction(p),
+        })),
+        ...res.paymentHistory.map((p) => ({
+          ...p,
+          _resolved: resolvePaymentAction(p),
+        })),
       ];
       setBookings(all);
     } catch {
-      toast({ title: "Error", description: "Failed to fetch payments.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to fetch payments.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const pending = useMemo(() =>
-    bookings.filter(b => ["awaiting_down", "remaining"].includes(b._resolved?.type)),
-    [bookings]
+  const pending = useMemo(
+    () =>
+      bookings.filter((b) =>
+        ["awaiting_down", "remaining"].includes(b._resolved?.type),
+      ),
+    [bookings],
   );
-  const history = useMemo(() =>
-    bookings.filter(b => b._resolved?.type === "done"),
-    [bookings]
+  const history = useMemo(
+    () => bookings.filter((b) => b._resolved?.type === "done"),
+    [bookings],
   );
 
   const totalDue = pending.reduce((s, b) => s + (b._resolved?.amount || 0), 0);
@@ -157,8 +243,7 @@ function PaymentsPageContent() {
   const handlePay = (booking: any) => {
     const action = booking._resolved;
     if (!action || !action.amount) return;
-
-    const paymentType: 'down_payment' | 'remaining_payment' | 'full_payment' =
+    const paymentType: "down_payment" | "remaining_payment" | "full_payment" =
       action.type === "remaining" ? "remaining_payment" : "down_payment";
 
     setSelectedPayment({
@@ -178,280 +263,346 @@ function PaymentsPageContent() {
     setPaymentModalOpen(true);
   };
 
-  // ── Skeleton ──────────────────────────────────────────────────────────────
+  const eyebrow = (
+    <>
+      <span>My account</span>
+      <span className="size-1 rounded-full bg-muted-foreground/40" />
+      <span>Payments</span>
+    </>
+  );
+
+  const headerActions = (
+    <Button
+      onClick={fetchBookings}
+      disabled={loading}
+      variant="outline"
+      size="sm"
+      className="gap-1.5"
+    >
+      <RefreshCw className={cn("size-3.5", loading && "animate-spin")} />
+      Refresh
+    </Button>
+  );
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="bg-white border-b border-gray-200 px-4 py-8">
-          <div className="max-w-5xl mx-auto">
-            <div className="h-8 w-40 skeleton-shimmer rounded-lg mb-2" />
-            <div className="h-4 w-64 skeleton-shimmer rounded" />
-          </div>
+      <PageContainer>
+        <PageHeader
+          eyebrow={eyebrow}
+          title="Payments"
+          description="Track pending payments and view your payment history."
+          actions={headerActions}
+        />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <KpiCard key={i} label="" value={0} isLoading />
+          ))}
         </div>
-        <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1,2,3,4].map(i => <div key={i} className="h-24 skeleton-shimmer rounded-2xl" />)}
-          </div>
-          <div className="h-12 skeleton-shimmer rounded-xl" />
-          {[1,2,3].map(i => <div key={i} className="h-44 skeleton-shimmer rounded-2xl" />)}
-        </div>
-      </div>
+        <Skeleton className="h-12 w-full" />
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-44" />
+        ))}
+      </PageContainer>
     );
   }
 
-  // ── Main render ───────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* ── Page header ── */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 py-8 flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Payments</h1>
-            <p className="text-gray-500 mt-1 text-sm">Track pending payments and view your payment history</p>
-          </div>
-          <Button onClick={fetchBookings} disabled={loading} variant="outline" size="sm" className="flex items-center gap-2 border-gray-200">
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-        </div>
+    <PageContainer>
+      <PageHeader
+        eyebrow={eyebrow}
+        title="Payments"
+        description="Track pending payments and view your payment history."
+        actions={headerActions}
+      />
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          label="Pending payments"
+          value={pending.length}
+          icon={<Clock className="size-4" />}
+          invertTrendColor
+        />
+        <KpiCard
+          label="Amount due"
+          value={fmt(totalDue)}
+          icon={<Wallet className="size-4" />}
+          invertTrendColor
+        />
+        <KpiCard
+          label="Completed"
+          value={history.length}
+          icon={<CheckCircle2 className="size-4" />}
+        />
+        <KpiCard
+          label="Total paid"
+          value={fmt(totalPaid)}
+          icon={<TrendingUp className="size-4" />}
+        />
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+        <TabsList className="h-auto bg-muted/50 p-1 grid grid-cols-2 gap-1">
+          <TabsTrigger
+            value="pending"
+            className="gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm text-[12.5px]"
+          >
+            Pending payments
+            {pending.length > 0 ? (
+              <span
+                className={cn(
+                  "ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium tabular-nums",
+                  activeTab === "pending"
+                    ? "bg-bridal-cream text-bridal-gold-dark"
+                    : "bg-muted-foreground/10 text-muted-foreground",
+                )}
+              >
+                {pending.length}
+              </span>
+            ) : null}
+          </TabsTrigger>
+          <TabsTrigger
+            value="history"
+            className="gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm text-[12.5px]"
+          >
+            Payment history
+            {history.length > 0 ? (
+              <span
+                className={cn(
+                  "ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium tabular-nums",
+                  activeTab === "history"
+                    ? "bg-bridal-cream text-bridal-gold-dark"
+                    : "bg-muted-foreground/10 text-muted-foreground",
+                )}
+              >
+                {history.length}
+              </span>
+            ) : null}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
-        {/* ── Stats ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { label: "Pending Payments", value: pending.length,       icon: Clock,        iconBg: "bg-amber-50 text-amber-600",   val: "text-amber-600"   },
-            { label: "Amount Due",        value: fmt(totalDue),        icon: Wallet,       iconBg: "bg-red-50 text-red-500",       val: "text-red-500"     },
-            { label: "Completed",         value: history.length,       icon: CheckCircle2, iconBg: "bg-emerald-50 text-emerald-600", val: "text-emerald-600" },
-            { label: "Total Paid",        value: fmt(totalPaid),       icon: TrendingUp,   iconBg: "bg-blue-50 text-blue-600",     val: "text-blue-600"    },
-          ].map(({ label, value, icon: Icon, iconBg, val }) => (
-            <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
-                <p className={`text-xl font-bold mt-1 ${val}`}>{value}</p>
-              </div>
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${iconBg}`}>
-                <Icon className="w-5 h-5" />
-              </div>
-            </div>
-          ))}
-        </div>
+      {activeTab === "pending" &&
+        (pending.length === 0 ? (
+          <EmptyState
+            icon={<CheckCircle2 className="size-6" />}
+            title="All caught up"
+            description="You have no pending payments right now."
+          />
+        ) : (
+          <div className="space-y-3">
+            {pending.map((booking) => {
+              const action = booking._resolved;
+              const isRemaining = action.type === "remaining";
+              const accent = isRemaining
+                ? "border-l-bridal-mauve"
+                : "border-l-bridal-gold";
+              const badgeTone = isRemaining
+                ? "border-bridal-rose/45 bg-bridal-blush text-bridal-mauve"
+                : "border-bridal-gold/45 bg-bridal-gold/12 text-bridal-gold-dark";
 
-        {/* ── Tabs ── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-1 flex gap-1">
-          {[
-            { key: "pending" as const, label: "Pending Payments", count: pending.length },
-            { key: "history" as const, label: "Payment History",  count: history.length },
-          ].map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                activeTab === tab.key
-                  ? "bg-purple-600 text-white shadow-sm"
-                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
-              }`}
-            >
-              {tab.label}
-              {tab.count > 0 && (
-                <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
-                  activeTab === tab.key ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"
-                }`}>{tab.count}</span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* ── Pending Payments ── */}
-        {activeTab === "pending" && (
-          pending.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-16 text-center">
-              <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">All caught up!</h3>
-              <p className="text-gray-500 text-sm">You have no pending payments right now.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {pending.map((booking) => {
-                const action = booking._resolved;
-                const isRemaining = action.type === "remaining";
-                const accentColor = isRemaining ? "border-l-blue-500 bg-blue-50/20" : "border-l-amber-500 bg-amber-50/20";
-                const btnColor    = isRemaining
-                  ? "bg-blue-600 hover:bg-blue-700"
-                  : "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700";
-                const badgeBg     = isRemaining ? "bg-blue-100 text-blue-700 border-blue-200" : "bg-amber-100 text-amber-700 border-amber-200";
-
-                return (
-                  <div key={booking.bookingId || booking.id}
-                    className={`bg-white rounded-2xl border border-gray-100 shadow-sm border-l-4 ${accentColor} overflow-hidden`}
-                  >
-                    <div className="p-5 sm:p-6">
-                      {/* Top row */}
-                      <div className="flex items-start justify-between gap-4 mb-4">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                              Booking #{booking.bookingId || booking.id}
-                            </span>
-                            <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border ${badgeBg}`}>
-                              {isRemaining ? <Clock className="w-3 h-3" /> : <Wallet className="w-3 h-3" />}
-                              {isRemaining ? "Remaining Due" : "Down Payment Due"}
-                            </span>
-                          </div>
-                          <h3 className="text-base font-bold text-gray-900">
-                            {booking.businesses?.[0]?.name || booking.customerName || "Booking"}
-                          </h3>
-                          <p className="text-xs text-gray-400 mt-0.5">Booked on {fmtDate(booking.createdAt)}</p>
-                        </div>
-
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-2xl font-bold text-gray-900">{fmt(action.amount)}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            of {fmt(booking.totalAmount)} total
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Date / location */}
-                      <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-600 mb-4">
-                        <span className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
-                          {fmtDate(booking.bookingDate)}
-                        </span>
-                        {booking.bookingTime && (
-                          <span className="flex items-center gap-1.5">
-                            <Clock className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
-                            {TIME_LABELS[booking.bookingTime] || booking.bookingTime}
-                          </span>
-                        )}
-                        {booking.businesses?.length > 0 && (
-                          <span className="flex items-center gap-1.5">
-                            <Building2 className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
-                            {booking.businesses.map((b: any) => b.name).join(", ")}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Payment breakdown */}
-                      <div className="bg-gray-50 rounded-xl p-4 mb-4 grid grid-cols-3 gap-3 text-center text-sm">
-                        <div>
-                          <p className="text-xs text-gray-400 font-medium">Total</p>
-                          <p className="font-bold text-gray-900 mt-0.5">{fmt(booking.totalAmount)}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-400 font-medium">Down Payment</p>
-                          <p className="font-bold text-gray-900 mt-0.5">{fmt(booking.downPayment || booking.amount)}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-400 font-medium">Remaining</p>
-                          <p className="font-bold text-gray-900 mt-0.5">
-                            {fmt(Number(booking.totalAmount || 0) - Number(booking.downPayment || booking.amount || 0))}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* CTA */}
-                      <div className="flex items-center gap-3 pt-3 border-t border-gray-100">
-                        <Button
-                          onClick={() => router.push(`/user/bookings/${booking.bookingId || booking.id}`)}
-                          variant="outline"
-                          size="sm"
-                          className="h-10 px-4 text-sm border-gray-200 text-gray-600 hover:bg-gray-50"
-                        >
-                          View Details
-                          <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
-                        </Button>
-                        <Button
-                          onClick={() => handlePay(booking)}
-                          size="sm"
-                          className={`h-10 px-5 text-sm text-white font-semibold flex-1 ${btnColor}`}
-                        >
-                          <CreditCard className="w-4 h-4 mr-2" />
-                          {action.label} — {fmt(action.amount)}
-                          <ChevronRight className="w-4 h-4 ml-1" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )
-        )}
-
-        {/* ── Payment History ── */}
-        {activeTab === "history" && (
-          history.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-16 text-center">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-8 h-8 text-gray-300" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No payment history yet</h3>
-              <p className="text-gray-500 text-sm">Your completed payments will appear here.</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {history.map((booking) => (
-                <div key={booking.bookingId || booking.id}
-                  className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-5"
+              return (
+                <Card
+                  key={booking.bookingId || booking.id}
+                  className={cn(
+                    "border-l-4 overflow-hidden transition-shadow hover:shadow-md",
+                    accent,
+                  )}
                 >
-                  <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                  </div>
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-4 mb-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-[0.18em] tabular-nums">
+                            Booking #{booking.bookingId || booking.id}
+                          </span>
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1 text-[10.5px] font-medium uppercase tracking-[0.18em] px-2 py-0.5 rounded-full border",
+                              badgeTone,
+                            )}
+                          >
+                            {isRemaining ? (
+                              <Clock className="size-3" />
+                            ) : (
+                              <Wallet className="size-3" />
+                            )}
+                            {isRemaining ? "Remaining due" : "Down payment due"}
+                          </span>
+                        </div>
+                        <h3 className="font-display italic text-[18px] text-foreground">
+                          {booking.businesses?.[0]?.name ||
+                            booking.customerName ||
+                            "Booking"}
+                        </h3>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          Booked on {fmtDate(booking.createdAt)}
+                        </p>
+                      </div>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                        Booking #{booking.bookingId || booking.id}
-                      </span>
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
-                        Paid
-                      </span>
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-display italic text-[26px] text-foreground tabular-nums leading-none">
+                          {fmt(action.amount)}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          of <span className="tabular-nums">{fmt(booking.totalAmount)}</span> total
+                        </p>
+                      </div>
                     </div>
-                    <p className="font-semibold text-gray-900 text-sm">
-                      {booking.businesses?.[0]?.name || booking.customerName || "Booking"}
-                    </p>
-                    <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
+
+                    <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-[12.5px] text-muted-foreground mb-3">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Calendar className="size-3.5 text-bridal-gold" />
                         {fmtDate(booking.bookingDate)}
                       </span>
-                      {booking.businesses?.length > 0 && (
-                        <span className="flex items-center gap-1">
-                          <Building2 className="w-3 h-3" />
+                      {booking.bookingTime ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <Clock className="size-3.5 text-bridal-gold" />
+                          {TIME_LABELS[booking.bookingTime] || booking.bookingTime}
+                        </span>
+                      ) : null}
+                      {booking.businesses?.length > 0 ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <Building2 className="size-3.5 text-bridal-gold" />
                           {booking.businesses.map((b: any) => b.name).join(", ")}
                         </span>
-                      )}
+                      ) : null}
+                    </div>
+
+                    <div className="rounded-lg bg-muted/30 border border-border/60 p-3 mb-4 grid grid-cols-3 gap-3 text-center">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.18em] font-medium text-muted-foreground">
+                          Total
+                        </p>
+                        <p className="font-display italic text-[16px] text-foreground tabular-nums mt-0.5">
+                          {fmt(booking.totalAmount)}
+                        </p>
+                      </div>
+                      <div className="border-x border-border/60">
+                        <p className="text-[10px] uppercase tracking-[0.18em] font-medium text-muted-foreground">
+                          Down payment
+                        </p>
+                        <p className="font-display italic text-[16px] text-foreground tabular-nums mt-0.5">
+                          {fmt(booking.downPayment || booking.amount)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.18em] font-medium text-muted-foreground">
+                          Remaining
+                        </p>
+                        <p className="font-display italic text-[16px] text-foreground tabular-nums mt-0.5">
+                          {fmt(
+                            Number(booking.totalAmount || 0) -
+                              Number(booking.downPayment || booking.amount || 0),
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 pt-3 border-t border-border/60">
+                      <Button
+                        onClick={() =>
+                          router.push(`/user/bookings/${booking.bookingId || booking.id}`)
+                        }
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                      >
+                        Details
+                        <ArrowRight className="size-3" />
+                      </Button>
+                      <Button
+                        onClick={() => handlePay(booking)}
+                        size="sm"
+                        className="gap-1.5 flex-1"
+                      >
+                        <CreditCard className="size-3.5" />
+                        {action.label} — {fmt(action.amount)}
+                        <ChevronRight className="size-3" />
+                      </Button>
                     </div>
                   </div>
+                </Card>
+              );
+            })}
+          </div>
+        ))}
 
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-lg font-bold text-emerald-600">{fmt(booking.totalAmount)}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{fmtDate(booking.createdAt)}</p>
-                    <Button
-                      onClick={() => router.push(`/user/bookings/${booking.bookingId || booking.id}`)}
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-xs text-gray-500 hover:text-gray-700 mt-1 -mr-1"
-                    >
-                      Details <ChevronRight className="w-3 h-3 ml-0.5" />
-                    </Button>
+      {activeTab === "history" &&
+        (history.length === 0 ? (
+          <EmptyState
+            icon={<Clock className="size-6" />}
+            title="No payment history yet"
+            description="Your completed payments will appear here."
+          />
+        ) : (
+          <div className="space-y-2">
+            {history.map((booking) => (
+              <Card
+                key={booking.bookingId || booking.id}
+                className="p-4 flex items-center gap-4 hover:shadow-sm transition-shadow"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bridal-sage/15 text-[#3F6B43]">
+                  <CheckCircle2 className="size-4" />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                    <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-[0.18em] tabular-nums">
+                      Booking #{booking.bookingId || booking.id}
+                    </span>
+                    <span className="text-[10.5px] uppercase tracking-[0.18em] font-medium px-2 py-0.5 rounded-full border border-bridal-sage/45 bg-bridal-sage/15 text-[#3F6B43]">
+                      Paid
+                    </span>
+                  </div>
+                  <p className="font-display italic text-[16px] text-foreground truncate">
+                    {booking.businesses?.[0]?.name ||
+                      booking.customerName ||
+                      "Booking"}
+                  </p>
+                  <div className="flex items-center gap-3 mt-0.5 text-[11px] text-muted-foreground">
+                    <span className="inline-flex items-center gap-1">
+                      <Calendar className="size-3" />
+                      {fmtDate(booking.bookingDate)}
+                    </span>
+                    {booking.businesses?.length > 0 ? (
+                      <span className="inline-flex items-center gap-1 truncate">
+                        <Building2 className="size-3" />
+                        {booking.businesses.map((b: any) => b.name).join(", ")}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
-              ))}
-            </div>
-          )
-        )}
-      </div>
 
-      {/* ── Stripe Payment Modal ── */}
-      {selectedPayment && (
+                <div className="text-right flex-shrink-0">
+                  <p className="font-display italic text-[18px] text-[#3F6B43] tabular-nums leading-none">
+                    {fmt(booking.totalAmount)}
+                  </p>
+                  <p className="text-[10.5px] text-muted-foreground mt-1">
+                    {fmtDate(booking.createdAt)}
+                  </p>
+                  <Button
+                    onClick={() =>
+                      router.push(`/user/bookings/${booking.bookingId || booking.id}`)
+                    }
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-[11px] text-muted-foreground hover:text-foreground mt-1 -mr-1"
+                  >
+                    Details <ChevronRight className="size-3 ml-0.5" />
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ))}
+
+      {selectedPayment ? (
         <StripePayment
           isOpen={paymentModalOpen}
-          onClose={() => { setPaymentModalOpen(false); setSelectedPayment(null); }}
+          onClose={() => {
+            setPaymentModalOpen(false);
+            setSelectedPayment(null);
+          }}
           bookingId={selectedPayment.bookingId}
           customerEmail={user?.email || ""}
           paymentType={selectedPayment.paymentType}
@@ -462,11 +613,17 @@ function PaymentsPageContent() {
             setPaymentModalOpen(false);
             setSelectedPayment(null);
             fetchBookings();
-            toast({ title: "Success", description: "Payment processed successfully." });
+            toast({
+              title: "Success",
+              description: "Payment processed successfully.",
+            });
           }}
-          onPaymentFailure={() => { setPaymentModalOpen(false); setSelectedPayment(null); }}
+          onPaymentFailure={() => {
+            setPaymentModalOpen(false);
+            setSelectedPayment(null);
+          }}
         />
-      )}
-    </div>
+      ) : null}
+    </PageContainer>
   );
 }

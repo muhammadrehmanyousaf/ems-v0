@@ -2,23 +2,56 @@
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import {
-  Calendar, Clock, MapPin, User, Phone, Mail, ArrowLeft,
-  Trash2, CreditCard, Package, Building2, FileText,
-  CheckCircle2, XCircle, Timer, AlertTriangle, Info,
-  Wallet, ChevronRight, Star, MessageSquare,
+  Calendar,
+  Clock,
+  MapPin,
+  User,
+  Phone,
+  Mail,
+  ArrowLeft,
+  Trash2,
+  CreditCard,
+  Package,
+  Building2,
+  FileText,
+  CheckCircle2,
+  XCircle,
+  Timer,
+  AlertTriangle,
+  Info,
+  Wallet,
+  ChevronRight,
+  Star,
 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import axiosInstance from "@/lib/axiosConfig";
 import { BACKEND_URL } from "@/lib/backend-url";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel,
-  AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
+
+import {
+  PageContainer,
+  PageHeader,
+  SectionCard,
+  EmptyState,
+} from "@/components/user-dashboard";
+import { InstallmentsCard } from "@/components/bookings/installments-card";
+import { ChangeRequestsCard } from "@/components/bookings/change-requests-card";
+import { DisputeCard } from "@/components/bookings/dispute-card";
 
 interface BookingDetail {
   id: number;
@@ -29,7 +62,13 @@ interface BookingDetail {
   totalAmount: number;
   downPayment: number;
   specialRequests: string | null;
-  business: { id: number; name: string; city: string; subArea: string; description?: string };
+  business: {
+    id: number;
+    name: string;
+    city: string;
+    subArea: string;
+    description?: string;
+  };
   package: { id: number; name: string; price: number; features?: string[] } | null;
   menu: { id: number; title: string; price: number } | null;
 }
@@ -53,23 +92,63 @@ interface Booking {
   bookingDetails: BookingDetail[];
 }
 
-const STATUS_CONFIG: Record<string, {
-  label: string; icon: React.ElementType;
-  headerBg: string; badge: string; dot: string;
-}> = {
-  confirmed:          { label: "Confirmed",        icon: CheckCircle2, headerBg: "from-emerald-600 to-emerald-700", badge: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
-  "awaiting payment": { label: "Awaiting Payment", icon: CreditCard,   headerBg: "from-amber-500 to-amber-600",    badge: "bg-amber-100 text-amber-700 border-amber-200",       dot: "bg-amber-500"   },
-  pending:            { label: "Pending",           icon: Timer,        headerBg: "from-blue-600 to-blue-700",      badge: "bg-blue-100 text-blue-700 border-blue-200",          dot: "bg-blue-500"    },
-  completed:          { label: "Completed",         icon: CheckCircle2, headerBg: "from-purple-600 to-purple-700", badge: "bg-purple-100 text-purple-700 border-purple-200",     dot: "bg-purple-500"  },
-  cancelled:          { label: "Cancelled",         icon: XCircle,      headerBg: "from-red-500 to-red-600",       badge: "bg-red-100 text-red-600 border-red-200",             dot: "bg-red-400"     },
+const STATUS_CONFIG: Record<
+  string,
+  { label: string; icon: React.ElementType; tone: string; dot: string }
+> = {
+  confirmed: {
+    label: "Confirmed",
+    icon: CheckCircle2,
+    tone: "border-bridal-sage/45 bg-bridal-sage/15 text-[#3F6B43]",
+    dot: "bg-bridal-sage",
+  },
+  "awaiting payment": {
+    label: "Awaiting payment",
+    icon: CreditCard,
+    tone: "border-bridal-gold/45 bg-bridal-gold/12 text-bridal-gold-dark",
+    dot: "bg-bridal-gold",
+  },
+  pending: {
+    label: "Pending",
+    icon: Timer,
+    tone: "border-border bg-muted text-muted-foreground",
+    dot: "bg-muted-foreground/40",
+  },
+  completed: {
+    label: "Completed",
+    icon: CheckCircle2,
+    tone: "border-bridal-rose/45 bg-bridal-blush text-bridal-mauve",
+    dot: "bg-bridal-mauve",
+  },
+  cancelled: {
+    label: "Cancelled",
+    icon: XCircle,
+    tone: "border-bridal-coral/35 bg-bridal-coral/12 text-bridal-coral",
+    dot: "bg-bridal-coral",
+  },
 };
 
-const PAYMENT_CONFIG: Record<string, { label: string; color: string }> = {
-  pending:  { label: "Unpaid",   color: "bg-amber-100 text-amber-700 border-amber-200"     },
-  paid:     { label: "Paid",     color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-  partial:  { label: "Partial",  color: "bg-blue-100 text-blue-700 border-blue-200"         },
-  refunded: { label: "Refunded", color: "bg-purple-100 text-purple-700 border-purple-200"   },
-  failed:   { label: "Failed",   color: "bg-red-100 text-red-600 border-red-200"            },
+const PAYMENT_CONFIG: Record<string, { label: string; tone: string }> = {
+  pending: {
+    label: "Unpaid",
+    tone: "border-bridal-gold/45 bg-bridal-gold/10 text-bridal-gold-dark",
+  },
+  paid: {
+    label: "Paid",
+    tone: "border-bridal-sage/45 bg-bridal-sage/15 text-[#3F6B43]",
+  },
+  partial: {
+    label: "Partial",
+    tone: "border-bridal-rose/45 bg-bridal-blush text-bridal-mauve",
+  },
+  refunded: {
+    label: "Refunded",
+    tone: "border-border bg-muted text-muted-foreground",
+  },
+  failed: {
+    label: "Failed",
+    tone: "border-bridal-coral/35 bg-bridal-coral/12 text-bridal-coral",
+  },
 };
 
 const TIME_LABELS: Record<string, string> = {
@@ -82,18 +161,28 @@ const fmt = (n: number | string | null | undefined) =>
   `Rs. ${Number(n || 0).toLocaleString()}`;
 
 const fmtDate = (s: string) =>
-  new Date(s).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  new Date(s).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 
 const fmtShort = (s: string) =>
-  new Date(s).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  new Date(s).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 
-function sk(s: string) { return (s || "").toLowerCase(); }
+function sk(s: string) {
+  return (s || "").toLowerCase();
+}
 
 export default function BookingDetailPage() {
   const { user, isAuthenticated, isLoading } = useUser();
   const router = useRouter();
   const params = useParams();
-  const bookingId = params.id as string;
+  const bookingId = (params?.id as string) ?? "";
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [isLoadingBooking, setIsLoadingBooking] = useState(true);
@@ -110,12 +199,20 @@ export default function BookingDetailPage() {
   const fetchBooking = async () => {
     setIsLoadingBooking(true);
     try {
-      const res = await axiosInstance.get(`${BACKEND_URL}api/v1/bookings/simple-user-bookings`);
-      const found = (res.data?.data || []).find((b: Booking) => String(b.id) === String(bookingId));
+      const res = await axiosInstance.get(
+        `${BACKEND_URL}api/v1/bookings/simple-user-bookings`,
+      );
+      const found = (res.data?.data || []).find(
+        (b: Booking) => String(b.id) === String(bookingId),
+      );
       if (found) setBooking(found);
       else throw new Error("not found");
     } catch {
-      toast({ title: "Error", description: "Failed to load booking details.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to load booking details.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoadingBooking(false);
     }
@@ -126,58 +223,100 @@ export default function BookingDetailPage() {
     setIsCancelling(true);
     try {
       if (sk(booking.status) === "awaiting payment") {
-        await axiosInstance.delete(`${BACKEND_URL}api/v1/bookings/${booking.id}/cancel-pending`);
-        toast({ title: "Booking Cancelled", description: `Booking #${booking.id} has been cancelled.` });
+        await axiosInstance.delete(
+          `${BACKEND_URL}api/v1/bookings/${booking.id}/cancel-pending`,
+        );
+        toast({
+          title: "Booking cancelled",
+          description: `Booking #${booking.id} has been cancelled.`,
+        });
         router.push("/user/bookings");
       } else {
-        await axiosInstance.patch(`${BACKEND_URL}api/v1/bookings/${booking.id}/cancel`);
-        toast({ title: "Booking Cancelled", description: `Booking #${booking.id} has been cancelled.` });
+        await axiosInstance.patch(
+          `${BACKEND_URL}api/v1/bookings/${booking.id}/cancel`,
+        );
+        toast({
+          title: "Booking cancelled",
+          description: `Booking #${booking.id} has been cancelled.`,
+        });
         fetchBooking();
       }
     } catch {
-      toast({ title: "Error", description: "Failed to cancel booking.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to cancel booking.",
+        variant: "destructive",
+      });
     } finally {
       setIsCancelling(false);
       setCancelDialogOpen(false);
     }
   };
 
-  // ── Skeletons ──
+  const eyebrow = (
+    <>
+      <span>My account</span>
+      <span className="size-1 rounded-full bg-muted-foreground/40" />
+      <span>Bookings</span>
+    </>
+  );
+
   if (isLoading || isLoadingBooking) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="h-40 skeleton-shimmer" />
-        <div className="max-w-5xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <PageContainer>
+        <PageHeader
+          eyebrow={eyebrow}
+          title="Booking details"
+          description="Loading…"
+        />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 space-y-4">
-            {[1,2,3].map(i => <div key={i} className="h-44 skeleton-shimmer rounded-2xl" />)}
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-44" />
+            ))}
           </div>
           <div className="space-y-4">
-            {[1,2].map(i => <div key={i} className="h-44 skeleton-shimmer rounded-2xl" />)}
+            {[1, 2].map((i) => (
+              <Skeleton key={i} className="h-44" />
+            ))}
           </div>
         </div>
-      </div>
+      </PageContainer>
     );
   }
 
   if (!user || !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-500 mb-4">Please log in to view booking details.</p>
-          <Button onClick={() => router.push("/login")} className="bg-purple-600 hover:bg-purple-700 text-white">Log In</Button>
-        </div>
-      </div>
+      <PageContainer>
+        <EmptyState
+          icon={<Calendar className="size-6" />}
+          title="Sign in required"
+          description="Please log in to view booking details."
+          action={
+            <Button onClick={() => router.push("/login")} size="sm">
+              Log in
+            </Button>
+          }
+        />
+      </PageContainer>
     );
   }
 
   if (!booking) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-500 mb-4">Booking not found.</p>
-          <Button onClick={() => router.push("/user/bookings")} variant="outline">Back to Bookings</Button>
-        </div>
-      </div>
+      <PageContainer>
+        <EmptyState
+          icon={<AlertTriangle className="size-6" />}
+          title="Booking not found"
+          description="We couldn't find this booking. It may have been removed."
+          action={
+            <Button onClick={() => router.push("/user/bookings")} variant="outline" size="sm">
+              <ArrowLeft className="size-3.5 mr-1.5" />
+              Back to bookings
+            </Button>
+          }
+        />
+      </PageContainer>
     );
   }
 
@@ -187,339 +326,417 @@ export default function BookingDetailPage() {
   const payCfg = PAYMENT_CONFIG[sk(booking.paymentStatus)] || PAYMENT_CONFIG.pending;
   const isCancellable = !["cancelled", "completed"].includes(statusKey);
   const isAwaitingPayment = statusKey === "awaiting payment";
-  const remaining = Number(booking.totalAmount || 0) - Number(booking.downPayment || 0);
+  const remaining =
+    Number(booking.totalAmount || 0) - Number(booking.downPayment || 0);
+  const primaryVendorName =
+    booking.bookingDetails?.[0]?.business?.name || "Booking details";
+
+  const headerActions = (
+    <div className="flex items-center gap-2 flex-wrap">
+      <Button
+        onClick={() => router.push("/user/bookings")}
+        variant="ghost"
+        size="sm"
+        className="gap-1.5 text-muted-foreground"
+      >
+        <ArrowLeft className="size-3.5" />
+        All bookings
+      </Button>
+      {isAwaitingPayment ? (
+        <Button size="sm" className="gap-1.5">
+          <Wallet className="size-3.5" />
+          Pay now
+          <ChevronRight className="size-3" />
+        </Button>
+      ) : null}
+      {isCancellable ? (
+        <Button
+          onClick={() => setCancelDialogOpen(true)}
+          size="sm"
+          variant="outline"
+          className="gap-1.5 border-bridal-coral/30 text-bridal-coral hover:bg-bridal-coral/10 hover:text-bridal-coral hover:border-bridal-coral/45"
+        >
+          <Trash2 className="size-3.5" />
+          Cancel
+        </Button>
+      ) : null}
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* ── Coloured page header ── */}
-      <div className={`bg-gradient-to-r ${cfg.headerBg} text-white`}>
-        <div className="max-w-5xl mx-auto px-4 pt-5 pb-8">
-          <button
-            onClick={() => router.push("/user/bookings")}
-            className="flex items-center gap-1.5 text-white/80 hover:text-white text-sm mb-5 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            My Bookings
-          </button>
-
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-white/60 text-sm font-medium">Booking #{booking.id}</span>
-                <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border ${cfg.badge}`}>
-                  <StatusIcon className="w-3 h-3" />
-                  {cfg.label}
-                </span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white">
-                {booking.bookingDetails?.[0]?.business?.name || "Booking Details"}
-              </h1>
-              <p className="text-white/70 mt-1 text-sm">Booked on {fmtShort(booking.createdAt)}</p>
-            </div>
-
-            <div className="flex gap-2">
-              {isAwaitingPayment && (
-                <Button
-                  size="sm"
-                  className="bg-white text-amber-600 hover:bg-white/90 font-semibold shadow-lg"
-                >
-                  <Wallet className="w-4 h-4 mr-1.5" />
-                  Pay Now
-                  <ChevronRight className="w-3.5 h-3.5 ml-1" />
-                </Button>
+    <PageContainer>
+      <PageHeader
+        eyebrow={
+          <>
+            <span>My account</span>
+            <span className="size-1 rounded-full bg-muted-foreground/40" />
+            <span>Bookings</span>
+            <span className="size-1 rounded-full bg-muted-foreground/40" />
+            <span className="tabular-nums">#{booking.id}</span>
+          </>
+        }
+        title={primaryVendorName}
+        description={
+          <span className="inline-flex items-center gap-2 flex-wrap">
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 text-[10.5px] font-medium uppercase tracking-[0.18em] px-2 py-0.5 rounded-full border",
+                cfg.tone,
               )}
-              {isCancellable && (
-                <Button
-                  onClick={() => setCancelDialogOpen(true)}
-                  size="sm"
-                  variant="outline"
-                  className="border-white/40 text-white hover:bg-white/10 bg-transparent"
-                >
-                  <Trash2 className="w-4 h-4 mr-1.5" />
-                  Cancel
-                </Button>
+            >
+              <StatusIcon className="size-3" />
+              {cfg.label}
+            </span>
+            <span
+              className={cn(
+                "text-[10.5px] font-medium uppercase tracking-[0.18em] px-2 py-0.5 rounded-full border",
+                payCfg.tone,
               )}
-            </div>
-          </div>
-        </div>
-      </div>
+            >
+              {payCfg.label}
+            </span>
+            <span className="text-muted-foreground">
+              · Booked on {fmtShort(booking.createdAt)}
+            </span>
+          </span>
+        }
+        actions={headerActions}
+      />
 
-      {/* ── Body ── */}
-      <div className="max-w-5xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-          {/* ── LEFT / MAIN ── */}
-          <div className="lg:col-span-2 space-y-5">
-
-            {/* Event info */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-              <h2 className="flex items-center gap-2 text-base font-bold text-gray-900 mb-5">
-                <Calendar className="w-4.5 h-4.5 text-purple-500" />
-                Event Details
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
-                    <Calendar className="w-4 h-4 text-purple-500" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Event Date</p>
-                    <p className="text-base font-semibold text-gray-900 mt-0.5">{fmtDate(booking.bookingDate)}</p>
-                  </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Main column */}
+        <div className="lg:col-span-2 space-y-4">
+          <SectionCard title="Event details">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex items-start gap-3">
+                <div className="size-9 rounded-md bg-bridal-cream border border-border flex items-center justify-center flex-shrink-0">
+                  <Calendar className="size-4 text-bridal-gold-dark" />
                 </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
-                    <Clock className="w-4 h-4 text-purple-500" />
+                <div>
+                  <p className="text-[10.5px] uppercase tracking-[0.22em] font-medium text-muted-foreground">
+                    Event date
+                  </p>
+                  <p className="font-display italic text-[16px] text-foreground mt-1">
+                    {fmtDate(booking.bookingDate)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="size-9 rounded-md bg-bridal-cream border border-border flex items-center justify-center flex-shrink-0">
+                  <Clock className="size-4 text-bridal-gold-dark" />
+                </div>
+                <div>
+                  <p className="text-[10.5px] uppercase tracking-[0.22em] font-medium text-muted-foreground">
+                    Time slot
+                  </p>
+                  <p className="font-display italic text-[16px] text-foreground mt-1">
+                    {TIME_LABELS[booking.bookingTime] || booking.bookingTime}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {booking.additionalRequests?.trim() ? (
+              <div className="mt-5 pt-5 border-t border-border/60">
+                <p className="text-[10.5px] uppercase tracking-[0.22em] font-medium text-muted-foreground mb-2">
+                  Special requests
+                </p>
+                <p className="text-[13.5px] text-foreground/85 bg-muted/30 rounded-md p-3 leading-relaxed">
+                  {booking.additionalRequests}
+                </p>
+              </div>
+            ) : null}
+          </SectionCard>
+
+          <SectionCard title="Customer information">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[
+                { icon: User, label: "Name", value: booking.customerName },
+                { icon: Mail, label: "Email", value: booking.customerEmail },
+                { icon: Phone, label: "Phone", value: booking.customerPhone },
+              ].map(({ icon: Icon, label, value }) => (
+                <div key={label} className="flex items-center gap-3">
+                  <div className="size-9 rounded-md bg-muted border border-border flex items-center justify-center flex-shrink-0">
+                    <Icon className="size-4 text-muted-foreground" />
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Time Slot</p>
-                    <p className="text-base font-semibold text-gray-900 mt-0.5">
-                      {TIME_LABELS[booking.bookingTime] || booking.bookingTime}
+                  <div className="min-w-0">
+                    <p className="text-[10.5px] uppercase tracking-[0.22em] font-medium text-muted-foreground">
+                      {label}
+                    </p>
+                    <p className="text-[13.5px] font-medium text-foreground truncate mt-0.5">
+                      {value}
                     </p>
                   </div>
                 </div>
-              </div>
-
-              {booking.additionalRequests?.trim() && (
-                <div className="mt-5 pt-5 border-t border-gray-100">
-                  <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Special Requests</p>
-                  <p className="text-sm text-gray-700 bg-gray-50 rounded-xl p-3 leading-relaxed">
-                    {booking.additionalRequests}
-                  </p>
-                </div>
-              )}
+              ))}
             </div>
+          </SectionCard>
 
-            {/* Customer info */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-              <h2 className="flex items-center gap-2 text-base font-bold text-gray-900 mb-5">
-                <User className="w-4.5 h-4.5 text-purple-500" />
-                Customer Information
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[
-                  { icon: User,  label: "Name",  value: booking.customerName  },
-                  { icon: Mail,  label: "Email", value: booking.customerEmail },
-                  { icon: Phone, label: "Phone", value: booking.customerPhone },
-                ].map(({ icon: Icon, label, value }) => (
-                  <div key={label} className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center flex-shrink-0">
-                      <Icon className="w-4 h-4 text-gray-400" />
+          <SectionCard title="Vendors & services">
+            {(booking.bookingDetails || []).length === 0 ? (
+              <p className="text-muted-foreground text-[13px] text-center py-6">
+                No vendor details available.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {booking.bookingDetails.map((detail) => (
+                  <div
+                    key={detail.id}
+                    className="border border-border rounded-lg overflow-hidden"
+                  >
+                    <div className="flex items-start justify-between gap-4 p-4 bg-muted/30 border-b border-border/60">
+                      <div className="min-w-0">
+                        <p className="font-display italic text-[18px] text-foreground">
+                          {detail.business?.name}
+                        </p>
+                        {(detail.business?.city || detail.business?.subArea) ? (
+                          <p className="inline-flex items-center gap-1 text-[11.5px] text-muted-foreground mt-0.5">
+                            <MapPin className="size-3" />
+                            {[detail.business.city, detail.business.subArea]
+                              .filter(Boolean)
+                              .join(", ")}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-display italic text-[18px] text-foreground tabular-nums leading-none">
+                          {fmt(detail.totalAmount)}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          Down{" "}
+                          <span className="font-medium text-foreground tabular-nums">
+                            {fmt(detail.downPayment)}
+                          </span>
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-xs text-gray-400 font-medium">{label}</p>
-                      <p className="text-sm font-semibold text-gray-900 truncate mt-0.5">{value}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
 
-            {/* Vendors & packages */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-              <h2 className="flex items-center gap-2 text-base font-bold text-gray-900 mb-5">
-                <Building2 className="w-4.5 h-4.5 text-purple-500" />
-                Vendors & Services
-              </h2>
-
-              {(booking.bookingDetails || []).length === 0 ? (
-                <p className="text-gray-400 text-sm text-center py-6">No vendor details available.</p>
-              ) : (
-                <div className="space-y-4">
-                  {booking.bookingDetails.map((detail) => (
-                    <div key={detail.id} className="border border-gray-100 rounded-2xl overflow-hidden">
-                      {/* vendor header */}
-                      <div className="flex items-start justify-between gap-4 p-4 bg-gray-50/60">
-                        <div className="min-w-0">
-                          <p className="font-bold text-gray-900 text-base">{detail.business?.name}</p>
-                          {(detail.business?.city || detail.business?.subArea) && (
-                            <p className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
-                              <MapPin className="w-3 h-3" />
-                              {[detail.business.city, detail.business.subArea].filter(Boolean).join(", ")}
+                    <div className="p-4 space-y-3">
+                      {detail.package ? (
+                        <div className="flex items-start gap-3 p-3 bg-bridal-cream rounded-md border border-bridal-gold/30">
+                          <Package className="size-4 text-bridal-gold-dark mt-0.5 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[13.5px] font-medium text-foreground">
+                              {detail.package.name}
                             </p>
-                          )}
+                            {Array.isArray(detail.package.features) &&
+                            detail.package.features.length > 0 ? (
+                              <ul className="mt-2 space-y-1">
+                                {detail.package.features.map((f, i) => (
+                                  <li
+                                    key={i}
+                                    className="flex items-start gap-1.5 text-[12px] text-foreground/85"
+                                  >
+                                    <CheckCircle2 className="size-3 text-[#3F6B43] flex-shrink-0 mt-0.5" />
+                                    {f}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : null}
+                          </div>
                         </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="font-bold text-purple-600 text-base">{fmt(detail.totalAmount)}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            Down: <span className="font-semibold text-gray-600">{fmt(detail.downPayment)}</span>
+                      ) : null}
+
+                      {detail.menu ? (
+                        <div className="flex items-center gap-3 p-3 bg-bridal-blush/40 rounded-md border border-bridal-rose/30">
+                          <FileText className="size-4 text-bridal-mauve flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[13.5px] font-medium text-foreground">
+                              {detail.menu.title}
+                            </p>
+                          </div>
+                          <p className="text-[13.5px] font-medium text-bridal-mauve flex-shrink-0 tabular-nums">
+                            {fmt(detail.menu.price)}
                           </p>
                         </div>
-                      </div>
+                      ) : null}
 
-                      <div className="p-4 space-y-3">
-                        {/* Package */}
-                        {detail.package && (
-                          <div className="flex items-start gap-3 p-3 bg-purple-50/40 rounded-xl">
-                            <Package className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-semibold text-gray-900">{detail.package.name}</p>
-                              {Array.isArray(detail.package.features) && detail.package.features.length > 0 && (
-                                <ul className="mt-2 space-y-1">
-                                  {detail.package.features.map((f, i) => (
-                                    <li key={i} className="flex items-start gap-1.5 text-xs text-gray-600">
-                                      <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0 mt-0.5" />
-                                      {f}
-                                    </li>
-                                  ))}
-                                </ul>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Menu */}
-                        {detail.menu && (
-                          <div className="flex items-center gap-3 p-3 bg-blue-50/40 rounded-xl">
-                            <FileText className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-semibold text-gray-900">{detail.menu.title}</p>
-                            </div>
-                            <p className="text-sm font-semibold text-blue-600 flex-shrink-0">{fmt(detail.menu.price)}</p>
-                          </div>
-                        )}
-
-                        {/* Special requests */}
-                        {detail.specialRequests?.trim() && (
-                          <div className="flex items-start gap-2 p-3 bg-amber-50/40 rounded-xl">
-                            <Info className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                            <p className="text-xs text-gray-700 leading-relaxed">{detail.specialRequests}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ── RIGHT / SIDEBAR ── */}
-          <div className="space-y-5">
-
-            {/* Payment summary */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <h2 className="flex items-center gap-2 text-base font-bold text-gray-900 mb-4">
-                <CreditCard className="w-4.5 h-4.5 text-purple-500" />
-                Payment Summary
-              </h2>
-
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-500">Total Amount</span>
-                  <span className="font-semibold text-gray-900">{fmt(booking.totalAmount)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-500">Down Payment Due</span>
-                  <span className="font-semibold text-gray-900">{fmt(booking.downPayment)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-500">Remaining Balance</span>
-                  <span className="font-semibold text-gray-900">{fmt(remaining)}</span>
-                </div>
-                <div className="flex justify-between items-center pt-1">
-                  <span className="text-gray-500">Payment Status</span>
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${payCfg.color}`}>
-                    {payCfg.label}
-                  </span>
-                </div>
-                {booking.paymentMethod && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500">Method</span>
-                    <span className="font-semibold text-gray-900 capitalize">{booking.paymentMethod}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
-                <span className="font-semibold text-gray-900">Now Due</span>
-                <span className="text-xl font-bold text-purple-600">{fmt(booking.downPayment)}</span>
-              </div>
-
-              {isAwaitingPayment && (
-                <Button className="w-full mt-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold shadow-sm">
-                  <Wallet className="w-4 h-4 mr-2" />
-                  Pay {fmt(booking.downPayment)}
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-              )}
-            </div>
-
-            {/* Timeline */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <h2 className="flex items-center gap-2 text-base font-bold text-gray-900 mb-4">
-                <Clock className="w-4.5 h-4.5 text-purple-500" />
-                Timeline
-              </h2>
-              <div className="space-y-4">
-                {[
-                  { dot: "bg-emerald-500", title: "Booking Created",  sub: fmtShort(booking.createdAt) },
-                  { dot: cfg.dot,          title: `Status: ${cfg.label}`, sub: fmtShort(booking.updatedAt) },
-                  ...(booking.cancellationReason?.trim()
-                    ? [{ dot: "bg-red-400", title: "Cancellation Reason", sub: booking.cancellationReason }]
-                    : []
-                  ),
-                ].map(({ dot, title, sub }, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${dot}`} />
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">{title}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
+                      {detail.specialRequests?.trim() ? (
+                        <div className="flex items-start gap-2 p-3 bg-muted/30 rounded-md border border-border/60">
+                          <Info className="size-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                          <p className="text-[12px] text-foreground/85 leading-relaxed">
+                            {detail.specialRequests}
+                          </p>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 ))}
               </div>
+            )}
+          </SectionCard>
+        </div>
+
+        {/* Sidebar column */}
+        <div className="space-y-4">
+          <SectionCard title="Payment summary">
+            <div className="space-y-2.5 text-[13px]">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Total amount</span>
+                <span className="font-medium text-foreground tabular-nums">
+                  {fmt(booking.totalAmount)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Down payment</span>
+                <span className="font-medium text-foreground tabular-nums">
+                  {fmt(booking.downPayment)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Remaining</span>
+                <span className="font-medium text-foreground tabular-nums">
+                  {fmt(remaining)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center pt-1">
+                <span className="text-muted-foreground">Status</span>
+                <span
+                  className={cn(
+                    "text-[10.5px] uppercase tracking-[0.18em] font-medium px-2 py-0.5 rounded-full border",
+                    payCfg.tone,
+                  )}
+                >
+                  {payCfg.label}
+                </span>
+              </div>
+              {booking.paymentMethod ? (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Method</span>
+                  <span className="font-medium text-foreground capitalize">
+                    {booking.paymentMethod}
+                  </span>
+                </div>
+              ) : null}
             </div>
 
-            {/* Actions */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-2">
-              <Button
-                onClick={() => router.push(`/vendors`)}
-                variant="outline"
-                className="w-full justify-start border-gray-200 text-gray-600 hover:bg-gray-50 text-sm h-10"
-              >
-                <Star className="w-4 h-4 mr-2 text-purple-400" />
-                Browse More Vendors
-              </Button>
-              {isCancellable && (
-                <Button
-                  onClick={() => setCancelDialogOpen(true)}
-                  variant="outline"
-                  className="w-full justify-start border-red-200 text-red-500 hover:bg-red-50 text-sm h-10"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Cancel Booking
-                </Button>
-              )}
+            <div className="mt-4 pt-4 border-t border-border/60 flex items-end justify-between">
+              <span className="text-[10.5px] uppercase tracking-[0.22em] font-medium text-muted-foreground">
+                Now due
+              </span>
+              <span className="font-display italic text-[24px] text-foreground tabular-nums leading-none">
+                {fmt(booking.downPayment)}
+              </span>
             </div>
-          </div>
+
+            {isAwaitingPayment ? (
+              <Button className="w-full mt-4 gap-1.5" size="sm">
+                <Wallet className="size-3.5" />
+                Pay {fmt(booking.downPayment)}
+                <ChevronRight className="size-3" />
+              </Button>
+            ) : null}
+          </SectionCard>
+
+          {/* BK-042 — payment schedule (down + remaining; legacy bookings hide). */}
+          <InstallmentsCard bookingId={booking.id} />
+
+          {/* BK-054/55/56 — mid-booking change requests (guest count / slot / package / extras). */}
+          <ChangeRequestsCard
+            bookingId={booking.id}
+            canRequest={
+              statusKey !== "cancelled" && statusKey !== "completed"
+            }
+          />
+
+          {/* BK-067 — post-completion dispute window (default 7d). */}
+          <DisputeCard
+            bookingId={booking.id}
+            isCompleted={statusKey === "completed"}
+          />
+
+          <SectionCard title="Timeline">
+            <div className="space-y-3.5">
+              {[
+                {
+                  dot: "bg-bridal-sage",
+                  title: "Booking created",
+                  sub: fmtShort(booking.createdAt),
+                },
+                {
+                  dot: cfg.dot,
+                  title: `Status: ${cfg.label}`,
+                  sub: fmtShort(booking.updatedAt),
+                },
+                ...(booking.cancellationReason?.trim()
+                  ? [
+                      {
+                        dot: "bg-bridal-coral",
+                        title: "Cancellation reason",
+                        sub: booking.cancellationReason,
+                      },
+                    ]
+                  : []),
+              ].map(({ dot, title, sub }, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <div
+                    className={cn(
+                      "size-2 rounded-full mt-1.5 flex-shrink-0 ring-4 ring-background",
+                      dot,
+                    )}
+                  />
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-medium text-foreground">
+                      {title}
+                    </p>
+                    <p className="text-[11.5px] text-muted-foreground mt-0.5">
+                      {sub}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+
+          <Card className="p-2 space-y-1">
+            <Button
+              onClick={() => router.push(`/vendors`)}
+              variant="ghost"
+              className="w-full justify-start gap-2 text-[13px]"
+            >
+              <Star className="size-4 text-muted-foreground" />
+              Browse more vendors
+            </Button>
+            {isCancellable ? (
+              <Button
+                onClick={() => setCancelDialogOpen(true)}
+                variant="ghost"
+                className="w-full justify-start gap-2 text-[13px] text-bridal-coral hover:text-bridal-coral hover:bg-bridal-coral/10"
+              >
+                <Trash2 className="size-4" />
+                Cancel booking
+              </Button>
+            ) : null}
+          </Card>
         </div>
       </div>
 
-      {/* ── Cancel dialog ── */}
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <AlertDialogContent className="rounded-2xl">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-red-500" />
-              Cancel Booking #{booking.id}?
+              <AlertTriangle className="size-5 text-bridal-coral" />
+              Cancel booking #{booking.id}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. Any payments made may be subject to the vendor's refund policy.
+              This action cannot be undone. Any payments made may be subject to the
+              vendor's refund policy.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isCancelling} className="rounded-xl">Keep Booking</AlertDialogCancel>
+            <AlertDialogCancel disabled={isCancelling}>
+              Keep booking
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleCancel}
               disabled={isCancelling}
-              className="rounded-xl bg-red-600 hover:bg-red-700 text-white"
+              className="bg-bridal-coral hover:bg-bridal-coral/90 text-bridal-ivory"
             >
-              {isCancelling ? "Cancelling…" : "Yes, Cancel"}
+              {isCancelling ? "Cancelling…" : "Yes, cancel"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageContainer>
   );
 }

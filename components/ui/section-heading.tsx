@@ -29,7 +29,7 @@ export function SectionHeading({
           {subtitle}
         </p>
       )}
-      <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+      <h2 className="font-display italic text-bridal-charcoal text-3xl tracking-tight sm:text-4xl lg:text-5xl">
         {title}
       </h2>
       {ornament && (

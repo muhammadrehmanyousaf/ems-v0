@@ -17,6 +17,7 @@ import {
   Flag,
   Loader2,
   ArrowLeft,
+  ArrowRight,
   HelpCircle,
   CheckCircle,
   Star,
@@ -26,6 +27,7 @@ import {
   Heart,
   Calendar,
   Users,
+  Send,
 } from "lucide-react";
 import { FormType, useFormContext } from "@/lib/context/form-context";
 import { toast } from "./ui/use-toast";
@@ -52,6 +54,19 @@ import { usePlatformStats } from "@/hooks/use-platform-stats";
 import { Icons } from "./ui/icons";
 import { motion } from "framer-motion";
 import { Package } from "@/lib/types";
+// 01-VR-ENHANCE-V1-FE — server-side draft sync
+import { useDraftSync } from "@/lib/hooks/useDraftSync";
+import { DraftResumePrompt } from "@/components/auth/DraftResumePrompt";
+
+// Bridal primitives (Phase 0 — design revamp)
+import { BridalButton } from "@/components/bridal/bridal-button";
+import {
+  BridalCard,
+  BridalCrown,
+  BridalTitle,
+} from "@/components/bridal/bridal-card";
+import { BridalBadge } from "@/components/bridal/bridal-badge";
+import { FloralDivider } from "@/components/bridal/floral-divider";
 
 export function BusinessRegistrationForm() {
   // const [currentStep, setCurrentStep] = useState(0);
@@ -73,6 +88,18 @@ export function BusinessRegistrationForm() {
   const [openModal, setOpenModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const { data: stats, isLoading: isLoadingStats } = usePlatformStats();
+
+  // 01-VR-ENHANCE-V1-FE — server-side draft sync.
+  // Auto-saves debounced 2s after any change to formData / currentStep / businessType
+  // once a valid email is in formData.email. Disabled after openModal flips true
+  // (i.e. after a successful submit) so the post-submit reset doesn't write
+  // an empty draft over the just-submitted record.
+  const draftSync = useDraftSync({
+    formData,
+    currentStep,
+    vendorType: businessType ? String(businessType) : null,
+    enabled: !openModal,
+  });
 
   const carRental = businessType === "Car rental";
   const bridalWear = businessType === "Bridal wearing";
@@ -557,6 +584,12 @@ export function BusinessRegistrationForm() {
         setSuccessMessage(response.data?.message || "");
         setOpenModal(true);
         setCurrentStep(0);
+
+        // 01-VR-ENHANCE-V1-FE — drop the server-side draft now that the
+        // business has been created. Non-blocking; failures are silent.
+        if (formData?.email) {
+          draftSync.clearDraft(formData.email).catch(() => null);
+        }
       }
     } catch (error: any) {
       loadingToastId.dismiss();
@@ -575,317 +608,350 @@ export function BusinessRegistrationForm() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-purple-50/30 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800 shadow-sm">
-        <div className="w-[90%] mx-auto sm:container sm:mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
-          <div className="flex items-center justify-between">
-            <Link
-              href="/"
-              className="flex items-center space-x-2 sm:space-x-3 group"
-            >
-              <div className="relative">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300">
-                  <Sparkles className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
-                </div>
-              </div>
-              <div>
-                <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">
-                  Perfect Wedding
-                </h1>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                  Business Registration
-                </p>
-              </div>
-            </Link>
+  // Submit-vs-continue branch — extracted so the JSX stays clean.
+  const isFinalStep =
+    ((bridalWear || weddingStationery) && currentStep === 8) ||
+    (carRental && currentStep === 7) ||
+    (!bridalWear && !weddingStationery && !carRental && currentStep === 6);
 
-            <Link
-              href="/get-help"
-              className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-neutral-800 rounded-lg transition-all duration-200"
-            >
-              <HelpCircle className="w-4 h-4" />
-              <span className="hidden sm:inline">Need Help?</span>
-            </Link>
-          </div>
+  const totalSteps = bridalWear || weddingStationery ? 9 : carRental ? 8 : 7;
+
+  return (
+    <div className="min-h-screen bridal-surface relative">
+      {/* Page-wide warm parchment + jaal background */}
+      <div className="fixed inset-0 bg-bridal-hero -z-10" aria-hidden />
+      <div
+        aria-hidden
+        className="fixed inset-0 bg-bridal-wash opacity-90 -z-10"
+      />
+
+      {/* ── Sticky bridal header ── */}
+      <header className="sticky top-0 z-50 backdrop-blur-md bg-bridal-ivory/85 border-b border-bridal-beige/70">
+        <div className="w-[92%] xl:w-[90%] max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-bridal-gold/15 border border-bridal-gold/40 flex items-center justify-center transition-colors group-hover:bg-bridal-gold/25">
+              <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-bridal-gold" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-display italic text-base sm:text-lg leading-tight text-bridal-charcoal">
+                AJOINT
+              </p>
+              <p className="bridal-label text-[9px] sm:text-[10px] tracking-[0.2em]">
+                Vendor Registration
+              </p>
+            </div>
+          </Link>
+
+          <Link
+            href="/get-help"
+            className="inline-flex items-center gap-1.5 px-3 sm:px-4 h-9 sm:h-10 rounded-[4px] border border-bridal-beige bg-bridal-cream font-bridal text-[12px] tracking-wide text-bridal-mauve hover:border-bridal-gold/60 hover:text-bridal-charcoal transition-colors"
+          >
+            <HelpCircle className="w-4 h-4" />
+            <span className="hidden sm:inline">Need Help?</span>
+          </Link>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="w-[90%] mx-auto sm:container sm:mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 max-w-7xl mx-auto">
-          {/* Left Side - Sticky Hero Section */}
-          <div className="lg:col-span-5 order-2 lg:order-1">
-            <div className="lg:sticky lg:top-24 space-y-4 sm:space-y-6 lg:space-y-8">
-              {/* Progress Section */}
-              <Card className="bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm border-0 shadow-xl">
-                <CardContent className="p-4 sm:p-6">
-                  <div className="space-y-3 sm:space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-base sm:text-lg font-semibold text-neutral-900 dark:text-neutral-100">
-                        Registration Progress
-                      </h2>
-                      <span className="text-sm font-medium text-purple-600">
-                        {getProgressPercentage()}%
-                      </span>
-                    </div>
-                    <Progress value={getProgressPercentage()} className="h-2" />
-                    <div className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>
-                        Step {currentStep + 1} of{" "}
-                        {bridalWear || weddingStationery ? 9 : carRental ? 8 : 7}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+      {/* ── Main content ── */}
+      <main className="w-[92%] xl:w-[90%] max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 lg:py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8">
+          {/* ── Left aside (sticky on lg) ── */}
+          <aside className="lg:col-span-5 order-2 lg:order-1 space-y-5">
+            <div className="lg:sticky lg:top-[88px] space-y-5">
+              {/* Progress card */}
+              <BridalCard className="p-5 sm:p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="bridal-label">Your Progress</span>
+                  <span className="font-display italic text-bridal-gold text-[20px] leading-none">
+                    {getProgressPercentage()}%
+                  </span>
+                </div>
+                {/* Custom progress bar — gold fill on beige track */}
+                <div className="h-1.5 w-full rounded-full bg-bridal-beige overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-bridal-gold to-bridal-gold-dark transition-all duration-500"
+                    style={{ width: `${getProgressPercentage()}%` }}
+                  />
+                </div>
+                <div className="mt-4 flex items-center gap-2 font-bridal text-[13px] text-bridal-text-soft">
+                  <CheckCircle className="w-4 h-4 text-bridal-sage" />
+                  <span>
+                    Step{" "}
+                    <span className="font-medium text-bridal-charcoal">
+                      {currentStep + 1}
+                    </span>{" "}
+                    of {totalSteps}
+                  </span>
+                </div>
+              </BridalCard>
 
-              {/* Benefits Section */}
-              <Card className="bg-gradient-to-br from-purple-600 to-purple-700 text-white border-0 shadow-xl">
-                <CardContent className="p-4 sm:p-6">
-                  <div className="space-y-4 sm:space-y-6">
+              {/* Benefits — blush rose card */}
+              <BridalCard
+                blush
+                className="p-5 sm:p-6 border-bridal-rose/40"
+              >
+                <div className="text-center mb-5">
+                  <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-bridal-cream border border-bridal-gold/40 flex items-center justify-center">
+                    <Award className="w-6 h-6 text-bridal-gold" />
+                  </div>
+                  <h3 className="font-display italic text-[22px] text-bridal-charcoal leading-tight">
+                    Join Pakistan&apos;s most{" "}
+                    <span className="text-bridal-gold">trusted network</span>
+                  </h3>
+                  <p className="font-bridal text-[13px] text-bridal-text-soft mt-2">
+                    List your business and connect with couples planning the
+                    biggest day of their lives.
+                  </p>
+                </div>
+
+                <ul className="space-y-2.5">
+                  {[
+                    "Free, full-featured business profile",
+                    "Direct, qualified customer leads",
+                    "Booking calendar & package manager",
+                    "24/7 vendor success support",
+                  ].map((item) => (
+                    <li
+                      key={item}
+                      className="flex items-start gap-2.5 font-bridal text-[13px] text-bridal-text"
+                    >
+                      <span className="mt-0.5 inline-flex w-5 h-5 flex-shrink-0 rounded-full bg-bridal-gold/15 border border-bridal-gold/40 items-center justify-center">
+                        <CheckCircle className="w-3 h-3 text-bridal-gold" />
+                      </span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </BridalCard>
+
+              {/* Stats card */}
+              <BridalCard className="p-5 sm:p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Star className="w-4 h-4 text-bridal-gold" />
+                  <span className="bridal-label">Platform Pulse</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-md border border-bridal-beige bg-bridal-ivory/50 p-3 text-center">
+                    <div className="font-display italic text-[26px] leading-none text-bridal-charcoal">
+                      {stats ? stats.vendors : 0}
+                      <span className="text-bridal-gold">+</span>
+                    </div>
+                    <div className="bridal-label mt-1">Active Vendors</div>
+                  </div>
+                  <div className="rounded-md border border-bridal-beige bg-bridal-blush/40 p-3 text-center">
+                    <div className="font-display italic text-[26px] leading-none text-bridal-charcoal">
+                      {stats ? stats.couplesServed : 0}
+                      <span className="text-bridal-gold">+</span>
+                    </div>
+                    <div className="bridal-label mt-1">Happy Couples</div>
+                  </div>
+                </div>
+              </BridalCard>
+            </div>
+          </aside>
+
+          {/* ── Right form panel ── */}
+          <section className="lg:col-span-7 order-1 lg:order-2">
+            <BridalCard
+              elevated
+              className="p-5 sm:p-7 lg:p-9 bg-bridal-cream"
+            >
+              {/* 01-VR-ENHANCE-V1-FE — server-side resume prompt.
+                  Shown only when an email is typed, the form is still empty
+                  enough to safely overwrite, and the server has a saved draft. */}
+              {formData?.email && currentStep <= 1 && !formData?.name && (
+                <DraftResumePrompt
+                  email={formData.email}
+                  onResume={(d) => {
+                    setFormData((prev) => ({ ...prev, ...(d.payload || {}) }));
+                    if (typeof d.currentStep === "number") setCurrentStep(d.currentStep);
+                    if (d.vendorType) setBusinessType(d.vendorType);
+                    toast({
+                      title: "Progress restored",
+                      description: `Picked up where you left off (step ${(d.currentStep || 0) + 1}).`,
+                    });
+                  }}
+                />
+              )}
+
+              {/* Step content */}
+              <div className="min-h-[440px] sm:min-h-[500px]">
+                {currentStep === 0 || currentStep < 1 ? (
+                  <div className="space-y-7">
                     <div className="text-center">
-                      <Award className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-purple-200" />
-                      <h3 className="text-lg sm:text-xl font-bold mb-2">
-                        Join Our Premium Network
-                      </h3>
-                      <p className="text-purple-100 text-sm">
-                        Connect with thousands of couples looking for your
-                        services
+                      <div className="mx-auto w-16 h-16 rounded-full bg-bridal-gold/15 border border-bridal-gold/40 flex items-center justify-center mb-5">
+                        <Shield className="w-7 h-7 text-bridal-gold" />
+                      </div>
+                      <BridalCrown className="mb-3">
+                        Step 1 — Your Craft
+                      </BridalCrown>
+                      <BridalTitle size="h2" className="mb-2">
+                        Choose your{" "}
+                        <span className="text-bridal-gold">business type</span>
+                      </BridalTitle>
+                      <p className="font-bridal text-bridal-text-soft text-sm max-w-md mx-auto">
+                        Select the category that best describes your wedding
+                        services. We&apos;ll tailor the rest of the form to
+                        your craft.
                       </p>
                     </div>
 
-                    <div className="space-y-3 sm:space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 sm:w-8 sm:h-8 bg-white/20 rounded-full flex items-center justify-center">
-                          <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </div>
-                        <span className="text-sm font-medium">
-                          Free Business Profile
+                    <FloralDivider width={220} />
+
+                    <BusinessTypeStep
+                      setBusinessType={setBusinessType}
+                      businessType={businessType}
+                      errors={errors}
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="flex items-start gap-4 pb-5 border-b border-bridal-beige/70">
+                      <div className="flex-shrink-0 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-bridal-gold flex items-center justify-center shadow-[0_8px_18px_-10px_rgba(176,125,84,0.55)]">
+                        <span className="font-display italic text-lg sm:text-xl text-bridal-charcoal leading-none">
+                          {currentStep}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 sm:w-8 sm:h-8 bg-white/20 rounded-full flex items-center justify-center">
-                          <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </div>
-                        <span className="text-sm font-medium">
-                          Direct Customer Leads
+                      <div className="min-w-0">
+                        <span className="bridal-label">
+                          {businessType} Registration
                         </span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 sm:w-8 sm:h-8 bg-white/20 rounded-full flex items-center justify-center">
-                          <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </div>
-                        <span className="text-sm font-medium">
-                          Professional Marketing Tools
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 sm:w-8 sm:h-8 bg-white/20 rounded-full flex items-center justify-center">
-                          <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </div>
-                        <span className="text-sm font-medium">
-                          24/7 Customer Support
-                        </span>
+                        <h2 className="font-display italic text-[22px] sm:text-[26px] text-bridal-charcoal leading-tight mt-0.5">
+                          Tell us more about{" "}
+                          <span className="text-bridal-gold">your business</span>
+                        </h2>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
 
-              {/* Stats cards */}
-              <Card className="bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm border-0 shadow-xl">
-                <CardContent className="p-4 sm:p-6">
-                  <div className="space-y-3 sm:space-y-4">
-                    <h3 className="text-base sm:text-lg font-semibold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-                      <Star className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
-                      Platform Statistics
-                    </h3>
-                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                      <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 rounded-xl">
-                        <div className="text-xl sm:text-2xl font-bold text-blue-600">
-                          {stats ? stats.vendors : 0}
-                          {"+"}
-                        </div>
-                        <div className="text-xs text-blue-600">
-                          Active Vendors
-                        </div>
-                      </div>
-                      <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/50 dark:to-emerald-950/50 rounded-xl">
-                        <div className="text-xl sm:text-2xl font-bold text-green-600">
-                          {stats ? stats.couplesServed : 0}
-                          {"+"}
-                        </div>
-                        <div className="text-xs text-green-600">
-                          Happy Couples
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Right Side - Form Section */}
-          <div className="lg:col-span-7 order-1 lg:order-2">
-            <Card className="bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm border-0 shadow-xl">
-              <CardContent className="p-4 sm:p-6 lg:p-8">
-                {/* Step Content */}
-                <div className="min-h-[400px] sm:min-h-[500px]">
-                  {currentStep === 0 || currentStep < 1 ? (
-                    <div className="space-y-4 sm:space-y-6">
-                      <div className="text-center space-y-3 sm:space-y-4">
-                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-purple-600 to-purple-700 rounded-full flex items-center justify-center mx-auto shadow-lg">
-                          <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-                        </div>
-                        <div>
-                          <h2 className="text-xl sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">
-                            Choose Your Business Type
-                          </h2>
-                          <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400">
-                            Select the category that best describes your wedding
-                            services
-                          </p>
-                        </div>
-                      </div>
-                      <BusinessTypeStep
-                        setBusinessType={setBusinessType}
-                        businessType={businessType}
-                        errors={errors}
+                    {formData.businessType === "Wedding venue" ? (
+                      <VenueSteps
+                        setFile={setFile}
+                        file={file}
+                        error={errors}
+                        setErrors={setErrors}
+                        currentStep={currentStep}
                       />
-                    </div>
-                  ) : (
-                    <div className="space-y-4 sm:space-y-6">
-                      <div className="flex items-center gap-3 mb-4 sm:mb-6">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-600 to-purple-700 rounded-full flex items-center justify-center">
-                          <span className="text-white font-semibold text-sm sm:text-base">
-                            {currentStep}
-                          </span>
-                        </div>
-                        <div>
-                          <h2 className="text-lg sm:text-xl font-bold text-neutral-900 dark:text-neutral-100">
-                            {businessType} Registration
-                          </h2>
-                          <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400">
-                            Complete your business profile
-                          </p>
-                        </div>
-                      </div>
+                    ) : carRental ? (
+                      <CarRentalSteps
+                        setFile={setFile}
+                        file={file}
+                        error={errors}
+                        setErrors={setErrors}
+                        currentStep={currentStep}
+                      />
+                    ) : bridalWear ? (
+                      <BridalWearSteps
+                        setFile={setFile}
+                        file={file}
+                        error={errors}
+                        setErrors={setErrors}
+                        currentStep={currentStep}
+                      />
+                    ) : weddingStationery ? (
+                      <WeddingStationerySteps
+                        setFile={setFile}
+                        file={file}
+                        error={errors}
+                        setErrors={setErrors}
+                        currentStep={currentStep}
+                      />
+                    ) : photographer ? (
+                      <PhotographerSteps
+                        setFile={setFile}
+                        file={file}
+                        error={errors}
+                        setErrors={setErrors}
+                        currentStep={currentStep}
+                      />
+                    ) : makeupArtist ? (
+                      <MakeupArtistSteps
+                        setFile={setFile}
+                        file={file}
+                        error={errors}
+                        setErrors={setErrors}
+                        currentStep={currentStep}
+                      />
+                    ) : hennaArtist ? (
+                      <HennaArtistSteps
+                        setFile={setFile}
+                        file={file}
+                        error={errors}
+                        setErrors={setErrors}
+                        currentStep={currentStep}
+                      />
+                    ) : decorator ? (
+                      <DecoratorSteps
+                        setFile={setFile}
+                        file={file}
+                        error={errors}
+                        setErrors={setErrors}
+                        currentStep={currentStep}
+                      />
+                    ) : catering ? (
+                      <CateringSteps
+                        setFile={setFile}
+                        file={file}
+                        error={errors}
+                        setErrors={setErrors}
+                        currentStep={currentStep}
+                      />
+                    ) : (
+                      <div />
+                    )}
+                  </div>
+                )}
+              </div>
 
-                      {formData.businessType === "Wedding venue" ? (
-                        <VenueSteps
-                          setFile={setFile}
-                          file={file}
-                          error={errors}
-                          setErrors={setErrors}
-                          currentStep={currentStep}
-                        />
-                      ) : carRental ? (
-                        <CarRentalSteps
-                          setFile={setFile}
-                          file={file}
-                          error={errors}
-                          setErrors={setErrors}
-                          currentStep={currentStep}
-                        />
-                      ) : bridalWear ? (
-                        <BridalWearSteps
-                          setFile={setFile}
-                          file={file}
-                          error={errors}
-                          setErrors={setErrors}
-                          currentStep={currentStep}
-                        />
-                      ) : weddingStationery ? (
-                        <WeddingStationerySteps
-                          setFile={setFile}
-                          file={file}
-                          error={errors}
-                          setErrors={setErrors}
-                          currentStep={currentStep}
-                        />
-                      ) : photographer ? (
-                        <PhotographerSteps
-                          setFile={setFile}
-                          file={file}
-                          error={errors}
-                          setErrors={setErrors}
-                          currentStep={currentStep}
-                        />
-                      ) : makeupArtist ? (
-                        <MakeupArtistSteps
-                          setFile={setFile}
-                          file={file}
-                          error={errors}
-                          setErrors={setErrors}
-                          currentStep={currentStep}
-                        />
-                      ) : hennaArtist ? (
-                        <HennaArtistSteps
-                          setFile={setFile}
-                          file={file}
-                          error={errors}
-                          setErrors={setErrors}
-                          currentStep={currentStep}
-                        />
-                      ) : decorator ? (
-                        <DecoratorSteps
-                          setFile={setFile}
-                          file={file}
-                          error={errors}
-                          setErrors={setErrors}
-                          currentStep={currentStep}
-                        />
-                      ) : catering ? (
-                        <CateringSteps
-                          setFile={setFile}
-                          file={file}
-                          error={errors}
-                          setErrors={setErrors}
-                          currentStep={currentStep}
-                        />
-                      ) : (
-                        <div></div>
-                      )}
-                    </div>
-                  )}
-                </div>
+              {/* Navigation buttons */}
+              <div className="mt-7 pt-5 border-t border-bridal-beige/70 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <BridalButton
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  onClick={handleBack}
+                  disabled={currentStep === 0}
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Back
+                </BridalButton>
 
-                {/* Navigation Buttons */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 pt-4 sm:pt-6 border-t border-neutral-200 dark:border-neutral-800 mt-6 sm:mt-8">
-                  <Button
-                    disabled={currentStep === 0}
-                    onClick={handleBack}
-                    variant="outline"
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 border-neutral-200 dark:border-neutral-700 hover:border-purple-500 dark:hover:border-purple-500 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200 py-3 sm:py-2"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    Back
-                  </Button>
-
-                  <Button
+                <div className="flex items-center sm:gap-3">
+                  <span className="hidden sm:inline-block bridal-label text-[10px] tracking-[0.18em]">
+                    {isFinalStep ? "One more click" : "Keep going"}
+                  </span>
+                  <BridalButton
                     type="button"
-                    onClick={
-                      ((bridalWear || weddingStationery) && currentStep === 8) ||
-                      (carRental && currentStep === 7) ||
-                      (!bridalWear && !weddingStationery && !carRental && currentStep === 6)
-                        ? handleSubmit
-                        : handleNext
-                    }
-                    className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 px-6 sm:px-8 py-3 sm:py-2 font-semibold"
+                    variant="primary"
+                    size="md"
+                    onClick={isFinalStep ? handleSubmit : handleNext}
                   >
-                    {((bridalWear || weddingStationery) && currentStep === 8) ||
-                    (carRental && currentStep === 7) ||
-                    (!bridalWear && !weddingStationery && !carRental && currentStep === 6)
-                      ? "Submit Registration"
-                      : "Continue"}
-                  </Button>
+                    {isFinalStep ? (
+                      <>
+                        <Send className="w-3.5 h-3.5" />
+                        Submit Registration
+                      </>
+                    ) : (
+                      <>
+                        Continue
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </>
+                    )}
+                  </BridalButton>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </BridalCard>
+
+            {/* Footer link */}
+            <p className="mt-5 text-center font-bridal text-[13px] text-bridal-text-soft">
+              Already have a vendor account?{" "}
+              <Link
+                href="/login"
+                className="text-bridal-gold hover:text-bridal-gold-dark font-medium underline-offset-4 hover:underline transition-colors"
+              >
+                Sign in
+              </Link>
+            </p>
+          </section>
         </div>
       </main>
 

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import {
   NavigationMenu,
@@ -16,7 +15,6 @@ import {
   Menu,
   Heart,
   Camera,
-  Building,
   Paintbrush,
   Car,
   PenTool,
@@ -34,29 +32,33 @@ import {
   MapPin,
   Search,
   MessageCircle,
+  Flower2,
 } from "lucide-react"
 import { useUser } from "@/context/UserContext"
 import { useChat } from "@/context/ChatContext"
 import NotificationDropdown from "./notification-dropdown"
 import HeaderAvatar from "./header-avatar"
 
+import { BridalButton } from "@/components/bridal/bridal-button"
+
+// Vendor categories for the mega menu — taglines double as one-line hover copy.
 const vendorCategories = [
-  { name: "Photographers", href: "/photographers", icon: Camera, gradient: "from-purple-600 to-violet-700", desc: "Capture every moment" },
-  { name: "Venues", href: "/venues", icon: MapPin, gradient: "from-amber-500 to-orange-600", desc: "Perfect locations" },
-  { name: "Decorators", href: "/decor", icon: Sparkles, gradient: "from-indigo-500 to-blue-600", desc: "Transform your venue" },
-  { name: "Makeup", href: "/makeup-artists", icon: Palette, gradient: "from-pink-500 to-rose-600", desc: "Look stunning" },
-  { name: "Catering", href: "/catering", icon: Utensils, gradient: "from-orange-500 to-red-600", desc: "Exquisite cuisine" },
-  { name: "Car Rental", href: "/car-rental", icon: Car, gradient: "from-slate-600 to-slate-800", desc: "Arrive in style" },
-  { name: "Henna Artists", href: "/henna-artists", icon: Paintbrush, gradient: "from-amber-600 to-amber-700", desc: "Beautiful designs" },
-  { name: "Bridal Wear", href: "/bridal-wear", icon: Crown, gradient: "from-gold-500 to-amber-600", desc: "Dream outfits" },
-  { name: "Stationery", href: "/wedding-stationery", icon: PenTool, gradient: "from-purple-700 to-slate-800", desc: "Elegant invitations" },
+  { name: "Photographers",  href: "/photographers",       icon: Camera,    desc: "Capture every moment" },
+  { name: "Venues",         href: "/venues",              icon: MapPin,    desc: "Where memories begin" },
+  { name: "Decorators",     href: "/decor",               icon: Sparkles,  desc: "Transform every space" },
+  { name: "Makeup",         href: "/makeup-artists",      icon: Palette,   desc: "The bridal glow" },
+  { name: "Catering",       href: "/catering",            icon: Utensils,  desc: "Flavours to remember" },
+  { name: "Car Rental",     href: "/car-rental",          icon: Car,       desc: "Arrive in elegance" },
+  { name: "Henna Artists",  href: "/henna-artists",       icon: Flower2,   desc: "The mehndi tradition" },
+  { name: "Bridal Wear",    href: "/bridal-wear",         icon: Crown,     desc: "Couture for the bride" },
+  { name: "Stationery",     href: "/wedding-stationery",  icon: PenTool,   desc: "Invitations that last" },
 ]
 
 const planningTools = [
-  { name: "Checklist", href: "/planning-tools/checklist", icon: Calendar, desc: "Stay organized", gradient: "from-purple-600 to-purple-700" },
-  { name: "Budget", href: "/planning-tools/budget", icon: DollarSign, desc: "Track expenses", gradient: "from-gold-500 to-amber-600" },
-  { name: "Guest List", href: "/planning-tools/guest-list", icon: Users, desc: "Manage invites", gradient: "from-indigo-500 to-purple-600" },
-  { name: "Timeline", href: "/planning-tools/timeline", icon: Clock, desc: "Plan your day", gradient: "from-amber-500 to-orange-600" },
+  { name: "Checklist",  href: "/planning-tools/checklist",  icon: Calendar,    desc: "Stay organised" },
+  { name: "Budget",     href: "/planning-tools/budget",     icon: DollarSign,  desc: "Track every rupee" },
+  { name: "Guest List", href: "/planning-tools/guest-list", icon: Users,       desc: "Manage invites" },
+  { name: "Timeline",   href: "/planning-tools/timeline",   icon: Clock,       desc: "Plan your day" },
 ]
 
 export function Header() {
@@ -75,302 +77,461 @@ export function Header() {
     <header
       className={`sticky top-0 z-50 transition-all duration-500 ease-out ${
         scrolled
-          ? "bg-white/80 dark:bg-neutral-900/80 backdrop-blur-2xl shadow-lg shadow-purple-500/8 border-b border-purple-100/50 dark:border-neutral-800"
-          : "bg-white/95 dark:bg-neutral-950/95 backdrop-blur-sm border-b border-purple-100/20 dark:border-neutral-800/50"
+          ? "bg-bridal-ivory/95 backdrop-blur-xl border-b border-bridal-beige/80 shadow-[0_8px_28px_-22px_rgba(176,125,84,0.45)]"
+          : "bg-bridal-ivory/85 backdrop-blur-md border-b border-bridal-beige/40"
       }`}
     >
       <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
-        <div className="flex items-center justify-between h-16 sm:h-[68px]">
-          {/* Left: Logo + Mobile Menu */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Mobile Menu */}
+        <div className="flex items-center justify-between h-16 sm:h-[72px]">
+          {/* ── Left: Mobile menu trigger + bridal logo ── */}
+          <div className="flex items-center gap-2.5 sm:gap-4">
+            {/* Mobile Sheet */}
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                className="lg:hidden h-10 w-10 hover:bg-purple-50 dark:hover:bg-neutral-800 hover:text-purple-600 dark:hover:text-purple-400 rounded-xl transition-colors duration-200"
+                <button
+                  type="button"
+                  className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-md text-bridal-charcoal hover:bg-bridal-blush/55 hover:text-bridal-mauve transition-colors duration-200"
                   aria-label="Open menu"
                 >
                   <Menu className="h-5 w-5" />
-                </Button>
+                </button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[310px] sm:w-[370px] p-0 border-0 shadow-2xl">
-                {/* Mobile Menu Header - Gradient */}
-                <div className="relative p-5 pb-6 bg-gradient-to-br from-purple-700 via-purple-800 to-purple-900 overflow-hidden">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.15),transparent_60%)]" />
+              <SheetContent
+                side="left"
+                className="w-[320px] sm:w-[380px] p-0 border-bridal-beige bg-bridal-cream"
+              >
+                {/* Mobile Menu — Header band */}
+                <div className="relative px-5 pt-6 pb-5 bg-gradient-to-b from-bridal-blush via-bridal-blush/60 to-bridal-cream border-b border-bridal-beige overflow-hidden">
+                  <span
+                    aria-hidden
+                    className="absolute -top-4 -right-4 w-32 h-32 rounded-full bg-bridal-rose/30 blur-3xl"
+                  />
+                  <span
+                    aria-hidden
+                    className="absolute -bottom-6 -left-6 w-32 h-32 rounded-full bg-bridal-gold/15 blur-3xl"
+                  />
+
                   <div className="relative flex items-center justify-between">
-                    <Link href="/" className="flex items-center gap-2.5" onClick={() => setIsOpen(false)}>
-                      <div className="w-9 h-9 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                        <Heart className="w-[18px] h-[18px] text-gold-300" />
-                      </div>
-                      <span className="text-xl font-heading font-bold text-white">WeddingPlatform</span>
-                    </Link>
-                    <Button
-                      variant="ghost"
-                      size="icon"
+                    <Link
+                      href="/"
+                      className="flex items-center gap-2.5"
                       onClick={() => setIsOpen(false)}
-                      className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/10 rounded-lg"
+                    >
+                      <span className="w-9 h-9 rounded-full bg-bridal-cream border border-bridal-gold/45 flex items-center justify-center">
+                        <Heart className="w-[18px] h-[18px] text-bridal-gold" />
+                      </span>
+                      <span className="font-display italic text-2xl text-bridal-charcoal leading-none">
+                        AJOINT
+                      </span>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => setIsOpen(false)}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-bridal-text-soft hover:text-bridal-charcoal hover:bg-bridal-cream transition-colors"
                       aria-label="Close menu"
                     >
                       <X className="h-4 w-4" />
-                    </Button>
+                    </button>
                   </div>
-                  <p className="relative mt-3 text-sm text-purple-200/80">Find your perfect wedding vendors</p>
+                  <p className="relative mt-3 font-bridal text-[12.5px] text-bridal-text-soft">
+                    Pakistan&apos;s wedding platform — find your dream team.
+                  </p>
                 </div>
 
-                {/* Mobile Menu Body */}
-                <nav className="flex flex-col h-[calc(100%-130px)] overflow-y-auto">
-                  <div className="p-4 space-y-6">
-                    {/* Vendor Categories - Compact Grid */}
+                {/* Mobile Menu — Body */}
+                <nav className="flex flex-col h-[calc(100%-150px)] overflow-y-auto">
+                  <div className="px-4 py-5 space-y-7">
+                    {/* Vendor categories */}
                     <div>
-                      <h3 className="text-[11px] font-bold uppercase tracking-[0.15em] text-purple-400 mb-3 px-1">
-                        Vendor Categories
-                      </h3>
+                      <div className="flex items-center gap-2 mb-3 px-1">
+                        <span className="block w-6 h-px bg-gradient-to-r from-transparent to-bridal-gold" />
+                        <span className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-gold">
+                          Vendor Categories
+                        </span>
+                      </div>
                       <div className="grid grid-cols-3 gap-2">
-                        {vendorCategories.map((item) => (
-                          <Link
-                            key={item.name}
-                            href={item.href}
-                            onClick={() => setIsOpen(false)}
-                          className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-purple-50 dark:hover:bg-neutral-800 transition-all duration-200 group text-center"
-                          >
-                            <div
-                              className={`w-10 h-10 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:scale-110 transition-all duration-200`}
+                        {vendorCategories.map((item) => {
+                          const Icon = item.icon
+                          return (
+                            <Link
+                              key={item.name}
+                              href={item.href}
+                              onClick={() => setIsOpen(false)}
+                              className="
+                                group flex flex-col items-center gap-2 p-3
+                                rounded-md border border-bridal-beige bg-bridal-cream
+                                hover:border-bridal-gold/55 hover:bg-bridal-blush/45
+                                transition-all duration-200 text-center
+                              "
                             >
-                              <item.icon className="w-[18px] h-[18px] text-white" />
-                            </div>
-                          <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-300 group-hover:text-purple-700 dark:group-hover:text-purple-400 leading-tight">
-                              {item.name}
-                            </span>
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Planning Tools */}
-                    <div>
-                      <h3 className="text-[11px] font-bold uppercase tracking-[0.15em] text-purple-400 mb-3 px-1">
-                        Planning Tools
-                      </h3>
-                      <div className="space-y-1">
-                        {planningTools.map((item) => (
-                          <Link
-                            key={item.name}
-                            href={item.href}
-                            onClick={() => setIsOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-purple-50 dark:hover:bg-neutral-800 transition-all duration-200 group"
-                          >
-                            <div
-                              className={`w-9 h-9 rounded-lg bg-gradient-to-br ${item.gradient} flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform duration-200`}
-                            >
-                              <item.icon className="w-4 h-4 text-white" />
-                            </div>
-                            <div>
-                            <div className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 group-hover:text-purple-700 dark:group-hover:text-purple-400">
+                              <span
+                                className="
+                                  w-9 h-9 rounded-full bg-bridal-blush/70 border border-bridal-beige
+                                  flex items-center justify-center
+                                  group-hover:bg-bridal-gold/15 group-hover:border-bridal-gold/45
+                                  transition-colors
+                                "
+                              >
+                                <Icon
+                                  className="w-[16px] h-[16px] text-bridal-gold-dark group-hover:text-bridal-gold transition-colors"
+                                  strokeWidth={1.6}
+                                />
+                              </span>
+                              <span className="font-display italic text-[12px] text-bridal-charcoal leading-tight">
                                 {item.name}
-                              </div>
-                            <div className="text-[11px] text-neutral-400 dark:text-neutral-500">{item.desc}</div>
-                            </div>
-                          </Link>
-                        ))}
+                              </span>
+                            </Link>
+                          )
+                        })}
                       </div>
                     </div>
 
-                    {/* Quick Links */}
+                    {/* Planning tools */}
                     <div>
-                      <h3 className="text-[11px] font-bold uppercase tracking-[0.15em] text-purple-400 mb-3 px-1">
-                        Quick Links
-                      </h3>
+                      <div className="flex items-center gap-2 mb-3 px-1">
+                        <span className="block w-6 h-px bg-gradient-to-r from-transparent to-bridal-gold" />
+                        <span className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-gold">
+                          Planning Tools
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        {planningTools.map((item) => {
+                          const Icon = item.icon
+                          return (
+                            <Link
+                              key={item.name}
+                              href={item.href}
+                              onClick={() => setIsOpen(false)}
+                              className="
+                                group flex items-center gap-3 px-3 py-2.5
+                                rounded-md hover:bg-bridal-blush/45 transition-colors duration-200
+                              "
+                            >
+                              <span className="w-9 h-9 rounded-md bg-bridal-blush/70 border border-bridal-beige flex items-center justify-center flex-shrink-0 group-hover:bg-bridal-gold/15 group-hover:border-bridal-gold/45 transition-colors">
+                                <Icon className="w-4 h-4 text-bridal-gold-dark" strokeWidth={1.6} />
+                              </span>
+                              <div className="min-w-0">
+                                <div className="font-display italic text-[15px] text-bridal-charcoal leading-tight">
+                                  {item.name}
+                                </div>
+                                <div className="font-bridal text-[11.5px] text-bridal-text-soft">
+                                  {item.desc}
+                                </div>
+                              </div>
+                            </Link>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Quick links */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-3 px-1">
+                        <span className="block w-6 h-px bg-gradient-to-r from-transparent to-bridal-gold" />
+                        <span className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-gold">
+                          Quick Links
+                        </span>
+                      </div>
                       <div className="space-y-1">
                         {[
-                          { name: "All Vendors", href: "/vendors", icon: Star },
-                          { name: "Search", href: "/search", icon: Search },
-                          { name: "Messages", href: "/user/conversations", icon: MessageCircle },
-                          { name: "My Bookings", href: "/user/bookings", icon: Calendar },
-                          { name: "Favorites", href: "/user/favorites", icon: Heart },
-                        ].map((item) => (
-                          <Link
-                            key={item.name}
-                            href={item.href}
-                            onClick={() => setIsOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-purple-50 dark:hover:bg-neutral-800 transition-all duration-200 group text-sm font-medium text-neutral-600 dark:text-neutral-300 hover:text-purple-600 dark:hover:text-purple-400"
-                          >
-                            <item.icon className="w-4 h-4 text-neutral-400 group-hover:text-purple-500" />
-                            {item.name}
-                          </Link>
-                        ))}
+                          { name: "All Vendors",  href: "/vendors",            icon: Star },
+                          { name: "Search",       href: "/search",             icon: Search },
+                          { name: "Messages",     href: "/user/conversations", icon: MessageCircle },
+                          { name: "My Bookings",  href: "/user/bookings",      icon: Calendar },
+                          { name: "Favourites",   href: "/user/favorites",     icon: Heart },
+                        ].map((item) => {
+                          const Icon = item.icon
+                          return (
+                            <Link
+                              key={item.name}
+                              href={item.href}
+                              onClick={() => setIsOpen(false)}
+                              className="
+                                group flex items-center gap-3 px-3 py-2.5
+                                rounded-md font-bridal text-[14px] text-bridal-text
+                                hover:bg-bridal-blush/45 hover:text-bridal-charcoal transition-colors
+                              "
+                            >
+                              <Icon className="w-4 h-4 text-bridal-gold/70 group-hover:text-bridal-gold transition-colors" />
+                              {item.name}
+                            </Link>
+                          )
+                        })}
                       </div>
                     </div>
                   </div>
 
                   {/* Mobile Auth */}
-              <div className="mt-auto p-4 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
-                    <div className="flex gap-2.5">
-                      <Link href="/login" onClick={() => setIsOpen(false)} className="flex-1">
-                        <Button
-                          variant="outline"
-                      className="w-full h-11 text-sm font-semibold border-purple-200 dark:border-neutral-700 text-purple-700 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-neutral-800 hover:border-purple-300 dark:hover:border-neutral-600 rounded-xl transition-all duration-200"
+                  <div className="mt-auto px-4 py-4 border-t border-bridal-beige bg-bridal-blush/30">
+                    {isAuthenticated ? (
+                      <p className="font-bridal text-[12px] text-bridal-text-soft text-center">
+                        Signed in as{" "}
+                        <span className="text-bridal-charcoal font-medium">
+                          {user?.fullName || user?.email}
+                        </span>
+                      </p>
+                    ) : (
+                      <div className="flex gap-2.5">
+                        <Link
+                          href="/login"
+                          onClick={() => setIsOpen(false)}
+                          className="flex-1"
                         >
-                          Sign In
-                        </Button>
-                      </Link>
-                      <Link href="/register" onClick={() => setIsOpen(false)} className="flex-1">
-                        <Button className="w-full h-11 text-sm font-semibold bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl shadow-lg shadow-purple-500/20 transition-all duration-200">
-                          Register
-                        </Button>
-                      </Link>
-                    </div>
+                          <BridalButton variant="ghost" size="md" block>
+                            Sign In
+                          </BridalButton>
+                        </Link>
+                        <Link
+                          href="/register"
+                          onClick={() => setIsOpen(false)}
+                          className="flex-1"
+                        >
+                          <BridalButton variant="primary" size="md" block>
+                            Register
+                          </BridalButton>
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </nav>
               </SheetContent>
             </Sheet>
 
-            {/* Logo */}
-            <Link href="/" className="flex items-center group">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-600 to-purple-800 rounded-xl flex items-center justify-center mr-2.5 shadow-lg shadow-purple-500/20 group-hover:shadow-purple-500/40 transition-all duration-300 group-hover:scale-[1.03]">
-                <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-gold-300" />
-              </div>
-              <span className="text-xl sm:text-2xl font-heading font-bold bg-gradient-to-r from-purple-700 to-purple-900 bg-clip-text text-transparent">
-                WeddingPlatform
+            {/* Logo — bridal wordmark */}
+            <Link href="/" className="flex items-center gap-2.5 group">
+              <span
+                className="
+                  w-10 h-10 rounded-full
+                  bg-bridal-cream border border-bridal-gold/45
+                  flex items-center justify-center
+                  group-hover:border-bridal-gold transition-colors duration-300
+                "
+              >
+                <Heart className="w-[18px] h-[18px] text-bridal-gold" />
+              </span>
+              <span className="leading-none">
+                <span className="block font-display italic text-[22px] sm:text-[24px] text-bridal-charcoal leading-none">
+                  AJOINT
+                </span>
+                <span className="hidden sm:block font-bridal text-[9px] uppercase tracking-[0.32em] text-bridal-gold mt-1">
+                  Pakistan&apos;s Shaadi Platform
+                </span>
               </span>
             </Link>
           </div>
 
-          {/* Center: Desktop Nav */}
+          {/* ── Center: Desktop Nav ── */}
           <NavigationMenu className="hidden lg:flex">
-            <NavigationMenuList className="gap-0.5">
-              {/* Vendors Mega Menu */}
+            <NavigationMenuList className="gap-1">
+              {/* Vendors mega menu — editorial three-pane layout */}
               <NavigationMenuItem>
-            <NavigationMenuTrigger className="text-[13px] font-semibold text-neutral-600 dark:text-neutral-300 hover:text-purple-700 dark:hover:text-purple-400 data-[state=open]:text-purple-700 dark:data-[state=open]:text-purple-400 bg-transparent hover:bg-purple-50/80 dark:hover:bg-neutral-800/80 data-[state=open]:bg-purple-50/80 dark:data-[state=open]:bg-neutral-800/80 rounded-lg px-3.5 py-2 h-9 transition-all duration-200">
+                <NavigationMenuTrigger
+                  className="
+                    bg-transparent rounded-md px-3.5 py-2 h-9
+                    font-bridal text-[12.5px] uppercase tracking-[0.18em] font-medium
+                    text-bridal-text hover:text-bridal-charcoal data-[state=open]:text-bridal-charcoal
+                    hover:bg-bridal-blush/55 data-[state=open]:bg-bridal-blush/55
+                    transition-all duration-200
+                  "
+                >
                   Vendors
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <div className="flex w-[660px]">
-                    {/* Left: Featured Panel */}
-                    <div className="w-[210px] bg-gradient-to-br from-purple-700 via-purple-800 to-purple-900 p-6 flex flex-col justify-between relative overflow-hidden">
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(212,175,55,0.12),transparent_60%)]" />
-                      <div className="relative">
-                        <div className="w-11 h-11 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center mb-4">
-                          <Star className="w-5 h-5 text-gold-300" />
-                        </div>
-                        <h3 className="text-lg font-heading font-bold text-white leading-tight mb-2">
-                          Find Your Dream Team
-                        </h3>
-                        <p className="text-[13px] text-purple-200/80 leading-relaxed">
-                          500+ verified wedding vendors across Pakistan
-                        </p>
-                      </div>
-                      <Link
-                        href="/vendors"
-                        className="relative inline-flex items-center gap-1.5 text-sm font-semibold text-gold-300 hover:text-gold-200 transition-colors mt-6 group/link"
-                      >
-                        Browse all
-                        <ArrowRight className="w-3.5 h-3.5 group-hover/link:translate-x-0.5 transition-transform" />
-                      </Link>
-                    </div>
+                  <div className="w-[1100px] max-w-[calc(100vw-3rem)] bg-bridal-cream border border-bridal-beige rounded-md overflow-hidden shadow-[0_28px_60px_-28px_rgba(176,125,84,0.5)]">
+                    <div className="grid grid-cols-12 min-h-[440px]">
+                      {/* ── Left: Editorial feature spotlight (4 cols) ── */}
+                      <div className="col-span-4 relative overflow-hidden">
+                        <Link href="/vendors" className="block group/featured h-full">
+                          <img
+                            src="https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=800"
+                            alt=""
+                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover/featured:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-br from-bridal-mauve/55 via-bridal-charcoal/60 to-bridal-charcoal/85" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-bridal-charcoal/90 via-bridal-charcoal/35 to-transparent" />
+                          <span aria-hidden className="absolute -top-6 -right-6 w-32 h-32 rounded-full bg-bridal-gold/20 blur-3xl" />
+                          <span aria-hidden className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-bridal-rose/25 blur-3xl" />
 
-                    {/* Right: Category Grid */}
-                    <div className="flex-1 p-4">
-                      <div className="grid grid-cols-3 gap-1">
-                        {vendorCategories.map((item) => (
-                          <NavigationMenuLink key={item.name} asChild>
-                            <Link
-                              href={item.href}
-                          className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-purple-50/80 dark:hover:bg-neutral-800/80 transition-all duration-200 group/item"
-                            >
-                              <div
-                                className={`w-8 h-8 rounded-lg bg-gradient-to-br ${item.gradient} flex items-center justify-center flex-shrink-0 group-hover/item:scale-110 group-hover/item:shadow-md transition-all duration-200`}
+                          <div className="relative z-10 p-6 h-full flex flex-col justify-end">
+                            <span className="inline-flex items-center gap-1.5 self-start px-2.5 py-1 mb-4 rounded-full bg-bridal-gold/20 border border-bridal-gold/55 backdrop-blur-sm font-bridal text-[10px] uppercase tracking-[0.22em] text-bridal-gold">
+                              <Star className="w-3 h-3 fill-bridal-gold" />
+                              Editor&apos;s Pick
+                            </span>
+                            <h3 className="font-display italic text-[28px] text-bridal-ivory leading-[1.1]">
+                              Find your dream{" "}
+                              <span className="text-bridal-gold">team</span>
+                            </h3>
+                            <p className="mt-2 font-bridal text-[12.5px] text-bridal-ivory/85 leading-relaxed">
+                              500+ verified vendors hand-picked for Pakistan&apos;s most thoughtful couples.
+                            </p>
+                            <span className="mt-4 inline-flex items-center gap-1.5 font-bridal text-[11px] uppercase tracking-[0.22em] text-bridal-gold group-hover/featured:text-bridal-rose transition-colors">
+                              Browse all vendors
+                              <ArrowRight className="w-3 h-3 transition-transform group-hover/featured:translate-x-0.5" />
+                            </span>
+                          </div>
+                        </Link>
+                      </div>
+
+                      {/* ── Right: Categories (8 cols) ── */}
+                      <div className="col-span-8 p-7 flex flex-col">
+                        <div className="flex items-center gap-3 mb-5">
+                          <span className="font-bridal text-[10px] uppercase tracking-[0.28em] text-bridal-gold font-medium whitespace-nowrap">
+                            All Wedding Categories
+                          </span>
+                          <span className="flex-1 h-px bg-gradient-to-r from-bridal-beige via-bridal-beige/40 to-transparent" />
+                        </div>
+
+                        {/* 3×3 vertical-stacked editorial cards — full names, no truncation */}
+                        <div className="grid grid-cols-3 gap-3 flex-1">
+                          {vendorCategories.map((item) => {
+                            const Icon = item.icon
+                            return (
+                              <NavigationMenuLink key={item.name} asChild>
+                                <Link
+                                  href={item.href}
+                                  className="
+                                    group/item relative flex flex-col items-start gap-2.5 p-4
+                                    rounded-md border border-transparent
+                                    hover:border-bridal-gold/55 hover:bg-bridal-blush/45 hover:-translate-y-0.5
+                                    transition-all duration-300
+                                  "
+                                >
+                                  <span className="
+                                    relative w-11 h-11 rounded-full bg-bridal-blush/65 border border-bridal-beige
+                                    flex items-center justify-center flex-shrink-0
+                                    group-hover/item:bg-bridal-gold/15 group-hover/item:border-bridal-gold/55
+                                    transition-colors
+                                  ">
+                                    <Icon
+                                      className="w-[18px] h-[18px] text-bridal-gold-dark group-hover/item:text-bridal-gold transition-colors"
+                                      strokeWidth={1.6}
+                                    />
+                                  </span>
+                                  <div className="min-w-0 w-full">
+                                    <div className="font-display italic text-[16px] text-bridal-charcoal leading-tight whitespace-nowrap">
+                                      {item.name}
+                                    </div>
+                                    <div className="font-bridal text-[11.5px] text-bridal-text-soft mt-0.5 leading-snug line-clamp-2">
+                                      {item.desc}
+                                    </div>
+                                  </div>
+                                </Link>
+                              </NavigationMenuLink>
+                            )
+                          })}
+                        </div>
+
+                        {/* Quick links strip */}
+                        <div className="mt-6 pt-4 border-t border-bridal-beige flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-4 flex-wrap">
+                            <span className="font-bridal text-[10px] uppercase tracking-[0.22em] text-bridal-text-label font-medium">
+                              Quick
+                            </span>
+                            {[
+                              { href: "/vendors?featured=true", label: "Featured" },
+                              { href: "/vendors?sort=top",      label: "Top Rated" },
+                              { href: "/vendors?new=true",      label: "New Arrivals" },
+                            ].map((q) => (
+                              <Link
+                                key={q.label}
+                                href={q.href}
+                                className="font-bridal text-[12.5px] text-bridal-mauve hover:text-bridal-gold-dark transition-colors"
                               >
-                                <item.icon className="w-3.5 h-3.5 text-white" />
-                              </div>
-                              <div className="min-w-0">
-                            <div className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200 group-hover/item:text-purple-700 dark:group-hover/item:text-purple-400 truncate">
-                                  {item.name}
-                                </div>
-                                <div className="text-[11px] text-neutral-400 truncate">{item.desc}</div>
-                              </div>
-                            </Link>
-                          </NavigationMenuLink>
-                        ))}
+                                {q.label}
+                              </Link>
+                            ))}
+                          </div>
+                          <Link
+                            href="/vendors"
+                            className="inline-flex items-center gap-1 font-bridal text-[11px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark hover:text-bridal-mauve transition-colors"
+                          >
+                            See all
+                            <ArrowRight className="w-3 h-3" />
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </NavigationMenuContent>
               </NavigationMenuItem>
 
-              {/* Planning Tools Dropdown */}
+              {/* Planning dropdown */}
               <NavigationMenuItem>
-            <NavigationMenuTrigger className="text-[13px] font-semibold text-neutral-600 dark:text-neutral-300 hover:text-purple-700 dark:hover:text-purple-400 data-[state=open]:text-purple-700 dark:data-[state=open]:text-purple-400 bg-transparent hover:bg-purple-50/80 dark:hover:bg-neutral-800/80 data-[state=open]:bg-purple-50/80 dark:data-[state=open]:bg-neutral-800/80 rounded-lg px-3.5 py-2 h-9 transition-all duration-200">
+                <NavigationMenuTrigger
+                  className="
+                    bg-transparent rounded-md px-3.5 py-2 h-9
+                    font-bridal text-[12.5px] uppercase tracking-[0.18em] font-medium
+                    text-bridal-text hover:text-bridal-charcoal data-[state=open]:text-bridal-charcoal
+                    hover:bg-bridal-blush/55 data-[state=open]:bg-bridal-blush/55
+                    transition-all duration-200
+                  "
+                >
                   Planning
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <div className="w-[420px] p-4">
+                  <div className="w-[440px] p-4 bg-bridal-cream border border-bridal-beige rounded-md">
                     <div className="grid grid-cols-2 gap-2">
-                      {planningTools.map((item) => (
-                        <NavigationMenuLink key={item.name} asChild>
-                          <Link
-                            href={item.href}
-                        className="flex items-center gap-3 p-3 rounded-xl hover:bg-purple-50/80 dark:hover:bg-neutral-800/80 transition-all duration-200 group/item border border-transparent hover:border-purple-100/80 dark:hover:border-neutral-700"
-                          >
-                            <div
-                              className={`w-10 h-10 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center flex-shrink-0 shadow-sm group-hover/item:shadow-md group-hover/item:scale-110 transition-all duration-200`}
+                      {planningTools.map((item) => {
+                        const Icon = item.icon
+                        return (
+                          <NavigationMenuLink key={item.name} asChild>
+                            <Link
+                              href={item.href}
+                              className="
+                                group/item flex items-center gap-3 p-3 rounded-md
+                                border border-transparent
+                                hover:bg-bridal-blush/45 hover:border-bridal-beige
+                                transition-all duration-200
+                              "
                             >
-                              <item.icon className="w-[18px] h-[18px] text-white" />
-                            </div>
-                            <div>
-                          <div className="text-sm font-semibold text-neutral-800 dark:text-neutral-200 group-hover/item:text-purple-700 dark:group-hover/item:text-purple-400">
-                                {item.name}
+                              <span className="w-10 h-10 rounded-md bg-bridal-blush/70 border border-bridal-beige flex items-center justify-center flex-shrink-0 group-hover/item:bg-bridal-gold/15 group-hover/item:border-bridal-gold/55 transition-colors">
+                                <Icon className="w-[18px] h-[18px] text-bridal-gold-dark" strokeWidth={1.6} />
+                              </span>
+                              <div>
+                                <div className="font-display italic text-[15px] text-bridal-charcoal leading-tight">
+                                  {item.name}
+                                </div>
+                                <div className="font-bridal text-[11.5px] text-bridal-text-soft">
+                                  {item.desc}
+                                </div>
                               </div>
-                              <div className="text-xs text-neutral-400">{item.desc}</div>
-                            </div>
-                          </Link>
-                        </NavigationMenuLink>
-                      ))}
+                            </Link>
+                          </NavigationMenuLink>
+                        )
+                      })}
                     </div>
                   </div>
                 </NavigationMenuContent>
               </NavigationMenuItem>
 
-              {/* Direct Links */}
-              <NavigationMenuItem>
-                <NavigationMenuLink asChild>
-                  <Link
-                    href="/venues"
-                className="inline-flex h-9 items-center rounded-lg px-3.5 py-2 text-[13px] font-semibold text-neutral-600 dark:text-neutral-300 hover:text-purple-700 dark:hover:text-purple-400 hover:bg-purple-50/80 dark:hover:bg-neutral-800/80 transition-all duration-200"
-                  >
-                    Venues
-                  </Link>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-
-              <NavigationMenuItem>
-                <NavigationMenuLink asChild>
-                  <Link
-                    href="/vendors"
-                className="inline-flex h-9 items-center rounded-lg px-3.5 py-2 text-[13px] font-semibold text-neutral-600 dark:text-neutral-300 hover:text-purple-700 dark:hover:text-purple-400 hover:bg-purple-50/80 dark:hover:bg-neutral-800/80 transition-all duration-200"
-                  >
-                    All Vendors
-                  </Link>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-
-              <NavigationMenuItem>
-                <NavigationMenuLink asChild>
-                  <Link
-                    href="/events"
-                className="inline-flex h-9 items-center rounded-lg px-3.5 py-2 text-[13px] font-semibold text-neutral-600 dark:text-neutral-300 hover:text-purple-700 dark:hover:text-purple-400 hover:bg-purple-50/80 dark:hover:bg-neutral-800/80 transition-all duration-200"
-                  >
-                    Events
-                  </Link>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
+              {/* Direct links */}
+              {[
+                { href: "/venues", label: "Venues" },
+                { href: "/vendors", label: "All Vendors" },
+                { href: "/events", label: "Events" },
+              ].map((link) => (
+                <NavigationMenuItem key={link.href}>
+                  <NavigationMenuLink asChild>
+                    <Link
+                      href={link.href}
+                      className="
+                        inline-flex h-9 items-center rounded-md px-3.5 py-2
+                        font-bridal text-[12.5px] uppercase tracking-[0.18em] font-medium
+                        text-bridal-text hover:text-bridal-charcoal hover:bg-bridal-blush/55
+                        transition-all duration-200
+                      "
+                    >
+                      {link.label}
+                    </Link>
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
+              ))}
             </NavigationMenuList>
           </NavigationMenu>
 
-          {/* Right: Actions */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5">
-            {isAuthenticated && (
+          {/* ── Right: Actions ── */}
+          <div className="flex items-center gap-1 sm:gap-1.5">
+            {isAuthenticated ? (
               <>
                 <Link
                   href={
@@ -380,12 +541,12 @@ export function Header() {
                       ? "/dashboard/chat"
                       : "/user/conversations"
                   }
-              className="relative h-9 w-9 flex items-center justify-center rounded-xl hover:bg-purple-50 dark:hover:bg-neutral-800 text-neutral-400 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200"
+                  className="relative h-10 w-10 inline-flex items-center justify-center rounded-full text-bridal-text-soft hover:bg-bridal-blush/55 hover:text-bridal-mauve transition-colors duration-200"
                   aria-label="Messages"
                 >
-                  <MessageCircle className="w-[18px] h-[18px]" />
+                  <MessageCircle className="w-[18px] h-[18px]" strokeWidth={1.6} />
                   {totalUnread > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-purple-600 text-white text-[10px] font-bold leading-none">
+                    <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-full bg-bridal-coral text-bridal-ivory text-[10px] font-bridal font-bold leading-none">
                       {totalUnread > 99 ? "99+" : totalUnread}
                     </span>
                   )}
@@ -399,18 +560,32 @@ export function Header() {
                       : "/user/notifications"
                   }
                 />
+                <Link
+                  href="/user/favorites"
+                  className="hidden sm:inline-flex h-10 w-10 items-center justify-center rounded-full text-bridal-text-soft hover:bg-bridal-blush/55 hover:text-bridal-mauve transition-colors duration-200"
+                  aria-label="Favourites"
+                >
+                  <Heart className="w-[18px] h-[18px]" strokeWidth={1.6} />
+                </Link>
+                <div className="relative ml-1">
+                  <HeaderAvatar loading={isLoading} user={user} />
+                </div>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="hidden sm:inline-flex font-bridal text-[12px] uppercase tracking-[0.18em] font-medium text-bridal-mauve hover:text-bridal-charcoal px-3 h-10 items-center transition-colors"
+                >
+                  Sign in
+                </Link>
+                <Link href="/register">
+                  <BridalButton variant="primary" size="sm">
+                    Get Started
+                  </BridalButton>
+                </Link>
               </>
             )}
-            <Link
-              href="/user/favorites"
-          className="hidden sm:flex h-9 w-9 items-center justify-center rounded-xl hover:bg-purple-50 dark:hover:bg-neutral-800 text-neutral-400 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200"
-              aria-label="Favorites"
-            >
-              <Heart className="w-[18px] h-[18px]" />
-            </Link>
-            <div className="relative">
-              <HeaderAvatar loading={isLoading} user={user} />
-            </div>
           </div>
         </div>
       </div>

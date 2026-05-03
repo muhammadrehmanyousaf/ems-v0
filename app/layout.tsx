@@ -7,7 +7,7 @@ import { NotificationProvider } from "@/context/NotificationContext"
 import { ChatProvider } from "@/context/ChatContext"
 import { QueryProvider } from "@/lib/providers/query-provider"
 import { PerformanceMonitor } from "@/components/performance-monitor"
-import { Inter, Playfair_Display } from "next/font/google";
+import { Inter, Playfair_Display, DM_Sans } from "next/font/google";
 
 export const metadata: Metadata = {
   title: {
@@ -44,7 +44,16 @@ const inter = Inter({
 const playfair = Playfair_Display({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
+  style: ["normal", "italic"],
   variable: "--font-playfair",
+});
+
+// Bridal-grade body font (DM Sans). Wired alongside Inter so existing
+// screens keep their typography until each phase migrates them over.
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "700"],
+  variable: "--font-dm-sans",
 });
 
 export default function RootLayout({
@@ -54,7 +63,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${playfair.variable} font-sans`} suppressHydrationWarning>
+      <body
+        className={`${inter.variable} ${playfair.variable} ${dmSans.variable} font-sans`}
+        suppressHydrationWarning
+      >
         <QueryProvider>
           <UserProvider>
             <BusinessProvider>

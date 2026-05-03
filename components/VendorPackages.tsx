@@ -23,10 +23,10 @@ export default function VendorPackages({ packages = [] }: VendorPackagesProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {packages.map((pkg, i) => (
-        <Card key={i} className="flex flex-col h-full border-purple-100 hover:border-purple-300 transition-colors shadow-sm">
+        <Card key={i} className="flex flex-col h-full border-bridal-beige hover:border-bridal-gold/55 transition-colors shadow-sm">
           <CardHeader>
             <CardTitle className="text-xl">{pkg.name}</CardTitle>
-            <CardDescription className="text-2xl font-bold text-purple-700 mt-2">
+            <CardDescription className="text-2xl font-bold text-bridal-gold-dark mt-2">
               Rs {Number(pkg.price).toLocaleString()}
             </CardDescription>
           </CardHeader>

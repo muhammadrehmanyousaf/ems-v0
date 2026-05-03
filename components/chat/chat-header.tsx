@@ -57,7 +57,7 @@ export function ChatHeader({ onBack, showBackButton }: ChatHeaderProps) {
               src={activeConvo.otherUser.profileImage || undefined}
               alt={activeConvo.otherUser.fullName}
             />
-            <AvatarFallback className="bg-gradient-to-br from-purple-500 to-purple-700 text-white text-xs font-semibold">
+            <AvatarFallback className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white text-xs font-semibold">
               {getInitials(activeConvo.otherUser.fullName)}
             </AvatarFallback>
           </Avatar>
@@ -71,7 +71,7 @@ export function ChatHeader({ onBack, showBackButton }: ChatHeaderProps) {
           <h3 className="text-sm font-semibold">{activeConvo.otherUser.fullName}</h3>
           <p className="text-xs">
             {isTyping ? (
-              <span className="text-purple-500 font-medium">typing...</span>
+              <span className="text-bridal-gold font-medium">typing...</span>
             ) : isOnline ? (
               <span className="text-green-600">Online</span>
             ) : (

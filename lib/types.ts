@@ -46,6 +46,24 @@ export interface Vendor {
   instruction?: string;
   subArea?: string;
   serviceProvided?: string[];
+  // BK-048 vacation mode (surfaced by GET /api/v1/businesses)
+  vacationMode?: boolean | null;
+  vacationStartsAt?: string | null;
+  vacationEndsAt?: string | null;
+  vacationMessage?: string | null;
+  // BK-074 outdoor / municipal permit
+  requiresPermit?: boolean | null;
+  permitChecklistUrl?: string | null;
+  // BK-053 last-spot urgency — backend gap today (only on availability bulk
+  // endpoint). Surfaced as optional so the card auto-activates the pill
+  // once `getBusinesses` is enriched. May arrive at the top level or under
+  // an `availabilitySummary` block.
+  lastSpot?: boolean | null;
+  availabilitySummary?: {
+    lastSpot?: boolean | null;
+    remaining?: number | null;
+    [key: string]: unknown;
+  } | null;
 }
 
 export interface Availability {

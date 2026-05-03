@@ -116,29 +116,34 @@ export default function StripePayment({
   if (status === 'failed') {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-bridal-cream border border-bridal-beige rounded-md">
           <DialogHeader>
-            <DialogTitle className="text-center text-xl font-bold text-red-600">
-              Payment Setup Failed
+            <DialogTitle className="text-center font-display italic text-[24px] text-bridal-coral">
+              Payment setup failed
             </DialogTitle>
           </DialogHeader>
           <div className="text-center space-y-4">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
-              <XCircle className="h-8 w-8 text-red-600" />
+            <div className="w-16 h-16 bg-bridal-coral/15 border border-bridal-coral/40 rounded-full flex items-center justify-center mx-auto">
+              <XCircle className="h-8 w-8 text-bridal-coral" />
             </div>
-            <p className="text-neutral-600 text-sm">
+            <p className="font-bridal text-[13px] text-bridal-text-soft">
               {error || 'Something went wrong. Please try again.'}
             </p>
-            <div className="space-y-2">
-              <Button
+            <div className="space-y-2 pt-2">
+              <button
+                type="button"
                 onClick={handlePayNow}
-                className="w-full bg-blue-600 hover:bg-blue-700"
+                className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] transition-all duration-300"
               >
-                Try Again
-              </Button>
-              <Button onClick={onClose} variant="outline" className="w-full">
+                Try again
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full inline-flex items-center justify-center h-11 rounded-[4px] border border-bridal-beige bg-bridal-cream hover:border-bridal-gold/55 text-bridal-charcoal font-bridal text-[12px] uppercase tracking-[0.22em] font-medium transition-colors"
+              >
                 Cancel
-              </Button>
+              </button>
             </div>
           </div>
         </DialogContent>
@@ -150,12 +155,12 @@ export default function StripePayment({
   if (status === 'redirecting') {
     return (
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-bridal-cream border border-bridal-beige rounded-md">
           <div className="text-center py-8 space-y-4">
-            <Loader2 className="h-10 w-10 animate-spin text-blue-600 mx-auto" />
+            <Loader2 className="h-10 w-10 animate-spin text-bridal-gold mx-auto" />
             <div>
-              <p className="text-lg font-semibold text-neutral-900">Redirecting to Stripe...</p>
-              <p className="text-sm text-neutral-500 mt-1">You&apos;ll be taken to a secure payment page</p>
+              <p className="font-display italic text-[22px] text-bridal-charcoal">Redirecting to Stripe…</p>
+              <p className="font-bridal text-[13px] text-bridal-text-soft mt-1">You&apos;ll be taken to a secure payment page</p>
             </div>
           </div>
         </DialogContent>
@@ -166,38 +171,43 @@ export default function StripePayment({
   // Default: show payment summary + Pay button
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md p-0 overflow-hidden">
+      <DialogContent className="max-w-md p-0 overflow-hidden bg-bridal-cream border border-bridal-beige rounded-md">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-6 pb-5 text-white">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-white">
-              {paymentType === 'down_payment' ? 'Pay Down Payment' : paymentType === 'full_payment' ? 'Pay Full Amount' : 'Pay Remaining Balance'}
+        <div className="relative bg-bridal-charcoal px-6 pt-6 pb-5 text-bridal-ivory overflow-hidden">
+          <div className="absolute inset-0 bg-mughal-jaal opacity-[0.08] pointer-events-none" />
+          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-bridal-gold to-transparent" />
+          <DialogHeader className="relative">
+            <p className="font-bridal text-[10px] uppercase tracking-[0.32em] font-medium text-bridal-gold mb-1.5">
+              Secure payment
+            </p>
+            <DialogTitle className="font-display italic text-[24px] text-bridal-ivory leading-tight">
+              {paymentType === 'down_payment' ? 'Pay down payment' : paymentType === 'full_payment' ? 'Pay full amount' : 'Pay remaining balance'}
             </DialogTitle>
-            <DialogDescription className="text-blue-100 text-sm">
-              Secure payment via Stripe
+            <DialogDescription className="font-bridal text-[12px] text-bridal-ivory/75 mt-1.5">
+              Processed via Stripe — your card details never touch our servers.
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <div className="px-6 pb-6 space-y-5">
+        <div className="px-6 pb-6 pt-5 space-y-5">
           {/* Payment Summary */}
-          <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200 space-y-3">
+          <div className="bg-bridal-ivory rounded-md p-4 border border-bridal-beige space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-neutral-500">Payment Type</span>
-              <span className="text-sm font-semibold text-neutral-800">{getPaymentTypeLabel()}</span>
+              <span className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Payment Type</span>
+              <span className="font-display italic text-[14px] text-bridal-charcoal">{getPaymentTypeLabel()}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-neutral-500">Business</span>
-              <span className="text-sm font-medium text-neutral-700">{businessName}</span>
+              <span className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Business</span>
+              <span className="font-bridal text-[13px] font-medium text-bridal-charcoal">{businessName}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-neutral-500">Booking</span>
-              <span className="text-sm font-medium text-neutral-700">#{bookingId}</span>
+              <span className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Booking</span>
+              <span className="font-bridal text-[13px] font-medium text-bridal-charcoal">#{bookingId}</span>
             </div>
-            <div className="border-t border-neutral-200 pt-3">
-              <div className="flex items-center justify-between">
-                <span className="text-base font-semibold text-neutral-700">Amount</span>
-                <span className="text-xl font-bold text-neutral-900">
+            <div className="border-t border-bridal-beige/70 pt-3">
+              <div className="flex items-end justify-between">
+                <span className="font-bridal text-[10.5px] uppercase tracking-[0.32em] font-medium text-bridal-text-label">Amount</span>
+                <span className="font-display italic text-[28px] text-bridal-gold-dark leading-none">
                   Rs. {Number(amount).toLocaleString()}
                 </span>
               </div>
@@ -205,34 +215,40 @@ export default function StripePayment({
           </div>
 
           {/* Security Badge */}
-          <div className="flex items-center gap-2 text-xs text-neutral-400 justify-center">
-            <Shield className="h-3.5 w-3.5" />
+          <div className="flex items-center gap-2 font-bridal text-[11.5px] text-bridal-text-soft justify-center">
+            <Shield className="h-3.5 w-3.5 text-bridal-gold" />
             <span>Secured by Stripe. Your card details never touch our servers.</span>
           </div>
 
           {/* Action Buttons */}
           <div className="space-y-2">
-            <Button
+            <button
+              type="button"
               onClick={handlePayNow}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 text-base font-semibold"
               disabled={loading}
+              className="w-full inline-flex items-center justify-center gap-2 h-12 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] hover:shadow-[0_14px_30px_-12px_rgba(176,125,84,0.7)] transition-all duration-300 disabled:opacity-60 disabled:cursor-wait"
             >
               {loading ? (
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Setting up...
-                </div>
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Setting up…
+                </>
               ) : (
-                <div className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5" />
+                <>
+                  <CreditCard className="h-4 w-4" />
                   Pay Rs. {Number(amount).toLocaleString()}
-                  <ExternalLink className="h-4 w-4 ml-1 opacity-60" />
-                </div>
+                  <ExternalLink className="h-3.5 w-3.5 ml-1 opacity-60" />
+                </>
               )}
-            </Button>
-            <Button onClick={onClose} variant="ghost" className="w-full text-neutral-500" disabled={loading}>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="w-full h-11 inline-flex items-center justify-center rounded-[4px] font-bridal text-[12px] uppercase tracking-[0.22em] font-medium text-bridal-text-soft hover:text-bridal-charcoal hover:bg-bridal-blush/55 transition-colors disabled:opacity-50"
+            >
               Cancel
-            </Button>
+            </button>
           </div>
         </div>
       </DialogContent>

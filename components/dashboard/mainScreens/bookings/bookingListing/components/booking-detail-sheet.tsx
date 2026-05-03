@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge"
 import { BookingData } from "@/lib/dashboard-types"
 import { User, CalendarDays, Package, CreditCard, Building } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { VendorChangeRequestsCard } from "@/components/bookings/vendor-change-requests-card"
+import { InstallmentsCard } from "@/components/bookings/installments-card"
 
 interface BookingDetailSheetProps {
   open: boolean
@@ -68,7 +70,7 @@ export function BookingDetailSheet({ open, onOpenChange, booking }: BookingDetai
           {/* Customer Info */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <User className="h-4 w-4 text-purple-500" />
+              <User className="h-4 w-4 text-bridal-gold" />
               <span className="text-sm font-semibold text-neutral-700">Customer</span>
             </div>
             <div className="ml-6 space-y-2">
@@ -92,7 +94,7 @@ export function BookingDetailSheet({ open, onOpenChange, booking }: BookingDetai
           {/* Event Info */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <CalendarDays className="h-4 w-4 text-purple-500" />
+              <CalendarDays className="h-4 w-4 text-bridal-gold" />
               <span className="text-sm font-semibold text-neutral-700">Event</span>
             </div>
             <div className="ml-6 space-y-2">
@@ -118,7 +120,7 @@ export function BookingDetailSheet({ open, onOpenChange, booking }: BookingDetai
           {/* Services (Vendor's portion from BookingDetails) */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <Building className="h-4 w-4 text-purple-500" />
+              <Building className="h-4 w-4 text-bridal-gold" />
               <span className="text-sm font-semibold text-neutral-700">Your Services</span>
             </div>
             {details.length > 0 ? (
@@ -127,19 +129,19 @@ export function BookingDetailSheet({ open, onOpenChange, booking }: BookingDetai
                   <div key={detail.id} className="rounded-lg border border-neutral-100 bg-neutral-50/50 p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold text-neutral-800">{detail.business?.name || 'Business'}</p>
-                      <p className="text-sm font-bold text-purple-600">Rs. {Number(detail.totalAmount || 0).toLocaleString()}</p>
+                      <p className="text-sm font-bold text-bridal-gold-dark">Rs. {Number(detail.totalAmount || 0).toLocaleString()}</p>
                     </div>
                     {detail.package && (
                       <div className="flex items-center gap-2">
-                        <Package className="h-3.5 w-3.5 text-purple-400" />
+                        <Package className="h-3.5 w-3.5 text-bridal-gold/70" />
                         <span className="text-xs text-neutral-600">{detail.package.name}</span>
-                        <span className="text-xs text-purple-500 font-medium">Rs. {Number(detail.package.price || 0).toLocaleString()}</span>
+                        <span className="text-xs text-bridal-gold font-medium">Rs. {Number(detail.package.price || 0).toLocaleString()}</span>
                       </div>
                     )}
                     {detail.menu && (
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-neutral-500">Menu: {detail.menu.title}</span>
-                        <span className="text-xs text-purple-500 font-medium">Rs. {Number(detail.menu.price || 0).toLocaleString()}</span>
+                        <span className="text-xs text-bridal-gold font-medium">Rs. {Number(detail.menu.price || 0).toLocaleString()}</span>
                       </div>
                     )}
                     {detail.specialRequests && (
@@ -164,13 +166,13 @@ export function BookingDetailSheet({ open, onOpenChange, booking }: BookingDetai
           {/* Payment Summary */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <CreditCard className="h-4 w-4 text-purple-500" />
+              <CreditCard className="h-4 w-4 text-bridal-gold" />
               <span className="text-sm font-semibold text-neutral-700">Payment</span>
             </div>
-            <div className="ml-6 rounded-lg bg-purple-50 border border-purple-100 p-4 space-y-2">
+            <div className="ml-6 rounded-lg bg-bridal-cream border border-bridal-beige p-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-neutral-600">Your Total</span>
-                <span className="font-bold text-purple-700">Rs. {amount.toLocaleString()}</span>
+                <span className="font-bold text-bridal-gold-dark">Rs. {amount.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-neutral-600">Down Payment</span>
@@ -193,6 +195,13 @@ export function BookingDetailSheet({ open, onOpenChange, booking }: BookingDetai
               </div>
             </>
           )}
+
+          {/* BK-042 — payment schedule (read-only on vendor side). */}
+          <hr className="border-neutral-100" />
+          <InstallmentsCard bookingId={booking.id} />
+
+          {/* BK-054/55/56 — customer change requests; vendor approves/declines pending. */}
+          <VendorChangeRequestsCard bookingId={booking.id} />
 
         </div>
       </SheetContent>

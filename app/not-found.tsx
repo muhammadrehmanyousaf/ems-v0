@@ -6,15 +6,15 @@ import { Home, ArrowLeft, Search } from 'lucide-react'
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50/30 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-bridal-cream via-white to-bridal-cream/30 flex items-center justify-center px-4">
       <div className="max-w-lg w-full text-center">
         <div className="relative mb-8">
-          <span className="text-[150px] sm:text-[200px] font-bold text-purple-100 leading-none select-none">
+          <span className="text-[150px] sm:text-[200px] font-bold text-bridal-cream leading-none select-none">
             404
           </span>
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-purple-100 rounded-full flex items-center justify-center">
-              <Search className="w-10 h-10 sm:w-12 sm:h-12 text-purple-400" />
+            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-bridal-gold/15 rounded-full flex items-center justify-center">
+              <Search className="w-10 h-10 sm:w-12 sm:h-12 text-bridal-gold/70" />
             </div>
           </div>
         </div>
@@ -31,13 +31,13 @@ export default function NotFound() {
           <Button
             onClick={() => window.history.back()}
             variant="outline"
-            className="w-full sm:w-auto border-purple-200 text-purple-600 hover:bg-purple-50 min-h-[44px]"
+            className="w-full sm:w-auto border-bridal-gold/45 text-bridal-gold-dark hover:bg-bridal-cream min-h-[44px]"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Go Back
           </Button>
           <Link href="/">
-            <Button className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white min-h-[44px]">
+            <Button className="w-full sm:w-auto bg-gradient-to-r from-bridal-gold to-bridal-gold-dark hover:from-bridal-gold-dark hover:to-bridal-gold-dark text-white min-h-[44px]">
               <Home className="w-4 h-4 mr-2" />
               Back to Home
             </Button>

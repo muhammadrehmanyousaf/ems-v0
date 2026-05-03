@@ -1,5 +1,6 @@
 "use client"
 
+import { useRef, useState } from "react"
 import Link from "next/link"
 import {
   Camera,
@@ -10,112 +11,220 @@ import {
   Utensils,
   Crown,
   Mail,
-  Brush,
+  Flower2,
   ArrowRight,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
-import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/ui/motion-wrapper"
-import { SectionHeading } from "@/components/ui/section-heading"
+import { ScrollReveal } from "@/components/ui/motion-wrapper"
+import { FloralDivider } from "@/components/bridal/floral-divider"
+import { Swiper, SwiperSlide } from "swiper/react"
+import { Navigation, FreeMode } from "swiper/modules"
+import type { Swiper as SwiperType } from "swiper"
+import "swiper/css"
+import "swiper/css/free-mode"
 
+// 9 wedding categories. Taglines feed the hover overlay so each card reads
+// like a small editorial vignette rather than a button label.
 const categoryData = [
-  {
-    path: "photographers",
-    icon: Camera,
-    title: "Photographers",
-    gradient: "from-purple-600 via-purple-700 to-violet-800",
-  },
-  {
-    path: "venues",
-    icon: MapPin,
-    title: "Venues",
-    gradient: "from-gold-500 via-amber-600 to-orange-700",
-  },
-  {
-    path: "decor",
-    icon: Palette,
-    title: "Decorators",
-    gradient: "from-purple-500 via-indigo-600 to-blue-700",
-  },
-  {
-    path: "makeup-artists",
-    icon: Heart,
-    title: "Makeup",
-    gradient: "from-pink-500 via-rose-600 to-purple-700",
-  },
-  {
-    path: "catering",
-    icon: Utensils,
-    title: "Catering",
-    gradient: "from-amber-500 via-orange-600 to-red-700",
-  },
-  {
-    path: "henna-artists",
-    icon: Brush,
-    title: "Henna Artists",
-    gradient: "from-orange-500 via-amber-600 to-yellow-700",
-  },
-  {
-    path: "car-rental",
-    icon: Car,
-    title: "Car Rental",
-    gradient: "from-slate-600 via-slate-700 to-slate-900",
-  },
-  {
-    path: "bridal-wear",
-    icon: Crown,
-    title: "Bridal Wear",
-    gradient: "from-gold-500 via-gold-600 to-amber-700",
-  },
-  {
-    path: "wedding-stationery",
-    icon: Mail,
-    title: "Stationery",
-    gradient: "from-purple-800 via-purple-900 to-slate-900",
-  },
+  { path: "photographers",       icon: Camera,    title: "Photographers", tagline: "Capture every moment" },
+  { path: "venues",              icon: MapPin,    title: "Venues",        tagline: "Where memories begin" },
+  { path: "decor",               icon: Palette,   title: "Decorators",    tagline: "Transform every space" },
+  { path: "makeup-artists",      icon: Heart,     title: "Makeup",        tagline: "The bridal glow" },
+  { path: "catering",            icon: Utensils,  title: "Catering",      tagline: "Flavours to remember" },
+  { path: "henna-artists",       icon: Flower2,   title: "Henna Artists", tagline: "The mehndi tradition" },
+  { path: "car-rental",          icon: Car,       title: "Car Rental",    tagline: "Arrive in elegance" },
+  { path: "bridal-wear",         icon: Crown,     title: "Bridal Wear",   tagline: "Couture for the bride" },
+  { path: "wedding-stationery",  icon: Mail,      title: "Stationery",    tagline: "Invitations that last" },
 ]
 
 export function FeaturedCategories() {
+  const swiperRef = useRef<SwiperType | null>(null)
+  const [canPrev, setCanPrev] = useState(false)
+  const [canNext, setCanNext] = useState(true)
+
   return (
-    <section className="section-padding bg-gradient-to-b from-purple-50/50 to-white">
-      <div className="container-responsive">
+    <section className="relative bg-bridal-ivory section-padding overflow-hidden">
+      {/* Faint ivory grain + Mughal jaal watermark */}
+      <div aria-hidden className="absolute inset-0 bg-bridal-grain opacity-90" />
+      <div aria-hidden className="absolute inset-0 bg-mughal-jaal opacity-50" />
+
+      <div className="relative container-responsive">
+        {/* ── Editorial section header ── */}
         <ScrollReveal>
-          <div className="flex justify-between items-end mb-10">
-            <div>
-              <SectionHeading title="Browse Services" subtitle="Categories" align="left" />
-              <p className="text-muted-foreground mt-2">Explore different wedding service categories</p>
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-10 sm:mb-12">
+            <div className="max-w-xl">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="block w-10 h-px bg-gradient-to-r from-transparent to-bridal-gold" />
+                <span className="font-bridal text-[10.5px] uppercase tracking-[0.32em] text-bridal-gold">
+                  Browse by Category
+                </span>
+              </div>
+              <h2 className="font-display italic text-[30px] sm:text-[36px] md:text-[40px] leading-[1.1] text-bridal-charcoal">
+                Every detail of your{" "}
+                <span className="text-bridal-gold">shaadi</span>, in one place
+              </h2>
+              <p className="font-bridal text-bridal-text-soft text-[14px] sm:text-[15px] mt-3">
+                Browse Pakistan&apos;s most trusted vendors across nine wedding
+                categories — from mehndi to walima.
+              </p>
             </div>
-            <Link
-              href="/vendors"
-              className="hidden md:inline-flex items-center gap-2 text-purple-600 hover:text-purple-700 font-semibold group"
-            >
-              View all
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </Link>
+
+            {/* Carousel arrows */}
+            <div className="flex items-center gap-3 self-start lg:self-end">
+              <button
+                type="button"
+                onClick={() => swiperRef.current?.slidePrev()}
+                disabled={!canPrev}
+                className="
+                  inline-flex w-11 h-11 items-center justify-center
+                  rounded-full border border-bridal-beige bg-bridal-cream
+                  text-bridal-mauve transition-all duration-200
+                  hover:border-bridal-gold/55 hover:bg-bridal-blush/40 hover:text-bridal-charcoal
+                  disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-bridal-beige disabled:hover:bg-bridal-cream
+                "
+                aria-label="Previous categories"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => swiperRef.current?.slideNext()}
+                disabled={!canNext}
+                className="
+                  inline-flex w-11 h-11 items-center justify-center
+                  rounded-full border border-bridal-gold/55 bg-bridal-gold
+                  text-bridal-charcoal transition-all duration-200
+                  hover:bg-bridal-gold-dark hover:text-bridal-ivory
+                  disabled:opacity-30 disabled:cursor-not-allowed
+                "
+                aria-label="Next categories"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </ScrollReveal>
 
-        <StaggerContainer staggerDelay={0.06} className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-3 sm:gap-4">
+        {/* ── Single-line category carousel ── */}
+        <Swiper
+          modules={[Navigation, FreeMode]}
+          freeMode
+          spaceBetween={16}
+          slidesPerView={1.6}
+          breakpoints={{
+            480: { slidesPerView: 2.4 },
+            640: { slidesPerView: 3.2 },
+            768: { slidesPerView: 4.2 },
+            1024: { slidesPerView: 5.2 },
+            1280: { slidesPerView: 6.2 },
+            1536: { slidesPerView: 7 },
+          }}
+          onSwiper={(swiper) => {
+            swiperRef.current = swiper
+            setCanPrev(!swiper.isBeginning)
+            setCanNext(!swiper.isEnd)
+          }}
+          onSlideChange={(swiper) => {
+            setCanPrev(!swiper.isBeginning)
+            setCanNext(!swiper.isEnd)
+          }}
+          className="!overflow-visible"
+        >
           {categoryData.map((category) => {
-            const IconComponent = category.icon
+            const Icon = category.icon
             return (
-              <StaggerItem key={category.path}>
-                <Link href={`/${category.path}`} className="block group">
-                  <div className={`relative rounded-2xl overflow-hidden bg-gradient-to-br ${category.gradient} p-4 flex flex-col items-center justify-center text-center gap-2.5 min-h-[120px] shadow-md hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300`}>
-                    <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:bg-white/25 transition-all duration-300">
-                      <IconComponent className="w-5 h-5 text-white" />
+              <SwiperSlide key={category.path} className="!h-auto">
+                <Link
+                  href={`/${category.path}`}
+                  className="group block h-full"
+                >
+                  <article
+                    className="
+                      relative h-full min-h-[200px]
+                      rounded-md bg-bridal-cream
+                      border border-bridal-beige
+                      overflow-hidden
+                      transition-all duration-300 ease-out
+                      hover:border-bridal-gold/55
+                      hover:-translate-y-1
+                      hover:shadow-[0_24px_40px_-28px_rgba(176,125,84,0.5)]
+                    "
+                  >
+                    {/* Gold corner accents on hover */}
+                    {[
+                      "top-3 left-3 border-t border-l rounded-tl-sm",
+                      "top-3 right-3 border-t border-r rounded-tr-sm",
+                      "bottom-3 left-3 border-b border-l rounded-bl-sm",
+                      "bottom-3 right-3 border-b border-r rounded-br-sm",
+                    ].map((cls, i) => (
+                      <span
+                        key={i}
+                        aria-hidden
+                        className={`absolute ${cls} w-3 h-3 border-bridal-gold/0 group-hover:border-bridal-gold/70 transition-colors duration-300`}
+                      />
+                    ))}
+
+                    {/* Sage mehndi wash on hover */}
+                    <span
+                      aria-hidden
+                      className="absolute inset-0 bg-bridal-blush/0 group-hover:bg-[#EFF5EC]/55 transition-colors duration-300"
+                    />
+
+                    <div className="relative h-full p-5 flex flex-col items-center justify-center text-center">
+                      {/* Icon ring */}
+                      <div
+                        className="
+                          w-14 h-14 rounded-full
+                          bg-bridal-blush/55 border border-bridal-beige
+                          flex items-center justify-center
+                          transition-all duration-300
+                          group-hover:bg-bridal-gold/15
+                          group-hover:border-bridal-gold/55
+                          group-hover:scale-105
+                        "
+                      >
+                        <Icon
+                          className="w-6 h-6 text-bridal-gold-dark group-hover:text-bridal-gold transition-colors duration-300"
+                          strokeWidth={1.6}
+                        />
+                      </div>
+
+                      {/* Title */}
+                      <h3 className="mt-3.5 font-display italic text-[17px] sm:text-[18px] text-bridal-charcoal leading-tight">
+                        {category.title}
+                      </h3>
+
+                      {/* Tagline */}
+                      <p className="mt-1 font-bridal text-[11.5px] sm:text-[12px] text-bridal-text-soft">
+                        {category.tagline}
+                      </p>
+
+                      {/* Hover hint */}
+                      <span className="mt-2.5 inline-flex items-center gap-1 text-[10px] font-bridal uppercase tracking-[0.22em] text-bridal-gold opacity-0 -translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+                        Explore
+                        <ArrowRight className="w-3 h-3" />
+                      </span>
                     </div>
-                    <h3 className="text-xs sm:text-sm font-semibold text-white leading-tight">
-                      {category.title}
-                    </h3>
-                  </div>
+                  </article>
                 </Link>
-              </StaggerItem>
+              </SwiperSlide>
             )
           })}
-        </StaggerContainer>
+        </Swiper>
 
-        <div className="text-center mt-8 md:hidden">
-          <Link href="/vendors" className="text-purple-600 hover:text-purple-700 font-medium">
-            View all vendors &rarr;
+        {/* ── Bottom CTA ── */}
+        <div className="text-center mt-10">
+          <Link
+            href="/vendors"
+            className="
+              inline-flex items-center gap-2
+              font-bridal text-[12px] uppercase tracking-[0.22em] font-medium
+              text-bridal-mauve hover:text-bridal-gold transition-colors group
+            "
+          >
+            <span>View all vendors</span>
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
       </div>

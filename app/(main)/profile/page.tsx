@@ -85,7 +85,7 @@ export default function ProfilePage() {
         <CardFooter>
           <Button 
             onClick={handleSubmit}
-            className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
+            className="bg-gradient-to-r from-bridal-gold to-bridal-gold-dark hover:from-bridal-gold-dark hover:to-bridal-gold-dark text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
           >
             Save Changes
           </Button>

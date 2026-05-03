@@ -1,18 +1,36 @@
 import { CalendarEvent, Cell, ymd } from '@/lib/utils';
 import React, { useEffect, useState } from 'react'
 import type { BlockedDate } from '@/lib/api/dashboard';
-import { BanIcon, Store } from 'lucide-react';
+import type { SlotAvailabilityRow } from '@/lib/api/businessAvailability';
+import { BanIcon, Repeat, Store } from 'lucide-react';
 
 type MonthViewProps = {
   cells: Cell[];
   events: CalendarEvent[];
   blockedDateSet: Set<string>;
   blockedDateMap: Map<string, BlockedDate>;
+  // BK-011 — materialised recurring blocks (e.g. "Every Monday closed").
+  // Optional: callers that haven't been migrated render the legacy view.
+  recurringBlockedDateSet?: Set<string>;
+  recurringBlockedMap?: Map<string, { reason: string; businessName: string | null }>;
+  // BK-008/15/19/53 — per-day slot availability for the auto-picked
+  // primary business. Empty when vendor has no slot-template-aware business.
+  slotAvailabilityByDate?: Record<string, SlotAvailabilityRow[]>;
   onOpenCellDialog: (events: CalendarEvent[] | [], date?: Date) => void;
   onDateBlockToggle: (date: Date) => void;
 };
 
-const MonthView = ({ cells, events, blockedDateSet, blockedDateMap, onOpenCellDialog, onDateBlockToggle }: MonthViewProps) => {
+const MonthView = ({
+  cells,
+  events,
+  blockedDateSet,
+  blockedDateMap,
+  recurringBlockedDateSet,
+  recurringBlockedMap,
+  slotAvailabilityByDate,
+  onOpenCellDialog,
+  onDateBlockToggle,
+}: MonthViewProps) => {
   const byDate = React.useMemo(() => {
     const m = new Map<string, CalendarEvent[]>();
     for (const ev of events) {
@@ -42,7 +60,7 @@ const MonthView = ({ cells, events, blockedDateSet, blockedDateMap, onOpenCellDi
   return (
     <div className="h-[calc(100dvh-210px)] w-full border rounded-lg overflow-hidden">
       {/* Legend */}
-      <div className="flex items-center gap-4 px-3 py-1.5 border-b bg-muted/30 text-xs text-muted-foreground">
+      <div className="flex items-center gap-4 px-3 py-1.5 border-b bg-muted/30 text-xs text-muted-foreground flex-wrap">
         <span className="flex items-center gap-1.5">
           <span className="h-3 w-3 rounded-sm bg-emerald-600/20 border border-emerald-600/30 inline-block" />
           Online Booking
@@ -51,6 +69,12 @@ const MonthView = ({ cells, events, blockedDateSet, blockedDateMap, onOpenCellDi
           <span className="h-3 w-3 rounded-sm bg-red-100 border border-red-300 inline-block" />
           Blocked / Unavailable
         </span>
+        {recurringBlockedDateSet && recurringBlockedDateSet.size > 0 ? (
+          <span className="flex items-center gap-1.5">
+            <Repeat className="h-3 w-3 text-amber-600" />
+            Recurring rule
+          </span>
+        ) : null}
         <span className="flex items-center gap-1.5">
           <Store className="h-3 w-3 text-orange-500" />
           Offline Booking
@@ -72,6 +96,15 @@ const MonthView = ({ cells, events, blockedDateSet, blockedDateMap, onOpenCellDi
           const more = list.length - visible.length;
           const isBlocked = blockedDateSet.has(key);
           const blockInfo = blockedDateMap.get(key);
+          // BK-011 — recurring rule materialised against this cell. Visually
+          // distinct from per-date blocks: amber tint + Repeat icon.
+          const isRecurringBlocked = recurringBlockedDateSet?.has(key) ?? false;
+          const recurringInfo = recurringBlockedMap?.get(key);
+          const cellTitle = isBlocked
+            ? `Blocked: ${blockInfo?.reason || 'Vendor not available this day'}`
+            : isRecurringBlocked
+            ? `Recurring block${recurringInfo?.businessName ? ` (${recurringInfo.businessName})` : ''}: ${recurringInfo?.reason}`
+            : 'Right-click to block this date';
 
           return (
             <div
@@ -81,13 +114,15 @@ const MonthView = ({ cells, events, blockedDateSet, blockedDateMap, onOpenCellDi
                 e.preventDefault();
                 onDateBlockToggle(c.date);
               }}
-              title={isBlocked ? `Blocked: ${blockInfo?.reason || 'Vendor not available this day'}` : 'Right-click to block this date'}
+              title={cellTitle}
               className={[
                 'border p-2 relative cursor-pointer select-none group',
                 !c.inCurrentMonth
                   ? 'bg-accent dark:bg-accent/30 text-muted-foreground'
                   : isBlocked
                   ? 'bg-red-50/80 dark:bg-red-950/30'
+                  : isRecurringBlocked
+                  ? 'bg-amber-50/70 dark:bg-amber-950/20'
                   : 'hover:bg-accent/50',
               ].join(' ')}
             >
@@ -97,6 +132,7 @@ const MonthView = ({ cells, events, blockedDateSet, blockedDateMap, onOpenCellDi
                   'text-sm select-none',
                   c.isToday ? 'h-6 w-6 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-xs' : '',
                   isBlocked && !c.isToday ? 'text-red-400 line-through' : '',
+                  !isBlocked && isRecurringBlocked && !c.isToday ? 'text-amber-700 line-through' : '',
                 ].join(' ')}>
                   {c.date.getDate()}
                 </span>
@@ -108,12 +144,24 @@ const MonthView = ({ cells, events, blockedDateSet, blockedDateMap, onOpenCellDi
                     Blocked
                   </span>
                 )}
+                {/* BK-011 — recurring-rule indicator. Hidden when also per-date blocked. */}
+                {!isBlocked && isRecurringBlocked && c.inCurrentMonth && (
+                  <span className="flex items-center gap-0.5 text-[9px] font-semibold text-amber-700 bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 rounded-full leading-none">
+                    <Repeat className="h-2.5 w-2.5" />
+                    Recurring
+                  </span>
+                )}
               </div>
 
               {/* Reason tooltip on hover */}
               {isBlocked && c.inCurrentMonth && (
                 <p className="mt-0.5 text-[10px] text-red-400 truncate leading-tight">
                   {blockInfo?.reason || 'Not available'}
+                </p>
+              )}
+              {!isBlocked && isRecurringBlocked && c.inCurrentMonth && (
+                <p className="mt-0.5 text-[10px] text-amber-700 truncate leading-tight">
+                  {recurringInfo?.reason || 'Recurring block'}
                 </p>
               )}
 
@@ -123,6 +171,16 @@ const MonthView = ({ cells, events, blockedDateSet, blockedDateMap, onOpenCellDi
                   className="absolute inset-0 pointer-events-none opacity-10"
                   style={{
                     backgroundImage: 'repeating-linear-gradient(45deg, #ef4444 0, #ef4444 1px, transparent 0, transparent 50%)',
+                    backgroundSize: '8px 8px',
+                  }}
+                />
+              )}
+              {/* Recurring overlay (lighter, amber). Hidden when per-date already striped. */}
+              {!isBlocked && isRecurringBlocked && c.inCurrentMonth && (
+                <div
+                  className="absolute inset-0 pointer-events-none opacity-10"
+                  style={{
+                    backgroundImage: 'repeating-linear-gradient(45deg, #f59e0b 0, #f59e0b 1px, transparent 0, transparent 50%)',
                     backgroundSize: '8px 8px',
                   }}
                 />
@@ -138,6 +196,48 @@ const MonthView = ({ cells, events, blockedDateSet, blockedDateMap, onOpenCellDi
                   <BanIcon className="h-2.5 w-2.5" />
                 </button>
               )}
+
+              {/* BK-008/15/19/53 — slot capacity chips ("L 2/3 · D 1/3"). Hidden
+                  when the day has no template availability (legacy free-string
+                  vendor, unblocked-but-no-templates, or off-grid month). */}
+              {(() => {
+                const slots = slotAvailabilityByDate?.[key];
+                if (!Array.isArray(slots) || slots.length === 0) return null;
+                if (!c.inCurrentMonth) return null;
+                if (isBlocked) return null;
+                // Only render templates that run on this weekday and aren't slot-blocked.
+                const visibleSlots = slots.filter(s => s.runsThisWeekday && !s.blocked);
+                if (visibleSlots.length === 0) return null;
+                return (
+                  <div className="mt-1 flex flex-wrap gap-0.5">
+                    {visibleSlots.slice(0, 3).map(s => {
+                      const initial = (s.label || '?').slice(0, 1).toUpperCase();
+                      const soldOut = s.capacity > 0 && s.free === 0;
+                      const lastSpot = !!s.lastSpot;
+                      return (
+                        <span
+                          key={s.slotTemplateId}
+                          title={`${s.label} · ${s.startTime?.slice(0, 5) || ''}-${s.endTime?.slice(0, 5) || ''} · ${s.free}/${s.capacity} free`}
+                          className={[
+                            'inline-flex items-center gap-0.5 rounded px-1 py-0 text-[9.5px] tabular-nums leading-tight border',
+                            soldOut
+                              ? 'bg-red-50 text-red-700 border-red-200'
+                              : lastSpot
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                          ].join(' ')}
+                        >
+                          <span className="font-semibold">{initial}</span>
+                          <span>{s.free}/{s.capacity}</span>
+                        </span>
+                      );
+                    })}
+                    {visibleSlots.length > 3 ? (
+                      <span className="text-[9px] text-muted-foreground self-center">+{visibleSlots.length - 3}</span>
+                    ) : null}
+                  </div>
+                );
+              })()}
 
               {/* Events */}
               <div className="mt-1 xlarge:mt-2 space-y-1">

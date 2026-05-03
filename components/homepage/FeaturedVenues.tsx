@@ -13,14 +13,14 @@ export function FeaturedVenues() {
   const vendors = allVendors.slice(0, 8)
 
   return (
-    <section className="py-6 sm:py-8 md:py-12 lg:py-16 bg-gradient-to-b from-white to-purple-50/40">
+    <section className="py-6 sm:py-8 md:py-12 lg:py-16 bg-gradient-to-b from-white to-bridal-cream/40">
       <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 xl:px-12">
         <div className="flex justify-between items-end mb-12">
           <div>
             <SectionHeading title="Featured Wedding Venues" subtitle="Dream Locations" />
             <p className="text-muted-foreground mt-2">Discover beautiful venues for your perfect wedding day</p>
           </div>
-          <Link href="/venues" className="text-purple-600 hover:text-purple-700 hover:underline hidden md:block font-medium">
+          <Link href="/venues" className="text-bridal-gold-dark hover:text-bridal-gold-dark hover:underline hidden md:block font-medium">
             View all venues &rarr;
           </Link>
         </div>
@@ -30,10 +30,10 @@ export function FeaturedVenues() {
             Array.from({ length: 4 }).map((_, index) => (
               <SwiperSlide key={index}>
                 <div className="animate-pulse w-full">
-                  <div className="bg-purple-100 h-48 rounded-t-lg" />
+                  <div className="bg-bridal-gold/15 h-48 rounded-t-lg" />
                   <div className="bg-white p-4 rounded-b-lg">
-                    <div className="h-4 bg-purple-100 rounded w-3/4 mb-2" />
-                    <div className="h-4 bg-purple-100 rounded w-1/2" />
+                    <div className="h-4 bg-bridal-gold/15 rounded w-3/4 mb-2" />
+                    <div className="h-4 bg-bridal-gold/15 rounded w-1/2" />
                   </div>
                 </div>
               </SwiperSlide>
@@ -53,6 +53,7 @@ export function FeaturedVenues() {
                   capacity={vendor.capacity}
                   amenities={vendor.amenities}
                   sponsored={vendor.sponsored}
+                  business={vendor}
                 />
               </SwiperSlide>
             ))
@@ -60,7 +61,7 @@ export function FeaturedVenues() {
         </FeaturedSwiper>
 
         <div className="text-center mt-8 md:hidden">
-          <Link href="/venues" className="text-purple-600 hover:text-purple-700 hover:underline font-medium">
+          <Link href="/venues" className="text-bridal-gold-dark hover:text-bridal-gold-dark hover:underline font-medium">
             View all venues &rarr;
           </Link>
         </div>

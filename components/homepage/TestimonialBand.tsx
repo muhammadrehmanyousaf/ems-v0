@@ -2,41 +2,46 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Star, Quote } from "lucide-react"
+import { Star, Quote, ChevronLeft, ChevronRight } from "lucide-react"
 import { ScrollReveal, CountUp } from "@/components/ui/motion-wrapper"
+import { FloralDivider } from "@/components/bridal/floral-divider"
 
 const testimonials = [
   {
-    quote: "The vendors we found here made our wedding absolutely magical. Every detail was perfect!",
-    couple: "Priya & Rahul",
-    location: "Mumbai",
+    quote:
+      "We found our photographer, our venue, and our caterer in one evening. Truly the dream platform — every detail of our shaadi was perfect.",
+    couple: "Sarah & Ahmed",
+    location: "Lahore",
     rating: 5,
   },
   {
-    quote: "From photographer to caterer, we booked everything through this platform. Couldn't be happier!",
-    couple: "Sara & Ahmed",
-    location: "Delhi",
+    quote:
+      "The planning tools saved us so many late nights. Our walima went flawlessly because every vendor was already coordinated.",
+    couple: "Aisha & Raja",
+    location: "Karachi",
     rating: 5,
   },
   {
-    quote: "The planning tools saved us so much time. Our wedding day went flawlessly thanks to them.",
-    couple: "Meera & Arun",
-    location: "Chennai",
+    quote:
+      "AJOINT introduced us to vendors we never would have found on our own. The Mehndi was unforgettable — and so was the value.",
+    couple: "Hira & Bilal",
+    location: "Islamabad",
     rating: 5,
   },
   {
-    quote: "We discovered amazing vendors we never would have found otherwise. Truly a game-changer!",
-    couple: "Aisha & Raj",
-    location: "Udaipur",
+    quote:
+      "Booking through AJOINT meant transparent pricing, real reviews, and a calendar that just worked. The least stressful wedding any of our friends have planned.",
+    couple: "Mehar & Faisal",
+    location: "Faisalabad",
     rating: 5,
   },
 ]
 
 const stats = [
   { end: 10000, suffix: "+", label: "Happy Couples" },
-  { end: 500, suffix: "+", label: "Verified Vendors" },
-  { end: 50, suffix: "+", label: "Cities Covered" },
-  { end: 4.8, suffix: "", label: "Avg Rating", decimals: true },
+  { end: 500,   suffix: "+", label: "Verified Vendors" },
+  { end: 50,    suffix: "+", label: "Cities Covered" },
+  { end: 4.8,   suffix: "/5", label: "Avg Rating", decimals: true },
 ]
 
 export function TestimonialBand() {
@@ -45,47 +50,70 @@ export function TestimonialBand() {
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrent((prev) => (prev + 1) % testimonials.length)
-    }, 5000)
+    }, 6500)
     return () => clearInterval(timer)
   }, [])
 
+  const t = testimonials[current]
+
   return (
-    <section className="relative py-16 sm:py-20 overflow-hidden">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-purple-800 to-purple-950" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(212,175,55,0.15),transparent_50%)]" />
+    <section className="relative py-16 sm:py-20 lg:py-24 overflow-hidden bg-bridal-blush/55">
+      <div aria-hidden className="absolute inset-0 bg-bridal-grain opacity-90" />
+      <div aria-hidden className="absolute inset-0 bg-mughal-jaal opacity-40" />
+      {/* Soft warm radials */}
+      <span aria-hidden className="absolute -top-20 -right-20 w-96 h-96 rounded-full bg-bridal-rose/25 blur-3xl" />
+      <span aria-hidden className="absolute -bottom-20 -left-20 w-96 h-96 rounded-full bg-bridal-gold/15 blur-3xl" />
 
       <div className="relative container-responsive">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          {/* Left: Testimonials */}
-          <ScrollReveal variant="fade-right">
-            <div>
-              {/* Large quote mark */}
-              <Quote className="w-12 h-12 text-gold-500/40 mb-6 rotate-180" />
+        <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+          {/* ── Left: Testimonial ── */}
+          <ScrollReveal variant="fade-right" className="lg:col-span-7">
+            <div className="max-w-2xl">
+              {/* Caps eyebrow */}
+              <div className="flex items-center gap-3 mb-3">
+                <span className="block w-10 h-px bg-gradient-to-r from-transparent to-bridal-gold" />
+                <span className="font-bridal text-[10.5px] uppercase tracking-[0.32em] text-bridal-gold font-medium">
+                  Real Couples · Real Stories
+                </span>
+              </div>
 
-              <div className="relative min-h-[160px]">
+              {/* Big italic Playfair gold opening quote */}
+              <Quote
+                className="w-14 h-14 text-bridal-gold/35 mb-4 -ml-2 rotate-180"
+                strokeWidth={1.4}
+              />
+
+              <div className="relative min-h-[180px]">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={current}
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 18 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.5 }}
+                    exit={{ opacity: 0, y: -18 }}
+                    transition={{ duration: 0.55 }}
                   >
-                    <blockquote className="text-xl sm:text-2xl lg:text-3xl font-heading text-white/95 leading-relaxed mb-6">
-                      &ldquo;{testimonials[current].quote}&rdquo;
+                    <blockquote className="font-display italic text-[22px] sm:text-[26px] lg:text-[30px] leading-[1.3] text-bridal-charcoal">
+                      &ldquo;{t.quote}&rdquo;
                     </blockquote>
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center text-white font-bold text-sm">
-                        {testimonials[current].couple.charAt(0)}
+
+                    <div className="mt-6 flex items-center gap-4 flex-wrap">
+                      <div className="w-12 h-12 rounded-full bg-bridal-cream border-2 border-bridal-gold flex items-center justify-center font-display italic text-bridal-charcoal text-[20px] flex-shrink-0">
+                        {t.couple.charAt(0)}
                       </div>
                       <div>
-                        <p className="font-semibold text-white">{testimonials[current].couple}</p>
-                        <p className="text-sm text-purple-200">{testimonials[current].location}</p>
+                        <p className="font-display italic text-[18px] text-bridal-charcoal leading-tight">
+                          {t.couple}
+                        </p>
+                        <p className="font-bridal text-[11px] uppercase tracking-[0.22em] text-bridal-gold mt-0.5">
+                          {t.location}
+                        </p>
                       </div>
-                      <div className="ml-auto flex gap-0.5">
-                        {Array.from({ length: testimonials[current].rating }).map((_, i) => (
-                          <Star key={i} className="w-4 h-4 fill-gold-400 text-gold-400" />
+                      <div className="ml-auto flex items-center gap-0.5">
+                        {Array.from({ length: t.rating }).map((_, i) => (
+                          <Star
+                            key={i}
+                            className="w-4 h-4 text-bridal-gold fill-bridal-gold"
+                          />
                         ))}
                       </div>
                     </div>
@@ -93,40 +121,71 @@ export function TestimonialBand() {
                 </AnimatePresence>
               </div>
 
-              {/* Dots */}
-              <div className="flex gap-2 mt-8">
-                {testimonials.map((_, i) => (
+              {/* Bridal pagination — gold pill for active, beige dots otherwise + arrow controls */}
+              <div className="mt-8 flex items-center gap-3">
+                <div className="flex gap-2">
+                  {testimonials.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setCurrent(i)}
+                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                        i === current
+                          ? "w-8 bg-bridal-gold"
+                          : "w-1.5 bg-bridal-beige hover:bg-bridal-text-label/45"
+                      }`}
+                      aria-label={`Testimonial ${i + 1}`}
+                    />
+                  ))}
+                </div>
+                <div className="ml-auto flex items-center gap-1.5">
                   <button
-                    key={i}
-                    onClick={() => setCurrent(i)}
-                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                      i === current ? "w-8 bg-gold-400" : "bg-white/30 hover:bg-white/50"
-                    }`}
-                  />
-                ))}
+                    type="button"
+                    onClick={() =>
+                      setCurrent(
+                        (current - 1 + testimonials.length) %
+                          testimonials.length
+                      )
+                    }
+                    className="inline-flex w-9 h-9 items-center justify-center rounded-full border border-bridal-beige bg-bridal-cream text-bridal-mauve hover:border-bridal-gold/55 hover:text-bridal-charcoal transition-colors"
+                    aria-label="Previous testimonial"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrent((current + 1) % testimonials.length)}
+                    className="inline-flex w-9 h-9 items-center justify-center rounded-full border border-bridal-gold/55 bg-bridal-gold text-bridal-charcoal hover:bg-bridal-gold-dark hover:text-bridal-ivory transition-colors"
+                    aria-label="Next testimonial"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           </ScrollReveal>
 
-          {/* Right: Stats */}
-          <ScrollReveal variant="fade-left">
-            <div className="grid grid-cols-2 gap-6">
+          {/* ── Right: Stats ── */}
+          <ScrollReveal variant="fade-left" className="lg:col-span-5">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               {stats.map((stat, i) => (
                 <div
                   key={i}
-                  className="text-center p-6 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10"
+                  className="bridal-card p-5 sm:p-6 text-center hover:border-bridal-gold/55 transition-colors"
                 >
-                  <div className="text-3xl sm:text-4xl font-bold font-heading text-white mb-1">
+                  <div className="font-display italic text-[28px] sm:text-[34px] text-bridal-gold leading-none">
                     {stat.decimals ? (
-                      <span>4.8</span>
+                      <span>4.8/5</span>
                     ) : (
                       <CountUp end={stat.end} suffix={stat.suffix} duration={2.5} />
                     )}
                   </div>
-                  <p className="text-sm text-purple-200">{stat.label}</p>
+                  <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] text-bridal-text-soft font-medium mt-2">
+                    {stat.label}
+                  </p>
                 </div>
               ))}
             </div>
+            <FloralDivider className="mt-7" width={200} />
           </ScrollReveal>
         </div>
       </div>

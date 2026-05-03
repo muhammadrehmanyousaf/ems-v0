@@ -56,11 +56,11 @@ const benefits = [
 export default function VendorGuidePage() {
   return (
     <div className="min-h-screen">
-      <section className="bg-gradient-to-br from-purple-600 to-purple-800 text-white py-16 px-4">
+      <section className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <BookOpen className="w-12 h-12 mx-auto mb-4 text-purple-200" />
+          <BookOpen className="w-12 h-12 mx-auto mb-4 text-bridal-gold/40" />
           <h1 className="text-4xl sm:text-5xl font-bold mb-4">Vendor Guide</h1>
-          <p className="text-lg text-purple-100 max-w-xl mx-auto">
+          <p className="text-lg text-bridal-cream max-w-xl mx-auto">
             Everything you need to know about listing your business and growing with AJOINT.
           </p>
         </div>
@@ -73,11 +73,11 @@ export default function VendorGuidePage() {
             {steps.map((item) => (
               <Card key={item.step} className="border-0 shadow-sm">
                 <CardContent className="p-6 flex gap-5">
-                  <div className="flex-shrink-0 w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                    <item.icon className="w-6 h-6 text-purple-600" />
+                  <div className="flex-shrink-0 w-12 h-12 bg-bridal-gold/15 rounded-xl flex items-center justify-center">
+                    <item.icon className="w-6 h-6 text-bridal-gold-dark" />
                   </div>
                   <div>
-                    <p className="text-xs text-purple-600 font-semibold mb-1">Step {item.step}</p>
+                    <p className="text-xs text-bridal-gold-dark font-semibold mb-1">Step {item.step}</p>
                     <h3 className="text-lg font-semibold text-neutral-900 mb-1">{item.title}</h3>
                     <p className="text-sm text-neutral-600">{item.description}</p>
                   </div>
@@ -108,7 +108,7 @@ export default function VendorGuidePage() {
           <p className="text-neutral-600 mb-6">Join hundreds of vendors already thriving on AJOINT.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/business-registration">
-              <Button className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white gap-2">
+              <Button className="bg-gradient-to-r from-bridal-gold to-bridal-gold-dark hover:from-bridal-gold-dark hover:to-bridal-gold-dark text-white gap-2">
                 Register as Vendor <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>

@@ -135,7 +135,7 @@ export function ConversationList() {
         <ScrollArea className="flex-1">
           {loadingContacts ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-5 w-5 animate-spin text-purple-500" />
+              <Loader2 className="h-5 w-5 animate-spin text-bridal-gold" />
             </div>
           ) : filteredContacts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
@@ -151,12 +151,12 @@ export function ConversationList() {
                   key={contact.id}
                   type="button"
                   onClick={() => handleSelectContact(contact)}
-                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-purple-50 dark:hover:bg-purple-950/20 transition-colors text-left"
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-bridal-cream dark:hover:bg-bridal-charcoal/40 transition-colors text-left"
                 >
                   <div className="relative">
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={contact.profileImage || undefined} alt={contact.fullName} />
-                      <AvatarFallback className="bg-gradient-to-br from-purple-500 to-purple-700 text-white text-xs font-semibold">
+                      <AvatarFallback className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white text-xs font-semibold">
                         {getInitials(contact.fullName)}
                       </AvatarFallback>
                     </Avatar>
@@ -190,7 +190,7 @@ export function ConversationList() {
           <button
             type="button"
             onClick={handleNewChat}
-            className="p-2 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-950/30 text-purple-600 transition-colors"
+            className="p-2 rounded-lg hover:bg-bridal-cream dark:hover:bg-bridal-charcoal/40 text-bridal-gold-dark transition-colors"
             title="New conversation"
           >
             <MessageSquarePlus className="h-5 w-5" />
@@ -211,12 +211,12 @@ export function ConversationList() {
       <ScrollArea className="flex-1">
         {isLoadingConversations && conversations.length === 0 ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-5 w-5 animate-spin text-purple-500" />
+            <Loader2 className="h-5 w-5 animate-spin text-bridal-gold" />
           </div>
         ) : filteredConversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-            <div className="h-14 w-14 rounded-2xl bg-purple-50 dark:bg-purple-950/30 flex items-center justify-center mb-3">
-              <MessageCircle className="h-7 w-7 text-purple-400" />
+            <div className="h-14 w-14 rounded-2xl bg-bridal-cream dark:bg-bridal-charcoal/40 flex items-center justify-center mb-3">
+              <MessageCircle className="h-7 w-7 text-bridal-gold/70" />
             </div>
             <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
               {search ? "No conversations found" : "No conversations yet"}
@@ -228,7 +228,7 @@ export function ConversationList() {
               <button
                 type="button"
                 onClick={handleNewChat}
-                className="mt-4 text-xs font-medium text-purple-600 hover:text-purple-700 transition-colors"
+                className="mt-4 text-xs font-medium text-bridal-gold-dark hover:text-bridal-gold-dark transition-colors"
               >
                 Start a conversation
               </button>
@@ -250,7 +250,7 @@ export function ConversationList() {
                   className={cn(
                     "w-full flex items-center gap-3 px-4 py-3 transition-all duration-150 text-left group",
                     isActive
-                      ? "bg-purple-50 dark:bg-purple-950/30 border-r-2 border-purple-600"
+                      ? "bg-bridal-cream dark:bg-bridal-charcoal/40 border-r-2 border-bridal-gold-dark"
                       : "hover:bg-gray-50 dark:hover:bg-gray-900/50"
                   )}
                 >
@@ -265,7 +265,7 @@ export function ConversationList() {
                         className={cn(
                           "text-xs font-semibold text-white",
                           isActive
-                            ? "bg-gradient-to-br from-purple-600 to-purple-800"
+                            ? "bg-gradient-to-br from-bridal-gold to-bridal-gold-dark"
                             : "bg-gradient-to-br from-gray-400 to-gray-600"
                         )}
                       >
@@ -297,7 +297,7 @@ export function ConversationList() {
                         className={cn(
                           "text-xs truncate",
                           isTyping
-                            ? "text-purple-500 italic font-medium"
+                            ? "text-bridal-gold italic font-medium"
                             : convo.unreadCount > 0
                             ? "text-gray-700 dark:text-gray-300 font-medium"
                             : "text-gray-500"
@@ -310,7 +310,7 @@ export function ConversationList() {
                           : "No messages yet"}
                       </p>
                       {convo.unreadCount > 0 && (
-                        <span className="shrink-0 min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-purple-600 text-white text-[10px] font-bold">
+                        <span className="shrink-0 min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-bridal-gold text-white text-[10px] font-bold">
                           {convo.unreadCount > 99 ? "99+" : convo.unreadCount}
                         </span>
                       )}

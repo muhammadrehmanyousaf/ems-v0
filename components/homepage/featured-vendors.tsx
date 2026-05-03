@@ -12,11 +12,11 @@ export function FeaturedVendors() {
 
   if (isLoading) {
     return (
-      <section className="py-16 bg-gradient-to-br from-purple-50/30 via-white to-gold-50/20">
+      <section className="py-16 bg-gradient-to-br from-bridal-cream/30 via-white to-gold-50/20">
         <div className="container mx-auto px-4">
           <SectionHeading title="Featured Vendors" subtitle="Handpicked Selection" />
           <div className="flex justify-center mt-8">
-            <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+            <Loader2 className="w-8 h-8 animate-spin text-bridal-gold" />
           </div>
         </div>
       </section>
@@ -28,7 +28,7 @@ export function FeaturedVendors() {
   }
 
   return (
-    <section className="py-16 bg-gradient-to-br from-purple-50/30 via-white to-gold-50/20">
+    <section className="py-16 bg-gradient-to-br from-bridal-cream/30 via-white to-gold-50/20">
       <div className="container mx-auto px-4">
         <SectionHeading
           title="Featured Vendors"
@@ -56,6 +56,7 @@ export function FeaturedVendors() {
                 sponsored={vendor.sponsored}
                 showBookButton={true}
                 showDetails={true}
+                business={vendor}
               />
             </SwiperSlide>
           ))}
@@ -64,7 +65,7 @@ export function FeaturedVendors() {
         <div className="text-center mt-8">
           <Link
             href="/vendors"
-            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transform hover:scale-105"
+            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-bridal-gold to-bridal-gold-dark hover:from-bridal-gold-dark hover:to-bridal-gold-dark text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] hover:shadow-[0_14px_30px_-12px_rgba(176,125,84,0.7)] transform hover:scale-105"
           >
             View All Vendors
           </Link>

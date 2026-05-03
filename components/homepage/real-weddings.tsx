@@ -1,12 +1,27 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Heart, Share2, Calendar, MapPin, Users, Camera, Star, Award, ArrowRight, Clock, DollarSign } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
+  Heart,
+  Share2,
+  Calendar,
+  MapPin,
+  Users,
+  Award,
+  ArrowRight,
+  DollarSign,
+} from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { ScrollReveal } from "@/components/ui/motion-wrapper"
+import { BridalButton } from "@/components/bridal/bridal-button"
 
 const px = (id: number, w = 800) =>
   `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=${w}`
@@ -67,120 +82,114 @@ function WeddingDetailModal({ wedding }: { wedding: any }) {
     navigator.share?.({
       title: `${wedding.couple}'s Wedding`,
       text: wedding.story,
-      url: window.location.href
+      url: window.location.href,
     }).catch(() => {
       navigator.clipboard.writeText(window.location.href)
       toast({
-        title: "Link copied!",
-        description: "Wedding story link has been copied to clipboard.",
+        title: "Link copied",
+        description: "Wedding story link copied to clipboard.",
       })
     })
   }
 
   const handleLike = () => {
     toast({
-      title: "Liked!",
-      description: "This wedding story has been liked successfully.",
+      title: "Saved to your favourites",
+      description: "This wedding story has been saved.",
     })
   }
 
   return (
-    <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+    <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-bridal-cream border-bridal-beige">
       <DialogHeader>
-        <DialogTitle className="text-3xl font-bold text-neutral-900">{wedding.couple}</DialogTitle>
-        <DialogDescription className="text-lg text-neutral-600">
-          {wedding.location} • {wedding.date}
+        <DialogTitle className="font-display italic text-[28px] sm:text-[32px] text-bridal-charcoal leading-tight">
+          {wedding.couple}
+        </DialogTitle>
+        <DialogDescription className="font-bridal text-[14px] text-bridal-text-soft">
+          <span className="text-bridal-gold">{wedding.location}</span> · {wedding.date}
         </DialogDescription>
       </DialogHeader>
 
-      <div className="space-y-8">
-        {/* Hero Image */}
-        <div className="relative aspect-[16/9] rounded-2xl overflow-hidden shadow-xl">
+      <div className="space-y-7">
+        {/* Hero image with theme overlay */}
+        <div className="relative aspect-[16/9] rounded-md overflow-hidden bridal-card p-0">
           <img
             src={wedding.gallery[selectedImage]}
             alt={wedding.couple}
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-          <div className="absolute bottom-6 left-6 right-6 text-white">
-            <Badge className="bg-gradient-to-r from-purple-600 to-purple-700 text-white border-0 mb-3">
+          <div className="absolute inset-0 bg-gradient-to-t from-bridal-charcoal/85 via-bridal-charcoal/15 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 p-6 text-bridal-ivory">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 mb-3 rounded-full bg-bridal-gold/95 text-bridal-charcoal text-[10px] font-bridal font-medium uppercase tracking-[0.22em]">
               {wedding.theme}
-            </Badge>
-            <h3 className="text-2xl font-bold mb-2">{wedding.theme}</h3>
-            <p className="text-lg opacity-90">{wedding.story}</p>
+            </span>
+            <p className="font-display italic text-[18px] sm:text-[22px] text-bridal-ivory/95 max-w-3xl leading-snug">
+              {wedding.story}
+            </p>
           </div>
         </div>
 
-        {/* Image Gallery */}
+        {/* Gallery */}
         <div className="grid grid-cols-4 gap-3">
           {wedding.gallery.map((image: string, index: number) => (
             <button
               key={index}
               onClick={() => setSelectedImage(index)}
-              className={`aspect-square rounded-xl overflow-hidden shadow-lg transition-all duration-300 ${
-                selectedImage === index ? 'ring-4 ring-purple-500 scale-105' : 'hover:scale-105'
+              className={`aspect-square rounded-md overflow-hidden border transition-all duration-300 ${
+                selectedImage === index
+                  ? "border-bridal-gold ring-2 ring-bridal-gold/40 scale-[1.02]"
+                  : "border-bridal-beige hover:border-bridal-gold/55"
               }`}
             >
               <img
                 src={image}
-                alt={`${wedding.couple} - Image ${index + 1}`}
+                alt={`${wedding.couple} ${index + 1}`}
                 className="w-full h-full object-cover"
               />
             </button>
           ))}
         </div>
 
-        {/* Wedding Details */}
-        <div className="grid md:grid-cols-2 gap-8">
-          <div className="space-y-6">
-            <h4 className="text-2xl font-bold text-neutral-900">Wedding Details</h4>
-            <div className="space-y-4">
-              <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-purple-50 to-purple-100/50 rounded-xl">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-purple-600" />
+        {/* Details */}
+        <div className="grid md:grid-cols-2 gap-7">
+          <div className="space-y-4">
+            <h4 className="font-display italic text-[22px] text-bridal-charcoal">Wedding Details</h4>
+            <div className="space-y-3">
+              {[
+                { Icon: Calendar, label: "Date",  value: wedding.date },
+                { Icon: MapPin,   label: "Venue", value: wedding.location },
+                { Icon: Users,    label: "Guests", value: `${wedding.guests} people` },
+                { Icon: DollarSign, label: "Budget", value: wedding.budget },
+              ].map(({ Icon, label, value }) => (
+                <div key={label} className="flex items-center gap-3 p-3 bridal-card">
+                  <span className="inline-flex w-10 h-10 rounded-full bg-bridal-blush/55 border border-bridal-beige items-center justify-center flex-shrink-0">
+                    <Icon className="w-4 h-4 text-bridal-gold-dark" strokeWidth={1.6} />
+                  </span>
+                  <div>
+                    <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] text-bridal-text-label font-medium">
+                      {label}
+                    </p>
+                    <p className="font-display italic text-[16px] text-bridal-charcoal leading-tight">
+                      {value}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-semibold text-neutral-900">Date</p>
-                  <p className="text-neutral-600">{wedding.date}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <MapPin className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="font-semibold text-neutral-900">Venue</p>
-                  <p className="text-neutral-600">{wedding.location}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl">
-                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Users className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="font-semibold text-neutral-900">Guests</p>
-                  <p className="text-neutral-600">{wedding.guests} people</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-purple-50 to-violet-50 rounded-xl">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <DollarSign className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="font-semibold text-neutral-900">Budget</p>
-                  <p className="text-neutral-600">{wedding.budget}</p>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
-          <div className="space-y-6">
-            <h4 className="text-2xl font-bold text-neutral-900">Highlights</h4>
-            <div className="grid grid-cols-1 gap-3">
-              {wedding.highlights.map((highlight: string, index: number) => (
-                <div key={index} className="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-xl hover:shadow-md transition-all duration-200">
-                  <div className="w-3 h-3 bg-gradient-to-r from-purple-600 to-purple-700 rounded-full" />
-                  <span className="font-medium text-neutral-900">{highlight}</span>
+          <div className="space-y-4">
+            <h4 className="font-display italic text-[22px] text-bridal-charcoal">Highlights</h4>
+            <div className="grid grid-cols-1 gap-2.5">
+              {wedding.highlights.map((highlight: string) => (
+                <div
+                  key={highlight}
+                  className="flex items-center gap-3 p-3 bridal-card hover:border-bridal-gold/55 transition-colors"
+                >
+                  <span className="w-2 h-2 rounded-full bg-bridal-gold flex-shrink-0" />
+                  <span className="font-bridal text-[14px] text-bridal-charcoal">
+                    {highlight}
+                  </span>
                 </div>
               ))}
             </div>
@@ -188,28 +197,35 @@ function WeddingDetailModal({ wedding }: { wedding: any }) {
         </div>
 
         {/* Vendors */}
-        <div className="space-y-6">
-          <h4 className="text-2xl font-bold text-neutral-900">Featured Vendors</h4>
-          <div className="grid md:grid-cols-3 gap-4">
-            {wedding.vendors.map((vendor: string, index: number) => (
-              <div key={index} className="p-4 bg-gradient-to-r from-neutral-50 to-neutral-100 rounded-xl text-center border border-neutral-200 hover:shadow-lg transition-all duration-200">
-                <Award className="w-6 h-6 text-purple-600 mx-auto mb-2" />
-                <span className="font-semibold text-neutral-900">{vendor}</span>
+        <div>
+          <h4 className="font-display italic text-[22px] text-bridal-charcoal mb-4">
+            Featured Vendors
+          </h4>
+          <div className="grid md:grid-cols-3 gap-3">
+            {wedding.vendors.map((vendor: string) => (
+              <div
+                key={vendor}
+                className="bridal-card p-4 text-center"
+              >
+                <Award className="w-5 h-5 text-bridal-gold mx-auto mb-2" />
+                <span className="font-display italic text-[15px] text-bridal-charcoal block">
+                  {vendor}
+                </span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-4 pt-6 border-t border-neutral-200">
-          <Button onClick={handleLike} variant="outline" className="flex-1 h-12 border-neutral-200 hover:border-purple-500 hover:text-purple-600">
-            <Heart className="w-5 h-5 mr-2" />
+        {/* Actions */}
+        <div className="flex gap-3 pt-5 border-t border-bridal-beige">
+          <BridalButton onClick={handleLike} variant="ghost" size="lg" block>
+            <Heart className="w-4 h-4" />
             Save Story
-          </Button>
-          <Button onClick={handleShare} variant="outline" className="flex-1 h-12 border-neutral-200 hover:border-purple-500 hover:text-purple-600">
-            <Share2 className="w-5 h-5 mr-2" />
+          </BridalButton>
+          <BridalButton onClick={handleShare} variant="outline" size="lg" block>
+            <Share2 className="w-4 h-4" />
             Share Story
-          </Button>
+          </BridalButton>
         </div>
       </div>
     </DialogContent>
@@ -217,88 +233,111 @@ function WeddingDetailModal({ wedding }: { wedding: any }) {
 }
 
 export function RealWeddings() {
-  const { toast } = useToast()
-
   return (
-    <section className="py-8 sm:py-12 lg:py-16 bg-gradient-to-br from-neutral-50 via-white to-purple-50/30">
-      <div className="w-[90%] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
-        <div className="text-center mb-12">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-gold-600 mb-2">Love Stories</p>
-          <h2 className="text-4xl font-heading font-bold text-foreground mb-4">Real Wedding Stories</h2>
-          <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
-            Get inspired by these beautiful wedding celebrations. Each story is unique, 
-            just like your love story will be.
-          </p>
-        </div>
+    <section className="relative bg-bridal-cream section-padding overflow-hidden">
+      <div aria-hidden className="absolute inset-0 bg-bridal-grain opacity-90" />
+      <div aria-hidden className="absolute inset-0 bg-mughal-jaal opacity-30" />
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="relative container-responsive">
+        <ScrollReveal>
+          <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <span className="block w-10 h-px bg-gradient-to-r from-transparent to-bridal-gold" />
+              <span className="font-bridal text-[10.5px] uppercase tracking-[0.32em] text-bridal-gold font-medium">
+                Love Stories
+              </span>
+              <span className="block w-10 h-px bg-gradient-to-l from-transparent to-bridal-gold" />
+            </div>
+            <h2 className="font-display italic text-[28px] sm:text-[34px] md:text-[40px] leading-[1.1] text-bridal-charcoal">
+              Real Pakistani{" "}
+              <span className="text-bridal-gold">wedding stories</span>
+            </h2>
+            <p className="font-bridal text-bridal-text-soft text-[14px] sm:text-[15px] mt-3 leading-relaxed">
+              Get inspired by these beautiful celebrations. Each story is unique —
+              just like yours will be.
+            </p>
+          </div>
+        </ScrollReveal>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
           {weddings.map((wedding) => (
             <Dialog key={wedding.id}>
               <DialogTrigger asChild>
-                <Card className="group overflow-hidden cursor-pointer hover:shadow-2xl transition-all duration-500 hover:scale-105 border-0 shadow-lg bg-white">
-                  <CardHeader className="p-0">
-                    <div className="relative aspect-[4/3]">
-                      <img
-                        src={wedding.image}
-                        alt={wedding.couple}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                      <div className="absolute bottom-4 left-4 right-4 text-white">
-                        <h3 className="text-2xl font-bold mb-2">{wedding.couple}</h3>
-                        <p className="text-sm opacity-90 mb-3">{wedding.location}</p>
-                        <div className="flex items-center gap-3">
-                          <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm">
-                            <Users className="w-3 h-3 mr-1" />
-                            {wedding.guests} guests
-                          </Badge>
-                          <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm">
-                            <DollarSign className="w-3 h-3 mr-1" />
-                            {wedding.budget}
-                          </Badge>
-                        </div>
+                <article className="group overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-1 bridal-card p-0">
+                  <div className="relative aspect-[4/3]">
+                    <img
+                      src={wedding.image}
+                      alt={wedding.couple}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-bridal-charcoal/90 via-bridal-charcoal/30 to-transparent" />
+
+                    <span className="absolute top-4 right-4 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-bridal-cream/95 border border-bridal-beige text-bridal-charcoal text-[10px] font-bridal font-medium uppercase tracking-[0.18em] backdrop-blur-sm">
+                      <Calendar className="w-3 h-3 text-bridal-gold" />
+                      {wedding.date}
+                    </span>
+
+                    <div className="absolute inset-x-0 bottom-0 p-5 text-bridal-ivory">
+                      <h3 className="font-display italic text-[24px] leading-tight">
+                        {wedding.couple}
+                      </h3>
+                      <p className="font-bridal text-[12px] text-bridal-rose mt-0.5">
+                        {wedding.location}
+                      </p>
+                      <div className="mt-3 flex items-center gap-2 flex-wrap">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-bridal-ivory/15 backdrop-blur-sm border border-bridal-ivory/20 text-bridal-ivory text-[10.5px] font-bridal">
+                          <Users className="w-3 h-3" />
+                          {wedding.guests} guests
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-bridal-ivory/15 backdrop-blur-sm border border-bridal-ivory/20 text-bridal-ivory text-[10.5px] font-bridal">
+                          <DollarSign className="w-3 h-3" />
+                          {wedding.budget}
+                        </span>
                       </div>
-                      <Badge className="absolute top-4 right-4 bg-white/95 text-neutral-800 border-0 shadow-lg">
-                        <Calendar className="w-3 h-3 mr-1" />
-                        {wedding.date}
-                      </Badge>
                     </div>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <p className="text-neutral-600 line-clamp-2 mb-4 leading-relaxed">{wedding.story}</p>
+                  </div>
+                  <div className="p-5">
+                    <p className="font-bridal text-[13px] text-bridal-text-soft line-clamp-2 mb-4 leading-relaxed">
+                      {wedding.story}
+                    </p>
                     <div className="flex items-center justify-between">
-                      <span className="text-purple-600 text-sm font-semibold group-hover:text-purple-700 transition-colors duration-200">
+                      <span className="font-bridal text-[11px] uppercase tracking-[0.22em] text-bridal-gold font-medium group-hover:text-bridal-gold-dark transition-colors">
                         Read their story →
                       </span>
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-purple-50 hover:text-purple-600">
-                          <Heart className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-purple-50 hover:text-purple-600">
-                          <Share2 className="w-4 h-4" />
-                        </Button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex w-8 h-8 items-center justify-center rounded-full text-bridal-text-label hover:bg-bridal-blush/55 hover:text-bridal-mauve transition-colors"
+                          aria-label="Save"
+                        >
+                          <Heart className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex w-8 h-8 items-center justify-center rounded-full text-bridal-text-label hover:bg-bridal-blush/55 hover:text-bridal-mauve transition-colors"
+                          aria-label="Share"
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </article>
               </DialogTrigger>
               <WeddingDetailModal wedding={wedding} />
             </Dialog>
           ))}
         </div>
 
-        <div className="text-center mt-12">
-          <Button 
-            variant="outline" 
-            size="lg" 
-            className="text-purple-600 hover:text-purple-700 border-purple-200 hover:border-purple-300 bg-white hover:bg-purple-50 transition-all duration-300 px-8 py-3"
-          >
-            View more wedding stories
-            <ArrowRight className="w-5 h-5 ml-2" />
-          </Button>
+        <div className="text-center mt-10">
+          <BridalButton variant="ghost" size="lg">
+            View more stories
+            <ArrowRight className="w-4 h-4" />
+          </BridalButton>
         </div>
       </div>
     </section>
   )
 }
-

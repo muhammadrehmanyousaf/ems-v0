@@ -28,7 +28,7 @@ export default function VendorGallery({ images = [], video }: VendorGalleryProps
           <button
             key={i}
             onClick={() => setSelectedImage(img)}
-            className={`relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all duration-200 ${selectedImage === img ? "border-purple-500 scale-95 opacity-100" : "border-transparent opacity-70 hover:opacity-100"}`}
+            className={`relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all duration-200 ${selectedImage === img ? "border-bridal-gold-dark scale-95 opacity-100" : "border-transparent opacity-70 hover:opacity-100"}`}
           >
             <Image src={getFirstImage([img])} alt={`Gallery thumbnail ${i + 1}`} fill className="object-cover" />
           </button>

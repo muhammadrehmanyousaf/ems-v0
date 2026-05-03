@@ -13,14 +13,14 @@ export function FeaturedMakeupArtists() {
   const vendors = allVendors.slice(0, 8)
 
   return (
-    <section className="py-6 sm:py-8 md:py-12 lg:py-16 bg-gradient-to-br from-gold-50/20 via-white to-purple-50/30">
+    <section className="py-6 sm:py-8 md:py-12 lg:py-16 bg-gradient-to-br from-gold-50/20 via-white to-bridal-cream/30">
       <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 xl:px-12">
         <div className="flex justify-between items-end mb-12">
           <div>
             <SectionHeading title="Featured Makeup Artists" subtitle="Bridal Beauty" />
             <p className="text-muted-foreground mt-2">Professional makeup artists for your perfect wedding look</p>
           </div>
-          <Link href="/makeup-artists" className="text-purple-600 hover:text-purple-700 hover:underline hidden md:block font-medium">
+          <Link href="/makeup-artists" className="text-bridal-gold-dark hover:text-bridal-gold-dark hover:underline hidden md:block font-medium">
             View all makeup artists &rarr;
           </Link>
         </div>
@@ -53,6 +53,7 @@ export function FeaturedMakeupArtists() {
                   capacity={vendor.capacity}
                   amenities={vendor.amenities}
                   sponsored={vendor.sponsored}
+                  business={vendor}
                 />
               </SwiperSlide>
             ))
@@ -60,7 +61,7 @@ export function FeaturedMakeupArtists() {
         </FeaturedSwiper>
 
         <div className="text-center mt-8 md:hidden">
-          <Link href="/makeup-artists" className="text-purple-600 hover:text-purple-700 hover:underline font-medium">
+          <Link href="/makeup-artists" className="text-bridal-gold-dark hover:text-bridal-gold-dark hover:underline font-medium">
             View all makeup artists &rarr;
           </Link>
         </div>

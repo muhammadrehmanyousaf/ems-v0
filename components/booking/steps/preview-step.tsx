@@ -184,40 +184,45 @@ export default function PreviewStep({
       animate="visible"
     >
       <motion.div variants={item}>
-        <h2 className="font-heading text-2xl font-bold text-neutral-900">
-          Review Your Booking
+        <p className="font-bridal text-[10.5px] uppercase tracking-[0.32em] font-medium text-bridal-gold-dark mb-2">
+          Final step · Review
+        </p>
+        <h2 className="font-display italic text-[28px] sm:text-[32px] text-bridal-charcoal leading-tight">
+          Review your booking
         </h2>
-        <p className="mt-1 text-sm text-neutral-500">
-          Confirm everything looks right before submitting
+        <p className="mt-2 font-bridal text-[14px] text-bridal-text-soft">
+          Confirm everything looks right before submitting.
         </p>
       </motion.div>
 
       <motion.div
         variants={item}
-        className="rounded-xl border border-neutral-200 bg-white divide-y divide-neutral-100 overflow-hidden"
+        className="rounded-md border border-bridal-beige bg-bridal-cream divide-y divide-bridal-beige/70 overflow-hidden shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)]"
       >
         {/* Contact */}
-        <div className="p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <User className="h-4 w-4 text-purple-500" />
-            <span className="text-sm font-bold text-neutral-700">Contact</span>
+        <div className="p-5 sm:p-6">
+          <div className="flex items-center gap-2.5 mb-4">
+            <span className="w-8 h-8 rounded-full bg-bridal-blush/60 inline-flex items-center justify-center">
+              <User className="h-3.5 w-3.5 text-bridal-mauve" />
+            </span>
+            <span className="font-bridal text-[10.5px] uppercase tracking-[0.28em] font-medium text-bridal-gold-dark">Contact</span>
           </div>
-          <div className="ml-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
             <div className="min-w-0">
-              <p className="text-xs text-neutral-400">Name</p>
-              <p className="text-sm font-medium text-neutral-800 break-words">
+              <p className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Name</p>
+              <p className="font-display italic text-[16px] text-bridal-charcoal break-words mt-1">
                 {formData.username}
               </p>
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-neutral-400">Email</p>
-              <p className="text-sm font-medium text-neutral-800 break-all">
+              <p className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Email</p>
+              <p className="font-bridal text-[14px] text-bridal-charcoal break-all mt-1">
                 {formData.email}
               </p>
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-neutral-400">Phone</p>
-              <p className="text-sm font-medium text-neutral-800 break-words">
+              <p className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Phone</p>
+              <p className="font-bridal text-[14px] text-bridal-charcoal break-words mt-1">
                 {formData.phoneNumber}
               </p>
             </div>
@@ -225,15 +230,17 @@ export default function PreviewStep({
         </div>
 
         {/* Event */}
-        <div className="p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <CalendarDays className="h-4 w-4 text-purple-500" />
-            <span className="text-sm font-bold text-neutral-700">Event</span>
+        <div className="p-5 sm:p-6">
+          <div className="flex items-center gap-2.5 mb-4">
+            <span className="w-8 h-8 rounded-full bg-bridal-gold/15 inline-flex items-center justify-center">
+              <CalendarDays className="h-3.5 w-3.5 text-bridal-gold-dark" />
+            </span>
+            <span className="font-bridal text-[10.5px] uppercase tracking-[0.28em] font-medium text-bridal-gold-dark">Event</span>
           </div>
-          <div className="ml-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
             <div className="min-w-0">
-              <p className="text-xs text-neutral-400">Date</p>
-              <p className="text-sm font-medium text-neutral-800 break-words">
+              <p className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Date</p>
+              <p className="font-display italic text-[16px] text-bridal-charcoal break-words mt-1">
                 {formData.bookingDate
                   ? format(
                       typeof formData.bookingDate === "string"
@@ -245,15 +252,15 @@ export default function PreviewStep({
               </p>
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-neutral-400">Time</p>
-              <p className="text-sm font-medium text-neutral-800 break-words">
+              <p className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Time</p>
+              <p className="font-bridal text-[14px] text-bridal-charcoal break-words mt-1">
                 {getTimeSlotDisplay(formData.timeSlot)}
               </p>
             </div>
             {["Wedding venue", "Catering", "Decorator"].includes(venue?.vendor?.vendorType ?? "") && !isBridalWear && !isWeddingStationery && (
               <div className="min-w-0">
-                <p className="text-xs text-neutral-400">Guests</p>
-                <p className="text-sm font-medium text-neutral-800 break-words">
+                <p className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Guests</p>
+                <p className="font-display italic text-[18px] text-bridal-charcoal break-words mt-1">
                   {formData.guestCount}
                 </p>
               </div>
@@ -262,26 +269,28 @@ export default function PreviewStep({
         </div>
 
         {/* Invoice Breakdown */}
-        <div className="p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <Receipt className="h-4 w-4 text-purple-500" />
-            <span className="text-sm font-bold text-neutral-700">
-              Cost Breakdown
+        <div className="p-5 sm:p-6">
+          <div className="flex items-center gap-2.5 mb-4">
+            <span className="w-8 h-8 rounded-full bg-bridal-rose/30 inline-flex items-center justify-center">
+              <Receipt className="h-3.5 w-3.5 text-bridal-mauve" />
+            </span>
+            <span className="font-bridal text-[10.5px] uppercase tracking-[0.28em] font-medium text-bridal-gold-dark">
+              Cost breakdown
             </span>
           </div>
-          <div className="ml-6 space-y-2">
+          <div className="space-y-3">
             {invoiceLines.map((line, i) => (
               <div
                 key={i}
-                className="flex items-center justify-between text-sm"
+                className="flex items-start justify-between gap-3"
               >
                 <div className="min-w-0 flex-1">
-                  <span className="text-neutral-700">{line.label}</span>
-                  <span className="ml-2 text-[10px] text-neutral-400 bg-neutral-50 px-1.5 py-0.5 rounded">
+                  <p className="font-bridal text-[13.5px] text-bridal-charcoal">{line.label}</p>
+                  <span className="inline-block mt-1 font-bridal text-[10px] uppercase tracking-[0.22em] text-bridal-gold-dark bg-bridal-ivory border border-bridal-beige px-2 py-0.5 rounded-full">
                     {line.type}
                   </span>
                 </div>
-                <span className="text-neutral-800 font-medium shrink-0 ml-3">
+                <span className="font-display italic text-[16px] text-bridal-charcoal shrink-0">
                   {formatPKR(line.amount)}
                 </span>
               </div>
@@ -293,84 +302,97 @@ export default function PreviewStep({
       {/* Total + Payment Schedule */}
       <motion.div
         variants={item}
-        className="rounded-xl bg-purple-50 border border-purple-100 p-5 space-y-4"
+        className="relative rounded-md bg-bridal-cream border border-bridal-gold/45 overflow-hidden shadow-[0_18px_40px_-32px_rgba(176,125,84,0.45)]"
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-purple-600" />
-            <span className="text-lg font-bold text-neutral-900">Total</span>
-          </div>
-          <span className="text-2xl font-bold text-purple-600">
-            {formatPKR(computedTotal)}
-          </span>
-        </div>
-
-        {/* Payment Timeline */}
-        {downPayment > 0 && (
-          <div className="border-t border-purple-200/50 pt-3">
-            <p className="text-xs font-semibold text-purple-700 mb-2">
-              Payment Schedule
-            </p>
+        {/* Gold accent strip */}
+        <div className="h-[3px] bg-gradient-to-r from-transparent via-bridal-gold to-transparent" />
+        <div className="p-5 sm:p-6 space-y-5">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {/* Step 1: Down Payment */}
-              <div className="flex-1 relative">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
-                    1
-                  </div>
-                  <span className="text-xs font-medium text-purple-800">
-                    Down Payment
-                  </span>
-                </div>
-                <p className="ml-8 text-sm font-bold text-purple-700">
-                  {formatPKR(downPayment)}
-                </p>
-                <p className="ml-8 text-[10px] text-purple-500">
-                  Due at booking
-                </p>
-              </div>
-              {/* Connector */}
-              <div className="w-8 h-0.5 bg-purple-200 shrink-0 mt-[-8px]" />
-              {/* Step 2: Remaining */}
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-6 h-6 rounded-full bg-purple-200 text-purple-600 flex items-center justify-center text-[10px] font-bold shrink-0">
-                    2
-                  </div>
-                  <span className="text-xs font-medium text-purple-600">
-                    Remaining
-                  </span>
-                </div>
-                <p className="ml-8 text-sm font-bold text-purple-600">
-                  {formatPKR(remaining)}
-                </p>
-                <p className="ml-8 text-[10px] text-purple-400">Before event</p>
+              <span className="w-10 h-10 rounded-full bg-bridal-gold/15 border border-bridal-gold/45 inline-flex items-center justify-center">
+                <CreditCard className="h-4 w-4 text-bridal-gold-dark" />
+              </span>
+              <div>
+                <p className="font-bridal text-[10px] uppercase tracking-[0.32em] font-medium text-bridal-text-label">Booking total</p>
+                <p className="font-display italic text-[18px] text-bridal-charcoal leading-none mt-1">All inclusive</p>
               </div>
             </div>
+            <span className="font-display italic text-[34px] sm:text-[38px] text-bridal-gold-dark leading-none">
+              {formatPKR(computedTotal)}
+            </span>
           </div>
-        )}
+
+          {/* Payment Timeline */}
+          {downPayment > 0 && (
+            <div className="border-t border-bridal-beige/70 pt-4">
+              <p className="font-bridal text-[10px] uppercase tracking-[0.28em] font-medium text-bridal-gold-dark mb-3">
+                Payment schedule
+              </p>
+              <div className="flex items-center gap-3">
+                {/* Step 1: Down Payment */}
+                <div className="flex-1 rounded-md border border-bridal-gold/45 bg-bridal-ivory p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 rounded-full bg-bridal-gold border border-bridal-gold-dark text-bridal-charcoal flex items-center justify-center font-display italic text-[13px] shrink-0">
+                      1
+                    </div>
+                    <span className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
+                      Down payment
+                    </span>
+                  </div>
+                  <p className="font-display italic text-[20px] text-bridal-charcoal leading-none">
+                    {formatPKR(downPayment)}
+                  </p>
+                  <p className="font-bridal text-[11px] text-bridal-text-soft mt-1.5">
+                    Due at booking
+                  </p>
+                </div>
+                {/* Connector */}
+                <span aria-hidden className="hidden sm:block w-8 h-px bg-gradient-to-r from-bridal-gold to-bridal-beige shrink-0" />
+                {/* Step 2: Remaining */}
+                <div className="flex-1 rounded-md border border-bridal-beige bg-bridal-ivory p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 rounded-full bg-bridal-cream border border-bridal-beige text-bridal-text-soft flex items-center justify-center font-display italic text-[13px] shrink-0">
+                      2
+                    </div>
+                    <span className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">
+                      Remaining
+                    </span>
+                  </div>
+                  <p className="font-display italic text-[20px] text-bridal-charcoal/85 leading-none">
+                    {formatPKR(remaining)}
+                  </p>
+                  <p className="font-bridal text-[11px] text-bridal-text-soft mt-1.5">
+                    Before event
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </motion.div>
 
       {/* Cancellation Policy */}
       {policies.length > 0 && (
         <motion.div
           variants={item}
-          className="rounded-xl border border-amber-200 bg-amber-50 p-4"
+          className="rounded-md border border-bridal-gold/45 bg-bridal-cream p-5"
         >
-          <div className="flex items-start gap-2">
-            <Info className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-            <div className="space-y-2">
-              <p className="text-sm font-semibold text-amber-800">
-                Cancellation Policy
+          <div className="flex items-start gap-3">
+            <span className="w-8 h-8 rounded-full bg-bridal-gold/15 inline-flex items-center justify-center flex-shrink-0">
+              <Info className="h-3.5 w-3.5 text-bridal-gold-dark" />
+            </span>
+            <div className="space-y-2.5 flex-1">
+              <p className="font-bridal text-[10.5px] uppercase tracking-[0.28em] font-medium text-bridal-gold-dark">
+                Cancellation policy
               </p>
               {policies.map((p, i) => (
                 <div key={i}>
                   {policies.length > 1 && (
-                    <p className="text-xs font-medium text-amber-700">
+                    <p className="font-display italic text-[14px] text-bridal-charcoal mb-0.5">
                       {p.name}
                     </p>
                   )}
-                  <p className="text-xs text-amber-700">{p.policy}</p>
+                  <p className="font-bridal text-[12.5px] text-bridal-charcoal/85 leading-relaxed">{p.policy}</p>
                 </div>
               ))}
             </div>

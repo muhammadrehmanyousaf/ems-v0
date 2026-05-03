@@ -128,27 +128,28 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h2 className="font-heading text-2xl font-bold text-neutral-900 sm:text-3xl">Additional Vendors</h2>
-        <p className="mt-2 text-neutral-500 text-sm">Enhance your event with services from other vendors</p>
+        <h2 className="font-display italic text-[28px] sm:text-[32px] text-bridal-charcoal leading-tight">Additional Vendors</h2>
+        <p className="mt-2 font-bridal text-[14px] text-bridal-text-soft">Enhance your event with services from other vendors</p>
       </div>
 
-      <div className="rounded-xl bg-gradient-to-r from-purple-50/60 via-white to-gold-50/40 p-4 border border-purple-100/40 flex items-start gap-3">
-        <Star className="w-4 h-4 mt-0.5 text-gold-500 flex-shrink-0" />
-        <p className="text-sm text-neutral-500">
-          <strong className="text-neutral-700">Optional:</strong> Select additional vendors to complement your venue. Choose their packages in the next step.
+      <div className="rounded-md bg-bridal-cream p-4 border border-bridal-gold/45 flex items-start gap-3 shadow-[0_8px_24px_-20px_rgba(176,125,84,0.4)]">
+        <Star className="w-4 h-4 mt-0.5 text-bridal-gold flex-shrink-0" />
+        <p className="font-bridal text-[13px] text-bridal-charcoal/85">
+          <strong className="font-display italic text-bridal-gold-dark not-italic mr-1">Optional</strong>
+          — select additional vendors to complement your venue. Choose their packages in the next step.
         </p>
       </div>
 
       {/* Add Vendors Section */}
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-neutral-700 uppercase tracking-wider">Add Vendors</h3>
+        <h3 className="font-bridal text-[10.5px] uppercase tracking-[0.32em] font-medium text-bridal-gold-dark">Add Vendors</h3>
 
-        <div className="rounded-xl border border-neutral-200/80 bg-white/60 backdrop-blur-sm p-4">
+        <div className="rounded-md border border-bridal-beige bg-bridal-ivory p-5">
           <div className="flex flex-col space-y-3 sm:flex-row sm:space-x-3 sm:space-y-0">
             <div className="flex-1 space-y-1">
-              <Label htmlFor="vendor-type" className="text-xs text-neutral-500">Vendor Type</Label>
+              <Label htmlFor="vendor-type" className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Vendor Type</Label>
               <Select value={selectedVendorType || 'all'} onValueChange={setSelectedVendorType}>
-                <SelectTrigger id="vendor-type" className="rounded-xl border-neutral-200 bg-white/80 h-10">
+                <SelectTrigger id="vendor-type" className="rounded-[4px] border-bridal-beige bg-bridal-cream h-11 font-bridal text-bridal-charcoal focus:ring-bridal-gold focus:ring-1">
                   <SelectValue placeholder="Select vendor type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -161,9 +162,9 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
             </div>
 
             <div className="flex-1 space-y-1">
-              <Label htmlFor="vendor" className="text-xs text-neutral-500">Vendor</Label>
+              <Label htmlFor="vendor" className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Vendor</Label>
               <Select value={selectedVendorId} onValueChange={setSelectedVendorId}>
-                <SelectTrigger id="vendor" className="rounded-xl border-neutral-200 bg-white/80 h-10">
+                <SelectTrigger id="vendor" className="rounded-[4px] border-bridal-beige bg-bridal-cream h-11 font-bridal text-bridal-charcoal focus:ring-bridal-gold focus:ring-1">
                   <SelectValue placeholder="Select vendor" />
                 </SelectTrigger>
                 <SelectContent>
@@ -192,10 +193,10 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
                 type="button"
                 onClick={addVendor}
                 disabled={!selectedVendorId || checkingAvailability}
-                className={`w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-1.5 ${
+                className={`w-full sm:w-auto h-11 px-6 rounded-[4px] font-bridal text-[12px] uppercase tracking-[0.22em] font-medium transition-all duration-300 inline-flex items-center justify-center gap-2 ${
                   !selectedVendorId || checkingAvailability
-                    ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40'
+                    ? 'bg-bridal-gold/40 text-bridal-charcoal/60 cursor-not-allowed'
+                    : 'bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] hover:shadow-[0_14px_30px_-12px_rgba(176,125,84,0.7)]'
                 }`}
               >
                 {checkingAvailability ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
@@ -209,24 +210,24 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
       {/* Selected Vendors */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-neutral-700 uppercase tracking-wider">Selected Vendors</h3>
+          <h3 className="font-bridal text-[10.5px] uppercase tracking-[0.32em] font-medium text-bridal-gold-dark">Selected Vendors</h3>
           {formData.selectedVendors.length > 0 && (
             <div className="relative w-44">
-              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" />
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-bridal-gold" />
               <Input
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 text-sm h-9 rounded-xl border-neutral-200 bg-white/80"
+                className="pl-8 font-bridal text-[13px] h-10 rounded-[4px] border-bridal-beige bg-bridal-cream text-bridal-charcoal placeholder:text-bridal-text-soft focus-visible:border-bridal-gold/55 focus-visible:ring-1 focus-visible:ring-bridal-gold"
               />
             </div>
           )}
         </div>
 
         {formData.selectedVendors.length === 0 ? (
-          <div className="rounded-xl border-2 border-dashed border-neutral-200 p-6 text-center">
-            <p className="text-neutral-400 text-sm">No vendors selected yet</p>
-            <p className="mt-1 text-xs text-neutral-300">Add vendors from the selection above</p>
+          <div className="rounded-md border border-dashed border-bridal-beige bg-bridal-cream p-8 text-center">
+            <p className="font-display italic text-[18px] text-bridal-charcoal">No vendors selected yet</p>
+            <p className="mt-1.5 font-bridal text-[12px] text-bridal-text-soft">Add vendors from the selection above</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -238,22 +239,22 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className="flex items-center justify-between rounded-xl border border-neutral-200/80 bg-white/60 backdrop-blur-sm p-3"
+                  className="flex items-center justify-between rounded-md border border-bridal-beige bg-bridal-ivory hover:border-bridal-gold/45 p-4 transition-colors"
                 >
                   <div>
-                    <p className="font-medium text-sm text-neutral-800">{vendor.name}</p>
+                    <p className="font-display italic text-[16px] text-bridal-charcoal">{vendor.name}</p>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <Badge variant="outline" className="bg-purple-50/60 text-purple-600 border-purple-200/60 text-[10px] px-1.5 py-0">
+                      <Badge variant="outline" className="bg-bridal-cream text-bridal-gold-dark border-bridal-gold/45 text-[10px] uppercase tracking-[0.18em] font-bridal font-medium px-2 py-0.5">
                         {vendor.type}
                       </Badge>
-                      <span className="text-xs text-neutral-400">Rs. {vendor.minimumPrice || vendor.price || 0}</span>
+                      <span className="font-bridal text-[12px] text-bridal-gold-dark">Rs. {vendor.minimumPrice || vendor.price || 0}</span>
                     </div>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => removeVendor(vendor.id)}
-                    className="h-7 w-7 rounded-full p-0 text-neutral-400 hover:bg-red-50 hover:text-red-500"
+                    className="h-8 w-8 rounded-full p-0 text-bridal-text-soft hover:bg-bridal-coral/15 hover:text-bridal-coral transition-colors"
                   >
                     <X className="h-3.5 w-3.5" />
                   </Button>
@@ -266,11 +267,11 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
 
       {/* Inline Vendor Preview */}
       {previewVendorDetail && (
-        <Card className="border border-neutral-200/80 shadow-md rounded-xl overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-purple-50/50 via-white to-gold-50/30 py-3 px-5">
-            <CardTitle className="flex items-center justify-between gap-2 text-base">
+        <Card className="border border-bridal-beige bg-bridal-cream shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)] rounded-md overflow-hidden">
+          <CardHeader className="bg-bridal-ivory border-b border-bridal-beige py-4 px-5">
+            <CardTitle className="flex items-center justify-between gap-2 font-display italic text-[18px] text-bridal-charcoal">
               <span className="truncate">{previewVendorDetail.name}</span>
-              <Badge variant="outline" className="bg-purple-50/60 text-purple-600 border-purple-200/60 text-xs">
+              <Badge variant="outline" className="bg-bridal-cream text-bridal-gold-dark border-bridal-gold/45 font-bridal text-[10.5px] uppercase tracking-[0.2em] font-medium px-2.5 py-0.5">
                 {previewVendorDetail.type || (previewVendorDetail as any).subBusinessType}
               </Badge>
             </CardTitle>
@@ -283,18 +284,18 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
                 </div>
               </div>
               <div className="col-span-1 sm:col-span-2 space-y-2">
-                <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-600">
+                <div className="flex flex-wrap items-center gap-3 font-bridal text-[13px] text-bridal-charcoal/85">
                   <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {previewVendorDetail.location || previewVendorDetail.city}</span>
-                  <span className="flex items-center gap-1 text-gold-600"><Star className="w-3.5 h-3.5 fill-current" /> {previewVendorDetail.rating || 0}</span>
+                  <span className="flex items-center gap-1 text-bridal-gold-dark"><Star className="w-3.5 h-3.5 fill-bridal-gold text-bridal-gold" /> {previewVendorDetail.rating || 0}</span>
                   <Badge variant="outline" className="text-xs">Rs. {previewVendorDetail.minimumPrice || 0}</Badge>
                 </div>
                 {previewVendorDetail.description && (
-                  <p className="text-sm text-neutral-500 line-clamp-2">{previewVendorDetail.description}</p>
+                  <p className="font-bridal text-[12.5px] text-bridal-text-soft line-clamp-2 leading-relaxed">{previewVendorDetail.description}</p>
                 )}
                 {previewVendorDetail.amenities && previewVendorDetail.amenities.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {previewVendorDetail.amenities.slice(0, 6).map((a, i) => (
-                      <Badge key={i} variant="outline" className="text-[10px] bg-neutral-50 text-neutral-500 border-neutral-200/60">{a}</Badge>
+                      <Badge key={i} variant="outline" className="text-[10.5px] uppercase tracking-[0.18em] font-bridal font-medium bg-bridal-ivory text-bridal-charcoal/85 border-bridal-beige px-2 py-0.5">{a}</Badge>
                     ))}
                   </div>
                 )}
@@ -303,13 +304,13 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
 
             {(previewVendorDetail as any).packages && (previewVendorDetail as any).packages.length > 0 && (
               <div className="space-y-2">
-                <h4 className="text-xs font-semibold text-neutral-700 uppercase tracking-wider">Packages</h4>
+                <h4 className="font-bridal text-[10.5px] uppercase tracking-[0.32em] font-medium text-bridal-gold-dark">Packages</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {(previewVendorDetail as any).packages.map((pkg: any) => (
-                    <div key={pkg.id} className="rounded-lg border border-neutral-100 p-3 bg-neutral-50/50">
+                    <div key={pkg.id} className="rounded-md border border-bridal-beige p-3 bg-bridal-ivory">
                       <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm text-neutral-700">{pkg.name}</span>
-                        <span className="text-sm font-semibold text-purple-600">Rs. {pkg.price?.toLocaleString()}</span>
+                        <span className="font-display italic text-[15px] text-bridal-charcoal">{pkg.name}</span>
+                        <span className="font-display italic text-[16px] text-bridal-gold-dark">Rs. {pkg.price?.toLocaleString()}</span>
                       </div>
                     </div>
                   ))}
@@ -318,10 +319,15 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
             )}
 
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setPreviewVendorDetail(null)} className="rounded-xl text-sm h-9">
-                Close
-              </Button>
               <button
+                type="button"
+                onClick={() => setPreviewVendorDetail(null)}
+                className="inline-flex items-center justify-center h-10 px-5 rounded-[4px] border border-bridal-beige bg-bridal-cream hover:border-bridal-gold/55 hover:text-bridal-gold-dark text-bridal-charcoal font-bridal text-[11.5px] uppercase tracking-[0.22em] font-medium transition-colors"
+              >
+                Close
+              </button>
+              <button
+                type="button"
                 onClick={() => {
                   if (previewVendorDetail) {
                     const vType = (previewVendorDetail.type || (previewVendorDetail as any).subBusinessType || '').toString()
@@ -332,7 +338,7 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
                     })
                   }
                 }}
-                className="px-5 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg shadow-purple-500/25 transition-all duration-300"
+                className="inline-flex items-center justify-center h-10 px-6 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[11.5px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] transition-all duration-300"
               >
                 Use this vendor
               </button>
@@ -343,25 +349,34 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
 
       {/* Vendor Preview Modal */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="rounded-2xl">
+        <DialogContent className="rounded-md bg-bridal-cream border border-bridal-beige">
           <DialogHeader>
-            <DialogTitle>{previewVendor?.name}</DialogTitle>
-            <DialogDescription>{previewVendor?.type || previewVendor?.subBusinessType}</DialogDescription>
+            <DialogTitle className="font-display italic text-[22px] text-bridal-charcoal">{previewVendor?.name}</DialogTitle>
+            <DialogDescription className="font-bridal text-[12px] uppercase tracking-[0.22em] text-bridal-gold-dark">
+              {previewVendor?.type || previewVendor?.subBusinessType}
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="relative w-full h-44 overflow-hidden rounded-xl">
+          <div className="space-y-4">
+            <div className="relative w-full h-44 overflow-hidden rounded-md border border-bridal-beige">
               <img src={previewVendor?.images?.[0] || "/placeholder.jpg"} alt={previewVendor?.name || ''} className="h-full w-full object-cover" />
             </div>
-            <div className="flex items-center gap-3 text-sm text-neutral-600">
-              <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {previewVendor?.location || previewVendor?.city}</span>
-              <span className="flex items-center gap-1 text-gold-600"><Star className="w-3.5 h-3.5 fill-current" /> {previewVendor?.rating || 0}</span>
-              <Badge variant="outline" className="text-xs">Rs. {previewVendor?.minimumPrice || previewVendor?.price || 0}</Badge>
+            <div className="flex flex-wrap items-center gap-3 font-bridal text-[13px] text-bridal-charcoal/85">
+              <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-bridal-gold" /> {previewVendor?.location || previewVendor?.city}</span>
+              <span className="flex items-center gap-1.5"><Star className="w-3.5 h-3.5 fill-bridal-gold text-bridal-gold" /> <span className="font-display italic text-[15px] text-bridal-charcoal">{previewVendor?.rating || 0}</span></span>
+              <span className="font-display italic text-[15px] text-bridal-gold-dark">Rs. {previewVendor?.minimumPrice || previewVendor?.price || 0}</span>
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setPreviewOpen(false)} className="rounded-xl text-sm">Close</Button>
               <button
+                type="button"
+                onClick={() => setPreviewOpen(false)}
+                className="inline-flex items-center justify-center h-10 px-5 rounded-[4px] border border-bridal-beige bg-bridal-cream hover:border-bridal-gold/55 hover:text-bridal-gold-dark text-bridal-charcoal font-bridal text-[11.5px] uppercase tracking-[0.22em] font-medium transition-colors"
+              >
+                Close
+              </button>
+              <button
+                type="button"
                 onClick={() => { if (previewVendor) { setSelectedVendorId(String(previewVendor.id)); setPreviewOpen(false) } }}
-                className="px-5 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/25 transition-all duration-300"
+                className="inline-flex items-center justify-center h-10 px-6 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[11.5px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] transition-all duration-300"
               >
                 Select
               </button>

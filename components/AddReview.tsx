@@ -59,7 +59,7 @@ export default function AddReview({ vendorId, onAddReview }: AddReviewProps) {
           <label htmlFor="comment" className="block text-sm font-medium text-neutral-700 mb-2">Your Review</label>
           <Textarea id="comment" placeholder="Share your experience with this vendor..." className="w-full min-h-[100px] resize-y bg-white border-neutral-200" value={comment} onChange={(e) => setComment(e.target.value)} required />
         </div>
-        <Button type="submit" disabled={isSubmitting || !comment.trim()} className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-md transition-all duration-200">
+        <Button type="submit" disabled={isSubmitting || !comment.trim()} className="bg-gradient-to-r from-bridal-gold to-bridal-gold-dark hover:from-bridal-gold-dark hover:to-bridal-gold-dark text-white shadow-md transition-all duration-200">
           {isSubmitting ? "Submitting..." : "Submit Review"}
         </Button>
       </form>

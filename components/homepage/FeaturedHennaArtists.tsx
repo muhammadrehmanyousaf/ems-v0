@@ -20,7 +20,7 @@ export function FeaturedHennaArtists() {
             <SectionHeading title="Featured Henna Artists" subtitle="Mehndi Artistry" />
             <p className="text-muted-foreground mt-2">Beautiful henna designs for your wedding celebrations</p>
           </div>
-          <Link href="/henna-artists" className="text-purple-600 hover:text-purple-700 hover:underline hidden md:block font-medium">
+          <Link href="/henna-artists" className="text-bridal-gold-dark hover:text-bridal-gold-dark hover:underline hidden md:block font-medium">
             View all henna artists &rarr;
           </Link>
         </div>
@@ -53,6 +53,7 @@ export function FeaturedHennaArtists() {
                   capacity={vendor.capacity}
                   amenities={vendor.amenities}
                   sponsored={vendor.sponsored}
+                  business={vendor}
                 />
               </SwiperSlide>
             ))
@@ -60,7 +61,7 @@ export function FeaturedHennaArtists() {
         </FeaturedSwiper>
 
         <div className="text-center mt-8 md:hidden">
-          <Link href="/henna-artists" className="text-purple-600 hover:text-purple-700 hover:underline font-medium">
+          <Link href="/henna-artists" className="text-bridal-gold-dark hover:text-bridal-gold-dark hover:underline font-medium">
             View all henna artists &rarr;
           </Link>
         </div>

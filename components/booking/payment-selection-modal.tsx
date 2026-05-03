@@ -57,15 +57,20 @@ export default function PaymentSelectionModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl p-0">
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto rounded-md p-0 bg-bridal-cream border border-bridal-beige">
         {/* Header */}
-        <div className="bg-purple-600 px-6 py-5 rounded-t-2xl">
-          <DialogHeader className="text-left">
-            <DialogTitle className="text-white text-lg font-bold flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Complete Your Payment
+        <div className="relative bg-bridal-charcoal px-6 py-6 rounded-t-md overflow-hidden">
+          <div className="absolute inset-0 bg-mughal-jaal opacity-[0.08] pointer-events-none" />
+          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-bridal-gold to-transparent" />
+          <DialogHeader className="text-left relative">
+            <p className="font-bridal text-[10px] uppercase tracking-[0.32em] font-medium text-bridal-gold mb-1.5">
+              Final step
+            </p>
+            <DialogTitle className="font-display italic text-bridal-ivory text-[24px] sm:text-[26px] flex items-center gap-2.5 leading-tight">
+              <CreditCard className="h-5 w-5 text-bridal-gold" />
+              Complete your payment
             </DialogTitle>
-            <DialogDescription className="text-purple-200 text-sm mt-1">
+            <DialogDescription className="font-bridal text-bridal-ivory/75 text-[13px] mt-2">
               Choose how you&apos;d like to pay for your booking
             </DialogDescription>
           </DialogHeader>
@@ -73,69 +78,66 @@ export default function PaymentSelectionModal({
 
         <div className="p-6 space-y-5">
           {/* Booking Summary */}
-          <div className="rounded-xl bg-neutral-50 border border-neutral-200 p-4 space-y-3">
+          <div className="rounded-md bg-bridal-ivory border border-bridal-beige p-4 space-y-3">
             {bookingId && (
-              <div className="flex items-center gap-2 text-sm text-purple-700 bg-purple-50 rounded-lg px-3 py-2 border border-purple-100">
+              <div className="flex items-center gap-2 font-bridal text-[12px] text-bridal-gold-dark bg-bridal-cream rounded-[4px] px-3 py-2 border border-bridal-gold/45">
                 <CreditCard className="h-3.5 w-3.5" />
-                <span className="font-medium">Booking #{bookingId}</span>
+                <span className="font-medium uppercase tracking-[0.2em]">Booking #{bookingId}</span>
               </div>
             )}
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="flex items-center gap-2 text-neutral-600">
-                <Building className="h-3.5 w-3.5 text-neutral-400" />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex items-center gap-2 font-bridal text-[13px] text-bridal-charcoal/85">
+                <Building className="h-3.5 w-3.5 text-bridal-gold flex-shrink-0" />
                 <span className="truncate">{venue?.name || 'Business'}</span>
               </div>
-              <div className="flex items-center gap-2 text-neutral-600">
-                <Calendar className="h-3.5 w-3.5 text-neutral-400" />
+              <div className="flex items-center gap-2 font-bridal text-[13px] text-bridal-charcoal/85">
+                <Calendar className="h-3.5 w-3.5 text-bridal-gold flex-shrink-0" />
                 <span>{formData.bookingDate ? new Date(formData.bookingDate).toLocaleDateString() : "N/A"}</span>
               </div>
-              <div className="flex items-center gap-2 text-neutral-600">
-                <Clock className="h-3.5 w-3.5 text-neutral-400" />
+              <div className="flex items-center gap-2 font-bridal text-[13px] text-bridal-charcoal/85">
+                <Clock className="h-3.5 w-3.5 text-bridal-gold flex-shrink-0" />
                 <span>{formData.timeSlot ? getTimeSlotText(formData.timeSlot) : "N/A"}</span>
               </div>
-              <div className="flex items-center gap-2 text-neutral-600">
-                <Users className="h-3.5 w-3.5 text-neutral-400" />
+              <div className="flex items-center gap-2 font-bridal text-[13px] text-bridal-charcoal/85">
+                <Users className="h-3.5 w-3.5 text-bridal-gold flex-shrink-0" />
                 <span>{formData.guestCount} guests</span>
               </div>
             </div>
 
             {vendorDetails && vendorDetails.length > 0 && (
-              <div className="pt-2 border-t border-neutral-200 flex flex-wrap gap-1.5">
+              <div className="pt-2 border-t border-bridal-beige/70 flex flex-wrap gap-1.5">
                 {vendorDetails.map((vendor, index) => (
-                  <Badge key={index} variant="secondary" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                  <span key={index} className="inline-flex items-center font-bridal text-[10.5px] uppercase tracking-[0.18em] font-medium px-2.5 py-0.5 rounded-full bg-bridal-blush text-bridal-mauve border border-bridal-rose/45">
                     {vendor.name}
-                  </Badge>
+                  </span>
                 ))}
               </div>
             )}
           </div>
 
           {/* Payment Timeline */}
-          <div className="rounded-xl border border-neutral-200 bg-white p-4">
-            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-3">Payment Schedule</p>
+          <div className="rounded-md border border-bridal-beige bg-bridal-cream p-4">
+            <p className="font-bridal text-[10px] uppercase tracking-[0.28em] font-medium text-bridal-gold-dark mb-3">Payment schedule</p>
             <div className="flex items-center gap-0">
-              {/* Step 1 */}
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-white">1</span>
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-bridal-gold border border-bridal-gold-dark flex items-center justify-center flex-shrink-0">
+                  <span className="font-display italic text-[14px] text-bridal-charcoal">1</span>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold text-neutral-800 truncate">Down Payment</p>
-                  <p className="text-[10px] text-neutral-400">Due at booking</p>
-                  <p className="text-xs font-bold text-green-600">Rs. {downPaymentAmount.toLocaleString()}</p>
+                  <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark truncate">Down Payment</p>
+                  <p className="font-bridal text-[10px] text-bridal-text-soft">Due at booking</p>
+                  <p className="font-display italic text-[15px] text-bridal-charcoal mt-0.5">Rs. {downPaymentAmount.toLocaleString()}</p>
                 </div>
               </div>
-              {/* Connector */}
-              <ChevronRight className="h-4 w-4 text-neutral-300 flex-shrink-0 mx-1" />
-              {/* Step 2 */}
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <div className="w-7 h-7 rounded-full bg-neutral-200 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-neutral-500">2</span>
+              <ChevronRight className="h-4 w-4 text-bridal-gold/55 flex-shrink-0 mx-2" />
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-bridal-cream border border-bridal-beige flex items-center justify-center flex-shrink-0">
+                  <span className="font-display italic text-[14px] text-bridal-text-soft">2</span>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold text-neutral-800 truncate">Remaining</p>
-                  <p className="text-[10px] text-neutral-400">Before event</p>
-                  <p className="text-xs font-bold text-neutral-600">Rs. {remainingAmount.toLocaleString()}</p>
+                  <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-text-label truncate">Remaining</p>
+                  <p className="font-bridal text-[10px] text-bridal-text-soft">Before event</p>
+                  <p className="font-display italic text-[15px] text-bridal-charcoal/85 mt-0.5">Rs. {remainingAmount.toLocaleString()}</p>
                 </div>
               </div>
             </div>
@@ -143,68 +145,66 @@ export default function PaymentSelectionModal({
 
           {/* What's Included */}
           {(venue || (vendorDetails && vendorDetails.length > 0)) && (
-            <div className="rounded-xl border border-neutral-200 bg-white p-4">
-              <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">What&apos;s Included</p>
-              <div className="space-y-1.5">
+            <div className="rounded-md border border-bridal-beige bg-bridal-cream p-4">
+              <p className="font-bridal text-[10px] uppercase tracking-[0.28em] font-medium text-bridal-gold-dark mb-3">What&apos;s included</p>
+              <div className="space-y-2">
                 {venue && (
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 min-w-0">
-                      <Building className="h-3.5 w-3.5 text-purple-400 flex-shrink-0" />
-                      <span className="text-neutral-700 truncate">{venue.name}</span>
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-purple-50 text-purple-600 border-purple-200">Venue</Badge>
+                      <Building className="h-3.5 w-3.5 text-bridal-gold flex-shrink-0" />
+                      <span className="font-bridal text-[13px] text-bridal-charcoal truncate">{venue.name}</span>
+                      <span className="inline-flex items-center font-bridal text-[10px] uppercase tracking-[0.2em] font-medium px-2 py-0.5 rounded-full bg-bridal-cream text-bridal-gold-dark border border-bridal-gold/45">Venue</span>
                     </div>
                   </div>
                 )}
                 {vendorDetails?.map((vendor, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm">
+                  <div key={i} className="flex items-center justify-between">
                     <div className="flex items-center gap-2 min-w-0">
-                      <Users className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />
-                      <span className="text-neutral-700 truncate">{vendor.name}</span>
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-50 text-blue-600 border-blue-200">{vendor.type || 'Vendor'}</Badge>
+                      <Users className="h-3.5 w-3.5 text-bridal-mauve flex-shrink-0" />
+                      <span className="font-bridal text-[13px] text-bridal-charcoal truncate">{vendor.name}</span>
+                      <span className="inline-flex items-center font-bridal text-[10px] uppercase tracking-[0.2em] font-medium px-2 py-0.5 rounded-full bg-bridal-blush text-bridal-mauve border border-bridal-rose/45">{vendor.type || 'Vendor'}</span>
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="mt-2 pt-2 border-t border-neutral-100 flex justify-between text-sm font-semibold">
-                <span className="text-neutral-600">Total</span>
-                <span className="text-neutral-900">Rs. {totalPrice.toLocaleString()}</span>
+              <div className="mt-3 pt-3 border-t border-bridal-beige/70 flex items-baseline justify-between">
+                <span className="font-bridal text-[10.5px] uppercase tracking-[0.25em] font-medium text-bridal-text-label">Total</span>
+                <span className="font-display italic text-[22px] text-bridal-gold-dark">Rs. {totalPrice.toLocaleString()}</span>
               </div>
             </div>
           )}
 
           {/* Payment Options */}
           <div className="space-y-3">
-            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Choose Payment Option</p>
+            <p className="font-bridal text-[10px] uppercase tracking-[0.28em] font-medium text-bridal-gold-dark">Choose payment option</p>
             {/* Down Payment */}
             <button
               type="button"
               onClick={() => handlePaymentSelect('down_payment')}
               disabled={loading}
-              className={`w-full text-left rounded-xl border-2 p-5 transition-all duration-200 ${
+              className={`w-full text-left rounded-md border p-5 transition-all duration-300 ${
                 selectedPaymentType === 'down_payment'
-                  ? 'border-green-500 bg-green-50'
-                  : 'border-neutral-200 bg-white hover:border-green-300'
+                  ? 'border-bridal-sage bg-bridal-sage/15 shadow-[0_14px_32px_-18px_rgba(63,107,67,0.4)]'
+                  : 'border-bridal-beige bg-bridal-ivory hover:border-bridal-sage hover:bg-bridal-sage/10'
               }`}
             >
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
-                  <Banknote className="h-5 w-5 text-green-600" />
+                <div className="w-11 h-11 rounded-full bg-bridal-sage/25 border border-bridal-sage/40 flex items-center justify-center flex-shrink-0">
+                  <Banknote className="h-5 w-5 text-[#3F6B43]" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-base font-bold text-neutral-900">Pay Down Payment</h4>
-                    <span className="text-lg font-bold text-green-600">Rs. {downPaymentAmount.toLocaleString()}</span>
+                  <div className="flex items-end justify-between gap-3">
+                    <h4 className="font-display italic text-[18px] text-bridal-charcoal leading-tight">Pay down payment</h4>
+                    <span className="font-display italic text-[20px] text-[#3F6B43] shrink-0">Rs. {downPaymentAmount.toLocaleString()}</span>
                   </div>
-                  <p className="text-xs text-neutral-500 mt-0.5">Reserve your booking now, pay the rest before the event</p>
-                  <div className="mt-3 space-y-1 text-sm">
-                    <div className="flex justify-between text-neutral-500">
-                      <span>Remaining balance (due later)</span>
-                      <span className="font-medium text-neutral-700">Rs. {remainingAmount.toLocaleString()}</span>
-                    </div>
+                  <p className="font-bridal text-[12.5px] text-bridal-text-soft mt-2 leading-relaxed">Reserve your booking now, pay the rest before the event.</p>
+                  <div className="mt-3 pt-3 border-t border-bridal-beige/70 flex items-center justify-between font-bridal text-[12px]">
+                    <span className="text-bridal-text-soft">Remaining balance (due later)</span>
+                    <span className="font-medium text-bridal-charcoal">Rs. {remainingAmount.toLocaleString()}</span>
                   </div>
                   {selectedPaymentType === 'down_payment' && (
-                    <div className="mt-2 flex items-center gap-1.5 text-xs text-green-600 font-medium">
-                      <Check className="h-3.5 w-3.5" />
+                    <div className="mt-3 inline-flex items-center gap-1.5 font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-[#3F6B43]">
+                      <Check className="h-3.5 w-3.5" strokeWidth={3} />
                       Selected
                     </div>
                   )}
@@ -217,25 +217,25 @@ export default function PaymentSelectionModal({
               type="button"
               onClick={() => handlePaymentSelect('full_payment')}
               disabled={loading}
-              className={`w-full text-left rounded-xl border-2 p-5 transition-all duration-200 ${
+              className={`w-full text-left rounded-md border p-5 transition-all duration-300 ${
                 selectedPaymentType === 'full_payment'
-                  ? 'border-purple-500 bg-purple-50'
-                  : 'border-neutral-200 bg-white hover:border-purple-300'
+                  ? 'border-bridal-gold-dark bg-bridal-cream shadow-[0_14px_32px_-18px_rgba(176,125,84,0.5)]'
+                  : 'border-bridal-beige bg-bridal-ivory hover:border-bridal-gold/55 hover:bg-bridal-cream'
               }`}
             >
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0">
-                  <CreditCard className="h-5 w-5 text-purple-600" />
+                <div className="w-11 h-11 rounded-full bg-bridal-gold/15 border border-bridal-gold/45 flex items-center justify-center flex-shrink-0">
+                  <CreditCard className="h-5 w-5 text-bridal-gold-dark" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-base font-bold text-neutral-900">Pay Full Amount</h4>
-                    <span className="text-lg font-bold text-purple-600">Rs. {totalPrice.toLocaleString()}</span>
+                  <div className="flex items-end justify-between gap-3">
+                    <h4 className="font-display italic text-[18px] text-bridal-charcoal leading-tight">Pay full amount</h4>
+                    <span className="font-display italic text-[20px] text-bridal-gold-dark shrink-0">Rs. {totalPrice.toLocaleString()}</span>
                   </div>
-                  <p className="text-xs text-neutral-500 mt-0.5">Complete the full payment in one go — no remaining balance</p>
+                  <p className="font-bridal text-[12.5px] text-bridal-text-soft mt-2 leading-relaxed">Complete the full payment in one go — no remaining balance.</p>
                   {selectedPaymentType === 'full_payment' && (
-                    <div className="mt-2 flex items-center gap-1.5 text-xs text-purple-600 font-medium">
-                      <Check className="h-3.5 w-3.5" />
+                    <div className="mt-3 inline-flex items-center gap-1.5 font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
+                      <Check className="h-3.5 w-3.5" strokeWidth={3} />
                       Selected
                     </div>
                   )}
@@ -245,8 +245,8 @@ export default function PaymentSelectionModal({
           </div>
 
           {/* Security note */}
-          <div className="flex items-center gap-2 text-xs text-neutral-400 px-1">
-            <Shield className="w-3.5 h-3.5 flex-shrink-0" />
+          <div className="flex items-center gap-2 font-bridal text-[11.5px] text-bridal-text-soft px-1">
+            <Shield className="w-3.5 h-3.5 flex-shrink-0 text-bridal-gold" />
             <span>Payments are processed securely via Stripe. Your data is encrypted.</span>
           </div>
         </div>

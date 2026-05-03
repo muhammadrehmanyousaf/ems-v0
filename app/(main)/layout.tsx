@@ -1,9 +1,7 @@
 import "../globals.css"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
-import { PageTransition } from "@/components/ui/page-transition"
+import { PublicChrome } from "@/components/public-chrome"
 
 const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
@@ -21,13 +19,7 @@ export default async function RootLayout({
   return (
     <div lang="en" suppressHydrationWarning>
       <div className={inter.className} suppressHydrationWarning>
-        <Header />
-        <main className="min-h-screen w-full">
-          <PageTransition>
-            {children}
-          </PageTransition>
-        </main>
-        <Footer />
+        <PublicChrome>{children}</PublicChrome>
       </div>
     </div>
   )

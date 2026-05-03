@@ -22,11 +22,11 @@ const openings = [
 export default function CareersPage() {
   return (
     <div className="min-h-screen">
-      <section className="bg-gradient-to-br from-purple-600 to-purple-800 text-white py-16 px-4">
+      <section className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <Briefcase className="w-12 h-12 mx-auto mb-4 text-purple-200" />
+          <Briefcase className="w-12 h-12 mx-auto mb-4 text-bridal-gold/40" />
           <h1 className="text-4xl sm:text-5xl font-bold mb-4">Join Our Team</h1>
-          <p className="text-lg text-purple-100 max-w-xl mx-auto">
+          <p className="text-lg text-bridal-cream max-w-xl mx-auto">
             Help us revolutionize the wedding industry in Pakistan. We&apos;re building the future of event planning.
           </p>
         </div>
@@ -39,8 +39,8 @@ export default function CareersPage() {
             {perks.map((perk) => (
               <Card key={perk.title} className="border-0 shadow-sm text-center">
                 <CardContent className="p-6">
-                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-                    <perk.icon className="w-6 h-6 text-purple-600" />
+                  <div className="w-12 h-12 bg-bridal-gold/15 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <perk.icon className="w-6 h-6 text-bridal-gold-dark" />
                   </div>
                   <h3 className="font-semibold text-neutral-900 mb-2">{perk.title}</h3>
                   <p className="text-sm text-neutral-600">{perk.desc}</p>
@@ -67,7 +67,7 @@ export default function CareersPage() {
                     </div>
                   </div>
                   <Link href="/contact">
-                    <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white gap-1">
+                    <Button size="sm" className="bg-bridal-gold hover:bg-bridal-gold-dark text-white gap-1">
                       Apply <ArrowRight className="w-3 h-3" />
                     </Button>
                   </Link>

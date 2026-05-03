@@ -61,7 +61,7 @@ const PaymentsTable = ({ payments, loading, onRefresh }: PaymentsTableProps) => 
                         className={cn(
                             'px-4 py-2 text-sm font-medium border-b-2 transition-colors',
                             sourceFilter === key
-                                ? 'border-purple-600 text-purple-700'
+                                ? 'border-bridal-gold-dark text-bridal-gold-dark'
                                 : 'border-transparent text-muted-foreground hover:text-neutral-700'
                         )}
                     >

@@ -77,6 +77,33 @@ const BASE_SECTIONS = [
   { id: "availability", label: "Availability" },
 ] as const;
 
+// Bridal stat tile — used in vendor info chips grid
+function BridalStatTile({
+  icon,
+  iconBg,
+  iconColor,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  iconBg: string;
+  iconColor: string;
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-3 bg-bridal-ivory border border-bridal-beige rounded-md px-4 py-3.5 hover:border-bridal-gold/45 transition-colors">
+      <div className={`w-10 h-10 rounded-full ${iconBg} ${iconColor} inline-flex items-center justify-center flex-shrink-0`}>
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">{label}</p>
+        <p className="font-bridal text-[13px] font-medium text-bridal-charcoal truncate mt-0.5">{value}</p>
+      </div>
+    </div>
+  );
+}
+
 // Animated review bar component
 function AnimatedBar({
   percentage,
@@ -94,8 +121,11 @@ function AnimatedBar({
 
   return (
     <div ref={ref} className="flex items-center gap-3">
-      <span className="text-sm font-medium text-neutral-600 w-8">{label}</span>
-      <div className="flex-1 h-2.5 bg-neutral-100 rounded-full overflow-hidden">
+      <span className="font-display italic text-[15px] text-bridal-charcoal w-8 flex items-center gap-1">
+        {label}
+        <Star className="w-3 h-3 fill-bridal-gold text-bridal-gold" />
+      </span>
+      <div className="flex-1 h-2 bg-bridal-beige rounded-full overflow-hidden">
         <motion.div
           className={`h-full rounded-full ${color}`}
           initial={{ width: 0 }}
@@ -103,7 +133,7 @@ function AnimatedBar({
           transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
         />
       </div>
-      <span className="text-xs text-neutral-500 w-6 text-right">{count}</span>
+      <span className="font-bridal text-[11px] tabular-nums text-bridal-text-soft w-6 text-right">{count}</span>
     </div>
   );
 }
@@ -122,22 +152,8 @@ function CircularRating({
   const progress = (rating / 5) * circumference;
   const offset = circumference - progress;
 
-  const ratingColor =
-    rating >= 4.5
-      ? "text-emerald-500"
-      : rating >= 4
-        ? "text-purple-500"
-        : rating >= 3
-          ? "text-gold-500"
-          : "text-neutral-400";
-  const strokeColor =
-    rating >= 4.5
-      ? "#10b981"
-      : rating >= 4
-        ? "#8b5cf6"
-        : rating >= 3
-          ? "#D4AF37"
-          : "#9ca3af";
+  const ratingColor = "text-bridal-gold-dark";
+  const strokeColor = "#C9956A"; // bridal gold
   const ratingLabel =
     rating >= 4.5
       ? "Exceptional"
@@ -161,7 +177,7 @@ function CircularRating({
             cy="50"
             r="40"
             fill="none"
-            stroke="#f3f4f6"
+            stroke="#EDD9C3"
             strokeWidth="8"
           />
           <motion.circle
@@ -183,13 +199,13 @@ function CircularRating({
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={`text-2xl font-bold ${ratingColor}`}>
+          <span className="font-display italic text-[28px] text-bridal-charcoal">
             {rating.toFixed(1)}
           </span>
-          <span className="text-[10px] text-neutral-400">/5</span>
+          <span className="font-bridal text-[10px] uppercase tracking-[0.2em] text-bridal-text-soft">/5</span>
         </div>
       </div>
-      <span className={`text-sm font-semibold ${ratingColor}`}>
+      <span className="font-bridal text-[11px] uppercase tracking-[0.25em] font-medium text-bridal-gold-dark">
         {ratingLabel}
       </span>
     </div>
@@ -206,32 +222,34 @@ function FeatureGroup({ label, items }: { label: string; items: string[] }) {
   const overflow = items.length - VISIBLE;
 
   return (
-    <div className="space-y-1.5">
-      <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">
+    <div className="space-y-2">
+      <p className="font-bridal text-[10.5px] font-medium uppercase tracking-[0.25em] text-bridal-text-label">
         {label}
       </p>
       <div className="flex flex-wrap gap-1.5">
         {visible.map((item, i) => (
           <span
             key={i}
-            className="inline-flex items-center gap-1 bg-purple-50 text-purple-700 text-xs font-medium px-2.5 py-1 rounded-full border border-purple-100"
+            className="inline-flex items-center gap-1 bg-bridal-ivory text-bridal-charcoal text-[11.5px] font-medium px-2.5 py-1 rounded-full border border-bridal-beige"
           >
-            <CheckCircle className="w-3 h-3 shrink-0" />
+            <CheckCircle className="w-3 h-3 shrink-0 text-bridal-gold" />
             {item}
           </span>
         ))}
         {!expanded && overflow > 0 && (
           <button
+            type="button"
             onClick={() => setExpanded(true)}
-            className="inline-flex items-center bg-neutral-100 hover:bg-purple-50 text-neutral-500 hover:text-purple-600 text-xs font-medium px-2.5 py-1 rounded-full border border-neutral-200 transition-colors"
+            className="inline-flex items-center bg-bridal-cream hover:bg-bridal-blush text-bridal-gold-dark hover:text-bridal-mauve text-[11.5px] font-medium px-2.5 py-1 rounded-full border border-bridal-gold/45 transition-colors"
           >
             +{overflow} more
           </button>
         )}
         {expanded && overflow > 0 && (
           <button
+            type="button"
             onClick={() => setExpanded(false)}
-            className="inline-flex items-center bg-neutral-100 hover:bg-purple-50 text-neutral-500 hover:text-purple-600 text-xs font-medium px-2.5 py-1 rounded-full border border-neutral-200 transition-colors"
+            className="inline-flex items-center bg-bridal-cream hover:bg-bridal-blush text-bridal-gold-dark hover:text-bridal-mauve text-[11.5px] font-medium px-2.5 py-1 rounded-full border border-bridal-gold/45 transition-colors"
           >
             Show less
           </button>
@@ -273,34 +291,42 @@ function PackageCard({
       : [];
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-neutral-100 bg-white shadow-sm hover:shadow-lg transition-all duration-300">
-      {/* Top accent */}
-      <div className="h-1 bg-gradient-to-r from-purple-400 via-purple-600 to-purple-700" />
+    <div className="group relative overflow-hidden rounded-md border border-bridal-beige bg-bridal-cream shadow-[0_18px_44px_-32px_rgba(176,125,84,0.4)] hover:shadow-[0_28px_52px_-30px_rgba(176,125,84,0.55)] hover:border-bridal-gold/55 transition-all duration-500">
+      {/* Gold accent strip */}
+      <div className="h-[3px] bg-gradient-to-r from-transparent via-bridal-gold to-transparent" />
+
+      {/* Corner brackets */}
+      <div className="absolute top-3 left-3 w-3.5 h-3.5 border-l border-t border-bridal-gold/45 pointer-events-none" />
+      <div className="absolute top-3 right-3 w-3.5 h-3.5 border-r border-t border-bridal-gold/45 pointer-events-none" />
+
       <div className="p-5 sm:p-6">
-        {/* Header */}
         <div className="flex items-start justify-between gap-4 mb-5">
-          <h3 className="text-xl font-bold text-neutral-900 leading-tight">{pkg.name}</h3>
+          <div className="min-w-0">
+            <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold-dark font-medium mb-1.5">Package</p>
+            <h3 className="font-display italic text-[22px] sm:text-[24px] text-bridal-charcoal leading-tight">{pkg.name}</h3>
+          </div>
           <div className="shrink-0 text-right">
-            <p className="text-2xl font-extrabold text-purple-700">{formatPrice(pkg.price)}</p>
-            <p className="text-xs text-neutral-400 mt-0.5">{pricingLabel}</p>
+            <p className="font-display italic text-[26px] sm:text-[28px] text-bridal-gold-dark leading-none">{formatPrice(pkg.price)}</p>
+            <p className="font-bridal text-[10px] uppercase tracking-[0.22em] text-bridal-text-soft mt-1">{pricingLabel}</p>
           </div>
         </div>
 
-        {/* Feature groups */}
         {groups.length > 0 && (
-          <div className="space-y-4 mb-5 pt-4 border-t border-neutral-100">
+          <div className="space-y-4 mb-5 pt-5 border-t border-bridal-beige/70">
             {groups.map((g, gi) => (
               <FeatureGroup key={gi} label={g.label} items={g.items} />
             ))}
           </div>
         )}
 
-        <Button
+        <button
+          type="button"
           onClick={onBook}
-          className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl font-semibold shadow-sm shadow-purple-200/50"
+          className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] hover:shadow-[0_14px_30px_-12px_rgba(176,125,84,0.7)] transition-all duration-300"
         >
-          Select Package
-        </Button>
+          <CalendarCheck className="w-3.5 h-3.5" />
+          Select package
+        </button>
       </div>
     </div>
   );
@@ -869,7 +895,7 @@ export default function VendorDetailsMobile({
   }));
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-bridal-ivory">
       {/* ===== PARALLAX HERO SECTION ===== */}
       <div
         ref={heroRef}
@@ -901,9 +927,9 @@ export default function VendorDetailsMobile({
           </Swiper>
         </motion.div>
 
-        {/* Multi-layer gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-purple-950/60 via-purple-900/40 to-purple-950/80 z-10" />
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-950/30 via-transparent to-purple-950/30 z-10" />
+        {/* Bridal multi-layer vignette */}
+        <div className="absolute inset-0 bg-gradient-to-t from-bridal-charcoal/85 via-bridal-charcoal/40 to-bridal-charcoal/55 z-10" />
+        <div className="absolute inset-0 bg-mughal-jaal opacity-[0.08] pointer-events-none z-10" />
 
         {/* Top navigation bar */}
         <motion.div
@@ -914,7 +940,7 @@ export default function VendorDetailsMobile({
             variant="ghost"
             size="sm"
             onClick={() => router.back()}
-            className="p-2.5 rounded-full bg-black/20 backdrop-blur-md border border-white/10 text-white hover:bg-black/40 hover:text-white"
+            className="p-2.5 rounded-full bg-bridal-charcoal/40 backdrop-blur-md border border-bridal-ivory/15 text-bridal-ivory hover:bg-bridal-charcoal/60 hover:text-bridal-ivory"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
@@ -923,17 +949,17 @@ export default function VendorDetailsMobile({
               variant="ghost"
               size="sm"
               onClick={handleFavoriteToggle}
-              className="p-2.5 rounded-full bg-black/20 backdrop-blur-md border border-white/10 text-white hover:bg-black/40 hover:text-white"
+              className="p-2.5 rounded-full bg-bridal-charcoal/40 backdrop-blur-md border border-bridal-ivory/15 text-bridal-ivory hover:bg-bridal-charcoal/60 hover:text-bridal-ivory"
             >
               <Heart
-                className={`w-5 h-5 ${isFavorite ? "fill-red-500 text-red-500" : ""}`}
+                className={`w-5 h-5 ${isFavorite ? "fill-bridal-coral text-bridal-coral" : ""}`}
               />
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleShare}
-              className="p-2.5 rounded-full bg-black/20 backdrop-blur-md border border-white/10 text-white hover:bg-black/40 hover:text-white"
+              className="p-2.5 rounded-full bg-bridal-charcoal/40 backdrop-blur-md border border-bridal-ivory/15 text-bridal-ivory hover:bg-bridal-charcoal/60 hover:text-bridal-ivory"
             >
               <Share2 className="w-5 h-5" />
             </Button>
@@ -951,54 +977,57 @@ export default function VendorDetailsMobile({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
             >
-              <div className="flex items-center gap-2 mb-3">
-                <Badge className="bg-white/15 text-white border-white/20 backdrop-blur-md text-xs px-3 py-1">
-                  <VendorIcon className="w-3.5 h-3.5 mr-1.5" />
+              <div className="flex items-center gap-3 mb-5">
+                <div className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-bridal-gold/95 text-bridal-charcoal">
+                  <VendorIcon className="w-4 h-4" />
+                </div>
+                <span className="font-bridal text-[11px] sm:text-[12px] uppercase tracking-[0.4em] text-bridal-ivory/95">
                   {vendor.type || "Vendor"}
-                </Badge>
+                </span>
                 {vendor.sponsored && (
-                  <Badge className="bg-gold-500/90 text-white border-0 text-xs px-3 py-1">
-                    <Crown className="w-3.5 h-3.5 mr-1" />
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-bridal-gold/95 text-bridal-charcoal text-[10px] font-bridal font-medium uppercase tracking-[0.22em]">
+                    <Crown className="w-3 h-3" />
                     Featured
-                  </Badge>
+                  </span>
                 )}
               </div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-bold text-white mb-3 leading-tight">
+              <h1 className="font-display italic text-[40px] sm:text-[54px] lg:text-[68px] leading-[0.98] text-bridal-ivory mb-5 drop-shadow-[0_4px_30px_rgba(0,0,0,0.35)]">
                 {vendor.name}
               </h1>
-              <div className="flex flex-wrap items-center gap-4 text-white/90 mb-5">
-                <span className="flex items-center gap-1.5 text-sm sm:text-base">
-                  <MapPin className="w-4 h-4 text-purple-300" />
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-6 font-bridal text-bridal-ivory/95">
+                <span className="flex items-center gap-2 text-[14px]">
+                  <MapPin className="w-4 h-4 text-bridal-gold" />
                   {vendor.location || vendor.city}
                 </span>
-                <span className="flex items-center gap-1.5 text-sm sm:text-base">
-                  <Star className="w-4 h-4 text-gold-400 fill-gold-400" />
-                  {(liveAvgRating ?? vendor.rating)?.toFixed(1)} ({allReviews.length} reviews)
+                <span className="flex items-center gap-2 text-[14px]">
+                  <Star className="w-4 h-4 text-bridal-gold fill-bridal-gold" />
+                  <span className="font-display italic text-[18px]">{(liveAvgRating ?? vendor.rating)?.toFixed(1)}</span>
+                  <span className="text-bridal-ivory/70 text-[12px]">({allReviews.length} reviews)</span>
                 </span>
-                <span className="flex items-center gap-1.5 text-sm sm:text-base">
-                  <Shield className="w-4 h-4 text-emerald-400" />
+                <span className="flex items-center gap-2 text-[14px]">
+                  <Shield className="w-4 h-4 text-bridal-sage" />
                   Verified
                 </span>
               </div>
 
               {/* Price + CTA */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div className="text-white">
-                  <span className="text-xs text-white/60 uppercase tracking-wider">
+                <div className="text-bridal-ivory">
+                  <span className="font-bridal text-[10.5px] uppercase tracking-[0.32em] font-medium text-bridal-gold">
                     Starting from
                   </span>
-                  <p className="text-2xl sm:text-3xl font-bold text-gold-300">
+                  <p className="font-display italic text-[28px] sm:text-[32px] text-bridal-ivory leading-none mt-1">
                     {startingPrice ? formatPrice(startingPrice) : "See Packages"}
                   </p>
                 </div>
-                <Button
+                <button
+                  type="button"
                   onClick={handleBookNow}
-                  size="lg"
-                  className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-8 py-3 text-base font-semibold rounded-xl shadow-lg shadow-purple-900/30 hover:shadow-xl transition-all duration-300"
+                  className="inline-flex items-center gap-2 h-12 px-7 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium shadow-[0_14px_30px_-12px_rgba(176,125,84,0.65)] hover:shadow-[0_18px_36px_-12px_rgba(176,125,84,0.8)] transition-all duration-300"
                 >
-                  <CalendarCheck className="w-5 h-5 mr-2" />
-                  Book Now
-                </Button>
+                  <CalendarCheck className="w-4 h-4" />
+                  Book this vendor
+                </button>
               </div>
             </motion.div>
           </div>
@@ -1007,8 +1036,9 @@ export default function VendorDetailsMobile({
         {/* Image counter badge */}
         <div className="absolute bottom-6 right-6 z-20">
           <button
+            type="button"
             onClick={() => openLightbox(0)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-black/30 backdrop-blur-md rounded-full text-white text-xs border border-white/10 hover:bg-black/50 transition-colors"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-bridal-charcoal/40 backdrop-blur-md rounded-full text-bridal-ivory font-bridal text-[11px] uppercase tracking-[0.22em] font-medium border border-bridal-ivory/15 hover:bg-bridal-charcoal/60 hover:border-bridal-gold/55 transition-colors"
           >
             <Camera className="w-3.5 h-3.5" />
             {galleryImages.length} Photos
@@ -1019,25 +1049,26 @@ export default function VendorDetailsMobile({
       {/* ===== SCROLL-SPY NAVIGATION ===== */}
       <div
         ref={scrollSpyNavRef}
-        className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-purple-100/50 shadow-sm"
+        className="sticky top-0 z-30 bg-bridal-cream/95 backdrop-blur-xl border-b border-bridal-beige shadow-[0_4px_20px_-16px_rgba(176,125,84,0.45)]"
       >
         <div className="max-w-5xl mx-auto">
-          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none px-4 py-2">
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none px-4 py-2.5">
             {SECTIONS.map((section) => (
               <button
                 key={section.id}
+                type="button"
                 onClick={() => scrollToSection(section.id)}
-                className={`relative px-4 py-2 text-sm font-medium rounded-full whitespace-nowrap transition-all duration-300 ${
+                className={`relative px-4 py-2 font-bridal text-[11px] uppercase tracking-[0.22em] font-medium rounded-full whitespace-nowrap transition-all duration-300 ${
                   activeSection === section.id
-                    ? "text-purple-700 bg-purple-50"
-                    : "text-neutral-500 hover:text-purple-600 hover:bg-purple-50/50"
+                    ? "text-bridal-gold-dark bg-bridal-cream"
+                    : "text-bridal-text-soft hover:text-bridal-gold-dark hover:bg-bridal-blush"
                 }`}
               >
                 {section.label}
                 {activeSection === section.id && (
                   <motion.div
                     layoutId="scrollspy-indicator"
-                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-purple-600 rounded-full"
+                    className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-bridal-gold rounded-full"
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
                 )}
@@ -1056,94 +1087,67 @@ export default function VendorDetailsMobile({
             <section ref={overviewRef} id="overview">
               <ScrollReveal>
                 <div className="space-y-5">
-                  {/* Key facts chips */}
+                  {/* Key facts chips — bridal stat tiles */}
                   <div className="grid grid-cols-2 gap-2.5">
-                    {/* Type */}
-                    <div className="flex items-center gap-3 bg-purple-50 border border-purple-100 rounded-2xl px-4 py-3.5">
-                      <div className="w-9 h-9 rounded-xl bg-purple-500 flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <VendorIcon className="w-4 h-4 text-white" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[9px] text-purple-400 uppercase tracking-widest font-semibold">Type</p>
-                        <p className="text-sm font-bold text-purple-900 truncate">{vendor.type || "Vendor"}</p>
-                      </div>
-                    </div>
-
-                    {/* Starting Price */}
-                    <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-3.5">
-                      <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <span className="text-white font-extrabold text-xs">Rs</span>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[9px] text-emerald-500 uppercase tracking-widest font-semibold">Starting</p>
-                        <p className="text-sm font-bold text-emerald-900 truncate">{startingPrice ? formatPrice(startingPrice) : "See Packages"}</p>
-                      </div>
-                    </div>
-
-                    {/* Capacity */}
+                    <BridalStatTile
+                      icon={<VendorIcon className="w-4 h-4" />}
+                      iconBg="bg-bridal-gold/15"
+                      iconColor="text-bridal-gold-dark"
+                      label="Type"
+                      value={vendor.type || "Vendor"}
+                    />
+                    <BridalStatTile
+                      icon={<span className="font-bridal font-medium text-[11px]">Rs</span>}
+                      iconBg="bg-bridal-blush"
+                      iconColor="text-bridal-mauve"
+                      label="Starting"
+                      value={startingPrice ? formatPrice(startingPrice) : "See Packages"}
+                    />
                     {["Wedding venue", "Catering", "Decorator"].includes(vendor.type ?? "") && (vendor.minCapacity || vendor.maxCapacity || vendor.capacity) && (
-                      <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3.5">
-                        <div className="w-9 h-9 rounded-xl bg-blue-500 flex items-center justify-center flex-shrink-0 shadow-sm">
-                          <Users className="w-4 h-4 text-white" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[9px] text-blue-400 uppercase tracking-widest font-semibold">Capacity</p>
-                          <p className="text-sm font-bold text-blue-900 truncate">
-                            {vendor.minCapacity && vendor.maxCapacity
-                              ? `${vendor.minCapacity}–${vendor.maxCapacity}`
-                              : vendor.maxCapacity ?? vendor.minCapacity ?? vendor.capacity} Guests
-                          </p>
-                        </div>
-                      </div>
+                      <BridalStatTile
+                        icon={<Users className="w-4 h-4" />}
+                        iconBg="bg-bridal-rose/30"
+                        iconColor="text-bridal-mauve"
+                        label="Capacity"
+                        value={`${vendor.minCapacity && vendor.maxCapacity
+                          ? `${vendor.minCapacity}–${vendor.maxCapacity}`
+                          : vendor.maxCapacity ?? vendor.minCapacity ?? vendor.capacity} Guests`}
+                      />
                     )}
-
-                    {/* Min. Order (Stationery) */}
                     {isStationery && vendor.minCapacity && (
-                      <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3.5">
-                        <div className="w-9 h-9 rounded-xl bg-blue-500 flex items-center justify-center flex-shrink-0 shadow-sm">
-                          <PackageIcon className="w-4 h-4 text-white" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[9px] text-blue-400 uppercase tracking-widest font-semibold">Min. Order</p>
-                          <p className="text-sm font-bold text-blue-900">{vendor.minCapacity} pcs</p>
-                        </div>
-                      </div>
+                      <BridalStatTile
+                        icon={<PackageIcon className="w-4 h-4" />}
+                        iconBg="bg-bridal-rose/30"
+                        iconColor="text-bridal-mauve"
+                        label="Min. Order"
+                        value={`${vendor.minCapacity} pcs`}
+                      />
                     )}
-
-                    {/* Advance */}
                     {vendor.downPayment && (
-                      <div className="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3.5">
-                        <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center flex-shrink-0 shadow-sm">
-                          <span className="text-white font-extrabold text-xs">Rs</span>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[9px] text-amber-500 uppercase tracking-widest font-semibold">Advance</p>
-                          <p className="text-sm font-bold text-amber-900 truncate">
-                            {vendor.downPaymentType === "Percentage" ? `${vendor.downPayment}%` : formatPrice(vendor.downPayment)}
-                          </p>
-                        </div>
-                      </div>
+                      <BridalStatTile
+                        icon={<span className="font-bridal font-medium text-[11px]">Rs</span>}
+                        iconBg="bg-bridal-coral/20"
+                        iconColor="text-bridal-coral"
+                        label="Advance"
+                        value={vendor.downPaymentType === "Percentage" ? `${vendor.downPayment}%` : formatPrice(vendor.downPayment)}
+                      />
                     )}
-
-                    {/* Cancellation */}
                     {cancellationPolicy && (
-                      <div className="flex items-center gap-3 bg-teal-50 border border-teal-100 rounded-2xl px-4 py-3.5">
-                        <div className="w-9 h-9 rounded-xl bg-teal-500 flex items-center justify-center flex-shrink-0 shadow-sm">
-                          <Clock className="w-4 h-4 text-white" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[9px] text-teal-500 uppercase tracking-widest font-semibold">Cancellation</p>
-                          <p className="text-sm font-bold text-teal-900 truncate">{cancellationPolicy}</p>
-                        </div>
-                      </div>
+                      <BridalStatTile
+                        icon={<Clock className="w-4 h-4" />}
+                        iconBg="bg-bridal-sage/25"
+                        iconColor="text-[#3F6B43]"
+                        label="Cancellation"
+                        value={cancellationPolicy}
+                      />
                     )}
                   </div>
 
                   {/* Description */}
                   {vendor.description ? (
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                      <h2 className="text-base font-bold text-gray-900 mb-3">About</h2>
-                      <p className="text-sm text-gray-600 leading-relaxed break-words">
+                    <div className="bg-bridal-cream rounded-md border border-bridal-beige shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)] p-5">
+                      <h2 className="font-display italic text-[20px] text-bridal-charcoal mb-3">About</h2>
+                      <p className="text-sm text-bridal-charcoal/85 leading-relaxed break-words">
                         {vendor.description}
                       </p>
                     </div>
@@ -1151,13 +1155,13 @@ export default function VendorDetailsMobile({
 
                   {/* subBusinessType — multi-select types (Photographer, Decorator, Henna, Makeup) */}
                   {isSubBizTypeMulti && subBizTypeValues.length > 0 && (
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                      <h3 className="text-base font-bold text-gray-900 mb-3">
+                    <div className="bg-bridal-cream rounded-md border border-bridal-beige shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)] p-5">
+                      <h3 className="font-display italic text-[20px] text-bridal-charcoal mb-3">
                         {subBizTypeLabel}
                       </h3>
                       <div className="flex flex-wrap gap-2">
                         {subBizTypeValues.map((val, i) => (
-                          <Badge key={i} variant="secondary" className="text-sm px-3 py-1 bg-purple-50 text-purple-700 border-purple-200">
+                          <Badge key={i} variant="secondary" className="text-sm px-3 py-1 bg-bridal-blush text-bridal-mauve border-bridal-rose/45">
                             {val}
                           </Badge>
                         ))}
@@ -1167,8 +1171,8 @@ export default function VendorDetailsMobile({
 
                   {/* Expertise / Specializations */}
                   {Array.isArray(vendor.expertise) && vendor.expertise.length > 0 && (
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                      <h3 className="text-base font-bold text-gray-900 mb-3">
+                    <div className="bg-bridal-cream rounded-md border border-bridal-beige shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)] p-5">
+                      <h3 className="font-display italic text-[20px] text-bridal-charcoal mb-3">
                         {expertiseLabel}
                       </h3>
                       {expertiseGroups.length > 0 ? (
@@ -1177,15 +1181,15 @@ export default function VendorDetailsMobile({
                             const picked = items.filter((i) => vendor.expertise!.includes(i));
                             if (!picked.length) return null;
                             return (
-                              <div key={group} className="border border-neutral-200 rounded-xl overflow-hidden">
-                                <div className="flex items-center gap-2 px-3 py-2 bg-neutral-50 border-b border-neutral-200">
+                              <div key={group} className="border border-bridal-beige rounded-xl overflow-hidden">
+                                <div className="flex items-center gap-2 px-3 py-2 bg-bridal-ivory border-b border-bridal-beige">
                                   <span className="text-sm">{emoji}</span>
-                                  <p className="text-xs font-semibold text-neutral-700">{group}</p>
-                                  <span className="ml-auto text-xs text-neutral-400">{picked.length}</span>
+                                  <p className="text-xs font-semibold text-bridal-charcoal/85">{group}</p>
+                                  <span className="ml-auto text-xs text-bridal-text-soft">{picked.length}</span>
                                 </div>
                                 <div className="px-3 py-2 flex flex-wrap gap-1.5">
                                   {picked.map((v, i) => (
-                                    <span key={i} className="text-xs px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-100">
+                                    <span key={i} className="text-xs px-2.5 py-1 rounded-full bg-bridal-cream text-bridal-gold-dark border border-bridal-gold/45">
                                       {v}
                                     </span>
                                   ))}
@@ -1200,7 +1204,7 @@ export default function VendorDetailsMobile({
                             <Badge
                               key={i}
                               variant="secondary"
-                              className="text-sm px-3 py-1 bg-purple-50 text-purple-700 border-purple-200"
+                              className="text-sm px-3 py-1 bg-bridal-blush text-bridal-mauve border-bridal-rose/45"
                             >
                               {item}
                             </Badge>
@@ -1212,8 +1216,8 @@ export default function VendorDetailsMobile({
 
                   {/* Type-specific service details */}
                   {vendorSpecificDetails.length > 0 && (
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                      <h3 className="text-base font-bold text-gray-900 mb-4">
+                    <div className="bg-bridal-cream rounded-md border border-bridal-beige shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)] p-5">
+                      <h3 className="font-display italic text-[20px] text-bridal-charcoal mb-4">
                         Services & Features
                       </h3>
                       <StaggerContainer
@@ -1222,11 +1226,11 @@ export default function VendorDetailsMobile({
                       >
                         {vendorSpecificDetails.map((detail, i) => (
                           <StaggerItem key={i}>
-                            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 hover:border-purple-200 hover:shadow-sm transition-all duration-200">
-                              <CheckCircle className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                            <div className="flex items-center gap-3 p-3 bg-bridal-ivory rounded-xl border border-bridal-beige hover:border-bridal-gold/45 hover:shadow-sm transition-all duration-200">
+                              <CheckCircle className="w-4 h-4 text-bridal-gold flex-shrink-0" />
                               <div className="min-w-0">
-                                <p className="text-xs text-neutral-400">{detail.label}</p>
-                                <p className="text-sm font-medium text-neutral-800 truncate">{detail.value}</p>
+                                <p className="text-xs text-bridal-text-soft">{detail.label}</p>
+                                <p className="text-sm font-medium text-bridal-charcoal truncate">{detail.value}</p>
                               </div>
                             </div>
                           </StaggerItem>
@@ -1237,10 +1241,10 @@ export default function VendorDetailsMobile({
 
                   {/* Amenities + serviceProvided */}
                   {(vendor.amenities?.length > 0 || (serviceProvidedLabel && Array.isArray(vendor.serviceProvided) && vendor.serviceProvided.length > 0)) && (
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-5">
+                    <div className="bg-bridal-cream rounded-md border border-bridal-beige shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)] p-5 space-y-5">
                       {vendor.amenities?.length > 0 && (
                         <div>
-                          <h3 className="text-base font-bold text-gray-900 mb-3">
+                          <h3 className="font-display italic text-[20px] text-bridal-charcoal mb-3">
                             {amenitiesLabel}
                           </h3>
                           <div className="flex flex-wrap gap-2">
@@ -1248,7 +1252,7 @@ export default function VendorDetailsMobile({
                               <Badge
                                 key={index}
                                 variant="outline"
-                                className="text-sm px-3 py-1 border-purple-200 text-purple-700"
+                                className="text-sm px-3 py-1 border-bridal-gold/45 text-bridal-gold-dark"
                               >
                                 {amenity}
                               </Badge>
@@ -1258,12 +1262,12 @@ export default function VendorDetailsMobile({
                       )}
                       {serviceProvidedLabel && Array.isArray(vendor.serviceProvided) && vendor.serviceProvided.length > 0 && (
                         <div>
-                          <h3 className="text-base font-bold text-gray-900 mb-3">
+                          <h3 className="font-display italic text-[20px] text-bridal-charcoal mb-3">
                             {serviceProvidedLabel}
                           </h3>
                           <div className="flex flex-wrap gap-2">
                             {vendor.serviceProvided.map((val, i) => (
-                              <Badge key={i} variant="outline" className="text-sm px-3 py-1 border-purple-200 text-purple-700">
+                              <Badge key={i} variant="outline" className="text-sm px-3 py-1 border-bridal-gold/45 text-bridal-gold-dark">
                                 {val}
                               </Badge>
                             ))}
@@ -1275,8 +1279,8 @@ export default function VendorDetailsMobile({
 
                   {/* Cities Covered */}
                   {Array.isArray(vendor.cityCovered) && vendor.cityCovered.length > 0 && (
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                      <h3 className="text-base font-bold text-gray-900 mb-3">
+                    <div className="bg-bridal-cream rounded-md border border-bridal-beige shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)] p-5">
+                      <h3 className="font-display italic text-[20px] text-bridal-charcoal mb-3">
                         Cities Covered
                       </h3>
                       <div className="flex flex-wrap gap-2">
@@ -1292,17 +1296,17 @@ export default function VendorDetailsMobile({
 
                   {/* Booking Terms */}
                   {(vendor.downPayment || cancellationPolicy) && (
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                      <h3 className="text-base font-bold text-gray-900 mb-4">
+                    <div className="bg-bridal-cream rounded-md border border-bridal-beige shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)] p-5">
+                      <h3 className="font-display italic text-[20px] text-bridal-charcoal mb-4">
                         Booking Terms
                       </h3>
                       <div className="space-y-2.5">
                         {vendor.downPayment ? (
-                          <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-xl border border-amber-100">
-                            <DollarSign className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                          <div className="flex items-center gap-3 p-3 bg-bridal-ivory rounded-md border border-bridal-beige">
+                            <DollarSign className="w-4 h-4 text-bridal-gold-dark flex-shrink-0" />
                             <div>
-                              <p className="text-xs text-neutral-400">Advance Payment Required</p>
-                              <p className="text-sm font-medium text-neutral-800">
+                              <p className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Advance Payment Required</p>
+                              <p className="font-bridal text-[13px] font-medium text-bridal-charcoal mt-0.5">
                                 {vendor.downPaymentType === "Percentage"
                                   ? `${vendor.downPayment}% of total amount`
                                   : formatPrice(vendor.downPayment)}
@@ -1311,11 +1315,11 @@ export default function VendorDetailsMobile({
                           </div>
                         ) : null}
                         {cancellationPolicy && (
-                          <div className="flex items-center gap-3 p-3 bg-green-50 rounded-xl border border-green-100">
-                            <Clock className="w-4 h-4 text-green-600 flex-shrink-0" />
+                          <div className="flex items-center gap-3 p-3 bg-bridal-ivory rounded-md border border-bridal-beige">
+                            <Clock className="w-4 h-4 text-[#3F6B43] flex-shrink-0" />
                             <div>
-                              <p className="text-xs text-neutral-400">Cancellation Policy</p>
-                              <p className="text-sm font-medium text-neutral-800">{cancellationPolicy}</p>
+                              <p className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Cancellation Policy</p>
+                              <p className="font-bridal text-[13px] font-medium text-bridal-charcoal mt-0.5">{cancellationPolicy}</p>
                             </div>
                           </div>
                         )}
@@ -1325,21 +1329,21 @@ export default function VendorDetailsMobile({
 
                   {/* Additional Information + Instruction */}
                   {(vendor.additionalInfo || (vendor.instruction && !isStationery)) && (
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+                    <div className="bg-bridal-cream rounded-md border border-bridal-beige shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)] p-5 space-y-4">
                       {vendor.additionalInfo && (
                         <div>
-                          <h3 className="text-base font-bold text-gray-900 mb-2">
+                          <h3 className="font-display italic text-[20px] text-bridal-charcoal mb-2">
                             Additional Information
                           </h3>
-                          <p className="text-sm text-gray-600 leading-relaxed">{vendor.additionalInfo}</p>
+                          <p className="text-sm text-bridal-charcoal/85 leading-relaxed">{vendor.additionalInfo}</p>
                         </div>
                       )}
                       {vendor.instruction && !isStationery && (
                         <div>
-                          <h3 className="text-base font-bold text-gray-900 mb-2">
+                          <h3 className="font-display italic text-[20px] text-bridal-charcoal mb-2">
                             {vendor.type === "Bridal wearing" ? "Order Lead Time" : "Special Instructions"}
                           </h3>
-                          <p className="text-sm text-gray-600 leading-relaxed">{vendor.instruction}</p>
+                          <p className="text-sm text-bridal-charcoal/85 leading-relaxed">{vendor.instruction}</p>
                         </div>
                       )}
                     </div>
@@ -1347,15 +1351,15 @@ export default function VendorDetailsMobile({
 
                   {/* Services Offered — bridal + photographer/decorator/henna/makeup boolean pills */}
                   {(enabledBridalServices.length > 0 || enabledTypeServices.length > 0) && (
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                      <h3 className="text-base font-bold text-gray-900 mb-3">
+                    <div className="bg-bridal-cream rounded-md border border-bridal-beige shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)] p-5">
+                      <h3 className="font-display italic text-[20px] text-bridal-charcoal mb-3">
                         Services Offered
                       </h3>
                       <div className="flex flex-wrap gap-2">
                         {[...enabledBridalServices, ...enabledTypeServices].map((s, i) => (
                           <div
                             key={i}
-                            className="flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-700 rounded-full px-3 py-1 text-sm font-medium"
+                            className="flex items-center gap-1.5 bg-bridal-sage/20 border border-bridal-sage/40 text-[#3F6B43] rounded-full px-3 py-1 font-bridal text-[12px] font-medium"
                           >
                             <CheckCircle className="w-3.5 h-3.5" />
                             {s.label}
@@ -1370,11 +1374,11 @@ export default function VendorDetailsMobile({
 
             {/* ===== GALLERY SECTION ===== */}
             <section ref={galleryRef} id="gallery">
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+              <div className="bg-bridal-cream rounded-md border border-bridal-beige shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)] p-4">
                 <ScrollReveal>
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-bold text-gray-900">Gallery</h2>
-                    <span className="flex items-center gap-1.5 text-xs font-medium text-purple-600 bg-purple-50 border border-purple-100 px-3 py-1 rounded-full">
+                    <h2 className="font-display italic text-[22px] text-bridal-charcoal">Gallery</h2>
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-bridal-gold-dark bg-bridal-cream border border-bridal-gold/45 px-3 py-1 rounded-full">
                       <Camera className="w-3.5 h-3.5" />
                       {galleryImages.length} photos
                     </span>
@@ -1404,9 +1408,9 @@ export default function VendorDetailsMobile({
                           sizes="66vw"
                           priority
                         />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/20 backdrop-blur-sm rounded-full p-3">
-                            <Expand className="w-5 h-5 text-white" />
+                        <div className="absolute inset-0 bg-bridal-charcoal/0 group-hover:bg-bridal-charcoal/30 transition-colors duration-300 flex items-center justify-center">
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-bridal-cream/95 rounded-full p-3">
+                            <Expand className="w-5 h-5 text-bridal-charcoal" />
                           </div>
                         </div>
                       </motion.div>
@@ -1428,8 +1432,8 @@ export default function VendorDetailsMobile({
                           className="object-cover transition-transform duration-700 group-hover:scale-110"
                           sizes="33vw"
                         />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors duration-300 flex items-center justify-center">
-                          <Expand className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        <div className="absolute inset-0 bg-bridal-charcoal/0 group-hover:bg-bridal-charcoal/35 transition-colors duration-300 flex items-center justify-center">
+                          <Expand className="w-4 h-4 text-bridal-ivory opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                         </div>
                       </motion.div>
 
@@ -1452,12 +1456,12 @@ export default function VendorDetailsMobile({
                         />
                         {galleryImages.length > 3 ? (
                           <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className="text-white text-xl font-bold leading-none">+{galleryImages.length - 3}</span>
-                            <span className="text-white/80 text-xs mt-0.5">more</span>
+                            <span className="font-display italic text-bridal-ivory text-[24px] leading-none">+{galleryImages.length - 3}</span>
+                            <span className="font-bridal text-bridal-ivory/80 text-[10px] uppercase tracking-[0.22em] mt-1">more</span>
                           </div>
                         ) : (
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors duration-300 flex items-center justify-center">
-                            <Expand className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                          <div className="absolute inset-0 bg-bridal-charcoal/0 group-hover:bg-bridal-charcoal/35 transition-colors duration-300 flex items-center justify-center">
+                            <Expand className="w-4 h-4 text-bridal-ivory opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                           </div>
                         )}
                       </motion.div>
@@ -1482,8 +1486,8 @@ export default function VendorDetailsMobile({
                             className="object-cover transition-transform duration-700 group-hover:scale-110"
                             sizes="50vw"
                           />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors duration-300 flex items-center justify-center">
-                            <Expand className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                          <div className="absolute inset-0 bg-bridal-charcoal/0 group-hover:bg-bridal-charcoal/35 transition-colors duration-300 flex items-center justify-center">
+                            <Expand className="w-5 h-5 text-bridal-ivory opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                           </div>
                         </motion.div>
                       ))}
@@ -1494,7 +1498,7 @@ export default function VendorDetailsMobile({
                   {galleryImages.length > 1 && (
                     <button
                       onClick={() => openLightbox(0)}
-                      className="w-full mt-2 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:border-purple-300 hover:text-purple-700 hover:bg-purple-50 transition-all duration-200 flex items-center justify-center gap-2"
+                      className="w-full mt-2 py-2.5 rounded-xl border border-bridal-beige text-sm font-medium text-bridal-charcoal/85 hover:border-bridal-gold/55 hover:text-bridal-gold-dark hover:bg-bridal-blush transition-all duration-200 flex items-center justify-center gap-2"
                     >
                       <Camera className="w-4 h-4" />
                       View all {galleryImages.length} photos
@@ -1509,7 +1513,7 @@ export default function VendorDetailsMobile({
             <section ref={packagesRef} id="packages">
               <ScrollReveal>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-gray-900">
+                  <h2 className="font-display italic text-[22px] text-bridal-charcoal">
                     {vendor.type === "Bridal wearing"
                       ? "Outfit Listings"
                       : vendor.type === "Car rental"
@@ -1518,7 +1522,7 @@ export default function VendorDetailsMobile({
                           ? "Products"
                           : "Packages & Pricing"}
                   </h2>
-                  <span className="text-xs font-medium text-purple-600 bg-purple-50 border border-purple-100 px-3 py-1 rounded-full">
+                  <span className="text-xs font-medium text-bridal-gold-dark bg-bridal-cream border border-bridal-gold/45 px-3 py-1 rounded-full">
                     {(vendor.packages || []).length} listed
                   </span>
                 </div>
@@ -1538,10 +1542,10 @@ export default function VendorDetailsMobile({
                           whileInView={{ opacity: 1, y: 0 }}
                           viewport={{ once: true, margin: "-30px" }}
                           transition={{ duration: 0.4, delay: index * 0.08 }}
-                          className="border border-neutral-200 rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-300"
+                          className="border border-bridal-beige bg-bridal-cream rounded-md overflow-hidden hover:shadow-[0_18px_36px_-26px_rgba(176,125,84,0.5)] hover:border-bridal-gold/55 transition-all duration-500"
                         >
                           {/* Image */}
-                          <div className="relative aspect-[4/3] bg-neutral-100">
+                          <div className="relative aspect-[4/3] bg-bridal-ivory">
                             {imgs.length > 0 ? (
                               <>
                                 <Image
@@ -1552,24 +1556,24 @@ export default function VendorDetailsMobile({
                                   sizes="(max-width: 640px) 100vw, 50vw"
                                 />
                                 {imgs.length > 1 && (
-                                  <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">
+                                  <div className="absolute bottom-2 right-2 bg-bridal-charcoal/70 backdrop-blur-sm text-bridal-ivory font-bridal text-[10px] uppercase tracking-[0.2em] px-2.5 py-1 rounded-full">
                                     +{imgs.length - 1} photos
                                   </div>
                                 )}
                               </>
                             ) : (
-                              <div className="absolute inset-0 flex items-center justify-center bg-purple-50">
-                                <Sparkles className="w-10 h-10 text-purple-200" />
+                              <div className="absolute inset-0 flex items-center justify-center bg-bridal-cream">
+                                <Sparkles className="w-10 h-10 text-bridal-gold/40" />
                               </div>
                             )}
                           </div>
                           {/* Body */}
                           <div className="p-4 space-y-3">
                             <div className="flex items-start justify-between gap-2">
-                              <h3 className="font-semibold text-neutral-900 text-base leading-tight">
+                              <h3 className="font-display italic text-[18px] text-bridal-charcoal leading-tight">
                                 {pkg.name}
                               </h3>
-                              <span className="shrink-0 text-lg font-bold text-purple-700">
+                              <span className="shrink-0 font-display italic text-[20px] text-bridal-gold-dark">
                                 {formatPrice(pkg.price)}
                               </span>
                             </div>
@@ -1578,7 +1582,7 @@ export default function VendorDetailsMobile({
                                 {group.values.map((val, vi) => (
                                   <span
                                     key={vi}
-                                    className="inline-block bg-neutral-100 text-neutral-600 text-xs px-2 py-0.5 rounded-full border border-neutral-200"
+                                    className="inline-block bg-bridal-ivory text-bridal-charcoal/85 text-xs px-2 py-0.5 rounded-full border border-bridal-beige"
                                   >
                                     {val}
                                   </span>
@@ -1588,7 +1592,7 @@ export default function VendorDetailsMobile({
                             <Button
                               onClick={handleBookNow}
                               size="sm"
-                              className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl mt-1"
+                              className="w-full inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[11px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] transition-all duration-300 mt-1"
                             >
                               Book Now
                             </Button>
@@ -1597,7 +1601,7 @@ export default function VendorDetailsMobile({
                       );
                     })
                   ) : (
-                    <p className="text-sm text-neutral-500 col-span-2 text-center py-6">
+                    <p className="text-sm text-bridal-text-soft col-span-2 text-center py-6">
                       No outfit listings yet. Contact the store for details.
                     </p>
                   )}
@@ -1619,8 +1623,8 @@ export default function VendorDetailsMobile({
                   <div className="space-y-8">
                     {/* Cars section */}
                     <div className="space-y-4">
-                      <h3 className="text-base font-semibold text-neutral-800 flex items-center gap-2">
-                        <Car className="w-4 h-4 text-blue-500" /> Cars
+                      <h3 className="text-base font-semibold text-bridal-charcoal flex items-center gap-2">
+                        <Car className="w-4 h-4 text-bridal-gold" /> Cars
                       </h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {carPkgs.length > 0 ? carPkgs.map((pkg: any, index: number) => {
@@ -1643,9 +1647,9 @@ export default function VendorDetailsMobile({
                               whileInView={{ opacity: 1, y: 0 }}
                               viewport={{ once: true, margin: "-30px" }}
                               transition={{ duration: 0.4, delay: index * 0.08 }}
-                              className="border border-neutral-200 rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-300 bg-white"
+                              className="border border-bridal-beige bg-bridal-cream rounded-md overflow-hidden hover:shadow-[0_18px_36px_-26px_rgba(176,125,84,0.5)] hover:border-bridal-gold/55 transition-all duration-500"
                             >
-                              <div className="relative aspect-video bg-neutral-100">
+                              <div className="relative aspect-video bg-bridal-ivory">
                                 {imgs.length > 0 ? (
                                   <Image
                                     src={imgs[0]}
@@ -1655,12 +1659,12 @@ export default function VendorDetailsMobile({
                                     sizes="(max-width: 640px) 100vw, 50vw"
                                   />
                                 ) : (
-                                  <div className="absolute inset-0 flex items-center justify-center bg-blue-50">
-                                    <Car className="w-10 h-10 text-blue-200" />
+                                  <div className="absolute inset-0 flex items-center justify-center bg-bridal-cream">
+                                    <Car className="w-10 h-10 text-bridal-gold/40" />
                                   </div>
                                 )}
                                 {vehicleType && (
-                                  <span className="absolute top-2 left-2 bg-blue-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                                  <span className="absolute top-2 left-2 bg-bridal-gold/95 text-bridal-charcoal font-bridal text-[10px] uppercase tracking-[0.22em] px-2.5 py-1 rounded-full">
                                     {vehicleType}
                                   </span>
                                 )}
@@ -1668,52 +1672,52 @@ export default function VendorDetailsMobile({
                               <div className="p-4 space-y-2">
                                 <div className="flex items-start justify-between gap-2">
                                   <div>
-                                    <h3 className="font-semibold text-neutral-900 text-base">{pkg.name}</h3>
+                                    <h3 className="font-display italic text-[18px] text-bridal-charcoal">{pkg.name}</h3>
                                     {(year || color) && (
-                                      <p className="text-xs text-neutral-400 mt-0.5">
+                                      <p className="text-xs text-bridal-text-soft mt-0.5">
                                         {[year, color].filter(Boolean).join(" · ")}
                                       </p>
                                     )}
                                   </div>
                                   <div className="text-right shrink-0">
-                                    <span className="text-lg font-bold text-purple-700">{formatPrice(pkg.price)}</span>
-                                    <p className="text-[10px] text-neutral-400">per event</p>
+                                    <span className="font-display italic text-[20px] text-bridal-gold-dark">{formatPrice(pkg.price)}</span>
+                                    <p className="text-[10px] text-bridal-text-soft">per event</p>
                                   </div>
                                 </div>
                                 <div className="flex flex-wrap gap-1.5">
                                   {seats && (
-                                    <span className="inline-flex items-center gap-1 bg-neutral-100 text-neutral-600 text-xs px-2 py-0.5 rounded-full border border-neutral-200">
+                                    <span className="inline-flex items-center gap-1 bg-bridal-ivory text-bridal-charcoal/85 text-xs px-2 py-0.5 rounded-full border border-bridal-beige">
                                       👥 {seats} seats
                                     </span>
                                   )}
                                   {units && (
-                                    <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full border border-green-200">
+                                    <span className="inline-flex items-center gap-1 bg-bridal-sage/20 text-[#3F6B43] text-xs px-2 py-0.5 rounded-full border border-bridal-sage/40">
                                       🚗 {units} available
                                     </span>
                                   )}
                                 </div>
-                                <div className="flex flex-wrap gap-1.5 pt-1 border-t border-neutral-100">
-                                  <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border ${withDriver ? "bg-purple-50 text-purple-700 border-purple-200" : "bg-neutral-50 text-neutral-400 border-neutral-200"}`}>
+                                <div className="flex flex-wrap gap-1.5 pt-1 border-t border-bridal-beige">
+                                  <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border ${withDriver ? "bg-bridal-blush text-bridal-mauve border-bridal-rose/45" : "bg-bridal-ivory text-bridal-text-soft border-bridal-beige"}`}>
                                     🧑 Driver {withDriver ? "Included" : "Not Included"}
                                   </span>
-                                  <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border ${hasAC ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-neutral-50 text-neutral-400 border-neutral-200"}`}>
+                                  <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border ${hasAC ? "bg-bridal-cream text-bridal-mauve border-bridal-rose/45" : "bg-bridal-ivory text-bridal-text-soft border-bridal-beige"}`}>
                                     ❄️ {hasAC ? "AC" : "No AC"}
                                   </span>
                                   {hasDecor && (
-                                    <span className="inline-flex items-center gap-1 text-[11px] bg-pink-50 text-pink-700 px-2 py-0.5 rounded-full border border-pink-200">
+                                    <span className="inline-flex items-center gap-1 text-[11px] bg-bridal-coral/15 text-bridal-coral px-2 py-0.5 rounded-full border border-bridal-coral/30">
                                       🌸 Decoration
                                     </span>
                                   )}
                                 </div>
                                 {pkg.description && (
-                                  <p className="text-xs text-neutral-500 leading-relaxed pt-1 border-t border-neutral-100">
+                                  <p className="text-xs text-bridal-text-soft leading-relaxed pt-1 border-t border-bridal-beige">
                                     {pkg.description}
                                   </p>
                                 )}
                                 <Button
                                   onClick={handleBookNow}
                                   size="sm"
-                                  className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl mt-1"
+                                  className="w-full inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[11px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] transition-all duration-300 mt-1"
                                 >
                                   Book Now
                                 </Button>
@@ -1721,7 +1725,7 @@ export default function VendorDetailsMobile({
                             </motion.div>
                           );
                         }) : (
-                          <p className="text-sm text-neutral-500 col-span-2 text-center py-6">
+                          <p className="text-sm text-bridal-text-soft col-span-2 text-center py-6">
                             No cars listed yet. Contact the vendor for availability.
                           </p>
                         )}
@@ -1731,7 +1735,7 @@ export default function VendorDetailsMobile({
                     {/* Packages section */}
                     {servicePkgs.length > 0 && (
                       <div className="space-y-4">
-                        <h3 className="text-base font-semibold text-neutral-800">Packages</h3>
+                        <h3 className="text-base font-semibold text-bridal-charcoal">Packages</h3>
                         <StaggerContainer staggerDelay={0.1} className="space-y-4">
                           {servicePkgs.map((pkg: any, index: number) => (
                             <StaggerItem key={index}>
@@ -1766,9 +1770,9 @@ export default function VendorDetailsMobile({
                           whileInView={{ opacity: 1, y: 0 }}
                           viewport={{ once: true, margin: "-30px" }}
                           transition={{ duration: 0.4, delay: index * 0.08 }}
-                          className="border border-neutral-200 rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-300"
+                          className="border border-bridal-beige bg-bridal-cream rounded-md overflow-hidden hover:shadow-[0_18px_36px_-26px_rgba(176,125,84,0.5)] hover:border-bridal-gold/55 transition-all duration-500"
                         >
-                          <div className="relative aspect-[4/3] bg-neutral-100">
+                          <div className="relative aspect-[4/3] bg-bridal-ivory">
                             {imgs.length > 0 ? (
                               <>
                                 <Image
@@ -1779,40 +1783,40 @@ export default function VendorDetailsMobile({
                                   sizes="(max-width: 640px) 100vw, 50vw"
                                 />
                                 {imgs.length > 1 && (
-                                  <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">
+                                  <div className="absolute bottom-2 right-2 bg-bridal-charcoal/70 backdrop-blur-sm text-bridal-ivory font-bridal text-[10px] uppercase tracking-[0.2em] px-2.5 py-1 rounded-full">
                                     +{imgs.length - 1} photos
                                   </div>
                                 )}
                               </>
                             ) : (
-                              <div className="absolute inset-0 flex items-center justify-center bg-purple-50">
-                                <Gift className="w-10 h-10 text-purple-200" />
+                              <div className="absolute inset-0 flex items-center justify-center bg-bridal-cream">
+                                <Gift className="w-10 h-10 text-bridal-gold/40" />
                               </div>
                             )}
                           </div>
                           <div className="p-4 space-y-2.5">
                             <div className="flex items-start justify-between gap-2">
-                              <h3 className="font-semibold text-neutral-900 text-base leading-tight">{pkg.name}</h3>
-                              <span className="shrink-0 text-lg font-bold text-purple-700">{formatPrice(pkg.price)}</span>
+                              <h3 className="font-display italic text-[18px] text-bridal-charcoal leading-tight">{pkg.name}</h3>
+                              <span className="shrink-0 font-display italic text-[20px] text-bridal-gold-dark">{formatPrice(pkg.price)}</span>
                             </div>
                             {productTypes.length > 0 && (
                               <div className="flex flex-wrap gap-1.5">
                                 {productTypes.map((pt, i) => (
-                                  <span key={i} className="inline-block bg-purple-50 text-purple-700 text-xs px-2 py-0.5 rounded-full border border-purple-100">{pt}</span>
+                                  <span key={i} className="inline-block bg-bridal-blush text-bridal-mauve text-xs px-2 py-0.5 rounded-full border border-bridal-gold/45">{pt}</span>
                                 ))}
                               </div>
                             )}
                             {events.length > 0 && (
                               <div className="flex flex-wrap gap-1.5">
                                 {events.map((ev, i) => (
-                                  <span key={i} className="inline-block bg-amber-50 text-amber-700 text-xs px-2 py-0.5 rounded-full border border-amber-100">{ev}</span>
+                                  <span key={i} className="inline-block bg-bridal-cream text-bridal-gold-dark text-xs px-2 py-0.5 rounded-full border border-bridal-gold/45">{ev}</span>
                                 ))}
                               </div>
                             )}
                             <Button
                               onClick={handleBookNow}
                               size="sm"
-                              className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl mt-1"
+                              className="w-full inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[11px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] transition-all duration-300 mt-1"
                             >
                               Order Now
                             </Button>
@@ -1821,7 +1825,7 @@ export default function VendorDetailsMobile({
                       );
                     })
                   ) : (
-                    <p className="text-sm text-neutral-500 col-span-2 text-center py-6">
+                    <p className="text-sm text-bridal-text-soft col-span-2 text-center py-6">
                       No products listed yet. Contact the vendor for details.
                     </p>
                   )}
@@ -1847,7 +1851,7 @@ export default function VendorDetailsMobile({
                       </StaggerItem>
                     ))
                   ) : (
-                    <p className="text-sm text-neutral-500 text-center py-6">
+                    <p className="text-sm text-bridal-text-soft text-center py-6">
                       No packages available yet. Contact the vendor for pricing.
                     </p>
                   )}
@@ -1860,11 +1864,11 @@ export default function VendorDetailsMobile({
               <section ref={menusRef} id="menus">
                 <ScrollReveal>
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                      <Utensils className="w-4 h-4 text-purple-500" />
+                    <h2 className="font-display italic text-[22px] text-bridal-charcoal flex items-center gap-2">
+                      <Utensils className="w-4 h-4 text-bridal-gold" />
                       Menus
                     </h2>
-                    <span className="text-xs font-medium text-purple-600 bg-purple-50 border border-purple-100 px-3 py-1 rounded-full">
+                    <span className="text-xs font-medium text-bridal-gold-dark bg-bridal-cream border border-bridal-gold/45 px-3 py-1 rounded-full">
                       {vendor.menus!.length} options
                     </span>
                   </div>
@@ -1879,13 +1883,13 @@ export default function VendorDetailsMobile({
                       : [];
                     return (
                       <StaggerItem key={menu.id ?? index}>
-                        <Card className="border-neutral-100 hover:border-purple-200 hover:shadow-lg transition-all duration-300 h-full">
+                        <Card className="border-bridal-beige hover:border-bridal-gold/45 hover:shadow-lg transition-all duration-300 h-full">
                           <CardContent className="p-5 sm:p-6 flex flex-col h-full">
                             <div className="flex items-start justify-between gap-3 mb-4">
-                              <h3 className="text-lg font-semibold text-neutral-900 capitalize">
+                              <h3 className="text-lg font-semibold text-bridal-charcoal capitalize">
                                 {menu.title}
                               </h3>
-                              <Badge className="bg-purple-100 text-purple-700 border-purple-200 shrink-0">
+                              <Badge className="bg-bridal-gold/20 text-bridal-gold-dark border-bridal-gold/45 shrink-0">
                                 Rs. {menu.price?.toLocaleString()}
                                 <span className="text-[10px] font-normal ml-0.5">
                                   / head
@@ -1894,7 +1898,7 @@ export default function VendorDetailsMobile({
                             </div>
                             {menuItems.length > 0 && (
                               <div className="flex-1">
-                                <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">
+                                <p className="text-xs font-medium text-bridal-text-soft uppercase tracking-wider mb-2">
                                   Includes
                                 </p>
                                 <div className="flex flex-wrap gap-1.5">
@@ -1902,7 +1906,7 @@ export default function VendorDetailsMobile({
                                     <Badge
                                       key={i}
                                       variant="outline"
-                                      className="text-xs font-normal bg-neutral-50"
+                                      className="text-xs font-normal bg-bridal-ivory"
                                     >
                                       {String(item)}
                                     </Badge>
@@ -1912,7 +1916,7 @@ export default function VendorDetailsMobile({
                             )}
                             <Button
                               onClick={handleBookNow}
-                              className="w-full mt-4 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl"
+                              className="w-full mt-4 bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory rounded-xl"
                             >
                               Select Menu
                             </Button>
@@ -1929,10 +1933,10 @@ export default function VendorDetailsMobile({
             <section ref={reviewsRef} id="reviews">
               <ScrollReveal>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-gray-900">Reviews & Ratings</h2>
+                  <h2 className="font-display italic text-[22px] text-bridal-charcoal">Reviews &amp; Ratings</h2>
                   {allReviews.length > 0 && (
-                    <span className="text-xs font-medium text-amber-600 bg-amber-50 border border-amber-100 px-3 py-1 rounded-full flex items-center gap-1">
-                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                    <span className="font-bridal text-[11px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark bg-bridal-cream border border-bridal-gold/45 px-3 py-1 rounded-full flex items-center gap-1.5">
+                      <Star className="w-3 h-3 fill-bridal-gold text-bridal-gold" />
                       {avgRating.toFixed(1)} · {allReviews.length}
                     </span>
                   )}
@@ -1941,7 +1945,7 @@ export default function VendorDetailsMobile({
 
               {/* Review summary */}
               <ScrollReveal>
-                <Card className="border-neutral-100 mb-6">
+                <Card className="border-bridal-beige mb-6">
                   <CardContent className="p-6">
                     <div className="flex flex-col sm:flex-row items-center gap-8">
                       <CircularRating rating={avgRating} size={120} />
@@ -1954,10 +1958,10 @@ export default function VendorDetailsMobile({
                             count={item.count}
                             color={
                               item.star >= 4
-                                ? "bg-emerald-500"
+                                ? "bg-bridal-gold"
                                 : item.star === 3
-                                  ? "bg-gold-500"
-                                  : "bg-orange-400"
+                                  ? "bg-bridal-gold/70"
+                                  : "bg-bridal-coral/70"
                             }
                           />
                         ))}
@@ -1970,9 +1974,9 @@ export default function VendorDetailsMobile({
               {/* Write a review */}
               {isAuthenticated && userBookingId && !alreadyReviewed && (
                 <ScrollReveal>
-                  <Card className="border-purple-100 bg-purple-50/40 mb-4">
+                  <Card className="border border-bridal-gold/35 bg-bridal-cream rounded-md shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)] mb-4">
                     <CardContent className="p-5 space-y-4">
-                      <h4 className="font-semibold text-neutral-800">Write a Review</h4>
+                      <h4 className="font-semibold text-bridal-charcoal">Write a Review</h4>
                       <div className="flex items-center gap-1">
                         {[1,2,3,4,5].map(s => (
                           <button key={s} type="button"
@@ -1981,11 +1985,11 @@ export default function VendorDetailsMobile({
                             onMouseLeave={() => setReviewHover(0)}
                             className="p-0.5"
                           >
-                            <Star className={`w-8 h-8 transition-colors ${s <= (reviewHover || reviewRating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                            <Star className={`w-8 h-8 transition-colors ${s <= (reviewHover || reviewRating) ? "fill-bridal-gold text-bridal-gold" : "text-bridal-beige"}`} />
                           </button>
                         ))}
                         {reviewRating > 0 && (
-                          <span className="ml-2 text-sm text-neutral-500">
+                          <span className="ml-2 text-sm text-bridal-text-soft">
                             {["","Poor","Fair","Good","Very Good","Excellent"][reviewRating]}
                           </span>
                         )}
@@ -1995,12 +1999,12 @@ export default function VendorDetailsMobile({
                         onChange={e => setReviewComment(e.target.value)}
                         placeholder="Share your experience with this vendor..."
                         rows={3}
-                        className="w-full text-sm border border-purple-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-purple-400/20 focus:border-purple-400 resize-none bg-white"
+                        className="w-full font-bridal text-[14px] border border-bridal-beige rounded-[4px] p-4 focus:outline-none focus:ring-1 focus:ring-bridal-gold focus:border-bridal-gold/55 resize-none bg-bridal-ivory text-bridal-charcoal placeholder:text-bridal-text-soft"
                       />
                       <Button
                         onClick={handleReviewSubmit}
                         disabled={reviewRating === 0 || reviewSubmitting}
-                        className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white"
+                        className="w-full bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory"
                       >
                         {reviewSubmitting ? "Submitting…" : "Submit Review"}
                       </Button>
@@ -2010,20 +2014,20 @@ export default function VendorDetailsMobile({
               )}
 
               {isAuthenticated && alreadyReviewed && (
-                <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4">
+                <div className="flex items-center gap-2 font-bridal text-[13px] text-[#3F6B43] bg-bridal-sage/15 border border-bridal-sage/40 rounded-md px-4 py-3 mb-4">
                   <CheckCircle className="w-4 h-4 shrink-0" />
                   You've already reviewed this vendor. Thank you!
                 </div>
               )}
 
               {!isAuthenticated && (
-                <p className="text-sm text-neutral-500 text-center py-2 mb-4">
-                  <button onClick={() => router.push("/login")} className="text-purple-600 font-medium hover:underline">Log in</button> to leave a review after completing a booking.
+                <p className="text-sm text-bridal-text-soft text-center py-2 mb-4">
+                  <button onClick={() => router.push("/login")} className="text-bridal-gold-dark font-medium hover:underline">Log in</button> to leave a review after completing a booking.
                 </p>
               )}
 
               {isAuthenticated && !userBookingId && !alreadyReviewed && (
-                <p className="text-sm text-neutral-400 text-center py-2 mb-4">
+                <p className="text-sm text-bridal-text-soft text-center py-2 mb-4">
                   Complete a booking with this vendor to leave a review.
                 </p>
               )}
@@ -2031,46 +2035,46 @@ export default function VendorDetailsMobile({
               {/* Individual reviews */}
               {reviewsLoading && (
                 <div className="flex justify-center py-8">
-                  <div className="w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-6 h-6 border-2 border-bridal-gold border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
               {!reviewsLoading && allReviews.length === 0 && (
-                <p className="text-sm text-neutral-500 text-center py-8">
+                <p className="text-sm text-bridal-text-soft text-center py-8">
                   No reviews yet. Be the first to book and leave a review!
                 </p>
               )}
               <StaggerContainer staggerDelay={0.1} className="space-y-4">
                 {allReviews.map((review) => (
                   <StaggerItem key={review.id}>
-                    <Card className="border-neutral-100 hover:shadow-md transition-shadow duration-200">
+                    <Card className="border-bridal-beige bg-bridal-ivory hover:shadow-[0_18px_36px_-30px_rgba(176,125,84,0.45)] transition-shadow duration-300">
                       <CardContent className="p-5">
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-white font-semibold text-sm">
+                            <div className="w-10 h-10 rounded-full bg-bridal-cream border border-bridal-gold/55 flex items-center justify-center text-bridal-gold-dark font-display italic text-[18px]">
                               {(review.user?.fullName || review.userName || "A").charAt(0).toUpperCase()}
                             </div>
                             <div>
-                              <h4 className="font-semibold text-sm text-neutral-900">
+                              <h4 className="font-display italic text-[16px] text-bridal-charcoal">
                                 {review.user?.fullName || review.userName || "Anonymous"}
                               </h4>
-                              <p className="text-xs text-neutral-400">
+                              <p className="font-bridal text-[11px] text-bridal-text-soft mt-0.5">
                                 {new Date(review.createdAt || review.date).toLocaleDateString("en-PK", { year:"numeric", month:"short", day:"numeric" })}
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-0.5">
                             {[1,2,3,4,5].map(i => (
-                              <Star key={i} className={`w-3.5 h-3.5 ${i <= review.rating ? "fill-yellow-400 text-yellow-400" : "text-neutral-200"}`} />
+                              <Star key={i} className={`w-3.5 h-3.5 ${i <= review.rating ? "fill-bridal-gold text-bridal-gold" : "text-bridal-beige"}`} />
                             ))}
                           </div>
                         </div>
                         {review.comment && (
-                          <p className="text-sm text-neutral-600 leading-relaxed">{review.comment}</p>
+                          <p className="font-bridal text-[13.5px] text-bridal-charcoal/85 leading-[1.7]">{review.comment}</p>
                         )}
                         {review.vendorReply && (
-                          <div className="mt-3 pl-3 border-l-2 border-purple-200 text-sm text-neutral-600 bg-purple-50/40 rounded-r-lg py-2 pr-3">
-                            <span className="font-semibold text-purple-700 text-xs uppercase tracking-wide">Vendor reply: </span>
-                            {review.vendorReply}
+                          <div className="mt-3 pl-4 border-l-2 border-bridal-gold/45 bg-bridal-cream rounded-r-md py-2 pr-3">
+                            <span className="font-bridal text-[10px] uppercase tracking-[0.25em] font-medium text-bridal-gold-dark mr-2">Vendor reply</span>
+                            <span className="font-bridal text-[13px] text-bridal-charcoal/85">{review.vendorReply}</span>
                           </div>
                         )}
                       </CardContent>
@@ -2084,15 +2088,15 @@ export default function VendorDetailsMobile({
             <section ref={availabilityRef} id="availability">
               <ScrollReveal>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-gray-900">Check Availability</h2>
-                  <span className="text-xs font-medium text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full">
+                  <h2 className="font-display italic text-[22px] text-bridal-charcoal">Check Availability</h2>
+                  <span className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-[#3F6B43] bg-bridal-sage/15 border border-bridal-sage/40 px-3 py-1 rounded-full">
                     Live Calendar
                   </span>
                 </div>
               </ScrollReveal>
 
               <ScrollReveal>
-                <Card className="border-neutral-100">
+                <Card className="border-bridal-beige">
                   <CardContent className="p-5 sm:p-6">
                     {/* Calendar Header */}
                     <div className="flex items-center justify-between mb-4">
@@ -2101,18 +2105,18 @@ export default function VendorDetailsMobile({
                           variant="ghost"
                           size="sm"
                           onClick={goToPreviousMonth}
-                          className="p-2 rounded-full hover:bg-purple-50"
+                          className="p-2 rounded-full hover:bg-bridal-cream"
                         >
                           <ChevronLeft className="w-4 h-4" />
                         </Button>
-                        <h4 className="text-base font-semibold text-neutral-900">
+                        <h4 className="text-base font-semibold text-bridal-charcoal">
                           {formatMonthYear(currentDate)}
                         </h4>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={goToNextMonth}
-                          className="p-2 rounded-full hover:bg-purple-50"
+                          className="p-2 rounded-full hover:bg-bridal-cream"
                         >
                           <ChevronRight className="w-4 h-4" />
                         </Button>
@@ -2121,7 +2125,7 @@ export default function VendorDetailsMobile({
                         variant="outline"
                         size="sm"
                         onClick={goToToday}
-                        className="text-xs border-purple-300 text-purple-600 hover:bg-purple-50"
+                        className="text-xs border-bridal-gold/55 text-bridal-gold-dark hover:bg-bridal-cream"
                       >
                         Today
                       </Button>
@@ -2133,7 +2137,7 @@ export default function VendorDetailsMobile({
                         (day) => (
                           <div
                             key={day}
-                            className="text-center text-xs font-medium text-neutral-500 py-2"
+                            className="text-center text-xs font-medium text-bridal-text-soft py-2"
                           >
                             {day}
                           </div>
@@ -2183,23 +2187,23 @@ export default function VendorDetailsMobile({
                                   ? "Fully booked"
                                   : undefined
                               }
-                              className={`text-center text-xs sm:text-sm py-2 rounded-lg transition-all duration-200 relative ${
+                              className={`text-center font-bridal text-[12px] sm:text-[13px] py-2 rounded-md transition-all duration-200 relative ${
                                 isSelected
-                                  ? "bg-purple-600 text-white font-semibold shadow-lg"
+                                  ? "bg-bridal-gold text-bridal-charcoal font-medium shadow-[0_6px_18px_-10px_rgba(176,125,84,0.55)]"
                                   : isToday
-                                    ? "bg-purple-100 text-purple-700 font-semibold"
+                                    ? "bg-bridal-cream text-bridal-gold-dark font-medium border border-bridal-gold/55"
                                     : isBlocked
-                                    ? "bg-orange-50 text-orange-300 line-through cursor-not-allowed"
+                                    ? "bg-bridal-beige/50 text-bridal-text-soft line-through cursor-not-allowed"
                                     : isFullyBooked
-                                    ? "bg-red-50 text-red-300 line-through cursor-not-allowed"
+                                    ? "bg-bridal-coral/15 text-bridal-coral line-through cursor-not-allowed"
                                     : selectable
-                                      ? "hover:bg-purple-50 text-neutral-900 cursor-pointer"
-                                      : "text-neutral-300 cursor-not-allowed"
+                                      ? "hover:bg-bridal-blush text-bridal-charcoal cursor-pointer"
+                                      : "text-bridal-text-soft/60 cursor-not-allowed"
                               }`}
                             >
                               {day}
                               {selectable && !isSelected && !isPast && (
-                                <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                                <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-bridal-sage rounded-full" />
                               )}
                             </div>,
                           );
@@ -2209,26 +2213,26 @@ export default function VendorDetailsMobile({
                     </div>
 
                     {/* Legend */}
-                    <div className="flex items-center justify-center gap-3 text-xs text-neutral-500 flex-wrap">
+                    <div className="flex items-center justify-center gap-3 font-bridal text-[10.5px] uppercase tracking-[0.2em] text-bridal-text-soft flex-wrap">
                       <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 bg-purple-100 rounded-full" />
+                        <span className="w-2.5 h-2.5 bg-bridal-cream border border-bridal-gold/55 rounded-full" />
                         Today
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 bg-purple-600 rounded-full" />
+                        <span className="w-2.5 h-2.5 bg-bridal-gold rounded-full" />
                         Selected
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />
+                        <span className="w-2.5 h-2.5 bg-bridal-sage rounded-full" />
                         Available
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 bg-red-100 border border-red-300 rounded-full" />
+                        <span className="w-2.5 h-2.5 bg-bridal-coral/20 border border-bridal-coral/45 rounded-full" />
                         Fully booked
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 bg-orange-100 border border-orange-300 rounded-full" />
-                        Vendor unavailable
+                        <span className="w-2.5 h-2.5 bg-bridal-beige border border-bridal-beige rounded-full" />
+                        Unavailable
                       </span>
                     </div>
 
@@ -2240,47 +2244,41 @@ export default function VendorDetailsMobile({
                       const isAvailable = !isBlocked && !isFullyBooked;
 
                       return (
-                        <div className={`mt-5 p-4 rounded-xl border ${
+                        <div className={`mt-5 p-4 rounded-md border ${
                           isBlocked
-                            ? "bg-orange-50 border-orange-200"
+                            ? "bg-bridal-beige/40 border-bridal-beige"
                             : isFullyBooked
-                            ? "bg-red-50 border-red-200"
-                            : "bg-emerald-50 border-emerald-200"
+                            ? "bg-bridal-coral/15 border-bridal-coral/40"
+                            : "bg-bridal-sage/15 border-bridal-sage/40"
                         }`}>
                           <div className="flex items-start gap-3">
                             <CalendarCheck className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
-                              isBlocked ? "text-orange-500" : isFullyBooked ? "text-red-400" : "text-emerald-600"
+                              isBlocked ? "text-bridal-text-soft" : isFullyBooked ? "text-bridal-coral" : "text-[#3F6B43]"
                             }`} />
                             <div className="flex-1">
-                              <h4 className="font-semibold text-neutral-900 mb-1">
+                              <h4 className="font-display italic text-[18px] text-bridal-charcoal mb-1">
                                 {format(selectedDate, "EEEE, MMMM dd, yyyy")}
                               </h4>
                               {isBlocked ? (
-                                <p className="text-sm text-orange-600">
+                                <p className="font-bridal text-[12px] uppercase tracking-[0.2em] font-medium text-bridal-text-soft">
                                   {avail?.blockReason || "Vendor not available this day"}
                                 </p>
                               ) : isFullyBooked ? (
-                                <p className="text-sm text-red-500">All time slots are fully booked</p>
+                                <p className="font-bridal text-[12px] uppercase tracking-[0.2em] font-medium text-bridal-coral">All time slots are fully booked</p>
                               ) : (
                                 <>
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    {avail ? (
-                                      <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 text-xs">
-                                        {avail.availableSlots.length} slot{avail.availableSlots.length !== 1 ? "s" : ""} available
-                                      </Badge>
-                                    ) : (
-                                      <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 text-xs">
-                                        Available
-                                      </Badge>
-                                    )}
+                                    <span className="inline-flex items-center font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium px-2.5 py-1 rounded-full bg-bridal-sage/25 text-[#3F6B43] border border-bridal-sage/40">
+                                      {avail ? `${avail.availableSlots.length} slot${avail.availableSlots.length !== 1 ? "s" : ""} available` : "Available"}
+                                    </span>
                                   </div>
                                   {avail && avail.availableSlots.length > 0 && (
-                                    <div className="flex flex-wrap gap-1.5 mt-2">
+                                    <div className="flex flex-wrap gap-1.5 mt-3">
                                       {avail.availableSlots.map((slot, i) => {
                                         const [h, m] = slot.split(":").map(Number);
                                         const time = `${h === 0 ? 12 : h > 12 ? h - 12 : h}:${String(m).padStart(2,"0")} ${h >= 12 ? "PM" : "AM"}`;
                                         return (
-                                          <Badge key={i} variant="outline" className="text-xs">{time}</Badge>
+                                          <span key={i} className="inline-block font-bridal text-[11px] tabular-nums px-2.5 py-1 rounded-full bg-bridal-cream border border-bridal-beige text-bridal-charcoal">{time}</span>
                                         );
                                       })}
                                     </div>
@@ -2300,123 +2298,115 @@ export default function VendorDetailsMobile({
 
           {/* ===== STICKY SIDEBAR (Desktop) ===== */}
           <div className="hidden lg:block">
-            <div className="sticky top-20 space-y-5">
+            <div className="sticky top-24 space-y-5">
               {/* Booking card */}
-              <Card className="border-purple-100 shadow-lg">
+              <Card className="border border-bridal-beige bg-bridal-cream rounded-md shadow-[0_18px_40px_-32px_rgba(176,125,84,0.4)]">
                 <CardContent className="p-6">
-                  <div className="text-center mb-5">
-                    <span className="text-xs text-neutral-500 uppercase tracking-wider">
+                  <div className="text-center mb-5 pb-5 border-b border-bridal-beige/70">
+                    <span className="font-bridal text-[10.5px] uppercase tracking-[0.32em] font-medium text-bridal-text-label">
                       Starting from
                     </span>
-                    <p className="text-3xl font-bold text-purple-700">
+                    <p className="font-display italic text-[34px] text-bridal-gold-dark leading-none mt-2">
                       {startingPrice ? formatPrice(startingPrice) : "See Packages"}
                     </p>
                   </div>
-                  <Button
+                  <button
+                    type="button"
                     onClick={handleBookNow}
-                    size="lg"
-                    className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl text-base font-semibold shadow-lg shadow-purple-200/50 hover:shadow-xl transition-all duration-300 mb-3"
+                    className="w-full inline-flex items-center justify-center gap-2 h-12 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] hover:shadow-[0_14px_30px_-12px_rgba(176,125,84,0.7)] transition-all duration-300 mb-3"
                   >
-                    <CalendarCheck className="w-5 h-5 mr-2" />
-                    Book Now
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="lg"
+                    <CalendarCheck className="w-4 h-4" />
+                    Book now
+                  </button>
+                  <button
+                    type="button"
                     onClick={handleFavoriteToggle}
-                    className="w-full border-purple-200 text-purple-600 hover:bg-purple-50 rounded-xl"
+                    className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-[4px] border border-bridal-gold/45 bg-bridal-cream hover:bg-bridal-blush hover:border-bridal-mauve text-bridal-gold-dark hover:text-bridal-mauve font-bridal text-[12px] uppercase tracking-[0.22em] font-medium transition-colors"
                   >
-                    <Heart
-                      className={`w-5 h-5 mr-2 ${isFavorite ? "fill-red-500 text-red-500" : ""}`}
-                    />
-                    {isFavorite ? "Saved" : "Save to Favorites"}
-                  </Button>
+                    <Heart className={`w-4 h-4 ${isFavorite ? "fill-bridal-coral text-bridal-coral" : ""}`} />
+                    {isFavorite ? "Saved" : "Save to favorites"}
+                  </button>
                 </CardContent>
               </Card>
 
               {/* Location & Contact card */}
-              <Card className="border-neutral-100">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <MessageCircle className="w-4 h-4 text-purple-500" />
-                    Get in Touch
+              <Card className="border border-bridal-beige bg-bridal-cream rounded-md shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)]">
+                <CardHeader className="pb-3 border-b border-bridal-beige bg-bridal-ivory rounded-t-md">
+                  <CardTitle className="font-display italic text-[20px] text-bridal-charcoal flex items-center gap-2">
+                    <MessageCircle className="w-5 h-5 text-bridal-gold" />
+                    Get in touch
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 pt-0">
-                  <div className="flex items-center gap-3 text-sm text-neutral-600">
-                    <MapPin className="w-4 h-4 text-purple-400" />
+                <CardContent className="space-y-3 p-5">
+                  <div className="flex items-center gap-3 font-bridal text-[13px] text-bridal-charcoal/85">
+                    <MapPin className="w-4 h-4 text-bridal-gold" />
                     <span>{vendor.location || vendor.city}</span>
                   </div>
-                  <Button
+                  <button
+                    type="button"
                     onClick={handleMessageVendor}
-                    variant="outline"
-                    size="sm"
-                    className="w-full border-purple-200 text-purple-600 hover:bg-purple-50 rounded-xl mt-2"
+                    className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-[4px] border border-bridal-gold/45 bg-bridal-cream hover:bg-bridal-blush hover:border-bridal-mauve text-bridal-gold-dark hover:text-bridal-mauve font-bridal text-[12px] uppercase tracking-[0.22em] font-medium transition-colors"
                   >
-                    <MessageCircle className="w-4 h-4 mr-2" />
-                    Message Vendor
-                  </Button>
-                  <Button
+                    <MessageCircle className="w-4 h-4" />
+                    Message vendor
+                  </button>
+                  <button
+                    type="button"
                     onClick={handleBookNow}
-                    size="sm"
-                    className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl"
+                    className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] transition-all duration-300"
                   >
-                    <CalendarCheck className="w-4 h-4 mr-2" />
-                    Book & Get Contact Details
-                  </Button>
+                    <CalendarCheck className="w-4 h-4" />
+                    Book &amp; get details
+                  </button>
                 </CardContent>
               </Card>
 
-              {/* Share card */}
-              <Button
-                variant="outline"
+              {/* Share button */}
+              <button
+                type="button"
                 onClick={handleShare}
-                className="w-full border-neutral-200 text-neutral-600 hover:text-purple-600 hover:border-purple-200"
+                className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-[4px] border border-bridal-beige bg-bridal-cream hover:border-bridal-gold/55 hover:text-bridal-gold-dark text-bridal-charcoal font-bridal text-[12px] uppercase tracking-[0.22em] font-medium transition-colors"
               >
-                <Share2 className="w-4 h-4 mr-2" />
+                <Share2 className="w-4 h-4" />
                 Share this vendor
-              </Button>
+              </button>
             </div>
           </div>
         </div>
       </div>
 
       {/* ===== FIXED BOTTOM BAR (Mobile) ===== */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-purple-100/50 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
-        <div className="flex items-center gap-3">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-bridal-cream/95 backdrop-blur-xl border-t border-bridal-beige px-4 py-3 shadow-[0_-8px_30px_-16px_rgba(176,125,84,0.45)]">
+        <div className="flex items-center gap-2">
           <div className="flex-1">
-            <span className="text-[10px] text-neutral-500 uppercase tracking-wider">
+            <span className="font-bridal text-[9.5px] uppercase tracking-[0.25em] font-medium text-bridal-text-label">
               From
             </span>
-            <p className="text-lg font-bold text-purple-700">
+            <p className="font-display italic text-[20px] text-bridal-gold-dark leading-tight">
               {formatPrice(vendor.minimumPrice || vendor.price)}
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
+          <button
+            type="button"
             onClick={handleFavoriteToggle}
-            className="p-2.5 border-purple-200 rounded-xl"
+            className="w-11 h-11 inline-flex items-center justify-center rounded-[4px] border border-bridal-gold/45 bg-bridal-cream hover:border-bridal-mauve transition-colors"
           >
-            <Heart
-              className={`w-5 h-5 ${isFavorite ? "fill-red-500 text-red-500" : "text-purple-500"}`}
-            />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
+            <Heart className={`w-5 h-5 ${isFavorite ? "fill-bridal-coral text-bridal-coral" : "text-bridal-gold"}`} />
+          </button>
+          <button
+            type="button"
             onClick={handleMessageVendor}
-            className="p-2.5 border-purple-200 rounded-xl"
+            className="w-11 h-11 inline-flex items-center justify-center rounded-[4px] border border-bridal-gold/45 bg-bridal-cream hover:border-bridal-mauve transition-colors"
           >
-            <MessageCircle className="w-5 h-5 text-purple-500" />
-          </Button>
-          <Button
+            <MessageCircle className="w-5 h-5 text-bridal-gold" />
+          </button>
+          <button
+            type="button"
             onClick={handleBookNow}
-            size="lg"
-            className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-6 rounded-xl font-semibold shadow-lg shadow-purple-200/50"
+            className="inline-flex items-center justify-center h-11 px-6 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[11px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] transition-all duration-300"
           >
-            Book Now
-          </Button>
+            Book now
+          </button>
         </div>
       </div>
 
@@ -2425,25 +2415,26 @@ export default function VendorDetailsMobile({
 
       {/* ===== LIGHTBOX DIALOG ===== */}
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-        <DialogContent className="max-w-screen max-h-screen w-screen h-screen p-0 bg-black border-0 rounded-none overflow-hidden flex flex-col">
+        <DialogContent className="max-w-screen max-h-screen w-screen h-screen p-0 bg-bridal-charcoal border-0 rounded-none overflow-hidden flex flex-col">
           <DialogTitle className="sr-only">Gallery — {vendor.name}</DialogTitle>
 
-          {/* Top bar: counter + vendor name + close */}
-          <div className="flex items-center justify-between px-5 py-3 bg-black/60 backdrop-blur-sm z-50 shrink-0">
+          {/* Top bar */}
+          <div className="flex items-center justify-between px-5 py-3.5 bg-bridal-charcoal/85 backdrop-blur-sm z-50 shrink-0 border-b border-bridal-ivory/10">
             <div>
-              <p className="text-white font-semibold text-sm leading-tight">{vendor.name}</p>
-              <p className="text-white/50 text-xs mt-0.5">Gallery</p>
+              <p className="font-display italic text-bridal-ivory text-[18px] leading-tight">{vendor.name}</p>
+              <p className="font-bridal text-bridal-ivory/55 text-[11px] uppercase tracking-[0.25em] mt-0.5">Gallery</p>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-white/70 text-sm font-medium tabular-nums">
+              <span className="font-bridal text-bridal-ivory/70 text-[12px] uppercase tracking-[0.25em] tabular-nums">
                 {lightboxIndex + 1} / {galleryImages.length}
               </span>
               <button
+                type="button"
                 onClick={() => setLightboxOpen(false)}
                 aria-label="Close gallery"
-                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                className="w-9 h-9 rounded-full bg-bridal-ivory/10 hover:bg-bridal-gold hover:text-bridal-charcoal flex items-center justify-center text-bridal-ivory transition-colors"
               >
-                <X className="w-4.5 h-4.5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -2463,7 +2454,7 @@ export default function VendorDetailsMobile({
               className="h-full w-full lightbox-swiper"
             >
               {galleryImages.map((img, i) => (
-                <SwiperSlide key={i} className="flex items-center justify-center bg-black">
+                <SwiperSlide key={i} className="flex items-center justify-center bg-bridal-charcoal">
                   <div className="relative w-full h-full">
                     <Image
                       src={img}
@@ -2480,16 +2471,17 @@ export default function VendorDetailsMobile({
 
           {/* Thumbnail strip */}
           {galleryImages.length > 1 && (
-            <div ref={thumbStripRef} className="shrink-0 bg-black/80 backdrop-blur-sm py-3 px-4 overflow-x-auto scrollbar-none">
+            <div ref={thumbStripRef} className="shrink-0 bg-bridal-charcoal/85 backdrop-blur-sm py-3 px-4 overflow-x-auto scrollbar-none border-t border-bridal-ivory/10">
               <div className="flex gap-2 w-max mx-auto">
                 {galleryImages.map((img, i) => (
                   <button
                     key={i}
+                    type="button"
                     onClick={() => goToLightboxSlide(i)}
-                    className={`relative w-14 h-14 rounded-lg overflow-hidden shrink-0 transition-all duration-200 ${
+                    className={`relative w-16 h-16 rounded-md overflow-hidden shrink-0 transition-all duration-200 ${
                       i === lightboxIndex
-                        ? "ring-2 ring-purple-400 ring-offset-1 ring-offset-black opacity-100 scale-105"
-                        : "opacity-40 hover:opacity-70"
+                        ? "ring-2 ring-bridal-gold ring-offset-2 ring-offset-bridal-charcoal opacity-100 scale-105"
+                        : "opacity-45 hover:opacity-80"
                     }`}
                   >
                     <Image

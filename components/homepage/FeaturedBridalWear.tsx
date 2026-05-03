@@ -13,14 +13,14 @@ export function FeaturedBridalWear() {
   const vendors = allVendors.slice(0, 8)
 
   return (
-    <section className="py-6 sm:py-8 md:py-12 lg:py-16 bg-gradient-to-b from-white to-purple-50/40">
+    <section className="py-6 sm:py-8 md:py-12 lg:py-16 bg-gradient-to-b from-white to-bridal-cream/40">
       <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 xl:px-12">
         <div className="flex justify-between items-end mb-12">
           <div>
             <SectionHeading title="Featured Bridal Wear" subtitle="Wedding Couture" />
             <p className="text-muted-foreground mt-2">Stunning bridal dresses and wedding attire</p>
           </div>
-          <Link href="/bridal-wear" className="text-purple-600 hover:text-purple-700 hover:underline hidden md:block font-medium">
+          <Link href="/bridal-wear" className="text-bridal-gold-dark hover:text-bridal-gold-dark hover:underline hidden md:block font-medium">
             View all bridal wear &rarr;
           </Link>
         </div>
@@ -53,6 +53,7 @@ export function FeaturedBridalWear() {
                   capacity={vendor.capacity}
                   amenities={vendor.amenities}
                   sponsored={vendor.sponsored}
+                  business={vendor}
                 />
               </SwiperSlide>
             ))
@@ -60,7 +61,7 @@ export function FeaturedBridalWear() {
         </FeaturedSwiper>
 
         <div className="text-center mt-8 md:hidden">
-          <Link href="/bridal-wear" className="text-purple-600 hover:text-purple-700 hover:underline font-medium">
+          <Link href="/bridal-wear" className="text-bridal-gold-dark hover:text-bridal-gold-dark hover:underline font-medium">
             View all bridal wear &rarr;
           </Link>
         </div>

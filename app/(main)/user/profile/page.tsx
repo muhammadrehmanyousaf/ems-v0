@@ -4,14 +4,34 @@ import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { User, Mail, Phone, Save, Edit3, CheckCircle, AlertCircle, Shield, Lock, Key, Eye, EyeOff, Camera } from "lucide-react";
+import {
+  User,
+  Mail,
+  Phone,
+  Save,
+  Edit3,
+  CheckCircle,
+  AlertCircle,
+  Shield,
+  Lock,
+  Key,
+  Eye,
+  EyeOff,
+  Camera,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import axiosInstance from "@/lib/axiosConfig";
 import { BACKEND_URL } from "@/lib/backend-url";
+
+import {
+  PageContainer,
+  PageHeader,
+  SectionCard,
+} from "@/components/user-dashboard";
 
 interface UserProfile {
   fullName: string;
@@ -29,40 +49,31 @@ interface PasswordForm {
 
 const ProfilePage = () => {
   const { user, isAuthenticated, isLoading, logout } = useUser();
-  
-  // Function to update header in real-time without reload
+
   const updateHeaderInRealTime = (updatedProfile: UserProfile) => {
-    // Dispatch a custom event to notify the header component
-    if (typeof window !== 'undefined') {
-      const updateEvent = new CustomEvent('profileUpdated', {
-        detail: {
-          fullName: updatedProfile.fullName,
-          email: updatedProfile.email,
-          phoneNumber: updatedProfile.phoneNumber
-        }
-      });
-      window.dispatchEvent(updateEvent);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("profileUpdated", {
+          detail: {
+            fullName: updatedProfile.fullName,
+            email: updatedProfile.email,
+            phoneNumber: updatedProfile.phoneNumber,
+          },
+        }),
+      );
     }
   };
-  
+
   const [profile, setProfile] = useState<UserProfile>({
     fullName: "",
     email: "",
     phoneNumber: "",
-    roleIds: [3]
+    roleIds: [3],
   });
-  
-  // Ensure all profile values are always strings to prevent controlled/uncontrolled warnings
-  const safeProfile = {
-    fullName: String(profile.fullName || ""),
-    email: String(profile.email || ""),
-    phoneNumber: String(profile.phoneNumber || ""),
-    roleIds: [3]
-  };
   const [passwordForm, setPasswordForm] = useState<PasswordForm>({
     oldPassword: "",
     newPassword: "",
-    repeatPassword: ""
+    repeatPassword: "",
   });
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -78,12 +89,14 @@ const ProfilePage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  // profileImage upload is only for simple customers (not vendors or admins)
-  const isSimpleUser = !user?.isVendor &&
+  const isSimpleUser =
+    !user?.isVendor &&
     !user?.isSuperAdmin &&
-    !user?.roles?.some((r: any) => r.name === "super admin" || r.name === "vendor" || r.name === "admin");
+    !user?.roles?.some(
+      (r: any) =>
+        r.name === "super admin" || r.name === "vendor" || r.name === "admin",
+    );
 
-  // Fetch user profile on component mount
   useEffect(() => {
     if (user && !isLoading) {
       loadUserProfile();
@@ -95,35 +108,29 @@ const ProfilePage = () => {
   const loadUserProfile = () => {
     try {
       setIsLoadingProfile(true);
-
       if (user) {
-        // Set profile from the user data fetched by the context
         const initialProfile = {
           fullName: user.fullName || "",
           email: user.email || "",
           phoneNumber: user.phoneNumber || "",
-          roleIds: [3]
+          roleIds: [3],
         };
-        
         setProfile(initialProfile);
         setOriginalProfile(initialProfile);
-        setIsLoadingProfile(false); // Stop loading immediately since we have user data
-        
-        // Then fetch fresh data from API in background
+        setIsLoadingProfile(false);
         fetchProfileFromAPI(user.id);
       } else {
         setIsLoadingProfile(false);
       }
-    } catch (error) {
+    } catch {
       setIsLoadingProfile(false);
     }
   };
 
-    const fetchProfileFromAPI = async (userId: string) => {
+  const fetchProfileFromAPI = async (userId: string) => {
     try {
       const res = await axiosInstance.get(`${BACKEND_URL}api/v1/users?id=${userId}`);
       const data = res.data;
-
       if (data.data && Array.isArray(data.data)) {
         const userData = data.data.find((u: any) => u.id === userId);
         if (userData) {
@@ -138,78 +145,51 @@ const ProfilePage = () => {
         setOriginalProfile(data);
       }
     } catch {
-      // Keep the context data if API fails
+      // keep context data on failure
     } finally {
       setIsLoadingProfile(false);
     }
   };
 
   const handleInputChange = (field: keyof UserProfile, value: string) => {
-    setProfile(prev => {
-      const updated = {
-        ...prev,
-        [field]: value
-      };
-      return updated;
-    });
+    setProfile((prev) => ({ ...prev, [field]: value }));
   };
 
-    const handleSave = async () => {
+  const handleSave = async () => {
     try {
       setIsSaving(true);
-      
-      if (!user || !user.id) {
-        throw new Error('User ID not found');
-      }
-      
-      const requestBody = {
-        ...profile,
-        roleIds: [3],
-        id: user.id
-      };
-      const res = await axiosInstance.patch(`${BACKEND_URL}api/v1/users?id=${user.id}`, requestBody);
-
+      if (!user || !user.id) throw new Error("User ID not found");
+      const requestBody = { ...profile, roleIds: [3], id: user.id };
+      const res = await axiosInstance.patch(
+        `${BACKEND_URL}api/v1/users?id=${user.id}`,
+        requestBody,
+      );
       let updatedData = profile;
       const resData = res.data;
-      if (resData?.data?.fullName) {
-        updatedData = resData.data;
-      } else if (resData?.fullName) {
-        updatedData = resData;
-      }
-      
-      // Update the profile state with new data - this updates the UI immediately!
+      if (resData?.data?.fullName) updatedData = resData.data;
+      else if (resData?.fullName) updatedData = resData;
       setProfile(updatedData);
       setOriginalProfile(updatedData);
       setIsEditing(false);
-      setLastUpdated(new Date()); // Track when profile was last updated
-      
-      // Update header in real-time without reload!
+      setLastUpdated(new Date());
       updateHeaderInRealTime(updatedData);
-      
-      // Also update the user context if available (for header display)
-      if (typeof window !== 'undefined' && localStorage.getItem('user_id')) {
-        // Update localStorage with new name if it changed
-        const currentUser = JSON.parse(localStorage.getItem('user_data') || '{}');
+      if (typeof window !== "undefined" && localStorage.getItem("user_id")) {
+        const currentUser = JSON.parse(localStorage.getItem("user_data") || "{}");
         if (updatedData.fullName && currentUser.fullName !== updatedData.fullName) {
           currentUser.fullName = updatedData.fullName;
-          localStorage.setItem('user_data', JSON.stringify(currentUser));
+          localStorage.setItem("user_data", JSON.stringify(currentUser));
         }
       }
-      
       toast({
-        title: "Profile Updated! 🎉",
-        description: "Your profile has been updated successfully. The changes are now visible everywhere!",
+        title: "Profile updated",
+        description: "Your profile changes have been saved.",
       });
     } catch (error) {
       let errorMessage = "Failed to update profile";
       if (error instanceof Error) {
         errorMessage = `Failed to update profile: ${error.message}`;
       }
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: errorMessage, variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -220,108 +200,85 @@ const ProfilePage = () => {
       if (passwordForm.newPassword !== passwordForm.repeatPassword) {
         toast({
           title: "Error",
-          description: "New passwords do not match!",
+          description: "New passwords do not match.",
           variant: "destructive",
         });
         return;
       }
-
       setIsPasswordChanging(true);
-      
-      if (!user || !user.id) {
-        throw new Error('User ID not found');
-      }
-
+      if (!user || !user.id) throw new Error("User ID not found");
       await axiosInstance.patch(`${BACKEND_URL}api/v1/users/change-password`, {
         currentPassword: passwordForm.oldPassword,
         newPassword: passwordForm.newPassword,
       });
-
-      // Success! Clear password form
-      setPasswordForm({
-        oldPassword: "",
-        newPassword: "",
-        repeatPassword: ""
-      });
-
-      // Show success message
+      setPasswordForm({ oldPassword: "", newPassword: "", repeatPassword: "" });
       toast({
-        title: "Password Changed Successfully! 🔐",
-        description: "Your password has been updated. You will be logged out for security reasons.",
+        title: "Password changed",
+        description: "You'll be signed out in a moment for security.",
       });
-
-      // Wait a moment for user to see the message, then logout
       setTimeout(() => {
-        // Use the proper logout function for security
         logout();
-        // Redirect to login page
-        router.push('/login');
-      }, 2000); // 2 second delay
-
+        router.push("/login");
+      }, 2000);
     } catch (error) {
       let errorMessage = "Failed to change password. Please try again.";
       if (error instanceof Error) {
         errorMessage = `Failed to change password: ${error.message}`;
       }
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: errorMessage, variant: "destructive" });
     } finally {
       setIsPasswordChanging(false);
     }
   };
 
   const handleCancel = () => {
-    if (originalProfile) {
-      setProfile(originalProfile);
-    }
+    if (originalProfile) setProfile(originalProfile);
     setIsEditing(false);
   };
 
   const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Show preview immediately
     const previewUrl = URL.createObjectURL(file);
     setImagePreview(previewUrl);
-
-    // Upload to server
     try {
       setIsUploadingImage(true);
       const formData = new FormData();
       formData.append("picture", file);
-
-      const res = await axiosInstance.post(`${BACKEND_URL}api/v1/users/upload-profile-picture`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
+      const res = await axiosInstance.post(
+        `${BACKEND_URL}api/v1/users/upload-profile-picture`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
       const serverImageUrl = res.data?.data?.profileImage;
       if (serverImageUrl) {
-        setProfile(prev => ({ ...prev, profileImage: serverImageUrl }));
-        // Update header avatar in real-time
+        setProfile((prev) => ({ ...prev, profileImage: serverImageUrl }));
         if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("profileUpdated", { detail: { profileImage: serverImageUrl } }));
+          window.dispatchEvent(
+            new CustomEvent("profileUpdated", {
+              detail: { profileImage: serverImageUrl },
+            }),
+          );
           const currentUser = JSON.parse(localStorage.getItem("user_data") || "{}");
           currentUser.profileImage = serverImageUrl;
           localStorage.setItem("user_data", JSON.stringify(currentUser));
         }
       }
-
-      toast({ title: "Profile picture updated!" });
+      toast({ title: "Profile picture updated" });
     } catch {
       setImagePreview(null);
-      toast({ title: "Upload failed", description: "Could not upload profile picture.", variant: "destructive" });
+      toast({
+        title: "Upload failed",
+        description: "Could not upload profile picture.",
+        variant: "destructive",
+      });
     } finally {
       setIsUploadingImage(false);
-      // Reset input so same file can be re-selected
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
-  const getPasswordStrength = (password: string): { score: number; label: string; color: string } => {
+  const getPasswordStrength = (password: string) => {
     if (!password) return { score: 0, label: "", color: "" };
     let score = 0;
     if (password.length >= 8) score++;
@@ -329,497 +286,361 @@ const ProfilePage = () => {
     if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
     if (/\d/.test(password)) score++;
     if (/[^a-zA-Z0-9]/.test(password)) score++;
-
-    if (score <= 1) return { score: 1, label: "Weak", color: "bg-red-500" };
-    if (score <= 2) return { score: 2, label: "Fair", color: "bg-orange-500" };
-    if (score <= 3) return { score: 3, label: "Good", color: "bg-yellow-500" };
-    if (score <= 4) return { score: 4, label: "Strong", color: "bg-green-500" };
-    return { score: 5, label: "Very Strong", color: "bg-emerald-500" };
+    if (score <= 1) return { score: 1, label: "Weak", color: "bg-bridal-coral" };
+    if (score <= 2) return { score: 2, label: "Fair", color: "bg-bridal-coral/70" };
+    if (score <= 3) return { score: 3, label: "Good", color: "bg-bridal-gold/70" };
+    if (score <= 4) return { score: 4, label: "Strong", color: "bg-bridal-sage" };
+    return { score: 5, label: "Very strong", color: "bg-[#3F6B43]" };
   };
 
   const hasChanges = () => {
-    if (!originalProfile) {
-      return false;
-    }
-    
-    // Ensure we're comparing strings
-    const currentName = String(profile.fullName || "");
-    const currentEmail = String(profile.email || "");
-    const currentPhone = String(profile.phoneNumber || "");
-    
-    const originalName = String(originalProfile.fullName || "");
-    const originalEmail = String(originalProfile.email || "");
-    const originalPhone = String(originalProfile.phoneNumber || "");
-    
-    const nameChanged = currentName !== originalName;
-    const emailChanged = currentEmail !== originalEmail;
-    const phoneChanged = currentPhone !== originalPhone;
-    
-    return nameChanged || emailChanged || phoneChanged;
+    if (!originalProfile) return false;
+    return (
+      String(profile.fullName || "") !== String(originalProfile.fullName || "") ||
+      String(profile.email || "") !== String(originalProfile.email || "") ||
+      String(profile.phoneNumber || "") !== String(originalProfile.phoneNumber || "")
+    );
   };
-
-
 
   if (isLoading || isLoadingProfile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-purple-50/80 py-8 px-4">
-        <div className="max-w-4xl mx-auto">
-          {/* Page title skeleton */}
-          <div className="text-center mb-8">
-            <div className="h-10 w-56 skeleton-shimmer rounded-lg mx-auto mb-3" />
-            <div className="h-5 w-80 skeleton-shimmer rounded mx-auto" />
+      <PageContainer>
+        <PageHeader
+          eyebrow={<><span>My account</span><span className="size-1 rounded-full bg-muted-foreground/40" /><span>Profile</span></>}
+          title="Profile"
+          description="Manage your personal information and account security."
+        />
+        <SectionCard title="Personal information">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-3.5 w-24" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ))}
           </div>
-
-          {/* Profile card skeleton */}
-          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm overflow-hidden">
-            {/* Purple gradient header */}
-            <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-white/20 rounded-full" />
-                  <div>
-                    <div className="h-5 w-44 bg-white/30 rounded mb-2" />
-                    <div className="h-3 w-56 bg-white/20 rounded" />
-                  </div>
-                </div>
-                <div className="h-9 w-28 bg-white/20 rounded-lg" />
+        </SectionCard>
+        <SectionCard title="Security">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-3.5 w-24" />
+                <Skeleton className="h-10 w-full" />
               </div>
-            </div>
-            {/* Form fields */}
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {[
-                  { label: "Full Name", width: "w-20" },
-                  { label: "Email Address", width: "w-28" },
-                  { label: "Phone Number", width: "w-28" },
-                ].map((field, i) => (
-                  <div key={i} className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 skeleton-shimmer rounded" />
-                      <div className={`h-4 ${field.width} skeleton-shimmer rounded`} />
-                    </div>
-                    <div className="h-10 w-full skeleton-shimmer rounded-lg border-2 border-neutral-100" />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Password card skeleton */}
-          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm mt-6 overflow-hidden">
-            {/* Blue gradient header */}
-            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-white/20 rounded-full" />
-                <div>
-                  <div className="h-5 w-40 bg-white/30 rounded mb-2" />
-                  <div className="h-3 w-48 bg-white/20 rounded" />
-                </div>
-              </div>
-            </div>
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {["Current Password", "New Password"].map((label, i) => (
-                  <div key={i} className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 skeleton-shimmer rounded" />
-                      <div className="h-4 w-32 skeleton-shimmer rounded" />
-                    </div>
-                    <div className="h-10 w-full skeleton-shimmer rounded-lg border-2 border-neutral-100" />
-                  </div>
-                ))}
-                <div className="space-y-2 md:col-span-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 skeleton-shimmer rounded" />
-                    <div className="h-4 w-40 skeleton-shimmer rounded" />
-                  </div>
-                  <div className="h-10 w-full skeleton-shimmer rounded-lg border-2 border-neutral-100" />
-                </div>
-              </div>
-              <div className="flex justify-end mt-6 pt-6 border-t border-neutral-200">
-                <div className="h-11 w-44 skeleton-shimmer rounded-lg" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+            ))}
+          </div>
+        </SectionCard>
+      </PageContainer>
     );
   }
 
   if (!user || !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-purple-50/80 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-neutral-600">Please log in to view your profile</p>
-        </div>
-      </div>
+      <PageContainer>
+        <SectionCard className="text-center" title="Sign in required">
+          <p className="text-sm text-muted-foreground">
+            Please log in to view your profile.
+          </p>
+        </SectionCard>
+      </PageContainer>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-purple-50/80 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-neutral-900 mb-2">Profile Settings</h1>
-          <p className="text-lg text-neutral-600">Manage your account information and preferences</p>
-        </div>
+  const headerEyebrow = (
+    <>
+      <span>My account</span>
+      <span className="size-1 rounded-full bg-muted-foreground/40" />
+      <span>Profile</span>
+    </>
+  );
 
-        {/* Profile Card */}
-        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader className="bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-t-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {isSimpleUser ? (
-                  /* Clickable avatar with camera upload — simple customers only */
-                  <div className="relative group">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/jpg"
-                      className="hidden"
-                      onChange={handleImageFileChange}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isUploadingImage}
-                      className="w-14 h-14 rounded-full overflow-hidden border-2 border-white/40 hover:border-white transition-all duration-200 block"
-                    >
-                      {imagePreview || profile.profileImage ? (
-                        <img
-                          src={imagePreview || profile.profileImage}
-                          alt="Profile"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-white/20 flex items-center justify-center text-white font-bold text-xl">
-                          {profile.fullName?.charAt(0).toUpperCase() || <User className="w-6 h-6" />}
-                        </div>
-                      )}
-                      <span className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
-                        {isUploadingImage ? (
-                          <Spinner size="sm" className="text-white" />
-                        ) : (
-                          <Camera className="w-5 h-5 text-white" />
-                        )}
-                      </span>
-                    </button>
-                  </div>
+  const profileActions = !isEditing ? (
+    <Button onClick={() => setIsEditing(true)} variant="outline" size="sm" className="gap-1.5">
+      <Edit3 className="size-3.5" />
+      Edit profile
+    </Button>
+  ) : (
+    <div className="flex items-center gap-2">
+      <Button onClick={handleCancel} variant="ghost" size="sm">
+        Cancel
+      </Button>
+      <Button
+        onClick={handleSave}
+        disabled={!hasChanges() || isSaving}
+        size="sm"
+        className="gap-1.5"
+      >
+        {isSaving ? <Spinner size="sm" className="mr-1" /> : <Save className="size-3.5" />}
+        {isSaving ? "Saving…" : "Save changes"}
+      </Button>
+    </div>
+  );
+
+  return (
+    <PageContainer>
+      <PageHeader
+        eyebrow={headerEyebrow}
+        title="Profile"
+        description="Manage your personal information and account security."
+      />
+
+      {/* Avatar + identity card */}
+      <SectionCard
+        title="Personal information"
+        description="Your basic profile details — visible on bookings and reviews."
+        action={profileActions}
+      >
+        <div className="flex items-start gap-5 mb-6 pb-6 border-b border-border/50">
+          {isSimpleUser ? (
+            <div className="relative group">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/jpg"
+                className="hidden"
+                onChange={handleImageFileChange}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingImage}
+                className="relative h-20 w-20 rounded-full overflow-hidden border-2 border-border hover:border-bridal-gold/55 transition-colors block"
+              >
+                {imagePreview || profile.profileImage ? (
+                  <img
+                    src={imagePreview || profile.profileImage}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
-                  /* Static avatar for vendors / admins — no upload here */
-                  <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-xl">
-                    {profile.fullName?.charAt(0).toUpperCase() || <User className="w-6 h-6" />}
+                  <div className="w-full h-full bg-bridal-cream flex items-center justify-center text-bridal-gold-dark text-2xl font-display italic">
+                    {profile.fullName?.charAt(0).toUpperCase() || "U"}
                   </div>
                 )}
-                                 <div>
-                   <CardTitle className="text-xl">Personal Information</CardTitle>
-                   <CardDescription className="text-purple-100">
-                     Update your basic profile details
-                     {lastUpdated && (
-                       <span className="block text-xs text-purple-200 mt-1">
-                         Last updated: {lastUpdated.toLocaleString()}
-                       </span>
-                     )}
-                   </CardDescription>
-                 </div>
-              </div>
-              {!isEditing && (
-                <Button
-                  onClick={() => setIsEditing(true)}
-                  variant="outline"
-                  size="sm"
-                  className="bg-white/20 hover:bg-white/30 border-white/30 text-white hover:text-white"
-                >
-                  <Edit3 className="w-4 h-4 mr-2" />
-                  Edit Profile
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Full Name */}
-              <div className="space-y-2">
-                <Label htmlFor="fullName" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                  <User className="w-4 h-4 text-purple-500" />
-                  Full Name
-                </Label>
-                                 <Input
-                   id="fullName"
-                   type="text"
-                   value={profile.fullName || ""}
-                   onChange={(e) => handleInputChange('fullName', e.target.value)}
-                   disabled={!isEditing}
-                   className={`border-2 transition-all duration-200 ${
-                     isEditing 
-                       ? 'border-purple-200 focus:border-purple-500 focus:ring-purple-500/20' 
-                       : 'border-neutral-200 bg-neutral-50'
-                   }`}
-                   placeholder="Enter your full name"
-                 />
-              </div>
-
-              {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-purple-500" />
-                  Email Address
-                </Label>
-                                 <Input
-                   id="email"
-                   type="email"
-                   value={profile.email || ""}
-                   onChange={(e) => handleInputChange('email', e.target.value)}
-                   disabled={!isEditing}
-                   className={`border-2 transition-all duration-200 ${
-                     isEditing 
-                       ? 'border-purple-200 focus:border-purple-500 focus:ring-purple-500/20' 
-                       : 'border-neutral-200 bg-neutral-50'
-                   }`}
-                   placeholder="Enter your email"
-                 />
-              </div>
-
-              {/* Phone Number */}
-              <div className="space-y-2">
-                <Label htmlFor="phoneNumber" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-purple-500" />
-                  Phone Number
-                </Label>
-                                 <Input
-                   id="phoneNumber"
-                   type="tel"
-                   value={profile.phoneNumber || ""}
-                   onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
-                   disabled={!isEditing}
-                   className={`border-2 transition-all duration-200 ${
-                     isEditing 
-                       ? 'border-purple-200 focus:border-purple-500 focus:ring-purple-500/20' 
-                       : 'border-neutral-200 bg-neutral-50'
-                   }`}
-                   placeholder="Enter your phone number"
-                 />
-              </div>
-
-
-            </div>
-
-            {/* Action Buttons */}
-            {isEditing && (
-              <div className="flex items-center justify-end gap-3 mt-8 pt-6 border-t border-neutral-200">
-                <Button
-                  onClick={handleCancel}
-                  variant="outline"
-                  size="lg"
-                  className="border-neutral-300 text-neutral-600 hover:bg-neutral-50"
-                >
-                  Cancel
-                </Button>
-                                                   <Button
-                    onClick={handleSave}
-                    disabled={!hasChanges() || isSaving}
-                    size="lg"
-                    className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
-                  >
-                  {isSaving ? (
-                    <>
-                      <Spinner size="sm" className="mr-2" />
-                      Saving...
-                    </>
+                <span className="absolute inset-0 rounded-full bg-bridal-charcoal/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  {isUploadingImage ? (
+                    <Spinner size="sm" className="text-bridal-ivory" />
                   ) : (
-                    <>
-                      <Save className="w-4 h-4 mr-2" />
-                      Save Changes
-                    </>
+                    <Camera className="w-5 h-5 text-bridal-ivory" />
                   )}
-                </Button>
+                </span>
+              </button>
+            </div>
+          ) : (
+            <div className="h-20 w-20 rounded-full bg-bridal-cream border border-border flex items-center justify-center text-2xl font-display italic text-bridal-gold-dark">
+              {profile.fullName?.charAt(0).toUpperCase() || "U"}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="font-display italic text-[22px] text-foreground leading-tight">
+              {profile.fullName || "Your name"}
+            </p>
+            <p className="text-[13px] text-muted-foreground mt-0.5 truncate">
+              {profile.email || "—"}
+            </p>
+            {lastUpdated && (
+              <p className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <CheckCircle className="size-3 text-[#3F6B43]" />
+                Updated {lastUpdated.toLocaleString()}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="space-y-2">
+            <Label htmlFor="fullName" className="text-[12px] font-medium text-foreground inline-flex items-center gap-1.5">
+              <User className="size-3.5 text-muted-foreground" />
+              Full name
+            </Label>
+            <Input
+              id="fullName"
+              type="text"
+              value={profile.fullName || ""}
+              onChange={(e) => handleInputChange("fullName", e.target.value)}
+              disabled={!isEditing}
+              placeholder="Enter your full name"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-[12px] font-medium text-foreground inline-flex items-center gap-1.5">
+              <Mail className="size-3.5 text-muted-foreground" />
+              Email address
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              value={profile.email || ""}
+              onChange={(e) => handleInputChange("email", e.target.value)}
+              disabled={!isEditing}
+              placeholder="you@example.com"
+            />
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="phoneNumber" className="text-[12px] font-medium text-foreground inline-flex items-center gap-1.5">
+              <Phone className="size-3.5 text-muted-foreground" />
+              Phone number
+            </Label>
+            <Input
+              id="phoneNumber"
+              type="tel"
+              value={profile.phoneNumber || ""}
+              onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
+              disabled={!isEditing}
+              placeholder="+92 300 1234567"
+            />
+          </div>
+        </div>
+
+        {isEditing && hasChanges() && (
+          <div className="mt-5 inline-flex items-center gap-2 rounded-md border border-bridal-gold/45 bg-bridal-cream px-3 py-2 text-[12px] text-bridal-gold-dark">
+            <AlertCircle className="size-3.5" />
+            You have unsaved changes
+          </div>
+        )}
+      </SectionCard>
+
+      {/* Security card */}
+      <SectionCard
+        title="Security"
+        description="Update your password. You'll be signed out after a successful change."
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="space-y-2">
+            <Label htmlFor="oldPassword" className="text-[12px] font-medium text-foreground inline-flex items-center gap-1.5">
+              <Lock className="size-3.5 text-muted-foreground" />
+              Current password
+            </Label>
+            <div className="relative">
+              <Input
+                id="oldPassword"
+                type={showOldPassword ? "text" : "password"}
+                value={passwordForm.oldPassword}
+                onChange={(e) =>
+                  setPasswordForm((prev) => ({ ...prev, oldPassword: e.target.value }))
+                }
+                placeholder="Enter current password"
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowOldPassword(!showOldPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showOldPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="newPassword" className="text-[12px] font-medium text-foreground inline-flex items-center gap-1.5">
+              <Key className="size-3.5 text-muted-foreground" />
+              New password
+            </Label>
+            <div className="relative">
+              <Input
+                id="newPassword"
+                type={showNewPassword ? "text" : "password"}
+                value={passwordForm.newPassword}
+                onChange={(e) =>
+                  setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))
+                }
+                placeholder="Enter new password"
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showNewPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+            {passwordForm.newPassword && (
+              <div className="space-y-1.5 pt-1">
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div
+                      key={i}
+                      className={`h-1 flex-1 rounded-full transition-colors ${
+                        i <= getPasswordStrength(passwordForm.newPassword).score
+                          ? getPasswordStrength(passwordForm.newPassword).color
+                          : "bg-border"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <p className="text-[11px] font-medium text-muted-foreground">
+                  {getPasswordStrength(passwordForm.newPassword).label}
+                </p>
               </div>
             )}
+          </div>
 
-                         {/* Changes Indicator */}
-             {isEditing && hasChanges() && (
-               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
-                 <AlertCircle className="w-4 h-4 text-blue-600" />
-                 <span className="text-sm text-blue-700">You have unsaved changes</span>
-               </div>
-             )}
-             
-             {/* Last Updated Indicator */}
-             {lastUpdated && !isEditing && (
-               <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-                 <CheckCircle className="w-4 h-4 text-green-600" />
-                 <span className="text-sm text-green-700">
-                   Profile updated successfully at {lastUpdated.toLocaleTimeString()}
-                 </span>
-               </div>
-             )}
-          </CardContent>
-        </Card>
-
-        {/* Password Change Card */}
-        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm mt-6">
-          <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t-lg">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                <Shield className="w-6 h-6" />
-              </div>
-              <div>
-                <CardTitle className="text-xl">Change Password</CardTitle>
-                                 <CardDescription className="text-blue-100">
-                   Update your account password
-                   <span className="block text-xs text-blue-200 mt-1">
-                     ⚠️ You will be automatically logged out after changing your password
-                   </span>
-                 </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Old Password */}
-              <div className="space-y-2">
-                <Label htmlFor="oldPassword" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-blue-500" />
-                  Current Password
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="oldPassword"
-                    type={showOldPassword ? "text" : "password"}
-                    value={passwordForm.oldPassword}
-                    onChange={(e) => setPasswordForm(prev => ({ ...prev, oldPassword: e.target.value }))}
-                    className="border-2 border-blue-200 focus:border-blue-500 focus:ring-blue-500/20 pr-10"
-                    placeholder="Enter current password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowOldPassword(!showOldPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
-                  >
-                    {showOldPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* New Password */}
-              <div className="space-y-2">
-                <Label htmlFor="newPassword" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                  <Key className="w-4 h-4 text-blue-500" />
-                  New Password
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="newPassword"
-                    type={showNewPassword ? "text" : "password"}
-                    value={passwordForm.newPassword}
-                    onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
-                    className="border-2 border-blue-200 focus:border-blue-500 focus:ring-blue-500/20 pr-10"
-                    placeholder="Enter new password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
-                  >
-                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                {passwordForm.newPassword && (
-                  <div className="space-y-1.5">
-                    <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <div
-                          key={i}
-                          className={`h-1.5 flex-1 rounded-full transition-colors ${
-                            i <= getPasswordStrength(passwordForm.newPassword).score
-                              ? getPasswordStrength(passwordForm.newPassword).color
-                              : "bg-gray-200"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <p className={`text-xs font-medium ${
-                      getPasswordStrength(passwordForm.newPassword).score <= 1 ? "text-red-600" :
-                      getPasswordStrength(passwordForm.newPassword).score <= 2 ? "text-orange-600" :
-                      getPasswordStrength(passwordForm.newPassword).score <= 3 ? "text-yellow-600" :
-                      "text-green-600"
-                    }`}>
-                      {getPasswordStrength(passwordForm.newPassword).label}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Repeat New Password */}
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="repeatPassword" className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-blue-500" />
-                  Confirm New Password
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="repeatPassword"
-                    type={showRepeatPassword ? "text" : "password"}
-                    value={passwordForm.repeatPassword}
-                    onChange={(e) => setPasswordForm(prev => ({ ...prev, repeatPassword: e.target.value }))}
-                    className={`border-2 focus:ring-blue-500/20 pr-10 ${
-                      passwordForm.repeatPassword && passwordForm.repeatPassword !== passwordForm.newPassword
-                        ? "border-red-300 focus:border-red-500"
-                        : "border-blue-200 focus:border-blue-500"
-                    }`}
-                    placeholder="Repeat new password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowRepeatPassword(!showRepeatPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
-                  >
-                    {showRepeatPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                {passwordForm.repeatPassword && passwordForm.repeatPassword !== passwordForm.newPassword && (
-                  <p className="text-xs text-red-600">Passwords do not match</p>
-                )}
-              </div>
-            </div>
-
-            {/* Password Change Button */}
-            <div className="flex items-center justify-end mt-6 pt-6 border-t border-neutral-200">
-              <Button
-                onClick={handlePasswordChange}
-                disabled={!passwordForm.oldPassword || !passwordForm.newPassword || !passwordForm.repeatPassword || isPasswordChanging}
-                size="lg"
-                className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="repeatPassword" className="text-[12px] font-medium text-foreground inline-flex items-center gap-1.5">
+              <CheckCircle className="size-3.5 text-muted-foreground" />
+              Confirm new password
+            </Label>
+            <div className="relative">
+              <Input
+                id="repeatPassword"
+                type={showRepeatPassword ? "text" : "password"}
+                value={passwordForm.repeatPassword}
+                onChange={(e) =>
+                  setPasswordForm((prev) => ({ ...prev, repeatPassword: e.target.value }))
+                }
+                placeholder="Repeat new password"
+                className={`pr-10 ${
+                  passwordForm.repeatPassword &&
+                  passwordForm.repeatPassword !== passwordForm.newPassword
+                    ? "border-bridal-coral focus-visible:ring-bridal-coral/40"
+                    : ""
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowRepeatPassword(!showRepeatPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
               >
-                {isPasswordChanging ? (
-                  <>
-                    <Spinner size="sm" className="mr-2" />
-                    Changing Password...
-                  </>
-                ) : (
-                  <>
-                    <Shield className="w-4 h-4 mr-2" />
-                    Change Password
-                  </>
-                )}
-              </Button>
+                {showRepeatPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
             </div>
-          </CardContent>
-        </Card>
-
-        
-
-        {/* Additional Info */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-neutral-500">
-            Need help? Contact our support team for assistance
-          </p>
+            {passwordForm.repeatPassword &&
+              passwordForm.repeatPassword !== passwordForm.newPassword && (
+                <p className="text-[11px] text-bridal-coral">Passwords do not match</p>
+              )}
+          </div>
         </div>
-      </div>
-    </div>
+
+        <div className="mt-6 pt-5 border-t border-border/60 flex items-center justify-between gap-3 flex-wrap">
+          <p className="text-[11.5px] text-muted-foreground inline-flex items-center gap-1.5">
+            <Shield className="size-3.5" />
+            You'll be signed out after a successful password change.
+          </p>
+          <Button
+            onClick={handlePasswordChange}
+            disabled={
+              !passwordForm.oldPassword ||
+              !passwordForm.newPassword ||
+              !passwordForm.repeatPassword ||
+              isPasswordChanging
+            }
+            size="sm"
+            className="gap-1.5"
+          >
+            {isPasswordChanging ? (
+              <Spinner size="sm" className="mr-1" />
+            ) : (
+              <Shield className="size-3.5" />
+            )}
+            {isPasswordChanging ? "Changing…" : "Change password"}
+          </Button>
+        </div>
+      </SectionCard>
+    </PageContainer>
   );
 };
 

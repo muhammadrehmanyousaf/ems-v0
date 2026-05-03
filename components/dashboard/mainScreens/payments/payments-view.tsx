@@ -82,7 +82,7 @@ const PaymentsView = () => {
                     ) : (
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                             {[
-                                { label: 'Total Bookings', value: String(s?.all.count ?? 0), icon: Clock,     color: 'text-purple-600', bg: 'bg-purple-50' },
+                                { label: 'Total Bookings', value: String(s?.all.count ?? 0), icon: Clock,     color: 'text-bridal-gold-dark', bg: 'bg-bridal-cream' },
                                 { label: 'Total Revenue',  value: fmt(s?.all.total    ?? 0), icon: TrendingUp, color: 'text-neutral-700', bg: 'bg-neutral-100' },
                                 { label: 'Total Received', value: fmt(s?.all.received ?? 0), icon: TrendingUp, color: 'text-green-600',  bg: 'bg-green-50' },
                                 { label: 'Total Due',      value: fmt(s?.all.due      ?? 0), icon: AlertCircle,color: 'text-red-500',   bg: 'bg-red-50' },

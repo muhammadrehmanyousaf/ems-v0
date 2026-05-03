@@ -11,6 +11,27 @@ const config: Config = {
   theme: {
   	extend: {
   		colors: {
+  			// ── Bridal palette (Phase 0 — design revamp) ─────────────────
+  			// Pakistani wedding aesthetic: ivory silk, champagne gold, rose
+  			// petal, deep mauve, sage mehndi, dusty coral, warm charcoal.
+  			// Use these for all NEW components going through the revamp.
+  			bridal: {
+  				ivory: '#FDF8F2',
+  				cream: '#FFF9F4',
+  				blush: '#FFF0F3',
+  				rose: '#F2B5C0',
+  				gold: '#C9956A',
+  				'gold-dark': '#B07D54',
+  				mauve: '#8B5A72',
+  				sage: '#A8C4A2',
+  				coral: '#E8917A',
+  				charcoal: '#2C1810',
+  				beige: '#EDD9C3',
+  				sand: '#F5E6D3',
+  				text: '#5C3D2E',
+  				'text-soft': '#7A5040',
+  				'text-label': '#A0694A',
+  			},
   			gold: {
   				50: '#FFFDF5',
   				100: '#FFF9E6',
@@ -93,7 +114,12 @@ const config: Config = {
   		},
   		fontFamily: {
   			heading: ['var(--font-playfair)', 'Georgia', 'Times New Roman', 'serif'],
+  			// `sans` keeps the legacy Inter mapping so existing screens don't
+  			// shift mid-revamp. New bridal screens should use `font-bridal`
+  			// (DM Sans) explicitly via Tailwind class.
   			sans: ['var(--font-inter)', 'Arial', 'Helvetica', 'sans-serif'],
+  			bridal: ['var(--font-dm-sans)', 'Helvetica Neue', 'Arial', 'sans-serif'],
+  			display: ['var(--font-playfair)', 'Georgia', 'Times New Roman', 'serif'],
   		},
   		borderRadius: {
   			lg: 'var(--radius)',
@@ -176,6 +202,20 @@ const config: Config = {
   				'0%': { opacity: '0', transform: 'translateY(16px)' },
   				'100%': { opacity: '1', transform: 'translateY(0)' },
   			},
+  			// ── Bridal motion ─────────────────────────────────────────
+  			'petal-fall': {
+  				'0%': { transform: 'translate3d(0, -8%, 0) rotate(0deg)', opacity: '0' },
+  				'10%': { opacity: '0.85' },
+  				'100%': { transform: 'translate3d(40px, 110vh, 0) rotate(360deg)', opacity: '0' },
+  			},
+  			'petal-drift': {
+  				'0%, 100%': { transform: 'translate3d(0, 0, 0) rotate(0deg)' },
+  				'50%': { transform: 'translate3d(20px, -16px, 0) rotate(8deg)' },
+  			},
+  			'stagger-fade-up': {
+  				'0%': { opacity: '0', transform: 'translateY(14px)' },
+  				'100%': { opacity: '1', transform: 'translateY(0)' },
+  			},
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
@@ -194,6 +234,9 @@ const config: Config = {
   			'ripple': 'ripple 0.6s linear forwards',
   			'bounce-dot': 'bounce-dot 1.5s ease-in-out infinite',
   			'slide-up-fade': 'slide-up-fade 0.5s ease-out forwards',
+  			'petal-fall': 'petal-fall 14s linear infinite',
+  			'petal-drift': 'petal-drift 8s ease-in-out infinite',
+  			'stagger-fade-up': 'stagger-fade-up 0.5s ease-out forwards',
   		}
   	}
   },

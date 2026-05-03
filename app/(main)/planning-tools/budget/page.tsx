@@ -174,7 +174,7 @@ export default function BudgetPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-6 sm:mb-8"
       >
-        <Link href="/planning-tools" className="inline-flex items-center gap-2 text-purple-600 hover:text-purple-700 mb-4 transition-colors duration-200">
+        <Link href="/planning-tools" className="inline-flex items-center gap-2 text-bridal-gold-dark hover:text-bridal-gold-dark mb-4 transition-colors duration-200">
           <ArrowLeft className="w-4 h-4" />
           <span className="text-sm sm:text-base">Back to Planning Tools</span>
         </Link>
@@ -233,19 +233,19 @@ export default function BudgetPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-500 to-violet-600 text-white border-0">
+        <Card className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white border-0">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-100 mb-1">Spent</p>
+                <p className="text-sm font-medium text-bridal-cream mb-1">Spent</p>
                 <p className="text-2xl sm:text-3xl font-bold">Rs. {totalActual.toLocaleString()}</p>
               </div>
-              <TrendingDown className="w-8 h-8 text-purple-200" />
+              <TrendingDown className="w-8 h-8 text-bridal-gold/40" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className={`text-white border-0 ${overBudget ? 'bg-gradient-to-br from-red-500 to-purple-700' : 'bg-gradient-to-br from-orange-500 to-amber-600'}`}>
+        <Card className={`text-white border-0 ${overBudget ? 'bg-gradient-to-br from-red-500 to-bridal-gold-dark' : 'bg-gradient-to-br from-orange-500 to-amber-600'}`}>
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>

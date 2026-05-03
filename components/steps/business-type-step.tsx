@@ -37,10 +37,10 @@ const businessTypes = [
     title: "Makeup Artist",
     subtitle: "Beauty & Styling Services",
     icon: Heart,
-    color: "from-purple-500 to-purple-600",
-    bgColor: "from-purple-50 to-purple-50/80",
-    borderColor: "border-purple-200",
-    textColor: "text-purple-600",
+    color: "from-bridal-gold to-bridal-gold-dark",
+    bgColor: "from-bridal-cream to-bridal-cream/80",
+    borderColor: "border-bridal-gold/45",
+    textColor: "text-bridal-gold-dark",
   },
   {
     id: "Wedding venue",
@@ -67,10 +67,10 @@ const businessTypes = [
     title: "Decorator",
     subtitle: "Event Decoration & Design",
     icon: Gift,
-    color: "from-purple-500 to-violet-600",
-    bgColor: "from-purple-50 to-violet-50",
-    borderColor: "border-purple-200",
-    textColor: "text-purple-600",
+    color: "from-bridal-gold to-bridal-gold-dark",
+    bgColor: "from-bridal-cream to-violet-50",
+    borderColor: "border-bridal-gold/45",
+    textColor: "text-bridal-gold-dark",
   },
   {
     id: "Catering",
@@ -199,18 +199,18 @@ export function BusinessTypeStep({
         ))}
       </div>
       {businessType && (
-        <Card className="bg-gradient-to-r from-purple-50 to-purple-50/80 border-purple-200">
+        <Card className="bg-gradient-to-r from-bridal-cream to-bridal-cream/80 border-bridal-gold/45">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-purple-600 to-purple-700 rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-bridal-gold to-bridal-gold-dark rounded-full flex items-center justify-center flex-shrink-0">
                 <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-medium text-purple-900">
+                <p className="text-xs sm:text-sm font-medium text-bridal-charcoal">
                   You selected:{" "}
                   <span className="font-bold">{businessType}</span>
                 </p>
-                <p className="text-xs text-purple-700">
+                <p className="text-xs text-bridal-gold-dark">
                   Click "Continue" to proceed with your registration
                 </p>
               </div>
@@ -219,10 +219,10 @@ export function BusinessTypeStep({
         </Card>
       )}{" "}
       {!businessType && Object.keys(errors || {}).length > 0 && (
-        <Card className="bg-gradient-to-r from-purple-50 to-red-50/80 border-purple-200">
+        <Card className="bg-gradient-to-r from-bridal-cream to-red-50/80 border-bridal-gold/45">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-purple-600 to-red-700 rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-bridal-gold to-red-700 rounded-full flex items-center justify-center flex-shrink-0">
                 <MailWarning className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
               </div>
               <div className="min-w-0 flex-1">

@@ -9,8 +9,8 @@ import { Spinner } from "@/components/ui/spinner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { Card } from "@/components/ui/card"
 import {
   User,
   Mail,
@@ -25,11 +25,17 @@ import {
   Shield,
   CheckCircle,
   AlertCircle,
-  Settings,
   LogOut,
   ChevronRight,
   Edit3,
 } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+import {
+  PageContainer,
+  PageHeader,
+  SectionCard,
+} from "@/components/user-dashboard"
 
 interface ProfileForm {
   fullName: string
@@ -55,9 +61,15 @@ function PasswordStrengthBar({ password }: { password: string }) {
   if (/\d/.test(password)) score++
   if (/[^a-zA-Z0-9]/.test(password)) score++
 
-  const labels = ["", "Weak", "Fair", "Good", "Strong", "Very Strong"]
-  const colors = ["", "bg-red-500", "bg-orange-500", "bg-yellow-500", "bg-green-500", "bg-emerald-500"]
-  const textColors = ["", "text-red-600", "text-orange-600", "text-yellow-600", "text-green-600", "text-emerald-600"]
+  const labels = ["", "Weak", "Fair", "Good", "Strong", "Very strong"]
+  const colors = [
+    "",
+    "bg-bridal-coral",
+    "bg-bridal-coral/70",
+    "bg-bridal-gold/70",
+    "bg-bridal-sage",
+    "bg-[#3F6B43]",
+  ]
 
   return (
     <div className="space-y-1.5 mt-1.5">
@@ -65,11 +77,14 @@ function PasswordStrengthBar({ password }: { password: string }) {
         {[1, 2, 3, 4, 5].map((i) => (
           <div
             key={i}
-            className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${i <= score ? colors[score] : "bg-gray-200"}`}
+            className={cn(
+              "h-1 flex-1 rounded-full transition-colors",
+              i <= score ? colors[score] : "bg-border",
+            )}
           />
         ))}
       </div>
-      <p className={`text-xs font-medium ${textColors[score]}`}>{labels[score]}</p>
+      <p className="text-[11px] font-medium text-muted-foreground">{labels[score]}</p>
     </div>
   )
 }
@@ -79,9 +94,18 @@ export default function UserSettingsPage() {
   const router = useRouter()
 
   const [activeSection, setActiveSection] = useState<Section>("profile")
-  const [profile, setProfile] = useState<ProfileForm>({ fullName: "", email: "", phoneNumber: "", city: "" })
+  const [profile, setProfile] = useState<ProfileForm>({
+    fullName: "",
+    email: "",
+    phoneNumber: "",
+    city: "",
+  })
   const [originalProfile, setOriginalProfile] = useState<ProfileForm | null>(null)
-  const [passwords, setPasswords] = useState<PasswordForm>({ oldPassword: "", newPassword: "", repeatPassword: "" })
+  const [passwords, setPasswords] = useState<PasswordForm>({
+    oldPassword: "",
+    newPassword: "",
+    repeatPassword: "",
+  })
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
@@ -96,10 +120,11 @@ export default function UserSettingsPage() {
   const isSimpleUser =
     !user?.isVendor &&
     !user?.isSuperAdmin &&
-    !user?.roles?.some((r: any) => r.name === "super admin" || r.name === "vendor" || r.name === "admin")
+    !user?.roles?.some(
+      (r: any) =>
+        r.name === "super admin" || r.name === "vendor" || r.name === "admin",
+    )
 
-  // Pull the latest user once on mount so cached `user_data` from an older
-  // login can't keep stale fields (e.g. city) from showing in the form.
   useEffect(() => {
     refreshUser()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -129,7 +154,6 @@ export default function UserSettingsPage() {
     if (!user?.id) return
     try {
       setIsSaving(true)
-      // Self-update endpoint — uses req.user.id on the server, no role tampering.
       const res = await axiosInstance.patch("/api/v1/users/profile", {
         fullName: profile.fullName,
         email: profile.email,
@@ -140,7 +164,6 @@ export default function UserSettingsPage() {
       setOriginalProfile(profile)
       setIsEditing(false)
       setSavedAt(new Date())
-      // Sync to localStorage so header updates
       if (typeof window !== "undefined") {
         const stored = JSON.parse(localStorage.getItem("user_data") || "{}")
         const merged = updatedUser
@@ -152,9 +175,7 @@ export default function UserSettingsPage() {
       await refreshUser()
       toast({ title: "Profile saved", description: "Your changes have been applied." })
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        "Please try again."
+      const msg = err?.response?.data?.message || "Please try again."
       toast({ title: "Save failed", description: msg, variant: "destructive" })
     } finally {
       setIsSaving(false)
@@ -172,7 +193,11 @@ export default function UserSettingsPage() {
       return
     }
     if (passwords.newPassword.length < 8) {
-      toast({ title: "Password too short", description: "Use at least 8 characters.", variant: "destructive" })
+      toast({
+        title: "Password too short",
+        description: "Use at least 8 characters.",
+        variant: "destructive",
+      })
       return
     }
     if (!user?.id) return
@@ -183,16 +208,21 @@ export default function UserSettingsPage() {
         newPassword: passwords.newPassword,
       })
       setPasswords({ oldPassword: "", newPassword: "", repeatPassword: "" })
-      toast({ title: "Password changed", description: "You will be logged out for security." })
+      toast({
+        title: "Password changed",
+        description: "You will be logged out for security.",
+      })
       setTimeout(() => {
         logout()
         router.push("/login")
       }, 2000)
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        "Please check your current password."
-      toast({ title: "Failed to change password", description: msg, variant: "destructive" })
+      const msg = err?.response?.data?.message || "Please check your current password."
+      toast({
+        title: "Failed to change password",
+        description: msg,
+        variant: "destructive",
+      })
     } finally {
       setIsChangingPassword(false)
     }
@@ -201,7 +231,6 @@ export default function UserSettingsPage() {
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    // Frontend size guard so we don't hit the multer limit blindly.
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "Image too large",
@@ -227,30 +256,24 @@ export default function UserSettingsPage() {
       setIsUploadingImage(true)
       const form = new FormData()
       form.append("picture", file)
-      // Don't set Content-Type manually — axios + FormData adds the multipart
-      // boundary automatically. Setting it by hand drops the boundary and the
-      // server returns "Unexpected end of form".
       const res = await axiosInstance.post(
         "/api/v1/users/upload-profile-picture",
-        form
+        form,
       )
       const serverUrl = res.data?.data?.profileImage
       if (serverUrl) {
-        // Cache-bust so the <img> swaps to the new file (the URL pattern is
-        // stable per-user, so the browser would otherwise reuse the cached
-        // previous photo).
         const bustedUrl = `${serverUrl}${serverUrl.includes("?") ? "&" : "?"}v=${Date.now()}`
         setImagePreview(bustedUrl)
         if (typeof window !== "undefined") {
           const stored = JSON.parse(localStorage.getItem("user_data") || "{}")
           localStorage.setItem(
             "user_data",
-            JSON.stringify({ ...stored, profileImage: bustedUrl })
+            JSON.stringify({ ...stored, profileImage: bustedUrl }),
           )
           window.dispatchEvent(
             new CustomEvent("profileUpdated", {
               detail: { profileImage: bustedUrl },
-            })
+            }),
           )
         }
       }
@@ -261,18 +284,34 @@ export default function UserSettingsPage() {
       const msg = err?.response?.data?.message || "Please try again."
       toast({ title: "Upload failed", description: msg, variant: "destructive" })
     } finally {
-      // Free the temporary object URL we created from the local file.
-      try { URL.revokeObjectURL(objectUrl) } catch {}
+      try {
+        URL.revokeObjectURL(objectUrl)
+      } catch {}
       setIsUploadingImage(false)
       if (fileInputRef.current) fileInputRef.current.value = ""
     }
   }
 
+  const eyebrow = (
+    <>
+      <span>My account</span>
+      <span className="size-1 rounded-full bg-muted-foreground/40" />
+      <span>Settings</span>
+    </>
+  )
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50/50 flex items-center justify-center">
-        <Spinner size="lg" className="text-purple-500" />
-      </div>
+      <PageContainer>
+        <PageHeader
+          eyebrow={eyebrow}
+          title="Settings"
+          description="Manage your profile and security preferences."
+        />
+        <div className="flex items-center justify-center py-20">
+          <Spinner size="lg" className="text-bridal-gold" />
+        </div>
+      </PageContainer>
     )
   }
 
@@ -284,412 +323,429 @@ export default function UserSettingsPage() {
   const avatarSrc = imagePreview || (user as any).profileImage
   const initials = (user.fullName || "U").charAt(0).toUpperCase()
 
-  const navItems: { id: Section; label: string; icon: React.ElementType; description: string }[] = [
-    { id: "profile", label: "Personal Info", icon: User, description: "Name, email, phone & city" },
-    { id: "security", label: "Security", icon: Shield, description: "Password & account safety" },
+  const navItems: {
+    id: Section
+    label: string
+    icon: React.ElementType
+    description: string
+  }[] = [
+    {
+      id: "profile",
+      label: "Personal info",
+      icon: User,
+      description: "Name, email, phone, city",
+    },
+    {
+      id: "security",
+      label: "Security",
+      icon: Shield,
+      description: "Password & account safety",
+    },
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50/40">
-      {/* Page header */}
-      <div className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
-            <Settings className="w-5 h-5 text-purple-600" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Account Settings</h1>
-            <p className="text-sm text-gray-500">Manage your profile and security preferences</p>
-          </div>
-        </div>
-      </div>
+    <PageContainer>
+      <PageHeader
+        eyebrow={eyebrow}
+        title="Settings"
+        description="Manage your profile and security preferences."
+      />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        <div className="flex flex-col lg:flex-row gap-6">
-
-          {/* ── Sidebar ── */}
-          <aside className="lg:w-64 shrink-0 space-y-3">
-            {/* Avatar card */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col items-center text-center">
-              <div className="relative group mb-3">
-                {isSimpleUser && (
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/jpg"
-                    className="hidden"
-                    onChange={handleImageChange}
-                  />
-                )}
-                <button
-                  type="button"
-                  onClick={() => isSimpleUser && fileInputRef.current?.click()}
-                  disabled={isUploadingImage || !isSimpleUser}
-                  className={`w-20 h-20 rounded-full overflow-hidden border-4 border-purple-100 transition-all duration-200 ${isSimpleUser ? "cursor-pointer hover:border-purple-300" : "cursor-default"}`}
-                >
-                  {avatarSrc ? (
-                    <img src={avatarSrc} alt="Profile" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-white font-bold text-2xl">
-                      {initials}
-                    </div>
-                  )}
-                  {isSimpleUser && (
-                    <span className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
-                      {isUploadingImage ? (
-                        <Spinner size="sm" className="text-white" />
-                      ) : (
-                        <Camera className="w-5 h-5 text-white" />
-                      )}
-                    </span>
-                  )}
-                </button>
-              </div>
-              <p className="font-semibold text-gray-900 text-sm">{user.fullName || "—"}</p>
-              <p className="text-xs text-gray-500 mt-0.5 truncate max-w-full">{user.email}</p>
-              {user.isVendor && (
-                <Badge className="mt-2 bg-purple-100 text-purple-700 border-0 text-xs">Vendor</Badge>
-              )}
+      <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-5">
+        {/* Sidebar */}
+        <aside className="space-y-3">
+          {/* Avatar card */}
+          <Card className="p-5 flex flex-col items-center text-center">
+            <div className="relative group mb-3">
               {isSimpleUser && (
-                <p className="text-[11px] text-gray-400 mt-2">Click avatar to change photo</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/jpg"
+                  className="hidden"
+                  onChange={handleImageChange}
+                />
               )}
-            </div>
-
-            {/* Navigation */}
-            <nav className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              {navItems.map((item) => {
-                const Icon = item.icon
-                const active = activeSection === item.id
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveSection(item.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors duration-150 border-b border-gray-50 last:border-0 ${
-                      active
-                        ? "bg-purple-50 text-purple-700"
-                        : "text-gray-700 hover:bg-gray-50"
-                    }`}
-                  >
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${active ? "bg-purple-100" : "bg-gray-100"}`}>
-                      <Icon className={`w-4 h-4 ${active ? "text-purple-600" : "text-gray-500"}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium ${active ? "text-purple-700" : "text-gray-800"}`}>{item.label}</p>
-                      <p className="text-[11px] text-gray-400 truncate">{item.description}</p>
-                    </div>
-                    {active && <ChevronRight className="w-4 h-4 text-purple-400 shrink-0" />}
-                  </button>
-                )
-              })}
-            </nav>
-
-            {/* Logout */}
-            <button
-              onClick={() => { logout(); router.push("/") }}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-white rounded-2xl border border-gray-100 shadow-sm text-gray-600 hover:text-red-600 hover:border-red-100 hover:bg-red-50 transition-all duration-150 text-sm font-medium"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign out
-            </button>
-          </aside>
-
-          {/* ── Main Content ── */}
-          <main className="flex-1 min-w-0">
-
-            {/* Personal Info */}
-            {activeSection === "profile" && (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                {/* Section header */}
-                <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                        <User className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <h2 className="text-white font-semibold text-lg">Personal Information</h2>
-                        <p className="text-purple-200 text-sm">Update your profile details</p>
-                      </div>
-                    </div>
-                    {!isEditing && (
-                      <Button
-                        size="sm"
-                        onClick={() => setIsEditing(true)}
-                        className="bg-white/20 hover:bg-white/30 border-white/30 text-white border"
-                        variant="outline"
-                      >
-                        <Edit3 className="w-3.5 h-3.5 mr-1.5" />
-                        Edit
-                      </Button>
+              <button
+                type="button"
+                onClick={() => isSimpleUser && fileInputRef.current?.click()}
+                disabled={isUploadingImage || !isSimpleUser}
+                className={cn(
+                  "relative w-20 h-20 rounded-full overflow-hidden border-2 border-border transition-colors block",
+                  isSimpleUser ? "cursor-pointer hover:border-bridal-gold/55" : "cursor-default",
+                )}
+              >
+                {avatarSrc ? (
+                  <img
+                    src={avatarSrc}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-bridal-cream flex items-center justify-center text-bridal-gold-dark font-display italic text-2xl">
+                    {initials}
+                  </div>
+                )}
+                {isSimpleUser && (
+                  <span className="absolute inset-0 rounded-full bg-bridal-charcoal/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                    {isUploadingImage ? (
+                      <Spinner size="sm" className="text-bridal-ivory" />
+                    ) : (
+                      <Camera className="size-4 text-bridal-ivory" />
                     )}
-                  </div>
-                </div>
+                  </span>
+                )}
+              </button>
+            </div>
+            <p className="font-display italic text-[16px] text-foreground">
+              {user.fullName || "—"}
+            </p>
+            <p className="text-[11.5px] text-muted-foreground mt-0.5 truncate max-w-full">
+              {user.email}
+            </p>
+            {user.isVendor ? (
+              <span className="mt-2 inline-flex items-center rounded-full border border-bridal-gold/45 bg-bridal-cream px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-bridal-gold-dark">
+                Vendor
+              </span>
+            ) : null}
+            {isSimpleUser ? (
+              <p className="text-[10.5px] text-muted-foreground mt-2">
+                Click avatar to change photo
+              </p>
+            ) : null}
+          </Card>
 
-                <div className="p-6 space-y-5">
-                  {/* Fields grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    {/* Full Name */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5 text-purple-400" />
-                        Full Name
-                      </Label>
-                      <Input
-                        value={profile.fullName}
-                        onChange={(e) => setProfile((p) => ({ ...p, fullName: e.target.value }))}
-                        disabled={!isEditing}
-                        placeholder="Your full name"
-                        className={`h-11 transition-all duration-200 ${
-                          isEditing
-                            ? "border-purple-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/10 bg-white"
-                            : "border-gray-100 bg-gray-50 text-gray-700"
-                        }`}
-                      />
-                    </div>
-
-                    {/* Email */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                        <Mail className="w-3.5 h-3.5 text-purple-400" />
-                        Email Address
-                      </Label>
-                      <Input
-                        type="email"
-                        value={profile.email}
-                        onChange={(e) => setProfile((p) => ({ ...p, email: e.target.value }))}
-                        disabled={!isEditing}
-                        placeholder="your@email.com"
-                        className={`h-11 transition-all duration-200 ${
-                          isEditing
-                            ? "border-purple-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/10 bg-white"
-                            : "border-gray-100 bg-gray-50 text-gray-700"
-                        }`}
-                      />
-                    </div>
-
-                    {/* Phone */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                        <Phone className="w-3.5 h-3.5 text-purple-400" />
-                        Phone Number
-                      </Label>
-                      <Input
-                        type="tel"
-                        value={profile.phoneNumber}
-                        onChange={(e) => setProfile((p) => ({ ...p, phoneNumber: e.target.value }))}
-                        disabled={!isEditing}
-                        placeholder="+92 300 0000000"
-                        className={`h-11 transition-all duration-200 ${
-                          isEditing
-                            ? "border-purple-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/10 bg-white"
-                            : "border-gray-100 bg-gray-50 text-gray-700"
-                        }`}
-                      />
-                    </div>
-
-                    {/* City */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-purple-400" />
-                        City
-                      </Label>
-                      <Input
-                        value={profile.city}
-                        onChange={(e) => setProfile((p) => ({ ...p, city: e.target.value }))}
-                        disabled={!isEditing}
-                        placeholder="Your city"
-                        className={`h-11 transition-all duration-200 ${
-                          isEditing
-                            ? "border-purple-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/10 bg-white"
-                            : "border-gray-100 bg-gray-50 text-gray-700"
-                        }`}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Status / feedback banners */}
-                  {isEditing && hasChanges && (
-                    <div className="flex items-center gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      Unsaved changes
-                    </div>
+          {/* Section nav */}
+          <Card className="overflow-hidden">
+            {navItems.map((item) => {
+              const Icon = item.icon
+              const active = activeSection === item.id
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setActiveSection(item.id)}
+                  className={cn(
+                    "relative w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-border/60 last:border-0",
+                    active
+                      ? "bg-bridal-cream"
+                      : "hover:bg-muted/40",
                   )}
-
-                  {!isEditing && savedAt && (
-                    <div className="flex items-center gap-2 px-3 py-2.5 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700">
-                      <CheckCircle className="w-4 h-4 shrink-0" />
-                      Saved at {savedAt.toLocaleTimeString()}
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  {isEditing && (
-                    <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
-                      <Button variant="outline" onClick={handleCancel} className="border-gray-200 text-gray-600">
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={handleSave}
-                        disabled={!hasChanges || isSaving}
-                        className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-md shadow-purple-200"
-                      >
-                        {isSaving ? (
-                          <>
-                            <Spinner size="sm" className="mr-2" />
-                            Saving…
-                          </>
-                        ) : (
-                          <>
-                            <Save className="w-4 h-4 mr-2" />
-                            Save Changes
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Security */}
-            {activeSection === "security" && (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                {/* Section header */}
-                <div className="bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                      <Shield className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-white font-semibold text-lg">Security</h2>
-                      <p className="text-blue-100 text-sm">Change your password to keep your account safe</p>
-                    </div>
+                >
+                  {active ? (
+                    <span
+                      aria-hidden
+                      className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-r-full bg-bridal-gold"
+                    />
+                  ) : null}
+                  <div
+                    className={cn(
+                      "size-8 rounded-md flex items-center justify-center shrink-0",
+                      active
+                        ? "bg-bridal-gold/15 text-bridal-gold-dark"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    <Icon className="size-4" />
                   </div>
-                </div>
-
-                <div className="p-6 space-y-5">
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
-                    <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                    <p className="text-sm text-amber-700">
-                      After changing your password you will be automatically signed out and redirected to login.
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className={cn(
+                        "text-[13px] font-medium",
+                        active ? "text-foreground" : "text-foreground/85",
+                      )}
+                    >
+                      {item.label}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground truncate">
+                      {item.description}
                     </p>
                   </div>
+                  {active ? (
+                    <ChevronRight className="size-4 text-bridal-gold-dark shrink-0" />
+                  ) : null}
+                </button>
+              )
+            })}
+          </Card>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    {/* Current Password */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                        <Lock className="w-3.5 h-3.5 text-indigo-400" />
-                        Current Password
-                      </Label>
-                      <div className="relative">
-                        <Input
-                          type={showOld ? "text" : "password"}
-                          value={passwords.oldPassword}
-                          onChange={(e) => setPasswords((p) => ({ ...p, oldPassword: e.target.value }))}
-                          placeholder="Enter current password"
-                          className="h-11 border-indigo-100 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/10 pr-10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowOld(!showOld)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        >
-                          {showOld ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
+          {/* Sign out */}
+          <button
+            type="button"
+            onClick={() => {
+              logout()
+              router.push("/")
+            }}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-border bg-card px-4 py-2.5 text-[12.5px] font-medium text-muted-foreground hover:text-bridal-coral hover:border-bridal-coral/35 hover:bg-bridal-coral/5 transition-colors"
+          >
+            <LogOut className="size-3.5" />
+            Sign out
+          </button>
+        </aside>
 
-                    {/* New Password */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                        <Key className="w-3.5 h-3.5 text-indigo-400" />
-                        New Password
-                      </Label>
-                      <div className="relative">
-                        <Input
-                          type={showNew ? "text" : "password"}
-                          value={passwords.newPassword}
-                          onChange={(e) => setPasswords((p) => ({ ...p, newPassword: e.target.value }))}
-                          placeholder="Enter new password"
-                          className="h-11 border-indigo-100 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/10 pr-10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowNew(!showNew)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        >
-                          {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                      <PasswordStrengthBar password={passwords.newPassword} />
-                    </div>
-
-                    {/* Confirm Password */}
-                    <div className="space-y-1.5 sm:col-span-2">
-                      <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                        <CheckCircle className="w-3.5 h-3.5 text-indigo-400" />
-                        Confirm New Password
-                      </Label>
-                      <div className="relative">
-                        <Input
-                          type={showRepeat ? "text" : "password"}
-                          value={passwords.repeatPassword}
-                          onChange={(e) => setPasswords((p) => ({ ...p, repeatPassword: e.target.value }))}
-                          placeholder="Repeat new password"
-                          className={`h-11 focus:ring-2 focus:ring-indigo-400/10 pr-10 ${
-                            passwords.repeatPassword && passwords.repeatPassword !== passwords.newPassword
-                              ? "border-red-300 focus:border-red-400"
-                              : "border-indigo-100 focus:border-indigo-400"
-                          }`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowRepeat(!showRepeat)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        >
-                          {showRepeat ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                      {passwords.repeatPassword && passwords.repeatPassword !== passwords.newPassword && (
-                        <p className="text-xs text-red-600">Passwords do not match</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex justify-end">
+        {/* Main content */}
+        <main className="min-w-0">
+          {activeSection === "profile" ? (
+            <SectionCard
+              title="Personal information"
+              description="Update your basic profile details."
+              action={
+                !isEditing ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setIsEditing(true)}
+                    className="gap-1.5"
+                  >
+                    <Edit3 className="size-3.5" />
+                    Edit
+                  </Button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Button onClick={handleCancel} variant="ghost" size="sm">
+                      Cancel
+                    </Button>
                     <Button
-                      onClick={handlePasswordChange}
-                      disabled={
-                        !passwords.oldPassword ||
-                        !passwords.newPassword ||
-                        !passwords.repeatPassword ||
-                        passwords.newPassword !== passwords.repeatPassword ||
-                        isChangingPassword
-                      }
-                      className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-md shadow-indigo-200"
+                      onClick={handleSave}
+                      disabled={!hasChanges || isSaving}
+                      size="sm"
+                      className="gap-1.5"
                     >
-                      {isChangingPassword ? (
-                        <>
-                          <Spinner size="sm" className="mr-2" />
-                          Changing Password…
-                        </>
+                      {isSaving ? (
+                        <Spinner size="sm" className="mr-1" />
                       ) : (
-                        <>
-                          <Shield className="w-4 h-4 mr-2" />
-                          Change Password
-                        </>
+                        <Save className="size-3.5" />
                       )}
+                      {isSaving ? "Saving…" : "Save"}
                     </Button>
                   </div>
+                )
+              }
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <Label className="text-[11.5px] font-medium text-foreground inline-flex items-center gap-1.5">
+                    <User className="size-3.5 text-muted-foreground" />
+                    Full name
+                  </Label>
+                  <Input
+                    value={profile.fullName}
+                    onChange={(e) =>
+                      setProfile((p) => ({ ...p, fullName: e.target.value }))
+                    }
+                    disabled={!isEditing}
+                    placeholder="Your full name"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[11.5px] font-medium text-foreground inline-flex items-center gap-1.5">
+                    <Mail className="size-3.5 text-muted-foreground" />
+                    Email address
+                  </Label>
+                  <Input
+                    type="email"
+                    value={profile.email}
+                    onChange={(e) =>
+                      setProfile((p) => ({ ...p, email: e.target.value }))
+                    }
+                    disabled={!isEditing}
+                    placeholder="you@email.com"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[11.5px] font-medium text-foreground inline-flex items-center gap-1.5">
+                    <Phone className="size-3.5 text-muted-foreground" />
+                    Phone number
+                  </Label>
+                  <Input
+                    type="tel"
+                    value={profile.phoneNumber}
+                    onChange={(e) =>
+                      setProfile((p) => ({ ...p, phoneNumber: e.target.value }))
+                    }
+                    disabled={!isEditing}
+                    placeholder="+92 300 1234567"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[11.5px] font-medium text-foreground inline-flex items-center gap-1.5">
+                    <MapPin className="size-3.5 text-muted-foreground" />
+                    City
+                  </Label>
+                  <Input
+                    value={profile.city}
+                    onChange={(e) =>
+                      setProfile((p) => ({ ...p, city: e.target.value }))
+                    }
+                    disabled={!isEditing}
+                    placeholder="Your city"
+                  />
                 </div>
               </div>
-            )}
-          </main>
-        </div>
+
+              {isEditing && hasChanges ? (
+                <div className="mt-5 inline-flex items-center gap-2 rounded-md border border-bridal-gold/45 bg-bridal-cream px-3 py-2 text-[12px] text-bridal-gold-dark">
+                  <AlertCircle className="size-3.5" />
+                  Unsaved changes
+                </div>
+              ) : null}
+
+              {!isEditing && savedAt ? (
+                <div className="mt-5 inline-flex items-center gap-2 rounded-md border border-bridal-sage/45 bg-bridal-sage/15 px-3 py-2 text-[12px] text-[#3F6B43]">
+                  <CheckCircle className="size-3.5" />
+                  Saved at {savedAt.toLocaleTimeString()}
+                </div>
+              ) : null}
+            </SectionCard>
+          ) : null}
+
+          {activeSection === "security" ? (
+            <SectionCard
+              title="Security"
+              description="Change your password to keep your account safe."
+            >
+              <div className="rounded-md border border-bridal-gold/45 bg-bridal-cream px-4 py-3 mb-5 flex items-start gap-3">
+                <AlertCircle className="size-4 text-bridal-gold-dark mt-0.5 shrink-0" />
+                <p className="text-[12.5px] text-foreground/85 leading-relaxed">
+                  After changing your password you will be automatically signed out
+                  and redirected to login.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <Label className="text-[11.5px] font-medium text-foreground inline-flex items-center gap-1.5">
+                    <Lock className="size-3.5 text-muted-foreground" />
+                    Current password
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      type={showOld ? "text" : "password"}
+                      value={passwords.oldPassword}
+                      onChange={(e) =>
+                        setPasswords((p) => ({ ...p, oldPassword: e.target.value }))
+                      }
+                      placeholder="Enter current password"
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowOld(!showOld)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showOld ? (
+                        <EyeOff className="size-4" />
+                      ) : (
+                        <Eye className="size-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[11.5px] font-medium text-foreground inline-flex items-center gap-1.5">
+                    <Key className="size-3.5 text-muted-foreground" />
+                    New password
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      type={showNew ? "text" : "password"}
+                      value={passwords.newPassword}
+                      onChange={(e) =>
+                        setPasswords((p) => ({ ...p, newPassword: e.target.value }))
+                      }
+                      placeholder="Enter new password"
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNew(!showNew)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showNew ? (
+                        <EyeOff className="size-4" />
+                      ) : (
+                        <Eye className="size-4" />
+                      )}
+                    </button>
+                  </div>
+                  <PasswordStrengthBar password={passwords.newPassword} />
+                </div>
+
+                <div className="space-y-2 sm:col-span-2">
+                  <Label className="text-[11.5px] font-medium text-foreground inline-flex items-center gap-1.5">
+                    <CheckCircle className="size-3.5 text-muted-foreground" />
+                    Confirm new password
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      type={showRepeat ? "text" : "password"}
+                      value={passwords.repeatPassword}
+                      onChange={(e) =>
+                        setPasswords((p) => ({
+                          ...p,
+                          repeatPassword: e.target.value,
+                        }))
+                      }
+                      placeholder="Repeat new password"
+                      className={cn(
+                        "pr-10",
+                        passwords.repeatPassword &&
+                          passwords.repeatPassword !== passwords.newPassword &&
+                          "border-bridal-coral focus-visible:ring-bridal-coral/40",
+                      )}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRepeat(!showRepeat)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showRepeat ? (
+                        <EyeOff className="size-4" />
+                      ) : (
+                        <Eye className="size-4" />
+                      )}
+                    </button>
+                  </div>
+                  {passwords.repeatPassword &&
+                  passwords.repeatPassword !== passwords.newPassword ? (
+                    <p className="text-[11px] text-bridal-coral">
+                      Passwords do not match
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+
+              <Separator className="my-5" />
+
+              <div className="flex justify-end">
+                <Button
+                  onClick={handlePasswordChange}
+                  disabled={
+                    !passwords.oldPassword ||
+                    !passwords.newPassword ||
+                    !passwords.repeatPassword ||
+                    passwords.newPassword !== passwords.repeatPassword ||
+                    isChangingPassword
+                  }
+                  size="sm"
+                  className="gap-1.5"
+                >
+                  {isChangingPassword ? (
+                    <Spinner size="sm" className="mr-1" />
+                  ) : (
+                    <Shield className="size-3.5" />
+                  )}
+                  {isChangingPassword ? "Changing…" : "Change password"}
+                </Button>
+              </div>
+            </SectionCard>
+          ) : null}
+        </main>
       </div>
-    </div>
+    </PageContainer>
   )
 }

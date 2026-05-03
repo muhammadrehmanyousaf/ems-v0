@@ -1,15 +1,18 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Heading } from "@/components/heading";
+import dynamic from "next/dynamic";
+
 import DashboardDateFilter from "../../globalComponents/dashboard-date-filter";
 import { Button } from "@/components/ui/button";
 import CardsSection from "./sections/cards-section";
 import ChartsSections from "./sections/charts-sections";
 import RevenueSplitSection from "./sections/revenue-split-section";
 import UpcomingAndDueSection from "./sections/upcoming-and-due-section";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import TableAndReviewSection from "./sections/table-and-review-section";
+import PageContainer from "@/components/dashboard/layout/page-container";
+import { PageHeader } from "@/components/dashboard/layout/page-header";
+
 import {
   AnalyticsAPI,
   type DateRange,
@@ -25,9 +28,9 @@ import {
 import { PaymentsAPI } from "@/lib/api/dashboard";
 import type { VendorRevenueResponse, VendorPayment } from "@/lib/dashboard-types";
 import { useUser } from "@/context/UserContext";
+import { getDashboardRole, isAdminLike } from "@/lib/dashboard-role";
 import { CalendarCheck, Clock, Phone, Building2, DollarSign } from "lucide-react";
 import { toast } from "sonner";
-import dynamic from "next/dynamic";
 import {
   Sheet,
   SheetContent,
@@ -93,28 +96,33 @@ function TodayBookingItem({ item }: { item: TodaysBookingItem }) {
   );
 }
 
+// Hook-free role-aware switcher. Without this split, the super-admin / vendor
+// branches would have different hook counts between renders (the user loads
+// async — first paint sees null) and React would crash the page blank.
 const DashboardView = () => {
+  const { user, isLoading } = useUser();
+  if (isLoading) return null;
+  if (isAdminLike(getDashboardRole(user))) return <AdminDashboardView />;
+  return <VendorDashboardView />;
+};
+
+const VendorDashboardView = () => {
   const { user } = useUser();
-
-  if (user?.isSuperAdmin) {
-    return <AdminDashboardView />;
-  }
-
   const [dateRange, setDateRange] = useState<DateRange>("this_year");
   const [customStart, setCustomStart] = useState<string | undefined>();
   const [customEnd, setCustomEnd] = useState<string | undefined>();
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const [kpis, setKpis]                   = useState<DashboardKpis | null>(null);
-  const [bookingTrends, setBookingTrends]  = useState<BookingTrendsData | null>(null);
-  const [statusDist, setStatusDist]        = useState<StatusDistributionData | null>(null);
+  const [kpis, setKpis] = useState<DashboardKpis | null>(null);
+  const [bookingTrends, setBookingTrends] = useState<BookingTrendsData | null>(null);
+  const [statusDist, setStatusDist] = useState<StatusDistributionData | null>(null);
   const [recentBookings, setRecentBookings] = useState<RecentBookingsData | null>(null);
-  const [reviewSummary, setReviewSummary]  = useState<ReviewSummaryData | null>(null);
+  const [reviewSummary, setReviewSummary] = useState<ReviewSummaryData | null>(null);
   const [todaysBookings, setTodaysBookings] = useState<TodaysBookingsData | null>(null);
-  const [vendorRevenue, setVendorRevenue]  = useState<VendorRevenueResponse | null>(null);
-  const [upcoming7Days, setUpcoming7Days]  = useState<UpcomingBookings7DaysData | null>(null);
+  const [vendorRevenue, setVendorRevenue] = useState<VendorRevenueResponse | null>(null);
+  const [upcoming7Days, setUpcoming7Days] = useState<UpcomingBookings7DaysData | null>(null);
 
-  const [loading, setLoading]              = useState(true);
+  const [loading, setLoading] = useState(true);
   const [revenueLoading, setRevenueLoading] = useState(true);
 
   const fetchAll = useCallback(async () => {
@@ -175,55 +183,33 @@ const DashboardView = () => {
   const firstName = user?.fullName?.split(" ")[0] || "there";
 
   return (
-    <div className="py-4 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-y-4 w-full px-4 md:px-6">
-        <Heading title={`Hi ${firstName}, Welcome Back!`} />
-        <span className="flex items-center justify-end gap-2">
-          <DashboardDateFilter value={dateRange} onChange={handleDateChange} />
-          <Button variant="outline" className="gap-2" onClick={() => setSheetOpen(true)}>
-            <CalendarCheck className="size-4" />
-            Today&apos;s Bookings
-            {todaysBookings && todaysBookings.count > 0 && (
-              <span className="ml-1 min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold">
-                {todaysBookings.count}
-              </span>
-            )}
-          </Button>
-        </span>
-      </div>
+    <PageContainer>
+      <PageHeader
+        eyebrow="Vendor console · Overview"
+        title={`Welcome back, ${firstName}`}
+        description="At-a-glance signal for your business — bookings, revenue and reviews."
+        actions={
+          <>
+            <DashboardDateFilter value={dateRange} onChange={handleDateChange} />
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setSheetOpen(true)}>
+              <CalendarCheck className="size-3.5" />
+              Today&apos;s bookings
+              {todaysBookings && todaysBookings.count > 0 && (
+                <span className="ml-1 min-w-[18px] h-4 px-1.5 flex items-center justify-center rounded-full bg-bridal-cream border border-bridal-gold/45 text-bridal-gold-dark text-[10px] font-medium tabular-nums">
+                  {todaysBookings.count}
+                </span>
+              )}
+            </Button>
+          </>
+        }
+      />
 
-      <ScrollArea className="h-[calc(100dvh-200px)] md:h-[calc(100dvh-140px)] overflow-auto px-4 md:px-6">
-        <div className="space-y-4">
-          {/* Row 1: KPI cards */}
-          <CardsSection data={kpis} loading={loading} />
+      <CardsSection data={kpis} loading={loading} />
+      <RevenueSplitSection data={vendorRevenue} loading={revenueLoading} />
+      <UpcomingAndDueSection upcoming={upcoming7Days} due={paymentsDue} loading={loading} />
+      <ChartsSections bookingTrends={bookingTrends} statusDist={statusDist} loading={loading} />
+      <TableAndReviewSection recentBookings={recentBookings} reviewSummary={reviewSummary} loading={loading} />
 
-          {/* Row 2: Offline / Online revenue split */}
-          <RevenueSplitSection data={vendorRevenue} loading={revenueLoading} />
-
-          {/* Row 3: Upcoming 7 days + Payments Due */}
-          <UpcomingAndDueSection
-            upcoming={upcoming7Days}
-            due={paymentsDue}
-            loading={loading}
-          />
-
-          {/* Row 4: Booking trends chart + Status donut */}
-          <ChartsSections
-            bookingTrends={bookingTrends}
-            statusDist={statusDist}
-            loading={loading}
-          />
-
-          {/* Row 5: Recent bookings table + Reviews */}
-          <TableAndReviewSection
-            recentBookings={recentBookings}
-            reviewSummary={reviewSummary}
-            loading={loading}
-          />
-        </div>
-      </ScrollArea>
-
-      {/* Today's Bookings Sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent className="sm:max-w-md overflow-y-auto">
           <SheetHeader>
@@ -250,7 +236,7 @@ const DashboardView = () => {
           </div>
         </SheetContent>
       </Sheet>
-    </div>
+    </PageContainer>
   );
 };
 

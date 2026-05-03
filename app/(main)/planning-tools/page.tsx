@@ -11,9 +11,9 @@ const tools = [
     title: "Wedding Checklist",
     description: "Stay organized with our comprehensive wedding planning checklist",
     icon: CalendarDays,
-    color: "text-purple-600",
-    bgColor: "bg-purple-50",
-    gradient: "from-purple-600 to-purple-700",
+    color: "text-bridal-gold-dark",
+    bgColor: "bg-bridal-cream",
+    gradient: "from-bridal-gold to-bridal-gold-dark",
     href: "/planning-tools/checklist",
     features: ["Progress tracking", "Category organization", "Due date reminders"]
   },
@@ -41,9 +41,9 @@ const tools = [
     title: "Timeline Creator",
     description: "Create a detailed timeline for your wedding day",
     icon: Clock,
-    color: "text-purple-600",
-    bgColor: "bg-purple-50",
-    gradient: "from-purple-500 to-violet-600",
+    color: "text-bridal-gold-dark",
+    bgColor: "bg-bridal-cream",
+    gradient: "from-bridal-gold to-bridal-gold-dark",
     href: "/planning-tools/timeline",
     features: ["Visual timeline", "Vendor coordination", "Day-of schedule"]
   },
@@ -84,8 +84,8 @@ export default function PlanningToolsPage() {
         className="text-center mb-8 sm:mb-12 lg:mb-16 px-4"
       >
         <div className="flex items-center justify-center gap-2 mb-4">
-          <Sparkles className="w-6 h-6 text-purple-500" />
-          <span className="text-sm font-medium text-purple-600 bg-purple-50 px-3 py-1 rounded-full">
+          <Sparkles className="w-6 h-6 text-bridal-gold" />
+          <span className="text-sm font-medium text-bridal-gold-dark bg-bridal-cream px-3 py-1 rounded-full">
             Planning Made Easy
           </span>
         </div>
@@ -135,7 +135,7 @@ export default function PlanningToolsPage() {
                 
                 <CardContent className="p-4 sm:p-6 pt-0 mt-auto relative z-10">
                   <div className="flex items-center justify-center">
-                    <div className="flex items-center gap-2 text-purple-600 font-medium group-hover:text-purple-700 transition-colors duration-300">
+                    <div className="flex items-center gap-2 text-bridal-gold-dark font-medium group-hover:text-bridal-gold-dark transition-colors duration-300">
                       <span className="text-sm sm:text-base">Open Tool</span>
                       <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                     </div>
@@ -162,12 +162,12 @@ export default function PlanningToolsPage() {
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
             <Link href="/vendors" className="w-full sm:w-auto">
-              <div className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-300 font-medium text-center">
+              <div className="px-6 py-3 bg-gradient-to-r from-bridal-gold to-bridal-gold-dark text-white rounded-lg hover:from-bridal-gold-dark hover:to-bridal-gold-dark transition-all duration-300 font-medium text-center">
                 Find Vendors
               </div>
             </Link>
             <Link href="/venues" className="w-full sm:w-auto">
-              <div className="px-6 py-3 border border-purple-500 text-purple-600 rounded-lg hover:bg-purple-50 transition-all duration-300 font-medium text-center">
+              <div className="px-6 py-3 border border-bridal-gold-dark text-bridal-gold-dark rounded-lg hover:bg-bridal-cream transition-all duration-300 font-medium text-center">
                 Browse Venues
               </div>
             </Link>

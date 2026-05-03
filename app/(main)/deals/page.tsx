@@ -58,11 +58,11 @@ const deals = [
 export default function DealsPage() {
   return (
     <div className="min-h-screen">
-      <section className="bg-gradient-to-br from-purple-600 to-purple-800 text-white py-16 px-4">
+      <section className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <Tag className="w-12 h-12 mx-auto mb-4 text-purple-200" />
+          <Tag className="w-12 h-12 mx-auto mb-4 text-bridal-gold/40" />
           <h1 className="text-4xl sm:text-5xl font-bold mb-4">Wedding Deals</h1>
-          <p className="text-lg text-purple-100 max-w-xl mx-auto">
+          <p className="text-lg text-bridal-cream max-w-xl mx-auto">
             Exclusive offers from top-rated vendors. Save big on your dream wedding.
           </p>
         </div>
@@ -82,8 +82,8 @@ export default function DealsPage() {
                   <Badge variant="secondary" className="mb-3">{deal.category}</Badge>
                   <h3 className="text-lg font-semibold text-neutral-900 mb-1">{deal.vendor}</h3>
                   <div className="flex items-center gap-2 mb-3">
-                    <Percent className="w-4 h-4 text-purple-600" />
-                    <span className="text-purple-600 font-bold">{deal.discount}</span>
+                    <Percent className="w-4 h-4 text-bridal-gold-dark" />
+                    <span className="text-bridal-gold-dark font-bold">{deal.discount}</span>
                   </div>
                   <p className="text-sm text-neutral-600 mb-4">{deal.description}</p>
                   <div className="flex items-center gap-1 text-xs text-neutral-500">
@@ -95,13 +95,13 @@ export default function DealsPage() {
           </div>
 
           <div className="text-center mt-12 bg-white rounded-2xl p-8 shadow-sm border">
-            <Bell className="w-10 h-10 text-purple-600 mx-auto mb-4" />
+            <Bell className="w-10 h-10 text-bridal-gold-dark mx-auto mb-4" />
             <h2 className="text-xl font-bold text-neutral-900 mb-2">Never Miss a Deal</h2>
             <p className="text-neutral-600 mb-6 max-w-md mx-auto">
               Browse our vendor catalog to discover more offers and seasonal promotions.
             </p>
             <Link href="/venues">
-              <Button className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white gap-2">
+              <Button className="bg-gradient-to-r from-bridal-gold to-bridal-gold-dark hover:from-bridal-gold-dark hover:to-bridal-gold-dark text-white gap-2">
                 Browse Vendors <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>

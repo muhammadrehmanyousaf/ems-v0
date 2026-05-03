@@ -65,7 +65,7 @@ export function ChatInput() {
         className={cn(
           "flex items-end gap-2 rounded-2xl border px-3 py-2 transition-all duration-200",
           isFocused
-            ? "border-purple-400 shadow-[0_0_0_3px_rgba(147,51,234,0.08)]"
+            ? "border-bridal-gold/55 shadow-[0_0_0_3px_rgba(147,51,234,0.08)]"
             : "border-gray-200 dark:border-gray-800"
         )}
       >
@@ -108,7 +108,7 @@ export function ChatInput() {
           className={cn(
             "p-2 rounded-xl transition-all duration-200 shrink-0",
             message.trim()
-              ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-sm hover:shadow-md hover:from-purple-700 hover:to-purple-800 active:scale-95"
+              ? "bg-gradient-to-r from-bridal-gold to-bridal-gold-dark text-white shadow-sm hover:shadow-md hover:from-bridal-gold-dark hover:to-bridal-gold-dark active:scale-95"
               : "text-gray-300 dark:text-gray-600 cursor-not-allowed"
           )}
         >

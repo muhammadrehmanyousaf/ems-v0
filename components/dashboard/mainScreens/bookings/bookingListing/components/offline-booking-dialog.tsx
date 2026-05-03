@@ -76,7 +76,7 @@ function getVendorTypeBadgeColor(vendorType: string) {
         'Decorator': 'bg-pink-100 text-pink-700',
         'Henna artist': 'bg-orange-100 text-orange-700',
         'Makeup artist': 'bg-rose-100 text-rose-700',
-        'Wedding venue': 'bg-purple-100 text-purple-700',
+        'Wedding venue': 'bg-bridal-gold/15 text-bridal-gold-dark',
         'Car rental': 'bg-cyan-100 text-cyan-700',
         'Catering': 'bg-green-100 text-green-700',
         'Bridal wearing': 'bg-fuchsia-100 text-fuchsia-700',
@@ -141,7 +141,7 @@ function PackageOption({ pkg }: { pkg: ApiPackage }) {
         <div className="flex flex-col gap-0.5 py-0.5 w-full">
             <div className="flex items-center justify-between gap-3">
                 <span className="font-medium text-sm truncate">{pkg.name}</span>
-                <span className="text-xs font-semibold text-purple-600 shrink-0">{formatPKR(pkg.price)}</span>
+                <span className="text-xs font-semibold text-bridal-gold-dark shrink-0">{formatPKR(pkg.price)}</span>
             </div>
             {pkg.description && (
                 <p className="text-[11px] text-muted-foreground line-clamp-1">{pkg.description}</p>
@@ -149,7 +149,7 @@ function PackageOption({ pkg }: { pkg: ApiPackage }) {
             {preview.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-0.5">
                     {preview.map((f, i) => (
-                        <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600 border border-purple-100">
+                        <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full bg-bridal-cream text-bridal-gold-dark border border-bridal-beige">
                             {f}
                         </span>
                     ))}
@@ -443,7 +443,7 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess }: OfflineB
                                         type="button"
                                         onClick={() => { setCarMode('package'); setSelectedPackageId(''); setQuantity(1); }}
                                         className={cn('flex-1 py-2 text-sm font-medium transition-colors',
-                                            carMode === 'package' ? 'bg-purple-600 text-white' : 'bg-white text-neutral-600 hover:bg-neutral-50'
+                                            carMode === 'package' ? 'bg-bridal-gold text-white' : 'bg-white text-neutral-600 hover:bg-neutral-50'
                                         )}
                                     >
                                         Package
@@ -452,7 +452,7 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess }: OfflineB
                                         type="button"
                                         onClick={() => { setCarMode('single'); setSelectedPackageId(''); setQuantity(1); }}
                                         className={cn('flex-1 py-2 text-sm font-medium border-l border-neutral-200 transition-colors',
-                                            carMode === 'single' ? 'bg-purple-600 text-white' : 'bg-white text-neutral-600 hover:bg-neutral-50'
+                                            carMode === 'single' ? 'bg-bridal-gold text-white' : 'bg-white text-neutral-600 hover:bg-neutral-50'
                                         )}
                                     >
                                         Single Car
@@ -643,7 +643,7 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess }: OfflineB
                     {priceBreakdown && priceBreakdown.subtotal > 0 && (
                         <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 space-y-2">
                             <div className="flex items-center gap-2 text-sm font-medium text-neutral-700 mb-1">
-                                <Receipt className="h-4 w-4 text-purple-500" />
+                                <Receipt className="h-4 w-4 text-bridal-gold" />
                                 Price Summary
                             </div>
                             {priceBreakdown.items.map((item, i) => (
@@ -654,10 +654,10 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess }: OfflineB
                             ))}
                             <div className="border-t border-neutral-200 pt-2 flex justify-between text-sm font-semibold">
                                 <span className="text-neutral-800">Total</span>
-                                <span className="text-purple-700">{formatPKR(priceBreakdown.subtotal)}</span>
+                                <span className="text-bridal-gold-dark">{formatPKR(priceBreakdown.subtotal)}</span>
                             </div>
                             {priceBreakdown.downPayment > 0 && (
-                                <div className="flex justify-between text-xs text-purple-600">
+                                <div className="flex justify-between text-xs text-bridal-gold-dark">
                                     <span>Down Payment (due now)</span>
                                     <span className="font-medium">{formatPKR(priceBreakdown.downPayment)}</span>
                                 </div>

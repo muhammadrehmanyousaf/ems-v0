@@ -20,7 +20,7 @@ export default function VendorReviews({ reviews = [] }: VendorReviewsProps) {
           <div key={i} className="bg-white p-4 sm:p-5 rounded-xl border border-neutral-100 shadow-sm">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600">
+                <div className="w-10 h-10 bg-bridal-gold/15 rounded-full flex items-center justify-center text-bridal-gold-dark">
                   <User className="w-5 h-5" />
                 </div>
                 <div>

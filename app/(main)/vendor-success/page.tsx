@@ -45,11 +45,11 @@ const stats = [
 export default function VendorSuccessPage() {
   return (
     <div className="min-h-screen">
-      <section className="bg-gradient-to-br from-purple-600 to-purple-800 text-white py-16 px-4">
+      <section className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <Trophy className="w-12 h-12 mx-auto mb-4 text-purple-200" />
+          <Trophy className="w-12 h-12 mx-auto mb-4 text-bridal-gold/40" />
           <h1 className="text-4xl sm:text-5xl font-bold mb-4">Vendor Success Stories</h1>
-          <p className="text-lg text-purple-100 max-w-xl mx-auto">
+          <p className="text-lg text-bridal-cream max-w-xl mx-auto">
             See how vendors across Pakistan are growing their businesses with AJOINT.
           </p>
         </div>
@@ -61,7 +61,7 @@ export default function VendorSuccessPage() {
             {stats.map((stat) => (
               <Card key={stat.label} className="border-0 shadow-sm text-center">
                 <CardContent className="p-6">
-                  <stat.icon className="w-8 h-8 text-purple-600 mx-auto mb-3" />
+                  <stat.icon className="w-8 h-8 text-bridal-gold-dark mx-auto mb-3" />
                   <p className="text-3xl font-bold text-neutral-900">{stat.value}</p>
                   <p className="text-sm text-neutral-600">{stat.label}</p>
                 </CardContent>
@@ -74,8 +74,8 @@ export default function VendorSuccessPage() {
               <Card key={story.name} className="border-0 shadow-sm">
                 <CardContent className="p-6 sm:p-8">
                   <div className="flex flex-col sm:flex-row sm:items-start gap-6">
-                    <div className="flex-shrink-0 w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                      <Quote className="w-6 h-6 text-purple-600" />
+                    <div className="flex-shrink-0 w-12 h-12 bg-bridal-gold/15 rounded-xl flex items-center justify-center">
+                      <Quote className="w-6 h-6 text-bridal-gold-dark" />
                     </div>
                     <div className="flex-1">
                       <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -85,7 +85,7 @@ export default function VendorSuccessPage() {
                       </div>
                       <p className="text-neutral-600 mb-4 italic">&quot;{story.quote}&quot;</p>
                       <div className="flex flex-wrap gap-4 text-sm">
-                        <span className="text-purple-600 font-medium">{story.stats.bookings} bookings</span>
+                        <span className="text-bridal-gold-dark font-medium">{story.stats.bookings} bookings</span>
                         <span className="flex items-center gap-1"><Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />{story.stats.rating} rating</span>
                         <span className="text-neutral-500">{story.stats.years}</span>
                       </div>
@@ -104,7 +104,7 @@ export default function VendorSuccessPage() {
           <p className="text-neutral-600 mb-6">Join the fastest-growing vendor network in Pakistan.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/business-registration">
-              <Button className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white gap-2">
+              <Button className="bg-gradient-to-r from-bridal-gold to-bridal-gold-dark hover:from-bridal-gold-dark hover:to-bridal-gold-dark text-white gap-2">
                 Register Your Business <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
