@@ -55,7 +55,7 @@ const weddings = [
     theme: "Garden Romance",
     vendors: ["Zaika Caterers", "Golden Moments Photography", "Dream Decor Studio"],
     highlights: ["Garden mehndi", "Floral canopy nikkah", "Fairy-light reception", "Live music"],
-    gallery: [px(2253870), px(1616113), px(931177), px(169193)],
+    gallery: [px(2253870), px(2253839), px(1485469), px(169198)],
   },
   {
     id: 3,
@@ -70,7 +70,7 @@ const weddings = [
     theme: "Luxury Grand",
     vendors: ["Dawat-e-Khaas Caterers", "Nikkah Stories Studio", "Royal Sajawat"],
     highlights: ["Grand stage setup", "Royal baraat", "Multi-cuisine feast", "Designer outfits"],
-    gallery: [px(1456613), px(260922), px(1128783), px(1267320)],
+    gallery: [px(1456613), px(1779487), px(931796), px(265856)],
   },
 ]
 

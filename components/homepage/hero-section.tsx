@@ -599,15 +599,18 @@ export function HeroSection() {
     setVenueLocation("")
   }
 
-  // Hero background images — cinematic Pakistani bridal photography (Pexels).
-  // Each shot is shot in golden-hour / warm ambient light to harmonise with
-  // the ivory + champagne palette behind the layered overlay below.
+  // Hero background — cinematic Pakistani bridal & mehndi photography.
+  // Curated pool biased toward South-Asian wedding visuals (bridal couture,
+  // mehndi hands, henna patterns, gold jewellery, marigold florals, dupatta).
+  // All URLs Pexels CDN, free for commercial use.
   const heroImages = [
-    "https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=1920",
-    "https://images.pexels.com/photos/2253870/pexels-photo-2253870.jpeg?auto=compress&cs=tinysrgb&w=1920",
-    "https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg?auto=compress&cs=tinysrgb&w=1920",
-    "https://images.pexels.com/photos/1456613/pexels-photo-1456613.jpeg?auto=compress&cs=tinysrgb&w=1920",
-    "https://images.pexels.com/photos/2253839/pexels-photo-2253839.jpeg?auto=compress&cs=tinysrgb&w=1920",
+    "https://images.pexels.com/photos/2253870/pexels-photo-2253870.jpeg?auto=compress&cs=tinysrgb&w=1920", // bridal portrait, traditional jewellery
+    "https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=1920", // bride couple
+    "https://images.pexels.com/photos/1456613/pexels-photo-1456613.jpeg?auto=compress&cs=tinysrgb&w=1920", // mehndi hands close-up
+    "https://images.pexels.com/photos/2253839/pexels-photo-2253839.jpeg?auto=compress&cs=tinysrgb&w=1920", // bridal close-up, golden hour
+    "https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg?auto=compress&cs=tinysrgb&w=1920", // wedding ceremony
+    "https://images.pexels.com/photos/1485469/pexels-photo-1485469.jpeg?auto=compress&cs=tinysrgb&w=1920", // bride solo portrait
+    "https://images.pexels.com/photos/1779487/pexels-photo-1779487.jpeg?auto=compress&cs=tinysrgb&w=1920", // henna pattern art
   ]
 
   return (
