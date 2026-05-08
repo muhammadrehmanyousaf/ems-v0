@@ -305,6 +305,16 @@ function PaymentBody({
       return
     }
 
+    // Stripe didn't return an error AND didn't return a succeeded intent.
+    // Most common case: paymentIntent.status === "requires_action" and Stripe
+    // is about to redirect (handled by booking-form's URL detection on return),
+    // OR status === "requires_payment_method" which means no card was charged.
+    // Surface the actual status so users don't sit on a silent loading state.
+    if (paymentIntent && paymentIntent.status !== "requires_action") {
+      setErrorMsg(
+        `Payment did not complete (status: ${paymentIntent.status}). Your card was not charged. Please try again.`,
+      )
+    }
     setIsPaying(false)
   }
 

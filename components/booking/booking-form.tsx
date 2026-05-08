@@ -104,7 +104,11 @@ export default function BookingForm() {
     }
   }, [user])
 
-  // Detect return from Stripe Checkout (payment_success / payment_cancelled in URL)
+  // Detect return from Stripe Checkout / Elements redirect.
+  // Stripe appends `redirect_status` and `payment_intent` to the return URL —
+  // honour them. Without this guard a failed 3DS / failed Stripe Link signup
+  // still landed on `?ps=1&bid=…&redirect_status=failed` and we naively
+  // rendered the success screen even though the card was never charged.
   useEffect(() => {
     if (typeof window === "undefined") return
     const sp = new URLSearchParams(window.location.search)
@@ -113,8 +117,24 @@ export default function BookingForm() {
     const bid = sp.get("bid")
     const sid = sp.get("sid")
     const pt = sp.get("pt") || "down_payment"
+    const redirectStatus = sp.get("redirect_status") // succeeded | processing | requires_action | requires_payment_method | canceled | failed
 
-    if (ps === "1" && bid) {
+    const isPaymentSuccess =
+      ps === "1" &&
+      bid &&
+      // If redirect_status is present (post-redirect), require it to be
+      // succeeded/processing. If absent (Checkout flow with custom return
+      // URL where Stripe doesn't append it), trust ps=1.
+      (redirectStatus == null || redirectStatus === "succeeded" || redirectStatus === "processing")
+
+    const isPaymentFailure =
+      ps === "1" &&
+      bid &&
+      redirectStatus &&
+      redirectStatus !== "succeeded" &&
+      redirectStatus !== "processing"
+
+    if (isPaymentSuccess) {
       setPaymentReturnBookingId(Number(bid))
       setPaymentReturnType(pt)
       window.history.replaceState({}, "", window.location.pathname)
@@ -124,6 +144,13 @@ export default function BookingForm() {
           .get(`${BACKEND_URL}api/v1/payments/verify-checkout-session`, { params: { sessionId: sid, bookingId: bid, paymentType: pt } })
           .catch(() => {})
       }
+    } else if (isPaymentFailure) {
+      window.history.replaceState({}, "", window.location.pathname)
+      toast({
+        title: "Payment not completed",
+        description: `Payment status: ${redirectStatus}. Your card was not charged. Click Pay again to retry.`,
+        variant: "destructive",
+      })
     } else if (pc === "1" && bid) {
       window.history.replaceState({}, "", window.location.pathname)
       // Delete the unpaid booking silently, then inform the user
