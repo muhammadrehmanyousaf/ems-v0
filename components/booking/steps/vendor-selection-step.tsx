@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -280,7 +281,13 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="col-span-1">
                 <div className="relative w-full h-36 overflow-hidden rounded-xl">
-                  <img src={previewVendorDetail.images?.[0] || "/placeholder.jpg"} alt={previewVendorDetail.name} className="h-full w-full object-cover" />
+                  <Image
+                    src={previewVendorDetail.images?.[0] || "/placeholder.jpg"}
+                    alt={previewVendorDetail.name}
+                    fill
+                    sizes="(min-width: 640px) 33vw, 100vw"
+                    className="object-cover"
+                  />
                 </div>
               </div>
               <div className="col-span-1 sm:col-span-2 space-y-2">
@@ -358,7 +365,13 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
           </DialogHeader>
           <div className="space-y-4">
             <div className="relative w-full h-44 overflow-hidden rounded-md border border-bridal-beige">
-              <img src={previewVendor?.images?.[0] || "/placeholder.jpg"} alt={previewVendor?.name || ''} className="h-full w-full object-cover" />
+              <Image
+                src={previewVendor?.images?.[0] || "/placeholder.jpg"}
+                alt={previewVendor?.name || ''}
+                fill
+                sizes="(min-width: 768px) 600px, 100vw"
+                className="object-cover"
+              />
             </div>
             <div className="flex flex-wrap items-center gap-3 font-bridal text-[13px] text-bridal-charcoal/85">
               <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-bridal-gold" /> {previewVendor?.location || previewVendor?.city}</span>

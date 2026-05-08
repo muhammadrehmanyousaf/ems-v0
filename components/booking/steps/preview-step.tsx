@@ -399,6 +399,29 @@ export default function PreviewStep({
           </div>
         </motion.div>
       )}
+
+      {/*
+        Marketplace + payment-security disclosure — required for PayFast
+        underwriting and card-network scheme rules. Plain-language clarity
+        for the customer at the moment of payment commitment. Copy only,
+        no functional change to the booking flow.
+        Reference: docs/payfast/01-payfast-integration-overview.md §1 + §3.
+      */}
+      <motion.div
+        variants={item}
+        className="rounded-md border border-bridal-beige bg-bridal-ivory/60 p-4"
+      >
+        <p className="font-bridal text-[12.5px] text-bridal-text leading-relaxed">
+          Wedding Wala is a marketplace. Wedding services here are delivered by independent vendors. Wedding Wala collects payment on the vendor&apos;s behalf and holds it through a licensed Pakistani payment gateway. Your card statement reads <strong className="text-bridal-charcoal">WEDDINGWALA</strong>. We never store full card details.
+        </p>
+        <p className="mt-2 font-bridal text-[12px] text-bridal-text-soft leading-relaxed">
+          By submitting this booking you agree to Wedding Wala&apos;s{" "}
+          <a href="/terms" target="_blank" className="text-bridal-gold hover:underline">Terms</a>,{" "}
+          <a href="/privacy" target="_blank" className="text-bridal-gold hover:underline">Privacy Policy</a>,{" "}
+          <a href="/refund-policy" target="_blank" className="text-bridal-gold hover:underline">Refund Policy</a>, and{" "}
+          <a href="/cancellation-policy" target="_blank" className="text-bridal-gold hover:underline">Cancellation Policy</a>.
+        </p>
+      </motion.div>
     </motion.div>
   );
 }

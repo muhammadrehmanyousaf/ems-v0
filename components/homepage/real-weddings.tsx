@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import {
   Dialog,
   DialogContent,
@@ -113,10 +114,12 @@ function WeddingDetailModal({ wedding }: { wedding: any }) {
       <div className="space-y-7">
         {/* Hero image with theme overlay */}
         <div className="relative aspect-[16/9] rounded-md overflow-hidden bridal-card p-0">
-          <img
+          <Image
             src={wedding.gallery[selectedImage]}
             alt={wedding.couple}
-            className="w-full h-full object-cover"
+            fill
+            sizes="(min-width: 768px) 768px, 100vw"
+            className="object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-bridal-charcoal/85 via-bridal-charcoal/15 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 p-6 text-bridal-ivory">
@@ -141,9 +144,12 @@ function WeddingDetailModal({ wedding }: { wedding: any }) {
                   : "border-bridal-beige hover:border-bridal-gold/55"
               }`}
             >
-              <img
+              <Image
                 src={image}
                 alt={`${wedding.couple} ${index + 1}`}
+                width={200}
+                height={200}
+                sizes="200px"
                 className="w-full h-full object-cover"
               />
             </button>
@@ -265,10 +271,12 @@ export function RealWeddings() {
               <DialogTrigger asChild>
                 <article className="group overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-1 bridal-card p-0">
                   <div className="relative aspect-[4/3]">
-                    <img
+                    <Image
                       src={wedding.image}
                       alt={wedding.couple}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      fill
+                      sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-700"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-bridal-charcoal/90 via-bridal-charcoal/30 to-transparent" />
 

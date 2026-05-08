@@ -162,6 +162,36 @@ export default function PaymentSuccessScreen({ bookingId, venue, paymentType = "
         <span className="font-display italic text-bridal-gold-dark">{booking?.customerEmail || "your email"}</span>.
       </p>
 
+      {/*
+        What-happens-next + refund-eligibility line. Required by card-network
+        scheme rules to remind the customer of their rights at the moment
+        the payment clears. Pure copy, no logic. Reference:
+        docs/payfast/01-payfast-integration-overview.md §1 item 6.
+      */}
+      <div className="mt-6 max-w-lg w-full rounded-md border border-bridal-beige bg-bridal-ivory/60 p-4 text-left">
+        <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] text-bridal-gold font-medium mb-2">
+          What happens next
+        </p>
+        <ul className="font-bridal text-[12.5px] text-bridal-text leading-relaxed space-y-1.5 list-disc pl-5">
+          <li>The vendor confirms your booking — typically within 24 hours.</li>
+          <li>If the vendor declines, your full deposit is refunded automatically (10–12 working days for cards).</li>
+          <li>Your card statement reads <strong className="text-bridal-charcoal">WEDDINGWALA</strong>.</li>
+          <li>
+            Cancellations follow your{" "}
+            <Link href="/cancellation-policy" className="text-bridal-gold hover:underline">
+              vendor&apos;s cancellation tier
+            </Link>
+            . Refunds always reach the original payment method.
+          </li>
+          <li>
+            Need help?{" "}
+            <Link href="/help" className="text-bridal-gold hover:underline">Help centre</Link>
+            {" "}or{" "}
+            <Link href="/contact" className="text-bridal-gold hover:underline">contact us</Link>.
+          </li>
+        </ul>
+      </div>
+
       {/* CTAs */}
       <div className="mt-8 flex flex-col sm:flex-row gap-3">
         <Link

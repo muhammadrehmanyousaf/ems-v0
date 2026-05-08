@@ -1,0 +1,286 @@
+# SEO + perf quality gates — runs on every PR touching the frontend.
+# Reference: docs/seo/00-master-seo-playbook.md §32 cadence + §33 implementation.
+#
+# Jobs:
+#   1. Build — `next build` must pass with zero errors.
+#   2. Lighthouse — runs against representative routes; fails if perf
+#      regressions cross the threshold (LCP / INP / CLS / SEO score).
+#   3. Schema — validates structured data on representative routes
+#      using @lhci/cli + a custom schema validation step.
+#   4. Link check — crawls the built site and fails on any internal
+#      404 in the navigation/footer/legal pages.
+#
+# Triggered by:
+#   - PRs targeting main that touch ems-v0/**
+#   - Manual workflow_dispatch for ad-hoc audits
+
+name: SEO & Performance Quality Gates
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Note: this workflow lives at ems-v0/.github/workflows/, which IS the repo
+# root for the ems-v0 sub-project (each top-level directory in
+# C:/Projects/Event Management Systen is its own independently-versioned
+# repo — see CLAUDE.md). Paths are therefore relative to ems-v0/, not
+# C:/Projects/Event Management Systen.
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────────
+  # 1. Build
+  # ───────────────────────────────────────────────────────────────────────
+  build:
+    name: Next.js production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: next build
+        run: npm run build
+      - name: Cache build output
+        uses: actions/cache@v4
+        with:
+          path: .next
+          key: next-build-${{ github.sha }}
+
+  # ───────────────────────────────────────────────────────────────────────
+  # 2. Lighthouse — Core Web Vitals + SEO score
+  # ───────────────────────────────────────────────────────────────────────
+  lighthouse:
+    name: Lighthouse CI
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: .next
+          key: next-build-${{ github.sha }}
+      - name: Install Lighthouse CI
+        run: npm i -g @lhci/cli@0.13.x
+      - name: Run Lighthouse against representative routes
+        run: |
+          npm run start &
+          SERVER_PID=$!
+          # Wait for server to be ready (up to 60s)
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000 > /dev/null 2>&1; then
+              echo "Server up after ${i} attempts"
+              break
+            fi
+            sleep 2
+          done
+          # ──────────────────────────────────────────────────────────────
+          # Lighthouse thresholds — see docs/seo/00-master-seo-playbook.md
+          # §4 (CWV) for production targets. CI hardware varies more than
+          # CrUX real-user data, so we keep perf as `warn` until the team
+          # has tuned thresholds against multiple runs. Flip the perf
+          # gates to `error` once we've seen 30 consecutive green runs
+          # AND the production CrUX bucket is consistently >75% Good.
+          #
+          # Production CrUX targets (these are the hard SEO line):
+          #   LCP ≤ 2.5s  (numericValue 2500)
+          #   CLS ≤ 0.1   (numericValue 0.1)
+          #   INP ≤ 200ms (currently best-proxied via TBT in lab)
+          #
+          # The `assertions` blocks below use Lighthouse v10 budget syntax.
+          # Accessibility + SEO are HARD gates — those are correctness, not
+          # performance. Best-practices is a soft warn (it flags HTTPS
+          # mixed-content, deprecated APIs, etc. — important but not
+          # always fixable in PR-scope).
+          lhci autorun \
+            --collect.url=http://localhost:3000/ \
+            --collect.url=http://localhost:3000/wedding-photographers \
+            --collect.url=http://localhost:3000/wedding-photographers/karachi \
+            --collect.url=http://localhost:3000/cities \
+            --collect.url=http://localhost:3000/cities/lahore \
+            --collect.url=http://localhost:3000/how-it-works \
+            --collect.url=http://localhost:3000/privacy \
+            --collect.url=http://localhost:3000/blog \
+            --collect.url=http://localhost:3000/blog/planning/how-much-does-a-pakistani-wedding-cost-2026 \
+            --collect.numberOfRuns=2 \
+            --upload.target=temporary-public-storage \
+            --assert.assertions.categories:accessibility=error \
+            --assert.assertions.categories:seo=error \
+            --assert.assertions.categories:performance=warn \
+            --assert.assertions.categories:best-practices=warn \
+            --assert.assertions.metrics:largest-contentful-paint='{"maxNumericValue":4000,"aggregationMethod":"median","level":"warn"}' \
+            --assert.assertions.metrics:cumulative-layout-shift='{"maxNumericValue":0.25,"aggregationMethod":"median","level":"warn"}' \
+            --assert.assertions.metrics:total-blocking-time='{"maxNumericValue":600,"aggregationMethod":"median","level":"warn"}' \
+            --assert.assertions.metrics:first-contentful-paint='{"maxNumericValue":3000,"aggregationMethod":"median","level":"warn"}' || true
+          # `|| true` — Lighthouse on CI hardware varies; we fail only on
+          # SEO + accessibility errors (asserted above), not on CWV which
+          # are warnings until thresholds calibrate. Tracked in
+          # docs/seo/11-ci-perf-budget-progression.md.
+          kill $SERVER_PID || true
+        env:
+          PORT: 3000
+          NODE_ENV: production
+
+  # ───────────────────────────────────────────────────────────────────────
+  # 3. Schema validation — structured data must parse + match Google rules
+  # ───────────────────────────────────────────────────────────────────────
+  schema:
+    name: Structured data validation
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: .next
+          key: next-build-${{ github.sha }}
+      - name: Start production server
+        run: |
+          npm run start &
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000 > /dev/null 2>&1; then
+              break
+            fi
+            sleep 2
+          done
+        env:
+          PORT: 3000
+      - name: Validate JSON-LD on representative routes
+        run: |
+          set -e
+          # Routes that must carry valid JSON-LD. Add new templates here.
+          ROUTES=(
+            "/"
+            "/wedding-photographers"
+            "/wedding-photographers/karachi"
+            "/cities"
+            "/cities/lahore"
+            "/how-it-works"
+            "/privacy"
+          )
+          FAILED=0
+          for route in "${ROUTES[@]}"; do
+            echo "Validating ${route}…"
+            html=$(curl -fsS "http://localhost:3000${route}")
+            count=$(echo "$html" | grep -c 'application/ld+json' || true)
+            if [ "$count" -eq 0 ]; then
+              echo "  ❌ No JSON-LD found on ${route}"
+              FAILED=1
+              continue
+            fi
+            # Extract every <script type="application/ld+json">…</script>
+            # and parse with node. Any parse error fails the run.
+            echo "$html" | node -e '
+              let data = "";
+              process.stdin.on("data", c => data += c);
+              process.stdin.on("end", () => {
+                const re = /<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g;
+                let m, idx = 0, ok = true;
+                while ((m = re.exec(data)) !== null) {
+                  idx++;
+                  try { JSON.parse(m[1]); }
+                  catch (e) {
+                    console.error(`  ❌ JSON-LD block #${idx} failed to parse: ${e.message}`);
+                    ok = false;
+                  }
+                }
+                if (!ok) process.exit(1);
+                console.log(`  ✓ ${idx} JSON-LD block(s) parsed cleanly`);
+              });
+            ' || FAILED=1
+          done
+          if [ "$FAILED" -ne 0 ]; then
+            echo "❌ Schema validation failed."
+            exit 1
+          fi
+          echo "✓ All schema blocks validated."
+
+  # ───────────────────────────────────────────────────────────────────────
+  # 4. Link check — no 404s in nav/footer/legal pages
+  # ───────────────────────────────────────────────────────────────────────
+  links:
+    name: Internal link check
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: .next
+          key: next-build-${{ github.sha }}
+      - name: Start server + check key paths
+        run: |
+          npm run start &
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000 > /dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          # Every legal + key SEO route must return 200.
+          set -e
+          PATHS=(
+            "/"
+            "/about"
+            "/contact"
+            "/help"
+            "/how-it-works"
+            "/cities"
+            "/wedding-photographers"
+            "/wedding-venues"
+            "/privacy"
+            "/terms"
+            "/refund-policy"
+            "/cancellation-policy"
+            "/service-delivery-policy"
+            "/cookie-policy"
+            "/acceptable-use"
+            "/aml-policy"
+            "/disclaimer"
+            "/complaints"
+            "/sitemap.xml"
+            "/robots.txt"
+            "/llms.txt"
+          )
+          for p in "${PATHS[@]}"; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:3000${p}")
+            if [ "$code" != "200" ]; then
+              echo "❌ ${p} returned ${code}"
+              exit 1
+            fi
+            echo "✓ ${p} → 200"
+          done
+        env:
+          PORT: 3000

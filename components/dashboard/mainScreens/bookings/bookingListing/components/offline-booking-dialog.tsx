@@ -306,7 +306,7 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess }: OfflineB
         try {
             await BookingsAPI.create({
                 customerName: customerName.trim(),
-                customerEmail: customerEmail.trim() || `offline_${Date.now()}@ajoint.app`,
+                customerEmail: customerEmail.trim() || `offline_${Date.now()}@weddingwala.pk`,
                 customerPhone: customerPhone.trim(),
                 bookingDate: format(bookingDate, 'yyyy-MM-dd'),
                 bookingTime,

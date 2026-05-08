@@ -9,14 +9,14 @@ const stories = [
     name: "Royal Marquee & Events",
     category: "Venues",
     location: "Lahore",
-    quote: "Since joining AJOINT, our bookings have increased by 40%. The platform makes it incredibly easy for customers to find and book us. The dashboard analytics helped us understand peak seasons better.",
+    quote: "Since joining Wedding Wala, our bookings have increased by 40%. The platform makes it incredibly easy for customers to find and book us. The dashboard analytics helped us understand peak seasons better.",
     stats: { bookings: "200+", rating: "4.9", years: "2 years on platform" },
   },
   {
     name: "Capture Studios",
     category: "Photography",
     location: "Islamabad",
-    quote: "AJOINT changed how we get clients. Before, we relied solely on word of mouth. Now, 60% of our new clients come through the platform. The review system builds trust with couples we've never met.",
+    quote: "Wedding Wala changed how we get clients. Before, we relied solely on word of mouth. Now, 60% of our new clients come through the platform. The review system builds trust with couples we've never met.",
     stats: { bookings: "150+", rating: "4.8", years: "1.5 years on platform" },
   },
   {
@@ -30,7 +30,7 @@ const stories = [
     name: "Bloom & Petal Decor",
     category: "Decor",
     location: "Lahore",
-    quote: "As a small business, getting visibility was our biggest challenge. AJOINT put us in front of thousands of couples. We've built a loyal customer base and our portfolio speaks for itself now.",
+    quote: "As a small business, getting visibility was our biggest challenge. Wedding Wala put us in front of thousands of couples. We've built a loyal customer base and our portfolio speaks for itself now.",
     stats: { bookings: "120+", rating: "4.9", years: "1 year on platform" },
   },
 ]
@@ -50,7 +50,7 @@ export default function VendorSuccessPage() {
           <Trophy className="w-12 h-12 mx-auto mb-4 text-bridal-gold/40" />
           <h1 className="text-4xl sm:text-5xl font-bold mb-4">Vendor Success Stories</h1>
           <p className="text-lg text-bridal-cream max-w-xl mx-auto">
-            See how vendors across Pakistan are growing their businesses with AJOINT.
+            See how vendors across Pakistan are growing their businesses with Wedding Wala.
           </p>
         </div>
       </section>

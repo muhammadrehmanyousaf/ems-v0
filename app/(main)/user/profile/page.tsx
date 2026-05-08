@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -407,11 +408,29 @@ const ProfilePage = () => {
                 className="relative h-20 w-20 rounded-full overflow-hidden border-2 border-border hover:border-bridal-gold/55 transition-colors block"
               >
                 {imagePreview || profile.profileImage ? (
-                  <img
-                    src={imagePreview || profile.profileImage}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
+                  /*
+                    Avatar image source can be either a blob: URL (from a
+                    fresh upload preview) or a remote URL (from the backend).
+                    next/image rejects blob: URLs, so use an unoptimized
+                    fallback when the source is a blob, otherwise let the
+                    optimizer handle it.
+                  */
+                  (imagePreview || "").startsWith("blob:") ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={imagePreview || profile.profileImage}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Image
+                      src={imagePreview || profile.profileImage}
+                      alt="Profile"
+                      fill
+                      sizes="80px"
+                      className="object-cover"
+                    />
+                  )
                 ) : (
                   <div className="w-full h-full bg-bridal-cream flex items-center justify-center text-bridal-gold-dark text-2xl font-display italic">
                     {profile.fullName?.charAt(0).toUpperCase() || "U"}

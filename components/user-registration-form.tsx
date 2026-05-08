@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import axios from "axios"
 import Link from "next/link"
+import { TERMS_VERSION } from "@/lib/seo"
 import { useRouter } from "next/navigation"
 import {
   Heart,
@@ -98,6 +99,11 @@ export function UserRegistrationForm() {
       formData.append("phoneNumber", data.phoneNumber)
       formData.append("password", data.password)
       formData.append("roleIds", JSON.stringify([3]))
+      // Record explicit T&C acceptance — required for PayFast underwriting
+      // and chargeback defense. Backend persists via the User columns added
+      // in migration 20260507110000-user-terms-acceptance.
+      formData.append("termsVersion", TERMS_VERSION)
+      formData.append("termsAcceptedAt", new Date().toISOString())
       if (profileImageFile) {
         formData.append("profileImage", profileImageFile)
       }
@@ -388,23 +394,50 @@ export function UserRegistrationForm() {
           {isLoading ? "Creating account…" : "Create Account"}
         </BridalButton>
 
-        <p className="font-bridal text-[11px] text-bridal-text-soft leading-relaxed text-center">
-          By creating an account you agree to our{" "}
-          <Link
-            href="/terms"
-            className="text-bridal-mauve hover:text-bridal-gold underline-offset-4 hover:underline"
+        {/*
+          Explicit T&C acceptance — required for PayFast underwriting and
+          chargeback defense. The submit button is disabled until the user
+          ticks the box, and the timestamp + version are POSTed to the
+          backend. Reference: docs/payfast/01-payfast-integration-overview.md §2 item 6.
+        */}
+        <label className="flex items-start gap-2.5 text-left cursor-pointer">
+          <input
+            type="checkbox"
+            required
+            className="mt-1 accent-bridal-gold"
+            aria-describedby="terms-policy-text"
+          />
+          <span
+            id="terms-policy-text"
+            className="font-bridal text-[12px] text-bridal-text-soft leading-relaxed"
           >
-            Terms
-          </Link>{" "}
-          &amp;{" "}
-          <Link
-            href="/privacy"
-            className="text-bridal-mauve hover:text-bridal-gold underline-offset-4 hover:underline"
-          >
-            Privacy Policy
-          </Link>
-          .
-        </p>
+            I have read and agree to Wedding Wala&apos;s{" "}
+            <Link
+              href="/terms"
+              className="text-bridal-mauve hover:text-bridal-gold underline-offset-4 hover:underline"
+              target="_blank"
+            >
+              Terms of Service
+            </Link>
+            ,{" "}
+            <Link
+              href="/privacy"
+              className="text-bridal-mauve hover:text-bridal-gold underline-offset-4 hover:underline"
+              target="_blank"
+            >
+              Privacy Policy
+            </Link>
+            , and{" "}
+            <Link
+              href="/refund-policy"
+              className="text-bridal-mauve hover:text-bridal-gold underline-offset-4 hover:underline"
+              target="_blank"
+            >
+              Refund Policy
+            </Link>
+            .
+          </span>
+        </label>
       </form>
 
       <div className="my-3.5">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import {
   NavigationMenu,
@@ -121,7 +122,7 @@ export function Header() {
                         <Heart className="w-[18px] h-[18px] text-bridal-gold" />
                       </span>
                       <span className="font-display italic text-2xl text-bridal-charcoal leading-none">
-                        AJOINT
+                        Wedding Wala
                       </span>
                     </Link>
                     <button
@@ -311,7 +312,7 @@ export function Header() {
               </span>
               <span className="leading-none">
                 <span className="block font-display italic text-[22px] sm:text-[24px] text-bridal-charcoal leading-none">
-                  AJOINT
+                  Wedding Wala
                 </span>
                 <span className="hidden sm:block font-bridal text-[9px] uppercase tracking-[0.32em] text-bridal-gold mt-1">
                   Pakistan&apos;s Shaadi Platform
@@ -342,10 +343,12 @@ export function Header() {
                       {/* ── Left: Editorial feature spotlight (4 cols) ── */}
                       <div className="col-span-4 relative overflow-hidden">
                         <Link href="/vendors" className="block group/featured h-full">
-                          <img
+                          <Image
                             src="https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=800"
                             alt=""
-                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover/featured:scale-105"
+                            fill
+                            sizes="(min-width: 1024px) 367px, 100vw"
+                            className="object-cover transition-transform duration-700 group-hover/featured:scale-105"
                           />
                           <div className="absolute inset-0 bg-gradient-to-br from-bridal-mauve/55 via-bridal-charcoal/60 to-bridal-charcoal/85" />
                           <div className="absolute inset-0 bg-gradient-to-t from-bridal-charcoal/90 via-bridal-charcoal/35 to-transparent" />
@@ -508,7 +511,9 @@ export function Header() {
               {[
                 { href: "/venues", label: "Venues" },
                 { href: "/vendors", label: "All Vendors" },
-                { href: "/events", label: "Events" },
+                { href: "/real-weddings", label: "Real Weddings" },
+                { href: "/blog", label: "Blog" },
+                { href: "/help", label: "Help" },
               ].map((link) => (
                 <NavigationMenuItem key={link.href}>
                   <NavigationMenuLink asChild>

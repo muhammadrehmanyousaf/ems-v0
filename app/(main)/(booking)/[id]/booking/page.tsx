@@ -2,7 +2,7 @@ import BookingForm from '@/components/booking/booking-form'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: "Book Your Event | AJOINT",
+  title: "Book Your Event | Wedding Wala",
   description: "Secure, modern booking flow",
 }
 

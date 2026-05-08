@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
+import Image from "next/image"
 import { Search, MapPin, Star, ArrowRight, X, Heart, Award } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -627,11 +628,18 @@ export function HeroSection() {
         >
           {heroImages.map((src, i) => (
             <SwiperSlide key={i}>
-              <div className="w-full h-full overflow-hidden">
-                <img
+              <div className="w-full h-full overflow-hidden relative">
+                {/* LCP image — first slide is the page's largest paint;
+                    priority + high fetch priority is the single biggest CWV
+                    lever. Reference: docs/seo/05-T5-image-migration-runbook.md. */}
+                <Image
                   src={src}
                   alt=""
-                  className="w-full h-full object-cover animate-ken-burns"
+                  fill
+                  priority={i === 0}
+                  fetchPriority={i === 0 ? "high" : "auto"}
+                  sizes="100vw"
+                  className="object-cover animate-ken-burns"
                   style={{ animationDelay: `${i * 5}s` }}
                 />
               </div>
@@ -945,11 +953,13 @@ export function HeroSection() {
                                   className="cursor-pointer data-[selected=true]:bg-bridal-blush/45"
                                 >
                                   <div className="flex items-center gap-3 w-full p-1.5">
-                                    <div className="w-12 h-12 rounded-md overflow-hidden flex-shrink-0 ring-1 ring-bridal-beige">
-                                      <img
+                                    <div className="w-12 h-12 rounded-md overflow-hidden flex-shrink-0 ring-1 ring-bridal-beige relative">
+                                      <Image
                                         src={vendor.images?.[0] || "/placeholder.jpg"}
                                         alt={vendor.name}
-                                        className="w-full h-full object-cover"
+                                        fill
+                                        sizes="48px"
+                                        className="object-cover"
                                       />
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -1203,11 +1213,13 @@ export function HeroSection() {
                             className="w-full flex items-center gap-3 p-2.5 rounded-[4px] hover:bg-bridal-blush/50 cursor-pointer transition-all duration-200 group text-left"
                             onClick={() => handleVenueSelect(venue)}
                           >
-                            <div className="w-10 h-10 rounded-md overflow-hidden flex-shrink-0 ring-1 ring-bridal-beige">
-                              <img
+                            <div className="w-10 h-10 rounded-md overflow-hidden flex-shrink-0 ring-1 ring-bridal-beige relative">
+                              <Image
                                 src={venue.images?.[0] || "/placeholder.jpg"}
                                 alt={venue.name}
-                                className="w-full h-full object-cover"
+                                fill
+                                sizes="40px"
+                                className="object-cover"
                               />
                             </div>
                             <div className="flex-1 min-w-0">

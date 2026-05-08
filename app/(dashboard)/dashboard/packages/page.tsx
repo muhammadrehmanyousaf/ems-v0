@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Image from "next/image";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -77,10 +78,12 @@ function PackageImageEditor({
               key={url}
               className="relative group aspect-square rounded-md overflow-hidden border border-border"
             >
-              <img
+              <Image
                 src={url}
                 alt="Package"
-                className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                fill
+                sizes="(min-width: 1024px) 200px, 33vw"
+                className="object-cover transition-transform duration-200 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-bridal-charcoal/30 opacity-0 group-hover:opacity-100 transition-opacity" />
               <button
@@ -297,10 +300,12 @@ export default function PackagesPage() {
             >
               {Array.isArray(pkg.images) && pkg.images.length > 0 ? (
                 <div className="relative aspect-[4/3] bg-muted/30 overflow-hidden">
-                  <img
+                  <Image
                     src={pkg.images[0]}
                     alt={pkg.name}
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
+                    className="object-cover"
                   />
                   {pkg.images.length > 1 ? (
                     <span className="absolute bottom-2 right-2 rounded-full bg-bridal-charcoal/80 backdrop-blur text-bridal-ivory text-[10px] font-medium uppercase tracking-[0.18em] px-2.5 py-1">

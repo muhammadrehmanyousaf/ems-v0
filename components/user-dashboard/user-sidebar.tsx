@@ -96,7 +96,7 @@ export function UserSidebar() {
           </span>
           <span className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
             <span className="font-display italic text-[20px] text-bridal-charcoal leading-none">
-              AJOINT
+              Wedding Wala
             </span>
             <span className="text-[9px] font-bridal uppercase tracking-[0.32em] text-bridal-gold-dark mt-1">
               My account

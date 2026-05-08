@@ -126,10 +126,38 @@ export default function BankTransferScreen({
         </p>
         <ul className="font-bridal text-[12.5px] text-bridal-charcoal/85 space-y-1.5 list-disc list-inside leading-relaxed">
           <li>Use <strong className="text-bridal-charcoal not-italic">Booking #{bookingId}</strong> as the transfer reference/description</li>
-          <li>Send payment screenshot to <strong className="text-bridal-charcoal">+92 300 0000000</strong> on WhatsApp</li>
+          <li>Send payment screenshot to <strong className="text-bridal-charcoal">+92 327 4811220</strong> on WhatsApp</li>
           <li>Your booking will be confirmed within <strong className="text-bridal-charcoal">2-4 hours</strong> of payment receipt</li>
           <li>Keep the bank transfer receipt for your records</li>
         </ul>
+      </div>
+
+      {/*
+        Security + refund disclosure for bank-transfer flow. Bank transfers
+        sit outside card-network protections, so the customer sees this
+        explicitly. Pure copy, no logic. Reference:
+        docs/payfast/01-payfast-integration-overview.md §1 item 6.
+      */}
+      <div className="w-full rounded-md border border-bridal-beige bg-bridal-ivory/60 px-5 py-4 text-left mb-6">
+        <p className="font-bridal text-[10.5px] uppercase tracking-[0.28em] font-medium text-bridal-gold-dark mb-2">
+          Security &amp; refunds
+        </p>
+        <p className="font-bridal text-[12.5px] text-bridal-text leading-relaxed">
+          Wedding Wala holds your transferred deposit until the vendor
+          confirms the booking. If the vendor declines, your full deposit
+          is refunded to the originating bank account within 3–7 working
+          days. Bank transfers do not carry chargeback rights — for the
+          highest level of payment protection, pay by card instead. Read
+          our{" "}
+          <a href="/refund-policy" target="_blank" rel="noopener noreferrer" className="text-bridal-gold hover:underline">
+            Refund Policy
+          </a>{" "}
+          and{" "}
+          <a href="/cancellation-policy" target="_blank" rel="noopener noreferrer" className="text-bridal-gold hover:underline">
+            Cancellation Policy
+          </a>
+          .
+        </p>
       </div>
 
       {/* Also accept via JazzCash/Easypaisa */}

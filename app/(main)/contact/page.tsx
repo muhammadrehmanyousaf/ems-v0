@@ -21,15 +21,42 @@ export default function ContactPage() {
       return
     }
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 1000))
-    setLoading(false)
-    setSent(true)
-    toast({ title: "Message Sent", description: "We'll get back to you within 24 hours." })
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          email: form.email.trim(),
+          subject: form.subject.trim(),
+          message: form.message.trim(),
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data?.ok === false) {
+        toast({
+          title: "Couldn't send",
+          description: data?.error || "Something went wrong. Please try again, or email us directly at info@weddingwala.pk.",
+          variant: "destructive",
+        })
+        return
+      }
+      setSent(true)
+      toast({ title: "Message Sent", description: "We'll get back to you within 24 hours." })
+    } catch {
+      toast({
+        title: "Network error",
+        description: "Couldn't reach our servers. Please try again, or email info@weddingwala.pk.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   const info = [
-    { icon: Mail, label: "Email", value: "support@ajoint.pk", href: "mailto:support@ajoint.pk" },
-    { icon: Phone, label: "Phone", value: "+92 300 1234567", href: "tel:+923001234567" },
+    { icon: Mail, label: "Email", value: "info@weddingwala.pk", href: "mailto:info@weddingwala.pk" },
+    { icon: Phone, label: "Phone", value: "+92 327 4811220", href: "tel:+923274811220" },
     { icon: MapPin, label: "Office", value: "Lahore, Pakistan", href: null },
     { icon: Clock, label: "Hours", value: "Mon-Sat, 9 AM - 6 PM", href: null },
   ]

@@ -558,7 +558,7 @@ export function VendorAwards() {
             eyebrow="2026 Awards"
             title="Pakistan's most loved"
             highlight="wedding partners"
-            description="Voted by 10,000+ couples on AJOINT — the verified Hall of Fame of the year."
+            description="Voted by 10,000+ couples on Wedding Wala — the verified Hall of Fame of the year."
             align="center"
           />
         </ScrollReveal>
@@ -680,7 +680,7 @@ export function TrustStrip() {
       <div className="relative container-responsive">
         <ScrollReveal>
           <SectionHeader
-            eyebrow="Why AJOINT"
+            eyebrow="Why Wedding Wala"
             title="Built for the most important"
             highlight="day of your life"
             description="Bridal-grade tooling, end-to-end."

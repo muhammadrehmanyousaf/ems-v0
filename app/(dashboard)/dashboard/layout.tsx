@@ -11,8 +11,8 @@ import { Metadata } from "next"
 import NextTopLoader from "nextjs-toploader"
 
 export const metadata: Metadata = {
-  title: "AJOINT — Dashboard",
-  description: "AJOINT operations dashboard",
+  title: "Wedding Wala — Dashboard",
+  description: "Wedding Wala operations dashboard",
 }
 
 const layout = ({ children }: { children: React.ReactNode }) => {

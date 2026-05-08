@@ -23,14 +23,14 @@ const testimonials = [
   },
   {
     quote:
-      "AJOINT introduced us to vendors we never would have found on our own. The Mehndi was unforgettable — and so was the value.",
+      "Wedding Wala introduced us to vendors we never would have found on our own. The Mehndi was unforgettable — and so was the value.",
     couple: "Hira & Bilal",
     location: "Islamabad",
     rating: 5,
   },
   {
     quote:
-      "Booking through AJOINT meant transparent pricing, real reviews, and a calendar that just worked. The least stressful wedding any of our friends have planned.",
+      "Booking through Wedding Wala meant transparent pricing, real reviews, and a calendar that just worked. The least stressful wedding any of our friends have planned.",
     couple: "Mehar & Faisal",
     location: "Faisalabad",
     rating: 5,

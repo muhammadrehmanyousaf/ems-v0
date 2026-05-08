@@ -123,7 +123,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </div>
                 <div className="grid flex-1 text-left leading-tight">
                   <span className="text-[15px] font-semibold tracking-tight text-foreground">
-                    AJOINT
+                    Wedding Wala
                   </span>
                   <span className="text-[11px] text-muted-foreground -mt-0.5">
                     {ROLE_LABEL[role]}

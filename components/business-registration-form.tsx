@@ -39,6 +39,7 @@ import DecoratorSteps from "./VendorStepForms/newVendorRegisterationForm/Decorat
 import CateringSteps from "./VendorStepForms/newVendorRegisterationForm/Catering/catering-steps";
 import axios from "axios";
 import { BACKEND_URL } from "@/lib/backend-url";
+import { TERMS_VERSION } from "@/lib/seo";
 import { vanueValidations } from "./VendorStepForms/newVendorRegisterationForm/venueSteps/vanueComponents/vanueValidations";
 import SuccessModal from "./VendorStepForms/components/SuccessModal";
 import CarRentalSteps from "./VendorStepForms/newVendorRegisterationForm/CarRental/car-rental-steps";
@@ -87,6 +88,10 @@ export function BusinessRegistrationForm() {
   const [file, setFile] = useState<File | null>(null);
   const [openModal, setOpenModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  // T&C acceptance — explicit consent gate on the final step. Submit is
+  // blocked until checked. Reference:
+  // docs/payfast/01-payfast-integration-overview.md §2 item 6.
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const { data: stats, isLoading: isLoadingStats } = usePlatformStats();
 
   // 01-VR-ENHANCE-V1-FE — server-side draft sync.
@@ -319,6 +324,18 @@ export function BusinessRegistrationForm() {
       return;
     }
 
+    // Explicit T&C gate — frontend cannot submit without an affirmative
+    // tick. Backend defends in depth by also persisting the version /
+    // timestamp / IP for chargeback evidence.
+    if (!termsAccepted) {
+      toast({
+        title: "Please accept the Terms",
+        description:
+          "You must accept the Vendor Terms of Service, Privacy Policy, and Refund Policy before submitting.",
+      });
+      return;
+    }
+
     const loadingToastId = toast({
       title: "Processing",
       description: (
@@ -478,6 +495,11 @@ export function BusinessRegistrationForm() {
               })),
           })),
         ...(uploadTempId ? { tempId: uploadTempId } : {}),
+        // Vendor T&C acceptance — recorded on the user row by the backend
+        // signup controller. Reference: migration
+        // 20260507110000-user-terms-acceptance.
+        termsVersion: TERMS_VERSION,
+        termsAcceptedAt: new Date().toISOString(),
       };
 
       // Build the payload — use FormData so vendor profile image can be included
@@ -634,7 +656,7 @@ export function BusinessRegistrationForm() {
             </div>
             <div className="min-w-0">
               <p className="font-display italic text-base sm:text-lg leading-tight text-bridal-charcoal">
-                AJOINT
+                Wedding Wala
               </p>
               <p className="bridal-label text-[9px] sm:text-[10px] tracking-[0.2em]">
                 Vendor Registration
@@ -924,6 +946,7 @@ export function BusinessRegistrationForm() {
                     variant="primary"
                     size="md"
                     onClick={isFinalStep ? handleSubmit : handleNext}
+                    disabled={isFinalStep && !termsAccepted}
                   >
                     {isFinalStep ? (
                       <>
@@ -939,6 +962,64 @@ export function BusinessRegistrationForm() {
                   </BridalButton>
                 </div>
               </div>
+
+              {/*
+                T&C acceptance — visible only on the final step. Required
+                for PayFast underwriting + chargeback defense. The submit
+                button above is disabled until this is ticked. Reference:
+                docs/payfast/01-payfast-integration-overview.md §2 item 6,
+                docs/seo/00-master-seo-playbook.md §28 item 6.6.
+              */}
+              {isFinalStep && (
+                <label className="mt-4 flex items-start gap-2.5 cursor-pointer max-w-2xl">
+                  <input
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                    required
+                    className="mt-1 accent-bridal-gold"
+                    aria-describedby="vendor-terms-text"
+                  />
+                  <span
+                    id="vendor-terms-text"
+                    className="font-bridal text-[12.5px] text-bridal-text-soft leading-relaxed"
+                  >
+                    I confirm that I am authorised to list this business on Wedding Wala, and I have read and agree to the{" "}
+                    <Link
+                      href="/terms"
+                      target="_blank"
+                      className="text-bridal-gold hover:underline"
+                    >
+                      Vendor Terms of Service
+                    </Link>
+                    ,{" "}
+                    <Link
+                      href="/privacy"
+                      target="_blank"
+                      className="text-bridal-gold hover:underline"
+                    >
+                      Privacy Policy
+                    </Link>
+                    ,{" "}
+                    <Link
+                      href="/refund-policy"
+                      target="_blank"
+                      className="text-bridal-gold hover:underline"
+                    >
+                      Refund Policy
+                    </Link>
+                    , and{" "}
+                    <Link
+                      href="/acceptable-use"
+                      target="_blank"
+                      className="text-bridal-gold hover:underline"
+                    >
+                      Acceptable Use Policy
+                    </Link>
+                    .
+                  </span>
+                </label>
+              )}
             </BridalCard>
 
             {/* Footer link */}

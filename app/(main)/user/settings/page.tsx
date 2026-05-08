@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from "react"
+import Image from "next/image"
 import { useUser } from "@/context/UserContext"
 import { useRouter } from "next/navigation"
 import axiosInstance from "@/lib/axiosConfig"
@@ -376,11 +377,24 @@ export default function UserSettingsPage() {
                 )}
               >
                 {avatarSrc ? (
-                  <img
-                    src={avatarSrc}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
+                  // Same blob-vs-remote handling as user/profile/page.tsx —
+                  // next/image cannot serve blob: URLs.
+                  avatarSrc.startsWith("blob:") ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={avatarSrc}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Image
+                      src={avatarSrc}
+                      alt="Profile"
+                      fill
+                      sizes="80px"
+                      className="object-cover"
+                    />
+                  )
                 ) : (
                   <div className="w-full h-full bg-bridal-cream flex items-center justify-center text-bridal-gold-dark font-display italic text-2xl">
                     {initials}

@@ -59,7 +59,7 @@ export default function WeddingWebsitePage() {
               <div className="bg-gradient-to-r from-bridal-cream to-pink-50 p-8 sm:p-12 text-center">
                 <h3 className="text-2xl font-bold text-neutral-900 mb-3">Be the First to Know</h3>
                 <p className="text-neutral-600 mb-6 max-w-md mx-auto">
-                  We&apos;re building something special. Wedding websites are launching soon on AJOINT. Start planning your wedding now and your website will be ready when you need it.
+                  We&apos;re building something special. Wedding websites are launching soon on Wedding Wala. Start planning your wedding now and your website will be ready when you need it.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <Link href="/planning-tools">

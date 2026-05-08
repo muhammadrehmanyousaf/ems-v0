@@ -8,7 +8,7 @@ const steps = [
     step: 1,
     icon: UserPlus,
     title: "Create Your Account",
-    description: "Sign up as a vendor on AJOINT. It takes less than 2 minutes — just your name, email, and phone number.",
+    description: "Sign up as a vendor on Wedding Wala. It takes less than 2 minutes — just your name, email, and phone number.",
   },
   {
     step: 2,
@@ -61,7 +61,7 @@ export default function VendorGuidePage() {
           <BookOpen className="w-12 h-12 mx-auto mb-4 text-bridal-gold/40" />
           <h1 className="text-4xl sm:text-5xl font-bold mb-4">Vendor Guide</h1>
           <p className="text-lg text-bridal-cream max-w-xl mx-auto">
-            Everything you need to know about listing your business and growing with AJOINT.
+            Everything you need to know about listing your business and growing with Wedding Wala.
           </p>
         </div>
       </section>
@@ -105,7 +105,7 @@ export default function VendorGuidePage() {
       <section className="py-12 px-4 bg-neutral-50 border-t">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-2xl font-bold text-neutral-900 mb-3">Ready to Grow Your Business?</h2>
-          <p className="text-neutral-600 mb-6">Join hundreds of vendors already thriving on AJOINT.</p>
+          <p className="text-neutral-600 mb-6">Join hundreds of vendors already thriving on Wedding Wala.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/business-registration">
               <Button className="bg-gradient-to-r from-bridal-gold to-bridal-gold-dark hover:from-bridal-gold-dark hover:to-bridal-gold-dark text-white gap-2">
