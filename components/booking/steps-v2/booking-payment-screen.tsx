@@ -269,6 +269,8 @@ function PaymentBody({
   const elements = useElements()
   const [isPaying, setIsPaying] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [paymentReady, setPaymentReady] = useState(false)
+  const [stripeLoadError, setStripeLoadError] = useState<string | null>(null)
 
   const formatPKR = (n: number) =>
     new Intl.NumberFormat("en-PK", { style: "currency", currency: "PKR", maximumFractionDigits: 0 }).format(n)
@@ -332,13 +334,33 @@ function PaymentBody({
               Payment details
             </p>
           </div>
-          <div className="p-4 sm:p-5">
-            <PaymentElement options={{ layout: "tabs" }} />
+          <div className="p-4 sm:p-5 min-h-[140px]">
+            <PaymentElement
+              options={{ layout: "tabs" }}
+              onReady={() => setPaymentReady(true)}
+              onLoadError={(e) => {
+                const msg =
+                  e?.error?.message ||
+                  e?.error?.code ||
+                  "Stripe could not load the payment form."
+                setStripeLoadError(
+                  `${msg} — likely cause: the Stripe publishable key on the frontend doesn't match the secret key on the backend (test vs live, or two different Stripe accounts), OR the currency (PKR) isn't enabled on this Stripe account. Check Stripe Dashboard → Settings → Payment methods.`,
+                )
+              }}
+            />
+            {!paymentReady && !stripeLoadError && (
+              <div className="text-center py-2">
+                <span className="inline-block w-5 h-5 rounded-full border-2 border-bridal-gold border-t-transparent animate-spin" />
+                <p className="mt-2 font-bridal text-[11px] uppercase tracking-[0.22em] text-bridal-text-soft">
+                  Loading card form…
+                </p>
+              </div>
+            )}
           </div>
-          {errorMsg && (
+          {(stripeLoadError || errorMsg) && (
             <div className="mx-4 mb-4 flex items-start gap-2 rounded-md bg-bridal-coral/15 border border-bridal-coral/40 px-3 py-2 font-bridal text-[12px] text-bridal-coral">
               <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-              <p>{errorMsg}</p>
+              <p>{stripeLoadError || errorMsg}</p>
             </div>
           )}
         </section>
