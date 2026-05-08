@@ -622,14 +622,16 @@ export default function BookingDetailPage() {
               ) : null}
             </div>
 
-            <div className="mt-4 pt-4 border-t border-border/60 flex items-end justify-between">
-              <span className="text-[10.5px] uppercase tracking-[0.22em] font-medium text-muted-foreground">
-                Now due
-              </span>
-              <span className="font-display italic text-[24px] text-foreground tabular-nums leading-none">
-                {fmt(booking.downPayment)}
-              </span>
-            </div>
+            {showPayCta ? (
+              <div className="mt-4 pt-4 border-t border-border/60 flex items-end justify-between">
+                <span className="text-[10.5px] uppercase tracking-[0.22em] font-medium text-muted-foreground">
+                  Now due
+                </span>
+                <span className="font-display italic text-[24px] text-foreground tabular-nums leading-none">
+                  {fmt(dueAmount)}
+                </span>
+              </div>
+            ) : null}
 
             {showPayCta ? (
               <Button
