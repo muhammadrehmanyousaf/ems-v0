@@ -326,6 +326,14 @@ export default function BookingDetailPage() {
   const payCfg = PAYMENT_CONFIG[sk(booking.paymentStatus)] || PAYMENT_CONFIG.pending;
   const isCancellable = !["cancelled", "completed"].includes(statusKey);
   const isAwaitingPayment = statusKey === "awaiting payment";
+  const paymentKey = sk(booking?.paymentStatus || "");
+  const isPartiallyPaid = paymentKey === "partial";
+  const isFullyPaid = paymentKey === "paid";
+  const showPayCta = !isFullyPaid && (isAwaitingPayment || isPartiallyPaid);
+  const dueAmount = isPartiallyPaid
+    ? Math.max(Number(booking?.totalAmount || 0) - Number(booking?.downPayment || 0), 0)
+    : Number(booking?.downPayment || booking?.totalAmount || 0);
+  const payLabel = isPartiallyPaid ? "Pay remaining" : "Pay now";
   const remaining =
     Number(booking.totalAmount || 0) - Number(booking.downPayment || 0);
   const primaryVendorName =
@@ -342,10 +350,14 @@ export default function BookingDetailPage() {
         <ArrowLeft className="size-3.5" />
         All bookings
       </Button>
-      {isAwaitingPayment ? (
-        <Button size="sm" className="gap-1.5">
+      {showPayCta ? (
+        <Button
+          size="sm"
+          className="gap-1.5"
+          onClick={() => router.push(`/user/bookings/${booking?.id}/pay`)}
+        >
           <Wallet className="size-3.5" />
-          Pay now
+          {payLabel}
           <ChevronRight className="size-3" />
         </Button>
       ) : null}
@@ -619,10 +631,16 @@ export default function BookingDetailPage() {
               </span>
             </div>
 
-            {isAwaitingPayment ? (
-              <Button className="w-full mt-4 gap-1.5" size="sm">
+            {showPayCta ? (
+              <Button
+                className="w-full mt-4 gap-1.5"
+                size="sm"
+                onClick={() => router.push(`/user/bookings/${booking.id}/pay`)}
+              >
                 <Wallet className="size-3.5" />
-                Pay {fmt(booking.downPayment)}
+                {isPartiallyPaid
+                  ? `Pay remaining ${fmt(dueAmount)}`
+                  : `Pay ${fmt(booking.downPayment || booking.totalAmount)}`}
                 <ChevronRight className="size-3" />
               </Button>
             ) : null}
