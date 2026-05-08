@@ -268,7 +268,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-12 py-6 sm:py-10 lg:py-14">
         <div className="flex flex-col lg:flex-row gap-5 sm:gap-6 lg:gap-8">
           {/* ── Filter Sidebar ── */}
-          <aside className="w-full lg:w-72 xl:w-80 flex-shrink-0 lg:self-start">
+          <aside className="w-full lg:w-72 xl:w-80 flex-shrink-0">
             <div className="lg:sticky lg:top-24">
               <Card className="border border-bridal-beige bg-bridal-cream rounded-md max-h-[calc(100vh-7rem)] overflow-hidden flex flex-col shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)]">
                 <CardHeader className="pb-3 border-b border-bridal-beige bg-bridal-ivory flex-shrink-0">
