@@ -76,7 +76,7 @@ export function FeaturedVendorsShowcase({
               href={`/${vendorPath}/${hero.id}`}
               className="block group h-full"
             >
-              <div className="relative aspect-[4/3] lg:aspect-auto lg:h-full min-h-[340px] rounded-md overflow-hidden bridal-card p-0">
+              <div className="relative aspect-[4/3] lg:aspect-auto lg:h-full lg:min-h-[340px] rounded-md overflow-hidden bridal-card p-0">
                 <Image
                   src={getFirstImage(hero.images || [])}
                   alt={hero.name}
@@ -129,7 +129,7 @@ export function FeaturedVendorsShowcase({
                   href={`/${vendorPath}/${vendor.id}`}
                   className="block group h-full"
                 >
-                  <div className="relative aspect-[4/3] lg:aspect-auto lg:h-full lg:min-h-[210px] rounded-md overflow-hidden bridal-card p-0">
+                  <div className="relative aspect-[4/3] lg:aspect-auto lg:h-full lg:min-h-[210px] rounded-md overflow-hidden bridal-card p-0 w-full">
                     <Image
                       src={getFirstImage(vendor.images || [])}
                       alt={vendor.name}

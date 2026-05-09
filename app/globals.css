@@ -2,8 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+html,
 body {
   font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+  /* Belt-and-braces guard against any rogue element causing horizontal
+     scroll on mobile. Multiple homepage sections had min-height/min-width
+     elements that escaped their container at narrow viewports; rather
+     than chase each one, clip at the viewport so the page is always
+     exactly the device width regardless of what bleeds past it. */
+  overflow-x: hidden;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────

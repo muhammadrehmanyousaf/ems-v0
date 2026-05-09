@@ -44,7 +44,7 @@ function AlternatingRow({
       >
         {/* Hero image side */}
         <Link href={`/${path}/${hero.id}`} className="lg:w-1/2 group block">
-          <div className="relative aspect-[4/3] lg:aspect-auto lg:h-full min-h-[300px] rounded-md overflow-hidden bridal-card p-0">
+          <div className="relative aspect-[4/3] lg:aspect-auto lg:h-full lg:min-h-[300px] rounded-md overflow-hidden bridal-card p-0">
             <Image
               src={getFirstImage(hero.images || [])}
               alt={hero.name}
