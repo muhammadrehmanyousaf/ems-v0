@@ -305,7 +305,7 @@ function BudgetCalculator() {
         <div className="space-y-4 max-h-64 overflow-y-auto">
           {items.map(item => (
             <div key={item.id} className="p-4 border border-neutral-200 rounded-xl space-y-4 bg-white hover:shadow-md transition-all duration-200">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-neutral-700">Category</Label>
                   <select
@@ -328,7 +328,7 @@ function BudgetCalculator() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-neutral-700">Estimated</Label>
                   <Input
@@ -433,7 +433,7 @@ function GuestListManager() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-4 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl text-white text-center shadow-lg">
           <p className="text-3xl font-bold">{rsvpStats.confirmed}</p>
           <p className="text-sm text-green-100">Confirmed</p>
@@ -450,7 +450,7 @@ function GuestListManager() {
 
       <div className="space-y-4">
         <h4 className="text-lg font-semibold">Add New Guest</h4>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             placeholder="Full name"
             value={newGuest.name || ''}
@@ -465,7 +465,7 @@ function GuestListManager() {
             className="h-12 border-neutral-200 focus:ring-2 focus:ring-bridal-gold focus:border-bridal-gold-dark"
           />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             placeholder="Phone"
             value={newGuest.phone || ''}
@@ -591,7 +591,7 @@ function TimelineCreator() {
     <div className="space-y-6">
       <div className="space-y-4">
         <h4 className="text-lg font-semibold">Add New Event</h4>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             type="time"
             value={newEvent.time || ''}
@@ -605,7 +605,7 @@ function TimelineCreator() {
             className="h-12 border-neutral-200 focus:ring-2 focus:ring-bridal-gold focus:border-bridal-gold-dark"
           />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             placeholder="Duration"
             value={newEvent.duration || ''}

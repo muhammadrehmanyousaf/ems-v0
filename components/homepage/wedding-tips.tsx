@@ -223,7 +223,7 @@ function TipDetailModal({ tip }: { tip: any }) {
                         {item.month}
                       </Badge>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {item.tasks.map((task: string, taskIndex: number) => (
                         <div key={taskIndex} className="flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
                           <CheckCircle className="w-5 h-5 text-green-600" />
@@ -359,7 +359,7 @@ function TipDetailModal({ tip }: { tip: any }) {
 
             <div className="space-y-6">
               <h3 className="text-xl font-bold text-neutral-900">Guest List Checklist</h3>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {tip.content.checklist.map((item: string, index: number) => (
                   <div key={index} className="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-lg hover:shadow-md transition-all duration-200">
                     <div className="w-5 h-5 border-2 border-neutral-300 rounded" />
@@ -398,7 +398,7 @@ function TipDetailModal({ tip }: { tip: any }) {
             <div className="grid md:grid-cols-2 gap-8">
               <div className="space-y-6">
                 <h3 className="text-xl font-bold text-neutral-900">Essential Shots</h3>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {tip.content.shots.map((shot: string, index: number) => (
                     <div key={index} className="flex items-center gap-3 p-3 bg-gradient-to-r from-bridal-cream to-violet-50 rounded-lg">
                       <Camera className="w-4 h-4 text-bridal-gold-dark" />
@@ -423,7 +423,7 @@ function TipDetailModal({ tip }: { tip: any }) {
 
             <div className="space-y-6">
               <h3 className="text-xl font-bold text-neutral-900">Photography Checklist</h3>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {tip.content.checklist.map((item: string, index: number) => (
                   <div key={index} className="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-lg hover:shadow-md transition-all duration-200">
                     <div className="w-5 h-5 border-2 border-neutral-300 rounded" />

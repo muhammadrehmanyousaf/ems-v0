@@ -936,7 +936,7 @@ export function HeroSection() {
                         </div>
                       </PopoverTrigger>
                       <PopoverContent
-                        className="w-[500px] p-0 rounded-[4px] bg-bridal-cream border-bridal-beige"
+                        className="w-[calc(100vw-2rem)] sm:w-[500px] max-w-[500px] p-0 rounded-[4px] bg-bridal-cream border-bridal-beige"
                         align="start"
                         onOpenAutoFocus={(e) => e.preventDefault()}
                       >

@@ -854,13 +854,13 @@ export function FinalNewsletterCTA() {
           </p>
           <form
             onSubmit={(e) => e.preventDefault()}
-            className="mt-7 flex items-center gap-2 max-w-md mx-auto"
+            className="mt-7 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 max-w-md mx-auto px-4 sm:px-0"
           >
             <input
               type="email"
               placeholder="your@email.com"
               className="
-                flex-1 h-12 px-4 rounded-[4px]
+                w-full sm:flex-1 min-w-0 h-12 px-4 rounded-[4px]
                 bg-bridal-cream border border-bridal-beige
                 font-bridal text-[14px] text-bridal-charcoal
                 placeholder:text-bridal-text-label/70
@@ -868,7 +868,12 @@ export function FinalNewsletterCTA() {
                 transition-all
               "
             />
-            <BridalButton type="submit" variant="primary" size="lg">
+            <BridalButton
+              type="submit"
+              variant="primary"
+              size="lg"
+              className="w-full sm:w-auto shrink-0"
+            >
               Subscribe
             </BridalButton>
           </form>

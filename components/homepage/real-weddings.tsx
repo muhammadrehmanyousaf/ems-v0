@@ -133,7 +133,7 @@ function WeddingDetailModal({ wedding }: { wedding: any }) {
         </div>
 
         {/* Gallery */}
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {wedding.gallery.map((image: string, index: number) => (
             <button
               key={index}

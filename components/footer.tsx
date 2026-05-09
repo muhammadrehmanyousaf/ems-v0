@@ -130,8 +130,8 @@ export function Footer() {
                   className="w-full lg:w-auto flex flex-col gap-2 max-w-md"
                   noValidate
                 >
-                  <div className="flex items-center gap-2">
-                    <div className="relative flex-1">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <div className="relative w-full sm:flex-1 min-w-0">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-bridal-gold pointer-events-none" />
                       <input
                         type="email"
@@ -170,7 +170,7 @@ export function Footer() {
                       type="submit"
                       variant="primary"
                       size="md"
-                      className="h-11"
+                      className="h-11 w-full sm:w-auto shrink-0"
                       disabled={state === "loading"}
                     >
                       {state === "loading" ? (
@@ -224,7 +224,7 @@ export function Footer() {
               </p>
 
               {/* Trust strip */}
-              <div className="flex items-center gap-5 pt-1">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-1">
                 <span className="inline-flex items-center gap-1.5 font-bridal text-[12px] text-bridal-text-soft">
                   <Star className="w-3.5 h-3.5 text-bridal-gold fill-bridal-gold" />
                   <span className="font-medium text-bridal-charcoal">4.8/5</span>
