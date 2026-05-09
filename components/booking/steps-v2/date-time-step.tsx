@@ -32,7 +32,30 @@ const PERIODS = [
 ] as const
 
 const WEEKDAY_SHORT = ["S", "M", "T", "W", "T", "F", "S"]
+const WEEKDAY_FULL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+const MONTHS_FULL = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December",
+]
+
+function startOfMonth(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), 1)
+}
+function addMonths(d: Date, n: number) {
+  return new Date(d.getFullYear(), d.getMonth() + n, 1)
+}
+/**
+ * Build the grid of dates for a given month, 6 rows × 7 columns. Includes
+ * trailing days from the previous month and leading days from the next so
+ * the grid is always rectangular (Airbnb / Booking.com pattern).
+ */
+function buildMonthGrid(viewMonth: Date): Date[] {
+  const first = startOfMonth(viewMonth)
+  const startDayOfWeek = first.getDay() // 0 = Sun
+  const gridStart = addDays(first, -startDayOfWeek)
+  return Array.from({ length: 42 }, (_, i) => addDays(gridStart, i))
+}
 
 function toKey(d: Date) {
   const y = d.getFullYear()
@@ -71,18 +94,16 @@ export default function DateTimeStep({
 }: Props) {
   const today = startOfDay(new Date())
 
-  // Anchor for the visible day strip — first of 14 visible days.
-  const initialAnchor = (() => {
+  // The month currently shown in the calendar grid. Defaults to today's month
+  // (or the selected booking month if the user already has one).
+  const initialViewMonth = (() => {
     if (formData.bookingDate) {
       const d = new Date(formData.bookingDate)
-      if (!isNaN(d.getTime())) {
-        const an = startOfDay(d)
-        return an < today ? today : addDays(an, -3)
-      }
+      if (!isNaN(d.getTime())) return startOfMonth(d)
     }
-    return today
+    return startOfMonth(today)
   })()
-  const [anchor, setAnchor] = useState<Date>(initialAnchor)
+  const [viewMonth, setViewMonth] = useState<Date>(initialViewMonth)
 
   const selectedDate: Date | undefined = useMemo(() => {
     if (!formData.bookingDate) return undefined
@@ -100,15 +121,20 @@ export default function DateTimeStep({
     } catch { /* silent */ }
   }, [venue?.id])
 
-  // Fetch the months covered by the visible strip
+  // Prefetch the visible month + the next month (so leading days from next
+  // month already have availability when shown in the grid edges).
   useEffect(() => {
-    fetchMonth(anchor)
-    fetchMonth(addDays(anchor, 13))
-  }, [anchor, fetchMonth])
+    fetchMonth(viewMonth)
+    fetchMonth(addMonths(viewMonth, 1))
+  }, [viewMonth, fetchMonth])
 
-  const days = useMemo(() => {
-    return Array.from({ length: 30 }, (_, i) => addDays(anchor, i))
-  }, [anchor])
+  // The 6×7 grid of dates for the visible month (Airbnb / Booking.com pattern).
+  const monthGrid = useMemo(() => buildMonthGrid(viewMonth), [viewMonth])
+  const isSameMonth = useCallback(
+    (d: Date) => d.getMonth() === viewMonth.getMonth() && d.getFullYear() === viewMonth.getFullYear(),
+    [viewMonth]
+  )
+  const canGoPrevMonth = startOfMonth(today) < viewMonth
 
   const formatLong = (d: Date) =>
     `${["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`
@@ -179,44 +205,53 @@ export default function DateTimeStep({
       return { ...prev, guestCount: n }
     })
 
-  const renderDayRow = (slice: Date[]) => (
-    <div className="grid grid-cols-10 gap-1.5">
-      {slice.map((d) => {
-        const key = toKey(d)
-        const a = availability[key]
-        const isPast = d < today
-        const isBlocked = !!a?.isBlocked || (a && a.availableSlots.length === 0)
-        const isPartial = !!a && a.bookedSlots.length > 0 && !isBlocked
-        const isSelected = sameDay(d, selectedDate)
-        const disabled = isPast || isBlocked
-        return (
-          <button
-            key={key}
-            type="button"
-            onClick={() => handlePickDay(d)}
-            disabled={disabled}
-            className={`relative h-12 flex items-center justify-center gap-1.5 rounded-md text-center transition-all border
-              ${disabled
-                ? "border-transparent text-bridal-text-soft/40 cursor-not-allowed"
-                : isSelected
-                  ? "border-bridal-gold-dark bg-bridal-cream shadow-[0_6px_18px_-12px_rgba(176,125,84,0.5)]"
-                  : "border-bridal-beige bg-bridal-ivory hover:border-bridal-gold/55 hover:bg-bridal-cream text-bridal-charcoal"
-              }`}
-          >
-            <span className={`font-bridal text-[9px] uppercase tracking-[0.14em] font-medium ${isSelected ? "text-bridal-gold-dark" : disabled ? "" : "text-bridal-text-soft"}`}>
-              {WEEKDAY_SHORT[d.getDay()]}
-            </span>
-            <span className={`font-display italic text-[15px] tabular-nums leading-none ${isSelected ? "text-bridal-charcoal" : ""}`}>
-              {d.getDate()}
-            </span>
-            {isPartial && !isSelected && (
-              <span aria-hidden className="absolute bottom-1 w-1 h-1 rounded-full bg-bridal-gold" />
-            )}
-          </button>
-        )
-      })}
-    </div>
-  )
+  /** A single day cell in the monthly grid. Airbnb-style: square, large
+   *  numeral, dot indicator for partial availability. */
+  const renderDayCell = (d: Date) => {
+    const key = toKey(d)
+    const a = availability[key]
+    const isPast = d < today
+    const isBlocked = !!a?.isBlocked || (a && a.availableSlots.length === 0)
+    const isPartial = !!a && a.bookedSlots.length > 0 && !isBlocked
+    const isSelected = sameDay(d, selectedDate)
+    const isToday = sameDay(d, today)
+    const inMonth = isSameMonth(d)
+    const disabled = isPast || isBlocked
+
+    return (
+      <button
+        key={key}
+        type="button"
+        onClick={() => handlePickDay(d)}
+        disabled={disabled}
+        aria-label={`${WEEKDAY_FULL[d.getDay()]}, ${MONTHS_FULL[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}${disabled ? " (unavailable)" : ""}`}
+        aria-pressed={isSelected}
+        className={`
+          relative aspect-square flex flex-col items-center justify-center
+          rounded-full text-center transition-all
+          font-display text-[15px] sm:text-[16px] tabular-nums leading-none
+          ${!inMonth ? "opacity-30" : ""}
+          ${
+            disabled
+              ? "text-bridal-text-soft/50 cursor-not-allowed line-through decoration-1"
+              : isSelected
+                ? "bg-bridal-charcoal text-bridal-ivory shadow-[0_8px_22px_-10px_rgba(44,24,16,0.55)] hover:bg-bridal-charcoal"
+                : isToday
+                  ? "border border-bridal-gold-dark text-bridal-charcoal hover:bg-bridal-blush/45"
+                  : "text-bridal-charcoal hover:bg-bridal-blush/45 hover:rounded-full"
+          }
+        `}
+      >
+        <span>{d.getDate()}</span>
+        {isPartial && !isSelected && (
+          <span
+            aria-hidden
+            className="absolute bottom-1 sm:bottom-1.5 w-1 h-1 rounded-full bg-bridal-gold"
+          />
+        )}
+      </button>
+    )
+  }
 
   return (
     <div className="space-y-5 w-full">
@@ -230,42 +265,61 @@ export default function DateTimeStep({
         </p>
       </div>
 
-      {/* Date strip */}
-      <section className="space-y-2.5">
-        <div className="flex items-center justify-between">
-          <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
-            {selectedDate ? formatLong(selectedDate) : "Choose a day"}
-          </p>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setAnchor((a) => addDays(a, -30) < today ? today : addDays(a, -30))}
-              className="w-7 h-7 inline-flex items-center justify-center rounded-md text-bridal-charcoal hover:bg-bridal-blush/55 disabled:opacity-30"
-              disabled={anchor <= today}
-              aria-label="Earlier dates"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setAnchor((a) => addDays(a, 30))}
-              className="w-7 h-7 inline-flex items-center justify-center rounded-md text-bridal-charcoal hover:bg-bridal-blush/55"
-              aria-label="Later dates"
-            >
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
+      {/* Monthly calendar — Airbnb / Booking.com pattern */}
+      <section className="rounded-lg border border-bridal-beige bg-bridal-ivory p-4 sm:p-5">
+        {/* Header row: month label + prev/next */}
+        <div className="flex items-center justify-between mb-4">
+          <button
+            type="button"
+            onClick={() => setViewMonth((m) => (canGoPrevMonth ? addMonths(m, -1) : m))}
+            disabled={!canGoPrevMonth}
+            className="w-9 h-9 inline-flex items-center justify-center rounded-full text-bridal-charcoal hover:bg-bridal-blush/55 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+            aria-label="Previous month"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <h3 className="font-display italic text-[18px] sm:text-[20px] text-bridal-charcoal">
+            {MONTHS_FULL[viewMonth.getMonth()]} {viewMonth.getFullYear()}
+          </h3>
+          <button
+            type="button"
+            onClick={() => setViewMonth((m) => addMonths(m, 1))}
+            className="w-9 h-9 inline-flex items-center justify-center rounded-full text-bridal-charcoal hover:bg-bridal-blush/55 transition-colors"
+            aria-label="Next month"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
 
-        {renderDayRow(days.slice(0, 10))}
-        {renderDayRow(days.slice(10, 20))}
-        {renderDayRow(days.slice(20, 30))}
+        {/* Weekday header */}
+        <div className="grid grid-cols-7 gap-1 mb-1.5">
+          {WEEKDAY_SHORT.map((w, i) => (
+            <div
+              key={i}
+              className="h-8 flex items-center justify-center font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-soft"
+            >
+              {w}
+            </div>
+          ))}
+        </div>
 
-        <div className="flex items-center gap-3 font-bridal text-[10.5px] text-bridal-text-soft">
+        {/* 6×7 day grid */}
+        <div className="grid grid-cols-7 gap-1">
+          {monthGrid.map((d) => renderDayCell(d))}
+        </div>
+
+        {/* Legend */}
+        <div className="mt-4 pt-3 border-t border-bridal-beige/70 flex items-center justify-between gap-3 font-bridal text-[10.5px] text-bridal-text-soft">
           <span className="inline-flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-bridal-gold" />
             Limited availability
           </span>
+          {selectedDate && (
+            <span className="font-display italic text-[12.5px] text-bridal-charcoal not-italic font-bridal">
+              <span className="font-medium text-bridal-gold-dark">Selected:</span>{" "}
+              {formatLong(selectedDate)}
+            </span>
+          )}
         </div>
       </section>
 
