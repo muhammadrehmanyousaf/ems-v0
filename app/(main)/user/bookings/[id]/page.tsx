@@ -196,6 +196,38 @@ export default function BookingDetailPage() {
     }
   }, [user, isLoading, bookingId]);
 
+  // Refetch booking when the tab regains focus or visibility. Catches the
+  // common "I just paid on Stripe and clicked back, why is it still
+  // Pending?" case — the webhook may have landed while the page was idle.
+  // The refetch is silent (no spinner, no error toast) so it never disrupts
+  // the user mid-interaction.
+  useEffect(() => {
+    if (!user || !bookingId) return;
+    const refetchSilently = async () => {
+      try {
+        const res = await axiosInstance.get(
+          `${BACKEND_URL}api/v1/bookings/simple-user-bookings`,
+        );
+        const found = (res.data?.data || []).find(
+          (b: Booking) => String(b.id) === String(bookingId),
+        );
+        if (found) setBooking(found);
+      } catch {
+        /* swallow — focus refetch is best-effort */
+      }
+    };
+    const onFocus = () => refetchSilently();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refetchSilently();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [user, bookingId]);
+
   const fetchBooking = async () => {
     setIsLoadingBooking(true);
     try {

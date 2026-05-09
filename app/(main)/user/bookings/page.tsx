@@ -174,6 +174,33 @@ export default function BookingsPage() {
     }
   }, [user, isLoading]);
 
+  // Silent refetch when the tab regains focus / becomes visible — picks up
+  // the post-payment state automatically when the user clicks back from the
+  // Stripe checkout page or another tab.
+  useEffect(() => {
+    if (!user) return;
+    const refetchSilently = async () => {
+      try {
+        const res = await axiosInstance.get(
+          `${BACKEND_URL}api/v1/bookings/simple-user-bookings`,
+        );
+        setBookings(res.data?.data || []);
+      } catch {
+        /* swallow — focus refetch is best-effort */
+      }
+    };
+    const onFocus = () => refetchSilently();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refetchSilently();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [user]);
+
   const fetchBookings = async () => {
     setIsLoadingBookings(true);
     try {
