@@ -227,9 +227,9 @@ export default function DateTimeStep({
         aria-label={`${WEEKDAY_FULL[d.getDay()]}, ${MONTHS_FULL[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}${disabled ? " (unavailable)" : ""}`}
         aria-pressed={isSelected}
         className={`
-          relative aspect-square flex flex-col items-center justify-center
+          relative h-11 sm:h-12 w-full flex flex-col items-center justify-center
           rounded-full text-center transition-all
-          font-display text-[15px] sm:text-[16px] tabular-nums leading-none
+          font-display text-[14px] sm:text-[15px] tabular-nums leading-none
           ${!inMonth ? "opacity-30" : ""}
           ${
             disabled
@@ -238,7 +238,7 @@ export default function DateTimeStep({
                 ? "bg-bridal-charcoal text-bridal-ivory shadow-[0_8px_22px_-10px_rgba(44,24,16,0.55)] hover:bg-bridal-charcoal"
                 : isToday
                   ? "border border-bridal-gold-dark text-bridal-charcoal hover:bg-bridal-blush/45"
-                  : "text-bridal-charcoal hover:bg-bridal-blush/45 hover:rounded-full"
+                  : "text-bridal-charcoal hover:bg-bridal-blush/45"
           }
         `}
       >
@@ -246,7 +246,7 @@ export default function DateTimeStep({
         {isPartial && !isSelected && (
           <span
             aria-hidden
-            className="absolute bottom-1 sm:bottom-1.5 w-1 h-1 rounded-full bg-bridal-gold"
+            className="absolute bottom-1 w-1 h-1 rounded-full bg-bridal-gold"
           />
         )}
       </button>
@@ -265,8 +265,10 @@ export default function DateTimeStep({
         </p>
       </div>
 
-      {/* Monthly calendar — Airbnb / Booking.com pattern */}
-      <section className="rounded-lg border border-bridal-beige bg-bridal-ivory p-4 sm:p-5">
+      {/* Monthly calendar — Airbnb / Booking.com pattern.
+         Constrained to max-w-md so the cells stay at industry-standard
+         ~44-56px regardless of how wide the page container is. */}
+      <section className="rounded-lg border border-bridal-beige bg-bridal-ivory p-4 sm:p-5 max-w-md mx-auto sm:mx-0">
         {/* Header row: month label + prev/next */}
         <div className="flex items-center justify-between mb-4">
           <button
@@ -292,7 +294,7 @@ export default function DateTimeStep({
         </div>
 
         {/* Weekday header */}
-        <div className="grid grid-cols-7 gap-1 mb-1.5">
+        <div className="grid grid-cols-7 gap-0.5 mb-1">
           {WEEKDAY_SHORT.map((w, i) => (
             <div
               key={i}
@@ -304,18 +306,18 @@ export default function DateTimeStep({
         </div>
 
         {/* 6×7 day grid */}
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-0.5">
           {monthGrid.map((d) => renderDayCell(d))}
         </div>
 
         {/* Legend */}
-        <div className="mt-4 pt-3 border-t border-bridal-beige/70 flex items-center justify-between gap-3 font-bridal text-[10.5px] text-bridal-text-soft">
+        <div className="mt-4 pt-3 border-t border-bridal-beige/70 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 font-bridal text-[10.5px] text-bridal-text-soft">
           <span className="inline-flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-bridal-gold" />
             Limited availability
           </span>
           {selectedDate && (
-            <span className="font-display italic text-[12.5px] text-bridal-charcoal not-italic font-bridal">
+            <span className="font-bridal text-[12px] text-bridal-charcoal">
               <span className="font-medium text-bridal-gold-dark">Selected:</span>{" "}
               {formatLong(selectedDate)}
             </span>
