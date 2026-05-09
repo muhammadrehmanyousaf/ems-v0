@@ -1,8 +1,23 @@
+import type { Metadata } from "next"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Briefcase, MapPin, Clock, Rocket, Users, Heart, Zap, ArrowRight } from "lucide-react"
 import Link from "next/link"
+import { SITE_NAME, SITE_URL } from "@/lib/seo"
+
+export const metadata: Metadata = {
+  title: `Careers — Join the ${SITE_NAME} team`,
+  description: `Help us build Pakistan's wedding marketplace. Open roles in engineering, design, marketing, and vendor relations at ${SITE_NAME}.`,
+  alternates: { canonical: `${SITE_URL}/careers` },
+  openGraph: {
+    title: `Careers at ${SITE_NAME}`,
+    description: `Join the ${SITE_NAME} team and help reshape how Pakistan plans weddings.`,
+    url: `${SITE_URL}/careers`,
+    siteName: SITE_NAME,
+    type: "website",
+  },
+}
 
 const perks = [
   { icon: Rocket, title: "Growth Focused", desc: "Fast-paced startup environment where you learn and grow every day." },

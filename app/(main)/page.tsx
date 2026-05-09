@@ -1,4 +1,25 @@
+import type { Metadata } from "next"
+import { SITE_NAME, SITE_TITLE, SITE_DESCRIPTION, SITE_URL } from "@/lib/seo"
 import { HeroSection } from "@/components/homepage/hero-section"
+
+export const metadata: Metadata = {
+  // Homepage gets the FULL branded title (no template suffix). Without this
+  // the title bar fell back to "Modern Wedding Platform | Wedding Wala" from
+  // the old (main)/layout default. Now it reads the canonical SITE_TITLE.
+  title: {
+    absolute: SITE_TITLE,
+  },
+  description: SITE_DESCRIPTION,
+  alternates: { canonical: SITE_URL },
+  openGraph: {
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    type: "website",
+  },
+}
+
 import { FeaturedCategories } from "@/components/homepage/featured-categories"
 import { FeaturedVendorsShowcase } from "@/components/homepage/FeaturedVendorsShowcase"
 import { EditorialGallerySection } from "@/components/homepage/EditorialGallerySection"
