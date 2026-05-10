@@ -468,9 +468,10 @@ export default function BookingsPage() {
                   cfg.accent,
                 )}
               >
-                <div className="p-5">
-                  {/* Top row */}
-                  <div className="flex items-start justify-between gap-4 mb-4">
+                <div className="p-4 sm:p-5">
+                  {/* Top row — title + price competing for space on mobile.
+                     Stack vertically below sm so neither truncates awkwardly. */}
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-4">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-1.5">
                         <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-[0.18em] tabular-nums">
@@ -502,8 +503,8 @@ export default function BookingsPage() {
                       </p>
                     </div>
 
-                    <div className="text-right flex-shrink-0">
-                      <p className="font-display italic text-[22px] text-foreground tabular-nums leading-none">
+                    <div className="sm:text-right flex-shrink-0">
+                      <p className="font-display italic text-[20px] sm:text-[22px] text-foreground tabular-nums leading-none">
                         {fmt(booking.totalAmount)}
                       </p>
                       <p className="text-[11px] text-muted-foreground mt-1">
@@ -548,29 +549,30 @@ export default function BookingsPage() {
                     </span>
                   </div>
 
-                  {/* Vendor list */}
+                  {/* Vendor list — package + menu names wrap to a second line
+                     under the business name on narrow widths so nothing
+                     truncates to "Saa..." or pushes past the right edge. */}
                   {vendors.length > 0 && (
                     <div className="rounded-lg border border-border/60 bg-muted/30 p-3 mb-4 space-y-2">
                       {vendors.map((detail) => (
                         <div
                           key={detail.id}
-                          className="flex items-center justify-between gap-3"
+                          className="flex items-start justify-between gap-3"
                         >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Building2 className="size-3.5 text-muted-foreground flex-shrink-0" />
-                            <span className="text-[12.5px] font-medium text-foreground truncate">
-                              {detail.business?.name || "—"}
-                            </span>
-                            {detail.package?.name && (
-                              <span className="text-[12px] text-muted-foreground truncate">
-                                · {detail.package.name}
-                              </span>
-                            )}
-                            {detail.menu?.title && (
-                              <span className="text-[12px] text-muted-foreground truncate">
-                                · {detail.menu.title}
-                              </span>
-                            )}
+                          <div className="flex items-start gap-2 min-w-0 flex-1">
+                            <Building2 className="size-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[12.5px] font-medium text-foreground truncate">
+                                {detail.business?.name || "—"}
+                              </p>
+                              {(detail.package?.name || detail.menu?.title) && (
+                                <p className="text-[11.5px] text-muted-foreground truncate">
+                                  {[detail.package?.name, detail.menu?.title]
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                                </p>
+                              )}
+                            </div>
                           </div>
                           <span className="text-[12.5px] font-medium text-foreground tabular-nums flex-shrink-0">
                             {fmt(detail.totalAmount)}
@@ -580,9 +582,11 @@ export default function BookingsPage() {
                     </div>
                   )}
 
-                  {/* Actions */}
-                  <div className="flex items-center justify-between gap-3 pt-3 border-t border-border/60">
-                    <div className="flex gap-2">
+                  {/* Actions — wrap on mobile so 3 buttons don't crowd a
+                     360px viewport. Pay-now becomes full-width on its own
+                     row below the secondary actions. */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border/60">
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         onClick={() => router.push(`/user/bookings/${booking.id}`)}
                         variant="outline"
@@ -612,7 +616,7 @@ export default function BookingsPage() {
                       <Button
                         onClick={() => router.push(`/user/bookings/${booking.id}`)}
                         size="sm"
-                        className="gap-1.5"
+                        className="gap-1.5 w-full sm:w-auto"
                       >
                         <Wallet className="size-3.5" />
                         Pay now

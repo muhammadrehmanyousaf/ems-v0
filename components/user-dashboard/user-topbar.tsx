@@ -35,17 +35,24 @@ interface IconLinkProps {
   badge?: string | null
 }
 
-function IconLink({ href, label, icon: Icon, badge }: IconLinkProps) {
+function IconLink({
+  href,
+  label,
+  icon: Icon,
+  badge,
+  hideOnMobile,
+}: IconLinkProps & { hideOnMobile?: boolean }) {
   return (
     <Link
       href={href}
       aria-label={label}
-      className="
+      className={`
         relative inline-flex h-9 w-9 items-center justify-center rounded-full
         text-bridal-text-soft hover:text-bridal-charcoal
         hover:bg-bridal-blush/55
         transition-colors duration-150
-      "
+        ${hideOnMobile ? "hidden sm:inline-flex" : ""}
+      `}
     >
       <Icon className="h-[17px] w-[17px]" strokeWidth={1.7} />
       {badge ? (
@@ -130,10 +137,11 @@ export function UserTopbar() {
         </div>
       </div>
 
-      {/* Action cluster */}
-      <div className="flex items-center gap-0.5">
-        <IconLink href="/vendors" label="Browse vendors" icon={Home} />
-        <IconLink href="/user/favorites" label="Favourites" icon={Heart} />
+      {/* Action cluster — Home + Heart hide on mobile so the search input
+         and notification icons fit on a 360px viewport without crowding. */}
+      <div className="flex items-center gap-0.5 shrink-0">
+        <IconLink href="/vendors" label="Browse vendors" icon={Home} hideOnMobile />
+        <IconLink href="/user/favorites" label="Favourites" icon={Heart} hideOnMobile />
         <IconLink
           href="/user/conversations"
           label="Messages"
