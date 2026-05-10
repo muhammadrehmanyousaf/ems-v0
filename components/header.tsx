@@ -23,7 +23,6 @@ import {
   Star,
   Users,
   Calendar,
-  X,
   DollarSign,
   Clock,
   Palette,
@@ -112,7 +111,7 @@ export function Header() {
                     className="absolute -bottom-6 -left-6 w-32 h-32 rounded-full bg-bridal-gold/15 blur-3xl"
                   />
 
-                  <div className="relative flex items-center justify-between">
+                  <div className="relative flex items-center">
                     <Link
                       href="/"
                       className="flex items-center gap-2.5"
@@ -125,14 +124,12 @@ export function Header() {
                         Wedding Wala
                       </span>
                     </Link>
-                    <button
-                      type="button"
-                      onClick={() => setIsOpen(false)}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-bridal-text-soft hover:text-bridal-charcoal hover:bg-bridal-cream transition-colors"
-                      aria-label="Close menu"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+                    {/* Note: SheetContent renders a built-in close (X) at
+                        top-right via Radix's SheetPrimitive.Close. We deleted
+                        our custom one to avoid the duplicate-close-icon bug
+                        the user reported. If we ever need to restyle the
+                        close affordance, override it in components/ui/sheet.tsx
+                        instead of adding another button here. */}
                   </div>
                   <p className="relative mt-3 font-bridal text-[12.5px] text-bridal-text-soft">
                     Pakistan&apos;s wedding platform — find your dream team.
