@@ -265,10 +265,16 @@ export default function DateTimeStep({
         </p>
       </div>
 
+      {/* Calendar (left) + Time-of-day picker (right) side-by-side on
+         desktop. On mobile they stack — calendar on top, slots below.
+         This is the standard booking-flow layout (Airbnb, Booking.com,
+         Calendly). */}
+      <div className="flex flex-col lg:flex-row gap-5 items-start">
+
       {/* Monthly calendar — Airbnb / Booking.com pattern.
-         Constrained to max-w-md so the cells stay at industry-standard
+         Constrained to ~520px so the cells stay at industry-standard
          ~44-56px regardless of how wide the page container is. */}
-      <section className="rounded-lg border border-bridal-beige bg-bridal-ivory p-4 sm:p-5 max-w-md mx-auto sm:mx-0">
+      <section className="rounded-lg border border-bridal-beige bg-bridal-ivory p-4 sm:p-5 w-full lg:w-[520px] lg:flex-shrink-0 mx-auto sm:mx-0">
         {/* Header row: month label + prev/next */}
         <div className="flex items-center justify-between mb-4">
           <button
@@ -325,10 +331,20 @@ export default function DateTimeStep({
         </div>
       </section>
 
-      {/* Time period — segmented */}
-      <section className="space-y-2.5">
-        <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">Time of day</p>
-        <div className="grid grid-cols-3 gap-2">
+      {/* Time period — vertical stack on desktop (right of calendar),
+         3-column grid on mobile (below calendar). */}
+      <section className="w-full lg:flex-1 space-y-2.5">
+        <div className="flex items-center justify-between">
+          <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
+            Time of day
+          </p>
+          {!selectedDate && (
+            <span className="font-bridal text-[10.5px] text-bridal-text-soft">
+              Pick a date first
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-2">
           {PERIODS.map((p) => {
             const isSelected = formData.timeSlot === p.value
             const isBooked = selectedAvail?.bookedSlots?.includes(p.value) ?? false
@@ -341,7 +357,7 @@ export default function DateTimeStep({
                 type="button"
                 onClick={() => handlePickPeriod(p.value)}
                 disabled={disabled}
-                className={`relative flex flex-col items-start gap-1.5 p-3 rounded-md border text-left transition-all
+                className={`relative flex flex-row sm:flex-col lg:flex-row items-center sm:items-start lg:items-center gap-3 sm:gap-1.5 lg:gap-3 p-3 lg:p-4 rounded-md border text-left transition-all
                   ${disabled
                     ? "border-bridal-beige bg-bridal-ivory text-bridal-text-soft/50 cursor-not-allowed"
                     : isSelected
@@ -349,18 +365,28 @@ export default function DateTimeStep({
                       : "border-bridal-beige bg-bridal-ivory hover:border-bridal-gold/55 hover:bg-bridal-cream text-bridal-charcoal"
                   }`}
               >
-                <Icon className={`w-4 h-4 ${isSelected ? "text-bridal-gold-dark" : disabled ? "" : "text-bridal-mauve"}`} />
-                <div>
+                <span
+                  className={`shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-full ${
+                    isSelected
+                      ? "bg-bridal-gold/20"
+                      : disabled
+                        ? "bg-bridal-beige/40"
+                        : "bg-bridal-blush/40"
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 ${isSelected ? "text-bridal-gold-dark" : disabled ? "" : "text-bridal-mauve"}`} />
+                </span>
+                <div className="min-w-0 flex-1">
                   <p className="font-display italic text-[15px] leading-tight">{p.label}</p>
                   <p className="font-bridal text-[10.5px] text-bridal-text-soft mt-0.5">{p.hint}</p>
                 </div>
                 {isBooked && (
-                  <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded font-bridal text-[8.5px] uppercase tracking-[0.1em] font-medium bg-bridal-coral/15 text-bridal-coral border border-bridal-coral/40">
+                  <span className="shrink-0 px-1.5 py-0.5 rounded font-bridal text-[8.5px] uppercase tracking-[0.1em] font-medium bg-bridal-coral/15 text-bridal-coral border border-bridal-coral/40">
                     Booked
                   </span>
                 )}
                 {isHeld && !isBooked && (
-                  <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded font-bridal text-[8.5px] uppercase tracking-[0.1em] font-medium bg-bridal-gold/15 text-bridal-gold-dark border border-bridal-gold/45">
+                  <span className="shrink-0 px-1.5 py-0.5 rounded font-bridal text-[8.5px] uppercase tracking-[0.1em] font-medium bg-bridal-gold/15 text-bridal-gold-dark border border-bridal-gold/45">
                     On hold
                   </span>
                 )}
@@ -369,6 +395,8 @@ export default function DateTimeStep({
           })}
         </div>
       </section>
+
+      </div>{/* end calendar+slots row */}
 
       {/* Status messages */}
       {holdFailed && (
