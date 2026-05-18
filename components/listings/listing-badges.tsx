@@ -46,6 +46,16 @@ export interface ListingBadgeBusiness {
     lastSpot?: boolean | null
     remaining?: number | null
   } | null
+
+  // BK-100.6 — vendor reliability + trust badges. Attached by the
+  // search-endpoint mappers (getBusinesses, getBusinessesByVendorType).
+  // Optional so VendorCards passed legacy data still render cleanly.
+  reliability?: {
+    score: number
+    tier: 'newcomer' | 'rising' | 'trusted' | 'premium' | 'elite'
+    badges: string[]
+    breakdown?: Record<string, number>
+  } | null
 }
 
 interface ListingBadgesProps {

@@ -89,6 +89,21 @@ function normalizeBusiness(raw: any): any {
         ? raw.typeSpecificDetails
         : null,
     languagesSpoken: Array.isArray(raw.languagesSpoken) ? raw.languagesSpoken : null,
+    // BK-100.6 — reliability + badges block attached by the backend.
+    // Strict shape check so we don't blindly pass through whatever
+    // arrives on the wire.
+    reliability:
+      raw.reliability &&
+      typeof raw.reliability === 'object' &&
+      typeof raw.reliability.score === 'number' &&
+      Array.isArray(raw.reliability.badges)
+        ? {
+            score: raw.reliability.score,
+            tier: raw.reliability.tier,
+            badges: raw.reliability.badges,
+            breakdown: raw.reliability.breakdown,
+          }
+        : null,
   }
 }
 

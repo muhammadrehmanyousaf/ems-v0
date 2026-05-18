@@ -71,6 +71,15 @@ export interface Vendor {
   // simply fail the filter predicate — never crash.
   typeSpecificDetails?: Record<string, unknown> | null;
   languagesSpoken?: string[] | null;
+  // BK-100.6 — computed reliability score + earned trust badges.
+  // Attached by getBusinesses / getBusinessesByVendorType on the
+  // backend. Optional so legacy callers / cached responses parse cleanly.
+  reliability?: {
+    score: number; // 0..100
+    tier: 'newcomer' | 'rising' | 'trusted' | 'premium' | 'elite';
+    badges: string[]; // e.g. ['top_vendor','verified','dispute_free']
+    breakdown?: Record<string, number>;
+  } | null;
 }
 
 export interface Availability {

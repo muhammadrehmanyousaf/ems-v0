@@ -25,6 +25,8 @@ import {
   ListingBadges,
   type ListingBadgeBusiness,
 } from "@/components/listings/listing-badges"
+// BK-100.6 — vendor trust badges (Top Vendor / ID Verified / etc.)
+import { VendorTrustBadges } from "@/components/vendors/vendor-trust-badges"
 
 interface VendorCardProps {
   id: string | number
@@ -374,6 +376,18 @@ export default function VendorCard({
                     Wrapper renders nothing when no signal applies, so existing layouts
                     of vendors with none of these flags are unaffected. */}
                 <ListingBadges business={business} />
+
+                {/* BK-100.6 — vendor reliability trust badges (Top Vendor /
+                    ID Verified / Established / Dispute-free / etc.). Component
+                    renders nothing when neither `tier` nor `badges` are
+                    present so legacy vendor rows are unaffected. */}
+                {business?.reliability && (
+                  <VendorTrustBadges
+                    tier={business.reliability.tier}
+                    badges={business.reliability.badges}
+                    max={3}
+                  />
+                )}
 
                 {/* Price + availability */}
                 <div className="flex items-end justify-between mt-auto pt-3 border-t border-bridal-beige/70">
