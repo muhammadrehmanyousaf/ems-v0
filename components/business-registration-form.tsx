@@ -37,6 +37,8 @@ import MakeupArtistSteps from "./VendorStepForms/newVendorRegisterationForm/Make
 import HennaArtistSteps from "./VendorStepForms/newVendorRegisterationForm/HennaArtist/henna-artist-steps";
 import DecoratorSteps from "./VendorStepForms/newVendorRegisterationForm/Decorator/decorator-steps";
 import CateringSteps from "./VendorStepForms/newVendorRegisterationForm/Catering/catering-steps";
+// BK-100.55 Layer 2 — generic flow for the 14 new Pakistani categories.
+import GenericSteps from "./VendorStepForms/newVendorRegisterationForm/Generic/generic-steps";
 import axios from "axios";
 import { BACKEND_URL } from "@/lib/backend-url";
 import { TERMS_VERSION } from "@/lib/seo";
@@ -116,6 +118,32 @@ export function BusinessRegistrationForm() {
   const catering = businessType === "Catering";
   const venue = businessType === "Wedding venue";
 
+  // BK-100.55 Layer 2 — 14 new Pakistani vendor categories all route
+  // through the same `GenericSteps` flow (7-step layout, identical
+  // numbering to photographer so the validation + progress + isFinalStep
+  // logic in this file works unchanged). Per-category specialty UI
+  // polish ships in Layer 3 by swapping the generic specialty step
+  // for a category-aware component.
+  const BK_100_55_GENERIC_CATEGORIES = [
+    "Nikahkhwan",
+    "Choreographer",
+    "Dhol player",
+    "Event host",
+    "Live streaming",
+    "Generator rental",
+    "Marquee rental",
+    "Furniture rental",
+    "Florist",
+    "Wedding cakes",
+    "Mithai and sweets",
+    "Live cooking stall",
+    "Sound system rental",
+    "Qawwali and Naat",
+  ] as const;
+  const isGenericNewCategory = (BK_100_55_GENERIC_CATEGORIES as readonly string[]).includes(
+    businessType as string,
+  );
+
   // VR-050 — every vendor type now has an extra "Specialty & Trust" step.
   // For photographer/venue/makeup/henna/decorator/catering it sits at #4
   // (between Business Details and Packages). For bridal-wear, car-rental
@@ -177,7 +205,7 @@ export function BusinessRegistrationForm() {
       setErrors(currentErrors);
       return currentErrors;
     }
-    if (photographer || makeupArtist || hennaArtist || decorator || catering) {
+    if (photographer || makeupArtist || hennaArtist || decorator || catering || isGenericNewCategory) {
       // For now, use basic validation for new business types
       if (currentStep === 1) {
         if (!formData.fullName)
@@ -953,6 +981,17 @@ export function BusinessRegistrationForm() {
                       />
                     ) : catering ? (
                       <CateringSteps
+                        setFile={setFile}
+                        file={file}
+                        error={errors}
+                        setErrors={setErrors}
+                        currentStep={currentStep}
+                      />
+                    ) : isGenericNewCategory ? (
+                      // BK-100.55 Layer 2 — 14 new Pakistani categories
+                      // share a single generic flow. Per-category
+                      // specialty polish ships in Layer 3.
+                      <GenericSteps
                         setFile={setFile}
                         file={file}
                         error={errors}
