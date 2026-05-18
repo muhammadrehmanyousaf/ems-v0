@@ -186,6 +186,26 @@ export class BookingAPI {
     return res.data?.data;
   }
 
+  // BK-100.4 / BK-039 — vendor reports a customer no-show after the
+  // event date. Re-uses BookingDispute storage but openedByRole='vendor'.
+  // Backend enforces:
+  //   - caller must be in booking.vendorIds (403 otherwise)
+  //   - booking.status in {Confirmed, Completed}
+  //   - event date must already have passed
+  //   - no-show reporting window not expired (default 7d post-event)
+  //   - reason >= ~15 chars
+  //   - max one no-show per booking
+  static async openNoShowReport(
+    bookingId: number,
+    body: { reason: string; evidence?: unknown },
+  ): Promise<{ dispute: BookingDispute }> {
+    const res = await axiosInstance.post(
+      `${v1}/${bookingId}/no-show`,
+      body,
+    );
+    return res.data?.data;
+  }
+
   // BK-081 — booking status transition history
   static async getHistory(bookingId: number) {
     const res = await axiosInstance.get(`${v1}/${bookingId}/history`);

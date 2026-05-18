@@ -7,6 +7,9 @@ import { User, CalendarDays, Package, CreditCard, Building } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { VendorChangeRequestsCard } from "@/components/bookings/vendor-change-requests-card"
 import { InstallmentsCard } from "@/components/bookings/installments-card"
+// BK-100.4 — vendor "report no-show" CTA. Only renders inside the
+// 7-day reporting window enforced server-side.
+import { VendorNoShowDialog } from "@/components/bookings/vendor-no-show-dialog"
 
 interface BookingDetailSheetProps {
   open: boolean
@@ -48,6 +51,24 @@ export function BookingDetailSheet({ open, onOpenChange, booking }: BookingDetai
   const isPaid = booking.paymentStatus === 'Paid'
   const isPartial = booking.paymentStatus === 'Partial'
   const remaining = isPaid ? 0 : isPartial ? Math.max(0, amount - dp) : amount
+
+  // BK-100.4 — show "Report no-show" only when the booking is in a status
+  // where a no-show can apply AND the event has occurred. Backend
+  // re-enforces the same gates; this is just a UX hint to hide the CTA
+  // outside the valid window. The 7-day reporting cap is enforced
+  // server-side; we keep the trigger visible up to ~14 days post-event
+  // so a stale tab still shows a friendly server-side error rather than
+  // mysteriously hiding the button.
+  const noShowCandidate = (() => {
+    if (!["Confirmed", "Completed"].includes(booking.status || "")) return false
+    const bd = booking.bookingDate
+    if (!bd) return false
+    const evt = new Date(bd)
+    if (Number.isNaN(evt.getTime())) return false
+    const now = new Date()
+    const daysSince = (now.getTime() - evt.getTime()) / 86400000
+    return daysSince >= 0 && daysSince <= 14
+  })()
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -202,6 +223,30 @@ export function BookingDetailSheet({ open, onOpenChange, booking }: BookingDetai
 
           {/* BK-054/55/56 — customer change requests; vendor approves/declines pending. */}
           <VendorChangeRequestsCard bookingId={booking.id} />
+
+          {/* BK-100.4 / BK-039 — vendor-side no-show report. Only visible
+              when the event has passed AND the booking is Confirmed or
+              Completed (the only states a no-show can apply to). The
+              7-day server-side window means stale tabs render the
+              trigger but get a friendly error from the backend. */}
+          {noShowCandidate && (
+            <>
+              <hr className="border-neutral-100" />
+              <div className="space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-neutral-700">
+                      Customer didn&apos;t show up?
+                    </p>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      Available for 7 days after the event. Filing pauses payouts and triggers an admin review.
+                    </p>
+                  </div>
+                  <VendorNoShowDialog bookingId={booking.id} />
+                </div>
+              </div>
+            </>
+          )}
 
         </div>
       </SheetContent>
