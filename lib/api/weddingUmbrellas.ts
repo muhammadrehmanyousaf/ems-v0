@@ -81,6 +81,42 @@ export type UpdateUmbrellaInput = Partial<
   }
 >;
 
+/**
+ * BK-100.2 Layer 2b — bundle-discount preview block returned by GET
+ * /api/v1/wedding-umbrellas/:id and the dedicated preview-bundle
+ * endpoint. Pure read; the discount is only ACTUALLY APPLIED at
+ * Booking creation time in Layer 2c (multi-event flow).
+ */
+export interface BundleTier {
+  minCount: number;
+  percent: number;
+}
+
+export interface BundlePreview {
+  eligibleCount: number;
+  tier: BundleTier | null;
+  percent: number;
+  subtotal: number;
+  estimatedSavings: number;
+}
+
+export interface UmbrellaStats {
+  totalBookings: number;
+  activeBookings: number;
+  completedBookings: number;
+  cancelledBookings: number;
+  totalAmount: number;
+  totalPaid: number;
+  outstanding: number;
+}
+
+export interface UmbrellaDetailResponse {
+  umbrella: WeddingUmbrella;
+  stats: UmbrellaStats;
+  bundle: BundlePreview;
+  tiers: BundleTier[];
+}
+
 export class WeddingUmbrellasAPI {
   /** GET /api/v1/wedding-umbrellas/mine — caller's umbrellas. */
   static async listMine(): Promise<WeddingUmbrella[]> {
@@ -98,6 +134,20 @@ export class WeddingUmbrellasAPI {
   static async get(id: number): Promise<WeddingUmbrella | null> {
     const res = await axiosInstance.get(`/api/v1/wedding-umbrellas/${id}`);
     return res.data?.data?.umbrella ?? null;
+  }
+
+  /** GET /api/v1/wedding-umbrellas/:id — full response with stats + bundle. */
+  static async getDetail(id: number): Promise<UmbrellaDetailResponse | null> {
+    const res = await axiosInstance.get(`/api/v1/wedding-umbrellas/${id}`);
+    return res.data?.data ?? null;
+  }
+
+  /** GET /api/v1/wedding-umbrellas/:id/preview-bundle — bundle preview only. */
+  static async previewBundle(id: number): Promise<{ bundle: BundlePreview; tiers: BundleTier[] } | null> {
+    const res = await axiosInstance.get(
+      `/api/v1/wedding-umbrellas/${id}/preview-bundle`,
+    );
+    return res.data?.data ?? null;
   }
 
   /** PATCH /api/v1/wedding-umbrellas/:id — partial update. */

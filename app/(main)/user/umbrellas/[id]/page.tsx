@@ -47,6 +47,9 @@ import {
 import { useUser } from "@/context/UserContext";
 import {
   WeddingUmbrellasAPI,
+  type BundlePreview,
+  type BundleTier,
+  type UmbrellaStats,
   type WeddingUmbrella,
 } from "@/lib/api/weddingUmbrellas";
 import { LinkBookingDialog } from "@/components/umbrellas/link-booking-dialog";
@@ -76,6 +79,9 @@ export default function UmbrellaDetailPage() {
   const { user, isAuthenticated, isLoading } = useUser();
   const umbrellaId = Number(params?.id);
   const [umbrella, setUmbrella] = React.useState<WeddingUmbrella | null>(null);
+  const [stats, setStats] = React.useState<UmbrellaStats | null>(null);
+  const [bundle, setBundle] = React.useState<BundlePreview | null>(null);
+  const [tiers, setTiers] = React.useState<BundleTier[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [linkOpen, setLinkOpen] = React.useState(false);
   const [unlinkingBooking, setUnlinkingBooking] = React.useState<number | null>(null);
@@ -92,8 +98,17 @@ export default function UmbrellaDetailPage() {
     if (!user || !Number.isFinite(umbrellaId)) return;
     setLoading(true);
     try {
-      const u = await WeddingUmbrellasAPI.get(umbrellaId);
-      setUmbrella(u);
+      // BK-100.2 Layer 2b — getDetail returns umbrella + stats + bundle
+      // preview + tier ladder in one round-trip.
+      const detail = await WeddingUmbrellasAPI.getDetail(umbrellaId);
+      if (detail) {
+        setUmbrella(detail.umbrella);
+        setStats(detail.stats);
+        setBundle(detail.bundle);
+        setTiers(detail.tiers || []);
+      } else {
+        setUmbrella(null);
+      }
     } catch (e) {
       const msg =
         (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
@@ -363,9 +378,120 @@ export default function UmbrellaDetailPage() {
             </dl>
           </SectionCard>
 
+          {/* BK-100.2 Layer 2b — wedding-week spend tally. Approximate;
+              authoritative installment math lives in BookingInstallment. */}
+          {stats && stats.totalBookings > 0 && (
+            <SectionCard
+              title="Wedding-week spend"
+              description="Across all events in this umbrella."
+            >
+              <dl className="space-y-2.5 text-sm">
+                <div className="flex justify-between gap-2">
+                  <dt className="text-bridal-text-soft">Total amount</dt>
+                  <dd className="font-medium text-bridal-charcoal tabular-nums">
+                    Rs. {stats.totalAmount.toLocaleString()}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-bridal-text-soft">Paid so far</dt>
+                  <dd className="font-medium text-emerald-700 tabular-nums">
+                    Rs. {stats.totalPaid.toLocaleString()}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-bridal-text-soft">Outstanding</dt>
+                  <dd className="font-medium text-amber-700 tabular-nums">
+                    Rs. {stats.outstanding.toLocaleString()}
+                  </dd>
+                </div>
+                <div className="pt-2 border-t border-bridal-beige/70 flex justify-between gap-2 text-xs">
+                  <dt className="text-bridal-text-soft">
+                    Events ({stats.activeBookings} active
+                    {stats.completedBookings ? ` · ${stats.completedBookings} done` : ""}
+                    {stats.cancelledBookings ? ` · ${stats.cancelledBookings} cancelled` : ""})
+                  </dt>
+                  <dd className="font-medium text-bridal-charcoal tabular-nums">
+                    {stats.totalBookings}
+                  </dd>
+                </div>
+              </dl>
+            </SectionCard>
+          )}
+
+          {/* BK-100.2 Layer 2b — bundle savings preview. Informational
+              only in Layer 2b; Layer 2c (multi-event booking flow)
+              will actually apply the discount at Booking creation
+              time via `Booking.bundleDiscountSnapshot`. */}
+          {bundle && bundle.eligibleCount > 0 && (
+            <SectionCard
+              title={
+                bundle.percent > 0
+                  ? `Bundle savings · ${bundle.percent}% off`
+                  : "Bundle savings"
+              }
+              description={
+                bundle.percent > 0
+                  ? `You qualify for our ${bundle.tier?.minCount}+ event bundle tier.`
+                  : "Add more events to your umbrella to unlock bundle savings."
+              }
+            >
+              {bundle.percent > 0 ? (
+                <div className="rounded-md border border-bridal-gold/45 bg-bridal-cream p-3.5 mb-3">
+                  <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark mb-1">
+                    Estimated savings
+                  </p>
+                  <p className="font-display italic text-[24px] text-bridal-gold-dark leading-none tabular-nums">
+                    Rs. {bundle.estimatedSavings.toLocaleString()}
+                  </p>
+                  <p className="text-[11px] text-bridal-text-soft mt-2 leading-relaxed">
+                    At {bundle.percent}% off your Rs. {bundle.subtotal.toLocaleString()} subtotal across {bundle.eligibleCount} events.
+                  </p>
+                </div>
+              ) : null}
+              {tiers.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">
+                    Tier ladder
+                  </p>
+                  {tiers.map((t) => {
+                    const active = bundle.tier && t.minCount === bundle.tier.minCount;
+                    const next =
+                      !active &&
+                      t.minCount > bundle.eligibleCount &&
+                      (!bundle.tier || t.minCount === bundle.tier.minCount + 1 || true);
+                    return (
+                      <div
+                        key={t.minCount}
+                        className={`flex items-center justify-between text-xs px-2 py-1 rounded ${
+                          active
+                            ? "bg-bridal-gold/15 text-bridal-gold-dark font-medium"
+                            : "text-bridal-text-soft"
+                        }`}
+                      >
+                        <span>
+                          {t.minCount}+ events
+                          {active && " · current"}
+                          {!active && next && bundle.eligibleCount < t.minCount && (
+                            <span className="ml-1 text-bridal-gold-dark">
+                              · {t.minCount - bundle.eligibleCount} more to unlock
+                            </span>
+                          )}
+                        </span>
+                        <span className="tabular-nums">{t.percent}% off</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <p className="text-[10.5px] text-bridal-text-soft mt-3 italic leading-relaxed">
+                Bundle discount applies to new bookings made via the multi-event flow (coming next release). Bookings already confirmed keep their original pricing.
+              </p>
+            </SectionCard>
+          )}
+
           <SectionCard
             title="What umbrellas do"
-            description="Tomorrow you'll see bundle discounts and a shared timeline auto-generated 7 days before the wedding."
+            description="Tomorrow you'll see a shared timeline auto-generated 7 days before the wedding."
           >
             <ul className="space-y-2 text-xs text-bridal-text-soft">
               <li className="flex items-start gap-2">
@@ -378,7 +504,7 @@ export default function UmbrellaDetailPage() {
               </li>
               <li className="flex items-start gap-2">
                 <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-500" />
-                Cancellation cascade + bundle discount ship in the next release.
+                Cancellation cascade ships in the next release.
               </li>
             </ul>
           </SectionCard>
