@@ -21,6 +21,8 @@ import { toast } from 'sonner'
 import { Loader2, Building2, MapPin, DollarSign, Shield } from 'lucide-react'
 // BK-100.5 — vendor-selectable cancellation policy presets.
 import { CancellationPolicyCard } from '../subComponents/cancellation-policy-card'
+// BK-100.52 — vendor in-house bundled services (catering / decor / DJ / etc).
+import { BundledServicesCard } from '../subComponents/bundled-services-card'
 
 const formSchema = z.object({
     name: z.string().min(2, { message: "Business name must be at least 2 characters." }),
@@ -338,6 +340,14 @@ const BasicInfoTab = ({ business, onSuccess }: BasicInfoTabProps) => {
                 continues to coexist with the new structured policy. */}
             <div className="pt-6">
                 <CancellationPolicyCard businessId={business.id} />
+            </div>
+
+            {/* BK-100.52 — vendor in-house bundled services. Lets the
+                vendor declare catering / decor / DJ / valet etc. they
+                bundle with the venue. Customer-facing display + booking-
+                flow integration ship in Layer 2. */}
+            <div className="pt-6">
+                <BundledServicesCard businessId={business.id} />
             </div>
         </div>
     )
