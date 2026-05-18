@@ -62,6 +62,8 @@ import { useFavorites } from "@/hooks/use-favorites";
 import { ChatDrawer } from "@/components/chat/chat-drawer";
 import { toast as sonnerToast } from "sonner";
 import { VendorAPI } from "@/lib/api/vendors";
+// BK-100.52 Layer 2 — customer-facing bundled-services display.
+import { BundledServicesDisplay } from "@/components/vendors/bundled-services-display";
 
 interface VendorDetailsMobileProps {
   vendor: Vendor;
@@ -1275,6 +1277,19 @@ export default function VendorDetailsMobile({
                         </div>
                       )}
                     </div>
+                  )}
+
+                  {/* BK-100.52 Layer 2 — vendor's in-house bundled
+                      services + outside-vendor policy. Self-contained:
+                      renders nothing when the vendor has no declared
+                      services AND no outside-vendor policy set. The
+                      component handles its own heading + card-style
+                      backgrounds on each section. */}
+                  {vendor.id !== undefined && vendor.id !== null && (
+                    <BundledServicesDisplay
+                      businessId={Number(vendor.id)}
+                      withHeading
+                    />
                   )}
 
                   {/* Cities Covered */}

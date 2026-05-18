@@ -48,6 +48,10 @@ import type { Vendor, Review, Package as PkgType } from "@/lib/types";
 import Image from "next/image";
 import { BACKEND_URL } from "@/lib/backend-url";
 import { VendorAPI } from "@/lib/api/vendors";
+// BK-100.52 Layer 2 — customer-facing bundled-services display.
+// Self-contained: fetches its own data + renders nothing if the
+// vendor has no declared services / no outside-vendor policy.
+import { BundledServicesDisplay } from "@/components/vendors/bundled-services-display";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/use-toast";
 import Link from "next/link";
@@ -983,6 +987,20 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                             ))}
                           </div>
                         </SectionBlock>
+                      )}
+
+                      {/* BK-100.52 Layer 2 — vendor's in-house bundled
+                          services + outside-vendor policy. The component
+                          is self-headed (withHeading) and renders
+                          nothing when the vendor hasn't declared any
+                          services AND hasn't set an outside-vendor
+                          policy, so legacy vendor profiles render
+                          byte-identical. */}
+                      {vendor.id !== undefined && vendor.id !== null && (
+                        <BundledServicesDisplay
+                          businessId={Number(vendor.id)}
+                          withHeading
+                        />
                       )}
 
                       {Array.isArray(vendor.cityCovered) && vendor.cityCovered.length > 0 && (
