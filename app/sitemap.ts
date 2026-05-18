@@ -169,10 +169,64 @@ function buildCoreShard(): MetadataRoute.Sitemap {
 
 // ─── Shard 1: programmatic (city × vendor-type grid) ────────────────────
 
-function buildProgrammaticShard(): MetadataRoute.Sitemap {
+/**
+ * Programmatic SEO shard. Previously emitted all 12 cities × 11 vendor types
+ * (132 URLs) unconditionally, which surfaced empty pages like
+ * /wedding-djs/quetta in GSC's "Crawled - currently not indexed" report
+ * because Google saw the URL but found zero listings on it.
+ *
+ * Now we fetch the live vendor inventory once at build time and only emit
+ * URLs for (city, vendorType) combos with at least one real vendor. Combos
+ * with zero vendors stay accessible on the site (they still render with
+ * editorial copy + cross-links) but are hidden from the sitemap and the
+ * pages themselves emit `noindex,follow` until vendors arrive — see
+ * components/seo/vendor-type-city-page.tsx.
+ */
+async function buildProgrammaticShard(): Promise<MetadataRoute.Sitemap> {
   const now = new Date()
+
+  // Inventory of (citySlug, vendorTypeSlug) combos that have >=1 real vendor.
+  // Built from the same /businesses feed we use for the vendor-shard, so the
+  // build never hits the backend twice for the same data per cold render.
+  const populated = new Set<string>()
+  try {
+    const url = `${BACKEND_URL}api/v1/businesses?limit=2000`
+    const res = await fetch(url, {
+      next: { revalidate: 3600 },
+      headers: { Accept: "application/json" },
+    })
+    if (res.ok) {
+      const json = (await res.json()) as { data?: any }
+      const raws: any[] = Array.isArray(json?.data) ? json.data : json?.data?.data ?? []
+      for (const raw of raws) {
+        const vendor = raw?.vendor ?? {}
+        const backendType: string | undefined =
+          raw?.type || vendor?.vendorType || raw?.subBusinessType
+        if (!backendType) continue
+        const seoTypeSlug = BACKEND_TO_SEO[backendType]
+        if (!seoTypeSlug) continue
+        const cityRaw: string = raw?.city ?? raw?.location ?? vendor?.city ?? ""
+        if (!cityRaw) continue
+        const citySlug = slugifyName(cityRaw)
+        if (!CITIES.some((c) => c.slug === citySlug)) continue
+        populated.add(`${seoTypeSlug}|${citySlug}`)
+      }
+    }
+  } catch {
+    /* backend unreachable — fall through, keep nothing in `populated`,
+       fall back to emitting all combos so we never ship an empty sitemap
+       in a build-time outage */
+  }
+
+  // Fallback: if the backend fetch failed AND we ended up with zero
+  // populated combos, emit everything. Better an over-broad sitemap than
+  // an empty one.
+  const useInventory = populated.size > 0
+
   return VENDOR_TYPES.flatMap((v) =>
-    CITIES.map((city) => ({
+    CITIES.filter((city) =>
+      useInventory ? populated.has(`${v.slug}|${city.slug}`) : true,
+    ).map((city) => ({
       url: `${SITE_URL}/${v.slug}/${city.slug}`,
       lastModified: now,
       changeFrequency: "daily" as const,
@@ -360,7 +414,7 @@ export default async function sitemap({
     case "core":
       return buildCoreShard()
     case "programmatic":
-      return buildProgrammaticShard()
+      return await buildProgrammaticShard()
     case "vendors":
       return await buildVendorsShard()
     case "images":

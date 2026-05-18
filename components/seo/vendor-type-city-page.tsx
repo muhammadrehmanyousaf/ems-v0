@@ -26,6 +26,7 @@ import {
 } from "@/lib/seo"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
 import { fetchCityVendors, type VendorListItem } from "@/lib/seo/fetch-vendors"
+import { getCityEditorial, getVendorTypeGuide } from "@/lib/seo/city-editorial"
 
 export function generateVendorTypeCityStaticParams() {
   return CITIES.map((c) => ({ city: c.slug }))
@@ -75,6 +76,16 @@ export async function VendorTypeCityPage({
     limit: 24,
   })
 
+  // For pages with zero real listings, we render the page but mark it
+  // `noindex,follow` so Google still crawls outbound internal links but
+  // doesn't index the empty page itself. Resolves GSC's "Crawled - currently
+  // not indexed" warning for combos we haven't onboarded vendors for yet.
+  // When at least one vendor is onboarded for the combo, the page becomes
+  // indexable automatically without any code change.
+  const hasListings = vendors.length > 0
+  const editorial = getCityEditorial(city.slug)
+  const guide = getVendorTypeGuide(vt.slug)
+
   const url = `${SITE_URL}/${vt.slug}/${city.slug}`
   const priceRangeStr = formatPriceRange(vendors)
 
@@ -107,7 +118,9 @@ export async function VendorTypeCityPage({
     },
     {
       question: `How far in advance should I book a ${vt.singular.toLowerCase()} in ${city.name}?`,
-      answer: `For peak shaadi season (October–February), book 6–9 months ahead. Off-season weddings can often be booked 2–3 months out. Popular ${city.name} ${vt.plural.toLowerCase()} fill up faster — book the date before the vendor.`,
+      answer: editorial.peakSeason
+        ? `${city.name}'s peak shaadi season is ${editorial.peakSeason} — for any date in that window, book 6–9 months ahead. Off-season weddings can often be booked 2–3 months out. Popular ${city.name} ${vt.plural.toLowerCase()} fill up faster than less-known ones, so secure the date before locking the vendor.`
+        : `For peak shaadi season (October–February), book 6–9 months ahead. Off-season weddings can often be booked 2–3 months out. Popular ${city.name} ${vt.plural.toLowerCase()} fill up faster — book the date before the vendor.`,
     },
     {
       question: `Can I see real reviews for these ${vt.plural.toLowerCase()}?`,
@@ -130,6 +143,10 @@ export async function VendorTypeCityPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
       />
+      {/* Empty-listing pages stay accessible (so vendors can still link to
+         them, and Google can still crawl outbound) but are kept out of the
+         search index so they don't drag the site's content-quality signal. */}
+      {!hasListings && <meta name="robots" content="noindex,follow" />}
 
       <div className="container-responsive py-10 sm:py-14">
         <Breadcrumbs
@@ -236,17 +253,57 @@ export async function VendorTypeCityPage({
             About {vt.plural.toLowerCase()} in {city.name}
           </h2>
           <div className="prose prose-bridal max-w-3xl font-bridal text-[14.5px] text-bridal-text leading-relaxed space-y-4">
+            {editorial.intro ? (
+              <p>{editorial.intro}</p>
+            ) : (
+              <p>
+                {city.name} is one of Pakistan&apos;s busiest wedding destinations.
+                Whether you&apos;re planning a baraat at a banquet hall, a mehndi
+                under string lights at home, or a walima at a marquee,{" "}
+                {city.name} offers a {vt.singular.toLowerCase()} for every style
+                and budget.
+              </p>
+            )}
+            {editorial.notable && (
+              <p>
+                <strong className="text-bridal-charcoal font-semibold">
+                  Where {vt.plural.toLowerCase()} cluster in {city.name}:
+                </strong>{" "}
+                {editorial.notable}
+              </p>
+            )}
+            {guide && (
+              <p>
+                <strong className="text-bridal-charcoal font-semibold">
+                  What to look for in a {city.name}{" "}
+                  {vt.singular.toLowerCase()}:
+                </strong>{" "}
+                {guide}
+              </p>
+            )}
+            {editorial.priceContext && (
+              <p>
+                <strong className="text-bridal-charcoal font-semibold">
+                  Pricing context:
+                </strong>{" "}
+                {editorial.priceContext}
+              </p>
+            )}
             <p>
-              {city.name} is one of Pakistan&apos;s busiest wedding destinations.
-              Whether you&apos;re planning a baraat at a banquet hall, a mehndi
-              under string lights at home, or a walima at a marquee, {city.name}
-              {" "}offers a {vt.singular.toLowerCase()} for every style and budget.
-            </p>
-            <p>
-              {SITE_NAME} simplifies the {city.name} {vt.singular.toLowerCase()}
-              {" "}search. Every vendor is identity-verified, every review comes
-              from a real booking, and every quote is transparent before you
-              commit a deposit.
+              {SITE_NAME} simplifies the {city.name}{" "}
+              {vt.singular.toLowerCase()} search. Every vendor is
+              identity-verified, every review comes from a real booking, and
+              every quote is transparent before you commit a deposit.
+              {editorial.peakSeason && (
+                <>
+                  {" "}
+                  Peak season here is{" "}
+                  <strong className="text-bridal-charcoal font-semibold">
+                    {editorial.peakSeason}
+                  </strong>
+                  ; book ahead for those months.
+                </>
+              )}
             </p>
           </div>
         </section>
