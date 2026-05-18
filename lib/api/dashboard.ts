@@ -190,6 +190,47 @@ export class BusinessesAPI {
   static async delete(id: number): Promise<void> {
     await axiosInstance.delete(`/api/v1/businesses/${id}`);
   }
+
+  static async getCompleteness(id: number): Promise<CompletenessResponse> {
+    const res = await axiosInstance.get(`/api/v1/businesses/${id}/completeness`);
+    return res.data?.data;
+  }
+}
+
+// VR-050.10 — vendor profile completeness widget. Shape mirrors the
+// backend `computeCompletenessBreakdown` + `computeVerificationStatus`.
+export interface CompletenessItem {
+  key: string;
+  label: string;
+  weight: number;
+  done: boolean;
+}
+export interface CompletenessCategory {
+  key: string;
+  label: string;
+  earned: number;
+  max: number;
+  items: CompletenessItem[];
+}
+export interface CompletenessVerification {
+  tier: 0 | 1 | 2 | 3 | 4;
+  canAcceptBookings: boolean;
+  canListPublicly: boolean;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  ntnVerified: boolean;
+  cnicVerified: boolean;
+  addressVerified: boolean;
+  visited: boolean;
+  completeness: number;
+  missingForBookings: string[];
+  missingForPublic: string[];
+}
+export interface CompletenessResponse {
+  score: number;
+  categories: CompletenessCategory[];
+  suggestions: string[];
+  verification: CompletenessVerification;
 }
 
 // ─── Roles ────────────────────────────────────────────────────

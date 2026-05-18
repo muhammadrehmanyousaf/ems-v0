@@ -10,6 +10,7 @@ import ChartsSections from "./sections/charts-sections";
 import RevenueSplitSection from "./sections/revenue-split-section";
 import UpcomingAndDueSection from "./sections/upcoming-and-due-section";
 import TableAndReviewSection from "./sections/table-and-review-section";
+import CompletenessWidget from "./sections/completeness-widget";
 import PageContainer from "@/components/dashboard/layout/page-container";
 import { PageHeader } from "@/components/dashboard/layout/page-header";
 
@@ -28,6 +29,7 @@ import {
 import { PaymentsAPI } from "@/lib/api/dashboard";
 import type { VendorRevenueResponse, VendorPayment } from "@/lib/dashboard-types";
 import { useUser } from "@/context/UserContext";
+import { useBusiness } from "@/context/BusinessContext";
 import { getDashboardRole, isAdminLike } from "@/lib/dashboard-role";
 import { CalendarCheck, Clock, Phone, Building2, DollarSign } from "lucide-react";
 import { toast } from "sonner";
@@ -108,6 +110,7 @@ const DashboardView = () => {
 
 const VendorDashboardView = () => {
   const { user } = useUser();
+  const { business } = useBusiness();
   const [dateRange, setDateRange] = useState<DateRange>("this_year");
   const [customStart, setCustomStart] = useState<string | undefined>();
   const [customEnd, setCustomEnd] = useState<string | undefined>();
@@ -205,6 +208,12 @@ const VendorDashboardView = () => {
       />
 
       <CardsSection data={kpis} loading={loading} />
+      {business?.id && (
+        <CompletenessWidget
+          businessId={business.id}
+          editHref="/dashboard/business"
+        />
+      )}
       <RevenueSplitSection data={vendorRevenue} loading={revenueLoading} />
       <UpcomingAndDueSection upcoming={upcoming7Days} due={paymentsDue} loading={loading} />
       <ChartsSections bookingTrends={bookingTrends} statusDist={statusDist} loading={loading} />
