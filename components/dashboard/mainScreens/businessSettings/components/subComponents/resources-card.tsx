@@ -513,10 +513,10 @@ export function ResourcesCard({ businessId }: ResourcesCardProps) {
               />
               <span className="text-xs">
                 <span className="font-medium text-neutral-900">
-                  Use multi-resource capacity for bookings (Layer 2)
+                  Use multi-resource capacity for bookings
                 </span>
                 <span className="block text-neutral-500 mt-0.5">
-                  Once Layer 2 ships, enabling this will switch your booking engine from single-slot capacity to consuming from the resource pool above. No effect yet — safe to flip ahead of time.
+                  Switches your booking engine from single-slot capacity to consuming from the resource pool above. Per-kind capacity = quantity / units-per-booking; overall capacity is the bottleneck across kinds (a studio with 2 photographers + 1 videographer crew accepts 1 booking at a time, not 3). Per-date overrides still win — flip back to disable anytime.
                 </span>
                 {savingFlag && (
                   <span className="block text-amber-600 mt-1 inline-flex items-center gap-1">

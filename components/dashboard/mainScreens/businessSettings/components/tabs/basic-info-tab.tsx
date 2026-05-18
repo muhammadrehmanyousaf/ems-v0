@@ -344,20 +344,21 @@ const BasicInfoTab = ({ business, onSuccess }: BasicInfoTabProps) => {
                 <CancellationPolicyCard businessId={business.id} />
             </div>
 
-            {/* BK-100.52 — vendor in-house bundled services. Lets the
-                vendor declare catering / decor / DJ / valet etc. they
-                bundle with the venue. Customer-facing display + booking-
-                flow integration ship in Layer 2. */}
+            {/* BK-100.52 — vendor in-house bundled services. Vendor
+                declares catering / decor / DJ / valet etc. they bundle
+                with the venue; the customer-facing read-only display
+                on the profile + the interactive add-on picker on the
+                booking review step both consume this data. */}
             <div className="pt-6">
                 <BundledServicesCard businessId={business.id} />
             </div>
 
-            {/* BK-100.51 — multi-resource capacity declarations. Layer 1
-                captures vendor declarations; the slot engine continues
-                to use legacy single-capacity until Layer 2 lights up
-                the integration behind the opt-in flag. The card surfaces
-                the "no booking changes yet" reality clearly so vendors
-                aren't surprised. */}
+            {/* BK-100.51 — multi-resource capacity declarations. The
+                slot engine consults these rows when the "Use multi-
+                resource capacity" flag below is on (per-kind capacity
+                = quantity / unitsPerBooking; overall = MIN across
+                kinds). Flag defaults off; flipping it on/off is
+                instant + reversible. */}
             <div className="pt-6">
                 <ResourcesCard businessId={business.id} />
             </div>
