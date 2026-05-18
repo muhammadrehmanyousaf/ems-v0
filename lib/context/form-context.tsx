@@ -97,6 +97,20 @@ export type FormType = {
   instruction: string;
   serviceProvided: string[];
   minimumPrice: number;
+  // ── VR-050 — vendor registration v2 fields ───────────────────
+  // All optional; legacy v1 signups still work if these stay blank.
+  // Backend column docs: src/models/businessModel.js around line 215.
+  whatsappNumber: string;
+  languagesSpoken: string[];
+  ownerName: string;
+  ownerBio: string;
+  yearsInBusiness: number | "";
+  weddingsCompleted: number | "";
+  ntnNumber: string;
+  // Photographer + future vendor-type forms write into this blob. Shape
+  // is whitelisted server-side per vendorType (see vendorRegistrationValidators
+  // TYPE_SPECIFIC_WHITELIST). Anything not in the whitelist is dropped.
+  typeSpecificDetails: Record<string, string | number | boolean | string[] | null>;
 };
 type FormContextType = {
   businessType: BusinessType | string;
@@ -190,6 +204,15 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     instruction: "",
     serviceProvided: [],
     minimumPrice: 0,
+    // VR-050 defaults — all empty so the legacy submit path is unchanged
+    whatsappNumber: "",
+    languagesSpoken: [],
+    ownerName: "",
+    ownerBio: "",
+    yearsInBusiness: "",
+    weddingsCompleted: "",
+    ntnNumber: "",
+    typeSpecificDetails: {},
   });
 
   let currentErrors: { [key: string]: string } = {};

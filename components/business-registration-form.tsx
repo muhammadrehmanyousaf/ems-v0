@@ -116,19 +116,28 @@ export function BusinessRegistrationForm() {
   const catering = businessType === "Catering";
 
   // Calculate progress percentage
+  // VR-050 — photographer gained a "Specialty & Trust" step (step 4) so its
+  // total step count is now 7 user-facing steps (currentStep 1..7) instead of 6.
   const getProgressPercentage = () => {
     if (currentStep === 0) return 0;
     if (bridalWear && currentStep === 8) return 100;
     if (weddingStationery && currentStep === 8) return 100;
     if (carRental && currentStep === 7) return 100;
+    if (photographer && currentStep === 7) return 100;
     if (
-      (photographer || makeupArtist || hennaArtist || decorator || catering) &&
+      (makeupArtist || hennaArtist || decorator || catering) &&
       currentStep === 6
     )
       return 100;
     if (currentStep === 6) return 100;
 
-    const maxSteps = bridalWear || weddingStationery ? 8 : carRental ? 7 : 6;
+    const maxSteps = bridalWear || weddingStationery
+      ? 8
+      : carRental
+        ? 7
+        : photographer
+          ? 7
+          : 6;
     return Math.round((currentStep / maxSteps) * 100);
   };
 
@@ -247,7 +256,13 @@ export function BusinessRegistrationForm() {
           currentErrors.downPayment = "Percentage must be between 0 and 100";
         }
       }
-      if (currentStep === 4) {
+      // VR-050 — photographer flow inserted a "Specialty & Trust" step at 4,
+      // so its Packages step is 5 and Images step is 6. All other vendor
+      // types keep the original 4=Packages, 5=Images numbering.
+      // Step 4 for photographer is optional (no validation needed).
+      const packagesStep = photographer ? 5 : 4;
+      const imagesStep = photographer ? 6 : 5;
+      if (currentStep === packagesStep) {
         const isMenuType =
           formData.businessType === "Wedding venue" ||
           formData.businessType === "Catering";
@@ -285,7 +300,7 @@ export function BusinessRegistrationForm() {
           });
         }
       }
-      if (currentStep === 5) {
+      if (currentStep === imagesStep) {
         const imageCount = formData.imageFiles?.length ?? 0;
         if (imageCount === 0) {
           currentErrors.images = "Please upload at least one image";
@@ -500,6 +515,28 @@ export function BusinessRegistrationForm() {
         // 20260507110000-user-terms-acceptance.
         termsVersion: TERMS_VERSION,
         termsAcceptedAt: new Date().toISOString(),
+
+        // ── VR-050 — vendor registration v2 fields. Every entry is conditional
+        // (only included when the user actually filled it) so legacy v1
+        // submissions stay byte-identical. The backend validates each one
+        // and silently drops anything outside its whitelist.
+        ...(formData.whatsappNumber ? { whatsappNumber: formData.whatsappNumber } : {}),
+        ...(formData.languagesSpoken && formData.languagesSpoken.length > 0
+          ? { languagesSpoken: formData.languagesSpoken }
+          : {}),
+        ...(formData.ownerName ? { ownerName: formData.ownerName } : {}),
+        ...(formData.ownerBio ? { ownerBio: formData.ownerBio } : {}),
+        ...(formData.yearsInBusiness !== "" && formData.yearsInBusiness != null
+          ? { yearsInBusiness: Number(formData.yearsInBusiness) }
+          : {}),
+        ...(formData.weddingsCompleted !== "" && formData.weddingsCompleted != null
+          ? { weddingsCompleted: Number(formData.weddingsCompleted) }
+          : {}),
+        ...(formData.ntnNumber ? { ntnNumber: formData.ntnNumber } : {}),
+        ...(formData.typeSpecificDetails &&
+        Object.keys(formData.typeSpecificDetails).length > 0
+          ? { typeSpecificDetails: formData.typeSpecificDetails }
+          : {}),
       };
 
       // Build the payload — use FormData so vendor profile image can be included
@@ -601,6 +638,15 @@ export function BusinessRegistrationForm() {
           instruction: "",
           serviceProvided: [],
           minimumPrice: 0,
+          // VR-050 — clear the v2 fields so the next vendor starts clean
+          whatsappNumber: "",
+          languagesSpoken: [],
+          ownerName: "",
+          ownerBio: "",
+          yearsInBusiness: "",
+          weddingsCompleted: "",
+          ntnNumber: "",
+          typeSpecificDetails: {},
         });
         loadingToastId.dismiss();
         setSuccessMessage(response.data?.message || "");
@@ -631,12 +677,21 @@ export function BusinessRegistrationForm() {
   };
 
   // Submit-vs-continue branch — extracted so the JSX stays clean.
+  // VR-050 — photographer flow has one extra step (Specialty & Trust at #4),
+  // so its final step is 7 instead of 6.
   const isFinalStep =
     ((bridalWear || weddingStationery) && currentStep === 8) ||
     (carRental && currentStep === 7) ||
-    (!bridalWear && !weddingStationery && !carRental && currentStep === 6);
+    (photographer && currentStep === 7) ||
+    (!bridalWear && !weddingStationery && !carRental && !photographer && currentStep === 6);
 
-  const totalSteps = bridalWear || weddingStationery ? 9 : carRental ? 8 : 7;
+  const totalSteps = bridalWear || weddingStationery
+    ? 9
+    : carRental
+      ? 8
+      : photographer
+        ? 8
+        : 7;
 
   return (
     <div className="min-h-screen bridal-surface relative">
