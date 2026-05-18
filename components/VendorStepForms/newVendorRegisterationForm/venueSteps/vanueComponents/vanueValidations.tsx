@@ -83,7 +83,10 @@ export const vanueValidations = ({currentStep, formData, currentErrors }: Valida
         if (!formData.cancelationPolicy) currentErrors.cancelationPolicy = "Cancelation Policy is required";
         if (formData.parking !== false && formData.parking !== true) currentErrors.parking = "Parking is required";
       }
-      else if (currentStep === 4) {
+      // VR-050 — venue flow inserted a "Specialty & Trust" step at 4, so
+      // Packages is now 5 and Images is now 6. Step 4 is fully optional
+      // (no validation required).
+      else if (currentStep === 5) {
         const validPackages = formData.packages?.filter(pkg => pkg.name?.trim() && pkg.price) ?? [];
         if (validPackages.length === 0) {
           currentErrors.packages = "At least one package with a name and price is required";
@@ -108,7 +111,7 @@ export const vanueValidations = ({currentStep, formData, currentErrors }: Valida
           }
         });
       }
-      else if (currentStep === 5) {
+      else if (currentStep === 6) {
         if (formData.images.length < 1) currentErrors.images = "Images are required";
       }
   }

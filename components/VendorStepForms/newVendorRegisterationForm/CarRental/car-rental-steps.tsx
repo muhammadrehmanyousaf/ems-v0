@@ -6,6 +6,7 @@ import ContactDetails from '../../contact-details';
 import CarRentalBusinessDetails from './components/business-details';
 import CarDetailsStep from './components/car-details-step';
 import CarPackagesStep from './components/car-packages-step';
+import CarRentalSpecialtyTrust from './components/specialty-trust';
 import ImagesStep from '../../images-step';
 import Preview from '../../preview';
 
@@ -17,6 +18,8 @@ interface CarRentalStepsProps {
     setFile: React.Dispatch<React.SetStateAction<File | null>>;
 }
 
+// VR-050 — Car Rental gained an optional "Specialty & Trust" step at
+// position 7 (just before Preview). Total user-facing steps grew 7 → 8.
 const CarRentalSteps = ({ currentStep, error, setErrors, file, setFile }: CarRentalStepsProps) => {
     const stepHeadings: Record<number, { title: string; subtitle: string }> = {
         1: { title: 'Personal Details', subtitle: 'Enter your personal details here.' },
@@ -25,7 +28,8 @@ const CarRentalSteps = ({ currentStep, error, setErrors, file, setFile }: CarRen
         4: { title: 'Fleet / Car Details', subtitle: 'Add the vehicles available in your fleet.' },
         5: { title: 'Portfolio Images', subtitle: 'Upload photos of your vehicles (up to 20).' },
         6: { title: 'Packages', subtitle: 'Create combo packages from your fleet (optional).' },
-        7: { title: 'Preview', subtitle: 'Review all details before submitting.' },
+        7: { title: 'Specialty & Trust', subtitle: 'Optional — rental specialty details and verification.' },
+        8: { title: 'Preview', subtitle: 'Review all details before submitting.' },
     };
 
     const heading = stepHeadings[currentStep];
@@ -58,6 +62,9 @@ const CarRentalSteps = ({ currentStep, error, setErrors, file, setFile }: CarRen
                 <CarPackagesStep errors={error} setErrors={setErrors} />
             )}
             {currentStep === 7 && (
+                <CarRentalSpecialtyTrust />
+            )}
+            {currentStep === 8 && (
                 <Preview />
             )}
         </div>

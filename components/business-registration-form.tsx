@@ -114,31 +114,29 @@ export function BusinessRegistrationForm() {
   const hennaArtist = businessType === "Henna artist";
   const decorator = businessType === "Decorator";
   const catering = businessType === "Catering";
+  const venue = businessType === "Wedding venue";
+
+  // VR-050 — every vendor type now has an extra "Specialty & Trust" step.
+  // For photographer/venue/makeup/henna/decorator/catering it sits at #4
+  // (between Business Details and Packages). For bridal-wear, car-rental
+  // and stationery — whose flows have multiple specialised intermediate
+  // steps — it sits just before Preview to avoid renumbering the middle.
+  // Step counts (user-facing, currentStep 1..N):
+  //   Bridal Wear / Stationery: 9 (was 8)
+  //   Car Rental:               8 (was 7)
+  //   Photographer / Venue / Makeup / Henna / Decorator / Catering: 7 (was 6)
+  const maxUserSteps =
+    bridalWear || weddingStationery
+      ? 9
+      : carRental
+        ? 8
+        : 7;
 
   // Calculate progress percentage
-  // VR-050 — photographer gained a "Specialty & Trust" step (step 4) so its
-  // total step count is now 7 user-facing steps (currentStep 1..7) instead of 6.
   const getProgressPercentage = () => {
     if (currentStep === 0) return 0;
-    if (bridalWear && currentStep === 8) return 100;
-    if (weddingStationery && currentStep === 8) return 100;
-    if (carRental && currentStep === 7) return 100;
-    if (photographer && currentStep === 7) return 100;
-    if (
-      (makeupArtist || hennaArtist || decorator || catering) &&
-      currentStep === 6
-    )
-      return 100;
-    if (currentStep === 6) return 100;
-
-    const maxSteps = bridalWear || weddingStationery
-      ? 8
-      : carRental
-        ? 7
-        : photographer
-          ? 7
-          : 6;
-    return Math.round((currentStep / maxSteps) * 100);
+    if (currentStep >= maxUserSteps) return 100;
+    return Math.round((currentStep / maxUserSteps) * 100);
   };
 
   console.log("formdata here iasefaoeoifvnnafn", formData);
@@ -256,12 +254,12 @@ export function BusinessRegistrationForm() {
           currentErrors.downPayment = "Percentage must be between 0 and 100";
         }
       }
-      // VR-050 — photographer flow inserted a "Specialty & Trust" step at 4,
-      // so its Packages step is 5 and Images step is 6. All other vendor
-      // types keep the original 4=Packages, 5=Images numbering.
-      // Step 4 for photographer is optional (no validation needed).
-      const packagesStep = photographer ? 5 : 4;
-      const imagesStep = photographer ? 6 : 5;
+      // VR-050 — every simple-flow vendor type (photographer, makeup, henna,
+      // decorator, catering) inserted a "Specialty & Trust" step at 4, so
+      // their Packages step is 5 and Images step is 6. Step 4 is optional
+      // (no validation needed).
+      const packagesStep = 5;
+      const imagesStep = 6;
       if (currentStep === packagesStep) {
         const isMenuType =
           formData.businessType === "Wedding venue" ||
@@ -676,22 +674,11 @@ export function BusinessRegistrationForm() {
     }
   };
 
-  // Submit-vs-continue branch — extracted so the JSX stays clean.
-  // VR-050 — photographer flow has one extra step (Specialty & Trust at #4),
-  // so its final step is 7 instead of 6.
-  const isFinalStep =
-    ((bridalWear || weddingStationery) && currentStep === 8) ||
-    (carRental && currentStep === 7) ||
-    (photographer && currentStep === 7) ||
-    (!bridalWear && !weddingStationery && !carRental && !photographer && currentStep === 6);
-
-  const totalSteps = bridalWear || weddingStationery
-    ? 9
-    : carRental
-      ? 8
-      : photographer
-        ? 8
-        : 7;
+  // Submit-vs-continue branch — final step is the last user-facing step
+  // for each vendor type (see `maxUserSteps` above for the layout). The
+  // total-step counter includes step 0 (business-type picker).
+  const isFinalStep = currentStep === maxUserSteps;
+  const totalSteps = maxUserSteps + 1;
 
   return (
     <div className="min-h-screen bridal-surface relative">

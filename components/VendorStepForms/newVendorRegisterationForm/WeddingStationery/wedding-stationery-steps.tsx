@@ -8,6 +8,7 @@ import StationeryProfileStep from './components/stationery-profile-step';
 import ServicesStep from './components/services-step';
 import ImagesStep from '../../images-step';
 import ProductListingsStep from './components/product-listings-step';
+import StationerySpecialtyTrust from './components/specialty-trust';
 import Preview from '../../preview';
 
 interface WeddingStationeryStepsProps {
@@ -18,6 +19,8 @@ interface WeddingStationeryStepsProps {
     setFile: React.Dispatch<React.SetStateAction<File | null>>;
 }
 
+// VR-050 — Wedding Stationery gained an optional "Specialty & Trust"
+// step at position 8 (just before Preview). User-facing steps grew 8 → 9.
 const WeddingStationerySteps = ({ currentStep, error, setErrors, file, setFile }: WeddingStationeryStepsProps) => {
     const stepHeadings: Record<number, { title: string; subtitle: string }> = {
         1: { title: 'Personal Details', subtitle: 'Enter your personal details here.' },
@@ -27,7 +30,8 @@ const WeddingStationerySteps = ({ currentStep, error, setErrors, file, setFile }
         5: { title: 'Services & Turnaround', subtitle: 'What services do you offer and how long does production take?' },
         6: { title: 'Portfolio Images', subtitle: 'Upload photos of your stationery work (up to 20).' },
         7: { title: 'Product Listings', subtitle: 'Optionally add individual product listings for customers to browse.' },
-        8: { title: 'Preview', subtitle: 'Review all details before submitting.' },
+        8: { title: 'Specialty & Trust', subtitle: 'Optional — stationery specialty details and verification.' },
+        9: { title: 'Preview', subtitle: 'Review all details before submitting.' },
     };
 
     const heading = stepHeadings[currentStep];
@@ -63,6 +67,9 @@ const WeddingStationerySteps = ({ currentStep, error, setErrors, file, setFile }
                 <ProductListingsStep errors={error} setErrors={setErrors} />
             )}
             {currentStep === 8 && (
+                <StationerySpecialtyTrust />
+            )}
+            {currentStep === 9 && (
                 <Preview />
             )}
         </div>
