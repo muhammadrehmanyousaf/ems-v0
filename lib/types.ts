@@ -64,6 +64,13 @@ export interface Vendor {
     remaining?: number | null;
     [key: string]: unknown;
   } | null;
+  // BK-100.54 — Pakistani-specific search-filter inputs.
+  // VR-050.9 captures these into the backend `typeSpecificDetails` JSONB
+  // blob (per-vendor-type whitelist) and `languagesSpoken` TEXT[] column.
+  // Surfaced here as optional so legacy vendor rows (where these are NULL)
+  // simply fail the filter predicate — never crash.
+  typeSpecificDetails?: Record<string, unknown> | null;
+  languagesSpoken?: string[] | null;
 }
 
 export interface Availability {

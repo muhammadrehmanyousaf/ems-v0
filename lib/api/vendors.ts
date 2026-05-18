@@ -5,6 +5,29 @@ import type { Vendor } from '@/lib/types'
 const BASE = '/api/v1/businesses'
 
 /**
+ * BK-100.54 — Pakistani-specific search filter query params accepted by
+ * GET /api/v1/businesses and GET /api/v1/businesses/businesses-by-vendor.
+ * Backed by `event-planner-api/src/utils/pakistaniFilters.js`. All fields
+ * optional; missing/false = no filter (legacy result set preserved).
+ */
+export type PakistaniFilterParams = {
+  femalePhotographer?: boolean
+  mahramOnly?: boolean
+  separateHalls?: boolean
+  noMusicNikah?: boolean
+  sectKitchen?: boolean
+  vegetarian?: boolean
+  wifi?: boolean
+  outdoorCapable?: boolean
+  travelsToHome?: boolean
+  droneOffered?: boolean
+  secondShooter?: boolean
+  halalCert?: boolean
+  /** Comma-separated server-side; we pass an array here for ergonomics. */
+  languages?: string[] | string
+}
+
+/**
  * Normalize raw backend business data to the flat Vendor shape the frontend expects.
  * The backend returns { id, name, city, subBusinessType, vendor: { vendorType, ... }, ... }
  * but the frontend expects { type, location, userId, rating, ... } at the top level.
@@ -57,6 +80,15 @@ function normalizeBusiness(raw: any): any {
     description: raw.description || '',
     images: raw.images || [],
     packages: normalizePackages(raw.packages),
+    // BK-100.54 — pass through Pakistani-specific search filter inputs.
+    // Backend returns typeSpecificDetails as JSONB (already parsed) and
+    // languagesSpoken as TEXT[]. Both may be NULL on legacy vendor rows;
+    // we coerce to safe defaults that fail the filter predicate harmlessly.
+    typeSpecificDetails:
+      raw.typeSpecificDetails && typeof raw.typeSpecificDetails === 'object'
+        ? raw.typeSpecificDetails
+        : null,
+    languagesSpoken: Array.isArray(raw.languagesSpoken) ? raw.languagesSpoken : null,
   }
 }
 
@@ -74,10 +106,13 @@ export class VendorAPI {
   }
 
   // Get businesses by vendor type
-  static async getBusinessesByVendorType(vendorType: string): Promise<Vendor[]> {
+  static async getBusinessesByVendorType(
+    vendorType: string,
+    pakistaniFilters?: PakistaniFilterParams,
+  ): Promise<Vendor[]> {
     try {
       const response = await axiosInstance.get(`${BASE}/businesses-by-vendor`, {
-        params: { vendorType },
+        params: { vendorType, ...(pakistaniFilters || {}) },
       })
       const result = response.data.data
       const list = Array.isArray(result) ? result : result?.data || []

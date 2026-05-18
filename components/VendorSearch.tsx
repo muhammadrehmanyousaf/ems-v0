@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import {
   ChevronLeft, ChevronRight, Search, MapPin, Star, Users, Filter,
-  DollarSign, Tag, Shield, Car, Utensils, Sparkles,
+  DollarSign, Tag, Shield, Car, Utensils, Sparkles, Moon, Languages,
 } from "lucide-react"
 import VendorCard from "./VendorCard"
 import type { Vendor } from "@/lib/types"
@@ -41,7 +41,52 @@ interface Filters {
   hasFoodTasting: boolean
   hasWaiter: boolean
   cancellationPolicy: string
+  // BK-100.54 — Pakistani-specific filter inputs. Default-falsy/empty so
+  // an existing user with no chips toggled gets byte-identical results.
+  // Mapped to backend keys via PK_TSD_MAP below; client-side filter
+  // predicates read from Vendor.typeSpecificDetails (also additive).
+  pakistaniFlags: string[]
+  languages: string[]
 }
+
+// Mapping from chip ID → key in Vendor.typeSpecificDetails JSONB blob.
+// Mirrors the TYPE_SPECIFIC_FILTER_MAP in the backend helper at
+// event-planner-api/src/utils/pakistaniFilters.js — keep in sync.
+const PK_TSD_MAP: Record<string, string> = {
+  femalePhotographer: "femalePhotographerAvailable",
+  mahramOnly: "mahramOnlyAvailable",
+  separateHalls: "separateMenWomenHalls",
+  noMusicNikah: "comfortWithNoMusicNikah",
+  sectKitchen: "sectSpecificKitchenSeparation",
+  vegetarian: "vegetarianCapable",
+  wifi: "wifiAvailable",
+  outdoorCapable: "outdoorCapable",
+  travelsToHome: "travelsToBridalHome",
+  droneOffered: "droneFootageOffered",
+  secondShooter: "secondShooterAvailable",
+}
+
+// Customer-facing labels for the chips. Kept short for the sidebar.
+const PK_CHIP_LABELS: Record<string, string> = {
+  femalePhotographer: "Female photographer",
+  mahramOnly: "Mahram-only environment",
+  separateHalls: "Separate men's & women's halls",
+  noMusicNikah: "Comfortable with no-music nikah",
+  sectKitchen: "Sect-specific kitchen separation",
+  vegetarian: "Vegetarian menu offered",
+  wifi: "Wi-Fi for live streaming",
+  outdoorCapable: "Outdoor-capable",
+  travelsToHome: "Travels to bridal home",
+  droneOffered: "Drone footage offered",
+  secondShooter: "Second shooter available",
+}
+
+// Pakistani languages — must match the backend whitelist in
+// vendorRegistrationValidators.js `KNOWN_LANGUAGES`.
+const PK_LANGUAGES = [
+  "Urdu", "English", "Punjabi", "Pashto", "Sindhi", "Saraiki",
+  "Balochi", "Hindko", "Kashmiri", "Brahui", "Arabic",
+] as const
 
 const DEFAULT_FILTERS: Filters = {
   search: "",
@@ -59,6 +104,8 @@ const DEFAULT_FILTERS: Filters = {
   hasFoodTasting: false,
   hasWaiter: false,
   cancellationPolicy: "",
+  pakistaniFlags: [],
+  languages: [],
 }
 
 export default function VendorSearch({ vendorType }: VendorSearchProps) {
@@ -197,6 +244,31 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
       })
     }
 
+    // BK-100.54 — Pakistani-specific filter chips. Each enabled flag
+    // requires the vendor's typeSpecificDetails JSONB to carry the
+    // mapped key === true. Vendors whose row predates VR-050.9 (no
+    // typeSpecificDetails blob) fail the predicate, which is correct:
+    // they haven't declared the capability so we can't claim they offer it.
+    if (filters.pakistaniFlags.length > 0) {
+      result = result.filter(v => {
+        const tsd = (v.typeSpecificDetails as Record<string, unknown> | null) || null
+        if (!tsd) return false
+        return filters.pakistaniFlags.every(flagId => {
+          const tsdKey = PK_TSD_MAP[flagId]
+          return !!tsd[tsdKey]
+        })
+      })
+    }
+    if (filters.languages.length > 0) {
+      result = result.filter(v => {
+        const spoken = (v.languagesSpoken as string[] | null) || null
+        if (!Array.isArray(spoken) || spoken.length === 0) return false
+        // Overlap semantics: vendor matches if they speak ANY of the
+        // requested languages. Mirrors backend `Op.overlap`.
+        return filters.languages.some(l => spoken.includes(l))
+      })
+    }
+
     switch (sortOption) {
       case "price-low":
         result.sort((a, b) => Number(a.minimumPrice || a.price || 0) - Number(b.minimumPrice || b.price || 0))
@@ -221,7 +293,10 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
   const totalPages = Math.ceil(filteredVendors.length / 12)
   const paginatedVendors = filteredVendors.slice((currentPage - 1) * 12, currentPage * 12)
 
-  const toggleArr = (key: "staff" | "subTypes" | "amenities", value: string) => {
+  const toggleArr = (
+    key: "staff" | "subTypes" | "amenities" | "pakistaniFlags" | "languages",
+    value: string,
+  ) => {
     setFilters(prev => ({
       ...prev,
       [key]: prev[key].includes(value) ? prev[key].filter(v => v !== value) : [...prev[key], value],
@@ -244,6 +319,9 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
     filters.hasFoodTasting,
     filters.hasWaiter,
     filters.cancellationPolicy,
+    // BK-100.54
+    ...filters.pakistaniFlags,
+    ...filters.languages,
   ].filter(Boolean).length
 
   return (
@@ -543,6 +621,57 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                       onChange={v => setFilters(p => ({ ...p, sponsored: !!v }))}
                     />
 
+                    {/* BK-100.54 — Pakistani-specific preferences.
+                        Reads VR-050.9 typeSpecificDetails flags so legacy
+                        vendors with no declaration are correctly excluded
+                        when the chip is on (they haven't claimed it). */}
+                    <BridalSeparator />
+                    <FilterGroup
+                      icon={<Moon className="w-3.5 h-3.5 text-bridal-gold" />}
+                      label="Pakistani preferences"
+                    >
+                      <div className="space-y-2">
+                        {Object.entries(PK_CHIP_LABELS).map(([id, label]) => (
+                          <BridalCheckRow
+                            key={id}
+                            id={`pk-${id}`}
+                            label={label}
+                            checked={filters.pakistaniFlags.includes(id)}
+                            onChange={() => toggleArr("pakistaniFlags", id)}
+                          />
+                        ))}
+                      </div>
+                    </FilterGroup>
+
+                    {/* Halal cert is a scalar column (halalCertIssuer NOT NULL),
+                        not part of typeSpecificDetails. Client-side we approximate
+                        by checking the vendor's halalCertIssuer field if present. */}
+                    <BridalSeparator />
+                    <FilterGroup
+                      icon={<Languages className="w-3.5 h-3.5 text-bridal-gold" />}
+                      label="Languages spoken"
+                    >
+                      <div className="flex flex-wrap gap-1.5">
+                        {PK_LANGUAGES.map(lang => {
+                          const active = filters.languages.includes(lang)
+                          return (
+                            <button
+                              key={lang}
+                              type="button"
+                              onClick={() => toggleArr("languages", lang)}
+                              className={`font-bridal text-[11px] uppercase tracking-[0.15em] px-2.5 py-1 rounded-full border transition-all ${
+                                active
+                                  ? "bg-bridal-gold text-bridal-charcoal border-bridal-gold-dark"
+                                  : "bg-bridal-ivory text-bridal-text-soft border-bridal-beige hover:border-bridal-gold/55 hover:text-bridal-charcoal"
+                              }`}
+                            >
+                              {lang}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </FilterGroup>
+
                   </div>
                 </CardContent>
               </Card>
@@ -606,6 +735,21 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                 {filters.hasFoodTasting && <FilterChip label="Food tasting" onRemove={() => setFilters(p => ({ ...p, hasFoodTasting: false }))} />}
                 {filters.hasWaiter && <FilterChip label="Waiter service" onRemove={() => setFilters(p => ({ ...p, hasWaiter: false }))} />}
                 {filters.cancellationPolicy && <FilterChip label={filters.cancellationPolicy} onRemove={() => setFilters(p => ({ ...p, cancellationPolicy: "" }))} />}
+                {/* BK-100.54 */}
+                {filters.pakistaniFlags.map(id => (
+                  <FilterChip
+                    key={id}
+                    label={PK_CHIP_LABELS[id] ?? id}
+                    onRemove={() => toggleArr("pakistaniFlags", id)}
+                  />
+                ))}
+                {filters.languages.map(lang => (
+                  <FilterChip
+                    key={lang}
+                    label={lang}
+                    onRemove={() => toggleArr("languages", lang)}
+                  />
+                ))}
               </div>
             )}
 
