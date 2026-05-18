@@ -186,6 +186,40 @@ export class BookingAPI {
     return res.data?.data;
   }
 
+  // BK-100.9 — Postpone-without-cancel. Pakistani Islamic mourning
+  // custom: after death in immediate family, weddings are postponed
+  // 3-40 days. This is a third primitive distinct from cancel
+  // (applies refund policy, forfeits deposit) and reschedule (needs
+  // immediate new date). Sets postponedAt + postponedUntilAt + reason;
+  // deposit stays alive; vendor is notified.
+  //
+  // Backend gates:
+  //   - reason ≥ 15 chars
+  //   - mourningWindowDays clamped to [3, 90]; default 40
+  //   - booking.status ∈ {Pending, Awaiting Payment, Confirmed}
+  //   - bookingDate must still be in the future (Asia/Karachi)
+  //   - cannot re-postpone an already-postponed booking
+  //   - customer-by-email/phone/userId OR admin only
+  static async postpone(
+    bookingId: number,
+    body: { reason: string; mourningWindowDays?: number },
+  ): Promise<{
+    booking: {
+      id: number;
+      postponedAt: string;
+      postponedUntilAt: string;
+      postponeReason: string;
+      status: string;
+    };
+    mourningWindowDays: number;
+  }> {
+    const res = await axiosInstance.post(
+      `${v1}/${bookingId}/postpone`,
+      body,
+    );
+    return res.data?.data;
+  }
+
   // BK-100.4 / BK-039 — vendor reports a customer no-show after the
   // event date. Re-uses BookingDispute storage but openedByRole='vendor'.
   // Backend enforces:

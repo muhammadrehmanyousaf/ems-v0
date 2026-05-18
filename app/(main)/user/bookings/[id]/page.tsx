@@ -55,6 +55,8 @@ import { DisputeCard } from "@/components/bookings/dispute-card";
 // BK-100.7 — inline review prompt. Renders only on Completed bookings;
 // auto-focuses if `?action=review` is in the URL (C15 email link).
 import { ReviewPromptCard } from "@/components/bookings/review-prompt-card";
+// BK-100.9 — postpone-without-cancel (Pakistani Islamic mourning custom).
+import { PostponeBookingDialog } from "@/components/bookings/postpone-booking-dialog";
 
 interface BookingDetail {
   id: number;
@@ -103,6 +105,11 @@ interface Booking {
     | null;
   serviceLocationAddress?: string | null;
   serviceLocationNotes?: string | null;
+  // BK-100.9 — postpone-without-cancel state. NULL on bookings that
+  // haven't been postponed; otherwise carries the deadline + reason.
+  postponedAt?: string | null;
+  postponedUntilAt?: string | null;
+  postponeReason?: string | null;
 }
 
 const STATUS_CONFIG: Record<
@@ -411,15 +418,27 @@ export default function BookingDetailPage() {
         </Button>
       ) : null}
       {isCancellable ? (
-        <Button
-          onClick={() => setCancelDialogOpen(true)}
-          size="sm"
-          variant="outline"
-          className="gap-1.5 border-bridal-coral/30 text-bridal-coral hover:bg-bridal-coral/10 hover:text-bridal-coral hover:border-bridal-coral/45"
-        >
-          <Trash2 className="size-3.5" />
-          Cancel
-        </Button>
+        <>
+          {/* BK-100.9 — postpone-without-cancel. Shown next to Cancel
+              so the customer always sees the kinder alternative. */}
+          <PostponeBookingDialog
+            bookingId={booking.id}
+            bookingStatus={booking.status}
+            eventDate={booking.bookingDate}
+            alreadyPostponed={!!booking.postponedAt}
+            onPostponed={fetchBooking}
+            triggerVariant="button"
+          />
+          <Button
+            onClick={() => setCancelDialogOpen(true)}
+            size="sm"
+            variant="outline"
+            className="gap-1.5 border-bridal-coral/30 text-bridal-coral hover:bg-bridal-coral/10 hover:text-bridal-coral hover:border-bridal-coral/45"
+          >
+            <Trash2 className="size-3.5" />
+            Cancel
+          </Button>
+        </>
       ) : null}
     </div>
   );
@@ -463,6 +482,34 @@ export default function BookingDetailPage() {
         }
         actions={headerActions}
       />
+
+      {/* BK-100.9 — postponed-state banner. Shows above the detail
+          grid so the customer + any family member opening the link
+          immediately understands the booking is paused. */}
+      {booking.postponedAt && (
+        <div className="mb-5 rounded-lg border border-amber-300 bg-amber-50 p-4">
+          <div className="flex items-start gap-3">
+            <div className="size-9 rounded-md bg-amber-100 border border-amber-200 flex items-center justify-center flex-shrink-0">
+              <Timer className="size-4 text-amber-700" />
+            </div>
+            <div className="space-y-1 min-w-0">
+              <p className="font-medium text-amber-900">
+                This booking is postponed
+              </p>
+              {booking.postponedUntilAt && (
+                <p className="text-xs text-amber-800">
+                  Set a new date by {fmtShort(booking.postponedUntilAt)} via reschedule. Your deposit stays safe in the meantime.
+                </p>
+              )}
+              {booking.postponeReason && (
+                <p className="text-xs text-amber-700 italic mt-1 leading-relaxed">
+                  &ldquo;{booking.postponeReason}&rdquo;
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Main column */}
