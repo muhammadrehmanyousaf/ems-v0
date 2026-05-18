@@ -922,9 +922,39 @@ export default function BookingDetailPage() {
               <AlertTriangle className="size-5 text-bridal-coral" />
               Cancel booking #{booking.id}?
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. Any payments made may be subject to the
-              vendor's refund policy.
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  This action cannot be undone. Any payments made may be
+                  subject to the vendor&apos;s refund policy.
+                </p>
+                {/* BK-100.2 Layer 2c — surface umbrella context when
+                    the booking is part of a wedding-week umbrella. The
+                    umbrella's bundle-savings tier is computed from
+                    active siblings; cancelling one event may drop the
+                    surviving siblings to a lower tier (but does NOT
+                    retroactively change their snapshots — historical
+                    pricing is preserved). */}
+                {booking.umbrellaId && (
+                  <div className="rounded-md border border-bridal-gold/45 bg-bridal-cream p-3 text-sm">
+                    <p className="font-medium text-bridal-charcoal">
+                      Part of your wedding-week umbrella
+                    </p>
+                    <p className="text-xs text-bridal-text-soft mt-1 leading-relaxed">
+                      Other linked events stay scheduled — only this booking is
+                      cancelled. If you want to cancel the whole wedding,
+                      open the umbrella and use{" "}
+                      <Link
+                        href={`/user/umbrellas/${booking.umbrellaId}`}
+                        className="underline decoration-bridal-gold-dark/50 hover:text-bridal-gold-dark"
+                      >
+                        cancel everything
+                      </Link>{" "}
+                      from there.
+                    </p>
+                  </div>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

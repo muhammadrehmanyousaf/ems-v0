@@ -24,6 +24,7 @@ import {
   AlertTriangle,
   Sparkles,
   Building2,
+  Ban,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -49,9 +50,11 @@ import {
   WeddingUmbrellasAPI,
   type BundlePreview,
   type BundleTier,
+  type UmbrellaCancelResponse,
   type UmbrellaStats,
   type WeddingUmbrella,
 } from "@/lib/api/weddingUmbrellas";
+import { Textarea } from "@/components/ui/textarea";
 import { LinkBookingDialog } from "@/components/umbrellas/link-booking-dialog";
 
 function fmtDate(s: string | null | undefined): string {
@@ -87,6 +90,12 @@ export default function UmbrellaDetailPage() {
   const [unlinkingBooking, setUnlinkingBooking] = React.useState<number | null>(null);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
+  // BK-100.2 Layer 2c — cascade-cancel state.
+  const [cancelOpen, setCancelOpen] = React.useState(false);
+  const [cancelling, setCancelling] = React.useState(false);
+  const [cancelReason, setCancelReason] = React.useState("");
+  const [cancelOutcome, setCancelOutcome] =
+    React.useState<UmbrellaCancelResponse | null>(null);
 
   React.useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -144,6 +153,46 @@ export default function UmbrellaDetailPage() {
       toast({ title: "Couldn't unlink", description: msg, variant: "destructive" });
     } finally {
       setUnlinkingBooking(null);
+    }
+  };
+
+  // BK-100.2 Layer 2c — cascade cancel. Hits the new
+  // POST /:id/cancel endpoint which transitions every active child
+  // booking to Cancelled (through the standard state-machine helper,
+  // so history rows + vendor notifications still fire) and flips the
+  // umbrella row to status='cancelled'. We keep the dialog open after
+  // success to render the per-child outcome summary before navigating.
+  const handleCancel = async () => {
+    if (!umbrella) return;
+    setCancelling(true);
+    setCancelOutcome(null);
+    try {
+      const out = await WeddingUmbrellasAPI.cancel(umbrella.id, {
+        reason: cancelReason.trim() || undefined,
+      });
+      setCancelOutcome(out);
+      const cascadedCount = out?.cascaded?.length || 0;
+      const failedCount = out?.failed?.length || 0;
+      toast({
+        title: out?.noop
+          ? "Already cancelled"
+          : cascadedCount > 0
+            ? `Cancelled ${cascadedCount} booking${cascadedCount === 1 ? "" : "s"}`
+            : "Umbrella cancelled",
+        description: failedCount
+          ? `${failedCount} booking${failedCount === 1 ? "" : "s"} couldn't be cancelled — please check below.`
+          : "Vendors have been notified.",
+        variant: failedCount ? "destructive" : undefined,
+      });
+      await load();
+    } catch (e) {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        (e as Error)?.message ||
+        "Couldn't cancel";
+      toast({ title: "Couldn't cancel", description: msg, variant: "destructive" });
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -221,6 +270,26 @@ export default function UmbrellaDetailPage() {
               <LinkIcon className="h-3.5 w-3.5" />
               Link booking
             </Button>
+            {/* BK-100.2 Layer 2c — Cancel umbrella only shows when the
+                umbrella is still in a cancellable state. Already-
+                cancelled / completed umbrellas hide the action so the
+                customer can't double-cancel. */}
+            {umbrella.status !== "cancelled" &&
+              umbrella.status !== "completed" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 text-bridal-coral hover:text-bridal-coral border-bridal-coral/30"
+                  onClick={() => {
+                    setCancelReason("");
+                    setCancelOutcome(null);
+                    setCancelOpen(true);
+                  }}
+                >
+                  <Ban className="h-3.5 w-3.5" />
+                  Cancel
+                </Button>
+              )}
             <Button
               size="sm"
               variant="outline"
@@ -503,8 +572,10 @@ export default function UmbrellaDetailPage() {
                 Removing a booking from the umbrella never cancels it.
               </li>
               <li className="flex items-start gap-2">
-                <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-500" />
-                Cancellation cascade ships in the next release.
+                <Ban className="h-3.5 w-3.5 mt-0.5 shrink-0 text-bridal-coral" />
+                Cancel the whole umbrella to cancel every linked
+                booking in one step — vendors get notified
+                automatically.
               </li>
             </ul>
           </SectionCard>
@@ -517,6 +588,209 @@ export default function UmbrellaDetailPage() {
         onOpenChange={setLinkOpen}
         onLinked={load}
       />
+
+      {/* BK-100.2 Layer 2c — cascade-cancel dialog. Two phases:
+           1. Pre-confirm: shows count of active bookings about to be
+              cancelled + an optional reason textarea.
+           2. Post-confirm (cancelOutcome set): shows the per-child
+              outcome so the customer can see exactly what happened —
+              especially the `skipped[]` list for already-Completed
+              children that weren't touched. */}
+      <AlertDialog
+        open={cancelOpen}
+        onOpenChange={(open) => {
+          if (cancelling) return;
+          setCancelOpen(open);
+          if (!open) {
+            // Reset for next open.
+            setCancelOutcome(null);
+            setCancelReason("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Ban className="h-5 w-5 text-bridal-coral" />
+              {cancelOutcome ? "Cancellation summary" : "Cancel this umbrella?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                {!cancelOutcome ? (
+                  <>
+                    <p>
+                      This will cancel <strong>every active booking</strong> linked to{" "}
+                      {umbrellaTitle(umbrella)} — including deposits, vendor crews,
+                      and any in-flight installments. Already-completed bookings
+                      stay completed.
+                    </p>
+                    {(() => {
+                      const active = children.filter((b) =>
+                        ["Pending", "Awaiting Payment", "Confirmed"].includes(b.status),
+                      ).length;
+                      const completed = children.filter((b) => b.status === "Completed").length;
+                      const already = children.filter((b) => b.status === "Cancelled").length;
+                      return (
+                        <div className="rounded-md border border-bridal-coral/40 bg-bridal-coral/5 p-3 text-sm">
+                          <p className="font-medium text-bridal-coral">
+                            {active} booking{active === 1 ? "" : "s"} will be cancelled.
+                          </p>
+                          {(completed > 0 || already > 0) && (
+                            <p className="text-xs text-bridal-text-soft mt-1">
+                              {completed > 0 && `${completed} already completed`}
+                              {completed > 0 && already > 0 && " · "}
+                              {already > 0 && `${already} already cancelled`}
+                              {" — left untouched."}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    <div>
+                      <label
+                        htmlFor="cancel-reason"
+                        className="block text-xs font-medium text-bridal-text-label mb-1.5"
+                      >
+                        Reason (optional) — saved to your umbrella notes for record
+                      </label>
+                      <Textarea
+                        id="cancel-reason"
+                        value={cancelReason}
+                        onChange={(e) => setCancelReason(e.target.value.slice(0, 500))}
+                        placeholder="e.g. wedding postponed indefinitely, family bereavement, venue cancelled on us…"
+                        rows={3}
+                        disabled={cancelling}
+                      />
+                    </div>
+                    <p className="text-xs text-bridal-text-soft italic">
+                      Refunds for each cancelled booking follow that booking&apos;s
+                      cancellation policy — your umbrella doesn&apos;t override it.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-bridal-charcoal">
+                      Umbrella status:{" "}
+                      <Badge variant="outline" className="text-[10px]">
+                        cancelled
+                      </Badge>
+                    </p>
+                    {cancelOutcome.cascaded.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-bridal-text-label uppercase tracking-wider mb-1.5">
+                          Cancelled ({cancelOutcome.cascaded.length})
+                        </p>
+                        <ul className="space-y-1 text-sm">
+                          {cancelOutcome.cascaded.map((o) => (
+                            <li
+                              key={o.id}
+                              className="flex items-center justify-between gap-2 px-2 py-1 rounded bg-bridal-coral/5 border border-bridal-coral/20"
+                            >
+                              <span>Booking #{o.id}</span>
+                              <span className="text-[10px] text-bridal-text-soft tabular-nums">
+                                {o.from} → {o.to}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {cancelOutcome.skipped.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-bridal-text-label uppercase tracking-wider mb-1.5">
+                          Left as-is ({cancelOutcome.skipped.length})
+                        </p>
+                        <ul className="space-y-1 text-sm">
+                          {cancelOutcome.skipped.map((o) => (
+                            <li
+                              key={o.id}
+                              className="flex items-center justify-between gap-2 px-2 py-1 rounded bg-bridal-cream border border-bridal-beige/70"
+                            >
+                              <span>Booking #{o.id}</span>
+                              <span className="text-[10px] text-bridal-text-soft">
+                                {o.status}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {cancelOutcome.failed.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-red-700 uppercase tracking-wider mb-1.5">
+                          Couldn&apos;t cancel ({cancelOutcome.failed.length})
+                        </p>
+                        <ul className="space-y-1 text-sm">
+                          {cancelOutcome.failed.map((o) => (
+                            <li
+                              key={o.id}
+                              className="px-2 py-1 rounded bg-red-50 border border-red-200"
+                            >
+                              <p>Booking #{o.id}</p>
+                              {o.error && (
+                                <p className="text-[10px] text-red-700 mt-0.5 italic">
+                                  {o.error}
+                                </p>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="text-xs text-bridal-text-soft mt-1.5 italic">
+                          Try cancelling these from each booking&apos;s detail page,
+                          or contact support.
+                        </p>
+                      </div>
+                    )}
+                    {cancelOutcome.cascaded.length === 0 &&
+                      cancelOutcome.skipped.length === 0 &&
+                      cancelOutcome.failed.length === 0 && (
+                        <p className="text-sm text-bridal-text-soft">
+                          The umbrella had no linked bookings to cascade.
+                        </p>
+                      )}
+                  </>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            {cancelOutcome ? (
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault();
+                  setCancelOpen(false);
+                  setCancelOutcome(null);
+                  setCancelReason("");
+                }}
+                className="bg-bridal-gold hover:bg-bridal-gold-dark text-white"
+              >
+                Done
+              </AlertDialogAction>
+            ) : (
+              <>
+                <AlertDialogCancel disabled={cancelling}>Keep umbrella</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleCancel();
+                  }}
+                  disabled={cancelling}
+                  className="bg-bridal-coral hover:bg-bridal-coral/90 text-white"
+                >
+                  {cancelling ? (
+                    <>
+                      <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                      Cancelling…
+                    </>
+                  ) : (
+                    "Yes, cancel everything"
+                  )}
+                </AlertDialogAction>
+              </>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>

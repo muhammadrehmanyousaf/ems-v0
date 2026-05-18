@@ -190,4 +190,49 @@ export class WeddingUmbrellasAPI {
     );
     return res.data?.data?.booking;
   }
+
+  /**
+   * POST /api/v1/wedding-umbrellas/:id/cancel — BK-100.2 Layer 2c.
+   *
+   * Cascades cancel through every active child Booking + flips the
+   * umbrella row to status='cancelled'. Returns per-child outcome so
+   * the FE can show exactly what was cancelled vs. skipped.
+   *
+   * - `cascaded[]`: children we transitioned to Cancelled (from
+   *   Pending / Awaiting Payment / Confirmed).
+   * - `skipped[]`: children we left alone (already Completed,
+   *   already Cancelled, or refused by state-machine).
+   * - `failed[]`: children where the per-row transition threw (rare,
+   *   reported for triage).
+   *
+   * Idempotent: calling on an already-cancelled umbrella returns
+   * `{ noop: true }` with empty cascade arrays.
+   */
+  static async cancel(
+    umbrellaId: number,
+    body: { reason?: string; cascadeChildren?: boolean; forceMajeure?: boolean } = {},
+  ): Promise<UmbrellaCancelResponse> {
+    const res = await axiosInstance.post(
+      `/api/v1/wedding-umbrellas/${umbrellaId}/cancel`,
+      body,
+    );
+    return res.data?.data;
+  }
+}
+
+export interface UmbrellaCancelOutcome {
+  id: number;
+  from?: string;
+  to?: string;
+  status?: string;
+  reason?: string;
+  error?: string;
+}
+
+export interface UmbrellaCancelResponse {
+  umbrella: WeddingUmbrella;
+  cascaded: UmbrellaCancelOutcome[];
+  skipped: UmbrellaCancelOutcome[];
+  failed: UmbrellaCancelOutcome[];
+  noop?: boolean;
 }
