@@ -23,6 +23,8 @@ import { Loader2, Building2, MapPin, DollarSign, Shield } from 'lucide-react'
 import { CancellationPolicyCard } from '../subComponents/cancellation-policy-card'
 // BK-100.52 — vendor in-house bundled services (catering / decor / DJ / etc).
 import { BundledServicesCard } from '../subComponents/bundled-services-card'
+// BK-100.51 — multi-resource vendor capacity (halls / kitchen / crews / tents).
+import { ResourcesCard } from '../subComponents/resources-card'
 
 const formSchema = z.object({
     name: z.string().min(2, { message: "Business name must be at least 2 characters." }),
@@ -348,6 +350,16 @@ const BasicInfoTab = ({ business, onSuccess }: BasicInfoTabProps) => {
                 flow integration ship in Layer 2. */}
             <div className="pt-6">
                 <BundledServicesCard businessId={business.id} />
+            </div>
+
+            {/* BK-100.51 — multi-resource capacity declarations. Layer 1
+                captures vendor declarations; the slot engine continues
+                to use legacy single-capacity until Layer 2 lights up
+                the integration behind the opt-in flag. The card surfaces
+                the "no booking changes yet" reality clearly so vendors
+                aren't surprised. */}
+            <div className="pt-6">
+                <ResourcesCard businessId={business.id} />
             </div>
         </div>
     )
