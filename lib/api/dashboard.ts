@@ -499,6 +499,19 @@ export class ReviewsAPI {
   static async delete(reviewId: number | string): Promise<void> {
     await axiosInstance.delete(`/api/v1/reviews/${reviewId}`);
   }
+
+  // BK-100.7 — customer submits a review for a specific business on a
+  // specific booking. Backend gates to booking.status === 'Completed'
+  // and enforces one review per (user, business, booking).
+  static async submitReview(input: {
+    businessId: number;
+    bookingId: number;
+    rating: number; // 1..5
+    comment?: string;
+  }): Promise<{ review: unknown }> {
+    const res = await axiosInstance.post(`/api/v1/reviews`, input);
+    return res.data?.data;
+  }
 }
 
 // ─── Customers ────────────────────────────────────────────────

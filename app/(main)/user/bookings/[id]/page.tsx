@@ -27,7 +27,7 @@ import {
   ChevronRight,
   Star,
 } from "lucide-react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import axiosInstance from "@/lib/axiosConfig";
 import { BACKEND_URL } from "@/lib/backend-url";
@@ -52,6 +52,9 @@ import {
 import { InstallmentsCard } from "@/components/bookings/installments-card";
 import { ChangeRequestsCard } from "@/components/bookings/change-requests-card";
 import { DisputeCard } from "@/components/bookings/dispute-card";
+// BK-100.7 — inline review prompt. Renders only on Completed bookings;
+// auto-focuses if `?action=review` is in the URL (C15 email link).
+import { ReviewPromptCard } from "@/components/bookings/review-prompt-card";
 
 interface BookingDetail {
   id: number;
@@ -182,7 +185,11 @@ export default function BookingDetailPage() {
   const { user, isAuthenticated, isLoading } = useUser();
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const bookingId = (params?.id as string) ?? "";
+  // BK-100.7 — auto-scroll/focus the review card when the customer
+  // arrives from the C15 prompt email (`...?action=review`).
+  const wantsReview = searchParams?.get("action") === "review";
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [isLoadingBooking, setIsLoadingBooking] = useState(true);
@@ -695,6 +702,27 @@ export default function BookingDetailPage() {
           <DisputeCard
             bookingId={booking.id}
             isCompleted={statusKey === "completed"}
+          />
+
+          {/* BK-100.7 — inline review prompt. Renders only when the
+              booking is Completed. Backend re-enforces the gate so
+              this is purely a UX hint. Auto-scrolls into view when
+              the customer arrives via the C15 email link
+              (`...?action=review`). Backend Booking.status is stored
+              title-case ("Completed") matching the ENUM. */}
+          <ReviewPromptCard
+            bookingId={booking.id}
+            bookingStatus={booking.status || ""}
+            vendors={(booking.bookingDetails || []).map((d) => ({
+              businessId: d.businessId,
+              businessName: d.business?.name || "Vendor",
+              // alreadyReviewed is unknown until we fetch reviews —
+              // backend's POST /reviews dedups on (user, business,
+              // booking) and returns a clean 400 if dup. The card
+              // surfaces that as friendly inline copy.
+              alreadyReviewed: false,
+            }))}
+            autoFocus={wantsReview}
           />
 
           <SectionCard title="Timeline">
