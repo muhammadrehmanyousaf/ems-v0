@@ -109,4 +109,32 @@ export class ChatAPI {
       return [];
     }
   }
+
+  /**
+   * Phase 0 #1 — REST send-message companion to the existing
+   * Socket.io path. Used by ChatContext when the live socket is not
+   * connected (mobile network, corporate firewall, etc.) so vendors
+   * never see a "send" button that silently does nothing.
+   *
+   * Backend persists the message + broadcasts to receivers via
+   * Socket.io. Sender sees their own message echoed back in the
+   * returned `message` payload (canonical from the DB, replacing
+   * any tempId placeholder the FE may have rendered optimistically).
+   */
+  static async sendMessage(
+    conversationId: number,
+    content: string,
+    messageType: "text" | "image" | "file" = "text",
+  ): Promise<ChatMessageItem | null> {
+    try {
+      const response = await axiosInstance.post(
+        `${BACKEND_URL}api/v1/chat/conversations/${conversationId}/messages`,
+        { content, messageType },
+      );
+      return response.data?.data?.message ?? null;
+    } catch (error) {
+      console.error("Error sending message:", error);
+      throw error;
+    }
+  }
 }

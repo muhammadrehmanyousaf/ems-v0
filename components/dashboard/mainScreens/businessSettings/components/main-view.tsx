@@ -7,6 +7,10 @@ import ImagesTab from './tabs/images-tab';
 import PackagesTab from './tabs/packages-tab';
 import MenusTab from './tabs/menus-tab';
 import TypeSpecificTab from './tabs/type-specific-tab';
+// Phase 0 #2 — Bank details admin tab. Backend was always live;
+// this is the missing UI surface that lets vendors register a
+// payout target.
+import BankDetailsTab from './tabs/bank-details-tab';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUser } from '@/context/UserContext';
 import { useBusiness } from '@/context/BusinessContext';
@@ -62,6 +66,7 @@ const MainView = () => {
                 {active === 'type-specific' && vendorConfig && (
                     <TypeSpecificTab business={business} config={vendorConfig} onSuccess={onSuccess} />
                 )}
+                {active === 'bank-details' && <BankDetailsTab />}
             </div>
         </ScrollArea>
     )

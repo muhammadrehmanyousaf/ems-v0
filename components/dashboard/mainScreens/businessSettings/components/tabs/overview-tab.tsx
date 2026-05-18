@@ -7,7 +7,7 @@ import { ApiBusiness } from '@/lib/api/dashboard'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import { Edit, Images, Package, Settings2 } from 'lucide-react'
+import { Edit, Images, Package, Settings2, CreditCard } from 'lucide-react'
 
 interface OverviewTabProps {
     business: ApiBusiness;
@@ -18,6 +18,8 @@ const quickLinks = [
     { label: 'Images', tab: 'images', icon: Images, description: 'Manage your portfolio photos' },
     { label: 'Packages', tab: 'packages', icon: Package, description: 'Create & edit service packages' },
     { label: 'Details', tab: 'type-specific', icon: Settings2, description: 'Configure type-specific settings' },
+    // Phase 0 #2 — payout target.
+    { label: 'Bank Details', tab: 'bank-details', icon: CreditCard, description: 'Where payouts land — required for online bookings' },
 ]
 
 const OverviewTab = ({ business }: OverviewTabProps) => {
@@ -42,7 +44,7 @@ const OverviewTab = ({ business }: OverviewTabProps) => {
             </div>
 
             {/* Quick navigation cards */}
-            <div className='grid grid-cols-2 sm:grid-cols-4 gap-3'>
+            <div className='grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3'>
                 {quickLinks.map(({ label, tab, icon: Icon, description }) => (
                     <Link key={tab} href={`/dashboard/settings?tab=${tab}`}>
                         <Card className='hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer h-full group'>

@@ -284,44 +284,77 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const sendMessage = useCallback(
-    (content: string, tempId?: string) => {
+    async (content: string, tempId?: string) => {
       if (!activeConversationId || !content.trim()) return;
+      const trimmed = content.trim();
+      const txTempId = tempId || `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
+      // Optimistic update — same shape whether we go via socket or
+      // REST. The receiver-side broadcast replaces this in-place when
+      // the real message arrives (`chat:message-sent` for socket, the
+      // REST response handler for REST).
+      const optimisticMessage: any = {
+        id: Date.now(),
+        tempId: txTempId,
+        conversationId: activeConversationId,
+        senderId: Number(user?.id),
+        content: trimmed,
+        messageType: "text",
+        isRead: false,
+        readAt: null,
+        isEdited: false,
+        isDeleted: false,
+        createdAt: new Date().toISOString(),
+        sender: {
+          id: Number(user?.id),
+          fullName: user?.fullName || "",
+          profileImage: null,
+        },
+        _optimistic: true,
+      };
+      setMessages((prev) => [...prev, optimisticMessage]);
+
+      // Stop typing indicator regardless of transport.
+      if (isTypingRef.current) {
+        stopTyping();
+      }
+
+      // Phase 0 #1 — transport selection:
+      //   1) Live Socket.io connection → emit (existing path,
+      //      acknowledged via `chat:message-sent` listener on line ~109).
+      //   2) Otherwise → REST POST /api/v1/chat/conversations/:id/messages
+      //      (closes the long-standing "vendor can't reply" bug for
+      //      networks where Socket.io can't establish — mobile, corp WiFi).
       if (socketRef.current?.connected) {
         socketRef.current.emit("chat:send-message", {
           conversationId: activeConversationId,
-          content: content.trim(),
+          content: trimmed,
           messageType: "text",
-          tempId,
+          tempId: txTempId,
         });
-
-        // Optimistic update
-        const optimisticMessage: any = {
-          id: Date.now(),
-          tempId,
-          conversationId: activeConversationId,
-          senderId: Number(user?.id),
-          content: content.trim(),
-          messageType: "text",
-          isRead: false,
-          readAt: null,
-          isEdited: false,
-          isDeleted: false,
-          createdAt: new Date().toISOString(),
-          sender: {
-            id: Number(user?.id),
-            fullName: user?.fullName || "",
-            profileImage: null,
-          },
-          _optimistic: true,
-        };
-
-        setMessages((prev) => [...prev, optimisticMessage]);
+        return;
       }
 
-      // Stop typing indicator
-      if (isTypingRef.current) {
-        stopTyping();
+      try {
+        const real = await ChatAPI.sendMessage(activeConversationId, trimmed, "text");
+        if (real) {
+          // Replace the optimistic placeholder with the canonical row.
+          setMessages((prev) =>
+            prev.map((m) =>
+              (m as any).tempId === txTempId ? ({ ...real, tempId: txTempId } as any) : m,
+            ),
+          );
+        }
+      } catch (err) {
+        // Mark the optimistic message as failed so the UI can surface
+        // a "tap to retry" affordance. We don't auto-delete so the
+        // vendor doesn't lose their typed message.
+        console.error("[ChatContext] REST send failed:", err);
+        setMessages((prev) =>
+          prev.map((m) =>
+            (m as any).tempId === txTempId ? ({ ...m, _failed: true } as any) : m,
+          ),
+        );
       }
     },
     [activeConversationId, user]
