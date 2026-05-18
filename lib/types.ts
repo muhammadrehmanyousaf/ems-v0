@@ -223,6 +223,13 @@ export interface BookingFormData {
   serviceLocationMode?: 'at_vendor' | 'at_customer_home' | 'at_customer_plot' | 'at_third_party';
   serviceLocationAddress?: string;
   serviceLocationNotes?: string;
+
+  // BK-100.2 Layer 2d — optional umbrella attachment. When set, the
+  // booking is auto-linked to this WeddingUmbrella row on create AND
+  // any qualifying multi-event bundle discount (2 events → 3%, 3 → 5%,
+  // 4 → 7%, 5+ → 10%) is applied to totalAmount + downPayment by the
+  // backend at create-time. Customer picks this on the review step.
+  umbrellaId?: number;
 }
 
 export interface EventBooking {

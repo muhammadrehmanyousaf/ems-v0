@@ -413,6 +413,13 @@ export default function BookingForm() {
     if (currentForm.serviceLocationNotes?.trim()) {
       payload.serviceLocationNotes = currentForm.serviceLocationNotes.trim();
     }
+    // BK-100.2 Layer 2d — optional umbrella attachment. Backend
+    // validates ownership + active status + applies any qualifying
+    // multi-event bundle discount inside the create transaction.
+    // Missing / 0 / NaN → omitted → standalone booking (legacy path).
+    if (currentForm.umbrellaId && Number.isFinite(Number(currentForm.umbrellaId))) {
+      payload.umbrellaId = Number(currentForm.umbrellaId);
+    }
 
     try {
       setIsSubmitting(true)
@@ -668,6 +675,11 @@ export default function BookingForm() {
             selectedMenuObj={selectedMenuObj}
             vendorDetails={vendorsDetails[activeEventIndex]}
             venue={venue}
+            // BK-100.2 Layer 2d — only render the umbrella picker
+            // when we have a logged-in user (anonymous customers
+            // can't own umbrellas) AND a setter for the form data.
+            updateFormData={updateFormDataPartial}
+            isAuthenticated={!!user}
           />
         )
         break
