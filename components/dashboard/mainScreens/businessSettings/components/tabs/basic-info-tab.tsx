@@ -19,6 +19,8 @@ import { z } from 'zod'
 import { BusinessesAPI, type ApiBusiness } from '@/lib/api/dashboard'
 import { toast } from 'sonner'
 import { Loader2, Building2, MapPin, DollarSign, Shield } from 'lucide-react'
+// BK-100.5 — vendor-selectable cancellation policy presets.
+import { CancellationPolicyCard } from '../subComponents/cancellation-policy-card'
 
 const formSchema = z.object({
     name: z.string().min(2, { message: "Business name must be at least 2 characters." }),
@@ -328,6 +330,15 @@ const BasicInfoTab = ({ business, onSuccess }: BasicInfoTabProps) => {
                     </div>
                 </form>
             </Form>
+
+            {/* BK-100.5 — vendor-selectable cancellation policy presets.
+                Renders independently from the form above so saving the
+                basic-info form doesn't trigger an unrelated network round-trip,
+                and so the legacy free-text `cancelationPolicy` field
+                continues to coexist with the new structured policy. */}
+            <div className="pt-6">
+                <CancellationPolicyCard businessId={business.id} />
+            </div>
         </div>
     )
 }

@@ -195,6 +195,60 @@ export class BusinessesAPI {
     const res = await axiosInstance.get(`/api/v1/businesses/${id}/completeness`);
     return res.data?.data;
   }
+
+  // BK-100.5 — vendor-selectable cancellation policy presets.
+  static async getCancellationPolicy(
+    id: number,
+  ): Promise<CancellationPolicyResponse> {
+    const res = await axiosInstance.get(
+      `/api/v1/businesses/${id}/cancellation-policy`,
+    );
+    return res.data?.data;
+  }
+
+  static async setCancellationPolicy(
+    id: number,
+    preset: CancellationPresetKey,
+  ): Promise<{ policy: CancellationPolicy; presetKey: CancellationPresetKey }> {
+    const res = await axiosInstance.patch(
+      `/api/v1/businesses/${id}/cancellation-policy`,
+      { preset },
+    );
+    return res.data?.data;
+  }
+}
+
+// BK-100.5 — types mirror the backend `cancellationPolicyPresets.js` util.
+export type CancellationPresetKey =
+  | "platform_default"
+  | "flexible"
+  | "standard"
+  | "strict";
+
+export interface CancellationPolicyTier {
+  minDaysBefore: number;
+  refundPercent: number;
+  depositRefundable: boolean;
+}
+
+export interface CancellationPolicy {
+  version: number;
+  presetKey?: CancellationPresetKey;
+  presetLabel?: string;
+  tiers: CancellationPolicyTier[];
+  vendorCancelOverridesToFull: boolean;
+  forceMajeureOverridesToFull: boolean;
+  platformFeeRefundable: boolean;
+}
+
+export interface CancellationPolicyPreset extends CancellationPolicy {
+  key: CancellationPresetKey;
+}
+
+export interface CancellationPolicyResponse {
+  currentPolicy: CancellationPolicy | null;
+  currentPresetKey: CancellationPresetKey | null;
+  presets: CancellationPolicyPreset[];
 }
 
 // VR-050.10 — vendor profile completeness widget. Shape mirrors the
