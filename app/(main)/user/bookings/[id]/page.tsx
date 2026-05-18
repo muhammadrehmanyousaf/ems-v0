@@ -27,6 +27,7 @@ import {
   ChevronRight,
   Star,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import axiosInstance from "@/lib/axiosConfig";
@@ -110,6 +111,8 @@ interface Booking {
   postponedAt?: string | null;
   postponedUntilAt?: string | null;
   postponeReason?: string | null;
+  // BK-100.2 — optional umbrella link. NULL on unlinked bookings.
+  umbrellaId?: number | null;
 }
 
 const STATUS_CONFIG: Record<
@@ -482,6 +485,33 @@ export default function BookingDetailPage() {
         }
         actions={headerActions}
       />
+
+      {/* BK-100.2 — umbrella context banner. When this booking is
+          linked to a wedding-week umbrella, surface a tap-to-open
+          link so the customer can jump into the umbrella view. */}
+      {booking.umbrellaId && (
+        <div className="mb-4 rounded-lg border border-bridal-gold/45 bg-bridal-cream p-3.5">
+          <Link
+            href={`/user/umbrellas/${booking.umbrellaId}`}
+            className="flex items-center justify-between gap-3 group"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="size-8 rounded-md bg-bridal-gold/15 border border-bridal-gold/35 flex items-center justify-center flex-shrink-0">
+                <Star className="size-4 text-bridal-gold-dark" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-bridal-charcoal">
+                  Part of your wedding-week umbrella
+                </p>
+                <p className="text-xs text-bridal-text-soft">
+                  Tap to see every event + vendor in one view
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="size-4 text-bridal-gold-dark group-hover:translate-x-1 transition-transform" />
+          </Link>
+        </div>
+      )}
 
       {/* BK-100.9 — postponed-state banner. Shows above the detail
           grid so the customer + any family member opening the link
