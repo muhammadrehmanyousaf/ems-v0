@@ -230,6 +230,15 @@ export interface BookingFormData {
   // 4 → 7%, 5+ → 10%) is applied to totalAmount + downPayment by the
   // backend at create-time. Customer picks this on the review step.
   umbrellaId?: number;
+
+  // BK-100.52 Layer 2c — optional add-on selections from each vendor's
+  // BusinessBundledService catalogue. Keyed by businessId so multi-
+  // vendor carts stay cleanly separated. Backend validates each
+  // selection (must exist, must not be mandatory/included, must belong
+  // to a vendor in the cart) and applies the priceModel math
+  // (flat / per_plate × guestCount / percentage_of_total / free)
+  // before snapshotting to Booking.selectedBundledServicesJson.
+  selectedBundledServices?: Record<number, Array<{ serviceId: number }>>;
 }
 
 export interface EventBooking {

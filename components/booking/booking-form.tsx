@@ -420,6 +420,20 @@ export default function BookingForm() {
     if (currentForm.umbrellaId && Number.isFinite(Number(currentForm.umbrellaId))) {
       payload.umbrellaId = Number(currentForm.umbrellaId);
     }
+    // BK-100.52 Layer 2c — optional bundled-service selections from
+    // the in-house add-on picker. Backend validates each selection
+    // against the vendor's actual BusinessBundledService rows and
+    // applies the priceModel math (flat / per_plate × guestCount /
+    // percentage_of_total / free) inside the same transaction.
+    // Missing / empty / non-object → omitted → no add-ons applied.
+    if (
+      currentForm.selectedBundledServices &&
+      typeof currentForm.selectedBundledServices === "object" &&
+      !Array.isArray(currentForm.selectedBundledServices) &&
+      Object.keys(currentForm.selectedBundledServices).length > 0
+    ) {
+      payload.selectedBundledServices = currentForm.selectedBundledServices;
+    }
 
     try {
       setIsSubmitting(true)

@@ -19,6 +19,11 @@ import {
   type BundlePreview,
   type WeddingUmbrella,
 } from "@/lib/api/weddingUmbrellas"
+import {
+  BundledServicesAPI,
+  BUNDLED_CATEGORY_LABELS,
+  type BundledService,
+} from "@/lib/api/bundledServices"
 
 interface Props {
   formData: BookingFormData
@@ -77,7 +82,95 @@ export default function ReviewStep({
   const pkgPrice = Number(selectedPackageObj?.price) || 0
   const qty = isCarRental || isBridalWear || isWeddingStationery ? formData.vehicleQuantity || 1 : 1
   const menuPrice = Number(selectedMenuObj?.price) || 0
-  const total = pkgPrice * qty + menuPrice
+  const baseTotal = pkgPrice * qty + menuPrice
+
+  // BK-100.52 Layer 2c — fetch the venue's optional bundled add-ons.
+  // Filter to active + non-mandatory + non-included rows (those baked
+  // into the package price aren't pickable). Anonymous flows also see
+  // this — the picker doesn't need auth, only the API call. The
+  // venue's businessId is the picker key.
+  const venueBusinessId = venue?.vendor?.id || venue?.id
+  const [bundledServices, setBundledServices] = React.useState<BundledService[]>([])
+  const [loadingBundled, setLoadingBundled] = React.useState(false)
+  const showBundledPicker = !!updateFormData && !!venueBusinessId
+
+  React.useEffect(() => {
+    if (!showBundledPicker || !venueBusinessId) return
+    let cancelled = false
+    setLoadingBundled(true)
+    BundledServicesAPI.list(Number(venueBusinessId))
+      .then((res) => {
+        if (cancelled) return
+        const optional = (res?.services || []).filter(
+          (s) => !s.included && !s.mandatory && s.isActive,
+        )
+        // Sort by displayOrder then by name, mirroring backend list order.
+        optional.sort((a, b) => {
+          const oA = Number(a.displayOrder) || 0
+          const oB = Number(b.displayOrder) || 0
+          if (oA !== oB) return oA - oB
+          return String(a.name).localeCompare(String(b.name))
+        })
+        setBundledServices(optional)
+      })
+      .catch(() => {
+        if (!cancelled) setBundledServices([])
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingBundled(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [showBundledPicker, venueBusinessId])
+
+  // Customer's current picks for THIS venue's businessId.
+  const myPicks: Array<{ serviceId: number }> = venueBusinessId
+    ? formData.selectedBundledServices?.[Number(venueBusinessId)] || []
+    : []
+  const isPicked = (id: number) => myPicks.some((p) => Number(p.serviceId) === id)
+
+  const togglePick = (svc: BundledService) => {
+    if (!updateFormData || !venueBusinessId) return
+    const bid = Number(venueBusinessId)
+    const cur = formData.selectedBundledServices || {}
+    const list = (cur[bid] || []).filter((p) => Number(p.serviceId) !== svc.id)
+    const isCurrentlyPicked = (cur[bid] || []).some((p) => Number(p.serviceId) === svc.id)
+    const nextList = isCurrentlyPicked ? list : [...list, { serviceId: svc.id }]
+    const next = { ...cur }
+    if (nextList.length === 0) delete next[bid]
+    else next[bid] = nextList
+    updateFormData({ selectedBundledServices: next })
+  }
+
+  // Compute add-on cost client-side for the live preview. Backend
+  // recomputes authoritatively in the create transaction; a client/
+  // server drift can only make the customer's preview slightly off,
+  // never overcharge.
+  const guestCount = Math.max(1, Number(formData.guestCount) || 1)
+  const computeAddOnCost = (svc: BundledService): number => {
+    const amt = Number(svc.priceAmount) || 0
+    switch (svc.priceModel) {
+      case "free":
+        return 0
+      case "flat":
+        return Math.round(amt)
+      case "per_plate":
+        return Math.round(amt * guestCount)
+      case "percentage_of_total":
+        return Math.round((baseTotal * amt) / 100)
+      default:
+        return 0
+    }
+  }
+  const pickedServices = bundledServices.filter((s) => isPicked(s.id))
+  const addOnTotal = pickedServices.reduce(
+    (sum, svc) => sum + computeAddOnCost(svc),
+    0,
+  )
+
+  // `total` is now base + add-ons. Umbrella discount applies on top.
+  const total = baseTotal + addOnTotal
 
   let downPayment = 0
   if (venue) {
@@ -226,6 +319,102 @@ export default function ReviewStep({
           </div>
         </section>
       </div>
+
+      {/* BK-100.52 Layer 2c — bundled add-on picker. Surfaces this
+           vendor's optional in-house services (catering upgrades,
+           valet, generator backup, etc.) so the customer can stack
+           extras into the booking with one tap each. Hidden entirely
+           when the vendor has zero optional bundled services — most
+           non-venue vendors fall into this category and see no extra
+           UI. */}
+      {showBundledPicker && (loadingBundled || bundledServices.length > 0) && (
+        <section className="rounded-md border border-bridal-beige bg-bridal-ivory overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-bridal-beige bg-bridal-cream/60 flex items-center justify-between gap-2">
+            <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark inline-flex items-center gap-1.5">
+              <Sparkles className="w-3 h-3" />
+              Optional add-ons
+            </p>
+            {pickedServices.length > 0 && (
+              <span className="font-bridal text-[11px] text-bridal-charcoal tabular-nums">
+                +{formatPKR(addOnTotal)} · {pickedServices.length} selected
+              </span>
+            )}
+          </div>
+          <div className="px-4 py-3 space-y-2">
+            {loadingBundled ? (
+              <div className="flex items-center gap-2 text-xs text-bridal-text-soft">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Loading available add-ons…
+              </div>
+            ) : (
+              bundledServices.map((svc) => {
+                const picked = isPicked(svc.id)
+                const cost = computeAddOnCost(svc)
+                const priceLabel =
+                  svc.priceModel === "free"
+                    ? "Included free"
+                    : svc.priceModel === "per_plate"
+                      ? `${formatPKR(Number(svc.priceAmount) || 0)} per guest`
+                      : svc.priceModel === "percentage_of_total"
+                        ? `${Number(svc.priceAmount) || 0}% of booking total`
+                        : formatPKR(Number(svc.priceAmount) || 0)
+                return (
+                  <button
+                    key={svc.id}
+                    type="button"
+                    onClick={() => togglePick(svc)}
+                    className={`w-full text-left rounded-md border px-3 py-2.5 transition-colors ${
+                      picked
+                        ? "border-bridal-gold-dark bg-bridal-gold/10"
+                        : "border-bridal-beige bg-white hover:border-bridal-gold/50 hover:bg-bridal-cream/30"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-display italic text-[14px] text-bridal-charcoal">
+                            {svc.name}
+                          </span>
+                          <span className="font-bridal text-[9.5px] uppercase tracking-[0.18em] text-bridal-text-label">
+                            {BUNDLED_CATEGORY_LABELS[svc.category] || svc.category}
+                          </span>
+                        </div>
+                        {svc.description && (
+                          <p className="text-[12px] text-bridal-text-soft mt-1 leading-relaxed line-clamp-2">
+                            {svc.description}
+                          </p>
+                        )}
+                        <p className="text-[11px] text-bridal-text-soft mt-1.5 tabular-nums">
+                          {priceLabel}
+                          {svc.priceModel !== "flat" && svc.priceModel !== "free" && cost > 0 && (
+                            <span className="text-bridal-charcoal">
+                              {" "}
+                              · {formatPKR(cost)} for this booking
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <span
+                        aria-hidden
+                        className={`shrink-0 mt-1 inline-flex items-center justify-center w-5 h-5 rounded-full border-2 ${
+                          picked
+                            ? "border-bridal-gold-dark bg-bridal-gold-dark text-white"
+                            : "border-bridal-beige bg-white"
+                        }`}
+                      >
+                        {picked && <span className="text-[10px] leading-none">✓</span>}
+                      </span>
+                    </div>
+                  </button>
+                )
+              })
+            )}
+            <p className="text-[10.5px] text-bridal-text-soft italic mt-2 leading-relaxed">
+              Your vendor confirms availability for each add-on; final total is set when the vendor accepts. Required / always-included services aren&apos;t shown here.
+            </p>
+          </div>
+        </section>
+      )}
 
       {/* BK-100.2 Layer 2d — umbrella picker. Renders only when the
            customer is authenticated AND has at least one active
