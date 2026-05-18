@@ -120,3 +120,136 @@ export interface SlotAvailabilityRow {
   lastSpot: boolean;
   thresholdPct: number;
 }
+
+// ───────────────────────────────────────────────────────────────────
+// Phase 0 #6.2 — Slot Templates CRUD (vendor-side availability core).
+// ───────────────────────────────────────────────────────────────────
+
+export interface SlotTemplate {
+  id: number;
+  businessId: number;
+  label: string;
+  startTime: string; // HH:MM:SS
+  endTime: string;
+  capacity: number;
+  weekdayMask: number;
+  isActive: boolean;
+  sortOrder: number;
+  bufferAfterMinutes: number;
+  unitGuestCapacity: number | null;
+}
+
+export interface UpsertSlotTemplateInput {
+  label?: string;
+  startTime?: string;
+  endTime?: string;
+  capacity?: number;
+  weekdayMask?: number;
+  isActive?: boolean;
+  sortOrder?: number;
+  bufferAfterMinutes?: number;
+  unitGuestCapacity?: number | null;
+}
+
+export class SlotTemplatesAPI {
+  static async list(
+    businessId: number,
+    opts: { onlyActive?: boolean } = {},
+  ): Promise<SlotTemplate[]> {
+    const params = opts.onlyActive === false ? { onlyActive: 'false' } : undefined;
+    const res = await axiosInstance.get(
+      `${v1}/businesses/${businessId}/slots`,
+      { params },
+    );
+    return res.data?.data?.templates ?? res.data?.data ?? [];
+  }
+
+  static async create(
+    businessId: number,
+    body: UpsertSlotTemplateInput,
+  ): Promise<SlotTemplate> {
+    const res = await axiosInstance.post(
+      `${v1}/businesses/${businessId}/slots`,
+      body,
+    );
+    return res.data?.data?.template ?? res.data?.data;
+  }
+
+  static async update(
+    businessId: number,
+    templateId: number,
+    body: UpsertSlotTemplateInput,
+  ): Promise<SlotTemplate> {
+    const res = await axiosInstance.patch(
+      `${v1}/businesses/${businessId}/slots/${templateId}`,
+      body,
+    );
+    return res.data?.data?.template ?? res.data?.data;
+  }
+
+  /** Soft-deactivate (the backend keeps the row for historical bookings). */
+  static async deactivate(businessId: number, templateId: number): Promise<void> {
+    await axiosInstance.delete(
+      `${v1}/businesses/${businessId}/slots/${templateId}`,
+    );
+  }
+
+  /** One-tap onboarding: seeds Morning / Afternoon / Evening templates. */
+  static async seedDefaults(businessId: number): Promise<SlotTemplate[]> {
+    const res = await axiosInstance.post(
+      `${v1}/businesses/${businessId}/slots/templates/seed-defaults`,
+    );
+    return res.data?.data?.templates ?? [];
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────
+// Phase 0 #6.4 — Per-date capacity overrides.
+// ───────────────────────────────────────────────────────────────────
+
+export interface CapacityOverride {
+  id: number;
+  businessId: number;
+  forDate: string; // YYYY-MM-DD
+  slotTemplateId: number | null; // NULL = day-wide
+  capacityOverride: number;
+  reason: string | null;
+  createdByUserId: number | null;
+}
+
+export interface UpsertCapacityOverrideInput {
+  forDate: string;
+  slotTemplateId?: number | null;
+  capacityOverride: number;
+  reason?: string;
+}
+
+export class CapacityOverridesAPI {
+  static async list(
+    businessId: number,
+    opts: { from?: string; to?: string } = {},
+  ): Promise<CapacityOverride[]> {
+    const res = await axiosInstance.get(
+      `${v1}/businesses/${businessId}/slots/capacity-overrides`,
+      { params: opts },
+    );
+    return res.data?.data?.overrides ?? res.data?.data ?? [];
+  }
+
+  static async set(
+    businessId: number,
+    body: UpsertCapacityOverrideInput,
+  ): Promise<CapacityOverride> {
+    const res = await axiosInstance.post(
+      `${v1}/businesses/${businessId}/slots/capacity-overrides`,
+      body,
+    );
+    return res.data?.data?.override ?? res.data?.data;
+  }
+
+  static async clear(businessId: number, overrideId: number): Promise<void> {
+    await axiosInstance.delete(
+      `${v1}/businesses/${businessId}/slots/capacity-overrides/${overrideId}`,
+    );
+  }
+}

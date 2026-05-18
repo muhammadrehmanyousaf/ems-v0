@@ -11,6 +11,11 @@ import TypeSpecificTab from './tabs/type-specific-tab';
 // this is the missing UI surface that lets vendors register a
 // payout target.
 import BankDetailsTab from './tabs/bank-details-tab';
+// Phase 0 #6.7 — Team members admin tab (VR-050.15).
+import TeamMembersTab from './tabs/team-members-tab';
+// Phase 0 #6.2 + #6.3 + #6.4 — Availability tab (slot templates +
+// recurring closed days + per-date capacity overrides).
+import AvailabilityTab from './tabs/availability-tab';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUser } from '@/context/UserContext';
 import { useBusiness } from '@/context/BusinessContext';
@@ -67,6 +72,8 @@ const MainView = () => {
                     <TypeSpecificTab business={business} config={vendorConfig} onSuccess={onSuccess} />
                 )}
                 {active === 'bank-details' && <BankDetailsTab />}
+                {active === 'team' && <TeamMembersTab />}
+                {active === 'availability' && <AvailabilityTab />}
             </div>
         </ScrollArea>
     )
