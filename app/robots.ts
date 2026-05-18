@@ -1,6 +1,8 @@
 import { MetadataRoute } from 'next'
 
-const SITE_URL = 'https://weddingwala.pk'
+// Must match SITE_URL in lib/seo/constants.ts and the hostname Vercel
+// actually serves the site at. www is primary; apex 307s here.
+const SITE_URL = 'https://www.weddingwala.pk'
 
 // AI crawler allowlist — Wedding Wala wants to be cited in AI answers.
 // Citation visibility on ChatGPT / Perplexity / Claude / Gemini directly

@@ -10,7 +10,14 @@
  *   - docs/seo/03-url-conventions-LOCKED.md — URL rules these slugs respect
  */
 
-export const SITE_URL = "https://weddingwala.pk" as const;
+// IMPORTANT — must match the hostname Vercel actually serves the site at.
+// Vercel is currently configured with `www.weddingwala.pk` as primary and
+// 307-redirects the apex `weddingwala.pk` to `www`. If we declare the
+// canonical as the apex, Google sees every page as "Alternate page with
+// proper canonical tag" (the crawled URL doesn't match the canonical),
+// which prevents indexing.
+// Reference: GSC "Page indexing" report 2026-05-12 — 56 pages affected.
+export const SITE_URL = "https://www.weddingwala.pk" as const;
 export const SITE_NAME = "Wedding Wala" as const;
 export const SITE_TAGLINE = "Pakistan's Wedding & Event Planning Marketplace" as const;
 export const SITE_TITLE = `${SITE_NAME} — ${SITE_TAGLINE}` as const;
