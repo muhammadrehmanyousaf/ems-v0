@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState, useCallback } from "react"
 import type { BookingFormData, EventVenue } from "@/lib/types"
 import { ChevronLeft, ChevronRight, Sun, Sunset, Moon, Minus, Plus, AlertTriangle, Timer, XCircle } from "lucide-react"
 import { VendorAPI } from "@/lib/api/vendors"
+// BK-100.53 — service-location mode picker (optional; lets the
+// customer specify mehndi-at-home / marquee-at-plot / Nikah-at-masjid).
+import { ServiceLocationPicker } from "@/components/booking/service-location-picker"
 
 interface Props {
   formData: BookingFormData
@@ -480,6 +483,29 @@ export default function DateTimeStep({
           </div>
         </section>
       )}
+
+      {/* BK-100.53 — Service-location picker. Optional; collapsed by
+          default (empty mode). When the vendor type strongly suggests a
+          mode (marquee/tent → at_customer_plot, henna/makeup → at_home,
+          Nikahkhwan → at_third_party), the picker surfaces a "Suggested"
+          chip on the relevant option without forcing the customer to
+          pick it. */}
+      <section className="mt-5">
+        <ServiceLocationPicker
+          mode={formData.serviceLocationMode}
+          address={formData.serviceLocationAddress}
+          notes={formData.serviceLocationNotes}
+          vendorType={venue?.vendor?.vendorType}
+          onChange={(next) =>
+            updateFormData((prev) => ({
+              ...prev,
+              serviceLocationMode: next.mode,
+              serviceLocationAddress: next.address,
+              serviceLocationNotes: next.notes,
+            }))
+          }
+        />
+      </section>
     </div>
   )
 }

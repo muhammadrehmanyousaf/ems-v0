@@ -231,6 +231,17 @@ export interface BookingData {
   createdAt: string;
   updatedAt: string;
   bookingDetails: BookingDetail[];
+  // BK-100.53 — Service-location mode + address + notes. NULL on
+  // legacy bookings; vendor detail sheet renders the section only
+  // when set.
+  serviceLocationMode?:
+    | 'at_vendor'
+    | 'at_customer_home'
+    | 'at_customer_plot'
+    | 'at_third_party'
+    | null;
+  serviceLocationAddress?: string | null;
+  serviceLocationNotes?: string | null;
 }
 
 export interface BookingListResponse {

@@ -402,6 +402,18 @@ export default function BookingForm() {
       payload.guestCount = currentForm.guestCount;
     }
 
+    // BK-100.53 — service-location mode + address + notes. All optional.
+    // Backend defaults absent fields to NULL (treated as at_vendor).
+    if (currentForm.serviceLocationMode) {
+      payload.serviceLocationMode = currentForm.serviceLocationMode;
+    }
+    if (currentForm.serviceLocationAddress?.trim()) {
+      payload.serviceLocationAddress = currentForm.serviceLocationAddress.trim();
+    }
+    if (currentForm.serviceLocationNotes?.trim()) {
+      payload.serviceLocationNotes = currentForm.serviceLocationNotes.trim();
+    }
+
     try {
       setIsSubmitting(true)
       const response = await axiosInstance.post(`${BACKEND_URL}api/v1/bookings`, payload)

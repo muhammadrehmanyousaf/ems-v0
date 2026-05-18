@@ -3,7 +3,7 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 import { BookingData } from "@/lib/dashboard-types"
-import { User, CalendarDays, Package, CreditCard, Building } from "lucide-react"
+import { User, CalendarDays, Package, CreditCard, Building, MapPin } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { VendorChangeRequestsCard } from "@/components/bookings/vendor-change-requests-card"
 import { InstallmentsCard } from "@/components/bookings/installments-card"
@@ -213,6 +213,50 @@ export function BookingDetailSheet({ open, onOpenChange, booking }: BookingDetai
               <div>
                 <span className="text-sm font-semibold text-neutral-700">Notes</span>
                 <p className="mt-1 text-sm text-neutral-500">{booking.specialRequests || booking.additionalRequests}</p>
+              </div>
+            </>
+          )}
+
+          {/* BK-100.53 — service-location info, vendor-facing.
+              Renders only when off-vendor mode is set so the vendor
+              crew knows where to actually go. Legacy at-vendor bookings
+              skip this section entirely. */}
+          {booking.serviceLocationMode && booking.serviceLocationMode !== 'at_vendor' && (
+            <>
+              <hr className="border-neutral-100" />
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <MapPin className="h-4 w-4 text-bridal-gold" />
+                  <span className="text-sm font-semibold text-neutral-700">
+                    Service location
+                  </span>
+                </div>
+                <div className="ml-6 space-y-1.5">
+                  <p className="text-sm font-medium text-neutral-800">
+                    {(() => {
+                      switch (booking.serviceLocationMode) {
+                        case 'at_customer_home':
+                          return "At customer's home";
+                        case 'at_customer_plot':
+                          return "At customer's plot / lawn";
+                        case 'at_third_party':
+                          return 'Third-party venue';
+                        default:
+                          return 'Vendor address';
+                      }
+                    })()}
+                  </p>
+                  {booking.serviceLocationAddress && (
+                    <p className="text-sm text-neutral-600 leading-relaxed">
+                      {booking.serviceLocationAddress}
+                    </p>
+                  )}
+                  {booking.serviceLocationNotes && (
+                    <p className="text-xs text-neutral-500 italic leading-relaxed">
+                      {booking.serviceLocationNotes}
+                    </p>
+                  )}
+                </div>
               </div>
             </>
           )}

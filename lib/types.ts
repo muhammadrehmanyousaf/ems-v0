@@ -211,6 +211,18 @@ export interface BookingFormData {
 
   // Pricing
   totalPrice: number;
+
+  // BK-100.53 — Service-location mode. Where will the service actually
+  // happen? All optional; backend defaults to at_vendor when absent.
+  //   at_vendor          → bride/groom comes to the vendor's premises
+  //   at_customer_home   → vendor travels to the customer's home
+  //   at_customer_plot   → vendor delivers physical setup to a plot
+  //                        (marquee companies, home-wedding decorators)
+  //   at_third_party     → masjid for Nikah, family member's farmhouse,
+  //                        public lawn, etc.
+  serviceLocationMode?: 'at_vendor' | 'at_customer_home' | 'at_customer_plot' | 'at_third_party';
+  serviceLocationAddress?: string;
+  serviceLocationNotes?: string;
 }
 
 export interface EventBooking {

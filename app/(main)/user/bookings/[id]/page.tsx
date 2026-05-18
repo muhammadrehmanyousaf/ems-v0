@@ -93,6 +93,16 @@ interface Booking {
   createdAt: string;
   updatedAt: string;
   bookingDetails: BookingDetail[];
+  // BK-100.53 — optional service-location fields. NULL on legacy
+  // bookings; rendered conditionally.
+  serviceLocationMode?:
+    | "at_vendor"
+    | "at_customer_home"
+    | "at_customer_plot"
+    | "at_third_party"
+    | null;
+  serviceLocationAddress?: string | null;
+  serviceLocationNotes?: string | null;
 }
 
 const STATUS_CONFIG: Record<
@@ -495,6 +505,43 @@ export default function BookingDetailPage() {
                 <p className="text-[13.5px] text-foreground/85 bg-muted/30 rounded-md p-3 leading-relaxed">
                   {booking.additionalRequests}
                 </p>
+              </div>
+            ) : null}
+
+            {/* BK-100.53 — service-location block. Renders only when
+                set; legacy bookings without a mode render nothing here
+                so the existing card layout is unchanged. */}
+            {booking.serviceLocationMode && booking.serviceLocationMode !== "at_vendor" ? (
+              <div className="mt-5 pt-5 border-t border-border/60">
+                <p className="text-[10.5px] uppercase tracking-[0.22em] font-medium text-muted-foreground mb-2">
+                  Service location
+                </p>
+                <div className="bg-muted/30 rounded-md p-3 space-y-1.5">
+                  <p className="text-[13.5px] text-foreground/85 font-medium">
+                    {(() => {
+                      switch (booking.serviceLocationMode) {
+                        case "at_customer_home":
+                          return "At customer's home";
+                        case "at_customer_plot":
+                          return "At customer's plot / lawn";
+                        case "at_third_party":
+                          return "At a third-party venue";
+                        default:
+                          return "At vendor's place";
+                      }
+                    })()}
+                  </p>
+                  {booking.serviceLocationAddress && (
+                    <p className="text-[13px] text-foreground/80 leading-relaxed">
+                      {booking.serviceLocationAddress}
+                    </p>
+                  )}
+                  {booking.serviceLocationNotes && (
+                    <p className="text-[12px] text-muted-foreground italic leading-relaxed">
+                      {booking.serviceLocationNotes}
+                    </p>
+                  )}
+                </div>
               </div>
             ) : null}
           </SectionCard>
