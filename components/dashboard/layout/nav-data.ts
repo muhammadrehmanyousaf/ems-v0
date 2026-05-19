@@ -3,6 +3,7 @@ import {
   Boxes,
   BriefcaseBusiness,
   CalendarDays,
+  HandCoins,
   CircleDollarSign,
   ClipboardList,
   FileBadge,
@@ -56,6 +57,8 @@ export const data = {
     { name: "Expenses",      url: "/dashboard/expenses",       icon: Wallet },
     // Vendor Portal Phase 2 #8.1 — Inventory tracker.
     { name: "Inventory",     url: "/dashboard/inventory",      icon: Boxes },
+    // Vendor Portal Phase 2 #8.2 — Staff rota + casual-labour payroll.
+    { name: "Staff & payroll", url: "/dashboard/staff",        icon: HandCoins },
     { name: "Reviews",       url: "/dashboard/reviews",        icon: Smile },
     { name: "Notifications", url: "/dashboard/notifications",  icon: Bell },
   ],
