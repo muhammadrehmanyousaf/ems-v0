@@ -777,33 +777,30 @@ export function BusinessRegistrationForm() {
       <main className="w-[92%] xl:w-[90%] max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 lg:py-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start">
           {/* ── Left aside (sticky on lg) ──
-              Pinned at top:88px (just below the sticky header). Height
-              capped to viewport minus header + breathing room; internal
-              overflow scrolls with the gold bridal-scroll thumb when
-              content exceeds available height. On taller monitors the
-              three cards comfortably fit and no scrollbar appears at
-              all — the rail feels static and intentional. */}
+              Pinned at top:88px. NO internal scroll — cards are
+              tightened (smaller padding + spacing) so the whole rail
+              fits comfortably in a 720p+ viewport. If a vendor uses
+              an unusually short window, sticky naturally releases
+              and the rail joins the page scroll — no ugly inner
+              scrollbar appears at any size. */}
           <aside className="lg:col-span-4 order-2 lg:order-1">
-            <div
-              className="lg:sticky lg:top-[88px] lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-2 bridal-scroll space-y-5"
-            >
-              {/* Progress card */}
-              <BridalCard className="p-5 sm:p-6">
-                <div className="flex items-center justify-between mb-3">
+            <div className="lg:sticky lg:top-[88px] space-y-4">
+              {/* Progress card — compact */}
+              <BridalCard className="p-4 sm:p-5">
+                <div className="flex items-center justify-between mb-2.5">
                   <span className="bridal-label">Your Progress</span>
-                  <span className="font-display italic text-bridal-gold text-[20px] leading-none">
+                  <span className="font-display italic text-bridal-gold text-[18px] leading-none">
                     {getProgressPercentage()}%
                   </span>
                 </div>
-                {/* Custom progress bar — gold fill on beige track */}
                 <div className="h-1.5 w-full rounded-full bg-bridal-beige overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-bridal-gold to-bridal-gold-dark transition-all duration-500"
                     style={{ width: `${getProgressPercentage()}%` }}
                   />
                 </div>
-                <div className="mt-4 flex items-center gap-2 font-bridal text-[13px] text-bridal-text-soft">
-                  <CheckCircle className="w-4 h-4 text-bridal-sage" />
+                <div className="mt-3 flex items-center gap-2 font-bridal text-[12.5px] text-bridal-text-soft">
+                  <CheckCircle className="w-3.5 h-3.5 text-bridal-sage" />
                   <span>
                     Step{" "}
                     <span className="font-medium text-bridal-charcoal">
@@ -814,26 +811,26 @@ export function BusinessRegistrationForm() {
                 </div>
               </BridalCard>
 
-              {/* Benefits — blush rose card */}
+              {/* Benefits — blush rose card, compact */}
               <BridalCard
                 blush
-                className="p-5 sm:p-6 border-bridal-rose/40"
+                className="p-4 sm:p-5 border-bridal-rose/40"
               >
-                <div className="text-center mb-5">
-                  <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-bridal-cream border border-bridal-gold/40 flex items-center justify-center">
-                    <Award className="w-6 h-6 text-bridal-gold" />
+                <div className="text-center mb-3.5">
+                  <div className="w-10 h-10 mx-auto mb-2.5 rounded-full bg-bridal-cream border border-bridal-gold/40 flex items-center justify-center">
+                    <Award className="w-5 h-5 text-bridal-gold" />
                   </div>
-                  <h3 className="font-display italic text-[22px] text-bridal-charcoal leading-tight">
+                  <h3 className="font-display italic text-[18px] text-bridal-charcoal leading-tight">
                     Join Pakistan&apos;s most{" "}
                     <span className="text-bridal-gold">trusted network</span>
                   </h3>
-                  <p className="font-bridal text-[13px] text-bridal-text-soft mt-2">
-                    List your business and connect with couples planning the
-                    biggest day of their lives.
+                  <p className="font-bridal text-[12.5px] text-bridal-text-soft mt-1.5 leading-snug">
+                    Connect with couples planning the biggest day of their
+                    lives.
                   </p>
                 </div>
 
-                <ul className="space-y-2.5">
+                <ul className="space-y-1.5">
                   {[
                     "Free, full-featured business profile",
                     "Direct, qualified customer leads",
@@ -842,10 +839,10 @@ export function BusinessRegistrationForm() {
                   ].map((item) => (
                     <li
                       key={item}
-                      className="flex items-start gap-2.5 font-bridal text-[13px] text-bridal-text"
+                      className="flex items-start gap-2 font-bridal text-[12.5px] text-bridal-text"
                     >
-                      <span className="mt-0.5 inline-flex w-5 h-5 flex-shrink-0 rounded-full bg-bridal-gold/15 border border-bridal-gold/40 items-center justify-center">
-                        <CheckCircle className="w-3 h-3 text-bridal-gold" />
+                      <span className="mt-0.5 inline-flex w-4 h-4 flex-shrink-0 rounded-full bg-bridal-gold/15 border border-bridal-gold/40 items-center justify-center">
+                        <CheckCircle className="w-2.5 h-2.5 text-bridal-gold" />
                       </span>
                       <span>{item}</span>
                     </li>
@@ -853,26 +850,26 @@ export function BusinessRegistrationForm() {
                 </ul>
               </BridalCard>
 
-              {/* Stats card */}
-              <BridalCard className="p-5 sm:p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Star className="w-4 h-4 text-bridal-gold" />
+              {/* Stats card — compact */}
+              <BridalCard className="p-4 sm:p-5">
+                <div className="flex items-center gap-1.5 mb-2.5">
+                  <Star className="w-3.5 h-3.5 text-bridal-gold" />
                   <span className="bridal-label">Platform Pulse</span>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-md border border-bridal-beige bg-bridal-ivory/50 p-3 text-center">
-                    <div className="font-display italic text-[26px] leading-none text-bridal-charcoal">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="rounded-md border border-bridal-beige bg-bridal-ivory/50 p-2.5 text-center">
+                    <div className="font-display italic text-[22px] leading-none text-bridal-charcoal">
                       {stats ? stats.vendors : 0}
                       <span className="text-bridal-gold">+</span>
                     </div>
-                    <div className="bridal-label mt-1">Active Vendors</div>
+                    <div className="bridal-label mt-0.5">Active Vendors</div>
                   </div>
-                  <div className="rounded-md border border-bridal-beige bg-bridal-blush/40 p-3 text-center">
-                    <div className="font-display italic text-[26px] leading-none text-bridal-charcoal">
+                  <div className="rounded-md border border-bridal-beige bg-bridal-blush/40 p-2.5 text-center">
+                    <div className="font-display italic text-[22px] leading-none text-bridal-charcoal">
                       {stats ? stats.couplesServed : 0}
                       <span className="text-bridal-gold">+</span>
                     </div>
-                    <div className="bridal-label mt-1">Happy Couples</div>
+                    <div className="bridal-label mt-0.5">Happy Couples</div>
                   </div>
                 </div>
               </BridalCard>
