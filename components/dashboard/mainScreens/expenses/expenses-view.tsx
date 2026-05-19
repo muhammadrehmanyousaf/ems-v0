@@ -77,6 +77,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+import { LinkedFunctionSheetBadge } from '@/components/shared/linked-function-sheet-badge';
 import {
   ExpensesAPI,
   EXPENSE_CATEGORY_LABELS,
@@ -653,10 +654,13 @@ const ExpensesView = () => {
                         )}
                       </div>
                       {row.booking?.id && (
-                        <p className="text-[11px] text-muted-foreground">
-                          Tagged to booking #{row.booking.id}
-                          {row.booking.customerName ? ` (${row.booking.customerName})` : ''}
-                        </p>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <p className="text-[11px] text-muted-foreground">
+                            Tagged to booking #{row.booking.id}
+                            {row.booking.customerName ? ` (${row.booking.customerName})` : ''}
+                          </p>
+                          <LinkedFunctionSheetBadge bookingId={row.booking.id} variant="inline" />
+                        </div>
                       )}
                       {row.description && (
                         <p className="text-[11px] text-muted-foreground italic">

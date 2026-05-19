@@ -93,6 +93,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+import { LinkedFunctionSheetBadge } from '@/components/shared/linked-function-sheet-badge';
 import {
   StaffAPI,
   STAFF_ROLE_LABELS,
@@ -1436,7 +1437,10 @@ function ShiftCard({
                 </a>
               )}
               {shift.booking?.id && (
-                <span>Booking #{shift.booking.id}</span>
+                <>
+                  <span>Booking #{shift.booking.id}</span>
+                  <LinkedFunctionSheetBadge bookingId={shift.booking.id} variant="inline" />
+                </>
               )}
               {shift.thumbprintCaptured && (
                 <span className="inline-flex items-center gap-1 text-emerald-700">

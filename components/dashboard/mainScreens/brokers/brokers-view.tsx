@@ -89,6 +89,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+import { LinkedFunctionSheetBadge } from '@/components/shared/linked-function-sheet-badge';
 import {
   BrokerAPI,
   BROKER_TYPE_LABELS,
@@ -1423,7 +1424,10 @@ function CommissionCard({
                 <span>Due {fmtDate(commission.dueDate)}</span>
               )}
               {commission.bookingId && (
-                <span>Booking #{commission.bookingId}</span>
+                <>
+                  <span>Booking #{commission.bookingId}</span>
+                  <LinkedFunctionSheetBadge bookingId={commission.bookingId} variant="inline" />
+                </>
               )}
               {commission.broker?.phoneNumber && (
                 <a

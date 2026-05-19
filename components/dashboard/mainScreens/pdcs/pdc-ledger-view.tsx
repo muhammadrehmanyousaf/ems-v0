@@ -86,6 +86,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+import { LinkedFunctionSheetBadge } from '@/components/shared/linked-function-sheet-badge';
 import {
   PdcAPI,
   PDC_STATUS_LABELS,
@@ -775,9 +776,12 @@ const PdcLedgerView = () => {
                         </p>
                       )}
                       {row.booking?.id && (
-                        <p className="text-[11px] text-muted-foreground">
-                          Linked to booking #{row.booking.id} ({fmtDate(row.booking.bookingDate)})
-                        </p>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <p className="text-[11px] text-muted-foreground">
+                            Linked to booking #{row.booking.id} ({fmtDate(row.booking.bookingDate)})
+                          </p>
+                          <LinkedFunctionSheetBadge bookingId={row.booking.id} variant="inline" />
+                        </div>
                       )}
                       {row.notes && (
                         <p className="text-[11px] text-muted-foreground italic">

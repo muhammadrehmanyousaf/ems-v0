@@ -90,6 +90,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+import { LinkedFunctionSheetBadge } from '@/components/shared/linked-function-sheet-badge';
 import {
   SupplierAPI,
   SUPPLIER_CATEGORY_LABELS,
@@ -1401,7 +1402,10 @@ function InvoiceCard({
               )}
               {invoice.dueDate && <span>Due {fmtDate(invoice.dueDate)}</span>}
               {invoice.bookingId && (
-                <span>Booking #{invoice.bookingId}</span>
+                <>
+                  <span>Booking #{invoice.bookingId}</span>
+                  <LinkedFunctionSheetBadge bookingId={invoice.bookingId} variant="inline" />
+                </>
               )}
             </div>
           </div>
