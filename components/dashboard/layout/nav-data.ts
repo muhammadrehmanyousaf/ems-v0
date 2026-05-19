@@ -14,6 +14,7 @@ import {
   Settings2,
   ShieldAlert,
   Smile,
+  Sparkles,
   SquareUser,
   UserCheck,
   Users,
@@ -33,6 +34,10 @@ export const data = {
   // Vendors run their own business — full operational nav.
   vendorMainNav: [
     { name: "Dashboard",     url: "/dashboard",                icon: LayoutDashboard },
+    // Vendor Portal Phase 1 #7.6 — Day-of timeline runner.
+    // Positioned right under Dashboard because it's the page floor
+    // managers open first on a wedding day.
+    { name: "Today",         url: "/dashboard/today",          icon: Sparkles },
     { name: "Bookings",      url: "/dashboard/bookings",       icon: ClipboardList },
     { name: "Customers",     url: "/dashboard/customers",      icon: SquareUser },
     { name: "Calendar",      url: "/dashboard/calendar",       icon: CalendarDays },
