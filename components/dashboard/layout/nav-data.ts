@@ -47,6 +47,8 @@ export const data = {
     { name: "Receipts",      url: "/dashboard/receipts",       icon: CircleDollarSign },
     // Vendor Portal Phase 1 #7.4 — Post-dated cheque ledger.
     { name: "Cheque ledger", url: "/dashboard/pdcs",           icon: Wallet },
+    // Vendor Portal Phase 2 #8.3 — Expense tracking + per-event P&L.
+    { name: "Expenses",      url: "/dashboard/expenses",       icon: Wallet },
     { name: "Reviews",       url: "/dashboard/reviews",        icon: Smile },
     { name: "Notifications", url: "/dashboard/notifications",  icon: Bell },
   ],
