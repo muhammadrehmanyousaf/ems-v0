@@ -1,8 +1,10 @@
 import { CalendarEvent, Cell, ymd } from '@/lib/utils';
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import type { BlockedDate } from '@/lib/api/dashboard';
 import type { SlotAvailabilityRow } from '@/lib/api/businessAvailability';
-import { BanIcon, Repeat, Store } from 'lucide-react';
+import { BanIcon, Moon, Repeat, Store } from 'lucide-react';
+// Phase 3 #9.2 — Hijri overlay (Pakistani-cultural fit).
+import { gregorianToHijri, ramadanWindow } from '@/lib/hijri';
 
 type MonthViewProps = {
   cells: Cell[];
@@ -39,6 +41,15 @@ const MonthView = ({
     }
     return m;
   }, [events]);
+
+  // Phase 3 #9.2 — pre-compute the Ramadan suppression window for the
+  // visible cells. The set spans ~400 days forward from the first cell;
+  // covers the whole grid + the next year cleanly.
+  const ramadanDates = useMemo(() => {
+    if (!cells || cells.length === 0) return new Set<string>();
+    const first = cells[0]?.date || new Date();
+    return ramadanWindow(first, 400);
+  }, [cells]);
 
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -126,16 +137,40 @@ const MonthView = ({
                   : 'hover:bg-accent/50',
               ].join(' ')}
             >
-              {/* Date number */}
+              {/* Date number + Hijri subscript */}
               <div className="flex items-center justify-between">
-                <span className={[
-                  'text-sm select-none',
-                  c.isToday ? 'h-6 w-6 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-xs' : '',
-                  isBlocked && !c.isToday ? 'text-red-400 line-through' : '',
-                  !isBlocked && isRecurringBlocked && !c.isToday ? 'text-amber-700 line-through' : '',
-                ].join(' ')}>
-                  {c.date.getDate()}
-                </span>
+                <div className="flex items-baseline gap-1">
+                  <span className={[
+                    'text-sm select-none',
+                    c.isToday ? 'h-6 w-6 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-xs' : '',
+                    isBlocked && !c.isToday ? 'text-red-400 line-through' : '',
+                    !isBlocked && isRecurringBlocked && !c.isToday ? 'text-amber-700 line-through' : '',
+                  ].join(' ')}>
+                    {c.date.getDate()}
+                  </span>
+                  {/* Phase 3 #9.2 — Hijri day-of-month subscript. Tiny,
+                      muted, never overlaps the Gregorian number. Inside
+                      Ramadan window the chip tints emerald so vendor
+                      can scan the month and see Ramadan at a glance. */}
+                  {c.inCurrentMonth && (() => {
+                    const h = gregorianToHijri(c.date);
+                    const inRamadan = ramadanDates.has(key);
+                    return (
+                      <span
+                        className={[
+                          'text-[9px] leading-none tabular-nums px-1 py-0.5 rounded select-none',
+                          inRamadan
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'text-muted-foreground/50',
+                        ].join(' ')}
+                        title={`${h.day} ${h.monthName} ${h.year}`}
+                      >
+                        {inRamadan ? <Moon className="inline h-2 w-2 mr-0.5" /> : null}
+                        {h.day}
+                      </span>
+                    );
+                  })()}
+                </div>
 
                 {/* Block indicator badge */}
                 {isBlocked && c.inCurrentMonth && (

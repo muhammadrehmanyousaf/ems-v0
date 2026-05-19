@@ -17,6 +17,8 @@ import {
     type RecurringBlock,
     type SlotAvailabilityRow,
 } from '@/lib/api/businessAvailability';
+// Phase 3 #9.2 — Hijri overlay + Islamic-events suggestion strip.
+import { IslamicEventsStrip } from './islamic-events-strip';
 
 type Mode = 'month' | 'week' | 'day';
 
@@ -417,6 +419,13 @@ export default function MainCalendar() {
                 businessOptions={businessOptions}
                 selectedBusinessId={slotBusinessId}
                 onBusinessChange={(id) => setSlotBusinessId(id)}
+            />
+
+            {/* Phase 3 #9.2 — upcoming Islamic events with 1-click block.
+                Hidden when no events fall in the next 120 days. */}
+            <IslamicEventsStrip
+                blockedDateSet={blockedDateSet}
+                onBlock={(date) => onDateBlockToggle(date)}
             />
 
             {mode === 'month' && (
