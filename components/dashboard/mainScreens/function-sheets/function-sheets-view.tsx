@@ -39,6 +39,7 @@ import {
   AlertTriangle,
   Pencil,
   Plus,
+  PenLine,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -77,6 +78,7 @@ import {
   type PdfVariant,
 } from '@/lib/api/functionSheets';
 import { FunctionSheetComposer } from './function-sheet-composer';
+import { SignDialog, type SignSide } from './sign-dialog';
 
 interface VendorBusinessOption {
   id: number;
@@ -131,6 +133,10 @@ export default function FunctionSheetsView() {
   const [busy, setBusy] = useState<number | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
   const [editSheet, setEditSheet] = useState<FunctionSheet | null>(null);
+  const [signTarget, setSignTarget] = useState<{
+    sheet: FunctionSheet;
+    side: SignSide;
+  } | null>(null);
   const [cancelSheet, setCancelSheet] = useState<FunctionSheet | null>(null);
   const [deleteSheet, setDeleteSheet] = useState<FunctionSheet | null>(null);
 
@@ -399,6 +405,7 @@ export default function FunctionSheetsView() {
               busy={busy === s.id}
               onTransition={(to) => handleTransition(s, to)}
               onEdit={() => setEditSheet(s)}
+              onSign={(side) => setSignTarget({ sheet: s, side })}
               onCancel={() => setCancelSheet(s)}
               onDelete={() => setDeleteSheet(s)}
               onPdf={(variant, mode) => handlePdf(s, variant, mode)}
@@ -424,6 +431,16 @@ export default function FunctionSheetsView() {
         sheet={editSheet || undefined}
         onSaved={async () => {
           setEditSheet(null);
+          await fetchAll();
+        }}
+      />
+
+      <SignDialog
+        sheet={signTarget?.sheet ?? null}
+        side={signTarget?.side ?? 'vendor'}
+        onOpenChange={(o) => !o && setSignTarget(null)}
+        onSaved={async () => {
+          setSignTarget(null);
           await fetchAll();
         }}
       />
@@ -485,6 +502,7 @@ function SheetCard({
   busy,
   onTransition,
   onEdit,
+  onSign,
   onCancel,
   onDelete,
   onPdf,
@@ -493,6 +511,7 @@ function SheetCard({
   busy: boolean;
   onTransition: (to: FunctionSheetState) => void;
   onEdit: () => void;
+  onSign: (side: SignSide) => void;
   onCancel: () => void;
   onDelete: () => void;
   onPdf: (variant: PdfVariant, mode: 'preview' | 'download') => void;
@@ -501,6 +520,16 @@ function SheetCard({
   const nextOptions = NEXT_STATES[sheet.state] || [];
   const variants = variantsAvailable(sheet.state);
   const isTerminal = sheet.state === 'archived' || sheet.state === 'cancelled';
+
+  // Signature presence
+  const sigs = (sheet.signaturesJson || {}) as any;
+  const vendorSigned = !!sigs?.vendor?.signedAt;
+  const customerSigned = !!sigs?.customer?.signedAt;
+  // Signing makes sense from contract_pending onwards; vendor can
+  // also sign earlier to lock their side. Stop showing the buttons
+  // on terminal / paid / archived rows since they're frozen.
+  const canSign =
+    !isTerminal && sheet.state !== 'paid' && sheet.state !== 'archived';
 
   return (
     <Card className={isTerminal ? 'opacity-70' : ''}>
@@ -569,9 +598,21 @@ function SheetCard({
               Quote sent {fmtDate(sheet.sentAt)}
             </span>
           )}
+          {vendorSigned && (
+            <span className="inline-flex items-center gap-1 rounded bg-violet-50 px-2 py-0.5 text-violet-800">
+              <PenLine className="h-3 w-3" />
+              Vendor signed
+            </span>
+          )}
+          {customerSigned && (
+            <span className="inline-flex items-center gap-1 rounded bg-violet-50 px-2 py-0.5 text-violet-800">
+              <PenLine className="h-3 w-3" />
+              Customer signed
+            </span>
+          )}
           {sheet.signedAt && (
-            <span className="rounded bg-violet-50 px-2 py-0.5 text-violet-800">
-              Signed {fmtDate(sheet.signedAt)}
+            <span className="rounded bg-violet-100 px-2 py-0.5 font-medium text-violet-900">
+              Both signed {fmtDate(sheet.signedAt)}
             </span>
           )}
           {sheet.invoicedAt && (
@@ -669,6 +710,39 @@ function SheetCard({
               <Pencil className="mr-1 h-3 w-3" />
               Edit
             </Button>
+          )}
+          {/* Sign buttons — vendor / customer */}
+          {canSign && (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onSign('vendor')}
+                disabled={busy}
+                className={
+                  vendorSigned
+                    ? 'border-violet-300 bg-violet-50 text-violet-800'
+                    : 'border-neutral-300'
+                }
+              >
+                <PenLine className="mr-1 h-3 w-3" />
+                {vendorSigned ? 'Re-sign as vendor' : 'Sign as vendor'}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onSign('customer')}
+                disabled={busy}
+                className={
+                  customerSigned
+                    ? 'border-violet-300 bg-violet-50 text-violet-800'
+                    : 'border-neutral-300'
+                }
+              >
+                <PenLine className="mr-1 h-3 w-3" />
+                {customerSigned ? 'Re-sign customer' : 'Sign as customer'}
+              </Button>
+            </>
           )}
           {/* Cancel — visible on any non-terminal state */}
           {!isTerminal && (
