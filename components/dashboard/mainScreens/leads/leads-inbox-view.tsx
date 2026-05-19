@@ -93,6 +93,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+import { LinkedFunctionSheetBadge } from '@/components/shared/linked-function-sheet-badge';
 import {
   LeadAPI,
   LEAD_STATUS_LABELS,
@@ -717,6 +718,23 @@ function LeadCard({
             </span>
           )}
         </div>
+
+        {/* Conversion indicator — when lead is booked, surface the
+            linked Function Sheet so vendor sees what the inquiry
+            converted into (title + click-through to event command
+            centre). */}
+        {lead.bookingId && (
+          <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50/40 px-2 py-1">
+            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-800">
+              <CheckCircle2 className="h-3 w-3" />
+              Converted to Booking #{lead.bookingId}
+            </span>
+            <LinkedFunctionSheetBadge
+              bookingId={lead.bookingId}
+              variant="inline"
+            />
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-2 pt-1">
           {nextOptions.length > 0 ? (
