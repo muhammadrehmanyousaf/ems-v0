@@ -208,6 +208,35 @@ export class FunctionSheetAPI {
     const params = variant ? `?variant=${encodeURIComponent(variant)}` : "";
     return `/api/v1/function-sheets/${id}/pdf${params}`;
   }
+
+  /**
+   * Send the PDF for the requested variant to a WhatsApp number via
+   * the active adapter. Returns the provider result + delivery
+   * metadata (filename, bytes). Best-effort — when no provider is
+   * configured the response carries `result.ok = false` with
+   * `reason: 'no_provider'`.
+   */
+  static async sendWhatsapp(
+    id: number,
+    body: { variant?: PdfVariant; to?: string; body?: string },
+  ): Promise<{
+    provider: string;
+    to: string;
+    variant: PdfVariant;
+    filename: string;
+    bytes: number;
+    result: {
+      ok: boolean;
+      reason?: string;
+      providerMessageId?: string;
+    };
+  }> {
+    const res = await axiosInstance.post(
+      `/api/v1/function-sheets/${id}/send-whatsapp`,
+      body,
+    );
+    return res.data?.data;
+  }
 }
 
 // ─── Display helpers ────────────────────────────────────────────────

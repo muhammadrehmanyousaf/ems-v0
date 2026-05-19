@@ -40,6 +40,7 @@ import {
   Pencil,
   Plus,
   PenLine,
+  MessageSquare,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -79,6 +80,7 @@ import {
 } from '@/lib/api/functionSheets';
 import { FunctionSheetComposer } from './function-sheet-composer';
 import { SignDialog, type SignSide } from './sign-dialog';
+import { SendWhatsappDialog } from './send-whatsapp-dialog';
 
 interface VendorBusinessOption {
   id: number;
@@ -136,6 +138,10 @@ export default function FunctionSheetsView() {
   const [signTarget, setSignTarget] = useState<{
     sheet: FunctionSheet;
     side: SignSide;
+  } | null>(null);
+  const [whatsappTarget, setWhatsappTarget] = useState<{
+    sheet: FunctionSheet;
+    variant?: PdfVariant;
   } | null>(null);
   const [cancelSheet, setCancelSheet] = useState<FunctionSheet | null>(null);
   const [deleteSheet, setDeleteSheet] = useState<FunctionSheet | null>(null);
@@ -409,6 +415,9 @@ export default function FunctionSheetsView() {
               onCancel={() => setCancelSheet(s)}
               onDelete={() => setDeleteSheet(s)}
               onPdf={(variant, mode) => handlePdf(s, variant, mode)}
+              onWhatsapp={(variant) =>
+                setWhatsappTarget({ sheet: s, variant })
+              }
             />
           ))}
         </div>
@@ -441,6 +450,16 @@ export default function FunctionSheetsView() {
         onOpenChange={(o) => !o && setSignTarget(null)}
         onSaved={async () => {
           setSignTarget(null);
+          await fetchAll();
+        }}
+      />
+
+      <SendWhatsappDialog
+        sheet={whatsappTarget?.sheet ?? null}
+        initialVariant={whatsappTarget?.variant}
+        onOpenChange={(o) => !o && setWhatsappTarget(null)}
+        onSent={async () => {
+          setWhatsappTarget(null);
           await fetchAll();
         }}
       />
@@ -506,6 +525,7 @@ function SheetCard({
   onCancel,
   onDelete,
   onPdf,
+  onWhatsapp,
 }: {
   sheet: FunctionSheet;
   busy: boolean;
@@ -515,6 +535,7 @@ function SheetCard({
   onCancel: () => void;
   onDelete: () => void;
   onPdf: (variant: PdfVariant, mode: 'preview' | 'download') => void;
+  onWhatsapp: (variant?: PdfVariant) => void;
 }) {
   const tone = STATE_TONES[sheet.state];
   const nextOptions = NEXT_STATES[sheet.state] || [];
@@ -665,6 +686,10 @@ function SheetCard({
                   <DropdownMenuItem onClick={() => onPdf(v, 'download')}>
                     <Download className="mr-2 h-3 w-3" />
                     Download {PDF_VARIANT_LABELS[v]}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onWhatsapp(v)}>
+                    <MessageSquare className="mr-2 h-3 w-3" />
+                    Send {PDF_VARIANT_LABELS[v]} via WhatsApp
                   </DropdownMenuItem>
                 </React.Fragment>
               ))}
