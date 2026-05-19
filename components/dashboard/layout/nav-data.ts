@@ -38,6 +38,8 @@ export const data = {
     { name: "Calendar",      url: "/dashboard/calendar",       icon: CalendarDays },
     { name: "Conversations", url: "/dashboard/chat",           icon: MessageSquareText },
     { name: "Payments",      url: "/dashboard/payments",       icon: CircleDollarSign },
+    // Vendor Portal Phase 1 #7.5 — Cash + digital payment receipts.
+    { name: "Receipts",      url: "/dashboard/receipts",       icon: CircleDollarSign },
     // Vendor Portal Phase 1 #7.4 — Post-dated cheque ledger.
     { name: "Cheque ledger", url: "/dashboard/pdcs",           icon: Wallet },
     { name: "Reviews",       url: "/dashboard/reviews",        icon: Smile },
