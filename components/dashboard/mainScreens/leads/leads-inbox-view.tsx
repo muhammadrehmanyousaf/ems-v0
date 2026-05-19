@@ -99,6 +99,7 @@ import {
   LEAD_STATUS_LABELS,
   LEAD_SOURCE_LABELS,
   LEAD_EVENT_TYPE_LABELS,
+  type ConversionAnalytics,
   LEAD_STATUS_TONES,
   type Lead,
   type LeadStatus,
@@ -233,6 +234,8 @@ export default function LeadsInboxView() {
     bySource: {},
   });
   const [provider, setProvider] = useState<string>('noop');
+  const [analytics, setAnalytics] = useState<ConversionAnalytics | null>(null);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'all'>('all');
   const [sourceFilter, setSourceFilter] = useState<LeadSource | 'all'>('all');
@@ -262,6 +265,26 @@ export default function LeadsInboxView() {
       setLoading(false);
     }
   };
+
+  // Conversion analytics — fetched once on mount, refreshed when
+  // vendor expands the analytics panel. Independent of the filter
+  // state so the bigger picture stays visible regardless of which
+  // status / source the vendor is currently inspecting.
+  const loadAnalytics = async () => {
+    try {
+      const a = await LeadAPI.conversionAnalytics();
+      setAnalytics(a);
+    } catch (e: any) {
+      // Soft-fail — keep the inbox usable even if analytics 500s.
+      // eslint-disable-next-line no-console
+      console.warn('[leads] analytics load failed:', e?.message || e);
+    }
+  };
+
+  useEffect(() => {
+    loadAnalytics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     fetchLeads();
@@ -394,6 +417,118 @@ export default function LeadsInboxView() {
           <Plus className="mr-2 h-4 w-4" /> Log a lead
         </Button>
       </div>
+
+      {/* Conversion analytics — collapsible card showing per-source
+          funnel + revenue. Closed by default to keep the inbox
+          scannable; vendor clicks to expand. */}
+      {analytics && analytics.totalLeads > 0 && (
+        <Card>
+          <CardContent className="space-y-3 p-3">
+            <button
+              type="button"
+              onClick={() => setAnalyticsOpen((v) => !v)}
+              className="flex w-full items-center justify-between gap-2 text-left"
+            >
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Conversion analytics
+                </div>
+                <div className="mt-0.5 text-sm">
+                  <span className="font-semibold">
+                    {analytics.totalBooked} of {analytics.totalLeads} leads booked
+                  </span>{' '}
+                  <span className="text-muted-foreground">
+                    ({analytics.overallConversionRate}% conversion)
+                  </span>
+                  {analytics.totalRevenue > 0 && (
+                    <>
+                      {' · '}
+                      <span className="font-semibold text-emerald-700">
+                        {fmtPKR(analytics.totalRevenue)}
+                      </span>{' '}
+                      <span className="text-muted-foreground">
+                        revenue · {fmtPKR(analytics.avgTicketSize)} avg ticket
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <span className="text-xs text-blue-700">
+                {analyticsOpen ? 'Hide details' : 'Show per-source breakdown'}
+              </span>
+            </button>
+            {analyticsOpen && analytics.perSource.length > 0 && (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {analytics.perSource.map((s) => {
+                  const isWinner =
+                    s.revenue === Math.max(...analytics.perSource.map((p) => p.revenue)) &&
+                    s.revenue > 0;
+                  return (
+                    <div
+                      key={s.source}
+                      className={`rounded-md border p-3 text-xs ${
+                        isWinner
+                          ? 'border-emerald-300 bg-emerald-50/40'
+                          : 'border-neutral-200 bg-neutral-50/40'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold">
+                          {LEAD_SOURCE_LABELS[s.source as LeadSource] || s.source}
+                        </span>
+                        {isWinner && (
+                          <Badge
+                            variant="outline"
+                            className="border-emerald-300 bg-emerald-100 text-[10px] text-emerald-900"
+                          >
+                            top channel
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="mt-1 grid grid-cols-3 gap-1 text-[11px]">
+                        <div>
+                          <div className="text-muted-foreground">Total</div>
+                          <div className="font-semibold">{s.total}</div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">Booked</div>
+                          <div className="font-semibold text-emerald-700">
+                            {s.booked}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">Rate</div>
+                          <div className="font-semibold">{s.conversionRate}%</div>
+                        </div>
+                      </div>
+                      {s.revenue > 0 && (
+                        <div className="mt-1 border-t border-neutral-200 pt-1">
+                          <div className="text-muted-foreground text-[10px] uppercase tracking-wide">
+                            Revenue
+                          </div>
+                          <div className="font-semibold text-emerald-700">
+                            {fmtPKR(s.revenue)}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {fmtPKR(s.avgTicketSize)} avg ticket
+                            {s.avgDaysToBooking != null &&
+                              ` · ${s.avgDaysToBooking}d to book`}
+                          </div>
+                        </div>
+                      )}
+                      {s.revenue === 0 && s.booked === 0 && s.lost > 0 && (
+                        <div className="mt-1 text-[10px] text-rose-700">
+                          {s.lost} lost · 0 converted
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Funnel summary */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">

@@ -174,6 +174,29 @@ export interface WhatsappSendResult {
   };
 }
 
+export interface LeadSourceAnalytics {
+  source: LeadSource;
+  total: number;
+  byStatus: Partial<Record<LeadStatus, number>>;
+  booked: number;
+  lost: number;
+  conversionRate: number; // 0-100
+  revenue: number;
+  avgTicketSize: number;
+  avgDaysToBooking: number | null;
+}
+
+export interface ConversionAnalytics {
+  totalLeads: number;
+  totalBooked: number;
+  totalLost: number;
+  totalRevenue: number;
+  overallConversionRate: number;
+  avgTicketSize: number;
+  perSource: LeadSourceAnalytics[];
+  generatedAt: string;
+}
+
 export class LeadAPI {
   /** GET /api/v1/leads */
   static async list(filters: LeadListFilters = {}): Promise<LeadListResponse> {
@@ -224,6 +247,31 @@ export class LeadAPI {
   /** DELETE /api/v1/leads/:id — soft delete. */
   static async remove(id: number): Promise<void> {
     await axiosInstance.delete(`/api/v1/leads/${id}`);
+  }
+
+  /**
+   * GET /api/v1/leads/conversion-analytics
+   * Per-source funnel + revenue. Optional date-window filter.
+   */
+  static async conversionAnalytics(
+    filters: { from?: string; to?: string; businessId?: number } = {},
+  ): Promise<ConversionAnalytics> {
+    const res = await axiosInstance.get(
+      `/api/v1/leads/conversion-analytics`,
+      { params: filters },
+    );
+    return (
+      res.data?.data ?? {
+        totalLeads: 0,
+        totalBooked: 0,
+        totalLost: 0,
+        totalRevenue: 0,
+        overallConversionRate: 0,
+        avgTicketSize: 0,
+        perSource: [],
+        generatedAt: new Date().toISOString(),
+      }
+    );
   }
 }
 
