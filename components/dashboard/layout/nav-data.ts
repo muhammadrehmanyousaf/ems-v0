@@ -3,6 +3,7 @@ import {
   Boxes,
   BriefcaseBusiness,
   CalendarDays,
+  FileText,
   Fuel,
   Handshake,
   Plane,
@@ -50,6 +51,8 @@ export const data = {
     // because every booking starts as a lead.
     { name: "Lead inbox",    url: "/dashboard/leads",          icon: Inbox },
     { name: "Bookings",      url: "/dashboard/bookings",       icon: ClipboardList },
+    // Vendor Portal Phase 1 #7.1 — Function Sheets (Smart-File morphing doc).
+    { name: "Function sheets", url: "/dashboard/function-sheets", icon: FileText },
     { name: "Customers",     url: "/dashboard/customers",      icon: SquareUser },
     { name: "Calendar",      url: "/dashboard/calendar",       icon: CalendarDays },
     { name: "Conversations", url: "/dashboard/chat",           icon: MessageSquareText },
