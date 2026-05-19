@@ -43,6 +43,7 @@ import {
   MessageSquare,
   Share2,
   Activity,
+  ShieldCheck,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -85,6 +86,7 @@ import { SignDialog, type SignSide } from './sign-dialog';
 import { SendWhatsappDialog } from './send-whatsapp-dialog';
 import { ShareLinkDialog } from './share-link-dialog';
 import { ActivityDialog } from './activity-dialog';
+import { FbrSubmitDialog } from './fbr-submit-dialog';
 
 interface VendorBusinessOption {
   id: number;
@@ -151,6 +153,7 @@ export default function FunctionSheetsView() {
   const [activitySheet, setActivitySheet] = useState<FunctionSheet | null>(
     null,
   );
+  const [fbrSheet, setFbrSheet] = useState<FunctionSheet | null>(null);
   const [cancelSheet, setCancelSheet] = useState<FunctionSheet | null>(null);
   const [deleteSheet, setDeleteSheet] = useState<FunctionSheet | null>(null);
 
@@ -428,6 +431,7 @@ export default function FunctionSheetsView() {
               }
               onShare={() => setShareSheet(s)}
               onActivity={() => setActivitySheet(s)}
+              onFbr={() => setFbrSheet(s)}
             />
           ))}
         </div>
@@ -483,6 +487,12 @@ export default function FunctionSheetsView() {
       <ActivityDialog
         sheet={activitySheet}
         onOpenChange={(o) => !o && setActivitySheet(null)}
+      />
+
+      <FbrSubmitDialog
+        sheet={fbrSheet}
+        onOpenChange={(o) => !o && setFbrSheet(null)}
+        onSubmitted={fetchAll}
       />
 
       <AlertDialog
@@ -549,6 +559,7 @@ function SheetCard({
   onWhatsapp,
   onShare,
   onActivity,
+  onFbr,
 }: {
   sheet: FunctionSheet;
   busy: boolean;
@@ -561,6 +572,7 @@ function SheetCard({
   onWhatsapp: (variant?: PdfVariant) => void;
   onShare: () => void;
   onActivity: () => void;
+  onFbr: () => void;
 }) {
   const tone = STATE_TONES[sheet.state];
   const nextOptions = NEXT_STATES[sheet.state] || [];
@@ -586,6 +598,11 @@ function SheetCard({
       new Date(sheet.shareTokenExpiresAt) > new Date());
   const canShare =
     !isTerminal && sheet.state !== 'archived' && sheet.state !== 'cancelled';
+
+  // FBR state — only meaningful on invoiced/paid sheets.
+  const fbrEligible = sheet.state === 'invoiced' || sheet.state === 'paid';
+  const fbrStatus = sheet.fbrSubmissionStatus || null;
+  const fbrAccepted = fbrStatus === 'accepted';
 
   return (
     <Card className={isTerminal ? 'opacity-70' : ''}>
@@ -687,6 +704,24 @@ function SheetCard({
               Share link live
               {sheet.shareTokenExpiresAt &&
                 ` · expires ${fmtDate(sheet.shareTokenExpiresAt)}`}
+            </span>
+          )}
+          {fbrAccepted && sheet.fbrInvoiceNumber && (
+            <span className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 font-mono text-emerald-900">
+              <ShieldCheck className="h-3 w-3" />
+              FBR {sheet.fbrInvoiceNumber}
+            </span>
+          )}
+          {fbrStatus === 'rejected' && (
+            <span className="inline-flex items-center gap-1 rounded bg-rose-50 px-2 py-0.5 text-rose-800">
+              <ShieldCheck className="h-3 w-3" />
+              FBR rejected
+            </span>
+          )}
+          {fbrStatus === 'pending' && (
+            <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-amber-800">
+              <ShieldCheck className="h-3 w-3" />
+              FBR pending (no provider)
             </span>
           )}
           {Array.isArray(sheet.lineItemsJson) &&
@@ -827,6 +862,25 @@ function SheetCard({
             >
               <Share2 className="mr-1 h-3 w-3" />
               {shareTokenLive ? 'Manage share link' : 'Share link'}
+            </Button>
+          )}
+          {/* FBR submit — only invoiced/paid sheets */}
+          {fbrEligible && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onFbr}
+              disabled={busy}
+              className={
+                fbrAccepted
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                  : fbrStatus === 'rejected'
+                    ? 'border-rose-300 bg-rose-50 text-rose-800'
+                    : 'border-neutral-300'
+              }
+            >
+              <ShieldCheck className="mr-1 h-3 w-3" />
+              {fbrAccepted ? 'FBR re-submit' : 'Submit to FBR'}
             </Button>
           )}
           {/* Activity — always visible (compliance + dispute proof) */}

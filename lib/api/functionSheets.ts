@@ -63,6 +63,18 @@ export interface FunctionSheet {
   shareTokenIssuedAt?: string | null;
   shareTokenExpiresAt?: string | null;
   shareTokenRevokedAt?: string | null;
+  // FBR e-invoicing (Phase 3 #9.1)
+  fbrSubmittedAt?: string | null;
+  fbrInvoiceNumber?: string | null;
+  fbrQrCodePayload?: string | null;
+  fbrSubmissionStatus?:
+    | "submitted"
+    | "accepted"
+    | "rejected"
+    | "voided"
+    | "pending"
+    | null;
+  fbrSubmissionErrors?: Array<{ path?: string; message: string }> | null;
   createdAt: string;
   updatedAt: string;
   business?: { id: number; name: string | null; userId?: number } | null;
@@ -253,6 +265,45 @@ export class FunctionSheetAPI {
    */
   static async revokeShareToken(id: number): Promise<void> {
     await axiosInstance.delete(`/api/v1/function-sheets/${id}/share-token`);
+  }
+
+  /**
+   * Submit the function sheet to FBR (Federal Board of Revenue,
+   * Pakistan) for electronic invoicing. Required for vendors above
+   * the Tier-1 threshold (>Rs. 10M / yr retail; sales-tax-registered
+   * businesses).
+   *
+   * Provider-agnostic — when no adapter is configured the response
+   * carries `result.ok = false` with `reason: 'no_provider'`. The
+   * row is still stamped with the payload snapshot for replay when
+   * sandbox creds eventually arrive.
+   */
+  static async submitFbr(
+    id: number,
+    body: { buyerNtn?: string; buyerNic?: string; paymentMode?: string } = {},
+  ): Promise<{
+    provider: string;
+    result: {
+      ok: boolean;
+      reason?: string;
+      fbrInvoiceNumber?: string;
+      fbrQrCodePayload?: string;
+      status?: string;
+      errors?: Array<{ path?: string; message: string }>;
+    };
+    row: {
+      fbrSubmittedAt: string | null;
+      fbrInvoiceNumber: string | null;
+      fbrQrCodePayload: string | null;
+      fbrSubmissionStatus: string | null;
+      fbrSubmissionErrors: any[] | null;
+    };
+  }> {
+    const res = await axiosInstance.post(
+      `/api/v1/function-sheets/${id}/fbr-submit`,
+      body,
+    );
+    return res.data?.data;
   }
 
   /**
