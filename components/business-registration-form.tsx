@@ -412,6 +412,11 @@ export function BusinessRegistrationForm() {
       // storage isn't wired up on production yet, so we silently
       // drop any selected logo and submit without one. Vendor can
       // upload from the dashboard later once storage is ready.
+      //
+      // BELT-AND-BRACES: Even when the flag is ON, an upload failure
+      // is treated as a soft warning, NOT a submission blocker. A
+      // photographer doesn't lose their entire registration because
+      // the image bucket had a 5-second hiccup.
       if (IMAGE_UPLOADS_ENABLED && file) {
         const logoFormData = new FormData();
         logoFormData.append("images", file);
@@ -421,13 +426,9 @@ export function BusinessRegistrationForm() {
             logoFormData,
             { headers: { "Content-Type": "multipart/form-data" } },
           );
-        } catch {
-          toast({
-            title: "Error",
-            description: "Failed to upload logo. Please try again.",
-          });
-          loadingToastId.dismiss();
-          return;
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.warn("[business-registration] logo upload failed:", e);
         }
       }
 
@@ -451,13 +452,10 @@ export function BusinessRegistrationForm() {
             { headers: { "Content-Type": "multipart/form-data" } },
           );
           uploadedImageUrls = uploadRes.data?.data || [];
-        } catch {
-          toast({
-            title: "Error",
-            description: "Failed to upload images. Please try again.",
-          });
-          loadingToastId.dismiss();
-          return;
+        } catch (e) {
+          // Non-fatal — log and submit the business without images.
+          // eslint-disable-next-line no-console
+          console.warn("[business-registration] image upload failed:", e);
         }
       }
 

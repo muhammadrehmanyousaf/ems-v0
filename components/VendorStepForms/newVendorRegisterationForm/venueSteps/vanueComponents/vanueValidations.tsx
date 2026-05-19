@@ -112,6 +112,9 @@ export const vanueValidations = ({currentStep, formData, currentErrors }: Valida
         });
       }
       else if (currentStep === 6) {
-        if (formData.images.length < 1) currentErrors.images = "Images are required";
+        // Images temporarily optional — storage backend not wired up.
+        // See business-registration-form IMAGE_UPLOADS_ENABLED for the
+        // platform-wide flag; venue can complete registration without
+        // photos for now.
       }
   }

@@ -73,10 +73,11 @@ export const BridalWearValidations = ({ currentStep, formData, currentErrors }: 
     } else if (currentStep === 5) {
         if (!formData.instruction) currentErrors.instruction = 'Lead time is required';
     } else if (currentStep === 6) {
+        // Images temporarily optional — storage backend not wired up.
+        // 20-cap still enforced. See business-registration-form
+        // IMAGE_UPLOADS_ENABLED constant for the platform-wide flag.
         const imageCount = formData.imageFiles?.length ?? 0;
-        if (imageCount === 0) {
-            currentErrors.images = 'Please upload at least one image of your store / outfits';
-        } else if (imageCount > 20) {
+        if (imageCount > 20) {
             currentErrors.images = `Maximum 20 images allowed. Remove ${imageCount - 20} image(s).`;
         }
     } else if (currentStep === 7) {
