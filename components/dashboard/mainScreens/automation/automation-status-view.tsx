@@ -3,9 +3,13 @@
 /**
  * Phase 3 #9.5 — Automation status surface.
  *
- * Read-only v1 — shows the 5 rule definitions + their enabled state.
- * Per-vendor toggles via a settings JSON column are a follow-up; for
- * now ops manage them via env (AUTOMATION_T14_DISABLED=1 etc.).
+ * Shows the 5 rule definitions + per-vendor toggles. Two layers:
+ *   - vendorEnabled  per-vendor opt-out (persisted to User.automationPrefs)
+ *   - envDisabled    global ops kill-switch (env var, takes precedence)
+ *
+ * Toggles only flip the vendor preference; when env disables the rule
+ * we surface a separate "Disabled by ops" pill so the vendor knows
+ * their preference isn't the blocker.
  */
 
 import * as React from 'react';
@@ -18,11 +22,14 @@ import {
   CheckCircle2,
   XCircle,
   Sparkles,
+  Loader2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import axiosInstance from '@/lib/axiosConfig';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 
 interface Rule {
@@ -31,6 +38,8 @@ interface Rule {
   description: string;
   enabled: boolean;
   envFlag: string;
+  envDisabled: boolean;
+  vendorEnabled: boolean;
   delegated: boolean;
 }
 
@@ -50,14 +59,53 @@ const RULE_ICON: Record<string, React.ReactNode> = {
 export default function AutomationStatusView() {
   const [data, setData] = useState<AutomationStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [busyKind, setBusyKind] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = () => {
+    setLoading(true);
     axiosInstance
       .get('/api/v1/automation/status')
       .then((r) => setData(r.data?.data ?? null))
       .catch(() => setData(null))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    load();
   }, []);
+
+  const toggle = async (kind: string, next: boolean) => {
+    setBusyKind(kind);
+    try {
+      await axiosInstance.patch('/api/v1/automation/prefs', {
+        kind,
+        enabled: next,
+      });
+      toast.success(next ? 'Rule enabled' : 'Rule paused');
+      // Optimistic local update — avoids the full reload bounce.
+      setData((d) => {
+        if (!d) return d;
+        return {
+          ...d,
+          rules: d.rules.map((r) =>
+            r.kind === kind
+              ? {
+                  ...r,
+                  vendorEnabled: next,
+                  enabled: next && !r.envDisabled,
+                }
+              : r,
+          ),
+        };
+      });
+    } catch (e: any) {
+      toast.error(
+        e?.response?.data?.message || 'Could not save preference',
+      );
+    } finally {
+      setBusyKind(null);
+    }
+  };
 
   if (loading) {
     return <Skeleton className="h-64 w-full" />;
@@ -115,10 +163,25 @@ export default function AutomationStatusView() {
                     {r.label}
                   </span>
                 </div>
+                {busyKind === r.kind ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-neutral-400 shrink-0" />
+                ) : (
+                  <Switch
+                    checked={r.vendorEnabled}
+                    onCheckedChange={(v) => toggle(r.kind, v)}
+                    disabled={r.envDisabled || r.delegated}
+                    aria-label={`Toggle ${r.label}`}
+                  />
+                )}
+              </div>
+              <p className="text-xs text-neutral-600 leading-relaxed">
+                {r.description}
+              </p>
+              <div className="flex items-center gap-2 flex-wrap pt-0.5">
                 <Badge
                   variant="outline"
                   className={cn(
-                    'text-[10px] shrink-0',
+                    'text-[10px]',
                     r.enabled
                       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                       : 'bg-neutral-100 text-neutral-600 border-neutral-300',
@@ -129,29 +192,34 @@ export default function AutomationStatusView() {
                   ) : (
                     <XCircle className="h-3 w-3 mr-1" />
                   )}
-                  {r.enabled ? 'On' : 'Off'}
+                  {r.enabled ? 'Active' : 'Inactive'}
                 </Badge>
+                {r.envDisabled && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] bg-amber-50 text-amber-700 border-amber-200"
+                  >
+                    Disabled by ops
+                  </Badge>
+                )}
+                {r.delegated && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] bg-blue-50 text-blue-700 border-blue-200"
+                  >
+                    Delegated cron
+                  </Badge>
+                )}
               </div>
-              <p className="text-xs text-neutral-600 leading-relaxed">
-                {r.description}
-              </p>
-              {r.delegated && (
-                <Badge
-                  variant="outline"
-                  className="text-[10px] bg-blue-50 text-blue-700 border-blue-200"
-                >
-                  Delegated to dedicated cron
-                </Badge>
-              )}
             </CardContent>
           </Card>
         ))}
       </div>
 
       <p className="text-[11px] text-muted-foreground italic">
-        Per-vendor toggles ship in a follow-up. For now the platform owners
-        flip rules on/off via environment variables (e.g.{' '}
-        <code className="text-[10px]">AUTOMATION_T14_DISABLED=1</code>).
+        Toggles save instantly to your account. Rules marked &ldquo;Disabled
+        by ops&rdquo; are paused platform-wide via env var and can&apos;t
+        be re-enabled here — please contact support.
       </p>
     </div>
   );

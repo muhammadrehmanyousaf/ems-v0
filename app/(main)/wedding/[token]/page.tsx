@@ -62,6 +62,7 @@ interface Sheet {
   paidAt: string | null;
   signedAt: string | null;
   hasShareLink: boolean;
+  beoAvailable?: boolean;
 }
 interface Installment {
   id: number;
@@ -348,13 +349,26 @@ export default function Page({ params }: PageProps) {
                         {sheetsForBooking.map((s) => (
                           <li
                             key={s.id}
-                            className="flex items-center justify-between text-sm"
+                            className="flex items-center justify-between text-sm gap-2"
                           >
-                            <div className="flex items-center gap-2 min-w-0">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
                               <FileText className="h-3.5 w-3.5 text-bridal-gold/70 shrink-0" />
                               <span className="truncate">{s.title}</span>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
+                              {s.beoAvailable && (
+                                <a
+                                  href={`${BACKEND_URL}api/v1/public/wedding-umbrellas/portal/${encodeURIComponent(
+                                    token,
+                                  )}/sheets/${s.id}/beo.pdf`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[10px] px-1.5 py-0.5 rounded border bg-bridal-gold/10 text-bridal-gold-dark border-bridal-gold/30 hover:bg-bridal-gold/20"
+                                  title="Banquet Event Order preview"
+                                >
+                                  View BEO
+                                </a>
+                              )}
                               <span className="text-xs font-medium tabular-nums">
                                 {fmtPKR(s.grandTotal)}
                               </span>
