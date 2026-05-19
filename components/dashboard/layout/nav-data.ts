@@ -3,6 +3,7 @@ import {
   Boxes,
   BriefcaseBusiness,
   CalendarDays,
+  Handshake,
   HandCoins,
   Truck,
   CircleDollarSign,
@@ -62,6 +63,8 @@ export const data = {
     { name: "Staff & payroll", url: "/dashboard/staff",        icon: HandCoins },
     // Vendor Portal Phase 2 #8.4 — Supplier ledger (A/P).
     { name: "Suppliers",     url: "/dashboard/suppliers",      icon: Truck },
+    // Vendor Portal Phase 2 #8.8 — Broker commission ledger.
+    { name: "Brokers",       url: "/dashboard/brokers",        icon: Handshake },
     { name: "Reviews",       url: "/dashboard/reviews",        icon: Smile },
     { name: "Notifications", url: "/dashboard/notifications",  icon: Bell },
   ],
