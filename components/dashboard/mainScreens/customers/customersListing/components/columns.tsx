@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { ColumnDef } from '@tanstack/react-table';
 import { RowActions } from './row-actions';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -37,21 +38,29 @@ export const columns = (
     {
         accessorKey: "name",
         header: "Full Name",
-        cell: ({ row }) => (
-            <div className='flex items-center gap-2'>
-                <Avatar className='h-[34px] w-[34px]'>
-                    <AvatarFallback className='bg-primary/20 text-primary'>
-                        {row.original.name?.charAt(0).toLocaleUpperCase()}
-                    </AvatarFallback>
-                </Avatar>
-                <div>
-                    <span className="font-medium">{row.original.name}</span>
-                    {row.original.email && (
-                        <p className="text-xs text-muted-foreground">{row.original.email}</p>
-                    )}
-                </div>
-            </div>
-        )
+        cell: ({ row }) => {
+            // Listing _id is either the email or `offline_<N>` — both are
+            // valid identifiers for the Customer 360 page.
+            const id = row.original._id || '';
+            const href = `/dashboard/customers/${encodeURIComponent(id)}`;
+            return (
+                <Link href={href} className='flex items-center gap-2 group'>
+                    <Avatar className='h-[34px] w-[34px]'>
+                        <AvatarFallback className='bg-primary/20 text-primary'>
+                            {row.original.name?.charAt(0).toLocaleUpperCase()}
+                        </AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <span className="font-medium group-hover:text-bridal-gold-dark group-hover:underline underline-offset-2">
+                            {row.original.name}
+                        </span>
+                        {row.original.email && (
+                            <p className="text-xs text-muted-foreground">{row.original.email}</p>
+                        )}
+                    </div>
+                </Link>
+            );
+        }
     },
     { accessorKey: "phone", header: "Phone Number" },
     {

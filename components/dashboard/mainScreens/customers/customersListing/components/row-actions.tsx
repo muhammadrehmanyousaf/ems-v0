@@ -1,6 +1,7 @@
 "use client"
 
-import { Eye, MoreHorizontal } from "lucide-react"
+import Link from "next/link"
+import { Eye, MoreHorizontal, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
     DropdownMenu,
@@ -18,6 +19,7 @@ interface DataTableRowActionsProps {
 }
 
 export function RowActions({ data, onView }: DataTableRowActionsProps) {
+    const id = data._id || ''
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -29,12 +31,18 @@ export function RowActions({ data, onView }: DataTableRowActionsProps) {
                     <span className="sr-only">Open menu</span>
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[160px]">
+            <DropdownMenuContent align="end" className="w-[180px]">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="gap-2" onClick={() => onView(data)}>
                     <Eye className="size-4 opacity-70" />
-                    View Details
+                    Quick view
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="gap-2">
+                    <Link href={`/dashboard/customers/${encodeURIComponent(id)}`}>
+                        <ExternalLink className="size-4 opacity-70" />
+                        Open detail page
+                    </Link>
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

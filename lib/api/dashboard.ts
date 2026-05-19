@@ -526,6 +526,83 @@ export interface ApiCustomer {
   first_booking?: string;
 }
 
+export interface CustomerProfileBooking {
+  id: number;
+  customerName: string | null;
+  customerEmail: string | null;
+  customerPhone: string | null;
+  bookingDate: string | null;
+  bookingTime: string | null;
+  status: string;
+  paymentStatus: string | null;
+  paymentMethod: string | null;
+  totalAmount: number | string;
+  downPayment: number | string;
+  guestCount: number | null;
+  bookingSource: string | null;
+  specialRequests: string | null;
+  createdAt: string;
+}
+
+export interface CustomerProfileSheet {
+  id: number;
+  title: string;
+  state: string;
+  eventDate: string | null;
+  grandTotal: number | string;
+  bookingId: number | null;
+  customerName: string | null;
+  createdAt: string;
+}
+
+export interface CustomerProfileLead {
+  id: number;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  source: string;
+  status: string;
+  eventType: string | null;
+  eventDate: string | null;
+  bookingId: number | null;
+  createdAt: string;
+}
+
+export interface CustomerProfileResponse {
+  profile: {
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+    address: string;
+    offlineCustomerId: number | null;
+    firstBookingAt: string | null;
+    lastBookingAt: string | null;
+  };
+  stats: {
+    totalBookings: number;
+    completedBookings: number;
+    confirmedBookings: number;
+    cancelledBookings: number;
+    upcomingBookings: number;
+    lifetimeRevenue: number;
+    cancelledRevenue: number;
+    avgTicketSize: number;
+    repeatCustomer: boolean;
+    daysSinceLastBooking: number | null;
+    totalFunctionSheets: number;
+    paidSheets: number;
+    invoicedSheets: number;
+    signedSheets: number;
+    sheetRevenue: number;
+    totalLeads: number;
+    convertedLeads: number;
+    lostLeads: number;
+  };
+  bookings: CustomerProfileBooking[];
+  functionSheets: CustomerProfileSheet[];
+  leads: CustomerProfileLead[];
+}
+
 export class CustomersAPI {
   static async getAll(
     page = 1,
@@ -554,6 +631,28 @@ export class CustomersAPI {
         pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
       }
     );
+  }
+
+  /**
+   * Customer 360 — single-customer aggregate (bookings + function
+   * sheets + leads + stats). The listing's `_id` is either the
+   * customer's email or `offline_<id>`; pass it via the matching
+   * query param.
+   */
+  static async getProfile(params: {
+    email?: string;
+    phone?: string;
+    offlineId?: number;
+  }): Promise<CustomerProfileResponse | null> {
+    const qs = new URLSearchParams();
+    if (params.email) qs.set("email", params.email);
+    if (params.phone) qs.set("phone", params.phone);
+    if (params.offlineId != null) qs.set("offlineId", String(params.offlineId));
+    if (qs.toString() === "") return null;
+    const res = await axiosInstance.get(
+      `/api/v1/analytics/customers/profile?${qs.toString()}`,
+    );
+    return res.data?.data ?? null;
   }
 }
 
