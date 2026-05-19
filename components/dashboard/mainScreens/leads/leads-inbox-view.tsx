@@ -94,6 +94,8 @@ import {
 } from '@/components/ui/select';
 
 import { LinkedFunctionSheetBadge } from '@/components/shared/linked-function-sheet-badge';
+import { AiSuggestButton } from '@/components/ai/ai-suggest-button';
+import { AiAPI } from '@/lib/api/ai';
 import {
   LeadAPI,
   LEAD_STATUS_LABELS,
@@ -787,6 +789,18 @@ export default function LeadsInboxView() {
             onChange={(e) => setWhatsappBody(e.target.value)}
             placeholder="Assalam-o-alaikum! Thanks for your inquiry…"
           />
+          {/* Phase 5 — AI draft assist. Hidden when ANTHROPIC_API_KEY
+              isn't configured on the backend. */}
+          {whatsappLead && (
+            <div className="flex justify-start">
+              <AiSuggestButton
+                feature="leadReply"
+                label="AI draft reply"
+                run={() => AiAPI.draftLeadReply(whatsappLead.id)}
+                onSuggestion={(r) => setWhatsappBody(r.suggestion)}
+              />
+            </div>
+          )}
           <DialogFooter>
             <Button
               variant="outline"

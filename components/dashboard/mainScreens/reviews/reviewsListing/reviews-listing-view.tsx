@@ -5,6 +5,8 @@ import ReviewsTable from './components/reviews-table'
 import PageContainer from '@/components/dashboard/layout/page-container'
 // Phase 4 #10.2 — surfaces the review-automation cron's activity.
 import { ReviewAutomationStatsCard } from '../automation-stats-card'
+// Phase 5 — AI sentiment summary card.
+import { AiReviewSummaryCard } from '../ai-review-summary-card'
 
 const ReviewsListingView = () => {
     return (
@@ -16,6 +18,7 @@ const ReviewsListingView = () => {
                     />
                     <Separator/>
                     <ReviewAutomationStatsCard />
+                    <AiReviewSummaryCard />
                     <ReviewsTable/>
                 </div>
             </PageContainer>
