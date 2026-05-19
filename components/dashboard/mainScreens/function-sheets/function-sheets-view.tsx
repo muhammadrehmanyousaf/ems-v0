@@ -41,6 +41,7 @@ import {
   Plus,
   PenLine,
   MessageSquare,
+  Share2,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -81,6 +82,7 @@ import {
 import { FunctionSheetComposer } from './function-sheet-composer';
 import { SignDialog, type SignSide } from './sign-dialog';
 import { SendWhatsappDialog } from './send-whatsapp-dialog';
+import { ShareLinkDialog } from './share-link-dialog';
 
 interface VendorBusinessOption {
   id: number;
@@ -143,6 +145,7 @@ export default function FunctionSheetsView() {
     sheet: FunctionSheet;
     variant?: PdfVariant;
   } | null>(null);
+  const [shareSheet, setShareSheet] = useState<FunctionSheet | null>(null);
   const [cancelSheet, setCancelSheet] = useState<FunctionSheet | null>(null);
   const [deleteSheet, setDeleteSheet] = useState<FunctionSheet | null>(null);
 
@@ -418,6 +421,7 @@ export default function FunctionSheetsView() {
               onWhatsapp={(variant) =>
                 setWhatsappTarget({ sheet: s, variant })
               }
+              onShare={() => setShareSheet(s)}
             />
           ))}
         </div>
@@ -462,6 +466,12 @@ export default function FunctionSheetsView() {
           setWhatsappTarget(null);
           await fetchAll();
         }}
+      />
+
+      <ShareLinkDialog
+        sheet={shareSheet}
+        onOpenChange={(o) => !o && setShareSheet(null)}
+        onSaved={fetchAll}
       />
 
       <AlertDialog
@@ -526,6 +536,7 @@ function SheetCard({
   onDelete,
   onPdf,
   onWhatsapp,
+  onShare,
 }: {
   sheet: FunctionSheet;
   busy: boolean;
@@ -536,6 +547,7 @@ function SheetCard({
   onDelete: () => void;
   onPdf: (variant: PdfVariant, mode: 'preview' | 'download') => void;
   onWhatsapp: (variant?: PdfVariant) => void;
+  onShare: () => void;
 }) {
   const tone = STATE_TONES[sheet.state];
   const nextOptions = NEXT_STATES[sheet.state] || [];
@@ -551,6 +563,16 @@ function SheetCard({
   // on terminal / paid / archived rows since they're frozen.
   const canSign =
     !isTerminal && sheet.state !== 'paid' && sheet.state !== 'archived';
+
+  // Share-link state. A link is "live" when it exists, isn't revoked,
+  // and hasn't expired yet.
+  const shareTokenLive =
+    !!sheet.customerShareToken &&
+    !sheet.shareTokenRevokedAt &&
+    (!sheet.shareTokenExpiresAt ||
+      new Date(sheet.shareTokenExpiresAt) > new Date());
+  const canShare =
+    !isTerminal && sheet.state !== 'archived' && sheet.state !== 'cancelled';
 
   return (
     <Card className={isTerminal ? 'opacity-70' : ''}>
@@ -644,6 +666,14 @@ function SheetCard({
           {sheet.paidAt && (
             <span className="rounded bg-emerald-50 px-2 py-0.5 text-emerald-800">
               Paid {fmtDate(sheet.paidAt)}
+            </span>
+          )}
+          {shareTokenLive && (
+            <span className="inline-flex items-center gap-1 rounded bg-sky-50 px-2 py-0.5 text-sky-800">
+              <Share2 className="h-3 w-3" />
+              Share link live
+              {sheet.shareTokenExpiresAt &&
+                ` · expires ${fmtDate(sheet.shareTokenExpiresAt)}`}
             </span>
           )}
           {Array.isArray(sheet.lineItemsJson) &&
@@ -768,6 +798,23 @@ function SheetCard({
                 {customerSigned ? 'Re-sign customer' : 'Sign as customer'}
               </Button>
             </>
+          )}
+          {/* Share-link — for remote customers (overseas / different city) */}
+          {canShare && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onShare}
+              disabled={busy}
+              className={
+                shareTokenLive
+                  ? 'border-sky-300 bg-sky-50 text-sky-800'
+                  : 'border-neutral-300'
+              }
+            >
+              <Share2 className="mr-1 h-3 w-3" />
+              {shareTokenLive ? 'Manage share link' : 'Share link'}
+            </Button>
           )}
           {/* Cancel — visible on any non-terminal state */}
           {!isTerminal && (

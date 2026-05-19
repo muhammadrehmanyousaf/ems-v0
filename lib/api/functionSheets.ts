@@ -59,6 +59,10 @@ export interface FunctionSheet {
   signedAt: string | null;
   invoicedAt: string | null;
   paidAt: string | null;
+  customerShareToken?: string | null;
+  shareTokenIssuedAt?: string | null;
+  shareTokenExpiresAt?: string | null;
+  shareTokenRevokedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   business?: { id: number; name: string | null; userId?: number } | null;
@@ -207,6 +211,34 @@ export class FunctionSheetAPI {
   static pdfUrl(id: number, variant?: PdfVariant): string {
     const params = variant ? `?variant=${encodeURIComponent(variant)}` : "";
     return `/api/v1/function-sheets/${id}/pdf${params}`;
+  }
+
+  /**
+   * Issue (or rotate) a customer-share token. Previous link dies
+   * instantly. expiresInDays defaults to 30, clamped 1-365.
+   */
+  static async issueShareToken(
+    id: number,
+    expiresInDays = 30,
+  ): Promise<{
+    token: string;
+    issuedAt: string;
+    expiresAt: string;
+    expiresInDays: number;
+  }> {
+    const res = await axiosInstance.post(
+      `/api/v1/function-sheets/${id}/share-token`,
+      { expiresInDays },
+    );
+    return res.data?.data;
+  }
+
+  /**
+   * Revoke (flag-dead, do NOT clear) the share token. Vendor can
+   * re-issue afterwards.
+   */
+  static async revokeShareToken(id: number): Promise<void> {
+    await axiosInstance.delete(`/api/v1/function-sheets/${id}/share-token`);
   }
 
   /**
