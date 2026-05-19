@@ -3,6 +3,7 @@ import {
   Boxes,
   BriefcaseBusiness,
   CalendarDays,
+  Fuel,
   Handshake,
   HandCoins,
   Truck,
@@ -65,6 +66,8 @@ export const data = {
     { name: "Suppliers",     url: "/dashboard/suppliers",      icon: Truck },
     // Vendor Portal Phase 2 #8.8 — Broker commission ledger.
     { name: "Brokers",       url: "/dashboard/brokers",        icon: Handshake },
+    // Vendor Portal Phase 2 #8.5 — Generator fuel log (venue-specific).
+    { name: "Generator fuel",url: "/dashboard/generator-fuel", icon: Fuel },
     { name: "Reviews",       url: "/dashboard/reviews",        icon: Smile },
     { name: "Notifications", url: "/dashboard/notifications",  icon: Bell },
   ],
