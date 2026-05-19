@@ -48,6 +48,15 @@ import {
   Mail,
   Building,
   FileText,
+  HandCoins,
+  Receipt,
+  CreditCard,
+  Handshake,
+  Banknote,
+  HardHat,
+  Boxes,
+  TrendingUp,
+  TrendingDown,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -83,6 +92,7 @@ import {
   type FunctionSheetState,
   type PdfVariant,
   type AuditEvent,
+  type LinkedFinancials,
 } from '@/lib/api/functionSheets';
 import { FunctionSheetComposer } from './function-sheet-composer';
 import { SignDialog, type SignSide } from './sign-dialog';
@@ -149,6 +159,7 @@ export default function FunctionSheetDetailView({
   const router = useRouter();
   const [sheet, setSheet] = useState<FunctionSheet | null>(null);
   const [events, setEvents] = useState<AuditEvent[]>([]);
+  const [financials, setFinancials] = useState<LinkedFinancials | null>(null);
   const [businesses, setBusinesses] = useState<VendorBusinessOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -170,9 +181,10 @@ export default function FunctionSheetDetailView({
     setLoading(true);
     setError(null);
     try {
-      const [row, audit] = await Promise.all([
+      const [row, audit, fin] = await Promise.all([
         FunctionSheetAPI.get(sheetId),
         FunctionSheetAPI.auditLog(sheetId, 200).catch(() => ({ events: [] })),
+        FunctionSheetAPI.linkedFinancials(sheetId).catch(() => null),
       ]);
       if (!row) {
         setError('Function sheet not found');
@@ -180,6 +192,7 @@ export default function FunctionSheetDetailView({
       } else {
         setSheet(row);
         setEvents(audit.events || []);
+        setFinancials(fin);
       }
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Failed to load function sheet');
@@ -726,6 +739,25 @@ export default function FunctionSheetDetailView({
             </Card>
           )}
 
+          {/* Linked financials — receipts / PDCs / supplier invoices / commissions / expenses / staff / inventory consumption */}
+          {financials && financials.bookingId && (
+            <LinkedFinancialsSection financials={financials} />
+          )}
+          {financials && !financials.bookingId && (
+            <Card>
+              <CardContent className="space-y-1 p-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Linked financials
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Link this Function Sheet to a Booking to see receipts,
+                  cheques, supplier invoices, expenses, and staff payroll for
+                  the event in one place.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Activity log inline */}
           <Card>
             <CardContent className="space-y-2 p-4">
@@ -1081,6 +1113,386 @@ function InlineActivity({ events }: { events: AuditEvent[] }) {
         </li>
       )}
     </ol>
+  );
+}
+
+// ─── Linked financials section ────────────────────────────────────
+
+function LinkedFinancialsSection({
+  financials,
+}: {
+  financials: LinkedFinancials;
+}) {
+  const { pnl, receipts, pdcs, supplierInvoices, brokerCommissions, expenses, staffShifts, inventoryMovements } = financials;
+
+  return (
+    <Card>
+      <CardContent className="space-y-3 p-4">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <HandCoins className="h-3 w-3" />
+          Linked financials &amp; per-event P&amp;L
+        </div>
+
+        {pnl && (
+          <div className="space-y-2">
+            {/* Top-line P&L summary */}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <PnlCard
+                label="Gross"
+                value={pnl.gross}
+                tone="neutral"
+                icon={FileText}
+              />
+              <PnlCard
+                label="Received"
+                value={pnl.inflows.totalReceived}
+                tone="emerald"
+                icon={TrendingUp}
+                subtitle={
+                  pnl.inflows.pdcsHeld > 0
+                    ? `+ ${fmtPKR(pnl.inflows.pdcsHeld)} in held cheques`
+                    : undefined
+                }
+              />
+              <PnlCard
+                label="Spent"
+                value={pnl.outflows.totalOutflows}
+                tone="rose"
+                icon={TrendingDown}
+                subtitle={
+                  pnl.outflows.totalCommitted > 0
+                    ? `+ ${fmtPKR(pnl.outflows.totalCommitted)} committed`
+                    : undefined
+                }
+              />
+              <PnlCard
+                label="Net (paid only)"
+                value={pnl.net}
+                tone={pnl.net >= 0 ? 'emerald' : 'rose'}
+                icon={HandCoins}
+                subtitle={
+                  pnl.customerOutstanding > 0
+                    ? `${fmtPKR(pnl.customerOutstanding)} outstanding from customer`
+                    : 'customer fully paid'
+                }
+              />
+            </div>
+
+            {/* Cashflow vs net distinction */}
+            <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-[11px]">
+              <span className="font-semibold">Realised cashflow:</span>{' '}
+              <span
+                className={
+                  pnl.cashflow >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                }
+              >
+                {fmtPKR(pnl.cashflow)}
+              </span>{' '}
+              <span className="text-muted-foreground">
+                (cash received − cash paid out)
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Per-resource lists in collapsible-style sub-cards */}
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <ResourceList
+            title="Payment receipts"
+            count={receipts.length}
+            icon={Receipt}
+            total={receipts.reduce((s, r) => s + (Number(r.amount) || 0), 0)}
+            rows={receipts.map((r) => ({
+              key: r.id,
+              primary: r.method,
+              secondary: `${fmtDate(r.receivedDate)} ${r.transactionRef ? `· ${r.transactionRef}` : ''}`,
+              amount: Number(r.amount) || 0,
+              tone: 'emerald',
+            }))}
+          />
+          <ResourceList
+            title="Post-dated cheques"
+            count={pdcs.length}
+            icon={Banknote}
+            total={pdcs
+              .filter((p) => p.status !== 'bounced' && p.status !== 'cancelled')
+              .reduce((s, p) => s + (Number(p.amount) || 0), 0)}
+            rows={pdcs.map((p) => ({
+              key: p.id,
+              primary: `${p.bankName} · ${p.chequeNumber}`,
+              secondary: `${fmtDate(p.chequeDate)} · ${p.status}${p.bounceReason ? ` (${p.bounceReason})` : ''}`,
+              amount: Number(p.amount) || 0,
+              tone:
+                p.status === 'cleared'
+                  ? 'emerald'
+                  : p.status === 'bounced'
+                    ? 'rose'
+                    : p.status === 'deposited'
+                      ? 'sky'
+                      : 'amber',
+            }))}
+          />
+          <ResourceList
+            title="Supplier invoices"
+            count={supplierInvoices.length}
+            icon={CreditCard}
+            total={supplierInvoices.reduce(
+              (s, inv) =>
+                inv.status === 'void'
+                  ? s
+                  : s + (Number(inv.totalAmount) || 0),
+              0,
+            )}
+            rows={supplierInvoices.map((inv) => {
+              const outstanding = Math.max(
+                0,
+                (Number(inv.totalAmount) || 0) -
+                  (Number(inv.amountPaid) || 0),
+              );
+              return {
+                key: inv.id,
+                primary: `${inv.supplierNameSnapshot}${inv.invoiceNumber ? ` · #${inv.invoiceNumber}` : ''}`,
+                secondary: `${fmtDate(inv.invoiceDate)} · ${inv.status}${outstanding > 0 ? ` · ${fmtPKR(outstanding)} outstanding` : ''}`,
+                amount: Number(inv.totalAmount) || 0,
+                tone:
+                  inv.status === 'paid'
+                    ? 'emerald'
+                    : inv.status === 'overdue' || inv.status === 'disputed'
+                      ? 'rose'
+                      : 'amber',
+              };
+            })}
+          />
+          <ResourceList
+            title="Broker commissions"
+            count={brokerCommissions.length}
+            icon={Handshake}
+            total={brokerCommissions.reduce(
+              (s, c) =>
+                c.status === 'void' ? s : s + (Number(c.commissionAmount) || 0),
+              0,
+            )}
+            rows={brokerCommissions.map((c) => {
+              const outstanding = Math.max(
+                0,
+                (Number(c.commissionAmount) || 0) -
+                  (Number(c.amountPaid) || 0),
+              );
+              return {
+                key: c.id,
+                primary: `${c.brokerNameSnapshot} · ${c.commissionType === 'percentage' && c.commissionPct ? `${c.commissionPct}%` : 'flat'}`,
+                secondary: `${fmtDate(c.accruedDate)} · ${c.status}${outstanding > 0 ? ` · ${fmtPKR(outstanding)} unpaid` : ''}`,
+                amount: Number(c.commissionAmount) || 0,
+                tone:
+                  c.status === 'paid'
+                    ? 'emerald'
+                    : c.status === 'disputed'
+                      ? 'rose'
+                      : 'amber',
+              };
+            })}
+          />
+          <ResourceList
+            title="Expenses"
+            count={expenses.length}
+            icon={TrendingDown}
+            total={expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0)}
+            rows={expenses.map((e) => ({
+              key: e.id,
+              primary: `${e.category}${e.subcategory ? ` · ${e.subcategory}` : ''}${e.supplierName ? ` · ${e.supplierName}` : ''}`,
+              secondary: `${fmtDate(e.spentDate)} · ${e.paymentMethod}`,
+              amount: Number(e.amount) || 0,
+              tone: 'rose',
+            }))}
+          />
+          <ResourceList
+            title="Staff payroll"
+            count={staffShifts.length}
+            icon={HardHat}
+            total={staffShifts.reduce(
+              (s, sh) => s + (Number(sh.grossPayable) || 0),
+              0,
+            )}
+            rows={staffShifts.map((sh) => ({
+              key: sh.id,
+              primary: `${sh.staffNameSnapshot} · ${sh.roleSnapshot.replace(/_/g, ' ')}`,
+              secondary: `${fmtDate(sh.shiftDate)} · ${sh.paymentStatus}${sh.paidVia ? ` · via ${sh.paidVia}` : ''}`,
+              amount: Number(sh.grossPayable) || 0,
+              tone:
+                sh.paymentStatus === 'paid'
+                  ? 'emerald'
+                  : sh.paymentStatus === 'disputed'
+                    ? 'rose'
+                    : 'amber',
+            }))}
+          />
+          {inventoryMovements.length > 0 && (
+            <div className="lg:col-span-2">
+              <ResourceList
+                title="Inventory consumed"
+                count={inventoryMovements.length}
+                icon={Boxes}
+                rows={inventoryMovements.map((m) => ({
+                  key: m.id,
+                  primary: m.item?.name || '(unknown item)',
+                  secondary: `${fmtDate(m.occurredAt)}${m.reason ? ` · ${m.reason}` : ''}`,
+                  amount: undefined,
+                  amountLabel: `${m.quantity} ${m.item?.unit || ''}`.trim(),
+                  tone: 'sky',
+                }))}
+              />
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// PnlCard — top-line summary tile.
+
+const PNL_TONE: Record<
+  'neutral' | 'emerald' | 'rose' | 'amber' | 'sky',
+  { border: string; bg: string; iconColor: string }
+> = {
+  neutral: {
+    border: 'border-neutral-200',
+    bg: 'bg-white',
+    iconColor: 'text-neutral-500',
+  },
+  emerald: {
+    border: 'border-emerald-200',
+    bg: 'bg-emerald-50/40',
+    iconColor: 'text-emerald-700',
+  },
+  rose: {
+    border: 'border-rose-200',
+    bg: 'bg-rose-50/40',
+    iconColor: 'text-rose-700',
+  },
+  amber: {
+    border: 'border-amber-200',
+    bg: 'bg-amber-50/40',
+    iconColor: 'text-amber-700',
+  },
+  sky: {
+    border: 'border-sky-200',
+    bg: 'bg-sky-50/40',
+    iconColor: 'text-sky-700',
+  },
+};
+
+function PnlCard({
+  label,
+  value,
+  tone,
+  icon: Icon,
+  subtitle,
+}: {
+  label: string;
+  value: number;
+  tone: keyof typeof PNL_TONE;
+  icon: React.ElementType;
+  subtitle?: string;
+}) {
+  const t = PNL_TONE[tone];
+  return (
+    <div className={`rounded-md border ${t.border} ${t.bg} px-3 py-2`}>
+      <div className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+        <Icon className={`h-3 w-3 ${t.iconColor}`} />
+        {label}
+      </div>
+      <div className="text-base font-bold">{fmtPKR(value)}</div>
+      {subtitle && (
+        <div className="text-[10px] text-muted-foreground">{subtitle}</div>
+      )}
+    </div>
+  );
+}
+
+// ResourceList — collapsible per-resource list.
+
+function ResourceList({
+  title,
+  count,
+  icon: Icon,
+  total,
+  rows,
+}: {
+  title: string;
+  count: number;
+  icon: React.ElementType;
+  total?: number;
+  rows: Array<{
+    key: number | string;
+    primary: string;
+    secondary?: string;
+    amount?: number;
+    amountLabel?: string;
+    tone?: 'neutral' | 'emerald' | 'rose' | 'amber' | 'sky';
+  }>;
+}) {
+  const [expanded, setExpanded] = useState(rows.length <= 3);
+  if (count === 0) return null;
+  const visible = expanded ? rows : rows.slice(0, 3);
+  return (
+    <div className="rounded-md border border-neutral-200 bg-white">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 border-b border-neutral-100 px-3 py-2 text-left hover:bg-neutral-50"
+      >
+        <div className="inline-flex items-center gap-2">
+          <Icon className="h-3.5 w-3.5 text-neutral-500" />
+          <span className="text-xs font-semibold uppercase tracking-wide">
+            {title}
+          </span>
+          <Badge variant="secondary" className="text-[10px]">
+            {count}
+          </Badge>
+        </div>
+        {total != null && (
+          <span className="text-xs font-mono">{fmtPKR(total)}</span>
+        )}
+      </button>
+      <ul className="space-y-0 divide-y divide-neutral-100 text-xs">
+        {visible.map((r) => {
+          const toneCls = r.tone ? PNL_TONE[r.tone] : null;
+          return (
+            <li key={r.key} className="flex items-baseline gap-2 px-3 py-1.5">
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-medium">{r.primary}</div>
+                {r.secondary && (
+                  <div className="truncate text-[10px] text-muted-foreground">
+                    {r.secondary}
+                  </div>
+                )}
+              </div>
+              {r.amount != null ? (
+                <div
+                  className={`font-mono text-xs ${toneCls?.iconColor || 'text-neutral-900'}`}
+                >
+                  {fmtPKR(r.amount)}
+                </div>
+              ) : r.amountLabel ? (
+                <div className="font-mono text-xs text-neutral-700">
+                  {r.amountLabel}
+                </div>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+      {rows.length > 3 && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="w-full border-t border-neutral-100 px-3 py-1 text-[10px] text-blue-700 hover:bg-neutral-50"
+        >
+          {expanded ? 'Show less' : `Show ${rows.length - 3} more`}
+        </button>
+      )}
+    </div>
   );
 }
 

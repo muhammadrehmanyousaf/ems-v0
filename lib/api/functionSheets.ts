@@ -122,6 +122,118 @@ export interface AuditEvent {
   actor: { id: number; fullName: string | null; email: string | null } | null;
 }
 
+// ─── Linked financials types (per-event P&L) ───────────────────────
+
+export interface LinkedReceipt {
+  id: number;
+  amount: number | string;
+  method: string;
+  receivedDate: string;
+  transactionRef: string | null;
+  notes: string | null;
+}
+export interface LinkedPdc {
+  id: number;
+  chequeNumber: string;
+  bankName: string;
+  amount: number | string;
+  chequeDate: string;
+  depositDate: string | null;
+  status: string;
+  bounceReason: string | null;
+}
+export interface LinkedSupplierInvoice {
+  id: number;
+  supplierNameSnapshot: string;
+  supplierCategorySnapshot: string | null;
+  invoiceNumber: string | null;
+  invoiceDate: string;
+  dueDate: string | null;
+  totalAmount: number | string;
+  amountPaid: number | string;
+  status: string;
+}
+export interface LinkedBrokerCommission {
+  id: number;
+  brokerNameSnapshot: string;
+  brokerTypeSnapshot: string | null;
+  commissionType: string;
+  commissionPct: number | string | null;
+  commissionAmount: number | string;
+  amountPaid: number | string;
+  status: string;
+  accruedDate: string;
+  dueDate: string | null;
+}
+export interface LinkedExpense {
+  id: number;
+  category: string;
+  subcategory: string | null;
+  amount: number | string;
+  spentDate: string;
+  supplierName: string | null;
+  paymentMethod: string;
+  description: string | null;
+}
+export interface LinkedStaffShift {
+  id: number;
+  staffNameSnapshot: string;
+  roleSnapshot: string;
+  shiftDate: string;
+  dihariRate: number | string;
+  grossPayable: number | string;
+  netPayable: number | string;
+  paymentStatus: string;
+  paidAmount: number | string | null;
+  paidVia: string | null;
+}
+export interface LinkedInventoryMovement {
+  id: number;
+  type: string;
+  quantity: number | string;
+  occurredAt: string;
+  reason: string | null;
+  item?: { id: number; name: string; unit: string; category: string } | null;
+}
+
+export interface LinkedFinancialsPnl {
+  gross: number;
+  inflows: {
+    receipts: number;
+    pdcsHeld: number;
+    pdcsCleared: number;
+    pdcsBounced: number;
+    totalReceived: number;
+  };
+  outflows: {
+    supplierPaid: number;
+    supplierUnpaid: number;
+    commissionPaid: number;
+    commissionUnpaid: number;
+    expenses: number;
+    expensesByCategory: Record<string, number>;
+    staffPaid: number;
+    staffPending: number;
+    totalOutflows: number;
+    totalCommitted: number;
+  };
+  net: number;
+  cashflow: number;
+  customerOutstanding: number;
+}
+
+export interface LinkedFinancials {
+  bookingId: number | null;
+  receipts: LinkedReceipt[];
+  pdcs: LinkedPdc[];
+  supplierInvoices: LinkedSupplierInvoice[];
+  brokerCommissions: LinkedBrokerCommission[];
+  expenses: LinkedExpense[];
+  staffShifts: LinkedStaffShift[];
+  inventoryMovements: LinkedInventoryMovement[];
+  pnl: LinkedFinancialsPnl | null;
+}
+
 export interface PaymentScheduleEntry {
   label: string;
   dueDate?: string | null;
@@ -304,6 +416,34 @@ export class FunctionSheetAPI {
       body,
     );
     return res.data?.data;
+  }
+
+  /**
+   * Cross-feature financial roll-up — receipts / PDCs / supplier
+   * invoices / broker commissions / expenses / staff shifts /
+   * inventory consumption tied to this sheet's bookingId. Plus
+   * computed per-event P&L (gross / inflows / outflows / net /
+   * cashflow / customer-outstanding).
+   *
+   * Returns empty arrays + null pnl when the sheet has no bookingId.
+   */
+  static async linkedFinancials(id: number): Promise<LinkedFinancials> {
+    const res = await axiosInstance.get(
+      `/api/v1/function-sheets/${id}/linked-financials`,
+    );
+    return (
+      res.data?.data ?? {
+        bookingId: null,
+        receipts: [],
+        pdcs: [],
+        supplierInvoices: [],
+        brokerCommissions: [],
+        expenses: [],
+        staffShifts: [],
+        inventoryMovements: [],
+        pnl: null,
+      }
+    );
   }
 
   /**
