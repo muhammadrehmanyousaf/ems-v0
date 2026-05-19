@@ -13,6 +13,14 @@ body {
   overflow-x: hidden;
 }
 
+/* Phase 3 #9.4 — When the locale toggle flips to Urdu, the dashboard
+   subtree inherits the Nastaliq font stack so translated strings
+   render in proper Urdu typography. data-locale="ur" is set on the
+   <html> element by the LocaleProvider hook. */
+html[data-locale="ur"] body {
+  font-family: var(--font-nastaliq), var(--font-inter), Arial, sans-serif;
+}
+
 /* ─────────────────────────────────────────────────────────────────────────
    BRIDAL DESIGN SYSTEM — Phase 0 foundation
    Pakistani wedding aesthetic: ivory silk, champagne gold, rose petals.

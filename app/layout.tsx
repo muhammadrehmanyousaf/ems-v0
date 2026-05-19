@@ -8,7 +8,7 @@ import { ChatProvider } from "@/context/ChatContext"
 import { QueryProvider } from "@/lib/providers/query-provider"
 import { PerformanceMonitor } from "@/components/performance-monitor"
 import { CookieConsent } from "@/components/cookie-consent"
-import { Inter, Playfair_Display, DM_Sans } from "next/font/google"
+import { Inter, Playfair_Display, DM_Sans, Noto_Nastaliq_Urdu } from "next/font/google"
 import {
   SITE_URL,
   SITE_NAME,
@@ -151,6 +151,18 @@ const dmSans = DM_Sans({
   display: "swap",
 })
 
+// Phase 3 #9.4 — Nastaliq for Urdu text. Loaded only when needed
+// via the `font-nastaliq` utility (see globals.css); doesn't bloat
+// the baseline English bundle because next/font's tree-shaking only
+// pulls the weights we actually use.
+const nastaliq = Noto_Nastaliq_Urdu({
+  subsets: ["arabic"],
+  weight: ["400", "700"],
+  variable: "--font-nastaliq",
+  display: "swap",
+  preload: false,
+})
+
 export default function RootLayout({
   children,
 }: {
@@ -171,7 +183,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.variable} ${playfair.variable} ${dmSans.variable} font-sans`}
+        className={`${inter.variable} ${playfair.variable} ${dmSans.variable} ${nastaliq.variable} font-sans`}
         suppressHydrationWarning
       >
         <QueryProvider>

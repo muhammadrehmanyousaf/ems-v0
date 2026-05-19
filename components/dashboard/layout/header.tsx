@@ -5,6 +5,7 @@ import { UserNav } from "./user-nav"
 import ThemeToggle from "./ThemeToggle/theme-toggle"
 import NotificationsPopover from "./notifications-popover"
 import { Breadcrumbs } from "@/components/breadcrumbs"
+import { LanguageToggle } from "@/components/dashboard/language-toggle"
 
 const Header = () => {
   return (
@@ -16,6 +17,7 @@ const Header = () => {
       </div>
 
       <div className="flex items-center gap-1 px-3">
+        <LanguageToggle />
         <NotificationsPopover />
         <ThemeToggle />
         <Separator orientation="vertical" className="mx-1 h-4" />

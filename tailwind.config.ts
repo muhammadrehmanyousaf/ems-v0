@@ -120,6 +120,8 @@ const config: Config = {
   			sans: ['var(--font-inter)', 'Arial', 'Helvetica', 'sans-serif'],
   			bridal: ['var(--font-dm-sans)', 'Helvetica Neue', 'Arial', 'sans-serif'],
   			display: ['var(--font-playfair)', 'Georgia', 'Times New Roman', 'serif'],
+  			// Phase 3 #9.4 — Noto Nastaliq Urdu for Urdu text rendering.
+  			nastaliq: ['var(--font-nastaliq)', 'Jameel Noori Nastaleeq', 'serif'],
   		},
   		borderRadius: {
   			lg: 'var(--radius)',
