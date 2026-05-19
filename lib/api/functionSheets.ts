@@ -92,6 +92,49 @@ export interface TransitionInput {
   signatureData?: any;
 }
 
+export interface PaymentScheduleEntry {
+  label: string;
+  dueDate?: string | null;
+  amount: number;
+  paidOn?: string | null;
+}
+
+export interface CreateFunctionSheetInput {
+  businessId: number;
+  title: string;
+  bookingId?: number | null;
+  customerUserId?: number | null;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  eventDate?: string | null;
+  validUntil?: string | null;
+  lineItemsJson?: FunctionSheetLineItem[];
+  discountAmount?: number;
+  taxAmount?: number;
+  termsJson?: { lines: string[] } | { text: string } | string | null;
+  paymentScheduleJson?: PaymentScheduleEntry[] | null;
+  notes?: string;
+}
+
+export interface UpdateFunctionSheetInput {
+  title?: string;
+  bookingId?: number | null;
+  customerUserId?: number | null;
+  customerName?: string | null;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  eventDate?: string | null;
+  validUntil?: string | null;
+  lineItemsJson?: FunctionSheetLineItem[];
+  discountAmount?: number;
+  taxAmount?: number;
+  termsJson?: { lines: string[] } | { text: string } | string | null;
+  paymentScheduleJson?: PaymentScheduleEntry[] | null;
+  signaturesJson?: any;
+  notes?: string | null;
+}
+
 export class FunctionSheetAPI {
   static async list(filters: {
     state?: FunctionSheetState;
@@ -114,6 +157,19 @@ export class FunctionSheetAPI {
   static async get(id: number): Promise<FunctionSheet | null> {
     const res = await axiosInstance.get(`/api/v1/function-sheets/${id}`);
     return res.data?.data?.functionSheet ?? null;
+  }
+
+  static async create(body: CreateFunctionSheetInput): Promise<FunctionSheet> {
+    const res = await axiosInstance.post(`/api/v1/function-sheets`, body);
+    return res.data?.data?.functionSheet;
+  }
+
+  static async update(
+    id: number,
+    body: UpdateFunctionSheetInput,
+  ): Promise<FunctionSheet> {
+    const res = await axiosInstance.patch(`/api/v1/function-sheets/${id}`, body);
+    return res.data?.data?.functionSheet;
   }
 
   static async transition(

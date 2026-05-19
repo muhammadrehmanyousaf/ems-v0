@@ -3,28 +3,26 @@
 /**
  * Vendor Portal Phase 1 #7.1 — Function Sheet view (FE).
  *
- * Layer 1 backend shipped earlier; this is the first FE surface,
- * pairing with Layer 2 PDF generation.
+ * Layer 1 backend shipped earlier; this is the FE surface pairing
+ * with Layer 2 PDF generation + composer dialog.
  *
  * Surfaces:
  *   - 9-pill state summary (draft / quote_sent / ... / paid / archived / cancelled)
  *   - State filter pills + booking-id filter + event date range
+ *   - "New function sheet" button → opens composer with empty form
  *   - Per-sheet card showing morphing-doc identity (which face it's
  *     in now) + customer + event + grandTotal + sentAt/signedAt/
  *     invoicedAt/paidAt timeline + variant-aware "PDF" button
  *     dropdown
  *   - Transition action buttons (forward arrows for happy-path moves)
+ *   - Edit button (non-terminal sheets) → opens composer with row data
  *   - Cancel button
- *
- * Note: full create/edit dialogs with line-item builder are deferred
- * to the Smart-File composer ship. This view is read + transition +
- * PDF only — vendor can create function sheets through the chat /
- * booking-detail surfaces in the existing flow.
  */
 
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import axiosInstance from '@/lib/axiosConfig';
 import {
   Loader2,
   FileText,
@@ -39,6 +37,8 @@ import {
   XCircle,
   CheckCircle2,
   AlertTriangle,
+  Pencil,
+  Plus,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -76,6 +76,12 @@ import {
   type FunctionSheetSummary,
   type PdfVariant,
 } from '@/lib/api/functionSheets';
+import { FunctionSheetComposer } from './function-sheet-composer';
+
+interface VendorBusinessOption {
+  id: number;
+  name: string;
+}
 
 function fmtPKR(n: number | string | null | undefined): string {
   const x = Number(n);
@@ -114,6 +120,7 @@ export default function FunctionSheetsView() {
     byState: {},
     totalGrand: 0,
   });
+  const [businesses, setBusinesses] = useState<VendorBusinessOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [stateFilter, setStateFilter] = useState<FunctionSheetState | 'all'>(
     'all',
@@ -122,8 +129,23 @@ export default function FunctionSheetsView() {
   const [eventFrom, setEventFrom] = useState('');
   const [eventTo, setEventTo] = useState('');
   const [busy, setBusy] = useState<number | null>(null);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [editSheet, setEditSheet] = useState<FunctionSheet | null>(null);
   const [cancelSheet, setCancelSheet] = useState<FunctionSheet | null>(null);
   const [deleteSheet, setDeleteSheet] = useState<FunctionSheet | null>(null);
+
+  useEffect(() => {
+    axiosInstance
+      .get('/api/v1/businesses/user-business')
+      .then((res) => {
+        const list = res.data?.data;
+        const arr = Array.isArray(list) ? list : list?.data || [];
+        setBusinesses(
+          arr.map((b: any) => ({ id: b.id, name: b.name || `Business #${b.id}` })),
+        );
+      })
+      .catch(() => {});
+  }, []);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -242,6 +264,9 @@ export default function FunctionSheetsView() {
           the state. Print a PDF in any variant the current state has
           unlocked.
         </p>
+        <Button onClick={() => setComposerOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" /> New function sheet
+        </Button>
       </div>
 
       {/* Status summary cards */}
@@ -359,12 +384,9 @@ export default function FunctionSheetsView() {
           <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
             <FileText className="h-10 w-10 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              No function sheets in this view. Create one via the booking
-              detail or the API — vendors typically start from{' '}
-              <code className="rounded bg-neutral-100 px-1 text-[11px]">
-                POST /api/v1/function-sheets
-              </code>
-              .
+              No function sheets in this view. Click{' '}
+              <strong>New function sheet</strong> above to start a Smart
+              File with line items, terms, and a payment schedule.
             </p>
           </CardContent>
         </Card>
@@ -376,6 +398,7 @@ export default function FunctionSheetsView() {
               sheet={s}
               busy={busy === s.id}
               onTransition={(to) => handleTransition(s, to)}
+              onEdit={() => setEditSheet(s)}
               onCancel={() => setCancelSheet(s)}
               onDelete={() => setDeleteSheet(s)}
               onPdf={(variant, mode) => handlePdf(s, variant, mode)}
@@ -383,6 +406,27 @@ export default function FunctionSheetsView() {
           ))}
         </div>
       )}
+
+      <FunctionSheetComposer
+        open={composerOpen}
+        onOpenChange={setComposerOpen}
+        businesses={businesses}
+        onSaved={async () => {
+          setComposerOpen(false);
+          await fetchAll();
+        }}
+      />
+
+      <FunctionSheetComposer
+        open={!!editSheet}
+        onOpenChange={(o) => !o && setEditSheet(null)}
+        businesses={businesses}
+        sheet={editSheet || undefined}
+        onSaved={async () => {
+          setEditSheet(null);
+          await fetchAll();
+        }}
+      />
 
       <AlertDialog
         open={!!cancelSheet}
@@ -440,6 +484,7 @@ function SheetCard({
   sheet,
   busy,
   onTransition,
+  onEdit,
   onCancel,
   onDelete,
   onPdf,
@@ -447,6 +492,7 @@ function SheetCard({
   sheet: FunctionSheet;
   busy: boolean;
   onTransition: (to: FunctionSheetState) => void;
+  onEdit: () => void;
   onCancel: () => void;
   onDelete: () => void;
   onPdf: (variant: PdfVariant, mode: 'preview' | 'download') => void;
@@ -612,6 +658,18 @@ function SheetCard({
             );
           })}
 
+          {/* Edit — only on non-terminal sheets (server-side rule) */}
+          {!isTerminal && sheet.state !== 'paid' && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onEdit}
+              disabled={busy}
+            >
+              <Pencil className="mr-1 h-3 w-3" />
+              Edit
+            </Button>
+          )}
           {/* Cancel — visible on any non-terminal state */}
           {!isTerminal && (
             <Button
