@@ -11,6 +11,7 @@ import RevenueSplitSection from "./sections/revenue-split-section";
 import UpcomingAndDueSection from "./sections/upcoming-and-due-section";
 import TableAndReviewSection from "./sections/table-and-review-section";
 import CompletenessWidget from "./sections/completeness-widget";
+import OperationsSummarySection from "./sections/operations-summary-section";
 import PageContainer from "@/components/dashboard/layout/page-container";
 import { PageHeader } from "@/components/dashboard/layout/page-header";
 
@@ -214,6 +215,8 @@ const VendorDashboardView = () => {
           editHref="/dashboard/business"
         />
       )}
+      {/* Cross-feature operations summary — Phase 1/2/3 widget grid */}
+      <OperationsSummarySection />
       <RevenueSplitSection data={vendorRevenue} loading={revenueLoading} />
       <UpcomingAndDueSection upcoming={upcoming7Days} due={paymentsDue} loading={loading} />
       <ChartsSections bookingTrends={bookingTrends} statusDist={statusDist} loading={loading} />
