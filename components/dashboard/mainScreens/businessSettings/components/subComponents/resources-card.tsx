@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * BK-100.51 — Vendor multi-resource-capacity admin card (Layer 1).
+ * BK-100.51 — Vendor multi-resource-capacity admin card.
  *
  * Lets the vendor declare parallel-capacity realities:
  *   - A banquet with 3 halls
@@ -9,11 +9,18 @@
  *   - A photographer studio with 5 crews
  *   - A marquee company with 20 tents
  *
- * Layer 1 is the declaration UI only. The slot engine still uses the
- * legacy single-capacity slot-template field until Layer 2 lights up
- * the integration behind the opt-in flag. The card shows a clear
- * "this won't change bookings yet" notice so the vendor understands
- * what they're configuring.
+ * Layer 2 lit up the slot-engine integration (commit 0e3c65f). When
+ * the vendor flips the opt-in flag below, the slot engine consumes
+ * from THIS pool instead of the legacy single-capacity template
+ * field. Per-kind capacity = floor(sum(quantity) / unitsPerBooking);
+ * overall = MIN across kinds (the bottleneck — a studio with 2
+ * photographers + 1 videographer crew accepts 1 booking at a time,
+ * not 3).
+ *
+ * Phase 0 #6.5 polish — replaced the stale "ships in next release"
+ * banner with a LIVE capacity preview that mirrors the engine's math
+ * so the vendor can see exactly how many bookings their declared
+ * resources will accept BEFORE flipping the flag.
  */
 
 import * as React from "react";
@@ -27,6 +34,8 @@ import {
   AlertCircle,
   Sparkles,
   Info,
+  Layers,
+  TrendingDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -82,6 +91,58 @@ function describeResource(r: BusinessResource): string {
   const qty = r.quantity > 1 ? `${r.quantity}×` : "";
   const cap = r.capacityUnit ? ` · cap ${r.capacityUnit}` : "";
   return `${qty}${meta.label}${cap}`.trim();
+}
+
+/**
+ * Phase 0 #6.5 — pure-function capacity preview. Mirrors the
+ * server-side `computeMultiResourceCapacity` helper exactly so the
+ * vendor sees the same number the slot engine will use when the flag
+ * is flipped on:
+ *   per-kind = floor(sum(quantity) / unitsPerBooking)
+ *   overall  = MIN across kinds (bottleneck)
+ *
+ * Returns `{ totalCapacity, byKind: { [kind]: { perKindCap, totalQty,
+ * upb } }, bottleneckKind }` so we can render both the headline number
+ * and an inline tooltip explaining which resource is limiting.
+ */
+function previewCapacity(resources: BusinessResource[]): {
+  totalCapacity: number;
+  byKind: Record<string, { kind: string; perKindCap: number; totalQty: number; upb: number; label: string }>;
+  bottleneckKind: string | null;
+} {
+  const byKind: Record<string, { kind: string; perKindCap: number; totalQty: number; upb: number; label: string }> = {};
+  for (const r of resources) {
+    if (r.isActive === false) continue;
+    const qty = Number(r.quantity);
+    const upb = Number(r.unitsPerBooking);
+    if (!Number.isFinite(qty) || qty <= 0) continue;
+    if (!Number.isFinite(upb) || upb <= 0) continue;
+    const meta = RESOURCE_KIND_LABELS[r.kind];
+    const label = meta?.label || r.kind;
+    const prev = byKind[r.kind] || { kind: r.kind, totalQty: 0, upb, label };
+    prev.totalQty += qty;
+    prev.upb = Math.max(prev.upb, upb);
+    prev.label = label;
+    byKind[r.kind] = prev;
+  }
+  for (const k of Object.keys(byKind)) {
+    byKind[k].perKindCap = Math.floor(byKind[k].totalQty / byKind[k].upb);
+  }
+  const kinds = Object.values(byKind);
+  if (kinds.length === 0) return { totalCapacity: 0, byKind, bottleneckKind: null };
+  let bottleneck = Infinity;
+  let bottleneckKind: string | null = null;
+  for (const k of kinds) {
+    if (k.perKindCap < bottleneck) {
+      bottleneck = k.perKindCap;
+      bottleneckKind = k.kind;
+    }
+  }
+  return {
+    totalCapacity: Number.isFinite(bottleneck) ? Math.max(0, bottleneck) : 0,
+    byKind,
+    bottleneckKind,
+  };
 }
 
 export function ResourcesCard({ businessId }: ResourcesCardProps) {
@@ -213,8 +274,8 @@ export function ResourcesCard({ businessId }: ResourcesCardProps) {
       setUseFlag(next);
       toast.success(
         next
-          ? "Multi-resource mode enabled (engine integration ships in Layer 2)"
-          : "Multi-resource mode disabled",
+          ? "Multi-resource mode active — bookings now consume from your resource pool"
+          : "Reverted to slot-template capacity",
       );
     } catch (e) {
       const msg =
@@ -249,13 +310,89 @@ export function ResourcesCard({ businessId }: ResourcesCardProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Layer 1 notice — surface the "this doesn't change bookings yet" reality so the vendor isn't surprised. */}
-        <div className="rounded-md border border-amber-200 bg-amber-50/60 p-3 flex items-start gap-2">
-          <Info className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
-          <p className="text-xs text-amber-800 leading-relaxed">
-            <strong>Heads up:</strong> declaring resources here doesn&apos;t change your bookings yet. The engine integration ships in our next release. You can fill this in now so it&apos;s ready the moment it lights up.
-          </p>
-        </div>
+        {/* Phase 0 #6.5 — live capacity preview. Replaces the stale
+            "Layer 1 — not wired yet" amber notice with a concrete
+            number computed the same way the slot engine will compute
+            it when the flag is flipped on. Vendors see exactly how
+            many concurrent bookings their declared resources can
+            absorb BEFORE committing to multi-resource mode. */}
+        {!loading && !error && resources.length > 0 && (() => {
+          const preview = previewCapacity(resources);
+          const kinds = Object.values(preview.byKind);
+          const isBottlenecked =
+            kinds.length > 1 &&
+            kinds.some((k) => k.perKindCap === preview.totalCapacity) &&
+            kinds.some((k) => k.perKindCap > preview.totalCapacity);
+          return (
+            <div
+              className={cn(
+                "rounded-md border p-3",
+                preview.totalCapacity === 0
+                  ? "border-rose-200 bg-rose-50/60"
+                  : useFlag
+                  ? "border-emerald-200 bg-emerald-50/50"
+                  : "border-bridal-gold/40 bg-bridal-cream/40",
+              )}
+            >
+              <div className="flex items-start gap-2.5">
+                <Layers
+                  className={cn(
+                    "h-4 w-4 mt-0.5 shrink-0",
+                    preview.totalCapacity === 0
+                      ? "text-rose-600"
+                      : "text-bridal-gold-dark",
+                  )}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-neutral-900">
+                    {preview.totalCapacity === 0 ? (
+                      <>Capacity preview: <span className="text-rose-700">0 bookings/slot</span></>
+                    ) : (
+                      <>
+                        With these resources you&apos;ll accept{' '}
+                        <span className="font-semibold text-bridal-gold-dark tabular-nums">
+                          {preview.totalCapacity}{' '}
+                          {preview.totalCapacity === 1 ? 'booking' : 'bookings'}
+                        </span>{' '}
+                        per slot
+                        {useFlag ? ' (active now)' : ' once you flip the flag below'}.
+                      </>
+                    )}
+                  </p>
+                  {preview.totalCapacity === 0 && (
+                    <p className="text-xs text-rose-700 mt-1 leading-relaxed">
+                      One of your resource kinds has{' '}
+                      <code className="font-mono">unitsPerBooking</code> larger than its
+                      total quantity — that kind alone can&apos;t fulfil even one booking, so the bottleneck rule drops the whole capacity to 0. Increase the quantity OR drop unitsPerBooking on the limiting kind.
+                    </p>
+                  )}
+                  {preview.totalCapacity > 0 && (
+                    <div className="text-[11px] text-neutral-600 mt-1.5 leading-relaxed space-y-0.5">
+                      {kinds.map((k) => (
+                        <div key={k.kind} className="flex items-center gap-1">
+                          <span>
+                            <strong>{k.label}:</strong> {k.totalQty} ÷ {k.upb} per booking ={' '}
+                            <span className="tabular-nums font-semibold">{k.perKindCap}</span>
+                          </span>
+                          {isBottlenecked && k.perKindCap === preview.totalCapacity && (
+                            <Badge variant="outline" className="text-[9px] gap-0.5 border-amber-300 bg-amber-50 text-amber-800">
+                              <TrendingDown className="h-2.5 w-2.5" />
+                              bottleneck
+                            </Badge>
+                          )}
+                        </div>
+                      ))}
+                      <p className="italic text-neutral-500 pt-1">
+                        Overall = MIN across kinds (the bottleneck rule). Failure
+                        mode is &quot;fewer bookings&quot;, never &quot;double-booked&quot;.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {loading && (
           <div className="flex items-center gap-2 py-6 text-sm text-neutral-500">

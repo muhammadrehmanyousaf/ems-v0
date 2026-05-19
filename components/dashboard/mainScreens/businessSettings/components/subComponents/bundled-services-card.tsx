@@ -6,14 +6,24 @@
  * Pakistani banquets routinely offer in-house catering + decor + DJ +
  * valet + generator etc. This card lets the vendor declare those
  * offerings on their business settings page so customers see them on
- * the public profile (Layer 2 wires the customer-facing display).
+ * the public profile.
  *
  * Drops into the existing Basic Information tab as a standalone
  * section beneath the cancellation-policy card.
  *
- * Layer 1 surface: list / add / edit / delete bundled services +
- * outside-vendor policy. Layer 2 adds customer-facing rendering and
- * booking-flow integration (line items, conditional pricing rules).
+ * Trilogy shipped:
+ *   - Layer 1: list / add / edit / delete bundled services +
+ *     outside-vendor policy (this card).
+ *   - Layer 2 (commit b8a3ce1): customer-facing read-only display on
+ *     vendor profile.
+ *   - Layer 2c (commit f829245): interactive add-on picker at booking
+ *     review step, with priceModel-aware preview.
+ *
+ * Phase 0 #6.6 polish — added a "Quick-add Pakistani banquet presets"
+ * button so vendors can populate the common bundles (in-house catering
+ * @ Rs.1500/plate, decor, DJ, valet, generator backup, bridal room,
+ * mandap stage, tandoor station, Nikahkhwan service) with one tap and
+ * edit prices from there. Empty-screen anxiety solved.
  */
 
 import * as React from "react";
@@ -84,6 +94,165 @@ const EMPTY_DRAFT: DraftService = {
   isActive: true,
 };
 
+/**
+ * Phase 0 #6.6 — Pakistani banquet preset library.
+ *
+ * Curated from public Karachi / Lahore / Islamabad banquet menus
+ * (Royal Palm, Mehfil, PC, Hanif Rajput's banquet menus) — prices
+ * are mid-tier indicative defaults the vendor edits after one-tap
+ * insertion. These are NOT seeded server-side; the user explicitly
+ * picks them. Defensive: if any preset fails to insert (e.g. name
+ * collides with an existing service) the rest still proceed.
+ */
+const PAKISTANI_BANQUET_PRESETS: ReadonlyArray<{
+  key: string;
+  label: string;
+  description: string;
+  payload: UpsertBundledServiceInput;
+}> = [
+  {
+    key: "in_house_catering",
+    label: "In-house catering",
+    description: "Per-plate; mid-tier default Rs. 1,500 — edit after add.",
+    payload: {
+      category: "catering",
+      name: "In-house catering",
+      description:
+        "Per-plate menu prepared in our kitchen. Halal-certified ingredients, sect-aware preparation on request.",
+      priceModel: "per_plate",
+      priceAmount: 1500,
+      included: false,
+      mandatory: false,
+      isActive: true,
+    },
+  },
+  {
+    key: "decor",
+    label: "Wedding decoration",
+    description: "Flat Rs. 75,000 — stage + entrance + table florals.",
+    payload: {
+      category: "decor",
+      name: "In-house wedding decoration",
+      description:
+        "Stage, entrance arch, table florals, fairy lights, draping. Themes negotiable.",
+      priceModel: "flat",
+      priceAmount: 75000,
+      included: false,
+      mandatory: false,
+      isActive: true,
+    },
+  },
+  {
+    key: "dj_sound",
+    label: "DJ + sound system",
+    description: "Flat Rs. 50,000 — sound, lights, DJ for 5 hours.",
+    payload: {
+      category: "dj",
+      name: "DJ + sound system",
+      description: "Sound system, stage lighting, DJ for up to 5 hours.",
+      priceModel: "flat",
+      priceAmount: 50000,
+      included: false,
+      mandatory: false,
+      isActive: true,
+    },
+  },
+  {
+    key: "valet",
+    label: "Valet parking",
+    description: "Flat Rs. 25,000 — uniformed valet team for the event.",
+    payload: {
+      category: "valet",
+      name: "Valet parking",
+      description: "Uniformed valet attendants for the duration of your event.",
+      priceModel: "flat",
+      priceAmount: 25000,
+      included: false,
+      mandatory: false,
+      isActive: true,
+    },
+  },
+  {
+    key: "generator",
+    label: "Generator backup",
+    description: "Flat Rs. 15,000 — load-shedding insurance.",
+    payload: {
+      category: "generator",
+      name: "Generator backup",
+      description:
+        "Silent diesel generator on standby for the duration. Activates automatically on a load-shedding cut.",
+      priceModel: "flat",
+      priceAmount: 15000,
+      included: false,
+      mandatory: false,
+      isActive: true,
+    },
+  },
+  {
+    key: "bridal_room",
+    label: "Bridal room",
+    description: "Included — private prep space for the bride.",
+    payload: {
+      category: "other",
+      name: "Bridal room",
+      description: "Private bridal prep room with mirror + seating + lighting.",
+      priceModel: "free",
+      priceAmount: 0,
+      included: true,
+      mandatory: false,
+      isActive: true,
+    },
+  },
+  {
+    key: "mandap_stage",
+    label: "Mandap stage",
+    description: "Flat Rs. 30,000 — themed stage with backdrop.",
+    payload: {
+      category: "decor",
+      name: "Mandap / wedding stage",
+      description:
+        "Themed stage with backdrop, sofa seating, accent lighting. Mehndi yellow / Nikah classic / Walima white themes available.",
+      priceModel: "flat",
+      priceAmount: 30000,
+      included: false,
+      mandatory: false,
+      isActive: true,
+    },
+  },
+  {
+    key: "tandoor_live",
+    label: "Live tandoor station",
+    description: "Flat Rs. 25,000 — naan + tikka cooked on-site.",
+    payload: {
+      category: "catering",
+      name: "Live tandoor station",
+      description:
+        "On-site tandoor with cook. Fresh naan + chicken tikka + seekh kebab made to order through the evening.",
+      priceModel: "flat",
+      priceAmount: 25000,
+      included: false,
+      mandatory: false,
+      isActive: true,
+    },
+  },
+  {
+    key: "nikahkhwan",
+    label: "Nikahkhwan / officiant",
+    description: "Flat Rs. 5,000 — certified Maulvi for the Nikah.",
+    payload: {
+      category: "other",
+      name: "Nikahkhwan service",
+      description:
+        "Certified Maulvi to officiate the Nikah ceremony. Nikahnama drafting included on request.",
+      priceModel: "flat",
+      priceAmount: 5000,
+      included: false,
+      mandatory: false,
+      isActive: true,
+    },
+  },
+] as const;
+
 function formatPriceLabel(s: BundledService): string {
   const amt = typeof s.priceAmount === "string" ? parseFloat(s.priceAmount) : s.priceAmount;
   if (s.priceModel === "free" || !amt || amt === 0) return "Included";
@@ -100,6 +269,10 @@ export function BundledServicesCard({ businessId }: BundledServicesCardProps) {
   const [error, setError] = React.useState<string | null>(null);
 
   const [draft, setDraft] = React.useState<DraftService | null>(null);
+  // Phase 0 #6.6 — preset chooser state.
+  const [showPresets, setShowPresets] = React.useState(false);
+  const [presetKeys, setPresetKeys] = React.useState<Set<string>>(new Set());
+  const [insertingPresets, setInsertingPresets] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [deletingId, setDeletingId] = React.useState<number | null>(null);
 
@@ -131,6 +304,57 @@ export function BundledServicesCard({ businessId }: BundledServicesCardProps) {
   }, [load]);
 
   const startCreate = () => setDraft({ ...EMPTY_DRAFT });
+
+  /**
+   * Phase 0 #6.6 — Bulk-insert selected Pakistani-banquet presets.
+   * Walks the picked keys serially so the backend doesn't see a
+   * burst of N concurrent POSTs. Per-preset failures are reported
+   * but never abort the batch — vendor sees a partial-success toast
+   * and the rest still land.
+   */
+  const togglePreset = (key: string) => {
+    setPresetKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+  const insertSelectedPresets = async () => {
+    if (presetKeys.size === 0) {
+      toast.error("Pick at least one preset to add.");
+      return;
+    }
+    const chosen = PAKISTANI_BANQUET_PRESETS.filter((p) => presetKeys.has(p.key));
+    setInsertingPresets(true);
+    let inserted = 0;
+    const errors: string[] = [];
+    for (const p of chosen) {
+      try {
+        await BundledServicesAPI.create(businessId, p.payload);
+        inserted += 1;
+      } catch (e) {
+        const msg =
+          (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+          (e as Error)?.message ||
+          "unknown error";
+        errors.push(`${p.label}: ${msg}`);
+      }
+    }
+    setInsertingPresets(false);
+    if (inserted > 0) {
+      toast.success(`Added ${inserted} preset${inserted === 1 ? "" : "s"} — edit prices as needed.`);
+    }
+    if (errors.length > 0) {
+      toast.error(`${errors.length} preset(s) couldn't be added`, {
+        description: errors.slice(0, 3).join("\n"),
+      });
+    }
+    setPresetKeys(new Set());
+    setShowPresets(false);
+    await load();
+  };
+
   const startEdit = (s: BundledService) =>
     setDraft({
       id: s.id,
@@ -251,10 +475,24 @@ export function BundledServicesCard({ businessId }: BundledServicesCardProps) {
             </p>
           </div>
           {!draft && (
-            <Button type="button" size="sm" onClick={startCreate} className="gap-1.5">
-              <Plus className="h-3.5 w-3.5" />
-              Add service
-            </Button>
+            <div className="flex items-center gap-1.5">
+              {services.length === 0 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowPresets(true)}
+                  className="gap-1.5"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Quick-add Pakistani presets
+                </Button>
+              )}
+              <Button type="button" size="sm" onClick={startCreate} className="gap-1.5">
+                <Plus className="h-3.5 w-3.5" />
+                Add service
+              </Button>
+            </div>
           )}
         </div>
       </CardHeader>
@@ -583,6 +821,105 @@ export function BundledServicesCard({ businessId }: BundledServicesCardProps) {
                   <Save className="mr-2 h-3.5 w-3.5" />
                 )}
                 Save policy
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Phase 0 #6.6 — Pakistani-banquet preset chooser */}
+        {showPresets && (
+          <div className="rounded-md border border-bridal-gold/30 bg-bridal-cream/30 p-4 space-y-3">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-bridal-gold-dark" />
+                  <h4 className="text-sm font-semibold">Pakistani banquet presets</h4>
+                </div>
+                <p className="text-[11px] text-neutral-600 mt-0.5">
+                  Tick what your venue offers and we&apos;ll create the rows with
+                  reasonable mid-tier defaults. Edit prices and copy after add —
+                  these are starting points, not commitments.
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setShowPresets(false);
+                  setPresetKeys(new Set());
+                }}
+                disabled={insertingPresets}
+                aria-label="Close preset chooser"
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-1.5">
+              {PAKISTANI_BANQUET_PRESETS.map((p) => {
+                const picked = presetKeys.has(p.key);
+                return (
+                  <button
+                    key={p.key}
+                    type="button"
+                    onClick={() => togglePreset(p.key)}
+                    disabled={insertingPresets}
+                    className={cn(
+                      "text-left rounded-md border px-3 py-2 transition-colors",
+                      picked
+                        ? "border-bridal-gold-dark bg-bridal-gold/10"
+                        : "border-neutral-200 bg-white hover:border-bridal-gold/50",
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-neutral-900">
+                          {p.label}
+                        </p>
+                        <p className="text-[10.5px] text-neutral-500 mt-0.5 leading-snug">
+                          {p.description}
+                        </p>
+                      </div>
+                      <span
+                        aria-hidden
+                        className={cn(
+                          "shrink-0 mt-0.5 inline-flex items-center justify-center w-4 h-4 rounded-full border-2",
+                          picked
+                            ? "border-bridal-gold-dark bg-bridal-gold-dark text-white"
+                            : "border-neutral-300 bg-white",
+                        )}
+                      >
+                        {picked && <span className="text-[8px] leading-none">✓</span>}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setShowPresets(false);
+                  setPresetKeys(new Set());
+                }}
+                disabled={insertingPresets}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={insertSelectedPresets}
+                disabled={insertingPresets || presetKeys.size === 0}
+              >
+                {insertingPresets && (
+                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                )}
+                Add {presetKeys.size > 0 ? `${presetKeys.size} ` : ""}preset
+                {presetKeys.size === 1 ? "" : "s"}
               </Button>
             </div>
           </div>
