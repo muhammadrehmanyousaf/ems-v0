@@ -163,6 +163,8 @@ export interface LeadListFilters {
   businessId?: number;
   assignedToUserId?: number;
   search?: string;
+  /** Reverse-lookup: which lead converted to this booking? */
+  bookingId?: number;
 }
 
 export interface WhatsappSendResult {

@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { MoreHorizontal, Eye, Pencil, XCircle, Loader2, CreditCard, CheckCircle2 } from "lucide-react"
+import Link from "next/link"
+import { MoreHorizontal, Eye, Pencil, XCircle, Loader2, CreditCard, CheckCircle2, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -114,7 +115,13 @@ export function RowActions({ data }: DataTableRowActionsProps) {
         <DropdownMenuContent align="end" className="w-[200px]">
           <DropdownMenuItem onClick={() => setSheetOpen(true)}>
             <Eye className="mr-2 h-4 w-4" />
-            View Details
+            Quick view
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href={`/dashboard/bookings/${data.id}`}>
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Open detail page
+            </Link>
           </DropdownMenuItem>
           {canEdit && (
             <>

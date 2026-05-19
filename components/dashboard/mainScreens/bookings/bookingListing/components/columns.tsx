@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { ColumnDef } from '@tanstack/react-table';
 import { Globe, Store } from 'lucide-react';
 import { RowActions } from './row-actions';
@@ -61,7 +62,12 @@ export const columns: ColumnDef<BookingData>[] = [
     header: "Customer",
     cell: ({ row }) => (
       <div>
-        <p className="font-medium text-sm text-neutral-900">{row.original.customerName}</p>
+        <Link
+          href={`/dashboard/bookings/${row.original.id}`}
+          className="font-medium text-sm text-neutral-900 hover:text-bridal-gold-dark hover:underline underline-offset-2"
+        >
+          {row.original.customerName}
+        </Link>
         <p className="text-xs text-neutral-400">{row.original.customerPhone}</p>
       </div>
     ),

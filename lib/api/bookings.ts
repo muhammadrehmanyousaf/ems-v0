@@ -1,7 +1,24 @@
 import axiosInstance from "../axiosConfig";
 import { BACKEND_URL } from "../backend-url";
+import type { BookingData } from "../dashboard-types";
 
 const v1 = `${BACKEND_URL}api/v1/bookings`;
+
+// Returned by GET /:id/with-availability. The `booking` payload mirrors
+// BookingData (the same shape the listing uses), so the detail page can
+// reuse all the existing dashboard typings + dialogs.
+export interface BookingAvailabilityContextRow {
+  businessId: number;
+  date: string;
+  isAvailable: boolean;
+  remainingSlots?: number;
+  message?: string;
+}
+
+export interface BookingWithAvailabilityResponse {
+  booking: BookingData;
+  availabilityContext: BookingAvailabilityContextRow[];
+}
 
 // BK-042 — installments schedule. Backend returns `{ installments, totals }`.
 export interface BookingInstallment {
@@ -244,5 +261,17 @@ export class BookingAPI {
   static async getHistory(bookingId: number) {
     const res = await axiosInstance.get(`${v1}/${bookingId}/history`);
     return res.data?.data;
+  }
+
+  // Single-booking fetch reused on the dedicated detail page. The
+  // backend already exposes /:id/with-availability for the public flow;
+  // we piggyback on it here to avoid adding a new endpoint.
+  static async getWithAvailability(
+    bookingId: number,
+  ): Promise<BookingWithAvailabilityResponse | null> {
+    const res = await axiosInstance.get(
+      `${v1}/${bookingId}/with-availability`,
+    );
+    return res.data?.data ?? null;
   }
 }
