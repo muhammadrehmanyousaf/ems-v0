@@ -237,6 +237,36 @@ export class LeadAPI {
     return res.data?.data?.lead;
   }
 
+  /**
+   * POST /api/v1/leads/bulk-transition
+   * Bulk move up to 200 leads in one request. Per-id results returned.
+   */
+  static async bulkTransition(body: {
+    ids: number[];
+    to: LeadStatus;
+    statusReason?: string;
+  }): Promise<{
+    applied: number;
+    skipped: number;
+    failed: number;
+    results: Array<{ id: number; ok: boolean; reason?: string; noop?: boolean }>;
+  }> {
+    const res = await axiosInstance.post(`/api/v1/leads/bulk-transition`, body);
+    return res.data?.data;
+  }
+
+  /** DELETE /api/v1/leads/bulk — soft delete sweep. */
+  static async bulkDelete(ids: number[]): Promise<{
+    deleted: number;
+    failed: number;
+    results: Array<{ id: number; ok: boolean; reason?: string }>;
+  }> {
+    const res = await axiosInstance.delete(`/api/v1/leads/bulk`, {
+      data: { ids },
+    });
+    return res.data?.data;
+  }
+
   /** POST /api/v1/leads/:id/whatsapp — best-effort send. */
   static async sendWhatsapp(
     id: number,

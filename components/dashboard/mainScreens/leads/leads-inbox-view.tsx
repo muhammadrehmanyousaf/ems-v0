@@ -247,6 +247,10 @@ export default function LeadsInboxView() {
   const [whatsappSending, setWhatsappSending] = useState(false);
   const [deleteLead, setDeleteLead] = useState<Lead | null>(null);
   const [businesses, setBusinesses] = useState<VendorBusinessOption[]>([]);
+  // Phase 4 polish — bulk selection state. Set keyed by lead id; the
+  // bar appears above the list when at least one is selected.
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const fetchLeads = async () => {
     setLoading(true);
@@ -634,19 +638,109 @@ export default function LeadsInboxView() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {leads.map((lead) => (
-            <LeadCard
-              key={lead.id}
-              lead={lead}
-              busy={busy === lead.id}
-              onTransition={(to) => handleTransition(lead, to)}
-              onWhatsapp={() => {
-                setWhatsappLead(lead);
-                setWhatsappBody('');
+          {/* Phase 4 polish — bulk action bar, sticky-feeling on
+              scroll. Renders only when at least one lead is selected. */}
+          {selected.size > 0 && (
+            <BulkActionsBar
+              count={selected.size}
+              totalShown={leads.length}
+              busy={bulkBusy}
+              onSelectAll={() => {
+                if (selected.size === leads.length) setSelected(new Set());
+                else setSelected(new Set(leads.map((l) => l.id)));
               }}
-              onDelete={() => setDeleteLead(lead)}
+              onClear={() => setSelected(new Set())}
+              onBulkTransition={async (to) => {
+                setBulkBusy(true);
+                try {
+                  const r = await LeadAPI.bulkTransition({
+                    ids: Array.from(selected),
+                    to,
+                  });
+                  toast.success(
+                    `${r.applied} moved · ${r.skipped} skipped · ${r.failed} failed`,
+                  );
+                  setSelected(new Set());
+                  await fetchLeads();
+                } catch (e: any) {
+                  toast.error(
+                    e?.response?.data?.message ||
+                      'Bulk transition failed',
+                  );
+                } finally {
+                  setBulkBusy(false);
+                }
+              }}
+              onBulkDelete={async () => {
+                if (
+                  !window.confirm(
+                    `Soft-delete ${selected.size} leads? They'll be hidden but recoverable.`,
+                  )
+                )
+                  return;
+                setBulkBusy(true);
+                try {
+                  const r = await LeadAPI.bulkDelete(Array.from(selected));
+                  toast.success(
+                    `${r.deleted} deleted · ${r.failed} failed`,
+                  );
+                  setSelected(new Set());
+                  await fetchLeads();
+                } catch (e: any) {
+                  toast.error(
+                    e?.response?.data?.message || 'Bulk delete failed',
+                  );
+                } finally {
+                  setBulkBusy(false);
+                }
+              }}
             />
-          ))}
+          )}
+          {leads.map((lead) => {
+            const isSelected = selected.has(lead.id);
+            const toggle = () => {
+              setSelected((prev) => {
+                const next = new Set(prev);
+                if (next.has(lead.id)) next.delete(lead.id);
+                else next.add(lead.id);
+                return next;
+              });
+            };
+            return (
+              <div
+                key={lead.id}
+                className="relative"
+              >
+                <label className="absolute top-3 left-3 z-10 flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={toggle}
+                    onClick={(e) => e.stopPropagation()}
+                    className="h-4 w-4 accent-bridal-gold-dark"
+                  />
+                </label>
+                <div
+                  className={
+                    isSelected
+                      ? 'ring-2 ring-bridal-gold/40 rounded-lg'
+                      : ''
+                  }
+                >
+                  <LeadCard
+                    lead={lead}
+                    busy={busy === lead.id}
+                    onTransition={(to) => handleTransition(lead, to)}
+                    onWhatsapp={() => {
+                      setWhatsappLead(lead);
+                      setWhatsappBody('');
+                    }}
+                    onDelete={() => setDeleteLead(lead)}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -733,6 +827,91 @@ export default function LeadsInboxView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+// ─── Bulk-actions bar (Phase 4 polish) ────────────────────────────
+
+function BulkActionsBar({
+  count,
+  totalShown,
+  busy,
+  onSelectAll,
+  onClear,
+  onBulkTransition,
+  onBulkDelete,
+}: {
+  count: number;
+  totalShown: number;
+  busy: boolean;
+  onSelectAll: () => void;
+  onClear: () => void;
+  onBulkTransition: (to: LeadStatus) => void;
+  onBulkDelete: () => void;
+}) {
+  const [target, setTarget] = useState<LeadStatus | ''>('');
+  const allSelected = count === totalShown && totalShown > 0;
+  return (
+    <div className="sticky top-2 z-20 flex flex-wrap items-center gap-2 rounded-xl border border-bridal-gold/40 bg-bridal-gold/10 backdrop-blur p-2.5">
+      <div className="text-xs font-semibold text-bridal-gold-dark">
+        {count} selected
+      </div>
+      <button
+        type="button"
+        onClick={onSelectAll}
+        className="text-[11px] underline-offset-2 hover:underline text-bridal-gold-dark"
+      >
+        {allSelected ? 'Clear selection' : `Select all (${totalShown})`}
+      </button>
+      <div className="flex-1" />
+      <select
+        value={target}
+        onChange={(e) => setTarget(e.target.value as LeadStatus | '')}
+        disabled={busy}
+        className="h-8 rounded-md border border-neutral-200 bg-white px-2 text-xs"
+      >
+        <option value="">Move to…</option>
+        {(
+          [
+            'new',
+            'contacted',
+            'qualified',
+            'quoted',
+            'booked',
+            'lost',
+            'archived',
+          ] as LeadStatus[]
+        ).map((s) => (
+          <option key={s} value={s}>
+            {LEAD_STATUS_LABELS[s]}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        disabled={!target || busy}
+        onClick={() => target && onBulkTransition(target)}
+        className="h-8 rounded-md bg-bridal-gold text-white px-3 text-xs font-semibold disabled:opacity-50"
+      >
+        Apply
+      </button>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={onBulkDelete}
+        className="h-8 rounded-md border border-rose-200 bg-white text-rose-700 px-3 text-xs font-semibold hover:bg-rose-50 disabled:opacity-50"
+      >
+        Delete
+      </button>
+      <button
+        type="button"
+        onClick={onClear}
+        disabled={busy}
+        className="h-8 rounded-md text-neutral-500 px-2 text-xs hover:text-neutral-700 disabled:opacity-50"
+      >
+        Cancel
+      </button>
     </div>
   );
 }
