@@ -7,6 +7,7 @@ import {
   FileBadge,
   Gauge,
   Gavel,
+  Inbox,
   LayoutDashboard,
   MessageSquareText,
   ScrollText,
@@ -38,6 +39,9 @@ export const data = {
     // Positioned right under Dashboard because it's the page floor
     // managers open first on a wedding day.
     { name: "Today",         url: "/dashboard/today",          icon: Sparkles },
+    // Vendor Portal Phase 1 #7.3 — Lead Inbox. Sits above Bookings
+    // because every booking starts as a lead.
+    { name: "Lead inbox",    url: "/dashboard/leads",          icon: Inbox },
     { name: "Bookings",      url: "/dashboard/bookings",       icon: ClipboardList },
     { name: "Customers",     url: "/dashboard/customers",      icon: SquareUser },
     { name: "Calendar",      url: "/dashboard/calendar",       icon: CalendarDays },
