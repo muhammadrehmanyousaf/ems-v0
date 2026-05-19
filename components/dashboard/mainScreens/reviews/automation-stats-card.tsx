@@ -1,0 +1,234 @@
+'use client';
+
+/**
+ * Phase 4 #10.2 — Reviews automation status surfacing.
+ *
+ * Sits at the top of the Reviews page. Shows the vendor:
+ *   - how many post-event customers received a review prompt
+ *   - how many actually responded
+ *   - the response rate
+ *   - the most recent "silent" customers so the vendor can WhatsApp
+ *     them a personal nudge (one-click tel:/wa.me: links)
+ *
+ * Pure read — backend exposes GET /api/v1/reviews/automation-stats.
+ */
+
+import * as React from 'react';
+import { useEffect, useState } from 'react';
+import {
+  Inbox,
+  CheckCircle2,
+  Clock,
+  TrendingUp,
+  Phone,
+  MessageCircle,
+  RotateCw,
+} from 'lucide-react';
+import axiosInstance from '@/lib/axiosConfig';
+import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+
+interface SilentRecent {
+  id: number;
+  customerName: string | null;
+  customerPhone: string | null;
+  bookingDate: string | null;
+}
+
+interface AutomationStats {
+  prompted: number;
+  responded: number;
+  silent: number;
+  responseRate: number;
+  windowDays: number;
+  silentRecent: SilentRecent[];
+  avgRating: number | null;
+}
+
+function fmtDate(iso: string | null): string {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleDateString('en-PK', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function digitsOnly(phone: string | null): string {
+  return (phone || '').replace(/\D/g, '');
+}
+
+function waLink(phone: string | null, name: string | null): string {
+  const d = digitsOnly(phone);
+  if (!d) return '#';
+  // Normalize to E.164 for wa.me — Pakistani numbers start 03... in
+  // local form, 923... in international. Prepend 92 if local.
+  const normalized = d.startsWith('0') ? '92' + d.slice(1) : d;
+  const text = encodeURIComponent(
+    `Assalam-o-Alaikum ${name || ''} — hope your event went well. Could you take a moment to leave us a review? Shukria!`,
+  );
+  return `https://wa.me/${normalized}?text=${text}`;
+}
+
+export function ReviewAutomationStatsCard() {
+  const [data, setData] = useState<AutomationStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = () => {
+    setLoading(true);
+    axiosInstance
+      .get('/api/v1/reviews/automation-stats')
+      .then((r) => setData(r.data?.data ?? null))
+      .catch(() => setData(null))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  if (loading) {
+    return <Skeleton className="h-44 w-full" />;
+  }
+
+  if (!data || data.prompted === 0) {
+    return (
+      <Card>
+        <CardContent className="p-5 text-sm text-muted-foreground">
+          No post-event review prompts have been sent yet. Once a booking is
+          marked Completed and 3+ days have passed, the auto-prompt cron will
+          email the customer.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardContent className="p-5 space-y-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Inbox className="h-4 w-4 text-bridal-gold" />
+            <span className="text-sm font-semibold text-neutral-700">
+              Review automation — last {data.windowDays} days
+            </span>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={load}
+            className="h-7 gap-1"
+          >
+            <RotateCw className="h-3.5 w-3.5" />
+            Refresh
+          </Button>
+        </div>
+
+        <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+          <Stat
+            icon={<Inbox className="h-4 w-4 text-blue-600" />}
+            label="Prompted"
+            value={data.prompted}
+          />
+          <Stat
+            icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />}
+            label="Responded"
+            value={data.responded}
+          />
+          <Stat
+            icon={<Clock className="h-4 w-4 text-amber-600" />}
+            label="Silent"
+            value={data.silent}
+          />
+          <Stat
+            icon={<TrendingUp className="h-4 w-4 text-violet-600" />}
+            label="Response rate"
+            value={`${data.responseRate}%`}
+            sub={
+              data.avgRating != null ? `Avg ${data.avgRating} / 5` : null
+            }
+          />
+        </div>
+
+        {data.silentRecent.length > 0 && (
+          <div>
+            <div className="text-xs font-medium text-neutral-600 mb-1.5">
+              Silent customers — nudge them on WhatsApp
+            </div>
+            <ul className="divide-y divide-neutral-100 max-h-56 overflow-auto">
+              {data.silentRecent.map((s) => (
+                <li
+                  key={s.id}
+                  className="flex items-center justify-between gap-2 py-1.5 text-xs"
+                >
+                  <div className="min-w-0">
+                    <div className="font-medium text-neutral-800 truncate">
+                      {s.customerName || `Customer #${s.id}`}
+                    </div>
+                    <div className="text-[11px] text-neutral-500">
+                      Booking #{s.id} · {fmtDate(s.bookingDate)}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {s.customerPhone && (
+                      <a
+                        href={`tel:${s.customerPhone}`}
+                        className="inline-flex items-center gap-1 rounded-full border border-neutral-200 px-2 py-1 text-[10px] hover:bg-neutral-50"
+                        title="Call"
+                      >
+                        <Phone className="h-3 w-3" />
+                        Call
+                      </a>
+                    )}
+                    {s.customerPhone && (
+                      <a
+                        href={waLink(s.customerPhone, s.customerName)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-800 px-2 py-1 text-[10px] hover:bg-emerald-100"
+                        title="WhatsApp"
+                      >
+                        <MessageCircle className="h-3 w-3" />
+                        WhatsApp
+                      </a>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function Stat({
+  icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number | string;
+  sub?: string | null;
+}) {
+  return (
+    <div className="rounded-lg border bg-neutral-50/40 p-3">
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-neutral-500">
+        {icon}
+        {label}
+      </div>
+      <div className="text-xl font-bold text-neutral-900 mt-1">{value}</div>
+      {sub && <div className="text-[11px] text-neutral-500">{sub}</div>}
+    </div>
+  );
+}
