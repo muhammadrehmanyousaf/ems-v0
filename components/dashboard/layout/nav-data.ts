@@ -5,6 +5,7 @@ import {
   CalendarDays,
   Fuel,
   Handshake,
+  Plane,
   ShieldCheck,
   HandCoins,
   Truck,
@@ -71,6 +72,8 @@ export const data = {
     { name: "Generator fuel",url: "/dashboard/generator-fuel", icon: Fuel },
     // Vendor Portal Phase 2 #8.6 — Halal cert tracker (caterer-specific).
     { name: "Halal certs",   url: "/dashboard/halal-certs",    icon: ShieldCheck },
+    // Vendor Portal Phase 2 #8.7 — Drone NOC tracker (photographer-specific).
+    { name: "Drone NOC",     url: "/dashboard/drone-noc",      icon: Plane },
     { name: "Reviews",       url: "/dashboard/reviews",        icon: Smile },
     { name: "Notifications", url: "/dashboard/notifications",  icon: Bell },
   ],
