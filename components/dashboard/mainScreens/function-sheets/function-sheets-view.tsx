@@ -21,6 +21,7 @@
 
 import * as React from 'react';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import axiosInstance from '@/lib/axiosConfig';
 import {
@@ -610,9 +611,12 @@ function SheetCard({
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-base font-semibold">
+              <Link
+                href={`/dashboard/function-sheets/${sheet.id}`}
+                className="text-base font-semibold hover:underline"
+              >
                 {sheet.title || `Function sheet #${sheet.id}`}
-              </span>
+              </Link>
               <Badge
                 variant="outline"
                 className={`${tone.bg} ${tone.text} ${tone.border}`}
