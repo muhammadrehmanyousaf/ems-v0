@@ -96,6 +96,20 @@ export interface TransitionInput {
   signatureData?: any;
 }
 
+export interface AuditEvent {
+  id: number;
+  actorUserId: number | null;
+  targetType: string;
+  targetId: number;
+  action: string;
+  before: any | null;
+  after: any | null;
+  ipHash: string | null;
+  userAgent: string | null;
+  at: string;
+  actor: { id: number; fullName: string | null; email: string | null } | null;
+}
+
 export interface PaymentScheduleEntry {
   label: string;
   dueDate?: string | null;
@@ -239,6 +253,23 @@ export class FunctionSheetAPI {
    */
   static async revokeShareToken(id: number): Promise<void> {
     await axiosInstance.delete(`/api/v1/function-sheets/${id}/share-token`);
+  }
+
+  /**
+   * Append-only chronological audit log of every mutation on the
+   * sheet (create / update / state changes / signatures / share-token
+   * issue+revoke / PDF generation / WhatsApp sends / customer signing
+   * via public token). Hydrated with actor display names.
+   */
+  static async auditLog(
+    id: number,
+    limit = 50,
+  ): Promise<{ events: AuditEvent[] }> {
+    const res = await axiosInstance.get(
+      `/api/v1/function-sheets/${id}/audit-log`,
+      { params: { limit } },
+    );
+    return res.data?.data ?? { events: [] };
   }
 
   /**

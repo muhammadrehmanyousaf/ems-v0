@@ -42,6 +42,7 @@ import {
   PenLine,
   MessageSquare,
   Share2,
+  Activity,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -83,6 +84,7 @@ import { FunctionSheetComposer } from './function-sheet-composer';
 import { SignDialog, type SignSide } from './sign-dialog';
 import { SendWhatsappDialog } from './send-whatsapp-dialog';
 import { ShareLinkDialog } from './share-link-dialog';
+import { ActivityDialog } from './activity-dialog';
 
 interface VendorBusinessOption {
   id: number;
@@ -146,6 +148,9 @@ export default function FunctionSheetsView() {
     variant?: PdfVariant;
   } | null>(null);
   const [shareSheet, setShareSheet] = useState<FunctionSheet | null>(null);
+  const [activitySheet, setActivitySheet] = useState<FunctionSheet | null>(
+    null,
+  );
   const [cancelSheet, setCancelSheet] = useState<FunctionSheet | null>(null);
   const [deleteSheet, setDeleteSheet] = useState<FunctionSheet | null>(null);
 
@@ -422,6 +427,7 @@ export default function FunctionSheetsView() {
                 setWhatsappTarget({ sheet: s, variant })
               }
               onShare={() => setShareSheet(s)}
+              onActivity={() => setActivitySheet(s)}
             />
           ))}
         </div>
@@ -472,6 +478,11 @@ export default function FunctionSheetsView() {
         sheet={shareSheet}
         onOpenChange={(o) => !o && setShareSheet(null)}
         onSaved={fetchAll}
+      />
+
+      <ActivityDialog
+        sheet={activitySheet}
+        onOpenChange={(o) => !o && setActivitySheet(null)}
       />
 
       <AlertDialog
@@ -537,6 +548,7 @@ function SheetCard({
   onPdf,
   onWhatsapp,
   onShare,
+  onActivity,
 }: {
   sheet: FunctionSheet;
   busy: boolean;
@@ -548,6 +560,7 @@ function SheetCard({
   onPdf: (variant: PdfVariant, mode: 'preview' | 'download') => void;
   onWhatsapp: (variant?: PdfVariant) => void;
   onShare: () => void;
+  onActivity: () => void;
 }) {
   const tone = STATE_TONES[sheet.state];
   const nextOptions = NEXT_STATES[sheet.state] || [];
@@ -816,6 +829,16 @@ function SheetCard({
               {shareTokenLive ? 'Manage share link' : 'Share link'}
             </Button>
           )}
+          {/* Activity — always visible (compliance + dispute proof) */}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onActivity}
+            disabled={busy}
+          >
+            <Activity className="mr-1 h-3 w-3" />
+            Activity
+          </Button>
           {/* Cancel — visible on any non-terminal state */}
           {!isTerminal && (
             <Button
