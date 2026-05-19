@@ -41,6 +41,17 @@ import CateringSteps from "./VendorStepForms/newVendorRegisterationForm/Catering
 import GenericSteps from "./VendorStepForms/newVendorRegisterationForm/Generic/generic-steps";
 import axios from "axios";
 import { BACKEND_URL } from "@/lib/backend-url";
+
+// Temporary kill-switch — image storage isn't wired up on production
+// yet. While the flag is OFF, the registration flow accepts image
+// selections from the user, silently drops them, and submits the
+// business with no images. Flip back to true once an S3/Cloudinary
+// adapter ships and `/api/v1/businesses/upload-images` is alive.
+//
+// Honours `NEXT_PUBLIC_IMAGE_UPLOADS_ENABLED=1` on Vercel so ops can
+// re-enable without a redeploy once storage is ready.
+const IMAGE_UPLOADS_ENABLED =
+  process.env.NEXT_PUBLIC_IMAGE_UPLOADS_ENABLED === "1";
 import { TERMS_VERSION } from "@/lib/seo";
 import { vanueValidations } from "./VendorStepForms/newVendorRegisterationForm/venueSteps/vanueComponents/vanueValidations";
 import SuccessModal from "./VendorStepForms/components/SuccessModal";
@@ -328,7 +339,11 @@ export function BusinessRegistrationForm() {
       }
       if (currentStep === imagesStep) {
         const imageCount = formData.imageFiles?.length ?? 0;
-        if (imageCount === 0) {
+        // Temporary — images optional while IMAGE_UPLOADS_ENABLED is
+        // off (no storage backend yet). The 20-image cap still
+        // applies as a defensive client-side limit so a vendor
+        // can't queue up gigabytes of files we'd silently discard.
+        if (IMAGE_UPLOADS_ENABLED && imageCount === 0) {
           currentErrors.images = "Please upload at least one image";
         } else if (imageCount > 20) {
           currentErrors.images = `Maximum 20 images allowed. You have uploaded ${imageCount}. Please remove ${imageCount - 20} image(s).`;
@@ -392,8 +407,12 @@ export function BusinessRegistrationForm() {
       const uploadTempId = crypto.randomUUID();
       let uploadedImageUrls: string[] = [];
 
-      // Upload brand logo if a file was selected
-      if (file) {
+      // Upload brand logo if a file was selected.
+      // Skipped entirely while IMAGE_UPLOADS_ENABLED is off — image
+      // storage isn't wired up on production yet, so we silently
+      // drop any selected logo and submit without one. Vendor can
+      // upload from the dashboard later once storage is ready.
+      if (IMAGE_UPLOADS_ENABLED && file) {
         const logoFormData = new FormData();
         logoFormData.append("images", file);
         try {
@@ -412,8 +431,14 @@ export function BusinessRegistrationForm() {
         }
       }
 
-      // Upload business images
-      if (formData.imageFiles && formData.imageFiles.length > 0) {
+      // Upload business images. Skipped while uploads are disabled
+      // (see comment above). uploadedImageUrls stays [] and the
+      // payload further down sends an empty images array.
+      if (
+        IMAGE_UPLOADS_ENABLED &&
+        formData.imageFiles &&
+        formData.imageFiles.length > 0
+      ) {
         const imageFiles = formData.imageFiles.slice(0, 20); // hard cap at 20
         const imgFormData = new FormData();
         imageFiles.forEach((f: File) => {
@@ -446,7 +471,13 @@ export function BusinessRegistrationForm() {
 
       let packagesWithImages: any[] = validPkgsWithIdx.map(({ p }) => ({ ...p }));
 
-      if (rawPkgImageFiles.some((files) => files?.length > 0)) {
+      // Per-package image uploads (Car Rental fleet / Bridal Wear
+      // outfits). Same kill-switch — when off, selected files are
+      // dropped and packages submit with their text fields only.
+      if (
+        IMAGE_UPLOADS_ENABLED &&
+        rawPkgImageFiles.some((files) => files?.length > 0)
+      ) {
         packagesWithImages = await Promise.all(
           validPkgsWithIdx.map(async ({ p, originalIdx }) => {
             const files: File[] = rawPkgImageFiles[originalIdx] ?? [];
