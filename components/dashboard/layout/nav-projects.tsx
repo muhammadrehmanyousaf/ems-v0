@@ -18,8 +18,16 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
+// Phase 3 #9.4 follow-up — translate sidebar labels via useT when an
+// i18nKey is provided on the nav item; falls back to `name` otherwise.
+import { useT } from "@/lib/i18n/useT"
 
-export type NavItem = { name: string; url: string; icon: LucideIcon }
+export type NavItem = {
+  name: string;
+  url: string;
+  icon: LucideIcon;
+  i18nKey?: string;
+}
 
 export type SettingsSubItem = { id: string; label: string }
 
@@ -77,6 +85,11 @@ export function NavSections({ sections }: { sections: NavSection[] }) {
   const searchParams = useSearchParams()
   const isOnSettingsPage = getDashboardModule(normalizePath(pathname)) === "settings"
   const currentTab = searchParams?.get("tab") || "overview"
+  const t = useT()
+  // When an item declares i18nKey, prefer the translated label. Falls
+  // back cleanly to the hardcoded `name` when no key (or no translation).
+  const label = (item: NavItem) =>
+    item.i18nKey ? t(item.i18nKey) : item.name
 
   return (
     <>
@@ -112,7 +125,7 @@ export function NavSections({ sections }: { sections: NavSection[] }) {
                         >
                           <Link href={`${item.url}?tab=overview`}>
                             <item.icon />
-                            <span>{item.name}</span>
+                            <span>{label(item)}</span>
                           </Link>
                         </SidebarMenuButton>
                         {subItems.length > 0 && (
@@ -159,7 +172,7 @@ export function NavSections({ sections }: { sections: NavSection[] }) {
                   >
                     <Link href={item.url}>
                       <item.icon />
-                      <span>{item.name}</span>
+                      <span>{label(item)}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

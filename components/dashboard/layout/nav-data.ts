@@ -42,47 +42,31 @@ export const data = {
   // ── Vendor ──────────────────────────────────────────────────────
   // Vendors run their own business — full operational nav.
   vendorMainNav: [
-    { name: "Dashboard",     url: "/dashboard",                icon: LayoutDashboard },
-    // Vendor Portal Phase 1 #7.6 — Day-of timeline runner.
-    // Positioned right under Dashboard because it's the page floor
-    // managers open first on a wedding day.
-    { name: "Today",         url: "/dashboard/today",          icon: Sparkles },
-    // Vendor Portal Phase 1 #7.3 — Lead Inbox. Sits above Bookings
-    // because every booking starts as a lead.
-    { name: "Lead inbox",    url: "/dashboard/leads",          icon: Inbox },
-    { name: "Bookings",      url: "/dashboard/bookings",       icon: ClipboardList },
-    // Vendor Portal Phase 1 #7.1 — Function Sheets (Smart-File morphing doc).
-    { name: "Function sheets", url: "/dashboard/function-sheets", icon: FileText },
-    { name: "Customers",     url: "/dashboard/customers",      icon: SquareUser },
-    { name: "Calendar",      url: "/dashboard/calendar",       icon: CalendarDays },
-    { name: "Conversations", url: "/dashboard/chat",           icon: MessageSquareText },
-    { name: "Payments",      url: "/dashboard/payments",       icon: CircleDollarSign },
-    // Vendor Portal Phase 1 #7.5 — Cash + digital payment receipts.
-    { name: "Receipts",      url: "/dashboard/receipts",       icon: CircleDollarSign },
-    // Vendor Portal Phase 1 #7.4 — Post-dated cheque ledger.
-    { name: "Cheque ledger", url: "/dashboard/pdcs",           icon: Wallet },
-    // Vendor Portal Phase 2 #8.3 — Expense tracking + per-event P&L.
-    { name: "Expenses",      url: "/dashboard/expenses",       icon: Wallet },
-    // Vendor Portal Phase 2 #8.1 — Inventory tracker.
-    { name: "Inventory",     url: "/dashboard/inventory",      icon: Boxes },
-    // Vendor Portal Phase 2 #8.2 — Staff rota + casual-labour payroll.
-    { name: "Staff & payroll", url: "/dashboard/staff",        icon: HandCoins },
-    // Vendor Portal Phase 2 #8.4 — Supplier ledger (A/P).
-    { name: "Suppliers",     url: "/dashboard/suppliers",      icon: Truck },
-    // Vendor Portal Phase 2 #8.8 — Broker commission ledger.
-    { name: "Brokers",       url: "/dashboard/brokers",        icon: Handshake },
-    // Vendor Portal Phase 2 #8.5 — Generator fuel log (venue-specific).
-    { name: "Generator fuel",url: "/dashboard/generator-fuel", icon: Fuel },
-    // Vendor Portal Phase 2 #8.6 — Halal cert tracker (caterer-specific).
-    { name: "Halal certs",   url: "/dashboard/halal-certs",    icon: ShieldCheck },
-    // Vendor Portal Phase 2 #8.7 — Drone NOC tracker (photographer-specific).
-    { name: "Drone NOC",     url: "/dashboard/drone-noc",      icon: Plane },
-    { name: "Reviews",       url: "/dashboard/reviews",        icon: Smile },
-    { name: "Notifications", url: "/dashboard/notifications",  icon: Bell },
+    { name: "Dashboard",     url: "/dashboard",                icon: LayoutDashboard, i18nKey: "nav.dashboard" },
+    { name: "Today",         url: "/dashboard/today",          icon: Sparkles,        i18nKey: "nav.today" },
+    { name: "Lead inbox",    url: "/dashboard/leads",          icon: Inbox,           i18nKey: "nav.leads" },
+    { name: "Bookings",      url: "/dashboard/bookings",       icon: ClipboardList,   i18nKey: "nav.bookings" },
+    { name: "Function sheets", url: "/dashboard/function-sheets", icon: FileText,     i18nKey: "nav.function_sheets" },
+    { name: "Customers",     url: "/dashboard/customers",      icon: SquareUser,      i18nKey: "nav.customers" },
+    { name: "Calendar",      url: "/dashboard/calendar",       icon: CalendarDays,    i18nKey: "nav.calendar" },
+    { name: "Conversations", url: "/dashboard/chat",           icon: MessageSquareText, i18nKey: "nav.conversations" },
+    { name: "Payments",      url: "/dashboard/payments",       icon: CircleDollarSign, i18nKey: "nav.payments" },
+    { name: "Receipts",      url: "/dashboard/receipts",       icon: CircleDollarSign, i18nKey: "nav.receipts" },
+    { name: "Cheque ledger", url: "/dashboard/pdcs",           icon: Wallet,          i18nKey: "nav.cheque_ledger" },
+    { name: "Expenses",      url: "/dashboard/expenses",       icon: Wallet,          i18nKey: "nav.expenses" },
+    { name: "Inventory",     url: "/dashboard/inventory",      icon: Boxes,           i18nKey: "nav.inventory" },
+    { name: "Staff & payroll", url: "/dashboard/staff",        icon: HandCoins,       i18nKey: "nav.staff" },
+    { name: "Suppliers",     url: "/dashboard/suppliers",      icon: Truck,           i18nKey: "nav.suppliers" },
+    { name: "Brokers",       url: "/dashboard/brokers",        icon: Handshake,       i18nKey: "nav.brokers" },
+    { name: "Generator fuel",url: "/dashboard/generator-fuel", icon: Fuel,            i18nKey: "nav.generator_fuel" },
+    { name: "Halal certs",   url: "/dashboard/halal-certs",    icon: ShieldCheck,     i18nKey: "nav.halal_certs" },
+    { name: "Drone NOC",     url: "/dashboard/drone-noc",      icon: Plane,           i18nKey: "nav.drone_noc" },
+    { name: "Reviews",       url: "/dashboard/reviews",        icon: Smile,           i18nKey: "nav.reviews" },
+    { name: "Notifications", url: "/dashboard/notifications",  icon: Bell,            i18nKey: "nav.notifications" },
   ],
 
   vendorMyBusiness: [
-    { name: "Business Settings", url: "/dashboard/settings", icon: Settings },
+    { name: "Business Settings", url: "/dashboard/settings", icon: Settings, i18nKey: "nav.business_settings" },
   ],
 
   // ── Admin / Super-admin ────────────────────────────────────────

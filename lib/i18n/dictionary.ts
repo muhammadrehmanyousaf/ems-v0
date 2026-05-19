@@ -45,6 +45,15 @@ const EN: Dictionary = {
   "nav.today": "Today",
   "nav.settings": "Settings",
   "nav.businesses_overview": "Businesses overview",
+  "nav.conversations": "Conversations",
+  "nav.payments": "Payments",
+  "nav.cheque_ledger": "Cheque ledger",
+  "nav.generator_fuel": "Generator fuel",
+  "nav.halal_certs": "Halal certs",
+  "nav.drone_noc": "Drone NOC",
+  "nav.notifications": "Notifications",
+  "nav.business_settings": "Business Settings",
+  "nav.onboarding": "Onboarding",
 
   // Common verbs
   "verb.save": "Save",
@@ -132,6 +141,15 @@ const UR: Dictionary = {
   "nav.today": "آج",
   "nav.settings": "ترتیبات",
   "nav.businesses_overview": "کاروبار کا جائزہ",
+  "nav.conversations": "گفتگو",
+  "nav.payments": "ادائیگیاں",
+  "nav.cheque_ledger": "چیک لیجر",
+  "nav.generator_fuel": "جنریٹر فیول",
+  "nav.halal_certs": "حلال سرٹیفکیٹ",
+  "nav.drone_noc": "ڈرون این او سی",
+  "nav.notifications": "اطلاعات",
+  "nav.business_settings": "کاروبار کی ترتیبات",
+  "nav.onboarding": "آن بورڈنگ",
 
   // Common verbs
   "verb.save": "محفوظ کریں",
