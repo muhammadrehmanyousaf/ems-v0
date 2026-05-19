@@ -1,5 +1,6 @@
 import {
   Bell,
+  Boxes,
   BriefcaseBusiness,
   CalendarDays,
   CircleDollarSign,
@@ -53,6 +54,8 @@ export const data = {
     { name: "Cheque ledger", url: "/dashboard/pdcs",           icon: Wallet },
     // Vendor Portal Phase 2 #8.3 — Expense tracking + per-event P&L.
     { name: "Expenses",      url: "/dashboard/expenses",       icon: Wallet },
+    // Vendor Portal Phase 2 #8.1 — Inventory tracker.
+    { name: "Inventory",     url: "/dashboard/inventory",      icon: Boxes },
     { name: "Reviews",       url: "/dashboard/reviews",        icon: Smile },
     { name: "Notifications", url: "/dashboard/notifications",  icon: Bell },
   ],
