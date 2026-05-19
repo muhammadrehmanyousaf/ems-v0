@@ -147,6 +147,30 @@ html[data-locale="ur"] body {
   scrollbar-width: none; /* Firefox */
 }
 
+/* Elegant gold-on-cream scrollbar for bridal-themed sticky panels.
+   Used on the business-registration left rail so the aside can scroll
+   internally when its content overflows tall viewports without ever
+   looking technical. WebKit + Firefox covered. */
+.bridal-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(184, 140, 74, 0.35) transparent;
+}
+.bridal-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.bridal-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.bridal-scroll::-webkit-scrollbar-thumb {
+  background: rgba(184, 140, 74, 0.25);
+  border-radius: 999px;
+  transition: background 200ms ease;
+}
+.bridal-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(184, 140, 74, 0.45);
+}
+
 /* Playfair Display heading utility — kept under both names so legacy call
    sites that still write `font-heading` keep their typography. New code
    should use `font-display italic` (Tailwind token). */

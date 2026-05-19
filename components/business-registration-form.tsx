@@ -746,10 +746,18 @@ export function BusinessRegistrationForm() {
 
       {/* ── Main content ── */}
       <main className="w-[92%] xl:w-[90%] max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 lg:py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8">
-          {/* ── Left aside (sticky on lg) ── */}
-          <aside className="lg:col-span-5 order-2 lg:order-1 space-y-5">
-            <div className="lg:sticky lg:top-[88px] space-y-5">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start">
+          {/* ── Left aside (sticky on lg) ──
+              Pinned at top:88px (just below the sticky header). Height
+              capped to viewport minus header + breathing room; internal
+              overflow scrolls with the gold bridal-scroll thumb when
+              content exceeds available height. On taller monitors the
+              three cards comfortably fit and no scrollbar appears at
+              all — the rail feels static and intentional. */}
+          <aside className="lg:col-span-4 order-2 lg:order-1">
+            <div
+              className="lg:sticky lg:top-[88px] lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-2 bridal-scroll space-y-5"
+            >
               {/* Progress card */}
               <BridalCard className="p-5 sm:p-6">
                 <div className="flex items-center justify-between mb-3">
@@ -842,8 +850,13 @@ export function BusinessRegistrationForm() {
             </div>
           </aside>
 
-          {/* ── Right form panel ── */}
-          <section className="lg:col-span-7 order-1 lg:order-2">
+          {/* ── Right form panel ──
+              col-span-8 (vs aside's col-span-4) gives the form
+              ~67% of the width — enough room for the vendor-type grid
+              + the multi-field step forms to breathe. Scrolls with
+              the page naturally; the pinned aside on the left keeps
+              the progress + benefits + stats always in view. */}
+          <section className="lg:col-span-8 order-1 lg:order-2">
             <BridalCard
               elevated
               className="p-5 sm:p-7 lg:p-9 bg-bridal-cream"
