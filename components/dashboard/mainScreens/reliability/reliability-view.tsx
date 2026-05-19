@@ -237,6 +237,14 @@ function BusinessReliabilityCard({ biz }: { biz: BusinessReliability }) {
           <span>Completed: {biz.inputs.completionCount}</span>
           <span>Cancelled: {biz.inputs.cancellationCount}</span>
           <span>Verification tier: {biz.inputs.verificationTier} / 4</span>
+          {biz.inputs.medianResponseHours != null && (
+            <span>
+              Median response:{' '}
+              {biz.inputs.medianResponseHours < 1
+                ? `${Math.round(biz.inputs.medianResponseHours * 60)} min`
+                : `${biz.inputs.medianResponseHours.toFixed(1)} h`}
+            </span>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -9,6 +9,9 @@ import { QueryProvider } from "@/lib/providers/query-provider"
 import { PerformanceMonitor } from "@/components/performance-monitor"
 import { CookieConsent } from "@/components/cookie-consent"
 import { Inter, Playfair_Display, DM_Sans, Noto_Nastaliq_Urdu } from "next/font/google"
+// Phase 2 #8.9 — PWA shell.
+import { PwaRegister } from "@/components/pwa/pwa-register"
+import { PwaInstallPrompt } from "@/components/pwa/install-prompt"
 import {
   SITE_URL,
   SITE_NAME,
@@ -196,6 +199,8 @@ export default function RootLayout({
                   <SonnerToaster richColors position="top-right" />
                   <PerformanceMonitor />
                   <CookieConsent />
+                  <PwaRegister />
+                  <PwaInstallPrompt />
                 </ChatProvider>
               </NotificationProvider>
             </BusinessProvider>

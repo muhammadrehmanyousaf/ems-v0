@@ -24,6 +24,8 @@ export interface ReliabilityInputs {
   completenessScore: number;
   yearsInBusiness: number;
   weddingsCompleted: number;
+  /** BK-100.6.2 — median lead-response hours; null = no data yet. */
+  medianResponseHours?: number | null;
 }
 
 export interface ReliabilitySuggestion {
