@@ -348,7 +348,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
           {/* ── Filter Sidebar ── */}
           <aside className="w-full lg:w-72 xl:w-80 flex-shrink-0">
             <div className="lg:sticky lg:top-24">
-              <Card className="border border-bridal-beige bg-bridal-cream rounded-md max-h-[calc(100vh-7rem)] overflow-hidden flex flex-col shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)]">
+              <Card className="border border-bridal-beige bg-bridal-cream rounded-md max-h-[calc(100vh-7rem)] lg:h-[calc(100vh-7rem)] overflow-hidden flex flex-col shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)]">
                 <CardHeader className="pb-3 border-b border-bridal-beige bg-bridal-ivory flex-shrink-0">
                   <div className="flex items-center justify-between">
                     <CardTitle className="font-display italic text-[18px] text-bridal-charcoal flex items-center gap-2">
@@ -373,7 +373,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                 </CardHeader>
 
                 <CardContent className="p-0 flex-1 min-h-0">
-                  <div className="h-full overflow-y-auto px-4 py-5 space-y-5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-bridal-beige [&::-webkit-scrollbar-thumb]:rounded-full">
+                  <div className="hide-scrollbar h-full overflow-y-auto px-4 py-5 space-y-5">
 
                     {/* Search */}
                     <FilterGroup icon={<Search className="w-3.5 h-3.5 text-bridal-gold" />} label="Search">
