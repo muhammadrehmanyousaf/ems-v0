@@ -775,16 +775,18 @@ export function BusinessRegistrationForm() {
 
       {/* ── Main content ── */}
       <main className="w-[92%] xl:w-[90%] max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 lg:py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start">
-          {/* ── Left aside (sticky on lg) ──
-              Pinned at top:88px. NO internal scroll — cards are
-              tightened (smaller padding + spacing) so the whole rail
-              fits comfortably in a 720p+ viewport. If a vendor uses
-              an unusually short window, sticky naturally releases
-              and the rail joins the page scroll — no ugly inner
-              scrollbar appears at any size. */}
-          <aside className="lg:col-span-4 order-2 lg:order-1">
-            <div className="lg:sticky lg:top-[88px] space-y-5">
+        {/* On lg the whole row is one pinned, viewport-height panel: both
+            columns are h-full and aligned, so they can never drift relative
+            to each other (no "left slides up" effect). Each column manages
+            its own internal scroll. On mobile this is a normal stacked grid. */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start lg:sticky lg:top-[88px] lg:h-[calc(100vh-7rem)]">
+          {/* ── Left aside ──
+              Full height of the pinned row (lg:h-full). Content sits at the
+              top; if a vendor uses an unusually short window the rail scrolls
+              internally behind a slim gold bar rather than overflowing the
+              viewport or sliding under the header. */}
+          <aside className="lg:col-span-4 order-2 lg:order-1 lg:h-full lg:min-h-0">
+            <div className="lg:h-full lg:overflow-y-auto overflow-x-hidden bridal-scroll lg:pr-1 space-y-5">
               {/* Progress card — compact */}
               <BridalCard className="p-5 sm:p-6">
                 <div className="flex items-center justify-between mb-2.5">
@@ -877,15 +879,14 @@ export function BusinessRegistrationForm() {
           </aside>
 
           {/* ── Right form panel ──
-              col-span-8 (vs aside's col-span-4) gives the form
-              ~67% of the width — enough room for the vendor-type grid
-              + the multi-field step forms to breathe. Scrolls with
-              the page naturally; the pinned aside on the left keeps
-              the progress + benefits + stats always in view. */}
-          <section className="lg:col-span-8 order-1 lg:order-2">
+              col-span-8 (vs aside's col-span-4) gives the form ~67% of the
+              width. Fills the full height of the pinned row; the step body
+              scrolls internally and the nav footer stays pinned at the
+              bottom of the card. */}
+          <section className="lg:col-span-8 order-1 lg:order-2 lg:h-full lg:min-h-0">
             <BridalCard
               elevated
-              className="p-0 bg-bridal-cream flex flex-col overflow-hidden lg:sticky lg:top-[88px] lg:max-h-[calc(100vh-7rem)]"
+              className="p-0 bg-bridal-cream flex flex-col overflow-hidden lg:h-full"
             >
               {/* Scrollable step body — slim gold scrollbar (bridal-scroll).
                   The nav buttons live in a pinned footer below, so they stay
@@ -1109,10 +1110,11 @@ export function BusinessRegistrationForm() {
               )}
               </div>{/* end scrollable step body */}
 
-              {/* Pinned footer — nav buttons stay visible while the body
-                  scrolls (slim bridal scrollbar above). flex-shrink-0 keeps
-                  it at the card's bottom edge inside the sticky viewport. */}
-              <div className="flex-shrink-0 border-t border-bridal-beige/70 bg-bridal-cream px-5 sm:px-7 lg:px-9 py-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              {/* Pinned footer — nav buttons + sign-in link stay visible
+                  while the body scrolls. flex-shrink-0 keeps it at the card's
+                  bottom edge inside the full-height column. */}
+              <div className="flex-shrink-0 border-t border-bridal-beige/70 bg-bridal-cream px-5 sm:px-7 lg:px-9 py-3.5 space-y-2.5">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 <BridalButton
                   type="button"
                   variant="outline"
@@ -1148,19 +1150,21 @@ export function BusinessRegistrationForm() {
                     )}
                   </BridalButton>
                 </div>
+                </div>
+
+                {/* Sign-in link — moved into the footer so it sits with the
+                    buttons instead of dangling below the full-height card. */}
+                <p className="text-center font-bridal text-[12px] text-bridal-text-soft">
+                  Already have a vendor account?{" "}
+                  <Link
+                    href="/login"
+                    className="text-bridal-gold hover:text-bridal-gold-dark font-medium underline-offset-4 hover:underline transition-colors"
+                  >
+                    Sign in
+                  </Link>
+                </p>
               </div>
             </BridalCard>
-
-            {/* Footer link */}
-            <p className="mt-5 text-center font-bridal text-[13px] text-bridal-text-soft">
-              Already have a vendor account?{" "}
-              <Link
-                href="/login"
-                className="text-bridal-gold hover:text-bridal-gold-dark font-medium underline-offset-4 hover:underline transition-colors"
-              >
-                Sign in
-              </Link>
-            </p>
           </section>
         </div>
       </main>
