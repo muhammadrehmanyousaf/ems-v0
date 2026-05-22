@@ -784,9 +784,9 @@ export function BusinessRegistrationForm() {
               and the rail joins the page scroll — no ugly inner
               scrollbar appears at any size. */}
           <aside className="lg:col-span-4 order-2 lg:order-1">
-            <div className="lg:sticky lg:top-[88px] space-y-4">
+            <div className="lg:sticky lg:top-[88px] space-y-5">
               {/* Progress card — compact */}
-              <BridalCard className="p-4 sm:p-5">
+              <BridalCard className="p-5 sm:p-6">
                 <div className="flex items-center justify-between mb-2.5">
                   <span className="bridal-label">Your Progress</span>
                   <span className="font-display italic text-bridal-gold text-[18px] leading-none">
@@ -814,7 +814,7 @@ export function BusinessRegistrationForm() {
               {/* Benefits — blush rose card, compact */}
               <BridalCard
                 blush
-                className="p-4 sm:p-5 border-bridal-rose/40"
+                className="p-5 sm:p-6 border-bridal-rose/40"
               >
                 <div className="text-center mb-3.5">
                   <div className="w-10 h-10 mx-auto mb-2.5 rounded-full bg-bridal-cream border border-bridal-gold/40 flex items-center justify-center">
@@ -851,7 +851,7 @@ export function BusinessRegistrationForm() {
               </BridalCard>
 
               {/* Stats card — compact */}
-              <BridalCard className="p-4 sm:p-5">
+              <BridalCard className="p-5 sm:p-6">
                 <div className="flex items-center gap-1.5 mb-2.5">
                   <Star className="w-3.5 h-3.5 text-bridal-gold" />
                   <span className="bridal-label">Platform Pulse</span>
@@ -885,8 +885,13 @@ export function BusinessRegistrationForm() {
           <section className="lg:col-span-8 order-1 lg:order-2">
             <BridalCard
               elevated
-              className="p-5 sm:p-7 lg:p-9 bg-bridal-cream"
+              className="p-0 bg-bridal-cream flex flex-col overflow-hidden lg:sticky lg:top-[88px] lg:max-h-[calc(100vh-7rem)]"
             >
+              {/* Scrollable step body — slim gold scrollbar (bridal-scroll).
+                  The nav buttons live in a pinned footer below, so they stay
+                  visible while this area scrolls. overflow-x-hidden keeps the
+                  cards' hover-scale from spawning a horizontal bar. */}
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bridal-scroll p-5 sm:p-7 lg:p-9">
               {/* 01-VR-ENHANCE-V1-FE — server-side resume prompt.
                   Shown only when an email is typed, the form is still empty
                   enough to safely overwrite, and the server has a saved draft. */}
@@ -1044,54 +1049,16 @@ export function BusinessRegistrationForm() {
                 )}
               </div>
 
-              {/* Navigation buttons */}
-              <div className="mt-7 pt-5 border-t border-bridal-beige/70 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                <BridalButton
-                  type="button"
-                  variant="outline"
-                  size="md"
-                  onClick={handleBack}
-                  disabled={currentStep === 0}
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  Back
-                </BridalButton>
-
-                <div className="flex items-center sm:gap-3">
-                  <span className="hidden sm:inline-block bridal-label text-[10px] tracking-[0.18em]">
-                    {isFinalStep ? "One more click" : "Keep going"}
-                  </span>
-                  <BridalButton
-                    type="button"
-                    variant="primary"
-                    size="md"
-                    onClick={isFinalStep ? handleSubmit : handleNext}
-                    disabled={isFinalStep && !termsAccepted}
-                  >
-                    {isFinalStep ? (
-                      <>
-                        <Send className="w-3.5 h-3.5" />
-                        Submit Registration
-                      </>
-                    ) : (
-                      <>
-                        Continue
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </>
-                    )}
-                  </BridalButton>
-                </div>
-              </div>
-
               {/*
                 T&C acceptance — visible only on the final step. Required
                 for PayFast underwriting + chargeback defense. The submit
-                button above is disabled until this is ticked. Reference:
+                button in the pinned footer below is disabled until this is
+                ticked. Reference:
                 docs/payfast/01-payfast-integration-overview.md §2 item 6,
                 docs/seo/00-master-seo-playbook.md §28 item 6.6.
               */}
               {isFinalStep && (
-                <label className="mt-4 flex items-start gap-2.5 cursor-pointer max-w-2xl">
+                <label className="mt-6 flex items-start gap-2.5 cursor-pointer max-w-2xl">
                   <input
                     type="checkbox"
                     checked={termsAccepted}
@@ -1140,6 +1107,48 @@ export function BusinessRegistrationForm() {
                   </span>
                 </label>
               )}
+              </div>{/* end scrollable step body */}
+
+              {/* Pinned footer — nav buttons stay visible while the body
+                  scrolls (slim bridal scrollbar above). flex-shrink-0 keeps
+                  it at the card's bottom edge inside the sticky viewport. */}
+              <div className="flex-shrink-0 border-t border-bridal-beige/70 bg-bridal-cream px-5 sm:px-7 lg:px-9 py-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <BridalButton
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  onClick={handleBack}
+                  disabled={currentStep === 0}
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Back
+                </BridalButton>
+
+                <div className="flex items-center sm:gap-3">
+                  <span className="hidden sm:inline-block bridal-label text-[10px] tracking-[0.18em]">
+                    {isFinalStep ? "One more click" : "Keep going"}
+                  </span>
+                  <BridalButton
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    onClick={isFinalStep ? handleSubmit : handleNext}
+                    disabled={isFinalStep && !termsAccepted}
+                  >
+                    {isFinalStep ? (
+                      <>
+                        <Send className="w-3.5 h-3.5" />
+                        Submit Registration
+                      </>
+                    ) : (
+                      <>
+                        Continue
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </>
+                    )}
+                  </BridalButton>
+                </div>
+              </div>
             </BridalCard>
 
             {/* Footer link */}

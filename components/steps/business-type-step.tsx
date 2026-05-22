@@ -294,7 +294,7 @@ export function BusinessTypeStep({
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
         {businessTypes.map((type) => (
           <Card
             key={type.id}
@@ -309,23 +309,23 @@ export function BusinessTypeStep({
               setFormData((prev) => ({ ...prev, businessType: type.id }));
             }}
           >
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-start gap-3 sm:gap-4">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-start gap-2.5 sm:gap-3">
                 <div
                   className={cn(
-                    "w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shadow-lg transition-all duration-300 flex-shrink-0",
+                    "w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shadow-md transition-all duration-300 flex-shrink-0",
                     businessType === type.id
-                      ? `bg-gradient-to-r ${type.color} shadow-xl`
+                      ? `bg-gradient-to-r ${type.color} shadow-lg`
                       : `bg-gradient-to-r ${type.color} opacity-80`,
                   )}
                 >
-                  <type.icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                  <type.icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </div>
 
-                <div className="flex-1 space-y-1 sm:space-y-2 min-w-0">
+                <div className="flex-1 space-y-0.5 sm:space-y-1 min-w-0">
                   <h3
                     className={cn(
-                      "font-bold text-base sm:text-lg transition-colors duration-300 truncate",
+                      "font-bold text-sm sm:text-base transition-colors duration-300 truncate",
                       businessType === type.id
                         ? type.textColor
                         : "text-neutral-900",
@@ -333,7 +333,7 @@ export function BusinessTypeStep({
                   >
                     {type.title}
                   </h3>
-                  <p className="text-xs sm:text-sm text-neutral-600 line-clamp-2">
+                  <p className="text-[11px] sm:text-xs text-neutral-600 line-clamp-2">
                     {type.subtitle}
                   </p>
 
