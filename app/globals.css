@@ -9,8 +9,15 @@ body {
      scroll on mobile. Multiple homepage sections had min-height/min-width
      elements that escaped their container at narrow viewports; rather
      than chase each one, clip at the viewport so the page is always
-     exactly the device width regardless of what bleeds past it. */
-  overflow-x: hidden;
+     exactly the device width regardless of what bleeds past it.
+
+     MUST be `clip`, not `hidden`. `overflow-x: hidden` on the root makes
+     <html> a scroll container, which silently breaks `position: sticky`
+     for EVERY descendant site-wide (vendor filter rail, registration
+     left rail, sticky headers). `clip` clips the same horizontal bleed
+     but does NOT establish a scroll container, so sticky keeps working.
+     Do not change this back to `hidden`. */
+  overflow-x: clip;
 }
 
 /* Phase 3 #9.4 — When the locale toggle flips to Urdu, the dashboard
