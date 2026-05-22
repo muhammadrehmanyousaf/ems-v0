@@ -14,17 +14,38 @@ interface UserLike {
 
 const ADMIN_ROLE_NAMES = new Set(["admin", "administrator", "platform admin"]);
 
+// Canonical role-table ids (Roles table): 1 = super admin, 2 = Vendor,
+// 3 = User. NEVER treat id 2 as admin — id 2 is a VENDOR. Doing so flagged
+// every vendor as an admin and dropped them on the admin dashboard.
+const SUPER_ADMIN_ROLE_ID = 1;
+const VENDOR_ROLE_ID = 2;
+const SUPER_ADMIN_ROLE_NAMES = new Set(["super admin", "superadmin", "super-admin"]);
+
 export function getDashboardRole(user: UserLike | null | undefined): DashboardRole {
   if (!user) return "none";
-  if (user.isSuperAdmin) return "superAdmin";
 
-  const isAdmin = user.roles?.some((r) => {
-    const n = r.name?.toLowerCase().trim();
-    return (n && ADMIN_ROLE_NAMES.has(n)) || r.id === 2;
-  });
-  if (isAdmin) return "admin";
+  const roles = user.roles ?? [];
+  const hasRole = (
+    ids: number[],
+    names: Set<string>,
+  ) =>
+    roles.some((r) => {
+      const n = r.name?.toLowerCase().trim();
+      return (typeof r.id === "number" && ids.includes(r.id)) || (!!n && names.has(n));
+    });
 
-  if (user.isVendor) return "vendor";
+  // Super admin — explicit flag, role id 1, or a "super admin" role name.
+  if (user.isSuperAdmin || hasRole([SUPER_ADMIN_ROLE_ID], SUPER_ADMIN_ROLE_NAMES))
+    return "superAdmin";
+
+  // Admin — only a dedicated admin role by NAME. There is no separate admin
+  // role id in the current 3-role system (kept for forward-compat).
+  if (hasRole([], ADMIN_ROLE_NAMES)) return "admin";
+
+  // Vendor — explicit flag, role id 2, or a "vendor" role name.
+  if (user.isVendor || hasRole([VENDOR_ROLE_ID], new Set(["vendor"])))
+    return "vendor";
+
   return "none";
 }
 
