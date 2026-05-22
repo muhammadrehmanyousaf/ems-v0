@@ -115,15 +115,19 @@ export default function VendorCard({
         'Wedding venue': 'venues',
         'Car rental': 'car-rental',
         'Catering': 'catering',
-        'Bridal wearing': 'bridal-wear',
-        'Wedding Invitations and Stationery': 'wedding-stationery',
+        // `bridal-wear` / `wedding-stationery` are SEO listing routes that
+        // own /bridal-wear/[city] and /wedding-stationery/[city]; routing a
+        // numeric id there collides with [city] and never reaches a detail
+        // page. The numeric-id detail routes live under these slugs instead.
+        'Bridal wearing': 'bridal-wearing',
+        'Wedding Invitations and Stationery': 'wedding-invitations',
         'Venue': 'venues',
         'Caterer': 'catering',
         'Makeup Artist': 'makeup-artists',
         'Henna Artist': 'henna-artists',
         'Car Rental': 'car-rental',
-        'Wedding Stationery': 'wedding-stationery',
-        'Bridal Wear': 'bridal-wear'
+        'Wedding Stationery': 'wedding-invitations',
+        'Bridal Wear': 'bridal-wearing'
       }
       
       // Clean the vendor type before mapping
