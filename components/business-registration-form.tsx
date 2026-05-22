@@ -782,12 +782,12 @@ export function BusinessRegistrationForm() {
             On mobile this is a normal stacked grid. */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start lg:flex-1 lg:min-h-0 lg:grid-rows-[minmax(0,1fr)]">
           {/* ── Left aside ──
-              Full height of the pinned row (lg:h-full). Content sits at the
-              top; if a vendor uses an unusually short window the rail scrolls
-              internally behind a slim gold bar rather than overflowing the
-              viewport or sliding under the header. */}
+              Full height of the pinned row (lg:h-full). Content is centred;
+              on an unusually short window it can still scroll (wheel/touch)
+              but the scrollbar itself is hidden (hide-scrollbar) so the rail
+              never shows a bar. */}
           <aside className="lg:col-span-4 order-2 lg:order-1 lg:h-full lg:min-h-0">
-            <div className="lg:h-full lg:overflow-y-auto overflow-x-hidden bridal-scroll lg:pr-1">
+            <div className="lg:h-full lg:overflow-y-auto overflow-x-hidden hide-scrollbar">
               <div className="lg:min-h-full lg:flex lg:flex-col lg:justify-center space-y-5">
               {/* Progress card — compact */}
               <BridalCard className="p-5 sm:p-6">
