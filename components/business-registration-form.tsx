@@ -738,7 +738,7 @@ export function BusinessRegistrationForm() {
   const totalSteps = maxUserSteps + 1;
 
   return (
-    <div className="min-h-screen bridal-surface relative">
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden lg:flex lg:flex-col bridal-surface relative">
       {/* Page-wide warm parchment + jaal background */}
       <div className="fixed inset-0 bg-bridal-hero -z-10" aria-hidden />
       <div
@@ -774,19 +774,21 @@ export function BusinessRegistrationForm() {
       </header>
 
       {/* ── Main content ── */}
-      <main className="w-[92%] xl:w-[90%] max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 lg:py-10">
-        {/* On lg the whole row is one pinned, viewport-height panel: both
-            columns are h-full and aligned, so they can never drift relative
-            to each other (no "left slides up" effect). Each column manages
-            its own internal scroll. On mobile this is a normal stacked grid. */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start lg:sticky lg:top-[88px] lg:h-[calc(100vh-7rem)]">
+      <main className="w-[92%] xl:w-[90%] max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 lg:py-8 lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
+        {/* On lg the row fills the viewport (flex-1 inside the fixed-height
+            page) so there's no page scrollbar; both columns are h-full and
+            their content is vertically centred, each scrolling internally.
+            grid-rows minmax(0,1fr) lets the single row stretch to full height.
+            On mobile this is a normal stacked grid. */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start lg:flex-1 lg:min-h-0 lg:grid-rows-[minmax(0,1fr)]">
           {/* ── Left aside ──
               Full height of the pinned row (lg:h-full). Content sits at the
               top; if a vendor uses an unusually short window the rail scrolls
               internally behind a slim gold bar rather than overflowing the
               viewport or sliding under the header. */}
           <aside className="lg:col-span-4 order-2 lg:order-1 lg:h-full lg:min-h-0">
-            <div className="lg:h-full lg:overflow-y-auto overflow-x-hidden bridal-scroll lg:pr-1 space-y-5">
+            <div className="lg:h-full lg:overflow-y-auto overflow-x-hidden bridal-scroll lg:pr-1">
+              <div className="lg:min-h-full lg:flex lg:flex-col lg:justify-center space-y-5">
               {/* Progress card — compact */}
               <BridalCard className="p-5 sm:p-6">
                 <div className="flex items-center justify-between mb-2.5">
@@ -875,6 +877,7 @@ export function BusinessRegistrationForm() {
                   </div>
                 </div>
               </BridalCard>
+              </div>
             </div>
           </aside>
 
@@ -893,6 +896,10 @@ export function BusinessRegistrationForm() {
                   visible while this area scrolls. overflow-x-hidden keeps the
                   cards' hover-scale from spawning a horizontal bar. */}
               <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bridal-scroll p-5 sm:p-7 lg:p-9">
+              {/* min-h-full + justify-center: centres a short step vertically,
+                  while a tall step (e.g. the business-type grid) just grows
+                  and scrolls from the top — no clipping. */}
+              <div className="lg:min-h-full lg:flex lg:flex-col lg:justify-center">
               {/* 01-VR-ENHANCE-V1-FE — server-side resume prompt.
                   Shown only when an email is typed, the form is still empty
                   enough to safely overwrite, and the server has a saved draft. */}
@@ -914,26 +921,26 @@ export function BusinessRegistrationForm() {
               {/* Step content */}
               <div className="min-h-[440px] sm:min-h-[500px]">
                 {currentStep === 0 || currentStep < 1 ? (
-                  <div className="space-y-7">
+                  <div className="space-y-4">
                     <div className="text-center">
-                      <div className="mx-auto w-16 h-16 rounded-full bg-bridal-gold/15 border border-bridal-gold/40 flex items-center justify-center mb-5">
-                        <Shield className="w-7 h-7 text-bridal-gold" />
+                      <div className="mx-auto w-11 h-11 rounded-full bg-bridal-gold/15 border border-bridal-gold/40 flex items-center justify-center mb-2.5">
+                        <Shield className="w-5 h-5 text-bridal-gold" />
                       </div>
-                      <BridalCrown className="mb-3">
+                      <BridalCrown className="mb-2">
                         Step 1 — Your Craft
                       </BridalCrown>
-                      <BridalTitle size="h2" className="mb-2">
+                      <BridalTitle size="h3" className="mb-1.5">
                         Choose your{" "}
                         <span className="text-bridal-gold">business type</span>
                       </BridalTitle>
-                      <p className="font-bridal text-bridal-text-soft text-sm max-w-md mx-auto">
+                      <p className="font-bridal text-bridal-text-soft text-[12.5px] leading-snug max-w-sm mx-auto">
                         Select the category that best describes your wedding
                         services. We&apos;ll tailor the rest of the form to
                         your craft.
                       </p>
                     </div>
 
-                    <FloralDivider width={220} />
+                    <FloralDivider width={180} />
 
                     <BusinessTypeStep
                       setBusinessType={setBusinessType}
@@ -1108,6 +1115,7 @@ export function BusinessRegistrationForm() {
                   </span>
                 </label>
               )}
+              </div>{/* end centred content */}
               </div>{/* end scrollable step body */}
 
               {/* Pinned footer — nav buttons + sign-in link stay visible
