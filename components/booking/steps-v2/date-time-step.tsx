@@ -334,9 +334,13 @@ export default function DateTimeStep({
         </div>
       </section>
 
-      {/* Time period — vertical stack on desktop (right of calendar),
-         3-column grid on mobile (below calendar). */}
-      <section className="w-full lg:flex-1 space-y-2.5">
+      {/* Right column: time-of-day picker (single row) + the service-location
+         picker stacked beneath it. The slots now sit on ONE line and the
+         "Where will the service happen?" card fills the space beside the
+         calendar instead of leaving a tall empty gap. On mobile this whole
+         column drops below the calendar. */}
+      <div className="w-full lg:flex-1 space-y-5">
+        <section className="space-y-2.5">
         <div className="flex items-center justify-between">
           <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
             Time of day
@@ -347,7 +351,7 @@ export default function DateTimeStep({
             </span>
           )}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {PERIODS.map((p) => {
             const isSelected = formData.timeSlot === p.value
             const isBooked = selectedAvail?.bookedSlots?.includes(p.value) ?? false
@@ -360,7 +364,7 @@ export default function DateTimeStep({
                 type="button"
                 onClick={() => handlePickPeriod(p.value)}
                 disabled={disabled}
-                className={`relative flex flex-row sm:flex-col lg:flex-row items-center sm:items-start lg:items-center gap-3 sm:gap-1.5 lg:gap-3 p-3 lg:p-4 rounded-md border text-left transition-all
+                className={`relative flex flex-row sm:flex-col items-center sm:items-start gap-3 sm:gap-1.5 p-3 lg:p-4 rounded-md border text-left transition-all
                   ${disabled
                     ? "border-bridal-beige bg-bridal-ivory text-bridal-text-soft/50 cursor-not-allowed"
                     : isSelected
@@ -397,7 +401,28 @@ export default function DateTimeStep({
             )
           })}
         </div>
-      </section>
+        </section>
+
+        {/* BK-100.53 — service-location picker, pulled up beside the calendar
+           so the single-row time picker doesn't leave a tall empty gap.
+           Optional; collapsed by default (empty mode). When the vendor type
+           strongly suggests a mode it surfaces a "Suggested" chip without
+           forcing the choice. */}
+        <ServiceLocationPicker
+          mode={formData.serviceLocationMode}
+          address={formData.serviceLocationAddress}
+          notes={formData.serviceLocationNotes}
+          vendorType={venue?.vendor?.vendorType}
+          onChange={(next) =>
+            updateFormData((prev) => ({
+              ...prev,
+              serviceLocationMode: next.mode,
+              serviceLocationAddress: next.address,
+              serviceLocationNotes: next.notes,
+            }))
+          }
+        />
+      </div>{/* end right column */}
 
       </div>{/* end calendar+slots row */}
 
@@ -484,28 +509,8 @@ export default function DateTimeStep({
         </section>
       )}
 
-      {/* BK-100.53 — Service-location picker. Optional; collapsed by
-          default (empty mode). When the vendor type strongly suggests a
-          mode (marquee/tent → at_customer_plot, henna/makeup → at_home,
-          Nikahkhwan → at_third_party), the picker surfaces a "Suggested"
-          chip on the relevant option without forcing the customer to
-          pick it. */}
-      <section className="mt-5">
-        <ServiceLocationPicker
-          mode={formData.serviceLocationMode}
-          address={formData.serviceLocationAddress}
-          notes={formData.serviceLocationNotes}
-          vendorType={venue?.vendor?.vendorType}
-          onChange={(next) =>
-            updateFormData((prev) => ({
-              ...prev,
-              serviceLocationMode: next.mode,
-              serviceLocationAddress: next.address,
-              serviceLocationNotes: next.notes,
-            }))
-          }
-        />
-      </section>
+      {/* (Service-location picker moved up into the right column beside the
+          calendar — see the "right column" block above.) */}
     </div>
   )
 }
