@@ -820,3 +820,193 @@ the section that captures it. **New directives get appended at the top and route
 
 > **How I use this:** when you send a new requirement, I (a) append it here, (b) write the detail in
 > the right section (or a new one), (c) commit + push so it's permanent. You can keep sending — none of it slips.
+
+---
+
+## 24. COMPLETE SCENARIO LIBRARY — every vendor, every situation (telescope-level)
+
+Exhaustive enumeration of what a Pakistani wedding vendor faces, end-to-end. Each scenario → how the
+system handles it → module/section. Marked: ✅ exists · 🟠 partial · ⬜ to build. *(This is the
+"nothing missing" checklist; we build against it.)*
+
+### 24.1 Lead & discovery
+| Scenario | System handling | Ref |
+|---|---|---|
+| Customer finds vendor via marketplace search/category/city | Public listing + filters → inquiry | ✅ |
+| Found via vendor's own IG/WhatsApp **link-in-bio** | Vendor booking/inquiry page → lead in dashboard | ⬜ M17 |
+| Walk-in / phone inquiry | Manual lead + offline booking entry | 🟠 leads/offline |
+| Referral by past customer / **broker** | Lead tagged w/ referrer → broker commission | 🟠 M6 |
+| Repeat customer returns | Client profile + history + LTV surfaced | 🟠 M6 |
+| Inquiry but no booking (cold lead) | Lead pipeline + follow-up reminder (7-day) | 🟠 M6/M10 |
+| Comparing multiple vendors | Quote + fast response + portfolio strength | 🟠 |
+| Spam / fake / abusive inquiry | Mark spam / block; rate-limit | ⬜ |
+| Inquiry in Urdu / Roman Urdu | Urdu i18n + chat | ✅ toggle |
+| Last-minute inquiry (event in 2–3 days) | Lead-time rule may block; "rush" flag | 🟠 §21 |
+| Inquiry for booked/blocked date | Show unavailable + **waitlist** offer | 🟠 §21 |
+| Inquiry on Muharram/Ramadan date | Soft warning (vendor decides) | ✅ calendar |
+
+### 24.2 Quote & negotiation
+| Scenario | Handling | Ref |
+|---|---|---|
+| Standard package quote | Pick package → branded quote PDF → WhatsApp | ⬜ M7 |
+| Custom quote (bespoke event) | Build line items + add-ons → quote | ⬜ M7 |
+| Per-head vs flat pricing | Both modes (caterer per-head, venue flat) | 🟠 |
+| Discount: early-bird / bulk / off-season | Pricing rules engine | ⬜ M7/§21 |
+| Peak-season / weekend surcharge | Auto surcharge rule | ⬜ §21 |
+| Multi-event package (Mehndi+Baraat+Walima) | One deal, linked bookings, bundled price | ⬜ §22.5 |
+| Quote expired / revised | Quote status + versioning | ⬜ M7 |
+| Customer wants installments | Payment plan on quote | ⬜ M3 |
+
+### 24.3 Booking & confirmation
+| Scenario | Handling | Ref |
+|---|---|---|
+| Single-event booking | Wizard → hold → token → confirm | 🟠 M2 |
+| Multiple events same day (different resources) | Multi-resource (halls/cars/teams) | ⬜ §21.2 |
+| Multiple bookings same slot (capacity) | `maxBookingsPerSlot` per vendor | ⬜ §21.1 |
+| Vendor sets slots/day | Availability config | ⬜ §21.1 |
+| Token/advance to hold | 15-min hold + token payment | ✅ hold |
+| Hold expired (didn't pay) | Auto-release, slot reopens | ✅ |
+| Double-booking attempt (2 customers) | Lock + unique constraint | 🟠 §21.6 |
+| Online vs walk-in clash | Shared calendar, single guard | 🟠 §21.6 |
+| Tentative / pencil booking | Tentative status (no token) | ⬜ |
+| Trust booking (regular, no token) | Vendor override | ⬜ |
+| Booking 12 months ahead | Booking-window rule | ⬜ §21 |
+| Contract required before confirm | E-sign gate | ⬜ M11 |
+
+### 24.4 Payments & Khata
+| Scenario | Handling | Ref |
+|---|---|---|
+| Cash / Bank / EasyPaisa / JazzCash / Raast / cheque / online | Multi-mode record + proof photo | 🟠 M3/G6 |
+| Advance + balance + installments | Payment schedule + reminders | 🟠 M3 |
+| Balance on event day / after (credit) | A/R tracking | 🟠 M3 |
+| **Post-dated cheque** lifecycle | Received→Deposited→Cleared/Bounced + alert | ✅ /pdcs |
+| Cheque **bounce** → recovery | Recovery workflow, balance reopens | ⬜ M3 |
+| Overpayment / refund | Refund + ledger adjust | ⬜ M3 |
+| Third-party payer (bride's father) | Payer field | 🟠 |
+| Overseas family remittance | Note + online/bank | 🟠 |
+| Broker commission deduction | Auto-deduct + broker ledger | ⬜ M6 |
+| **FBR sales-tax e-invoice** | JSON→FBR/PRAL + QR | ⬜ M13 |
+| Withholding tax | Tax line on invoice | ⬜ M13 |
+| Outstanding receivables board | Sorted by overdue | 🟠 M3 |
+
+### 24.5 Event execution (day-of)
+| Scenario | Handling | Ref |
+|---|---|---|
+| Function sheet / **BEO** for the event | Generated from booking | 🟠 function-sheets |
+| Staff assignment + attendance | Assign + present/absent | 🟠 M5 |
+| Staff no-show → replacement | "Need replacement" alert | ⬜ M5 |
+| Resource (hall/car/artist) assignment | From multi-resource pool | ⬜ §21.2 |
+| Setup → service → teardown timeline | Day-of run sheet | ⬜ G7 |
+| Guest count changes on the day | Recalc (caterer production + price) | ⬜ §22.5 |
+| Power outage → generator | Generator/fuel log | ✅ /generator-fuel |
+| Security cordon / VIP delay (Isb) | Event-day risk note + buffer | ⬜ §15 |
+| Event overruns closing time | Closing-time warning | ⬜ §21 |
+| Equipment failure (camera/sound) | Incident note | ⬜ |
+| Last-minute add-on on the day | Add line + recalc balance | ⬜ |
+
+### 24.6 Post-event & delivery
+| Scenario | Handling | Ref |
+|---|---|---|
+| Mark complete + collect balance | Status + A/R close | 🟠 |
+| **Deliverables** (photos/video/album) | Tracker + **gallery** delivery | ⬜ M16 |
+| Delivery delay | ETA + client-visible status | ⬜ M16 |
+| Review request (3-day auto) | WhatsApp prompt cron | ✅ |
+| Negative review → vendor response | Reply + dispute if false | 🟠 M8 |
+| Damage claim (car/outfit/decor) | Deposit deduction workflow | ⬜ M16 |
+| Security deposit return | Return on clean inspection | ⬜ M16 |
+| Repeat/referral nudge | Post-event campaign | ⬜ M19 |
+
+### 24.7 Cancellation / reschedule / change
+| Scenario | Handling | Ref |
+|---|---|---|
+| Customer cancels (in/out of policy) | Auto refund calc per policy + doc | ⬜ M2 |
+| Vendor cancels (force majeure) | Batch cancel + notify | ✅ admin |
+| **Reschedule / postpone** | Move booking + buffers + notify | ⬜ §22.5 |
+| Package up/downgrade | Recalc + amend contract | ⬜ |
+| **Govt guest-cap / one-dish change after booking** | Amend/renegotiate flow | ⬜ §22.5 |
+| Partial cancel (1 of multi-event) | Cancel sub-booking | ⬜ |
+| No-show (customer) | Status + forfeiture | ⬜ |
+
+### 24.8 Business management (back-office)
+| Scenario | Handling | Ref |
+|---|---|---|
+| Price update (inflation) in 2 taps | Fast repricing | ⬜ §15 |
+| Seasonal pricing (winter peak) | Pricing rules | ⬜ §21 |
+| Add resources (halls/cars/artists) | Resource manager | ⬜ §21.2 |
+| Staff payroll (salary/commission) | Payroll + payslip | ⬜ M5 |
+| Expense + **profit per event** | Expense + P&L | 🟠 /expenses |
+| Cash-flow forecast | From confirmed + schedules | ⬜ M9 |
+| Supplier management | Supplier ledger | 🟠 /suppliers |
+| Inventory + maintenance | Stock/fleet/kit + service | 🟠 /inventory |
+| Multi-branch / multi-business | Multi-business switcher | 🟠 businesses-overview |
+| Income-tax / accountant export | Year-end export | ⬜ M20 |
+| Business Health Score | 0–100 + actions | ⬜ M9 |
+
+### 24.9 Marketing & growth
+| Scenario | Handling | Ref |
+|---|---|---|
+| Request **homepage/category promotion** → super-admin approve | Promotion flow | ⬜ §5 |
+| Featured badge + priority sort | Sponsored placement | 🟠 card supports |
+| Deal/offer broadcast to customers | Campaign | ⬜ M19 |
+| Off-season demand generation | Past-client broadcast | ⬜ M19 |
+| Portfolio/reviews → social share | Shareable assets | ⬜ M21 |
+| Vacation mode | Block + listing note | ✅ BK-048 |
+
+### 24.10 Compliance & legal (Pakistan)
+| Scenario | Handling | Ref |
+|---|---|---|
+| One-dish policy per booking | Compliance checklist + slip | ⬜ §15 |
+| Guest-cap (200) by city/province | Dynamic validation | ⬜ §15 |
+| Closing-time enforcement | Slot rule | ⬜ §21 |
+| Halal cert / hygiene | Compliance tracker | ✅ /halal-certs |
+| Drone NOC | Permit tracker | ✅ /drone-noc |
+| FBR e-invoicing (legal) | M13 | ⬜ M13 |
+| KYC / CNIC verification | KYC docs + tiers | ✅ admin |
+| Contract e-sign legality (ETO 2002) | Valid e-sign | ⬜ M11 |
+
+### 24.11 Account / system / access
+| Scenario | Handling | Ref |
+|---|---|---|
+| Onboarding: **import Excel/register** | Import wizard | ⬜ M14 |
+| Owner + staff users w/ permissions | Roles/seats | 🟠 |
+| Subscription tier limits + upgrade | Plan gating + billing | ⬜ §17 |
+| Data export / backup / ownership | Export everywhere | ⬜ M22 |
+| Notifications: in-app / WhatsApp / push | Multi-channel | 🟠 |
+| Offline / PWA (poor signal) | SW + offline calendar | ✅ |
+| Urdu / English toggle | i18n | ✅ |
+| Mobile vs desktop | Responsive + mobile nav | 🟠 |
+
+### 24.12 Customer (couple) side
+| Scenario | Handling | Ref |
+|---|---|---|
+| Browse / favourite / compare vendors | Marketplace + compare | ✅ |
+| Plan whole wedding (many vendors) | Trip/wedding planner | 🟠 /wedding |
+| Inquire / chat / quote | Inbox | 🟠 |
+| Book + pay token + sign | Booking + portal | 🟠 M12 |
+| View timeline + gallery | Client portal | ⬜ M12 |
+| Leave review | Public review | ✅ |
+
+### 24.13 Per-vendor-type UNIQUE scenarios
+| Type | Signature scenarios |
+|---|---|
+| **Venue** | multi-hall simultaneous events · one-dish raid risk · guest-cap law · seating chart · BEO · valet/parking · generator |
+| **Catering** | headcount lock · kitchen production scaling · 15–25% waste control · staffing ratio · food tasting · dietary/halal |
+| **Photographer** | 2 events/day (crews) · second shooter · RAW→edit→album pipeline · gallery proofing · drone NOC · reels |
+| **Makeup** | bride-factory cap · trial vs event day · kit/product cost · travel · multi-bride morning |
+| **Henna** | per-hand pricing · family-party bulk · multi-event/day · travel · cone product sales |
+| **Car rental** | fleet availability · driver+route sync · fuel/km/toll · deposit+damage · multi-vehicle convoy |
+| **Decorator** | setup+breakdown labour · decor inventory damage/theft · flower spoilage/substitution · theme |
+| **Bridal wear** | fitting/alteration milestones · rental deposit+damage · custom lead-time · groom/family outfits |
+| **Stationery** | design proof cycles · print-run qty · hard delivery deadline · digital invite files · bid/favour boxes |
+
+### 24.14 Vendor↔Vendor (M23 — full spec in §20 pending)
+| Scenario | Handling | Ref |
+|---|---|---|
+| Venue refers/books a photographer via platform | Sub-contract request → quote → accept | ⬜ M23 |
+| Commission split between vendors | Split ledger | ⬜ M23 |
+| Shared event / BEO across vendors | Shared event view | ⬜ M23 |
+| Inter-vendor rating | Vendor-to-vendor reviews | ⬜ M23 |
+
+> **Coverage status:** the lifecycle + back-office + compliance + per-type scenarios are now
+> enumerated. Many are ⬜/🟠 — that's the honest build backlog. If you spot ANY scenario missing,
+> tell me and it gets added here. This is the "nothing missing" master checklist.
