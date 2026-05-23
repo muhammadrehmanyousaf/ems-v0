@@ -47,6 +47,23 @@ export class BusinessAvailabilityAPI {
     return res.data?.data;
   }
 
+  // Venue compliance pack — legal guest cap / closing time / one-dish policy.
+  // Reuses the same user-business PATCH that vacation mode uses.
+  static async setCompliance(
+    businessId: number,
+    body: {
+      legalGuestCap?: number | null;
+      eventClosingTime?: string | null;
+      oneDishPolicy?: boolean;
+    },
+  ): Promise<{ business: unknown }> {
+    const res = await axiosInstance.patch(
+      `${v1}/businesses/user-business/${businessId}`,
+      body,
+    );
+    return res.data?.data;
+  }
+
   // BK-011 — list/create/delete recurring blocks for a business.
   static async listRecurringBlocks(
     businessId: number,

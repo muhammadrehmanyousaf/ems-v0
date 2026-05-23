@@ -42,6 +42,8 @@ const PERIODS = [
 // Flag-gated rollout of the vendor-configured slot engine. Default OFF =
 // the fixed Morning/Afternoon/Evening behaviour below, byte-for-byte unchanged.
 const SLOT_TEMPLATES_ENABLED = process.env.NEXT_PUBLIC_SLOT_TEMPLATES === "1"
+// Venue compliance soft-warnings (one-dish / guest-cap / closing-time). Default OFF.
+const VENUE_COMPLIANCE_ENABLED = process.env.NEXT_PUBLIC_VENUE_COMPLIANCE === "1"
 
 const WEEKDAY_SHORT = ["S", "M", "T", "W", "T", "F", "S"]
 const WEEKDAY_FULL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -269,6 +271,31 @@ export default function DateTimeStep({
   const isBridalWear = venue?.vendor?.vendorType === "Bridal wearing"
   const isWeddingStationery = venue?.vendor?.vendorType === "Wedding Invitations and Stationery"
   const enforceCapacity = !!venue?.maxCapacity || !!venue?.minCapacity
+
+  // Venue compliance soft-warnings (flag-gated, advisory only — never blocks).
+  // Reads the optional limits the vendor set in Settings → Availability →
+  // Compliance. Protects the owner from one-dish raids / guest-cap fines.
+  const vc = venue as unknown as {
+    legalGuestCap?: number | null
+    eventClosingTime?: string | null
+    oneDishPolicy?: boolean
+  } | null
+  const complianceWarnings: string[] = []
+  if (VENUE_COMPLIANCE_ENABLED && vc) {
+    if (vc.legalGuestCap != null && (formData.guestCount || 0) > vc.legalGuestCap)
+      complianceWarnings.push(
+        `Guest count (${formData.guestCount}) exceeds the legal cap of ${vc.legalGuestCap} for this venue's city — this can trigger fines or sealing.`,
+      )
+    if (vc.eventClosingTime && formData.timeSlot && formData.timeSlot >= vc.eventClosingTime)
+      complianceWarnings.push(
+        `Chosen start time (${formData.timeSlot}) is at/after the legal closing time (${vc.eventClosingTime}).`,
+      )
+    if (vc.oneDishPolicy)
+      complianceWarnings.push(
+        `One-dish policy applies here — only 1 main dish + 1 dessert may be served. Confirm the menu stays compliant.`,
+      )
+  }
+
   const adjust = (delta: number) =>
     updateFormData((prev) => {
       let n = Math.max(0, (prev.guestCount || 0) + delta)
@@ -541,6 +568,21 @@ export default function DateTimeStep({
       </div>{/* end right column */}
 
       </div>{/* end calendar+slots row */}
+
+      {/* Venue compliance advisory (soft — never blocks the booking) */}
+      {complianceWarnings.length > 0 && (
+        <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-300 px-3 py-2 font-bridal text-[12px] text-amber-800">
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-medium">Compliance check</p>
+            <ul className="list-disc pl-4 space-y-0.5">
+              {complianceWarnings.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
 
       {/* Status messages */}
       {holdFailed && (

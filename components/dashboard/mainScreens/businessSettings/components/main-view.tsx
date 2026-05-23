@@ -16,6 +16,10 @@ import TeamMembersTab from './tabs/team-members-tab';
 // Phase 0 #6.2 + #6.3 + #6.4 — Availability tab (slot templates +
 // recurring closed days + per-date capacity overrides).
 import AvailabilityTab from './tabs/availability-tab';
+import VenueComplianceCard from './subComponents/venue-compliance-card';
+
+// Venue compliance pack — flag-gated rollout (default OFF = no UI change).
+const VENUE_COMPLIANCE_ENABLED = process.env.NEXT_PUBLIC_VENUE_COMPLIANCE === '1';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUser } from '@/context/UserContext';
 import { useBusiness } from '@/context/BusinessContext';
@@ -73,7 +77,14 @@ const MainView = () => {
                 )}
                 {active === 'bank-details' && <BankDetailsTab />}
                 {active === 'team' && <TeamMembersTab />}
-                {active === 'availability' && <AvailabilityTab />}
+                {active === 'availability' && (
+                    <>
+                        {VENUE_COMPLIANCE_ENABLED && user?.vendorType === 'Wedding venue' && (
+                            <VenueComplianceCard />
+                        )}
+                        <AvailabilityTab />
+                    </>
+                )}
             </div>
         </ScrollArea>
     )
