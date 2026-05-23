@@ -805,6 +805,7 @@ the section that captures it. **New directives get appended at the top and route
 
 | # | Date | Owner directive | Captured in |
 |---|---|---|---|
+| 16 | 2026-05-24 | "go" — start building (first slice) | Audit found engine exists → built the wiring instead (§27.0c, commit `33e475f`) |
 | 15 | 2026-05-24 | Pre-build readiness check; then decided: vendor-side first · Availability Engine first · M19 later | §26 (readiness) + §27 (first-slice design) |
 | 14 | 2026-05-24 | List EVERY scenario for any vendor — nothing missing, fully professional | §24 (complete scenario library, 14 categories) |
 | 13 | 2026-05-24 | Do a ~1000-angle market sweep / analyze existing systems / gather requirements like a 30-yr analyst — be 1000× better | §25 (matrix + anti-playbook + requirements register) |
@@ -1195,6 +1196,21 @@ capacity, and buffers **don't drive what the customer sees/books**. The engine i
   `vendor-type-config.settingsTabs` omit it) + a "seed default slots" nudge on first use.
 
 > §27.2–§27.4 below are SUPERSEDED (engine exists). Kept for history.
+
+### 27.0c ✅ BUILT (2026-05-24, commit `33e475f`) — flag-gated, default OFF
+Shipped the corrected slice (frontend wiring only — engine already existed):
+- `lib/types.ts`: `BookingFormData.slotTemplateId?` (optional, additive).
+- `booking-form.tsx`: carry `slotTemplateId` into the per-vendor payload (single-vendor cart only —
+  backend rejects mixed-mode); reset with date/time.
+- `steps-v2/date-time-step.tsx`: behind `NEXT_PUBLIC_SLOT_TEMPLATES` (default OFF) → fetch the
+  vendor's slot-template availability (`getBulkAvailability`); when the vendor has templates, render
+  THOSE slots with per-slot remaining capacity ("2 of 3 left") + pass `slotTemplateId`; else fall
+  back to fixed Morning/Afternoon/Evening unchanged. Calendar day-availability unified via `dayAvail()`.
+- Build verified; flag OFF ⇒ every live vendor byte-for-byte unchanged.
+- **To activate & verify:** set `NEXT_PUBLIC_SLOT_TEMPLATES=1` on Vercel → seed slot templates for one
+  test venue (Settings → Availability) → confirm the customer booking screen shows those slots + caps.
+- **Known MVP limits (next):** slot HOLD is still date+time-keyed (fine for capacity-1 exclusive
+  halls; capacity>1 holds may be conservative); multi-vendor carts stay on the legacy period path.
 
 ### 27.1 Scope of MVP-1 (just enough to be real)
 - Vendor configures: **slots/day** (fixed periods or custom windows), **max bookings per slot**
