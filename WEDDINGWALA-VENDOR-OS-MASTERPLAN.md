@@ -1103,3 +1103,54 @@ guest-cap/closing-time compliance · generator-fuel/load-shedding · halal/drone
 event risk · Urdu-first · WhatsApp-native · works for unregistered sole-proprietors.
 
 Sources: [17hats vs HoneyBook vs Dubsado](https://www.honeybook.com/blog/17hats-vs-honeybook-vs-dubsado), [Goodshuffle vs Booqable](https://pro.goodshuffle.com/features/inventory-management/), [Curate florist software](https://curate.co/florist-software/), [Details Flowers](https://info.detailsflowers.com/), [Vagaro vs GlossGenius (no-show/marketing)](https://www.zoca.com/post/vagaro-vs-glossgenius-salon-software-comparison), [Pixieset/ShootProof/Pic-Time galleries](https://jackwoodhams.com/2025/06/22/best-client-gallery-services-photographers-2025/), [Prismm floor plan/seating](https://www.prismm.com/solutions/event-design-software/floor-planning-software-venues-planners-vendors), [The Knot/WeddingWire vendor complaints](https://theknotwhistleblowers.com/vendor-complaints), [WeddingWire Trustpilot](https://www.trustpilot.com/review/weddingwire.com), [AI lead scoring CRM 2025](https://monday.com/blog/crm-and-sales/ai-lead-scoring/), [Dubsado conditional workflows](https://help.dubsado.com/en/articles/467074-creating-workflows), [Multi-tenant SaaS isolation](https://4spotconsulting.com/architecting-robust-data-isolation-for-multi-tenant-saas/), [SadaBiz freelancer invoicing/PRC](https://sadapay.pk/blogs/sadabiz-streamlines-invoicing-for-pakistani-freelancers-with-industry-first-apple-pay-integration), [Udhaar Book free Urdu accounting](https://udhaar.pk/best-accounting-software-for-small-businesses/), [Oraan digital committees](https://www.oraan.com/).
+
+---
+
+## 26. PRE-BUILD READINESS — "kuch reh to nahi gaya?" (honest checklist before we start)
+
+The **feature & requirements** plan is comprehensive (§0–§25). But to start building on a LIVE
+system responsibly, these are genuinely still open. We close them, then build. ✅ done · 🟡 open.
+
+### 26.1 Open DECISIONS to close
+- 🟡 **D2** — promotion pricing model (default flat per-window; confirm).
+- 🟡 **D4** — Quote/Invoice PDF tech (client `react-pdf` vs server Puppeteer).
+- 🟡 **D7** — subscription tier PKR prices (validate with real vendors).
+- 🟡 **M19** — marketing broadcast: build or skip? (you left it ⏳ undecided.)
+- 🟡 **D8 (new)** — Payment gateway provider for online pay + recurring subscription billing
+  (Safepay / AssanPay / XPay / JazzCash-EasyPaisa direct?).
+- 🟡 **D9 (new)** — FBR e-invoicing route: direct PRAL integration vs a licensed integrator.
+
+### 26.2 Technical DESIGN layer not yet produced (needed before/at build time)
+- 🟡 **Data model / schema** for new entities (Resources/Halls, AvailabilityRules, Promotions,
+  Contracts/e-sign, Galleries, KitchenSheets, FloorPlans, ImportJobs, Subscriptions). Additive,
+  idempotent migrations (the project's existing pattern).
+- 🟡 **API contracts** (request/response) per new endpoint — sketched in modules, not finalized.
+- 🟡 **Vendor-side sub-user RBAC** — owner vs manager vs staff permissions *within* one business
+  (today vendor = single account). Needed for staff to use the system.
+- 🟡 **Subscription/billing engine** — recurring monthly charge, plan gating, trials, dunning.
+- 🟡 **Migration & rollout plan per feature** — flag-gated, zero-downtime, backfill strategy.
+- 🟡 **Integrations** — Google Calendar sync, payment gateway, FBR/PRAL, WhatsApp wa.me (decided).
+
+### 26.3 SCOPE confirmation
+- 🟡 **Couple / customer side** — this plan is vendor+admin-centric. The couple experience (M12
+  client portal, booking funnel, planning/guest-list/RSVP/e-invites) is referenced but light.
+  **Confirm:** is the couple side in scope for THIS build, or a separate later track?
+- 🟡 **First vendor type + first slice** — Venue is chosen (D5); pin the exact first buildable slice
+  (recommend: Availability Engine config → Booking wizard → BEO).
+
+### 26.4 Minor FEATURE additions to consider (surfaced, not yet in plan)
+- 🟡 **Two-way rating** — vendor rates the customer (paid on time? difficult?) → flag repeat risk.
+- 🟡 **Multi-currency display** for overseas-family payments (settle in PKR, show USD/GBP).
+- 🟡 **Zakat helper** (optional) — many vendors calculate zakat on business assets.
+- 🟡 **Run sheet shared with couple + all their vendors** (day-of coordination) — ties to M23.
+
+### 26.5 What is NOT a blocker (already done / safe)
+- ✅ Phase 0 fixes shipped (bookings crash, `/users` leak, role bug).
+- ✅ Monetization model (D6), no-commission principle, anti-playbook locked.
+- ✅ Module list, sidebar + craft localization, booking engine, scenario library, requirements register.
+- ✅ Build method: additive, flag-gated, build-verified, zero-downtime (proven this session).
+
+> **Bottom line:** nothing is missing at the *requirements* level. What's "left" is the
+> *engineering design* (data model + API + billing + sub-user RBAC), a few *decisions* (D2/D4/D7/
+> D8/D9 + M19), one *scope* question (couple side?), and pinning the *first slice*. Close these and
+> we build clean. None are blockers to starting the Venue availability-engine slice.
