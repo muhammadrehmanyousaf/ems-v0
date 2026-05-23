@@ -805,6 +805,7 @@ the section that captures it. **New directives get appended at the top and route
 
 | # | Date | Owner directive | Captured in |
 |---|---|---|---|
+| 17 | 2026-05-24 | "keep building" | Built Venue Compliance pack — legal guest-cap / closing-time / one-dish config + booking soft-warnings (BE `0315943`, FE `6282b60`), flag `NEXT_PUBLIC_VENUE_COMPLIANCE` default OFF; migration applied (additive) |
 | 16 | 2026-05-24 | "go" — start building (first slice) | Audit found engine exists → built the wiring instead (§27.0c, commit `33e475f`) |
 | 15 | 2026-05-24 | Pre-build readiness check; then decided: vendor-side first · Availability Engine first · M19 later | §26 (readiness) + §27 (first-slice design) |
 | 14 | 2026-05-24 | List EVERY scenario for any vendor — nothing missing, fully professional | §24 (complete scenario library, 14 categories) |
