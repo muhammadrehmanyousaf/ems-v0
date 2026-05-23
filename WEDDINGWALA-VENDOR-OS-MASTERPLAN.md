@@ -551,3 +551,54 @@ their real numbers (critical for the khata/FBR features to be adopted honestly).
   before we hard-code them. (Structure is locked; numbers are placeholders.)
 
 Sources: [Caterer food-cost + waste (Dawn)](https://www.dawn.com/news/746508/food-wastage-at-weddings), [Catering cost guide (Hanif Rajput)](https://hanifrajputcaterers.com/wedding-catering-cost/), [Makeup season volatility (Profit)](https://profit.pakistantoday.com.pk/2017/01/21/a-beauty-full-idea/), [Mehndi pricing/travel (NoorKada)](https://noorkada.com/mehndi-design-price/), [Car rental booking/fleet (PakWheels)](https://www.pakwheels.com/blog/how-to-choose-the-perfect-wedding-car-a-complete-checklist-for-couples/), [Bridal rental deposit/delays (TBS)](https://www.tbsnews.net/features/mode/why-not-rent-your-wedding-attire-553582), [Florist labour/spoilage (Florists' Review)](https://floristsreview.com/calculation-labor-costs-for-wedding-services/), [SaaS freemium/tiered pricing (Zuora)](https://www.zuora.com/guides/saas-pricing-models/).
+
+---
+
+## 18. "Will a vendor need NOTHING external?" — HONEST answer + the last-mile gaps
+
+**Honest verdict (2026-05-24):** the plan (M1–M16 + §15–§17) makes a vendor's **internal
+operations** fully self-contained — bookings, khata, cheques, staff, calendar, FBR invoicing,
+contracts. ✅ But for **lead acquisition + client comms + marketing-out + financial closure**,
+there is a genuine **last-mile gap** that would still send a vendor to an external app. Closing
+it gets us to ~99% of real business operations inside WeddingWala (beats HoneyBook/Studio Ninja
+on PK-fit, beats Shadiyana on ops). "100% external-free forever for everyone" is not an honest
+promise for any software — this is the realistic, defensible target.
+
+### 18.1 Decisive for "zero external" (build these or vendors keep other apps)
+- **M17 — Vendor branded booking / "link-in-bio" page.** PK vendors' leads come from their
+  Instagram/WhatsApp **bio link**. HoneyBook + Studio Ninja both ship a branded booking/inquiry
+  page. Without it → Linktree / Google Forms / external, and those leads never enter our system.
+  *(Ties into their existing marketplace profile — add a direct inquiry/booking funnel + shareable link.)*
+- **M18 — Omnichannel lead inbox.** Unify **Instagram DM + WhatsApp + Facebook + marketplace
+  inquiries + walk-ins** in one inbox (the Respond.io/Trengo/ManyChat category). This is the #1
+  reason a vendor keeps 5 apps open daily. Biggest single "close the other tabs" feature.
+- **M19 — Marketing / broadcast out.** WhatsApp/SMS broadcast to past clients: off-season deals,
+  Eid/festival greetings, "winter package" offers. Without it → external marketing tools.
+
+### 18.2 Financial closure (for the financially-serious vendor)
+- **M20 — Income-tax / annual-return support + accountant export.** FBR e-invoicing (M13)
+  covers *sales* tax; year-end *income* tax still sends them to an accountant/Excel. A clean
+  export (and PK income-tax helpers) closes the loop.
+
+### 18.3 Moat / polish (raise the ceiling toward zero-external)
+- **M21 — Social publishing** — push portfolio/reviews to Instagram/FB from inside (vs Canva).
+- **M22 — Data export / ownership / backup** — vendor trusts they're not locked in (adoption confidence).
+- **M23 — Vendor↔vendor sub-contracting** — a venue books a photographer *through* the platform
+  (otherwise WhatsApp). Network-effect moat + keeps coordination internal.
+
+### 18.4 What we deliberately DON'T try to absorb (out of scope, honestly)
+- The bank/wallet apps themselves (we integrate Raast/EasyPaisa/JazzCash, not replace them).
+- Instagram/Facebook as social networks (we post to them, don't replace them).
+- Hardware (cameras, generators) and physical logistics.
+
+### Truthful summary
+| Vendor need | After plan (M1–M16) | With §18 (M17–M23) |
+|---|---|---|
+| Run bookings/khata/cheques/staff/calendar/FBR | ✅ zero external | ✅ |
+| Capture leads from their own IG/WhatsApp funnel | ❌ external | ✅ |
+| One place for all client chats | ❌ external | ✅ |
+| Market back to past clients | ❌ external | ✅ |
+| Year-end income tax | ⚠️ accountant | ✅ export |
+
+> **So: am I 100% sure it's complete with zero external? No — not until M17–M20 are added.**
+> With them, yes for ~99% of real operations. I will not claim more than that honestly.
