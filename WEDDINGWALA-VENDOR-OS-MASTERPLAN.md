@@ -1010,3 +1010,94 @@ system handles it → module/section. Marked: ✅ exists · 🟠 partial · ⬜ 
 > **Coverage status:** the lifecycle + back-office + compliance + per-type scenarios are now
 > enumerated. Many are ⬜/🟠 — that's the honest build backlog. If you spot ANY scenario missing,
 > tell me and it gets added here. This is the "nothing missing" master checklist.
+
+---
+
+## 25. MARKET SWEEP & REQUIREMENTS REGISTER (researched ~18 systems, every angle)
+
+Studied the global + South Asian + Pakistani landscape to build a system **1000× better** than what
+exists. Distilled below: (a) what each leader is best at + what we take, (b) what vendors HATE (our
+anti-playbook), (c) new capabilities to add, (d) the formal functional + non-functional requirements.
+
+### 25.1 Competitive feature matrix — what each is best at → what WeddingWala takes
+| System | Category | Best at | We take |
+|---|---|---|---|
+| **HoneyBook** | service CRM | Smart Files (proposal+contract+invoice+pay in one), mobile app, polish | Unified quote→contract→pay flow + mobile-first |
+| **Dubsado** | service CRM | Advanced **conditional workflows** + intake forms routing by inquiry type | Automation engine + smart intake forms |
+| **17hats** | service CRM | Time-tracking + **built-in accounting** (replaces QuickBooks) + hot/cold lead types | Lead scoring + accounting depth |
+| **Tripleseat / Event Temple** | venue | BEO + e-sign contracts + group-sales pipeline | BEO + pipeline |
+| **Planning Pod** | venue/F&B | 7 BEO templates + floor plans + F&B | BEO templates + floor plan |
+| **Prismm (AllSeated) / Social Tables** | seating | **3D floor plans**, 10k objects, seating + dietary + color-coded day-of | Floor plan + seating (M16 venue) |
+| **Studio Ninja / Táve** | photo CRM | Booking website + workflows + client portal | Photographer flow |
+| **Pixieset / ShootProof / Pic-Time** | galleries | **Gallery delivery + proofing** (favorites/comments/edit requests) + print store + watermark/PIN, **white-label, 0% commission** | Galleries + proofing + 0% cut + white-label |
+| **Curate / Details Flowers** | florist/caterer | **Recipes → shopping lists**, real stem counts, costing, proposal+pay link | Recipe/production sheet + costing |
+| **Caterease / CaterZen** | catering | Kitchen production sheets, per-head, staffing | Kitchen sheet + staffing calc |
+| **Goodshuffle Pro / Booqable / TapGoods** | rental | **Barcoding** inventory, availability, **alternative-item suggest** on overbook, **damage flagging**, item ROI analytics | Inventory barcoding + damage + item analytics (decor/car/furniture) |
+| **Vagaro / GlossGenius / Fresha** | salon/beauty | **Deposits + no-show protection**, processing/cleanup buffers, **automated marketing** (lost-customer/before/after), waitlist, memberships | No-show protection + buffers + lifecycle marketing |
+| **WedMeGood / ShaadiSaga / WeddingWire India** | discovery | Huge vendor directory + inspiration | (discovery only — no ops; our moat) |
+| **Shadiyana** (PK) | discovery+planner | PK marketplace, commissions | (discovery only — we own ops) |
+| **Udhaar Book / Mindgigs** (PK) | accounting | **Free, offline, Urdu, FBR-compliant** invoicing | Must match: free tier + offline + Urdu + FBR |
+| **SadaBiz** (PK) | freelancer invoicing | Invoice + **PRC** for tax, Apple Pay | PRC/tax helpers + wallet pay |
+| **Oraan** (PK) | savings | Digital **committee/beesi (ROSCA)** | Committee-style payment plans (idea) |
+
+### 25.2 What vendors HATE about existing platforms → WeddingWala ANTI-PLAYBOOK (principles)
+The Knot / WeddingWire vendor reviews are full of rage. Each complaint → a WeddingWala rule:
+| Vendor's pain elsewhere | WeddingWala principle (locked) |
+|---|---|
+| **Spam / fake / copy-paste leads**, no follow-through | Lead **quality**: verified inquiries, intent signals, spam filter; vendor rates lead quality |
+| **No ROI** (167 leads, 0 bookings) | We don't sell leads; vendor keeps 100% — value = ops tools + targeted promotion |
+| **"Free" listing is hidden** unless you pay | Free tier is **genuinely usable** (run your business); promotion is *additive*, never a paywall to exist |
+| **12-month non-cancelable lock-in**, auto-renew without notice | **No lock-in** — monthly, cancel anytime, clear renewal notice |
+| **Commission on bookings** | **ZERO booking commission** (D6) — never from vendor or couple |
+| Account-manager churn, **no support** | In-app help + responsive support; self-serve docs in Urdu |
+| Hard to use / steep learning | **WhatsApp-simple** UX, Urdu, mobile-first, import-your-Excel onboarding |
+
+> This anti-playbook is a competitive weapon: market WeddingWala as *"no commission, no lock-in,
+> real tools, real leads"* — the opposite of what vendors resent today.
+
+### 25.3 NEW capabilities surfaced (added to backlog)
+- **AI assist (M24):** lead scoring (hot/cold), smart-reply drafts, auto-categorize inquiries, plain-English automations, review-sentiment. (75% of CRMs use AI lead scoring by 2025.)
+- **Inventory barcoding + alternative-item-suggest + item ROI** (decor/car/furniture/rental) — Goodshuffle pattern → strengthens M16.
+- **Recipe → shopping/production list + real-quantity costing** (caterer/florist/decorator) → strengthens M16 kitchen/decor.
+- **Conditional intake forms** routing inquiry by type (Dubsado) → strengthens M15.
+- **Gallery proofing** (favorites/comments/edit-requests) + **white-label** + **0% sale commission** → strengthens M16 photographer.
+- **No-show protection** (deposit-to-hold) + **lifecycle marketing** (lost-customer/before/after) → strengthens M19/§21.
+- **Committee/beesi-style payment plans** (Pakistani ROSCA behavior) — optional installment model.
+- **PRC + free/offline/Urdu FBR-compliant accounting parity** (Udhaar/Mindgigs are the bar) → M13/M20.
+
+### 25.4 Master Requirements Register — FUNCTIONAL (by domain)
+- **Leads:** capture (marketplace/IG link/WhatsApp/walk-in), quality/spam filter, scoring, pipeline, follow-up automation.
+- **Quotes/Proposals/Contracts:** templates, line items, per-head/flat, add-ons, discounts, **e-sign**, versioning, expiry, one-link review-sign-pay.
+- **Bookings:** wizard, multi-event, conflict detection, **availability engine (§21)**, holds, states (§21.5).
+- **Calendar:** month/week/day/agenda, Hijri, drag-reschedule, multi-resource, team overlay, blackouts.
+- **Payments/Khata:** all PK modes, advance/installments, cheque lifecycle, A/R, refunds, broker deduction, **FBR e-invoice**.
+- **Resources/Inventory:** halls/cars/artists/teams, stock/kit/fleet, barcoding, maintenance, damage.
+- **Staff:** roster, salary/commission, payroll, attendance, assignment, ratios.
+- **Deliverables (per-type):** galleries/proofing (photo), BEO/floor plan/seating (venue), kitchen sheet (caterer), fittings (bridal), proofs (stationery), trips/fuel (car), decor setup (decorator).
+- **Clients:** profiles, history, LTV, referral/broker, VIP flags, comms log.
+- **Reviews/Reputation:** auto-prompt, response, showcase, shareable cards.
+- **Analytics/BI:** revenue, occupancy/fill-rate, source attribution, seasonality heatmap, **health score**, forecast.
+- **Comms:** WhatsApp templates (wa.me), broadcast, in-app, push, notifications.
+- **Promotion:** request → super-admin approve → time-boxed featured (§5).
+- **Onboarding:** **Excel/register import**, profile setup, availability config.
+- **Admin/Super-admin:** vendor queue, KYC, disputes, promotions, directory, revenue, audit, roles, users, force-majeure.
+
+### 25.5 Master Requirements Register — NON-FUNCTIONAL
+- **Security & isolation:** per-vendor data isolation (row-level tenant scoping), strong auth/RBAC (verified §dashboard-role), audit logging, encryption, no cross-vendor leakage (cf. fixed `/users` leak).
+- **Consistency:** strong consistency on bookings (no double-book, §21.6).
+- **Performance:** dashboard < 2s; isolate heavy tenants; lazy-load charts; cached listings.
+- **Scalability:** stateless API (note: rate-limit store must move to Redis for multi-instance — logged earlier).
+- **Reliability/zero-downtime:** additive + flag-gated changes; graceful degradation (noop adapters).
+- **Data ownership:** export/backup everywhere (M22); vendor owns their data; 6-yr FBR archive.
+- **i18n/Localization:** English + **Urdu (Nastaliq)** + **craft-localized module names (§19)**.
+- **Offline/PWA:** calendar + today's bookings offline; installable.
+- **Accessibility & mobile:** mobile-first, large tap targets, bottom nav, low-literacy friendly.
+- **Compliance:** FBR e-invoicing, one-dish/guest-cap/closing-time, halal/drone/KYC, e-sign legality (ETO 2002), graceful for the **60% unregistered** vendors (don't force SECP/NTN).
+
+### 25.6 Pakistani-specific requirements (the moat)
+Bahi-khata (free/offline/Urdu) · cheque/PDC · EasyPaisa/JazzCash/Raast · committee/beesi plans ·
+FBR e-invoice + PRC · multi-event Pakistani wedding · Islamic calendar blackouts · brokers · one-dish/
+guest-cap/closing-time compliance · generator-fuel/load-shedding · halal/drone NOC · security-cordon
+event risk · Urdu-first · WhatsApp-native · works for unregistered sole-proprietors.
+
+Sources: [17hats vs HoneyBook vs Dubsado](https://www.honeybook.com/blog/17hats-vs-honeybook-vs-dubsado), [Goodshuffle vs Booqable](https://pro.goodshuffle.com/features/inventory-management/), [Curate florist software](https://curate.co/florist-software/), [Details Flowers](https://info.detailsflowers.com/), [Vagaro vs GlossGenius (no-show/marketing)](https://www.zoca.com/post/vagaro-vs-glossgenius-salon-software-comparison), [Pixieset/ShootProof/Pic-Time galleries](https://jackwoodhams.com/2025/06/22/best-client-gallery-services-photographers-2025/), [Prismm floor plan/seating](https://www.prismm.com/solutions/event-design-software/floor-planning-software-venues-planners-vendors), [The Knot/WeddingWire vendor complaints](https://theknotwhistleblowers.com/vendor-complaints), [WeddingWire Trustpilot](https://www.trustpilot.com/review/weddingwire.com), [AI lead scoring CRM 2025](https://monday.com/blog/crm-and-sales/ai-lead-scoring/), [Dubsado conditional workflows](https://help.dubsado.com/en/articles/467074-creating-workflows), [Multi-tenant SaaS isolation](https://4spotconsulting.com/architecting-robust-data-isolation-for-multi-tenant-saas/), [SadaBiz freelancer invoicing/PRC](https://sadapay.pk/blogs/sadabiz-streamlines-invoicing-for-pakistani-freelancers-with-industry-first-apple-pay-integration), [Udhaar Book free Urdu accounting](https://udhaar.pk/best-accounting-software-for-small-businesses/), [Oraan digital committees](https://www.oraan.com/).
