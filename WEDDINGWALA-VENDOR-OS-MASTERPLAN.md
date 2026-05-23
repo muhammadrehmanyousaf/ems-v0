@@ -564,6 +564,9 @@ it gets us to ~99% of real business operations inside WeddingWala (beats HoneyBo
 on PK-fit, beats Shadiyana on ops). "100% external-free forever for everyone" is not an honest
 promise for any software — this is the realistic, defensible target.
 
+**Build decisions (2026-05-24):** M17 ✅ build · M18 ⏸️ later · M19 ⏳ undecided · M20 ✅ build ·
+M21 ⏸️ later · M22 ✅ build · **M23 ✅ PRIORITY — game-changing, needs full detailed spec (§20).**
+
 ### 18.1 Decisive for "zero external" (build these or vendors keep other apps)
 - **M17 — Vendor branded booking / "link-in-bio" page.** PK vendors' leads come from their
   Instagram/WhatsApp **bio link**. HoneyBook + Studio Ninja both ship a branded booking/inquiry
@@ -602,3 +605,72 @@ promise for any software — this is the realistic, defensible target.
 
 > **So: am I 100% sure it's complete with zero external? No — not until M17–M20 are added.**
 > With them, yes for ~99% of real operations. I will not claim more than that honestly.
+
+---
+
+## 19. SIDEBAR MODULE MAP — common vs per-type, with craft-localized names
+
+### 19.1 HONEST current reality (verified in `lib/vendor-type-config.ts`)
+- **What a vendor ACTUALLY sees today = 8 modules + Business Settings**, identical for every type:
+  Dashboard · Bookings · Customers · Calendar · Conversations · Payments · Reviews · Notifications · **Business Settings**.
+- **13 routes EXIST but are NOT in the sidebar** (orphaned — built, not linked): Today, Lead inbox,
+  Function sheets, Receipts, Cheque ledger (`/pdcs`), Expenses, Inventory, Staff & payroll, Suppliers,
+  Brokers, Generator fuel, Halal certs, Drone NOC. → Surfacing these is low-effort, high-value.
+- **Craft-localized naming is NOT implemented.** Every type shows the same labels. Only per-type
+  differences today: `displayName`, `settingsTabs`, `pricingLabel`, `typeSpecificFields`, packages/menus.
+- **Implementation approach (additive):** add `navLabels?: Partial<Record<NavItemKey,string>>` to
+  each `VendorTypeConfig`; the sidebar already filters by `mainNavItems`, so we add a label override
+  + the new keys. Urdu stays handled by the existing EN/اردو i18n toggle (`i18nKey`), separate from craft-naming.
+
+### 19.2 COMMON modules (every vendor) — the full proposed set
+Base nav (always shown), grouped:
+- **MAIN:** Dashboard · Today · Bookings · Leads · Customers · Calendar · Conversations · Reviews · Notifications
+- **MONEY (Khata):** Payments · Receipts · Cheque ledger · Expenses · *(Premium)* FBR Invoicing
+- **BUSINESS:** Packages/Menus · Staff · Inventory · Brokers · Analytics · Promote · Business Settings
+- *(Compliance modules below are type-conditional, not common.)*
+
+### 19.3 CRAFT-LOCALIZED names (proposed — the core of your ask)
+Same module, named in the vendor's language of work (label only; route unchanged):
+
+| Module (route) | Venue/Marquee | Catering | Photographer | Decorator | Makeup | Henna | Car Rental | Bridal Wear | Stationery |
+|---|---|---|---|---|---|---|---|---|---|
+| Dashboard | Command Center | Command Center | Command Center | Command Center | Command Center | Command Center | Command Center | Command Center | Command Center |
+| Bookings | **Events / Functions** | **Orders** | **Shoots** | **Setups** | **Appointments** | **Appointments** | **Trips** | **Orders** | **Orders** |
+| Customers | Clients | Clients | Clients | Clients | **Brides** | **Brides** | Clients | Buyers | Clients |
+| Calendar | Event Calendar | Event Calendar | **Shoot Calendar** | Setup Calendar | **Appointment Calendar** | Appointment Calendar | **Fleet Calendar** | Fitting Calendar | Delivery Calendar |
+| Packages/Menus | Packages | **Menus** | Packages | Packages | Packages | Packages | **Fleet & Packages** | **Outfits** | **Products** |
+| Inventory | Asset Store | **Kitchen & Stock** | **Gear / Equipment** | **Decor Inventory** | **Kit & Products** | Henna Stock | **Fleet** | **Stock** | Stock |
+| Function sheets | **BEO / Function Sheet** | **Kitchen Sheet (BEO)** | **Shot List** | Setup Sheet | — | — | Trip Sheet | — | Proof Sheet |
+| Staff | Staff & Crew | **Kitchen & Waiters** | **Team & Shooters** | Setup Crew | Team | Artists | **Drivers** | Staff | Staff |
+| Payments | Payments (Khata) | Payments (Khata) | Payments (Khata) | Payments (Khata) | Payments (Khata) | Payments (Khata) | Payments (Khata) | Payments (Khata) | Payments (Khata) |
+
+*(Conversations = "Messages", Reviews, Notifications, Promote, Analytics, Expenses, Cheque ledger, Receipts keep the same name across types.)*
+
+### 19.4 PER-TYPE EXTRA modules (the type-specific surface — M16)
+On top of the common set, each type gets its winning module(s):
+
+| Vendor type | Extra type-specific modules |
+|---|---|
+| **Wedding Venue / Marquee** | **Halls / Spaces** (multi-hall) · **Floor Plan & Seating** · **BEO** · **Compliance** (one-dish/guest-cap/closing-time) · Generator Fuel |
+| **Catering** | **Menus** · **Kitchen Production Sheet** · **Staffing Calculator** · **Halal/Dietary** · Generator Fuel |
+| **Photographer / Videographer** | **Galleries & Proofing** · **Deliverables Tracker** · **Shot List** · Second-shooter assignment · Drone NOC |
+| **Decorator** | **Decor Inventory** (props/lights) · **Setup & Breakdown** · Change-orders |
+| **Makeup Artist** | **Trials** · **Kit & Products** · Per-day bride cap · Travel |
+| **Henna Artist** | **Designs / Per-hand pricing** · Multi-event day · Travel · Mehndi product stock |
+| **Car Rental** | **Fleet** · **Drivers & Routes** · **Fuel/KM Log** · **Deposit & Damage** |
+| **Bridal Wear** | **Outfit Catalogue** · **Fittings & Alterations** · **Deposit & Damage** · Custom-order milestones |
+| **Stationery** | **Design Proofs** · **Print Runs** · **Delivery Deadlines** · Digital-invite files |
+| **Nikahkhwan / Dhol / Qawwali / Sound / Generator / Marquee-rental / Furniture / Cakes / Mithai / Live-cooking / Event-host / Live-streaming** | Generic flow today; same pain→feature treatment per type when prioritised |
+
+### 19.5 ADMIN / SUPER-ADMIN sidebar (for completeness — not localized)
+- **OVERVIEW:** Dashboard
+- **OPERATIONS:** Vendor queue · KYC documents · Disputes · **Promotions** (approve, §5) · Bookings · Payments
+- **DIRECTORY:** Vendors · Businesses · Customers
+- **PLATFORM:** Revenue · *(super-only)* Audit logs · Roles · Users
+- **EMERGENCY** *(super-only)*: Force majeure
+
+## 20. M23 — Vendor↔Vendor sub-contracting / collaboration (PRIORITY — full spec TBD)
+Game-changer per owner. Placeholder for the full authentic spec: a vendor (e.g. a Venue) books/refers
+another WeddingWala vendor (e.g. a Photographer) *through* the platform — request, quote, accept,
+shared event/BEO, split payment/commission, ratings between vendors. Network-effect moat that keeps
+inter-vendor coordination inside WeddingWala instead of WhatsApp. **To be fully detailed next.**
