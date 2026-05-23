@@ -312,3 +312,9 @@ Featured ribbon + priority sort (already supported by `VendorCard` + listing sor
 ## 10. Change log
 - 2026-05-24 — Doc created. Audited current dashboard (40+ routes). Benchmarked HoneyBook/Dubsado.
   Fixed vendor-as-admin role bug (`9669954`). Logged bookings crash + `/users` leak as P0.
+- 2026-05-24 — Decisions locked (D1 super-admin-only, D3 wa.me, D5 Venue-first).
+  **Phase 0 shipped & verified live:**
+  · Bookings crash fixed (`2f31d7a`, FE) — nuqs server cache called from a client component.
+  · `/users` + `/users/:id` read leak closed (`b1d5b03`, BE) — verified live: vendor→403, super-admin→200.
+  · Flagged `/users` write endpoints for follow-up RBAC review.
+  **Next:** Phase 1 (polish existing modules, Venue vendor first) + Phase 2 (Khata, Quote gen, WhatsApp).
