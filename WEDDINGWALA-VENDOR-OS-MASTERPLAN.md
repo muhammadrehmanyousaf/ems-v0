@@ -262,9 +262,15 @@ Featured ribbon + priority sort (already supported by `VendorCard` + listing sor
 ## 7. Phased delivery plan (additive, flag-gated, in priority order)
 
 ### Phase 0 — Stop the bleeding (P0, do first)
-- [ ] **Fix `/dashboard/bookings` crash** (diagnose `BookingListingView`).
-- [ ] **Close `/api/v1/users` RBAC leak** (`superAdmin()` guard) — verify no vendor flow breaks.
+- [x] **Fix `/dashboard/bookings` crash** — root cause: `BookingListingView` (a Client
+  Component) called `searchParamsCache.get()` from `nuqs/server` (server-only) → threw on
+  the client → whole page hit the error boundary. Now reads via `useSearchParams()`.
+- [x] **Close `/api/v1/users` read leak** — `GET /users` and `GET /users/:id` now require
+  `superAdmin()` (self-service `/profile/me` stays open). Verified no vendor flow uses them.
 - [x] Fix vendor-shown-as-admin (`dashboard-role.ts`) — shipped `9669954`.
+- [ ] **Follow-up (flagged):** `/api/v1/users` WRITE endpoints (`PATCH /`, `POST /`,
+  `DELETE /`, `change-status`, `vendor-profile-update`) are still `auth()`-only. They appear
+  admin-only by usage, but need controller-level RBAC review before guarding — don't blind-guard.
 
 ### Phase 1 — Make it world-class where it already exists (polish)
 - [ ] M1 Command Center: Hijri/clock strip, actionable Smart Alerts, Quick-Actions bar, micro-interactions.
@@ -292,12 +298,16 @@ Featured ribbon + priority sort (already supported by `VendorCard` + listing sor
 - 🟡 Many pages empty for fresh vendors — expected, but seed/demo data would help UX testing.
 - 🟢 Vendor-as-admin mislabel — FIXED `9669954`.
 
-## 9. Open decisions (need your call)
-- **D1:** Real mid-tier **Admin/Moderator** role, or super-admin only? (Backend has no admin tier today.)
-- **D2:** Promotion pricing model — flat per-window, or auction/slot-based?
-- **D3:** WhatsApp — manual `wa.me` pre-fill (free, works now) vs WhatsApp Business API (paid, automated)?
-- **D4:** Quote/Invoice PDF — server-rendered (Puppeteer) or client (react-pdf)?
-- **D5:** Which vendor TYPE to perfect first end-to-end (Photographer, since that's your test acct, or Venue)?
+## 9. Decisions (locked 2026-05-24)
+- **D1 — Admin tier:** ✅ **Super-admin only.** Backend already has no admin tier; drop the
+  unused `admin` concept from the frontend (`getDashboardRole` keeps name-based detection for
+  forward-compat but no role maps to it). All admin surfaces stay `[auth(),superAdmin()]`.
+- **D2:** Promotion pricing — flat per-window (default). (Revisit auction later.)
+- **D3 — WhatsApp:** ✅ **Manual `wa.me` pre-fill** (free, ships now). One-click opens WhatsApp
+  with the templated message pre-filled; vendor taps send. (Business API later if needed.)
+- **D4:** Quote/Invoice PDF — TBD at M7 build time (lean to client `react-pdf` first).
+- **D5 — First vendor type to perfect E2E:** ✅ **Wedding Venue / Marquee** (hardest case:
+  capacity, multi-event days, fuel, halal — proves the system handles the worst case).
 
 ## 10. Change log
 - 2026-05-24 — Doc created. Audited current dashboard (40+ routes). Benchmarked HoneyBook/Dubsado.

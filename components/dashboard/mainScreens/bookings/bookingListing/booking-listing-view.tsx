@@ -4,7 +4,6 @@ import PageContainer from '@/components/dashboard/layout/page-container'
 import { Heading } from '@/components/heading'
 import BookingTable from './components/booking-table'
 import { Separator } from '@/components/ui/separator'
-import { searchParamsCache } from '@/lib/searchparams'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { LayoutGrid, Table as TableIcon } from 'lucide-react'
@@ -12,10 +11,12 @@ import { LayoutGrid, Table as TableIcon } from 'lucide-react'
 import PipelineView from '../pipeline/pipeline-view'
 
 const BookingListingView = () => {
-  const search = searchParamsCache.get('q');
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  // Client-safe read. `searchParamsCache` (nuqs/server) is server-only — calling
+  // .get() here (this is a Client Component) throws and crashed the whole page.
+  const search = searchParams?.get('q') ?? null;
 
   // Default = table (legacy behaviour). Vendor opts into pipeline via
   // ?view=pipeline. State lives in the URL so a vendor can bookmark
