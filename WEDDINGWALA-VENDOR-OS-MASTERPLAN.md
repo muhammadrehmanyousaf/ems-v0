@@ -390,9 +390,9 @@ Each type has a money-making surface a generic CRM can't replace:
 - **P4 — Per-type deliverables (M16):** Photographer galleries, Caterer kitchen sheet, etc.
 - **P5 — Intelligence + growth:** analytics/health score, promotion/featured + super-admin approval, reputation.
 
-### New decision needed
-- **D6 — Vendor SaaS model:** commission-on-booking / monthly subscription / freemium + paid
-  promotion? This shapes billing, the import incentive, and which features gate behind a plan.
+### D6 — Vendor SaaS model (LOCKED 2026-05-24): **subscription + freemium + paid promotions.**
+✅ **Monthly subscription + freemium tiers + paid promotions/advertising in the marketplace.**
+❌ **NO commission on bookings** — never charge the user OR the vendor per booking. Full detail in §17.
 
 Sources: [Tripleseat](https://tripleseat.com/), [Planning Pod BEO](https://planningpod.com/banquet-event-orders), [Tripleseat Floorplans](https://floorplans.tripleseat.com/), [Studio Ninja](https://www.studioninja.co/studio-ninja/), [Planning Pod F&B](https://planningpod.com/food-and-beverage-tools), [FBR e-invoicing (Sovos)](https://sovos.com/regulatory-updates/vat/pakistan-e-invoicing-implementation-timeline-revised-again/), [FBR e-invoicing (KPMG)](https://kpmg.com/us/en/taxnewsflash/news/2025/08/pakistan-compliance-deadlines-e-invoicing.html), [Shadiyana funding (ProPakistani)](https://propakistani.pk/2025/12/09/shadiyana-raises-800000-pre-seed-to-digitize-pakistans-rs-900-billion-wedding-industry/), [Easypaisa Raast P2M](https://www.nation.com.pk/14-Jun-2024/easypaisa-enables-raast-p2m-payments-to-digitise-person-to-merchant-transactions), [PK payment gateways](https://www.xstak.com/blog/payment-gateways-in-pakistan).
 
@@ -426,3 +426,128 @@ no Western tool (Tripleseat/Planning Pod) and no PK marketplace (Shadiyana) hand
 > makes them abandon the register.
 
 Sources: [One-Dish raids/sealing (PakistanTruth)](https://www.pakistantruth.com/one-dish-policy/), [Sindh 200-guest limit (Dawn)](https://www.dawn.com/news/1983964), [Karachi one-dish + guest limit (Dawn)](https://www.dawn.com/news/1981097), [Lahore closing-time extension (Dawn)](https://www.dawn.com/news/1872648), [Pricing volatility + security cordons (Dawn)](https://www.dawn.com/news/1998854), [Rawalpindi halls sealed (Dawn)](https://www.dawn.com/news/1792563).
+
+---
+
+## 16. EVERY vendor type — real Pakistani problems → features (researched 2026)
+
+"Think like a complete brain": every paid type gets its real pains mapped to features. The
+generic CRM (M1–M10) is the base; the **type-specific surface (M16)** is what wins each type.
+
+### 16.1 Photographer / Videographer
+*Pricing Rs 30k–300k+; deliverables = album, cinematic video, drone, reels.*
+| Real PK problem | Feature |
+|---|---|
+| **Edit/delivery delays** — clients chase for months; reputation killer | **Deliverable tracker**: per booking, items (RAW→edit→album→video→reels) with status + ETA + client-visible progress |
+| Advance disputes, balance-on-delivery | Advance/balance ledger + "deliver on full payment" gate |
+| Second-shooter / team coordination | Crew assignment per event + their rate/commission |
+| Oversupply → price pressure | Quote templates + package tiers + portfolio strength on profile |
+| Photo selection / proofing chaos (WhatsApp) | **Galleries + proofing + delivery** (M16) — client selects album shots in portal |
+| Shot expectations vary | Shot-list / must-have-shots per event |
+
+### 16.2 Caterer
+*Oil 2,700→9,700/tin; per-head 1,000–1,500 → 2,500; waste 15–25% (worse when dishes>guests); 200 guests ≈ 14–15 waiters + 5–6 labour + 2–3 cooks.*
+| Real PK problem | Feature |
+|---|---|
+| **Ingredient cost spikes vs fixed per-head** crush margin | **Per-head pricing tied to live ingredient cost + margin view**; reprice fast |
+| Small weddings lose economies of scale | Cost-per-head calculator by guest count |
+| 15–25% **food wastage** | **Kitchen production sheet** auto-scaled to final headcount (cook the right qty) |
+| **Staffing**: right crew per headcount | **Staffing-ratio calculator** (auto-suggest waiters/cooks/labour for N guests) |
+| One-Dish law on menu | Menu compliance toggle + halal/dietary tags |
+| Last-minute headcount changes | Headcount lock date + change-order recalc |
+
+### 16.3 Makeup Artist
+*Peak (3 mo post-Eid) Rs 200k–300k/mo; off-season ~30% of that; "bride factory" overbooking; last-minute cancels tank reviews; mostly undocumented.*
+| Real PK problem | Feature |
+|---|---|
+| **Overbooking** ("bride factory") → poor service, bad reviews | **Per-day bride cap / slot limits**; warn on overbook |
+| Last-minute cancellations | No-show / cancellation policy + deposit forfeiture |
+| Trials separate from event day | **Trial booking** type linked to the main booking |
+| Kit/product cost untracked | **Kit/product inventory** + per-bride product cost |
+| Travel to bride's home | Travel-charge add-on + logistics/address |
+| Seasonal income swings | Seasonal earnings view + off-season promo nudges |
+
+### 16.4 Henna / Mehndi Artist
+*Per-hand Rs 300–50k by tier; travel Rs 500–2,000 (+out-of-city); peak Nov–Feb +50–100%; book 6–12 mo ahead; bulk/early-bird discounts; 30-min wait rule.*
+| Real PK problem | Feature |
+|---|---|
+| Pricing by hands/design complexity | **Per-hand / per-design pricing** + complexity tiers |
+| Travel & out-of-city charges | Travel add-on by distance/city |
+| **Multiple events/day** (bride + family party) | Multi-slot/day scheduling + **bulk/family-party pricing** |
+| Peak-season surge | Seasonal pricing (+%) Nov–Feb |
+| Long lead bookings | Advance booking + early-bird discount rules |
+
+### 16.5 Car Rental
+*Rs 25k–2.5L/day; book early or miss; drivers must sync across cities; fuel/tolls extra.*
+| Real PK problem | Feature |
+|---|---|
+| **Fleet availability / double-book** | Per-vehicle availability + conflict detection |
+| **Driver coordination** across cities, on-time | Driver assignment + route + on-time check; multi-vehicle sync |
+| Fuel / tolls / km extra | **Fuel + km + toll log** per trip → profit per booking |
+| **Security deposit + damage** claims | Deposit + **damage-claim workflow** (photos, deduction) |
+| Package vs per-day pricing | Both pricing modes |
+
+### 16.6 Decorator / Florist
+*Labour 25–35% of event price; flower/decor spoilage 15–25%; availability shifts → premium substitutes; setup = vehicle+staff-hours+tolls+load+breakdown.*
+| Real PK problem | Feature |
+|---|---|
+| **Labour cost spirals** on last-minute changes | Setup crew scheduling + **change-order tracking** |
+| Decor/flower **inventory spoilage / theft / damage** | **Decor inventory** (props, lights, furniture, fresh flowers) + loss/damage tracking |
+| Flower availability + substitution at premium | Sourcing cost + substitution notes per event |
+| Setup + breakdown logistics | Setup/breakdown timeline + per-event labour & profit |
+
+### 16.7 Bridal Wear
+*Notorious delivery delays; substantial security deposit w/ proportional damage deduction; long custom lead times; rental return condition.*
+| Real PK problem | Feature |
+|---|---|
+| **Delivery/lead-time delays** | Custom-order **milestone tracker** (measure→stitch→fitting→ready) + deadline alerts |
+| **Security deposit + damage** (rental) | Deposit + **damage-deduction** workflow + return condition checklist |
+| Fittings / alterations | **Fitting/alteration schedule** linked to booking |
+| Outfit catalogue (rent vs buy) | Outfit/rental catalogue w/ availability |
+
+### 16.8 Stationery / Invitations
+| Real PK problem | Feature |
+|---|---|
+| **Design proof approval** cycles (WhatsApp chaos) | Proof upload → client approve/reject + revision history |
+| Print-run quantity & reprints on error | Quantity + reprint tracking |
+| **Delivery before event** (hard deadline) | Delivery-deadline tracker + alert |
+
+> The 14 newer categories (Nikahkhwan, Dhol, Qawwali, Generator, Marquee-rental, Furniture,
+> Cakes, Mithai, Live-cooking, Sound, Live-streaming, Event-host) start on the generic flow;
+> each gets the same pain→feature treatment when prioritised.
+
+---
+
+## 17. MONETIZATION MODEL (D6 locked) — subscription + freemium + promotions, **NO booking commission**
+
+Researched B2B-SaaS monetization (freemium converts ~2–5%; tiered "good/better/best"; ads in
+free tier; paid add-ons). **We never take a cut of a booking** (not from vendor, not from user) —
+revenue = subscriptions + marketplace promotions + add-ons. This keeps vendors trusting us with
+their real numbers (critical for the khata/FBR features to be adopted honestly).
+
+### 17.1 Subscription tiers (freemium → good/better/best)
+| Tier | Who | Includes | Gating |
+|---|---|---|---|
+| **Free — "Khata Lite"** | adoption hook | Core bookings + calendar + basic khata + **Excel import** + 1 business | caps (e.g. N bookings/mo), WeddingWala branding on quotes, no FBR e-invoice, no automations |
+| **Pro — "Business"** | most vendors | Unlimited bookings, full khata + **cheque/PDC**, quotes + **contracts/e-sign**, WhatsApp templates, staff, analytics, branding removed | — |
+| **Premium — "Growth"** | scaling / multi-hall | **FBR e-invoicing**, multi-business/multi-hall, **client portal**, automations, forecasting, priority support | — |
+
+> The Free tier exists to get them to **import their Excel** and run daily ops here — once their
+> business lives in WeddingWala, upgrading to keep cheques/FBR/contracts is natural. (Pricing
+> numbers are hypotheses to validate with real vendors; structure is the deliverable.)
+
+### 17.2 Paid promotions / advertising (à la carte, any tier) — super-admin approved (§5)
+- **Homepage hero**, **category-top**, **city-top**, **search boost** (priced per 7/15/30-day window)
+- **Featured badge** + priority sort on listings
+- **Deal / offer broadcast** to customers (e.g. "winter package 15% off")
+- **Marketplace banner ads**
+- All flow through the §5 request → super-admin approve → time-boxed placement loop.
+
+### 17.3 Add-ons
+- Extra staff seats · gallery storage (photographers) · SMS/WhatsApp credits (if Business API later) · extra businesses.
+
+### New decision needed
+- **D7 — tier pricing (PKR):** validate Free caps + Pro/Premium monthly prices with real vendors
+  before we hard-code them. (Structure is locked; numbers are placeholders.)
+
+Sources: [Caterer food-cost + waste (Dawn)](https://www.dawn.com/news/746508/food-wastage-at-weddings), [Catering cost guide (Hanif Rajput)](https://hanifrajputcaterers.com/wedding-catering-cost/), [Makeup season volatility (Profit)](https://profit.pakistantoday.com.pk/2017/01/21/a-beauty-full-idea/), [Mehndi pricing/travel (NoorKada)](https://noorkada.com/mehndi-design-price/), [Car rental booking/fleet (PakWheels)](https://www.pakwheels.com/blog/how-to-choose-the-perfect-wedding-car-a-complete-checklist-for-couples/), [Bridal rental deposit/delays (TBS)](https://www.tbsnews.net/features/mode/why-not-rent-your-wedding-attire-553582), [Florist labour/spoilage (Florists' Review)](https://floristsreview.com/calculation-labor-costs-for-wedding-services/), [SaaS freemium/tiered pricing (Zuora)](https://www.zuora.com/guides/saas-pricing-models/).
