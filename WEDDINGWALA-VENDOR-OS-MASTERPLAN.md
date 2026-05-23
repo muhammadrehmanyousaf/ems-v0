@@ -318,3 +318,111 @@ Featured ribbon + priority sort (already supported by `VendorCard` + listing sor
   · `/users` + `/users/:id` read leak closed (`b1d5b03`, BE) — verified live: vendor→403, super-admin→200.
   · Flagged `/users` write endpoints for follow-up RBAC review.
   **Next:** Phase 1 (polish existing modules, Venue vendor first) + Phase 2 (Khata, Quote gen, WhatsApp).
+- 2026-05-24 — **v2 deep research + gap analysis** (see §11–§14). Verdict: v1 plan was ~70%
+  (a strong horizontal skeleton). Found CRITICAL missing pieces: FBR e-invoicing (legal),
+  Excel import/migration (adoption), contracts/e-sign + client portal (table stakes), and
+  vendor-type-specific deliverables (galleries, floor plans/BEO, kitchen sheets).
+
+---
+
+## 11. v2 GAP ANALYSIS — is the plan 100% complete? **Honest answer: NO (v1 was ~70%).**
+
+Benchmarked the *vertical* leaders (not just HoneyBook/Dubsado): venues
+(Tripleseat / Planning Pod / Event Temple), photography (Studio Ninja / Táve→VSCO /
+Sprout / Pic-Time), catering (Caterease / Planning Pod F&B / CaterZen), plus Pakistani
+tax + payments reality. v1 covered the **horizontal CRM** well but **missed the
+"core deliverable" surface of each vendor type and four critical cross-cutting modules.**
+
+### 11.1 CRITICAL gaps (must-have — legal / adoption / table-stakes)
+| # | Gap | Why critical | Status in v1 |
+|---|---|---|---|
+| **G1** | **FBR e-invoicing** (SRO 709, 2025) — JSON → FBR/PRAL, QR code, 6-yr archive, sales-tax + withholding | **Legally mandatory** for sales-tax-registered vendors (phased Nov–Dec 2025). **No PK wedding tool does this** → killer differentiator | only a vague `/tax` route |
+| **G2** | **Excel / data import & migration** (bulk import bookings, customers, payments, cheques) | The user's #1 adoption need — "Excel say jaan churwana." Vendors won't switch without their history | ⬜ missing (only `/onboarding`) |
+| **G3** | **Contracts + e-signature** | Table stakes — HoneyBook/Studio Ninja/Event Temple all have e-sign | folded loosely into "quote", not a real module |
+| **G4** | **Client portal (magic link)** — client signs, pays, sees timeline + gallery | Standard in every competitor; the polished surface clients judge you by | mentioned, not a module |
+
+### 11.2 Vendor-TYPE-specific "core deliverable" surfaces (v1 was too horizontal)
+Each type has a money-making surface a generic CRM can't replace:
+| Vendor type | Core deliverable surface (must-have) | v1 |
+|---|---|---|
+| **Wedding Venue / Marquee** *(build first)* | **BEO / function-sheet** (formal: spaces, headcount, F&B, timeline, setup, payments) + **floor plan / seating chart** (stage, family tables, gents/ladies separation) + multi-hall/space inventory + deposits | partial (`/function-sheets`); floor plan ⬜ |
+| **Photographer / Videographer** | **Galleries / proofing / image delivery** + shot list + album selection + (opt) print/print-store + second-shooter assignment | ⬜ missing |
+| **Caterer** | **Kitchen production sheet** + recipe/ingredient costing (auto-scale by headcount) + **dietary/halal tags** + staffing ratios (waiters per N guests) | partial; kitchen sheet ⬜ |
+| **Makeup / Henna artist** | Trial bookings, **kit/product inventory**, travel-to-home logistics, multi-bride/day slots | partial |
+| **Car rental** | Fleet + driver assignment + **fuel/km log** + route + per-vehicle availability | exists, deepen |
+| **Bridal wear** | Outfit/rental catalogue + **fitting/alteration schedule** + deposit/security | partial |
+| **Stationery / Invitations** | **Design proofs** + print-run tracking + delivery schedule | partial |
+| *(14 new categories)* | Generic flow today; specialty polish later | generic |
+
+### 11.3 Other gaps
+- **G5 Proposals + Questionnaires/intake forms** (distinct from quote/contract — Dubsado/Táve pattern).
+- **G6 Payment-rail depth:** **Raast P2M QR** (instant, low-cost, SBP), EasyPaisa/JazzCash, gateway (AssanPay/XPay/Safepay), auto-pay + payment plans. (60%+ of PK prefers wallets over cards.)
+- **G7 Day-of timeline / run sheet** shared with client + team.
+- **G8 Marketplace lead funnel** — weddingwala.pk listing → inquiry → lead → quote (the discovery→ops bridge).
+- **G9 Reviews → shareable marketing assets** + reputation depth.
+- **G10 Vendor SaaS model** — how does the vendor pay WeddingWala? (commission vs subscription vs freemium + promotion fees) — **decision needed (D6)**.
+
+## 12. NEW modules added by v2 (additive to the original 10)
+- **M11 — Contracts & e-signature** (template library, fill from booking, client e-sign via portal/magic link, audit trail, PDF).
+- **M12 — Client Portal** (magic-link, no password: view booking, pay token/balance, sign contract, see timeline + (photographer) gallery).
+- **M13 — FBR e-Invoicing & Tax** (sales-tax + withholding, FBR/PRAL JSON + QR, 6-yr archive, P&L/tax reports). *Flagship Pakistani moat.*
+- **M14 — Data Import / Migration** (CSV/Excel import wizard for bookings, customers, payments, cheques; column-mapping; dedupe; the "leave your register behind" onboarding).
+- **M15 — Proposals & Intake Forms** (branded proposal, questionnaire to collect event details).
+- **M16 — Type-specific deliverable surfaces** (Venue floor-plan/BEO · Photographer galleries · Caterer kitchen sheet · etc — per §11.2).
+
+## 13. Competitive landscape & our moat (researched)
+- **Shadiyana** (PK, raised $800K pre-seed Dec-2025, 600+ vendors, 500K downloads) = a
+  **marketplace + planner**; revenue ~80% commissions + vendor subscriptions + marketing add-ons.
+  It is a **discovery** layer — **not** a deep vendor operations/management system.
+- **HoneyBook / Dubsado / 17hats** = horizontal service CRM (no PK tax, no cheque/khata, no Urdu, no Islamic calendar).
+- **Tripleseat / Planning Pod / Event Temple** = venue BEO/floor-plan depth (Western, no PK rails).
+- **Studio Ninja / Táve / Pic-Time** = photographer galleries/proofing depth.
+- **WeddingWala's moat (defensible, sticky):** the **operations layer** — bahi-khata + cheque/PDC +
+  **FBR e-invoicing** + multi-event Pakistani wedding + Islamic calendar + brokers + Urdu +
+  fuel/halal/drone compliance + Raast/EasyPaisa/JazzCash. If a vendor runs their *whole business*
+  here (not just lead-gen), they never leave. **Shadiyana owns discovery; WeddingWala should own operations.**
+
+## 14. Revised priority (supersedes §7 ordering)
+- **P0 (done):** bookings crash, `/users` leak, role bug.
+- **P1 — Venue end-to-end** (decision D5): polish command center + bookings wizard + **BEO/function-sheet** + **floor-plan/seating** + Khata payments. Make ONE vendor type flawless.
+- **P2 — Adoption + legal moat:** **M14 Excel import** (so they can switch) + **M13 FBR e-invoicing** (legal + unique) + **M11 contracts/e-sign**.
+- **P3 — Conversion polish:** **M12 client portal** + **M15 proposals/forms** + Quote generator + WhatsApp templates + Raast/wallet payments.
+- **P4 — Per-type deliverables (M16):** Photographer galleries, Caterer kitchen sheet, etc.
+- **P5 — Intelligence + growth:** analytics/health score, promotion/featured + super-admin approval, reputation.
+
+### New decision needed
+- **D6 — Vendor SaaS model:** commission-on-booking / monthly subscription / freemium + paid
+  promotion? This shapes billing, the import incentive, and which features gate behind a plan.
+
+Sources: [Tripleseat](https://tripleseat.com/), [Planning Pod BEO](https://planningpod.com/banquet-event-orders), [Tripleseat Floorplans](https://floorplans.tripleseat.com/), [Studio Ninja](https://www.studioninja.co/studio-ninja/), [Planning Pod F&B](https://planningpod.com/food-and-beverage-tools), [FBR e-invoicing (Sovos)](https://sovos.com/regulatory-updates/vat/pakistan-e-invoicing-implementation-timeline-revised-again/), [FBR e-invoicing (KPMG)](https://kpmg.com/us/en/taxnewsflash/news/2025/08/pakistan-compliance-deadlines-e-invoicing.html), [Shadiyana funding (ProPakistani)](https://propakistani.pk/2025/12/09/shadiyana-raises-800000-pre-seed-to-digitize-pakistans-rs-900-billion-wedding-industry/), [Easypaisa Raast P2M](https://www.nation.com.pk/14-Jun-2024/easypaisa-enables-raast-p2m-payments-to-digitise-person-to-merchant-transactions), [PK payment gateways](https://www.xstak.com/blog/payment-gateways-in-pakistan).
+
+---
+
+## 15. VENUE / MARQUEE vendor — REAL Pakistani management problems (researched 2026)
+
+The venue is the build-first type (D5). These are the *actual, current* pain points of
+Pakistani marquee/marriage-hall owners — each maps to a concrete feature. This is the moat:
+no Western tool (Tripleseat/Planning Pod) and no PK marketplace (Shadiyana) handles this.
+
+| Real problem (2026) | What it means operationally | Feature in the Venue build |
+|---|---|---|
+| **One-Dish Policy** — provincial law: 1 main + 1 dessert; raids, **sealing, FIRs, fines, permanent closure** for violations | Every booking's menu must stay legal; owner needs proof of compliance | **Booking compliance checklist** (one-dish toggle + menu cap) with red warning + a printable compliance slip per event |
+| **Guest-limit caps** (e.g. Sindh **200**, austerity drives, change without notice) | Headcount above the legal cap = penalty; caps differ by city/province & change | **Dynamic guest-limit rule by city/province** → booking validation warns/blocks when headcount exceeds the current legal cap |
+| **Closing-time limits** (9pm / 10pm / 11:30pm) | Events must end by a legal hour; slots constrained | **Event end-time enforcement** + slot rules in the calendar/booking wizard |
+| **Pricing volatility / inflation** — per-head jumps (~Rs500/head), won't commit to winter pricing (fuel/input uncertainty) | Rates change fast; quotes go stale; cost-linked pricing | **Fast per-head price update** + **seasonal/dynamic pricing** + **quote validity window** + cost-linked margin view |
+| **Date discovery / double-booking** in dense 60–70-hall clusters | Two parties on one date/hall = disaster | **Real-time availability + conflict detection** (date AND hall AND time-slot) |
+| **Multiple halls + multiple events/day** | A venue is N spaces, each separately bookable | **Multi-hall / multi-space management** — per-hall calendar, capacity, pricing |
+| **Generator fuel & load-shedding** | Fuel eats margin; backup power mandatory | exists `/generator-fuel` — link fuel cost → per-event profit |
+| **Security cordons / VIP protocol** (esp. Islamabad/Margalla) delay guests | Event-day disruption risk | **Event-day risk note / buffer** + day-of timeline flag |
+| **Advance/token + forced cancellations** (guest-cap changes mid-plan) | Refund disputes when law changes after booking | **Cancellation/refund policy engine** + advance/token ledger + policy snapshot on contract |
+| **Catering tie-in** (venue+food bundled; one-dish affects F&B) | BEO must reflect legal menu | **BEO / function-sheet** with menu lines tied to compliance |
+| **Winter peak season** (Nov–Feb) | Demand + pricing spikes | **Peak-season heatmap** + seasonal pricing rules |
+| **Large labor force** (setup crew, waiters) | Crew scheduling per event | Staff module + **staffing ratio** (waiters per N guests) |
+| **Halal / hygiene / NOC compliance** | Inspections, fines | Compliance tracker (exists `/halal-certs`) extended to venue permits |
+
+> **Design principle for Venue build:** the dashboard should make a hall owner feel the
+> system *protects them from getting fined or double-booked* and *updates prices in 2 taps*.
+> That emotional hook — "yeh system mujhe FIR aur double-booking se bachata hai" — is what
+> makes them abandon the register.
+
+Sources: [One-Dish raids/sealing (PakistanTruth)](https://www.pakistantruth.com/one-dish-policy/), [Sindh 200-guest limit (Dawn)](https://www.dawn.com/news/1983964), [Karachi one-dish + guest limit (Dawn)](https://www.dawn.com/news/1981097), [Lahore closing-time extension (Dawn)](https://www.dawn.com/news/1872648), [Pricing volatility + security cordons (Dawn)](https://www.dawn.com/news/1998854), [Rawalpindi halls sealed (Dawn)](https://www.dawn.com/news/1792563).
