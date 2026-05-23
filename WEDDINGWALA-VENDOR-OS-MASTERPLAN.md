@@ -1164,6 +1164,38 @@ system responsibly, these are genuinely still open. We close them, then build. �
 for, **without breaking** the current fixed Morning/Afternoon/Evening booking. **Opt-in per business
 behind a flag** — default OFF = today's behaviour byte-for-byte.
 
+### 27.0 ⚠️ BUILD-TIME AUDIT FINDING (2026-05-24) — the engine ALREADY EXISTS
+Before coding, a full audit found the Availability Engine is **already built end-to-end**, more
+advanced than this MVP-1 plan:
+- **Backend models:** `businessSlotTemplate` (label, start/end, **`capacity`** = max bookings per slot,
+  `weekdayMask`, **`bufferAfterMinutes`**, **`unitGuestCapacity`**), `businessResource` (multi-hall),
+  `businessCapacityOverride`, `businessRecurringBlock`, `businessSlotBlock`, `vendorBlockedDate`.
+- **Backend API:** `/businesses/:id/slots` (templates CRUD), `/availability`, `/availability/bulk`,
+  `/blocks`, `/capacity-overrides`; booking-create has capacity-aware slot-template mode (`slotTemplateId`).
+- **Frontend:** `lib/api/businessAvailability.ts`, Settings → **Availability tab** (slot-template
+  dialog with capacity + buffer + unit-guest-cap, recurring blocks, capacity overrides) + **Resources
+  (Halls) card** + calendar availability drawer. **Reachable today** in dashboard Settings.
+
+➡️ **So the owner's exact ask — "slots/day + multiple bookings per slot" — is ALREADY BUILT &
+USABLE.** Re-building §27.2–§27.4 would be duplicate work. **CORRECTED first slice below.**
+
+### 27.0b CORRECTED first slice — WIRE the booking flow to the configured engine
+The real gap: the **customer booking screen** (`steps-v2/date-time-step.tsx`) shows **hardcoded
+Morning/Afternoon/Evening** and does **not** pass `slotTemplateId` — so a venue's configured slots,
+capacity, and buffers **don't drive what the customer sees/books**. The engine is islanded.
+**Corrected MVP-1 = connect them (additive, flag-gated):**
+- Date-time step + offline-booking dialog: if the vendor has active slot templates → render THOSE
+  slots (label/time/remaining-capacity) and pass `slotTemplateId` into the booking → capacity-aware
+  path already in the backend kicks in. **Fallback** to the current hardcoded periods when a vendor
+  has no templates → existing vendors unaffected.
+- Availability display: use slot-template availability (remaining capacity per slot) instead of the
+  3 fixed periods.
+- Flag `NEXT_PUBLIC_SLOT_TEMPLATES` (default off) → opt-in; verify on one seeded venue first.
+- *Also surface:* ensure the Availability tab is reachable for every vendor type (some
+  `vendor-type-config.settingsTabs` omit it) + a "seed default slots" nudge on first use.
+
+> §27.2–§27.4 below are SUPERSEDED (engine exists). Kept for history.
+
 ### 27.1 Scope of MVP-1 (just enough to be real)
 - Vendor configures: **slots/day** (fixed periods or custom windows), **max bookings per slot**
   (1=exclusive / N), **resources** (e.g. Hall A, Hall B) each with capacity, **pre/post buffer**,
