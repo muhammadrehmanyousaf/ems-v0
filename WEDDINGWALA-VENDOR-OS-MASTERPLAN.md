@@ -805,6 +805,8 @@ the section that captures it. **New directives get appended at the top and route
 
 | # | Date | Owner directive | Captured in |
 |---|---|---|---|
+| 14 | 2026-05-24 | List EVERY scenario for any vendor — nothing missing, fully professional | §24 (complete scenario library, 14 categories) |
+| 13 | 2026-05-24 | Do a ~1000-angle market sweep / analyze existing systems / gather requirements like a 30-yr analyst — be 1000× better | §25 (matrix + anti-playbook + requirements register) |
 | 12 | 2026-05-24 | "Keep recording everything I say in the file — I'll keep telling you more." | This log (§23) — intake process established |
 | 11 | 2026-05-24 | Booking control: vendor controls **slots per day** and whether **multiple bookings allowed per slot** (real-time system) | §21.1–§21.4 (slots/day, max-per-slot, multi-resource, venue example) |
 | 10 | 2026-05-24 | Go fullllll deep again — every perspective (user / vendor-mgmt / system / flows), nothing missing, Pakistan-specific | §21 (engine) + §22 (flows + PK edge cases) |
