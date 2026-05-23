@@ -674,3 +674,124 @@ Game-changer per owner. Placeholder for the full authentic spec: a vendor (e.g. 
 another WeddingWala vendor (e.g. a Photographer) *through* the platform — request, quote, accept,
 shared event/BEO, split payment/commission, ratings between vendors. Network-effect moat that keeps
 inter-vendor coordination inside WeddingWala instead of WhatsApp. **To be fully detailed next.**
+
+---
+
+## 21. BOOKING & AVAILABILITY ENGINE — granular, vendor-controlled (the heart of the system)
+
+This is NOT a sidebar item — it is the **rules engine** under Bookings + Calendar, configured in
+**Business Settings → Availability**. Every vendor controls *how they can be booked*. Real-time,
+strong-consistency. Designed like a 30-year planner who has seen every Pakistani wedding go wrong.
+*(Today the code has only fixed Morning/Afternoon/Evening periods + a 15-min hold + Hijri blackouts.
+This §21 is the full target — additive, flag-gated.)*
+
+### 21.1 The configurable rules (each is a per-business / per-resource setting)
+| Rule | What it controls | Pakistani example |
+|---|---|---|
+| **Slot model** | Fixed periods (Morning/Afternoon/Evening) · custom time windows · full-day exclusive · duration-based | Venue = 2 slots/day (lunch + dinner); Makeup = 2-hour slots |
+| **Slots per day** | How many bookable slots the vendor offers in a day | *"Aik din mein kitni slots?"* — venue owner sets 1, 2, or 3 |
+| **Max bookings PER SLOT** (`capacity`) | 1 = exclusive · N = multiple bookings allowed in the same slot | *"Aik slot mein multiple bookings?"* — Makeup artist = 3 brides/morning; single-hall venue = 1; lawn split into 2 sections = 2 |
+| **Max bookings per day** | Hard daily cap across all slots | Photographer = 1 (can't be two places) unless multiple teams |
+| **Capacity / guests per slot** | Max guests the slot/hall can hold | Venue hall = 500; caterer crew limit = 1,500 |
+| **Buffer (pre/post)** | Setup/teardown/cleanup/travel time blocked around a booking | Venue = 3h cleanup between lunch & dinner; Makeup = 1h travel |
+| **Lead time** | Min advance notice to book | "No bookings within 2 days" |
+| **Booking window** | Max advance | Mehndi/venue = up to 12 months ahead |
+| **Closing time** | Legal event end hour | Venue = must end by 11:30pm (Lahore) / 10pm (Karachi) |
+| **Blackouts** | Recurring (every Friday AM) · Islamic (Muharram/Ramadan auto) · one-off (maintenance) | Already partly built |
+| **Overbooking / waitlist** | Allow tentative over-capacity · waitlist auto-promotes on cancel | Peak-season demand |
+| **Hold/lock** | Token hold TTL (slot reserved while paying) | 15-min hold exists today |
+| **Pricing rules** | Per-slot · peak/weekend surcharge · per-head vs flat · advance discount | Winter +20%, Fri/Sat premium |
+
+### 21.2 Multi-RESOURCE model (how one vendor runs many simultaneous events)
+A business owns **N bookable resources**; a booking consumes a resource for a slot; **conflict =
+same resource + overlapping slot (incl. buffer)**. This is the clean way to model the slot question:
+| Vendor | Resource | Multiple-per-slot achieved by |
+|---|---|---|
+| Venue | **Halls / Lawns / Sections** (Hall A, Hall B) | each hall booked independently → 3 halls = 3 simultaneous events |
+| Car rental | **Vehicles** (10 cars) | 10 cars = 10 simultaneous trips |
+| Makeup / Henna | **Artists / Teams** | 2 teams = 2 brides same morning |
+| Photographer | **Crews** | 2 crews = 2 events; else 1/slot |
+| Caterer | **Kitchen capacity** (max total guests/day) | capacity-based, not resource-based |
+
+> So "multiple bookings per slot" is achievable **two ways**, both vendor-controlled: (a) raise
+> `capacity` on a single resource, or (b) add more resources (halls/cars/teams). The venue owner
+> chooses per hall: 1 event (exclusive) or split capacity.
+
+### 21.3 Per-type DEFAULT booking config (vendor can override every value)
+| Type | Slots/day | Per-slot capacity | Resource | Buffer | Notes |
+|---|---|---|---|---|---|
+| **Venue/Marquee** | 1–2 (lunch/dinner) | 1 per hall | Halls | 2–4h cleanup | closing-time + guest-cap + one-dish compliance |
+| **Catering** | many | capacity by total guests/day | kitchen | prep time | headcount lock date |
+| **Photographer** | 1–3 | 1 per crew | crews | travel | full-day or per-event |
+| **Makeup** | 2–6 | 1 per artist (team→N) | artists | 1h travel | per-day bride cap |
+| **Henna** | 2–8 | 1 per artist (team→N) | artists | travel | multi-event/day, family bulk |
+| **Car rental** | many | 1 per vehicle | vehicles | return/clean | driver assignment |
+| **Decorator** | 1–2 | 1 per crew | crews | setup+breakdown | |
+| **Bridal wear** | many (appointments) | N per slot (fittings) | staff | — | fitting vs delivery slots |
+| **Stationery** | n/a (order-based) | n/a | — | — | deadline-driven, not slotted |
+
+### 21.4 VENUE worked example (your exact scenario)
+*Faisal Marquee, Lahore — 2 halls (Shahi Hall 500, Garden Lawn 300):*
+1. Owner sets **2 slots/day** (Lunch 12–4, Dinner 7–11:30 [legal close]).
+2. **Capacity per slot = 1 per hall** (exclusive) → so per day the marquee can host up to **4 events**
+   (2 halls × 2 slots), or owner sets Garden Lawn to split into 2 → 6 events.
+3. **Buffer 3h** between lunch & dinner (cleanup) — engine auto-blocks it.
+4. **Guest cap** = min(hall capacity, current legal cap e.g. 200) → warns if booking exceeds.
+5. **One-dish compliance** flag per booking; **closing-time** enforced at 11:30pm.
+6. Customer books Shahi Hall / Dinner / 15-Dec → **hold 15 min** → token paid → **confirmed**;
+   Shahi Hall Dinner 15-Dec now unavailable to everyone, Garden Lawn still free.
+7. Offline (walk-in) bookings write to the SAME calendar → no double-book between online & offline.
+
+### 21.5 Booking STATE MACHINE (one source of truth)
+`Inquiry → Quoted → Held(token pending, TTL) → Token-Paid → Confirmed → In-Progress → Completed → Reviewed`
+side states: `Waitlisted · Rescheduled · Cancelled(+refund calc) · No-show · Rejected · Expired(hold lapsed)`.
+Every transition: notify (WhatsApp/in-app) + audit log + calendar sync.
+
+### 21.6 Concurrency guarantee (system perspective — no double-booking, ever)
+- **Hold** writes a row with TTL; **Confirm** requires a still-valid hold.
+- **DB unique constraint** on `(resourceId, slot, date)` for exclusive resources → second confirm fails cleanly.
+- Capacity resources: atomic `count < capacity` check inside a transaction (strong consistency).
+- Online + offline + admin bookings all pass through the same guard.
+
+---
+
+## 22. END-TO-END FUNCTIONAL FLOWS (every perspective)
+
+### 22.1 Customer (couple) journey
+Discover (marketplace / search / vendor's IG link-in-bio) → view profile + **real-time availability**
+→ inquire / request quote → chat & negotiate → **book + pay token** (slot held) → **e-sign contract**
+→ WhatsApp confirmation → automated pre-event reminders (7-day, 1-day) → event day → pay balance →
+receive deliverables (photographer **gallery** / docs) → **review request** (3 days later).
+
+### 22.2 Vendor journey
+Configure profile + packages + **availability rules (§21)** → lead lands (marketplace / IG / WhatsApp /
+walk-in) → respond + **quote** → negotiate → **confirm + take token** (calendar auto-blocks) → assign
+**resource + staff** → manage payments (advance / cheque / installments) → **function sheet / BEO** for
+event day → mark **Completed** → collect balance → **deliver** → request review → watch **analytics**.
+
+### 22.3 System / engine flow
+Availability query → compute free slots (config + existing bookings + buffers + blackouts + legal caps)
+→ customer picks → **HOLD (lock, TTL)** → token payment webhook → **CONFIRM** (state transition,
+consume resource, calendar write, notify) → conflict guard (unique constraint / atomic capacity) →
+reminder crons → completion → review cron → analytics aggregation.
+
+### 22.4 Super-admin flow
+Vendor registers → **KYC review** → approve/reject (emailed) → monitor (platform pulse) →
+**promotion requests → approve** (§5) → disputes → force-majeure (batch) → revenue/oversight.
+
+### 22.5 Pakistani EDGE CASES (telescope-level — must all be handled)
+- **Wedding postponed** → reschedule flow (move booking + buffers + notify) + policy snapshot.
+- **Cancellation** → auto refund calc per vendor policy + cancellation doc.
+- **Govt guest-cap / one-dish change AFTER booking** (the 200-cap reality) → renegotiation/amend flow.
+- **Guest-count change** (caterer) → recalc headcount + production sheet + price; headcount lock date.
+- **Multi-event package** (Mehndi + Baraat + Walima across 3 dates) → one deal, multiple linked bookings.
+- **Cheque bounce** → recovery workflow + balance reopens.
+- **Installments / partial payments** → schedule + reminders.
+- **Double-booking attempt** (two customers, same slot) → hold/lock + unique constraint resolves.
+- **Online vs offline (walk-in) clash** → shared calendar, single guard.
+- **Vendor on vacation / hall under renovation** → block + waitlist.
+- **No-show / late balance** → status + policy enforcement.
+- **Ramadan/Muharram timing** → auto-blackout suggestion, not hard block (vendor decides).
+- **Security cordon / VIP protocol** (Islamabad) → event-day risk note + buffer.
+
+Sources: [Capacity & overbooking (BookingPress)](https://www.bookingpressplugin.com/set-and-manage-service-capacity/), [Avoid overbooking + waitlist (Regiondo)](https://pro.regiondo.com/blog/how-to-avoid-overbooking-as-a-tour-activity-provider/), [Venue rules engine: buffers/blackouts/multi-room (Skedda)](https://www.skedda.com/insights/facility-reservation-system), [Slot duration/interval/buffer (HighLevel)](https://help.gohighlevel.com/support/solutions/articles/48001155718-understanding-slot-duration-slot-interval-and-buffer-settings), [Max bookings per slot/day + lead time (FG Funnels)](https://support.fgfunnels.com/article/1408-understanding-calendar-availability-settings), [Padding between appointments (Acuity)](https://help.acuityscheduling.com/hc/en-us/articles/16676926857101-Adding-padding-between-appointments), [Hotel booking strong consistency (System Design Handbook)](https://www.systemdesignhandbook.com/guides/design-hotel-booking-system/).
