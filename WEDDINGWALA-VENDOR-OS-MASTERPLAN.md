@@ -805,6 +805,7 @@ the section that captures it. **New directives get appended at the top and route
 
 | # | Date | Owner directive | Captured in |
 |---|---|---|---|
+| 15 | 2026-05-24 | Pre-build readiness check; then decided: vendor-side first · Availability Engine first · M19 later | §26 (readiness) + §27 (first-slice design) |
 | 14 | 2026-05-24 | List EVERY scenario for any vendor — nothing missing, fully professional | §24 (complete scenario library, 14 categories) |
 | 13 | 2026-05-24 | Do a ~1000-angle market sweep / analyze existing systems / gather requirements like a 30-yr analyst — be 1000× better | §25 (matrix + anti-playbook + requirements register) |
 | 12 | 2026-05-24 | "Keep recording everything I say in the file — I'll keep telling you more." | This log (§23) — intake process established |
@@ -1132,11 +1133,11 @@ system responsibly, these are genuinely still open. We close them, then build. �
 - 🟡 **Integrations** — Google Calendar sync, payment gateway, FBR/PRAL, WhatsApp wa.me (decided).
 
 ### 26.3 SCOPE confirmation
-- 🟡 **Couple / customer side** — this plan is vendor+admin-centric. The couple experience (M12
-  client portal, booking funnel, planning/guest-list/RSVP/e-invites) is referenced but light.
-  **Confirm:** is the couple side in scope for THIS build, or a separate later track?
-- 🟡 **First vendor type + first slice** — Venue is chosen (D5); pin the exact first buildable slice
-  (recommend: Availability Engine config → Booking wizard → BEO).
+- ✅ **Couple / customer side** — DECIDED: **vendor + admin side FIRST**; couple experience is a
+  separate later track. Focus 100% on the vendor OS moat now.
+- ✅ **First vendor type + first slice** — DECIDED: **Venue** (D5), starting with the
+  **Availability Engine** (§21) → then Booking wizard → BEO. Design in §27.
+- ✅ **M19 marketing broadcast** — DECIDED: **later** (wa.me one-click templates suffice for now).
 
 ### 26.4 Minor FEATURE additions to consider (surfaced, not yet in plan)
 - 🟡 **Two-way rating** — vendor rates the customer (paid on time? difficult?) → flag repeat risk.
@@ -1154,3 +1155,50 @@ system responsibly, these are genuinely still open. We close them, then build. �
 > *engineering design* (data model + API + billing + sub-user RBAC), a few *decisions* (D2/D4/D7/
 > D8/D9 + M19), one *scope* question (couple side?), and pinning the *first slice*. Close these and
 > we build clean. None are blockers to starting the Venue availability-engine slice.
+
+---
+
+## 27. FIRST BUILD SLICE — Venue Availability Engine (MVP-1) — design
+
+**Decided start.** Smallest safe, additive slice of §21 that delivers the slot-control the owner asked
+for, **without breaking** the current fixed Morning/Afternoon/Evening booking. **Opt-in per business
+behind a flag** — default OFF = today's behaviour byte-for-byte.
+
+### 27.1 Scope of MVP-1 (just enough to be real)
+- Vendor configures: **slots/day** (fixed periods or custom windows), **max bookings per slot**
+  (1=exclusive / N), **resources** (e.g. Hall A, Hall B) each with capacity, **pre/post buffer**,
+  **lead time**, **booking window**, **closing time**, **blackouts** (reuse existing Hijri/manual).
+- Availability compute + **conflict detection** honours these (resource + slot + buffer + caps).
+- Surfaced in **Business Settings → Availability** (a tab already exists in the settings model).
+- *Out of MVP-1 (later):* waitlist auto-promote, dynamic pricing rules, drag-reschedule.
+
+### 27.2 Data model (additive, idempotent migrations — project pattern)
+- **`vendor_resources`**: `id, businessId, name, type(hall|vehicle|artist|team|generic), capacity,
+  active, sortOrder, createdAt/updatedAt`. (A business with no rows ⇒ treated as 1 implicit resource = today's behaviour.)
+- **`availability_rules`** (1 per business): `businessId, slotsPerDayJson (period defs),
+  maxBookingsPerSlot (default 1), maxBookingsPerDay (nullable), bufferPreMin, bufferPostMin,
+  leadTimeDays, bookingWindowDays, closingTime, engineEnabled (bool, default false)`.
+- **Bookings**: add nullable `resourceId` (FK → vendor_resources) + `slotKey` (date+period).
+  Existing bookings: `resourceId NULL` = implicit single resource → no behaviour change.
+- All columns nullable/defaulted; guarded with `describeTable`/`IF NOT EXISTS`.
+
+### 27.3 Backend
+- `GET/PUT /api/v1/businesses/:id/availability` (owner-scoped) — read/write the rule + resources.
+- `GET /api/v1/businesses/:id/availability/slots?month=` — compute free slots from
+  (rules + resources + existing bookings + buffers + blackouts + legal caps).
+- Booking create: extend conflict guard → unique on `(resourceId, date, period)` for exclusive
+  resources; atomic `count < maxBookingsPerSlot` for capacity. **Behind `AVAILABILITY_ENGINE` flag**;
+  when off, current logic runs unchanged.
+
+### 27.4 Frontend
+- Settings → **Availability** tab: slots/day editor, max-per-slot stepper, **Resources (Halls) manager**
+  (add/edit/capacity), buffer/lead-time/closing-time inputs. Bridal tokens, Urdu i18n keys.
+- Booking date/time step + calendar: when engine ON, show per-resource availability; else unchanged.
+- Flag `NEXT_PUBLIC_AVAILABILITY_ENGINE` (default off).
+
+### 27.5 Rollout & safety
+- Migrations additive + idempotent; flag default OFF → zero impact on live vendors.
+- Enable for ONE test venue (seeded) → verify end-to-end → then opt-in more.
+- Build-verified + no-regression on the existing booking flow before push.
+
+> This is the concrete first PR. On "go", I build it additive + flag-gated, build-verify, and ship.
