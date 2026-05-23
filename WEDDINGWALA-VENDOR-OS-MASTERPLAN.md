@@ -795,3 +795,28 @@ Vendor registers → **KYC review** → approve/reject (emailed) → monitor (pl
 - **Security cordon / VIP protocol** (Islamabad) → event-day risk note + buffer.
 
 Sources: [Capacity & overbooking (BookingPress)](https://www.bookingpressplugin.com/set-and-manage-service-capacity/), [Avoid overbooking + waitlist (Regiondo)](https://pro.regiondo.com/blog/how-to-avoid-overbooking-as-a-tour-activity-provider/), [Venue rules engine: buffers/blackouts/multi-room (Skedda)](https://www.skedda.com/insights/facility-reservation-system), [Slot duration/interval/buffer (HighLevel)](https://help.gohighlevel.com/support/solutions/articles/48001155718-understanding-slot-duration-slot-interval-and-buffer-settings), [Max bookings per slot/day + lead time (FG Funnels)](https://support.fgfunnels.com/article/1408-understanding-calendar-availability-settings), [Padding between appointments (Acuity)](https://help.acuityscheduling.com/hc/en-us/articles/16676926857101-Adding-padding-between-appointments), [Hotel booking strong consistency (System Design Handbook)](https://www.systemdesignhandbook.com/guides/design-hotel-booking-system/).
+
+---
+
+## 23. OWNER DIRECTIVES LOG — running intake (nothing gets lost)
+
+Every instruction the owner gives is logged here verbatim-in-spirit with a date and a pointer to
+the section that captures it. **New directives get appended at the top and routed to their section.**
+
+| # | Date | Owner directive | Captured in |
+|---|---|---|---|
+| 12 | 2026-05-24 | "Keep recording everything I say in the file — I'll keep telling you more." | This log (§23) — intake process established |
+| 11 | 2026-05-24 | Booking control: vendor controls **slots per day** and whether **multiple bookings allowed per slot** (real-time system) | §21.1–§21.4 (slots/day, max-per-slot, multi-resource, venue example) |
+| 10 | 2026-05-24 | Go fullllll deep again — every perspective (user / vendor-mgmt / system / flows), nothing missing, Pakistan-specific | §21 (engine) + §22 (flows + PK edge cases) |
+| 9 | 2026-05-24 | Tell me sidebar modules + craft-localized names per vendor type; common + per-type lists | §19 (module map + localization table) |
+| 8 | 2026-05-24 | M23 vendor↔vendor sub-contracting = "game changing", do in full detail + authenticity | §20 (placeholder — full spec pending) |
+| 7 | 2026-05-24 | Monetization: monthly **subscription + freemium + paid promotions/ads**; **NO booking commission** (not from user, not from vendor) | §17 (D6 locked) |
+| 6 | 2026-05-24 | Research EVERY vendor type's real PK problems — think like a complete brain | §16 (all-type pain→feature library) |
+| 5 | 2026-05-24 | Is the plan truly complete / zero-external? Answer honestly | §18 (honest verdict + M17–M23 last-mile) |
+| 4 | 2026-05-24 | Research real PK **venue** management problems | §15 (one-dish, guest-cap, closing-time, etc.) |
+| 3 | 2026-05-24 | Deep-dive + internet comparison; is the plan enough? | §11–§14 (gap analysis, new modules, moat, priorities) |
+| 2 | 2026-05-24 | Build a serious master file: roles → per-role dashboards/modules, world-class research | This whole document |
+| 1 | 2026-05-24 | Vendors must abandon Excel/registers; manage their ENTIRE business here; super-admin approval for homepage promotion | §0–§10, §5 (promotion flow) |
+
+> **How I use this:** when you send a new requirement, I (a) append it here, (b) write the detail in
+> the right section (or a new one), (c) commit + push so it's permanent. You can keep sending — none of it slips.
