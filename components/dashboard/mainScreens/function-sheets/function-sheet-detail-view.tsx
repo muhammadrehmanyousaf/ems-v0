@@ -95,6 +95,7 @@ import {
   type LinkedFinancials,
 } from '@/lib/api/functionSheets';
 import { FunctionSheetComposer } from './function-sheet-composer';
+import BeoRunSheetCard from './beo-run-sheet-card';
 import { SignDialog, type SignSide } from './sign-dialog';
 import { SendWhatsappDialog } from './send-whatsapp-dialog';
 import { ShareLinkDialog } from './share-link-dialog';
@@ -514,6 +515,11 @@ export default function FunctionSheetDetailView({
       {/* Two-column body */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
+          {/* BEO / run-sheet — flag-gated (NEXT_PUBLIC_BEO_EDITOR). Day-of
+              operations doc; read-only once the sheet is terminal. */}
+          {process.env.NEXT_PUBLIC_BEO_EDITOR === '1' && (
+            <BeoRunSheetCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
+          )}
           {/* Customer + event */}
           <Card>
             <CardContent className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">

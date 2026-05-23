@@ -33,6 +33,17 @@ export interface FunctionSheetLineItem {
   notes?: string | null;
 }
 
+// Structured day-of BEO / run-sheet (venue operations).
+export interface BeoTimelineRow { time: string; activity: string }
+export interface BeoData {
+  spaces?: string;                  // halls / areas used
+  guaranteedHeadcount?: number | null;
+  setupTime?: string;               // HH:MM
+  teardownTime?: string;            // HH:MM
+  timeline?: BeoTimelineRow[];      // run-sheet rows
+  crewNotes?: string;               // instructions for the crew
+}
+
 export interface FunctionSheet {
   id: number;
   businessId: number;
@@ -54,6 +65,7 @@ export interface FunctionSheet {
   termsJson: any;
   paymentScheduleJson: any;
   signaturesJson: any;
+  beoJson?: BeoData | null;
   notes: string | null;
   sentAt: string | null;
   signedAt: string | null;
@@ -274,6 +286,7 @@ export interface UpdateFunctionSheetInput {
   termsJson?: { lines: string[] } | { text: string } | string | null;
   paymentScheduleJson?: PaymentScheduleEntry[] | null;
   signaturesJson?: any;
+  beoJson?: BeoData | null;
   notes?: string | null;
 }
 
