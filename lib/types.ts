@@ -195,6 +195,11 @@ export interface BookingFormData {
   // Date & Time
   bookingDate: Date | string | undefined;
   timeSlot: string;
+  // Optional: when the vendor uses configured slot templates (capacity-aware
+  // availability engine), the chosen template's id is carried so the backend
+  // runs the capacity-aware booking path. Null/undefined = legacy fixed
+  // Morning/Afternoon/Evening period booking (unchanged).
+  slotTemplateId?: number | null;
   guestCount: number;
 
   // Package

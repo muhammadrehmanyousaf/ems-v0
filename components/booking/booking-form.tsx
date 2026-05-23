@@ -38,6 +38,7 @@ export default function BookingForm() {
     eventType: "",
     bookingDate: undefined,
     timeSlot: "",
+    slotTemplateId: null,
     guestCount: 1,
     selectedPackage: "",
     selectedMenu: "",
@@ -191,7 +192,7 @@ export default function BookingForm() {
           ? {
               ...e,
               currentStep: 0,
-              formData: { ...e.formData, bookingDate: undefined, timeSlot: '' }
+              formData: { ...e.formData, bookingDate: undefined, timeSlot: '', slotTemplateId: null }
             }
           : e
       ))
@@ -395,7 +396,14 @@ export default function BookingForm() {
         packageId: vendor.packageId ? Number(vendor.packageId) : null,
         menuId: vendor.menuId ? Number(vendor.menuId) : null,
         totalAmount: Number(vendor.totalAmount),
-        downPayment: Number(vendor.downPayment)
+        downPayment: Number(vendor.downPayment),
+        // Capacity-aware slot booking. Only attach when a single-vendor cart
+        // picked a configured slot template — the backend rejects mixed-mode
+        // carts (some with slotTemplateId, some without). Multi-vendor carts
+        // fall back to the legacy fixed-period path.
+        ...(currentForm.slotTemplateId && vendorsPayload.length === 1
+          ? { slotTemplateId: Number(currentForm.slotTemplateId) }
+          : {}),
       }))
     };
     if (currentForm.guestCount && currentForm.guestCount > 0) {

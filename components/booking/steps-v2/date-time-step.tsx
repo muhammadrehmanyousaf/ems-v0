@@ -4,6 +4,11 @@ import { useEffect, useMemo, useState, useCallback } from "react"
 import type { BookingFormData, EventVenue } from "@/lib/types"
 import { ChevronLeft, ChevronRight, Sun, Sunset, Moon, Minus, Plus, AlertTriangle, Timer, XCircle } from "lucide-react"
 import { VendorAPI } from "@/lib/api/vendors"
+// Capacity-aware slot-template availability (BK-008/015/019). Flag-gated:
+// when the vendor has configured slot templates we drive the picker from
+// them (their own slots + per-slot capacity) instead of the fixed
+// Morning/Afternoon/Evening periods. Falls back when none configured.
+import { BusinessAvailabilityAPI, type SlotAvailabilityRow } from "@/lib/api/businessAvailability"
 // BK-100.53 — service-location mode picker (optional; lets the
 // customer specify mehndi-at-home / marquee-at-plot / Nikah-at-masjid).
 import { ServiceLocationPicker } from "@/components/booking/service-location-picker"
@@ -34,6 +39,10 @@ const PERIODS = [
   { value: "18:00", label: "Evening",   hint: "6 PM – 11 PM",  icon: Moon },
 ] as const
 
+// Flag-gated rollout of the vendor-configured slot engine. Default OFF =
+// the fixed Morning/Afternoon/Evening behaviour below, byte-for-byte unchanged.
+const SLOT_TEMPLATES_ENABLED = process.env.NEXT_PUBLIC_SLOT_TEMPLATES === "1"
+
 const WEEKDAY_SHORT = ["S", "M", "T", "W", "T", "F", "S"]
 const WEEKDAY_FULL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
@@ -47,6 +56,9 @@ function startOfMonth(d: Date) {
 }
 function addMonths(d: Date, n: number) {
   return new Date(d.getFullYear(), d.getMonth() + n, 1)
+}
+function endOfMonth(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0)
 }
 /**
  * Build the grid of dates for a given month, 6 rows × 7 columns. Includes
@@ -131,6 +143,47 @@ export default function DateTimeStep({
     fetchMonth(addMonths(viewMonth, 1))
   }, [viewMonth, fetchMonth])
 
+  // ── Slot-template availability (flag-gated capacity-aware engine) ──
+  // Only fetched when the flag is on. If the vendor has configured slot
+  // templates we drive the picker from them; otherwise we fall back to the
+  // fixed periods so existing vendors are completely unaffected.
+  const [templateDays, setTemplateDays] = useState<Record<string, SlotAvailabilityRow[]>>({})
+  const [hasTemplates, setHasTemplates] = useState(false)
+  const fetchTemplateMonth = useCallback(async (d: Date) => {
+    if (!SLOT_TEMPLATES_ENABLED || !venue?.id) return
+    try {
+      const res = await BusinessAvailabilityAPI.getBulkAvailability(
+        venue.id as number, toKey(startOfMonth(d)), toKey(endOfMonth(d)),
+      )
+      const days = res?.days || {}
+      setTemplateDays((prev) => ({ ...prev, ...days }))
+      if (Object.values(days).some((rows) => rows && rows.length > 0)) setHasTemplates(true)
+    } catch { /* silent → fall back to fixed periods */ }
+  }, [venue?.id])
+  useEffect(() => {
+    if (!SLOT_TEMPLATES_ENABLED) return
+    fetchTemplateMonth(viewMonth)
+    fetchTemplateMonth(addMonths(viewMonth, 1))
+  }, [viewMonth, fetchTemplateMonth])
+  // Drive the UI from templates only when the vendor actually has some.
+  const useTemplates = SLOT_TEMPLATES_ENABLED && hasTemplates
+
+  // Synthesise a DayAvailability from template rows so the existing calendar
+  // logic (renderDayCell / handlePickDay) works unchanged for both paths.
+  const templateDayAvail = useCallback((key: string): DayAvailability | undefined => {
+    const rows = templateDays[key]
+    if (!rows) return undefined
+    const runnable = rows.filter((r) => r.runsThisWeekday)
+    if (runnable.length === 0) return { bookedSlots: [], availableSlots: [], isBlocked: true, blockReason: "Closed this day" }
+    const bookedSlots = runnable.filter((r) => r.blocked || r.free <= 0).map((r) => r.startTime.slice(0, 5))
+    const availableSlots = runnable.filter((r) => !r.blocked && r.free > 0).map((r) => r.startTime.slice(0, 5))
+    return { bookedSlots, availableSlots, isBlocked: availableSlots.length === 0 }
+  }, [templateDays])
+  const dayAvail = useCallback(
+    (key: string): DayAvailability | undefined => (useTemplates ? templateDayAvail(key) : availability[key]),
+    [useTemplates, templateDayAvail, availability],
+  )
+
   // The 6×7 grid of dates for the visible month (Airbnb / Booking.com pattern).
   const monthGrid = useMemo(() => buildMonthGrid(viewMonth), [viewMonth])
   const isSameMonth = useCallback(
@@ -152,7 +205,7 @@ export default function DateTimeStep({
   const handlePickDay = (d: Date) => {
     if (d < today) return
     const key = toKey(d)
-    const a = availability[key]
+    const a = dayAvail(key)
     if (a && (a.isBlocked || a.availableSlots.length === 0)) return
     updateFormData((prev) => ({
       ...prev,
@@ -162,7 +215,7 @@ export default function DateTimeStep({
   }
 
   const selectedKey = selectedDate ? toKey(selectedDate) : null
-  const selectedAvail = selectedKey ? availability[selectedKey] : undefined
+  const selectedAvail = selectedKey ? dayAvail(selectedKey) : undefined
 
   const handlePickPeriod = (period: string) => {
     if (!selectedDate) return
@@ -172,7 +225,22 @@ export default function DateTimeStep({
     updateFormData((prev) => ({
       ...prev,
       timeSlot: period,
+      slotTemplateId: null,
       bookingDate: formatBookingDate(selectedDate, period),
+    }))
+  }
+
+  // Capacity-aware slot pick (template engine path). Sets slotTemplateId so the
+  // backend runs the capacity-aware booking; timeSlot mirrors the start time so
+  // the existing hold + validation keep working unchanged.
+  const handlePickTemplate = (row: SlotAvailabilityRow) => {
+    if (!selectedDate || row.blocked || row.free <= 0 || !row.runsThisWeekday) return
+    const t = row.startTime.slice(0, 5)
+    updateFormData((prev) => ({
+      ...prev,
+      timeSlot: t,
+      slotTemplateId: row.slotTemplateId,
+      bookingDate: formatBookingDate(selectedDate, t),
     }))
   }
 
@@ -212,7 +280,7 @@ export default function DateTimeStep({
    *  numeral, dot indicator for partial availability. */
   const renderDayCell = (d: Date) => {
     const key = toKey(d)
-    const a = availability[key]
+    const a = dayAvail(key)
     const isPast = d < today
     const isBlocked = !!a?.isBlocked || (a && a.availableSlots.length === 0)
     const isPartial = !!a && a.bookedSlots.length > 0 && !isBlocked
@@ -351,6 +419,53 @@ export default function DateTimeStep({
             </span>
           )}
         </div>
+        {useTemplates && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {(selectedKey ? (templateDays[selectedKey] || []).filter((r) => r.runsThisWeekday) : []).length === 0 ? (
+              <p className="col-span-full font-bridal text-[12px] text-bridal-text-soft py-2">
+                {selectedDate ? "No slots offered on this day." : "Pick a date to see available slots."}
+              </p>
+            ) : (
+              (templateDays[selectedKey as string] || []).filter((r) => r.runsThisWeekday).map((row) => {
+                const isSelected = formData.slotTemplateId === row.slotTemplateId
+                const soldOut = row.blocked || row.free <= 0
+                const disabled = !selectedDate || soldOut
+                return (
+                  <button
+                    key={row.slotTemplateId}
+                    type="button"
+                    onClick={() => handlePickTemplate(row)}
+                    disabled={disabled}
+                    className={`relative flex flex-col items-start gap-1.5 p-3 lg:p-4 rounded-md border text-left transition-all
+                      ${disabled
+                        ? "border-bridal-beige bg-bridal-ivory text-bridal-text-soft/50 cursor-not-allowed"
+                        : isSelected
+                          ? "border-bridal-gold-dark bg-bridal-cream shadow-[0_8px_22px_-14px_rgba(176,125,84,0.45)] text-bridal-charcoal"
+                          : "border-bridal-beige bg-bridal-ivory hover:border-bridal-gold/55 hover:bg-bridal-cream text-bridal-charcoal"
+                      }`}
+                  >
+                    <div className="min-w-0 w-full">
+                      <p className="font-display italic text-[15px] leading-tight">{row.label}</p>
+                      <p className="font-bridal text-[10.5px] text-bridal-text-soft mt-0.5">
+                        {row.startTime.slice(0, 5)} – {row.endTime.slice(0, 5)}
+                      </p>
+                    </div>
+                    {soldOut ? (
+                      <span className="shrink-0 px-1.5 py-0.5 rounded font-bridal text-[8.5px] uppercase tracking-[0.1em] font-medium bg-bridal-coral/15 text-bridal-coral border border-bridal-coral/40">
+                        {row.blocked ? "Blocked" : "Full"}
+                      </span>
+                    ) : (
+                      <span className="shrink-0 font-bridal text-[10px] font-medium text-bridal-gold-dark">
+                        {row.free} of {row.capacity} left
+                      </span>
+                    )}
+                  </button>
+                )
+              })
+            )}
+          </div>
+        )}
+        {!useTemplates && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {PERIODS.map((p) => {
             const isSelected = formData.timeSlot === p.value
@@ -401,6 +516,7 @@ export default function DateTimeStep({
             )
           })}
         </div>
+        )}
         </section>
 
         {/* BK-100.53 — service-location picker, pulled up beside the calendar
