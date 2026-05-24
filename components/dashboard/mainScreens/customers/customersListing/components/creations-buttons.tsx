@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Download, Plus, Loader2 } from 'lucide-react'
+import { Download, Plus, Loader2, Upload } from 'lucide-react'
 import {
     Dialog,
     DialogContent,
@@ -16,6 +16,10 @@ import { Label } from '@/components/ui/label'
 import axiosInstance from '@/lib/axiosConfig'
 import { BACKEND_URL } from '@/lib/backend-url'
 import { toast } from '@/components/ui/use-toast'
+import ImportCustomersDialog from './import-customers-dialog'
+
+// Adoption: bulk-import customers from a CSV. Flag-gated (default OFF).
+const IMPORT_ENABLED = process.env.NEXT_PUBLIC_IMPORT === '1'
 
 interface CreationsButtonsProps {
     onCustomerAdded?: () => void;
@@ -23,6 +27,7 @@ interface CreationsButtonsProps {
 
 const CreationsButtons = ({ onCustomerAdded }: CreationsButtonsProps) => {
     const [open, setOpen] = useState(false)
+    const [importOpen, setImportOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [form, setForm] = useState({ name: '', phoneno: '', email: '', address: '' })
 
@@ -83,11 +88,25 @@ const CreationsButtons = ({ onCustomerAdded }: CreationsButtonsProps) => {
                     <Download className='size-4' />
                     Export
                 </Button>
+                {IMPORT_ENABLED && (
+                    <Button variant={'outline'} className='gap-2' onClick={() => setImportOpen(true)}>
+                        <Upload className='size-4' />
+                        Import
+                    </Button>
+                )}
                 <Button className='gap-2' onClick={() => setOpen(true)}>
                     <Plus className='size-4' />
                     Add New
                 </Button>
             </div>
+
+            {IMPORT_ENABLED && (
+                <ImportCustomersDialog
+                    open={importOpen}
+                    onOpenChange={setImportOpen}
+                    onImported={onCustomerAdded}
+                />
+            )}
 
             <Dialog open={open} onOpenChange={setOpen}>
                 <DialogContent className="sm:max-w-[425px]">
