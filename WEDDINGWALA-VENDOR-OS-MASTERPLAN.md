@@ -805,6 +805,7 @@ the section that captures it. **New directives get appended at the top and route
 
 | # | Date | Owner directive | Captured in |
 |---|---|---|---|
+| 21 | 2026-05-24 | "keep going" | Built **WhatsApp templates quick-send** (M10): PK phone normalise + editable template library + wa.me one-click; surfaced on customer detail. FE `4f6785d`, flag `NEXT_PUBLIC_WA_TEMPLATES` default OFF |
 | 20 | 2026-05-24 | "keep going" | Built CSV/Excel **customer import** (M14 MVP — adoption linchpin): paste/upload → map columns → preview → loop existing /offlineCustomers (unique-phone dedupe). FE `81233c9`, flag `NEXT_PUBLIC_IMPORT` default OFF |
 | 19 | 2026-05-24 | "keep going" | Built Command-Center "Needs attention" action strip — prioritised deep-link chips from operations-summary (FE `72a1639`), flag `NEXT_PUBLIC_ACTION_CENTER` default OFF |
 | 18 | 2026-05-24 | "go" (keep building) | Built BEO / run-sheet editor — structured day-of doc (spaces/headcount/setup-teardown/timeline/crew notes) into function-sheet beoJson (BE `29bea7e`, FE `ef04f4b`), flag `NEXT_PUBLIC_BEO_EDITOR` default OFF. (Audit: function-sheets already a full Smart-File; only the structured BEO editor was missing.) |
