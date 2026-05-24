@@ -47,6 +47,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import WhatsAppQuickSend from '@/components/dashboard/shared/whatsapp-quick-send';
 
 import {
   CustomersAPI,
@@ -280,6 +281,13 @@ export default function CustomerDetailView({
                 <span className="flex items-center gap-1.5">
                   <MapPin className="h-3.5 w-3.5" /> {profile.address}
                 </span>
+              )}
+              {process.env.NEXT_PUBLIC_WA_TEMPLATES === '1' && profile.phone && (
+                <WhatsAppQuickSend
+                  phone={profile.phone}
+                  customerName={profile.name}
+                  buttonClassName="h-7 px-2 text-xs"
+                />
               )}
             </div>
           </div>
