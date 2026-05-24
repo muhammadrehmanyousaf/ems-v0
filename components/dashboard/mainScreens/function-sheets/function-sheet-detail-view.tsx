@@ -99,6 +99,7 @@ import BeoRunSheetCard from './beo-run-sheet-card';
 import DeliverablesCard from './deliverables-card';
 import KitchenSheetCard from './kitchen-sheet-card';
 import BridalFittingCard from './bridal-fitting-card';
+import DecoratorSetupCard from './decorator-setup-card';
 import { useUser } from '@/context/UserContext';
 import { SignDialog, type SignSide } from './sign-dialog';
 import { SendWhatsappDialog } from './send-whatsapp-dialog';
@@ -541,6 +542,12 @@ export default function FunctionSheetDetailView({
           {process.env.NEXT_PUBLIC_BRIDAL_FITTING === '1' &&
             user?.vendorType === 'Bridal wearing' && (
               <BridalFittingCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
+            )}
+          {/* Decor setup + inventory — decorator signature. Flag
+              NEXT_PUBLIC_DECORATOR_SETUP + vendor-type gated. */}
+          {process.env.NEXT_PUBLIC_DECORATOR_SETUP === '1' &&
+            user?.vendorType === 'Decorator' && (
+              <DecoratorSetupCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
             )}
           {/* Customer + event */}
           <Card>

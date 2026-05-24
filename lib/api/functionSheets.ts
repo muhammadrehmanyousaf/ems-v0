@@ -54,6 +54,28 @@ export interface KitchenMenuItem {
   perHead?: string;      // e.g. "200g", "1 piece" — free text, vendor's units
   notes?: string;
 }
+// Decorator setup + decor-inventory condition tracking (§16.6).
+export type DecorCondition = "planned" | "setup" | "returned" | "damaged" | "lost";
+export interface DecorItem {
+  id: string;
+  item: string;                  // e.g. "Stage flower arch"
+  qty?: number;
+  source?: "own" | "rented";
+  perUnitCost?: number | null;
+  condition: DecorCondition;
+  notes?: string;
+}
+export interface DecoratorSetupData {
+  setupTime?: string;            // HH:MM
+  breakdownTime?: string;
+  setupCrew?: number | null;
+  breakdownCrew?: number | null;
+  transportTrips?: number | null;
+  items?: DecorItem[];
+  substitutionNotes?: string;    // flower availability subs etc.
+  damageLossNotes?: string;
+}
+
 // Bridal-wear fitting / alteration schedule (§16.7).
 export type BridalMilestoneKey =
   | "measurements" | "cut" | "stitched" | "fitting1" | "fitting2" | "final" | "delivered";
@@ -130,6 +152,7 @@ export interface FunctionSheet {
   deliverablesJson?: DeliverablesData | null;
   kitchenSheetJson?: KitchenSheetData | null;
   bridalWearJson?: BridalWearData | null;
+  decoratorSetupJson?: DecoratorSetupData | null;
   notes: string | null;
   sentAt: string | null;
   signedAt: string | null;
@@ -354,6 +377,7 @@ export interface UpdateFunctionSheetInput {
   deliverablesJson?: DeliverablesData | null;
   kitchenSheetJson?: KitchenSheetData | null;
   bridalWearJson?: BridalWearData | null;
+  decoratorSetupJson?: DecoratorSetupData | null;
   notes?: string | null;
 }
 
