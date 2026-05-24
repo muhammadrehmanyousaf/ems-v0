@@ -27,13 +27,19 @@ const PAYMENT_TYPES: { value: PaymentType; label: string; description: string }[
     { value: 'full_payment', label: 'Full Payment', description: 'Customer pays everything at once — status becomes Paid, booking gets Confirmed' },
 ];
 
+// Pakistani payment-mode coverage — every channel a vendor actually receives
+// money through. Backend accepts the method string permissively (see
+// bookingController.recordPayment line ~3232), so this is FE-only & additive.
 const PAYMENT_METHODS = [
     { value: 'cash', label: 'Cash' },
     { value: 'bank_transfer', label: 'Bank Transfer' },
-    { value: 'credit_card', label: 'Credit Card' },
-    { value: 'debit_card', label: 'Debit Card' },
+    { value: 'raast', label: 'Raast (SBP instant)' },
     { value: 'easypaisa', label: 'Easypaisa' },
     { value: 'jazzcash', label: 'JazzCash' },
+    { value: 'cheque', label: 'Cheque' },
+    { value: 'online', label: 'Online / payment gateway' },
+    { value: 'credit_card', label: 'Credit Card' },
+    { value: 'debit_card', label: 'Debit Card' },
 ];
 
 export function RecordPaymentDialog({ open, onOpenChange, booking, onSuccess }: RecordPaymentDialogProps) {

@@ -49,6 +49,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
+import WhatsAppQuickSend from '@/components/dashboard/shared/whatsapp-quick-send';
 import { cn } from '@/lib/utils';
 
 import { BookingAPI } from '@/lib/api/bookings';
@@ -337,6 +338,19 @@ export default function BookingDetailView({
                     >
                       {booking.customerPhone}
                     </a>
+                  </div>
+                )}
+                {process.env.NEXT_PUBLIC_WA_TEMPLATES === '1' && booking.customerPhone && (
+                  <div className="pt-1">
+                    <WhatsAppQuickSend
+                      phone={booking.customerPhone}
+                      customerName={booking.customerName}
+                      vars={{
+                        date: fmtDate(booking.bookingDate),
+                        amount: String(Number(booking.totalAmount || 0).toLocaleString('en-PK')),
+                      }}
+                      buttonClassName="h-8 w-full justify-center"
+                    />
                   </div>
                 )}
               </div>
