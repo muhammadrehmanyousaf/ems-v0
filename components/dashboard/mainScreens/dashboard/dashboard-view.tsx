@@ -12,6 +12,7 @@ import UpcomingAndDueSection from "./sections/upcoming-and-due-section";
 import TableAndReviewSection from "./sections/table-and-review-section";
 import CompletenessWidget from "./sections/completeness-widget";
 import OperationsSummarySection from "./sections/operations-summary-section";
+import NeedsAttentionStrip from "./sections/needs-attention-strip";
 import PageContainer from "@/components/dashboard/layout/page-container";
 import { PageHeader } from "@/components/dashboard/layout/page-header";
 
@@ -207,6 +208,11 @@ const VendorDashboardView = () => {
           </>
         }
       />
+
+      {/* Command-center action hub — prioritised, one-tap "needs attention".
+          Flag-gated (NEXT_PUBLIC_ACTION_CENTER); reads the existing
+          operations-summary endpoint, no new backend. */}
+      {process.env.NEXT_PUBLIC_ACTION_CENTER === '1' && <NeedsAttentionStrip />}
 
       <CardsSection data={kpis} loading={loading} />
       {business?.id && (
