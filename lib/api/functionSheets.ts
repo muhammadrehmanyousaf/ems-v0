@@ -172,6 +172,68 @@ export interface HennaScheduleData {
   notes?: string;
 }
 
+// Stationery / wedding-invitations (§16.8) — PK invitation card printers
+// run a 2-stage workflow: (1) design proofs with 3-5 revision rounds until
+// the customer locks approval, then (2) bulk print runs (qty / paper /
+// finish / envelope option). Approval is locked with a date so reprints
+// triggered by post-approval changes are billable.
+export type StationeryDeliverableKind =
+  | "save_the_date"
+  | "invitation"
+  | "rsvp_card"
+  | "menu_card"
+  | "table_number"
+  | "place_card"
+  | "favor_tag"
+  | "thank_you"
+  | "envelope_seal"
+  | "signage"
+  | "other";
+export type StationeryProofStatus = "draft" | "sent" | "revision_requested" | "approved";
+export interface StationeryProofRound {
+  id: string;
+  round: number;                   // 1, 2, 3...
+  sentAt?: string;                 // YYYY-MM-DD
+  status: StationeryProofStatus;
+  fileLink?: string;               // Drive / WhatsApp / WeTransfer
+  customerNotes?: string;          // what they asked to change
+  resolvedAt?: string;             // when the change was incorporated
+}
+export type StationeryFinish =
+  | "plain" | "matte" | "gloss" | "foil" | "emboss" | "deboss" | "letterpress" | "uv_spot";
+export interface StationeryPrintRun {
+  id: string;
+  qty: number | null;
+  paperStock?: string;             // "300gsm matte", "Conqueror laid"
+  finish?: StationeryFinish;
+  envelopeIncluded?: boolean;
+  unitCost?: number | null;        // PKR / piece
+  printedAt?: string | null;       // YYYY-MM-DD
+  deliveredAt?: string | null;
+  notes?: string;
+}
+export interface StationeryDeliverable {
+  id: string;
+  kind: StationeryDeliverableKind;
+  label: string;                   // free-text override, e.g. "Mehndi card"
+  language?: "english" | "urdu" | "both";
+  proofs?: StationeryProofRound[];
+  approvedAt?: string | null;      // null → not yet locked
+  approvedBy?: string;             // "Bride's father (Ahmed sb)"
+  printRuns?: StationeryPrintRun[];
+  notes?: string;
+}
+export interface StationeryData {
+  deliverables?: StationeryDeliverable[];
+  designerName?: string;           // calligrapher / designer credit
+  themeNotes?: string;             // colors, theme, calligraphy style
+  totalProofRoundsAllowed?: number | null;  // contract cap (typical 3-5)
+  pickupOrDelivery?: "pickup" | "delivery";
+  deliveryAddress?: string;        // where to drop the bulk box
+  reprintReason?: string;          // why a billable reprint was needed
+  notes?: string;
+}
+
 // Structured day-of BEO / run-sheet (venue operations).
 export interface BeoTimelineRow { time: string; activity: string }
 export interface BeoData {
@@ -211,6 +273,7 @@ export interface FunctionSheet {
   decoratorSetupJson?: DecoratorSetupData | null;
   carRentalJson?: CarRentalData | null;
   hennaJson?: HennaScheduleData | null;
+  stationeryJson?: StationeryData | null;
   notes: string | null;
   sentAt: string | null;
   signedAt: string | null;
@@ -438,6 +501,7 @@ export interface UpdateFunctionSheetInput {
   decoratorSetupJson?: DecoratorSetupData | null;
   carRentalJson?: CarRentalData | null;
   hennaJson?: HennaScheduleData | null;
+  stationeryJson?: StationeryData | null;
   notes?: string | null;
 }
 

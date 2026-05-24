@@ -102,6 +102,7 @@ import BridalFittingCard from './bridal-fitting-card';
 import DecoratorSetupCard from './decorator-setup-card';
 import CarRentalCard from './car-rental-card';
 import HennaScheduleCard from './henna-schedule-card';
+import StationeryCard from './stationery-card';
 import { useUser } from '@/context/UserContext';
 import { SignDialog, type SignSide } from './sign-dialog';
 import { SendWhatsappDialog } from './send-whatsapp-dialog';
@@ -562,6 +563,12 @@ export default function FunctionSheetDetailView({
           {process.env.NEXT_PUBLIC_HENNA_SCHEDULE === '1' &&
             user?.vendorType === 'Henna artist' && (
               <HennaScheduleCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
+            )}
+          {/* Invitations & stationery — proofs → approval lock → print runs.
+              Flag NEXT_PUBLIC_STATIONERY + vendor-type gated. */}
+          {process.env.NEXT_PUBLIC_STATIONERY === '1' &&
+            user?.vendorType === 'Wedding Invitations and Stationery' && (
+              <StationeryCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
             )}
           {/* Customer + event */}
           <Card>
