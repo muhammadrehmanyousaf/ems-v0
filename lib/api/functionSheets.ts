@@ -33,6 +33,19 @@ export interface FunctionSheetLineItem {
   notes?: string | null;
 }
 
+// Deliverables tracker — per-booking deliverable pipeline (photos/video/
+// album/drone for photographers; setup pics for decorators; etc).
+export type DeliverableStatus = "pending" | "in_progress" | "delivered" | "approved" | "rejected";
+export interface Deliverable {
+  id: string;
+  label: string;
+  status: DeliverableStatus;
+  etaDate?: string | null;
+  link?: string;
+  notes?: string;
+}
+export interface DeliverablesData { items: Deliverable[] }
+
 // Structured day-of BEO / run-sheet (venue operations).
 export interface BeoTimelineRow { time: string; activity: string }
 export interface BeoData {
@@ -66,6 +79,7 @@ export interface FunctionSheet {
   paymentScheduleJson: any;
   signaturesJson: any;
   beoJson?: BeoData | null;
+  deliverablesJson?: DeliverablesData | null;
   notes: string | null;
   sentAt: string | null;
   signedAt: string | null;
@@ -287,6 +301,7 @@ export interface UpdateFunctionSheetInput {
   paymentScheduleJson?: PaymentScheduleEntry[] | null;
   signaturesJson?: any;
   beoJson?: BeoData | null;
+  deliverablesJson?: DeliverablesData | null;
   notes?: string | null;
 }
 

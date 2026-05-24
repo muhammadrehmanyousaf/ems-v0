@@ -96,6 +96,7 @@ import {
 } from '@/lib/api/functionSheets';
 import { FunctionSheetComposer } from './function-sheet-composer';
 import BeoRunSheetCard from './beo-run-sheet-card';
+import DeliverablesCard from './deliverables-card';
 import { SignDialog, type SignSide } from './sign-dialog';
 import { SendWhatsappDialog } from './send-whatsapp-dialog';
 import { ShareLinkDialog } from './share-link-dialog';
@@ -519,6 +520,11 @@ export default function FunctionSheetDetailView({
               operations doc; read-only once the sheet is terminal. */}
           {process.env.NEXT_PUBLIC_BEO_EDITOR === '1' && (
             <BeoRunSheetCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
+          )}
+          {/* Deliverables tracker — flag-gated (NEXT_PUBLIC_DELIVERABLES).
+              Photographer signature; usable by every type. */}
+          {process.env.NEXT_PUBLIC_DELIVERABLES === '1' && (
+            <DeliverablesCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
           )}
           {/* Customer + event */}
           <Card>
