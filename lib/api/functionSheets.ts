@@ -172,6 +172,54 @@ export interface HennaScheduleData {
   notes?: string;
 }
 
+// Makeup-artist day sheet (§16.9) — PK makeup artists work bridal mornings
+// (often 4-5am arrival for morning baraat). They typically cap at 1-2 brides
+// per day (full bridal = 3-4 hours), price per-subject × package tier, and
+// run separate trial sessions before the wedding day (sometimes included,
+// often billable). Early-start surcharge + photo consent for portfolio.
+export type MakeupSubjectRole = "bride" | "family" | "guest";
+export type MakeupPackage =
+  | "light" | "party" | "engagement" | "bridal_full"
+  | "hd" | "airbrush" | "signature";
+export interface MakeupSubject {
+  id: string;
+  name: string;                       // "Bride", "Sister Ayesha", "Aunty Saima"
+  role: MakeupSubjectRole;
+  pkg: MakeupPackage;
+  rate: number | null;                // PKR for this look
+  appointmentTime?: string;           // HH:MM
+  startedAt?: string;                 // HH:MM (day-of actual)
+  finishedAt?: string;
+  photoLink?: string;                 // before/after / final-look shot
+  notes?: string;
+}
+export type MakeupTrialStatus = "planned" | "done" | "cancelled" | "no_show";
+export interface MakeupTrial {
+  id: string;
+  date?: string;                      // YYYY-MM-DD
+  status: MakeupTrialStatus;
+  included: boolean;                  // true → in package, false → billable extra
+  rate?: number | null;               // PKR if billable
+  photoLink?: string;
+  notes?: string;
+}
+export interface MakeupData {
+  subjects?: MakeupSubject[];
+  trials?: MakeupTrial[];
+  artistArrivalTime?: string;         // HH:MM — when artist reaches venue
+  firstSubjectStartTime?: string;     // HH:MM
+  lastSubjectFinishTime?: string;     // HH:MM
+  earlyStartSurcharge?: number | null;// PKR — pre-6am arrival surcharge
+  earlyStartReason?: string;          // "Morning baraat 7am"
+  travelCharge?: number | null;       // PKR
+  outOfCity?: boolean;
+  familyPackageDiscount?: number | null; // PKR off when whole family booked
+  kitFreshlySanitized?: boolean;      // post-COVID norm; vendor's hygiene claim
+  photoConsentForPortfolio?: boolean; // bride allows vendor to use shots
+  bridalCapPerDay?: number | null;    // contract guarantee — usually 1 or 2
+  notes?: string;
+}
+
 // Stationery / wedding-invitations (§16.8) — PK invitation card printers
 // run a 2-stage workflow: (1) design proofs with 3-5 revision rounds until
 // the customer locks approval, then (2) bulk print runs (qty / paper /
@@ -274,6 +322,7 @@ export interface FunctionSheet {
   carRentalJson?: CarRentalData | null;
   hennaJson?: HennaScheduleData | null;
   stationeryJson?: StationeryData | null;
+  makeupJson?: MakeupData | null;
   notes: string | null;
   sentAt: string | null;
   signedAt: string | null;
@@ -502,6 +551,7 @@ export interface UpdateFunctionSheetInput {
   carRentalJson?: CarRentalData | null;
   hennaJson?: HennaScheduleData | null;
   stationeryJson?: StationeryData | null;
+  makeupJson?: MakeupData | null;
   notes?: string | null;
 }
 

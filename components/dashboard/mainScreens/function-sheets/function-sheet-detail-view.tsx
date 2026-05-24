@@ -103,6 +103,7 @@ import DecoratorSetupCard from './decorator-setup-card';
 import CarRentalCard from './car-rental-card';
 import HennaScheduleCard from './henna-schedule-card';
 import StationeryCard from './stationery-card';
+import MakeupCard from './makeup-card';
 import { useUser } from '@/context/UserContext';
 import { SignDialog, type SignSide } from './sign-dialog';
 import { SendWhatsappDialog } from './send-whatsapp-dialog';
@@ -569,6 +570,12 @@ export default function FunctionSheetDetailView({
           {process.env.NEXT_PUBLIC_STATIONERY === '1' &&
             user?.vendorType === 'Wedding Invitations and Stationery' && (
               <StationeryCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
+            )}
+          {/* Makeup day sheet — subjects × package + trials + early-start +
+              cap warning. Flag NEXT_PUBLIC_MAKEUP + vendor-type gated. */}
+          {process.env.NEXT_PUBLIC_MAKEUP === '1' &&
+            user?.vendorType === 'Makeup artist' && (
+              <MakeupCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
             )}
           {/* Customer + event */}
           <Card>
