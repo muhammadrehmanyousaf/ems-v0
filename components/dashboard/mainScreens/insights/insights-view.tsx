@@ -30,6 +30,7 @@ import { cn } from '@/lib/utils';
 import { InsightsAPI, type InsightsAdvanced } from '@/lib/api/insights';
 import { LEAD_SOURCE_LABELS, type LeadSource } from '@/lib/api/leads';
 import RevenueBreakdowns from './revenue-breakdowns';
+import CashFlowForecast from './cash-flow-forecast';
 
 function fmtPKR(n: number): string {
   if (!Number.isFinite(n)) return '—';
@@ -251,6 +252,10 @@ export default function InsightsView() {
           mix, top customers by revenue, by-business slice. Self-
           contained component, fetches its own data on mount. */}
       <RevenueBreakdowns />
+
+      {/* Cash-flow forecast (audit gap G4) — month-by-month expected
+          inflows from BOOKED installments. Pairs with /receivables. */}
+      <CashFlowForecast />
     </div>
   );
 }

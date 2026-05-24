@@ -370,6 +370,25 @@ export class AnalyticsAPI {
       return null;
     }
   }
+
+  /**
+   * Cash-flow forecast — month-by-month expected inflows from BOOKED
+   * installments. Different from the 90-day revenue projection (which is
+   * statistical / rolling-30 × YoY blend). This one is just the math on
+   * what's already on the books.
+   */
+  static async getCashFlowForecast(
+    monthsAhead: number = 6,
+  ): Promise<CashFlowForecastData | null> {
+    try {
+      const res = await axiosInstance.get(
+        `${BACKEND_URL}api/v1/analytics/cash-flow-forecast?months=${monthsAhead}`
+      );
+      return res.data.data;
+    } catch {
+      return null;
+    }
+  }
 }
 
 // ─── A/R aging types ───────────────────────────────────────────────
@@ -471,4 +490,27 @@ export interface RevenueBreakdownsData {
     businessCount: number;
   };
   range: { from: string; to: string };
+}
+
+// ─── Cash-flow forecast types ─────────────────────────────────────
+export interface CashFlowMonth {
+  key: string;            // "YYYY-MM"
+  label: string;          // "May 2026"
+  expectedIn: number;     // Rs expected this month
+  installmentCount: number;
+  cumulative: number;     // running sum from month 0
+  isCurrentMonth: boolean;
+}
+export interface CashFlowForecastData {
+  months: CashFlowMonth[];
+  overdue: { total: number; count: number };
+  beyondHorizon: { total: number; count: number };
+  totals: {
+    horizonTotal: number;
+    grandTotal: number;   // overdue + months + beyond
+    installmentsCovered: number;
+    monthsCovered: number;
+  };
+  biggestMonth: { key: string; label: string; amount: number } | null;
+  generatedAt: string;
 }
