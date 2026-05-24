@@ -805,6 +805,7 @@ the section that captures it. **New directives get appended at the top and route
 
 | # | Date | Owner directive | Captured in |
 |---|---|---|---|
+| 25 | 2026-05-24 | "keep going" | Built **Caterer Kitchen Sheet** (§16.2, catering pillar) — headcount lock, per-head menu qty, staffing-ratio calculator (~1 waiter/15, 1 cook/50, 1 labour/30), service times, halal switch, dietary + leftover notes. FunctionSheet.kitchenSheetJson (BE `ddb41ee`, migration applied), card on detail view (FE `8628199`), flag `NEXT_PUBLIC_KITCHEN_SHEET` default OFF + vendor-type-gated to Catering |
 | 24 | 2026-05-24 | "keep going" (flags now live) | Built **Deliverables Tracker** (§16.1, photographer pillar) — per-booking delivery pipeline (label/status/ETA/share-link/notes) + quick presets (Edited Photos, Highlight Reel, Album, Drone, Reels…). FunctionSheet.deliverablesJson (BE `39e823e`, migration applied), card on detail view (FE `d8cd2db`), flag `NEXT_PUBLIC_DELIVERABLES` default OFF |
 | 23 | 2026-05-24 | "keep going" | Two small consolidations: (a) record-payment dropdown now has **Raast / Cheque / Online** + the rest (FE-only, PK channel coverage), (b) **WhatsAppQuickSend on booking detail** with {{date}}/{{amount}} pre-fill (same `NEXT_PUBLIC_WA_TEMPLATES` flag). FE `b83dc8b` |
 | 22 | 2026-05-24 | "keep going / keep going" | Built **M17 "link in bio" profile share card** — public booking URL + QR + Copy/Open/WhatsApp share on Settings > Overview (FE `b006f8f`), flag `NEXT_PUBLIC_PROMOTE_CARD` default OFF |
