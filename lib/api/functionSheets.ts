@@ -143,6 +143,35 @@ export interface KitchenSheetData {
   leftoverPlan?: string;
 }
 
+// Henna / mehndi per-subject schedule (§16.4) — PK henna artists price
+// per-hand (not flat), so each subject (bride / sister / aunty / guests)
+// gets its own row with hands count + complexity tier + per-hand rate.
+// Day-of timing: appointment + arrival + start + finish; plus travel
+// charge, out-of-city flag, family bulk discount, and aftercare kit.
+export type HennaComplexity = "simple" | "medium" | "bridal" | "intricate";
+export interface HennaSubject {
+  id: string;
+  name: string;                       // "Bride", "Sister Ayesha", "Guest 3"
+  hands: number | null;               // typically 2 (both hands), sometimes 4 (with feet)
+  complexity: HennaComplexity;
+  perHandRate: number | null;         // PKR per hand
+  appointmentTime?: string;           // HH:MM
+  startedAt?: string;                 // HH:MM (day-of actual)
+  finishedAt?: string;
+  notes?: string;
+}
+export interface HennaScheduleData {
+  subjects?: HennaSubject[];
+  artistArrivalTime?: string;         // HH:MM — when artist reaches venue
+  sessionStartTime?: string;          // HH:MM — first hand started
+  sessionEndTime?: string;            // HH:MM — last subject finished
+  travelCharge?: number | null;       // PKR — outside-city or premium-area surcharge
+  outOfCity?: boolean;
+  familyBulkDiscount?: number | null; // PKR — flat off when whole family booked
+  aftercareKitIncluded?: boolean;     // sugar-lemon paste, oil, gloves
+  notes?: string;
+}
+
 // Structured day-of BEO / run-sheet (venue operations).
 export interface BeoTimelineRow { time: string; activity: string }
 export interface BeoData {
@@ -181,6 +210,7 @@ export interface FunctionSheet {
   bridalWearJson?: BridalWearData | null;
   decoratorSetupJson?: DecoratorSetupData | null;
   carRentalJson?: CarRentalData | null;
+  hennaJson?: HennaScheduleData | null;
   notes: string | null;
   sentAt: string | null;
   signedAt: string | null;
@@ -407,6 +437,7 @@ export interface UpdateFunctionSheetInput {
   bridalWearJson?: BridalWearData | null;
   decoratorSetupJson?: DecoratorSetupData | null;
   carRentalJson?: CarRentalData | null;
+  hennaJson?: HennaScheduleData | null;
   notes?: string | null;
 }
 
