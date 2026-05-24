@@ -54,6 +54,33 @@ export interface KitchenMenuItem {
   perHead?: string;      // e.g. "200g", "1 piece" — free text, vendor's units
   notes?: string;
 }
+// Car-rental fleet + driver + fuel/km + deposit/damage (§16.5).
+export type VehicleStatus = "planned" | "dispatched" | "returned" | "returned_damaged";
+export interface VehicleAssignment {
+  id: string;
+  vehicle: string;             // e.g. "Civic ABK-123" or "Toyota Coaster"
+  driver?: string;             // driver name (phone optional in notes)
+  driverPhone?: string;
+  route?: string;              // "Lahore → Murree → Lahore"
+  departAt?: string;           // HH:MM
+  returnAt?: string;
+  startKm?: number | null;
+  endKm?: number | null;
+  fuelLitres?: number | null;
+  fuelCost?: number | null;
+  tollsCost?: number | null;
+  deposit?: number | null;
+  status: VehicleStatus;
+  damageNotes?: string;
+  notes?: string;
+}
+export interface CarRentalData {
+  vehicles?: VehicleAssignment[];
+  convoyNotes?: string;        // formation, pilot car, security etc.
+  totalDepositHeld?: number | null;
+  depositReturnedAt?: string | null;
+}
+
 // Decorator setup + decor-inventory condition tracking (§16.6).
 export type DecorCondition = "planned" | "setup" | "returned" | "damaged" | "lost";
 export interface DecorItem {
@@ -153,6 +180,7 @@ export interface FunctionSheet {
   kitchenSheetJson?: KitchenSheetData | null;
   bridalWearJson?: BridalWearData | null;
   decoratorSetupJson?: DecoratorSetupData | null;
+  carRentalJson?: CarRentalData | null;
   notes: string | null;
   sentAt: string | null;
   signedAt: string | null;
@@ -378,6 +406,7 @@ export interface UpdateFunctionSheetInput {
   kitchenSheetJson?: KitchenSheetData | null;
   bridalWearJson?: BridalWearData | null;
   decoratorSetupJson?: DecoratorSetupData | null;
+  carRentalJson?: CarRentalData | null;
   notes?: string | null;
 }
 
