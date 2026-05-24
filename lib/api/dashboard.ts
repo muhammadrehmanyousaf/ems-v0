@@ -759,10 +759,50 @@ export interface CreateBookingPayload {
 
 export type PaymentType = "down_payment" | "remaining" | "full_payment";
 
+export interface BulkImportBookingRow {
+  customerName: string;
+  customerPhone: string;
+  bookingDate: string;          // YYYY-MM-DD or DD/MM/YYYY (BE forgives both)
+  totalAmount: number | string;
+  customerEmail?: string;
+  bookingTime?: string;          // HH:MM (default 00:00)
+  downPayment?: number | string;
+  paymentStatus?: "Paid" | "Partial" | "Pending";
+  guestCount?: number | string;
+  eventCity?: string;
+  notes?: string;
+}
+export interface BulkImportBookingsResponse {
+  imported: number;
+  failed: number;
+  skipped: number;
+  errors: string[];
+  dryRun: boolean;
+  businessId: number;
+  businessName: string;
+}
+
 export class BookingsAPI {
   static async create(data: CreateBookingPayload) {
     const res = await axiosInstance.post("/api/v1/bookings", data);
     return res.data;
+  }
+
+  /**
+   * Bulk import historical bookings (Excel/register backfill).
+   * Server creates Booking rows with status="Completed", paymentStatus=
+   * "Paid" (overridable per row), bookingSource="offline". Bypasses
+   * past-date + lead-time validation. Soft cap 200 rows/request.
+   */
+  static async bulkImport(
+    rows: BulkImportBookingRow[],
+    businessId: number,
+    dryRun: boolean,
+  ): Promise<BulkImportBookingsResponse> {
+    const res = await axiosInstance.post("/api/v1/bookings/bulk-import", {
+      rows, businessId, dryRun,
+    });
+    return res.data?.data;
   }
 
   static async recordPayment(
