@@ -805,6 +805,7 @@ the section that captures it. **New directives get appended at the top and route
 
 | # | Date | Owner directive | Captured in |
 |---|---|---|---|
+| 19 | 2026-05-24 | "keep going" | Built Command-Center "Needs attention" action strip — prioritised deep-link chips from operations-summary (FE `72a1639`), flag `NEXT_PUBLIC_ACTION_CENTER` default OFF |
 | 18 | 2026-05-24 | "go" (keep building) | Built BEO / run-sheet editor — structured day-of doc (spaces/headcount/setup-teardown/timeline/crew notes) into function-sheet beoJson (BE `29bea7e`, FE `ef04f4b`), flag `NEXT_PUBLIC_BEO_EDITOR` default OFF. (Audit: function-sheets already a full Smart-File; only the structured BEO editor was missing.) |
 | 17 | 2026-05-24 | "keep building" | Built Venue Compliance pack — legal guest-cap / closing-time / one-dish config + booking soft-warnings (BE `0315943`, FE `6282b60`), flag `NEXT_PUBLIC_VENUE_COMPLIANCE` default OFF; migration applied (additive) |
 | 16 | 2026-05-24 | "go" — start building (first slice) | Audit found engine exists → built the wiring instead (§27.0c, commit `33e475f`) |
