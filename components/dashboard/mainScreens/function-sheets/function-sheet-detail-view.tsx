@@ -98,6 +98,7 @@ import { FunctionSheetComposer } from './function-sheet-composer';
 import BeoRunSheetCard from './beo-run-sheet-card';
 import DeliverablesCard from './deliverables-card';
 import KitchenSheetCard from './kitchen-sheet-card';
+import BridalFittingCard from './bridal-fitting-card';
 import { useUser } from '@/context/UserContext';
 import { SignDialog, type SignSide } from './sign-dialog';
 import { SendWhatsappDialog } from './send-whatsapp-dialog';
@@ -534,6 +535,12 @@ export default function FunctionSheetDetailView({
           {process.env.NEXT_PUBLIC_KITCHEN_SHEET === '1' &&
             user?.vendorType === 'Catering' && (
               <KitchenSheetCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
+            )}
+          {/* Bridal fitting / alteration schedule — bridal-wear signature.
+              Flag NEXT_PUBLIC_BRIDAL_FITTING + vendor-type gated. */}
+          {process.env.NEXT_PUBLIC_BRIDAL_FITTING === '1' &&
+            user?.vendorType === 'Bridal wearing' && (
+              <BridalFittingCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
             )}
           {/* Customer + event */}
           <Card>

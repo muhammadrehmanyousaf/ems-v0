@@ -54,6 +54,33 @@ export interface KitchenMenuItem {
   perHead?: string;      // e.g. "200g", "1 piece" — free text, vendor's units
   notes?: string;
 }
+// Bridal-wear fitting / alteration schedule (§16.7).
+export type BridalMilestoneKey =
+  | "measurements" | "cut" | "stitched" | "fitting1" | "fitting2" | "final" | "delivered";
+export interface BridalMilestone {
+  key: BridalMilestoneKey;
+  label: string;
+  status: "pending" | "done";
+  doneAt?: string | null;       // YYYY-MM-DD
+  note?: string;
+}
+export interface BridalOutfit {
+  id: string;
+  name: string;                  // e.g. "Bridal Lehenga"
+  type: "rental" | "purchase" | "custom";
+  deposit?: number | null;
+  deliveredAt?: string | null;
+  returnedAt?: string | null;    // for rentals
+  damageNotes?: string;
+}
+export interface BridalWearData {
+  milestones?: BridalMilestone[];
+  outfits?: BridalOutfit[];
+  alterationNotes?: string;
+  depositHeld?: number | null;        // total held across outfits
+  depositReturnedAt?: string | null;
+}
+
 export interface KitchenSheetData {
   headcount?: number | null;
   headcountLockedAt?: string | null;     // YYYY-MM-DD; null = not locked
@@ -102,6 +129,7 @@ export interface FunctionSheet {
   beoJson?: BeoData | null;
   deliverablesJson?: DeliverablesData | null;
   kitchenSheetJson?: KitchenSheetData | null;
+  bridalWearJson?: BridalWearData | null;
   notes: string | null;
   sentAt: string | null;
   signedAt: string | null;
@@ -325,6 +353,7 @@ export interface UpdateFunctionSheetInput {
   beoJson?: BeoData | null;
   deliverablesJson?: DeliverablesData | null;
   kitchenSheetJson?: KitchenSheetData | null;
+  bridalWearJson?: BridalWearData | null;
   notes?: string | null;
 }
 
