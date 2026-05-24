@@ -805,6 +805,7 @@ the section that captures it. **New directives get appended at the top and route
 
 | # | Date | Owner directive | Captured in |
 |---|---|---|---|
+| 24 | 2026-05-24 | "keep going" (flags now live) | Built **Deliverables Tracker** (§16.1, photographer pillar) — per-booking delivery pipeline (label/status/ETA/share-link/notes) + quick presets (Edited Photos, Highlight Reel, Album, Drone, Reels…). FunctionSheet.deliverablesJson (BE `39e823e`, migration applied), card on detail view (FE `d8cd2db`), flag `NEXT_PUBLIC_DELIVERABLES` default OFF |
 | 23 | 2026-05-24 | "keep going" | Two small consolidations: (a) record-payment dropdown now has **Raast / Cheque / Online** + the rest (FE-only, PK channel coverage), (b) **WhatsAppQuickSend on booking detail** with {{date}}/{{amount}} pre-fill (same `NEXT_PUBLIC_WA_TEMPLATES` flag). FE `b83dc8b` |
 | 22 | 2026-05-24 | "keep going / keep going" | Built **M17 "link in bio" profile share card** — public booking URL + QR + Copy/Open/WhatsApp share on Settings > Overview (FE `b006f8f`), flag `NEXT_PUBLIC_PROMOTE_CARD` default OFF |
 | 21 | 2026-05-24 | "keep going" | Built **WhatsApp templates quick-send** (M10): PK phone normalise + editable template library + wa.me one-click; surfaced on customer detail. FE `4f6785d`, flag `NEXT_PUBLIC_WA_TEMPLATES` default OFF |
