@@ -407,6 +407,27 @@ export class AnalyticsAPI {
       return null;
     }
   }
+
+  /**
+   * Response-time analytics — median hours from lead arrival to first
+   * vendor response, distribution buckets, and per-source slice. Uses
+   * existing Lead.respondedAt (stamped on first status transition off
+   * "new"). Final audit gap G8.
+   */
+  static async getResponseTimes(
+    range: DateRange = "this_year",
+    startDate?: string,
+    endDate?: string,
+  ): Promise<ResponseTimesData | null> {
+    try {
+      const res = await axiosInstance.get(
+        `${BACKEND_URL}api/v1/analytics/response-times?${buildQuery(range, startDate, endDate)}`
+      );
+      return res.data.data;
+    } catch {
+      return null;
+    }
+  }
 }
 
 // ─── A/R aging types ───────────────────────────────────────────────
@@ -573,4 +594,38 @@ export interface SeasonalityData {
     maxRevenue: number;
   };
   generatedAt: string;
+}
+
+// ─── Response-time analytics types ─────────────────────────────────
+export type ResponseBucketKey = "lt_1h" | "1_4h" | "4_24h" | "1_3d" | "gt_3d";
+export interface ResponseBucket {
+  key: ResponseBucketKey;
+  label: string;
+  count: number;
+  pct: number;
+  tone: "emerald" | "blue" | "amber" | "orange" | "rose";
+}
+export interface ResponseStats {
+  median: number;
+  mean: number;
+  p25: number;
+  p75: number;
+  min: number;
+  max: number;
+}
+export interface ResponseBySource {
+  source: string;
+  count: number;
+  median: number;
+  fastest: number;
+  slowest: number;
+}
+export interface ResponseTimesData {
+  hasData: boolean;
+  totalLeadsResponded: number;
+  totalLeadsUnresponded: number;
+  stats: ResponseStats | null;
+  distribution: ResponseBucket[];
+  bySource: ResponseBySource[];
+  range: { from: string; to: string };
 }

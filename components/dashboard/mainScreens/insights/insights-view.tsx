@@ -32,6 +32,7 @@ import { LEAD_SOURCE_LABELS, type LeadSource } from '@/lib/api/leads';
 import RevenueBreakdowns from './revenue-breakdowns';
 import CashFlowForecast from './cash-flow-forecast';
 import SeasonalDemandHeatmap from './seasonal-demand-heatmap';
+import ResponseTimes from './response-times';
 
 function fmtPKR(n: number): string {
   if (!Number.isFinite(n)) return '—';
@@ -261,6 +262,11 @@ export default function InsightsView() {
       {/* Seasonal demand heatmap (audit gap G2) — 24-month grid of the
           vendor's own bookings + revenue rhythm with YoY compare. */}
       <SeasonalDemandHeatmap />
+
+      {/* Response-time analytics (audit gap G8 — FINAL gap) — median
+          hours from lead arrival to first response + distribution +
+          per-source breakdown. */}
+      <ResponseTimes />
     </div>
   );
 }
