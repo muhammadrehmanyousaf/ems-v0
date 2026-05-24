@@ -48,6 +48,7 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import WhatsAppQuickSend from '@/components/dashboard/shared/whatsapp-quick-send';
+import CustomerTrustCard from './customer-trust-card';
 
 import {
   CustomersAPI,
@@ -341,6 +342,14 @@ export default function CustomerDetailView({
           }
         />
       </div>
+
+      {/* ─── Trust & risk (offline customers only, §26.4) ───────── */}
+      {process.env.NEXT_PUBLIC_CUSTOMER_TRUST === '1' && profile.offlineCustomerId && (
+        <CustomerTrustCard
+          offlineCustomerId={profile.offlineCustomerId}
+          customerName={displayName}
+        />
+      )}
 
       {/* ─── Bookings ───────────────────────────────────────────── */}
       <Card>

@@ -603,6 +603,85 @@ export interface CustomerProfileResponse {
   leads: CustomerProfileLead[];
 }
 
+// ─── Two-way rating (§26.4) — vendor rates the customer ────────────
+// Back-channel signal stored on offlineCustomer.vendorRatingsJson.
+// Each event is private to the vendor who wrote it. Server stamps
+// id + ratedAt + ratedByUserId — the FE never spoofs them.
+export type CustomerRatingFlag =
+  | "advance_disputed"
+  | "last_minute_cancel"
+  | "rude_to_staff"
+  | "harassed_staff"
+  | "cheque_bounced"
+  | "no_show"
+  | "negotiated_at_event"
+  | "scope_creep"
+  | "ghosted"
+  | "great_to_work_with"
+  | "paid_on_time"
+  | "premium_customer";
+export interface CustomerRatingSubscores {
+  paymentReliability?: number;        // 1-5
+  communication?: number;             // 1-5
+  expectations?: number;              // 1-5
+  dayOfBehavior?: number;             // 1-5
+}
+export interface CustomerRating {
+  id: string;
+  ratedAt: string;                    // ISO
+  ratedByUserId: number;
+  bookingId?: number | null;
+  overallStars: number;               // 1-5
+  wouldBookAgain: boolean;
+  flags: CustomerRatingFlag[];
+  subscores?: CustomerRatingSubscores;
+  notes?: string | null;
+}
+export interface CustomerRatingInput {
+  overallStars: number;               // 1-5 (required)
+  wouldBookAgain?: boolean;
+  flags?: CustomerRatingFlag[];
+  subscores?: CustomerRatingSubscores;
+  notes?: string | null;
+  bookingId?: number | null;
+}
+export interface CustomerRatingsResponse {
+  ratings: CustomerRating[];
+  allowedFlags: CustomerRatingFlag[];
+}
+
+export class CustomerRatingsAPI {
+  /** GET /offlineCustomers/:id/ratings — vendor-private list. */
+  static async list(offlineCustomerId: number): Promise<CustomerRatingsResponse> {
+    const res = await axiosInstance.get(
+      `/api/v1/offlineCustomers/${offlineCustomerId}/ratings`,
+    );
+    return res.data?.data ?? { ratings: [], allowedFlags: [] };
+  }
+
+  /** POST /offlineCustomers/:id/ratings — append a rating event. */
+  static async add(
+    offlineCustomerId: number,
+    body: CustomerRatingInput,
+  ): Promise<CustomerRating> {
+    const res = await axiosInstance.post(
+      `/api/v1/offlineCustomers/${offlineCustomerId}/ratings`,
+      body,
+    );
+    return res.data?.data?.rating;
+  }
+
+  /** DELETE /offlineCustomers/:id/ratings/:ratingId — remove your own event. */
+  static async remove(
+    offlineCustomerId: number,
+    ratingId: string,
+  ): Promise<void> {
+    await axiosInstance.delete(
+      `/api/v1/offlineCustomers/${offlineCustomerId}/ratings/${ratingId}`,
+    );
+  }
+}
+
 export class CustomersAPI {
   static async getAll(
     page = 1,
