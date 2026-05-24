@@ -311,7 +311,7 @@ export default function PhotographyCard({
   };
 
   return (
-    <Card>
+    <Card data-pillar="photography-shoot">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Camera className="h-4 w-4 text-bridal-gold-dark" />

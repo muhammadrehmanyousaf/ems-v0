@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { PackageCheck, Plus, Trash2, Loader2 } from "lucide-react";
+import { PackageCheck, Plus, Trash2, Loader2, Camera, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import {
   FunctionSheetAPI,
@@ -110,6 +110,42 @@ export default function DeliverablesCard({
     }
   };
 
+  // Photographer ↔ Deliverables cross-link: when this function sheet
+  // ALSO has a photography shoot sheet, pull its day-of progress
+  // (must-have shots captured + family groups shot) into a summary
+  // banner. Lets the photographer remember "I owe edited photos AND
+  // I still need to capture the bride+groom+both-parents group" in
+  // one glance, instead of jumping between cards.
+  const photo = sheet.photographyJson;
+  const shootProgress = photo ? (() => {
+    const shots = photo.shots || [];
+    const mustShots = shots.filter((s) => s.priority === "must");
+    const mustShot = mustShots.filter((s) => s.status === "shot").length;
+    const mustNotShot = mustShots.filter((s) => s.status === "planned").length;
+    const allShot = shots.filter((s) => s.status === "shot").length;
+    const families = photo.familyGroups || [];
+    const familiesShot = families.filter((g) => g.shot).length;
+    const editedTarget = photo.editedPhotoCountTarget || null;
+    return {
+      shotsShot: allShot,
+      shotsTotal: shots.length,
+      mustShot,
+      mustTotal: mustShots.length,
+      mustNotShot,
+      familiesShot,
+      familiesTotal: families.length,
+      editedTarget,
+      anyData: shots.length > 0 || families.length > 0 || !!editedTarget,
+    };
+  })() : null;
+
+  const scrollToShoot = () => {
+    if (typeof document === "undefined") return;
+    document
+      .querySelector<HTMLElement>("[data-pillar='photography-shoot']")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -123,6 +159,62 @@ export default function DeliverablesCard({
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
+        {/* Photographer cross-link — shoot-day progress at a glance */}
+        {shootProgress && shootProgress.anyData && (
+          <button
+            type="button"
+            onClick={scrollToShoot}
+            className="w-full text-left rounded-md border border-bridal-gold-dark/30 bg-bridal-gold-dark/5 p-2.5 hover:bg-bridal-gold-dark/10 transition-colors group"
+          >
+            <div className="flex items-center gap-2">
+              <Camera className="h-4 w-4 text-bridal-gold-dark shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-bridal-gold-dark">
+                  Shoot-day progress
+                </p>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-[11px] text-foreground">
+                  {shootProgress.mustTotal > 0 && (
+                    <span>
+                      <span className="font-semibold tabular-nums">
+                        {shootProgress.mustShot}/{shootProgress.mustTotal}
+                      </span>
+                      <span className="text-muted-foreground"> must-have shots</span>
+                      {shootProgress.mustNotShot > 0 && (
+                        <span className="ml-1 text-amber-700 font-semibold">
+                          · {shootProgress.mustNotShot} pending
+                        </span>
+                      )}
+                    </span>
+                  )}
+                  {shootProgress.familiesTotal > 0 && (
+                    <span>
+                      <span className="font-semibold tabular-nums">
+                        {shootProgress.familiesShot}/{shootProgress.familiesTotal}
+                      </span>
+                      <span className="text-muted-foreground"> family groups</span>
+                    </span>
+                  )}
+                  {shootProgress.shotsTotal > 0 && (
+                    <span>
+                      <span className="font-semibold tabular-nums">
+                        {shootProgress.shotsShot}/{shootProgress.shotsTotal}
+                      </span>
+                      <span className="text-muted-foreground"> total shots</span>
+                    </span>
+                  )}
+                  {shootProgress.editedTarget && (
+                    <span className="text-muted-foreground">
+                      target: <span className="font-semibold text-foreground tabular-nums">
+                        {shootProgress.editedTarget}
+                      </span> edited photos
+                    </span>
+                  )}
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform shrink-0" />
+            </div>
+          </button>
+        )}
         <div className="space-y-2">
           {items.map((row, i) => (
             <div key={row.id} className="rounded-md border p-2 space-y-2">

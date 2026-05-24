@@ -13,6 +13,7 @@ import TableAndReviewSection from "./sections/table-and-review-section";
 import CompletenessWidget from "./sections/completeness-widget";
 import OperationsSummarySection from "./sections/operations-summary-section";
 import NeedsAttentionStrip from "./sections/needs-attention-strip";
+import LeadConversionTile from "./sections/lead-conversion-tile";
 import PageContainer from "@/components/dashboard/layout/page-container";
 import { PageHeader } from "@/components/dashboard/layout/page-header";
 
@@ -223,6 +224,9 @@ const VendorDashboardView = () => {
       )}
       {/* Cross-feature operations summary — Phase 1/2/3 widget grid */}
       <OperationsSummarySection />
+      {/* Lead → Booking conversion (audit gap G3) — reuses existing
+          insights-advanced endpoint, no extra fetch on the BE. */}
+      <LeadConversionTile />
       <RevenueSplitSection data={vendorRevenue} loading={revenueLoading} />
       <UpcomingAndDueSection upcoming={upcoming7Days} due={paymentsDue} loading={loading} />
       <ChartsSections bookingTrends={bookingTrends} statusDist={statusDist} loading={loading} />
