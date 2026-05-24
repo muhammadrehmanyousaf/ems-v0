@@ -97,6 +97,8 @@ import {
 import { FunctionSheetComposer } from './function-sheet-composer';
 import BeoRunSheetCard from './beo-run-sheet-card';
 import DeliverablesCard from './deliverables-card';
+import KitchenSheetCard from './kitchen-sheet-card';
+import { useUser } from '@/context/UserContext';
 import { SignDialog, type SignSide } from './sign-dialog';
 import { SendWhatsappDialog } from './send-whatsapp-dialog';
 import { ShareLinkDialog } from './share-link-dialog';
@@ -159,6 +161,7 @@ export default function FunctionSheetDetailView({
   sheetId: number;
 }) {
   const router = useRouter();
+  const { user } = useUser();
   const [sheet, setSheet] = useState<FunctionSheet | null>(null);
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [financials, setFinancials] = useState<LinkedFinancials | null>(null);
@@ -526,6 +529,12 @@ export default function FunctionSheetDetailView({
           {process.env.NEXT_PUBLIC_DELIVERABLES === '1' && (
             <DeliverablesCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
           )}
+          {/* Kitchen sheet — caterer signature; gated by vendor type so other
+              types don't see an irrelevant card. Flag NEXT_PUBLIC_KITCHEN_SHEET. */}
+          {process.env.NEXT_PUBLIC_KITCHEN_SHEET === '1' &&
+            user?.vendorType === 'Catering' && (
+              <KitchenSheetCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
+            )}
           {/* Customer + event */}
           <Card>
             <CardContent className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">

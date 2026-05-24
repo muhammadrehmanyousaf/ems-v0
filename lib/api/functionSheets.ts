@@ -46,6 +46,27 @@ export interface Deliverable {
 }
 export interface DeliverablesData { items: Deliverable[] }
 
+// Caterer kitchen sheet (§16.2): the operational data that kills 15-25%
+// food wastage — headcount lock + per-head menu quantities + staffing.
+export interface KitchenMenuItem {
+  id: string;
+  item: string;          // e.g. "Chicken Karahi", "Mutton Pulao"
+  perHead?: string;      // e.g. "200g", "1 piece" — free text, vendor's units
+  notes?: string;
+}
+export interface KitchenSheetData {
+  headcount?: number | null;
+  headcountLockedAt?: string | null;     // YYYY-MM-DD; null = not locked
+  menu?: KitchenMenuItem[];
+  staffing?: { waiters?: number; cooks?: number; labour?: number };
+  prepStart?: string;                    // HH:MM
+  cookStart?: string;
+  serveTime?: string;
+  halalConfirmed?: boolean;
+  dietaryNotes?: string;                 // allergens, veg options, jain etc.
+  leftoverPlan?: string;
+}
+
 // Structured day-of BEO / run-sheet (venue operations).
 export interface BeoTimelineRow { time: string; activity: string }
 export interface BeoData {
@@ -80,6 +101,7 @@ export interface FunctionSheet {
   signaturesJson: any;
   beoJson?: BeoData | null;
   deliverablesJson?: DeliverablesData | null;
+  kitchenSheetJson?: KitchenSheetData | null;
   notes: string | null;
   sentAt: string | null;
   signedAt: string | null;
@@ -302,6 +324,7 @@ export interface UpdateFunctionSheetInput {
   signaturesJson?: any;
   beoJson?: BeoData | null;
   deliverablesJson?: DeliverablesData | null;
+  kitchenSheetJson?: KitchenSheetData | null;
   notes?: string | null;
 }
 
