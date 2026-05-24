@@ -172,6 +172,73 @@ export interface HennaScheduleData {
   notes?: string;
 }
 
+// Photography shoot-day sheet (§16.10) — goes beyond the generic
+// Deliverables card to capture the SHOOT-DAY operations. PK wedding
+// photographers cover 2-4 events (mehndi/nikah/baraat/walima), each
+// with its own crew + start/end + overtime. The family-group list is
+// the biggest source of post-wedding regret — bride's mother dictates
+// 20-40 specific groupings and the photographer must shoot them all.
+export type PhotoShotCategory =
+  | "couple" | "family" | "ceremony" | "details" | "candid" | "venue" | "other";
+export type PhotoShotPriority = "must" | "nice" | "optional";
+export type PhotoShotStatus = "planned" | "shot" | "skipped";
+export interface PhotographyShot {
+  id: string;
+  label: string;                      // "First look", "Ring exchange", "Stage wide"
+  category: PhotoShotCategory;
+  priority: PhotoShotPriority;
+  status: PhotoShotStatus;
+  notes?: string;
+}
+export interface PhotographyFamilyGroup {
+  id: string;
+  label: string;                      // "Bride + parents", "Groom side cousins", "Both mothers"
+  people?: string;                    // free-text roster ("Ammi, Abba, Mamoo Tariq")
+  side?: "bride" | "groom" | "both";
+  shot: boolean;
+  notes?: string;
+}
+export type PhotographyCrewRole =
+  | "main_shooter" | "second_shooter" | "cinematographer"
+  | "drone" | "assistant" | "album_designer" | "editor";
+export interface PhotographyCrew {
+  id: string;
+  name: string;
+  role: PhotographyCrewRole;
+  phone?: string;
+  notes?: string;
+}
+export interface PhotographyDay {
+  id: string;
+  label: string;                      // "Mehndi", "Baraat", "Walima"
+  date?: string;                      // YYYY-MM-DD
+  venue?: string;
+  callTime?: string;                  // HH:MM
+  wrapTime?: string;                  // HH:MM
+  contractedHours?: number | null;
+  overtimeRatePerHour?: number | null;// PKR
+  crewIds?: string[];                 // who covered it (subset of crew[])
+  notes?: string;
+}
+export type RawHandoverPolicy = "no" | "after_album_approval" | "yes_with_extra_fee" | "yes_included";
+export interface PhotographyData {
+  days?: PhotographyDay[];
+  crew?: PhotographyCrew[];
+  shots?: PhotographyShot[];
+  familyGroups?: PhotographyFamilyGroup[];
+  droneIncluded?: boolean;
+  dronePermissionStatus?: "not_needed" | "pending" | "granted" | "refused";
+  droneNotes?: string;
+  highlightReelTargetMinutes?: number | null;
+  fullFilmTargetMinutes?: number | null;
+  editedPhotoCountTarget?: number | null;
+  rawHandover?: RawHandoverPolicy;
+  rawHandoverFee?: number | null;     // PKR if extra-fee policy
+  backupStrategy?: string;            // "Dual SD + cloud upload nightly"
+  socialMediaTeaserTargetDate?: string; // YYYY-MM-DD
+  notes?: string;
+}
+
 // Makeup-artist day sheet (§16.9) — PK makeup artists work bridal mornings
 // (often 4-5am arrival for morning baraat). They typically cap at 1-2 brides
 // per day (full bridal = 3-4 hours), price per-subject × package tier, and
@@ -323,6 +390,7 @@ export interface FunctionSheet {
   hennaJson?: HennaScheduleData | null;
   stationeryJson?: StationeryData | null;
   makeupJson?: MakeupData | null;
+  photographyJson?: PhotographyData | null;
   notes: string | null;
   sentAt: string | null;
   signedAt: string | null;
@@ -552,6 +620,7 @@ export interface UpdateFunctionSheetInput {
   hennaJson?: HennaScheduleData | null;
   stationeryJson?: StationeryData | null;
   makeupJson?: MakeupData | null;
+  photographyJson?: PhotographyData | null;
   notes?: string | null;
 }
 
