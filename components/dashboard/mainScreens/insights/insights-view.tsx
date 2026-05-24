@@ -31,6 +31,7 @@ import { InsightsAPI, type InsightsAdvanced } from '@/lib/api/insights';
 import { LEAD_SOURCE_LABELS, type LeadSource } from '@/lib/api/leads';
 import RevenueBreakdowns from './revenue-breakdowns';
 import CashFlowForecast from './cash-flow-forecast';
+import SeasonalDemandHeatmap from './seasonal-demand-heatmap';
 
 function fmtPKR(n: number): string {
   if (!Number.isFinite(n)) return '—';
@@ -256,6 +257,10 @@ export default function InsightsView() {
       {/* Cash-flow forecast (audit gap G4) — month-by-month expected
           inflows from BOOKED installments. Pairs with /receivables. */}
       <CashFlowForecast />
+
+      {/* Seasonal demand heatmap (audit gap G2) — 24-month grid of the
+          vendor's own bookings + revenue rhythm with YoY compare. */}
+      <SeasonalDemandHeatmap />
     </div>
   );
 }

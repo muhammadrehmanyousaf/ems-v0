@@ -389,6 +389,24 @@ export class AnalyticsAPI {
       return null;
     }
   }
+
+  /**
+   * Seasonality — 24-month per-vendor heatmap with year-over-year
+   * compare and all-time peaks. Tells each vendor THEIR OWN rhythm
+   * (every vendor's pattern differs from the industry average).
+   */
+  static async getSeasonality(
+    monthsBack: number = 24,
+  ): Promise<SeasonalityData | null> {
+    try {
+      const res = await axiosInstance.get(
+        `${BACKEND_URL}api/v1/analytics/seasonality?monthsBack=${monthsBack}`
+      );
+      return res.data.data;
+    } catch {
+      return null;
+    }
+  }
 }
 
 // ─── A/R aging types ───────────────────────────────────────────────
@@ -512,5 +530,47 @@ export interface CashFlowForecastData {
     monthsCovered: number;
   };
   biggestMonth: { key: string; label: string; amount: number } | null;
+  generatedAt: string;
+}
+
+// ─── Seasonality types ─────────────────────────────────────────────
+export interface SeasonalityMonth {
+  key: string;                 // "YYYY-MM"
+  label: string;               // "Dec 2024"
+  year: number;
+  monthOfYear: number;         // 1-12
+  bookingCount: number;
+  completedCount: number;
+  cancelledCount: number;
+  revenue: number;
+  isCurrentMonth: boolean;
+  isFuture: boolean;
+}
+export interface SeasonalityYoY {
+  monthOfYear: number;
+  monthLabel: string;          // "Dec"
+  thisYear: { key: string; bookingCount: number; revenue: number };
+  lastYear: { key: string; bookingCount: number; revenue: number };
+  deltaCount: number;
+  deltaRevenue: number;
+  pctCount: number | null;
+  pctRevenue: number | null;
+}
+export interface SeasonalityData {
+  months: SeasonalityMonth[];
+  yoy: SeasonalityYoY[];
+  peaks: {
+    byCount: { key: string; label: string; value: number } | null;
+    byRevenue: { key: string; label: string; value: number } | null;
+  };
+  totals: {
+    totalBookings: number;
+    totalRevenue: number;
+    totalCompleted: number;
+    totalCancelled: number;
+    monthsCovered: number;
+    maxCount: number;
+    maxRevenue: number;
+  };
   generatedAt: string;
 }
