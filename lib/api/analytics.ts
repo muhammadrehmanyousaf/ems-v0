@@ -351,6 +351,25 @@ export class AnalyticsAPI {
       return null;
     }
   }
+
+  /**
+   * Revenue breakdowns — payment-method mix + top customers + by-business
+   * slice, all in one shot for the Insights page.
+   */
+  static async getRevenueBreakdowns(
+    range: DateRange = "this_year",
+    startDate?: string,
+    endDate?: string
+  ): Promise<RevenueBreakdownsData | null> {
+    try {
+      const res = await axiosInstance.get(
+        `${BACKEND_URL}api/v1/analytics/revenue-breakdowns?${buildQuery(range, startDate, endDate)}`
+      );
+      return res.data.data;
+    } catch {
+      return null;
+    }
+  }
 }
 
 // ─── A/R aging types ───────────────────────────────────────────────
@@ -409,4 +428,47 @@ export interface ReceivablesData {
   };
   customers: ReceivablesCustomer[];
   generatedAt: string;
+}
+
+// ─── Revenue breakdowns types ─────────────────────────────────────
+export type PaymentMethodKey =
+  | "cash" | "jazzcash" | "easypaisa" | "raast"
+  | "ibft" | "bank_transfer" | "other";
+
+export interface PaymentMethodSlice {
+  method: PaymentMethodKey | string;
+  total: number;
+  count: number;
+  pct: number; // 0-100 (1 decimal)
+}
+
+export interface TopCustomerRow {
+  customerName: string | null;
+  customerEmail: string | null;
+  customerPhone: string | null;
+  totalRevenue: number;
+  bookingCount: number;
+  completedCount: number;
+  lastBookingAt: string | null;
+  isRepeat: boolean;
+}
+
+export interface BusinessRevenueRow {
+  businessId: number;
+  businessName: string;
+  businessType: string | null;
+  totalRevenue: number;
+  bookingCount: number;
+}
+
+export interface RevenueBreakdownsData {
+  byPaymentMethod: PaymentMethodSlice[];
+  topCustomers: TopCustomerRow[];
+  byBusiness: BusinessRevenueRow[];
+  totals: {
+    paymentMethodTotal: number;
+    customerCount: number;
+    businessCount: number;
+  };
+  range: { from: string; to: string };
 }

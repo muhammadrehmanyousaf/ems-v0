@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils';
 
 import { InsightsAPI, type InsightsAdvanced } from '@/lib/api/insights';
 import { LEAD_SOURCE_LABELS, type LeadSource } from '@/lib/api/leads';
+import RevenueBreakdowns from './revenue-breakdowns';
 
 function fmtPKR(n: number): string {
   if (!Number.isFinite(n)) return '—';
@@ -245,6 +246,11 @@ export default function InsightsView() {
           </p>
         </CardContent>
       </Card>
+
+      {/* Revenue breakdowns (audit gaps G1+G6+G7) — payment-method
+          mix, top customers by revenue, by-business slice. Self-
+          contained component, fetches its own data on mount. */}
+      <RevenueBreakdowns />
     </div>
   );
 }
