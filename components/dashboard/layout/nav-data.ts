@@ -28,6 +28,7 @@ import {
   UserCheck,
   Users,
   Wallet,
+  AlertCircle,
 } from "lucide-react"
 
 /**
@@ -51,6 +52,7 @@ export const data = {
     { name: "Calendar",      url: "/dashboard/calendar",       icon: CalendarDays,    i18nKey: "nav.calendar" },
     { name: "Conversations", url: "/dashboard/chat",           icon: MessageSquareText, i18nKey: "nav.conversations" },
     { name: "Payments",      url: "/dashboard/payments",       icon: CircleDollarSign, i18nKey: "nav.payments" },
+    { name: "Receivables",   url: "/dashboard/receivables",    icon: AlertCircle,     i18nKey: "nav.receivables" },
     { name: "Receipts",      url: "/dashboard/receipts",       icon: CircleDollarSign, i18nKey: "nav.receipts" },
     { name: "Cheque ledger", url: "/dashboard/pdcs",           icon: Wallet,          i18nKey: "nav.cheque_ledger" },
     { name: "Expenses",      url: "/dashboard/expenses",       icon: Wallet,          i18nKey: "nav.expenses" },

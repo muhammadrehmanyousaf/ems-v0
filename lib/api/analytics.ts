@@ -336,4 +336,77 @@ export class AnalyticsAPI {
       return null;
     }
   }
+
+  /**
+   * A/R aging report — vendor-scoped per-customer outstanding-balance
+   * rollup. The #1 PK vendor question: "kis se paise leny hen?"
+   */
+  static async getReceivables(): Promise<ReceivablesData | null> {
+    try {
+      const res = await axiosInstance.get(
+        `${BACKEND_URL}api/v1/analytics/receivables`
+      );
+      return res.data.data;
+    } catch {
+      return null;
+    }
+  }
+}
+
+// ─── A/R aging types ───────────────────────────────────────────────
+export type ReceivablesBucketKey =
+  | "current"
+  | "days_1_30"
+  | "days_31_60"
+  | "days_61_90"
+  | "days_90_plus";
+
+export interface ReceivablesBucket {
+  count: number;
+  total: number;
+}
+
+export interface ReceivablesInstallment {
+  id: number;
+  label: string;
+  amount: number;
+  amountPaid: number;
+  outstanding: number;
+  dueAt: string;
+  daysOverdue: number;
+  bucket: ReceivablesBucketKey;
+  status: string;
+}
+
+export interface ReceivablesBooking {
+  bookingId: number;
+  bookingDate: string;
+  bookingTime: string;
+  status: string;
+  installments: ReceivablesInstallment[];
+  totalOutstanding: number;
+}
+
+export interface ReceivablesCustomer {
+  customerName: string;
+  customerEmail: string | null;
+  customerPhone: string | null;
+  totalOutstanding: number;
+  installmentsOpen: number;
+  oldestDaysOverdue: number;
+  bookingCount: number;
+  bookings: ReceivablesBooking[];
+  bucket: ReceivablesBucketKey;
+}
+
+export interface ReceivablesData {
+  buckets: Record<ReceivablesBucketKey, ReceivablesBucket>;
+  totals: {
+    grandOutstanding: number;
+    customerCount: number;
+    installmentsOpen: number;
+    oldestDaysOverdue: number;
+  };
+  customers: ReceivablesCustomer[];
+  generatedAt: string;
 }

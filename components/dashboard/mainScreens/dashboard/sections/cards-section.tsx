@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { KpiCard } from "../components/data-card";
 import {
     CalendarDays,
@@ -46,17 +47,24 @@ export default function CardsSection({ data, loading }: CardsSectionProps) {
                 loading={loading}
             />
 
-            <KpiCard
-                title="Revenue Due"
-                value={data?.revenueDue?.value ?? 0}
-                isCurrency
-                subtitle="Pending payments (PKR)"
-                icon={AlertCircle}
-                iconColor="bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400"
-                delta={undefined}
-                direction="flat"
-                loading={loading}
-            />
+            <Link
+                href="/dashboard/receivables"
+                className="block rounded-lg focus:outline-none focus:ring-2 focus:ring-bridal-gold-dark focus:ring-offset-2"
+                aria-label="Open receivables / A/R aging board"
+            >
+                <KpiCard
+                    title="Revenue Due"
+                    value={data?.revenueDue?.value ?? 0}
+                    isCurrency
+                    subtitle="Pending payments (PKR) · click to chase"
+                    icon={AlertCircle}
+                    iconColor="bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400"
+                    delta={undefined}
+                    direction="flat"
+                    loading={loading}
+                    className="hover:shadow-md hover:border-bridal-gold-dark/40 transition-all cursor-pointer"
+                />
+            </Link>
 
             <KpiCard
                 title="Today's Events"
