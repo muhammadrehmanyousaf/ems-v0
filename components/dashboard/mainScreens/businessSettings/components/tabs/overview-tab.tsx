@@ -3,6 +3,7 @@ import React from 'react'
 import Link from 'next/link'
 import BasicDetailsCard from '../subComponents/basic-details-card'
 import AdditionalInfoCard from '../subComponents/additional-info-card'
+import ProfileShareCard from '../subComponents/profile-share-card'
 import { ApiBusiness } from '@/lib/api/dashboard'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -46,6 +47,11 @@ const OverviewTab = ({ business }: OverviewTabProps) => {
                     </Badge>
                 )}
             </div>
+
+            {/* "Link in bio" / public booking link — M17 adoption lever for IG/WhatsApp leads. */}
+            {process.env.NEXT_PUBLIC_PROMOTE_CARD === '1' && (
+                <ProfileShareCard business={business} />
+            )}
 
             {/* Quick navigation cards */}
             <div className='grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3'>
