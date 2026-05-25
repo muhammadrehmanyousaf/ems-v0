@@ -1,7 +1,7 @@
 import PageContainer from '@/components/dashboard/layout/page-container';
 import { Heading } from '@/components/heading';
 import { Separator } from '@/components/ui/separator';
-import LeadsInboxView from '@/components/dashboard/mainScreens/leads/leads-inbox-view';
+import LeadsView from '@/components/dashboard/mainScreens/leads/leads-view';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -15,9 +15,9 @@ export default function Page() {
     <div>
       <PageContainer>
         <div className="space-y-4">
-          <Heading title="Lead Inbox" />
+          <Heading title="Leads" />
           <Separator />
-          <LeadsInboxView />
+          <LeadsView />
         </div>
       </PageContainer>
     </div>
