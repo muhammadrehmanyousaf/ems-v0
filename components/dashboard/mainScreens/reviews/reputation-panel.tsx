@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Star, TrendingUp, MessageCircle, Share2, Copy, Award, Quote,
+  Star, TrendingUp, MessageCircle, Share2, Copy, Award, Quote, Download, Tag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AnalyticsAPI, type ReputationData } from "@/lib/api/analytics";
@@ -72,6 +72,70 @@ export default function ReputationPanel() {
         () => toast.error("Could not copy"),
       );
     }
+  };
+
+  // Render the best review to a square PNG (canvas — no dependency) so
+  // the vendor can post it to Instagram / WhatsApp status.
+  const downloadCardPng = () => {
+    const r = data.topReview;
+    if (!r) return;
+    const S = 1080;
+    const canvas = document.createElement("canvas");
+    canvas.width = S; canvas.height = S;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) { toast.error("Canvas not supported"); return; }
+
+    // Background
+    ctx.fillStyle = "#FBF7F1"; ctx.fillRect(0, 0, S, S);
+    ctx.fillStyle = "#C9956C"; ctx.fillRect(0, 0, S, 12);
+    ctx.fillStyle = "#C9956C"; ctx.fillRect(0, S - 12, S, 12);
+
+    // Stars
+    ctx.fillStyle = "#C9956C";
+    ctx.font = "72px serif";
+    ctx.textAlign = "center";
+    ctx.fillText("★".repeat(r.rating) + "☆".repeat(5 - r.rating), S / 2, 220);
+
+    // Quote (wrapped)
+    ctx.fillStyle = "#2B2B2B";
+    ctx.font = "italic 46px Georgia, serif";
+    const words = `"${r.comment}"`.split(/\s+/);
+    const lines: string[] = [];
+    let line = "";
+    const maxW = S - 200;
+    for (const w of words) {
+      const test = line ? `${line} ${w}` : w;
+      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+      else line = test;
+    }
+    if (line) lines.push(line);
+    const shown = lines.slice(0, 9);
+    if (lines.length > 9) shown[8] = shown[8].replace(/\.*$/, "…");
+    let y = 360;
+    for (const ln of shown) { ctx.fillText(ln, S / 2, y); y += 64; }
+
+    // Attribution
+    ctx.fillStyle = "#7A7A7A";
+    ctx.font = "34px Georgia, serif";
+    ctx.fillText(r.reviewerName ? `— ${r.reviewerName}` : "— Verified customer", S / 2, Math.min(y + 60, S - 180));
+    if (r.businessName) {
+      ctx.font = "bold 38px Georgia, serif";
+      ctx.fillStyle = "#2B2B2B";
+      ctx.fillText(r.businessName, S / 2, S - 110);
+    }
+    ctx.fillStyle = "#C9956C";
+    ctx.font = "28px Georgia, serif";
+    ctx.fillText("reviewed on Wedding Wala", S / 2, S - 60);
+
+    canvas.toBlob((blob) => {
+      if (!blob) { toast.error("Could not render image"); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `wedding-wala-review-${r.id}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Review card downloaded");
+    }, "image/png");
   };
 
   return (
@@ -177,7 +241,26 @@ export default function ReputationPanel() {
                 <Button size="sm" variant="ghost" className="h-8 gap-1.5" onClick={() => shareBestReview("copy")}>
                   <Copy className="h-3.5 w-3.5" /> Copy
                 </Button>
+                <Button size="sm" variant="ghost" className="h-8 gap-1.5" onClick={downloadCardPng}>
+                  <Download className="h-3.5 w-3.5" /> PNG
+                </Button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* What customers mention — keyword tally */}
+        {data.keywords && data.keywords.length > 0 && (
+          <div className="space-y-1.5">
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold flex items-center gap-1">
+              <Tag className="h-3 w-3" /> What customers mention
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {data.keywords.map((k) => (
+                <Badge key={k.word} variant="outline" className="text-[11px] capitalize">
+                  {k.word}<span className="ml-1 text-muted-foreground tabular-nums">{k.count}</span>
+                </Badge>
+              ))}
             </div>
           </div>
         )}

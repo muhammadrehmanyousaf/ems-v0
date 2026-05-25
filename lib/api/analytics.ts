@@ -597,6 +597,7 @@ export interface ReputationData {
   responseRate: number | null;
   trend: ReputationTrendPoint[];
   categoryBenchmark: ReputationCategoryBenchmark | null;
+  keywords: { word: string; count: number }[];
   topReview: ReputationTopReview | null;
 }
 
