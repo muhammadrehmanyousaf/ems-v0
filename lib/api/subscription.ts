@@ -25,6 +25,17 @@ export interface MyPlanData {
   plans: PlanCatalogEntry[];
 }
 
+export interface UpgradeRequestRow {
+  id: number;
+  fullName: string | null;
+  email: string | null;
+  phoneNumber: string | null;
+  vendorType: string | null;
+  subscriptionTier: SubscriptionTier;
+  pendingUpgradeTier: SubscriptionTier;
+  upgradeRequestedAt: string | null;
+}
+
 export class SubscriptionAPI {
   static async getMyPlan(): Promise<MyPlanData | null> {
     try {
@@ -37,5 +48,19 @@ export class SubscriptionAPI {
 
   static async requestUpgrade(tier: SubscriptionTier): Promise<void> {
     await axiosInstance.post("/api/v1/subscriptions/request-upgrade", { tier });
+  }
+
+  // Super-admin
+  static async listUpgradeRequests(): Promise<UpgradeRequestRow[]> {
+    const res = await axiosInstance.get("/api/v1/subscriptions/admin/upgrade-requests");
+    return res.data?.data?.requests ?? [];
+  }
+
+  static async activate(userId: number, months?: number): Promise<void> {
+    await axiosInstance.post(`/api/v1/subscriptions/admin/${userId}/activate`, months ? { months } : {});
+  }
+
+  static async decline(userId: number, reason?: string): Promise<void> {
+    await axiosInstance.post(`/api/v1/subscriptions/admin/${userId}/decline`, reason ? { reason } : {});
   }
 }

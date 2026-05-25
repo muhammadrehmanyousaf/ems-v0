@@ -135,11 +135,15 @@ function buildAdminSections(role: DashboardRole): NavSection[] {
     (i) => isSuper || !SUPER_ONLY_PLATFORM.has(i.name),
   )
 
-  // Promotions queue (§5) is super-admin only + gated by the flag.
+  // Promotions queue (§5) + Plan-upgrades queue (§17.1) are super-admin
+  // only + each gated by their feature flag.
   const promotionsOn = process.env.NEXT_PUBLIC_PROMOTIONS === "1"
-  const operations = data.adminOperations.filter(
-    (i) => i.name !== "Promotions" || (promotionsOn && isSuper),
-  )
+  const billingOn = process.env.NEXT_PUBLIC_BILLING === "1"
+  const operations = data.adminOperations.filter((i) => {
+    if (i.name === "Promotions") return promotionsOn && isSuper
+    if (i.name === "Plan upgrades") return billingOn && isSuper
+    return true
+  })
 
   const sections: NavSection[] = [
     { label: "Overview",   items: data.adminOverview },

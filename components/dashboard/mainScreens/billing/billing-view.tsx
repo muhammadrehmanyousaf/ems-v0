@@ -48,7 +48,7 @@ export default function BillingView() {
     setBusyTier(tier);
     try {
       await SubscriptionAPI.requestUpgrade(tier);
-      toast.success("Upgrade requested — our team will reach out to set it up");
+      toast.success("Upgrade requested — we'll review it and notify you when it's active");
       load();
     } catch (e: any) {
       toast.error(e?.response?.data?.message || "Could not request upgrade");
@@ -70,7 +70,7 @@ export default function BillingView() {
     <div className="space-y-4">
       {data.pendingUpgradeTier && (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-          Upgrade to <strong>{data.pendingUpgradeTier}</strong> requested — our team will reach out to finalize it.
+          Upgrade to <strong>{data.pendingUpgradeTier}</strong> requested — we&apos;re reviewing it and will notify you the moment it&apos;s active.
         </div>
       )}
 

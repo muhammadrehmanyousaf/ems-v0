@@ -89,6 +89,7 @@ export const data = {
     { name: "KYC documents",  url: "/dashboard/admin/documents",    icon: FileBadge },
     { name: "Disputes",       url: "/dashboard/admin/disputes",     icon: Gavel },
     { name: "Promotions",     url: "/dashboard/admin/promotions",   icon: Megaphone },
+    { name: "Plan upgrades",  url: "/dashboard/admin/subscriptions", icon: CreditCard },
     { name: "Bookings",       url: "/dashboard/bookings",           icon: ClipboardList },
     { name: "Payments",       url: "/dashboard/payments",           icon: Wallet },
   ],

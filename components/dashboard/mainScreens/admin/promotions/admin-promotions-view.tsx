@@ -150,7 +150,7 @@ export default function AdminPromotionsView() {
                 </div>
                 {rejectingId === r.id && (
                   <div className="flex items-center gap-2 pt-1">
-                    <Input className="h-8 text-xs" placeholder="Rejection reason (emailed to vendor)" value={reason}
+                    <Input className="h-8 text-xs" placeholder="Rejection reason (sent to the vendor as a notification)" value={reason}
                       onChange={(e) => setReason(e.target.value)} />
                     <Button size="sm" className="h-8" disabled={busyId === r.id} onClick={() => doReject(r.id)}>
                       {busyId === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Confirm reject"}
