@@ -57,7 +57,9 @@ const BookingTable = ({ search }: Props) => {
   });
 
   const handleBookingCreated = () => {
-    queryClient.refetchQueries({ queryKey: ['/api/v1/bookings'] });
+    // Must match the queryKey used by useFetchData above, otherwise a newly
+    // created offline booking won't appear until a manual page refresh.
+    queryClient.refetchQueries({ queryKey: ['bookings', isAdmin ? 'admin' : 'vendor'] });
   };
 
   if (isLoading) {

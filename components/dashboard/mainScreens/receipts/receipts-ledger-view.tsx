@@ -444,12 +444,15 @@ const ReceiptsLedgerView = () => {
   const [confirmDelete, setConfirmDelete] = useState<PaymentReceipt | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
+  // Always load the FULL set so the per-method summary cards show the true
+  // breakdown across every method. The method filter only narrows the list
+  // below (applied client-side) — previously a filtered fetch made every
+  // non-selected method card read 0 and the Total card show only the
+  // filtered method's sum.
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
-      const res = await ReceiptsAPI.list(
-        methodFilter === 'all' ? {} : { method: methodFilter },
-      );
+      const res = await ReceiptsAPI.list({});
       setReceipts(res.receipts || []);
       setSummary(res.summary || { total: 0, byMethod: {} });
     } catch (e) {
@@ -457,14 +460,18 @@ const ReceiptsLedgerView = () => {
     } finally {
       setLoading(false);
     }
-  }, [methodFilter]);
+  }, []);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  // Already sorted by date desc on the backend; we keep that.
-  const rows = useMemo(() => receipts, [receipts]);
+  // Already sorted by date desc on the backend; we filter the displayed list
+  // by the active method client-side (summary cards stay full-breakdown).
+  const rows = useMemo(
+    () => (methodFilter === 'all' ? receipts : receipts.filter((r) => r.method === methodFilter)),
+    [receipts, methodFilter],
+  );
 
   const openCreate = () => {
     setEditing(null);
