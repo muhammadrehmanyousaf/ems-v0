@@ -51,9 +51,15 @@ function buildVendorSections(user: ReturnType<typeof useUser>["user"]): NavSecti
   const vendorConfig = getVendorTypeConfig(user?.vendorType)
   const allowedMain = vendorConfig?.mainNavItems ?? DEFAULT_VENDOR_CONFIG.mainNavItems
 
-  const main = data.vendorMainNav.filter((i) =>
-    allowedMain.includes(i.name as NavItemKey),
-  )
+  const navLabels = vendorConfig?.navLabels
+  const main = data.vendorMainNav
+    .filter((i) => allowedMain.includes(i.name as NavItemKey))
+    .map((i) => {
+      // §19.3 — attach the craft-localized label when this vendor type
+      // defines one for the item. Route + nav key are untouched.
+      const override = navLabels?.[i.name as NavItemKey]
+      return override ? { ...i, labelOverride: override } : i
+    })
 
   const settingsTabs = vendorConfig?.settingsTabs ?? DEFAULT_VENDOR_CONFIG.settingsTabs
   const isStationery = user?.vendorType === "Wedding Invitations and Stationery"
@@ -119,7 +125,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton size="lg" asChild className="data-[state=open]:bg-sidebar-accent">
               <Link href="/dashboard" className="flex items-center gap-2">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-foreground text-background">
-                  <span className="text-[13px] font-semibold tracking-tight">A</span>
+                  <span className="text-[13px] font-semibold tracking-tight">W</span>
                 </div>
                 <div className="grid flex-1 text-left leading-tight">
                   <span className="text-[15px] font-semibold tracking-tight text-foreground">

@@ -27,6 +27,9 @@ export type NavItem = {
   url: string;
   icon: LucideIcon;
   i18nKey?: string;
+  // §19.3 craft-localized label. When set, it WINS over the i18n
+  // translation (craft-naming is separate from the EN/اردو toggle).
+  labelOverride?: string;
 }
 
 export type SettingsSubItem = { id: string; label: string }
@@ -86,10 +89,11 @@ export function NavSections({ sections }: { sections: NavSection[] }) {
   const isOnSettingsPage = getDashboardModule(normalizePath(pathname)) === "settings"
   const currentTab = searchParams?.get("tab") || "overview"
   const t = useT()
-  // When an item declares i18nKey, prefer the translated label. Falls
+  // Craft-localized override (§19.3) wins over everything. Otherwise,
+  // when an item declares i18nKey, prefer the translated label. Falls
   // back cleanly to the hardcoded `name` when no key (or no translation).
   const label = (item: NavItem) =>
-    item.i18nKey ? t(item.i18nKey) : item.name
+    item.labelOverride ? item.labelOverride : item.i18nKey ? t(item.i18nKey) : item.name
 
   return (
     <>

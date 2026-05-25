@@ -68,6 +68,14 @@ export interface VendorTypeConfig {
   pricingLabel: string;
   hasPackages: boolean;
   hasMenus: boolean;
+  // §19.3 craft-localized sidebar labels — a vendor reads the modules
+  // in the language of their own work ("Shoots" not "Bookings",
+  // "Brides" not "Customers"). LABEL ONLY — the route + nav key are
+  // unchanged, so filtering + active-state still work. The craft name
+  // wins over the EN/اردو i18n label (craft-naming is separate from
+  // language toggle, per §19.1). Only keys present here are overridden;
+  // everything else falls back to the default label.
+  navLabels?: Partial<Record<NavItemKey, string>>;
 }
 
 // All vendors share these main nav items
@@ -97,6 +105,7 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     hasPackages: true,
     hasMenus: false,
     pricingLabel: "per event",
+    navLabels: { Bookings: "Events / Functions", Customers: "Clients", Calendar: "Event Calendar" },
     typeSpecificFields: [
       { key: "subBusinessType", label: "Venue Type", type: "select", options: ["Marquee", "Hall", "Outdoor", "Others"] },
       { key: "expertise", label: "Expertise", type: "multi-select", options: ["Engagement", "Wedding", "Parties", "Fashion Show", "Dinner"] },
@@ -121,6 +130,7 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     hasPackages: true,
     hasMenus: true,
     pricingLabel: "per head",
+    navLabels: { Bookings: "Orders", Customers: "Clients", Calendar: "Event Calendar" },
     typeSpecificFields: [
       { key: "maxCapacity", label: "Maximum Guests", type: "number", placeholder: "2000" },
       { key: "minCapacity", label: "Minimum Guests", type: "number", placeholder: "50" },
@@ -142,6 +152,7 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     hasPackages: true,
     hasMenus: false,
     pricingLabel: "per event",
+    navLabels: { Bookings: "Shoots", Customers: "Clients", Calendar: "Shoot Calendar" },
     typeSpecificFields: [
       { key: "subBusinessType", label: "Photography Type", type: "multi-select", options: ["Portrait", "Event", "Wedding", "Commercial", "Fashion"] },
       { key: "expertise", label: "Expertise", type: "multi-select", options: ["Engagement", "Wedding", "Parties", "Fashion Show", "Corporate Events", "Birthday", "Anniversary"] },
@@ -162,6 +173,7 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     hasPackages: true,
     hasMenus: false,
     pricingLabel: "per event",
+    navLabels: { Bookings: "Setups", Customers: "Clients", Calendar: "Setup Calendar" },
     typeSpecificFields: [
       { key: "subBusinessType", label: "Decoration Type", type: "multi-select", options: ["Wedding", "Event", "Theme", "Outdoor", "Indoor"] },
       { key: "expertise", label: "Expertise", type: "multi-select", options: ["Wedding Decoration", "Engagement Decoration", "Birthday Decoration", "Corporate Events", "Outdoor Events", "Indoor Events", "Theme Decoration"] },
@@ -182,6 +194,7 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     hasPackages: true,
     hasMenus: false,
     pricingLabel: "per session",
+    navLabels: { Bookings: "Appointments", Customers: "Brides", Calendar: "Appointment Calendar" },
     typeSpecificFields: [
       { key: "subBusinessType", label: "Henna Style", type: "multi-select", options: ["Traditional", "Modern", "Arabic", "Indo-Arabic", "Fusion"] },
       { key: "expertise", label: "Expertise", type: "multi-select", options: ["Bridal Henna", "Party Henna", "Engagement Henna", "Traditional Designs", "Modern Designs", "Arabic Designs", "Indo-Arabic Designs"] },
@@ -203,6 +216,7 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     hasPackages: true,
     hasMenus: false,
     pricingLabel: "per session",
+    navLabels: { Bookings: "Appointments", Customers: "Brides", Calendar: "Appointment Calendar" },
     typeSpecificFields: [
       { key: "subBusinessType", label: "Makeup Type", type: "multi-select", options: ["Bridal", "Party", "Fashion", "Commercial", "Hair"] },
       { key: "expertise", label: "Expertise", type: "multi-select", options: ["Bridal Makeup", "Groom Makeup", "Party Makeup", "Engagement Makeup", "Fashion Show", "Photoshoot", "Hair Styling"] },
@@ -222,6 +236,7 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     hasPackages: true,
     hasMenus: false,
     pricingLabel: "per event",
+    navLabels: { Bookings: "Trips", Customers: "Clients", Calendar: "Fleet Calendar" },
     typeSpecificFields: [],
   },
 
@@ -235,6 +250,7 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     hasPackages: true,
     hasMenus: false,
     pricingLabel: "per outfit",
+    navLabels: { Bookings: "Orders", Customers: "Buyers", Calendar: "Fitting Calendar" },
     typeSpecificFields: [
       { key: "subBusinessType", label: "Store Type", type: "select", options: ["Boutique", "Designer Studio", "Rental Store", "Multi-brand Outlet", "Online Boutique"] },
       { key: "expertise", label: "Occasions Catered", type: "multi-select", options: ["Bridal (Barat)", "Walima", "Engagement", "Mehndi / Mayun", "Nikah", "Post-wedding", "Bridesmaid"] },
@@ -265,6 +281,7 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     hasPackages: true,
     hasMenus: false,
     pricingLabel: "per set",
+    navLabels: { Bookings: "Orders", Customers: "Clients", Calendar: "Delivery Calendar" },
     typeSpecificFields: [
       { key: "subBusinessType", label: "Shop Type", type: "select", options: ["Print Studio", "Digital Design Studio", "Boutique Stationery", "Full-Service Wedding Stationery", "Online Store", "Home-Based Business"] },
       { key: "expertise", label: "Products Offered", type: "multi-select", options: [], groups: [
