@@ -67,6 +67,9 @@ Consolidates the directives log (§23) into a feature-status view. Every shipped
 | Vendor notifications on promo/sub decisions + sub-upgrade admin queue | `/dashboard/admin/subscriptions` | `NEXT_PUBLIC_BILLING` | #54 |
 | Free-tier quote-PDF branding gate (§17.1) | quote/contract/invoice PDFs | (active when paid tier set) | #54 |
 | M23 sub-contract ledger | function-sheet detail (all types) | `NEXT_PUBLIC_SUBCONTRACT` | #57 |
+| Pin best reviews | `/dashboard/reviews` | — | #58 |
+| Lead pipeline Kanban | `/dashboard/leads` (?view=pipeline) | — | #59 |
+| M23 Layer 2 — collaboration invites | `/dashboard/collaborations` | `NEXT_PUBLIC_SUBCONTRACT` | #60 |
 
 > **Build-pattern reference (proven 16× this cycle):** vendor pillar = migration (`ADD COLUMN IF NOT EXISTS <field>Json JSONB`) → model field → controller whitelist (≤50KB JSON cap) → FE types → self-contained card hydrating from `sheet.<field>Json` → wire into `function-sheet-detail-view.tsx` gated by `NEXT_PUBLIC_<FLAG>` + `user?.vendorType`. Analytics = new read-only `analyticsController` method + `analyticsRouter` line + FE component on `/insights`. Always audit-before-build; commit BE then FE then docs; hold push until owner says so.
 
@@ -742,15 +745,16 @@ subPhone, scope, agreedAmount, amountPaid, status (planned/confirmed/in_progress
 cancelled), notes }` + live totals (agreed · paid · outstanding). `<SubcontractCard/>`, all vendor
 types, flag `NEXT_PUBLIC_SUBCONTRACT`. Same JSONB-pillar pattern; zero coupling to the sub's own account.
 
-### 20.2 Layer 2 — On-platform collaboration (NEXT, needs owner sign-off on flow)
-The full network version, layered on top of 20.1: the sub is a real WeddingWala vendor →
-- lead sends a sub-contract *invite* (links to the sub's userId) → sub **accepts/declines** in their own dashboard;
-- on accept, a **linked function sheet** is created on the sub's side (their own BEO/run-sheet for the slice);
-- **split payment / commission** tracked both sides; settlement status syncs;
-- **vendor↔vendor rating** after the event (distinct from customer ratings + the community-trust layer #48).
-Open decisions for the owner: does the platform mediate the inter-vendor payment, or just track it? Is
-there a referral fee to the platform (vs the D6 "no booking commission" rule — likely an exception or a
-flat referral fee)? Until decided, Layer 1 stands alone and is fully useful.
+### 20.2 Layer 2 — On-platform collaboration (SHIPPED directive #60, payment deferred)
+Built: the lead invites a real Wedding Wala vendor (matched by phone/email) → invitee **accepts/declines**
+in their own dashboard (`/dashboard/collaborations`) → both sides get in-app notifications. `SubcontractInvites`
+table + `collaborationController` (send/incoming/outgoing/accept/decline/cancel). Amounts are **tracked**
+(agreedAmount), not collected. Flag `NEXT_PUBLIC_SUBCONTRACT`.
+**Still open (deferred per owner — payment later):**
+- **Split payment mediation** — does the platform move the inter-vendor money or just record it? (Currently records.)
+- **Referral fee** vs the D6 "no booking commission" rule — likely a flat referral fee exception. Decide when payment lands.
+- **Linked function sheet** on the sub's side (their own BEO for the slice) — nice-to-have follow-up.
+- **Vendor↔vendor rating** after the event — overlaps the community-trust layer (#48); fold in later.
 
 ---
 
@@ -882,6 +886,10 @@ the section that captures it. **New directives get appended at the top and route
 
 | # | Date | Owner directive | Captured in |
 |---|---|---|---|
+| 61 | 2026-05-25 | "another plan, complete all (payment later)" | **Tests for the new logic** — exported the cross-vendor phone matcher (`_nat`) + added `collabPhoneMatch.test.js` (PK-format collapse correctness + PLAN_CATALOG shape). New unit suites now **19/19 pass** (entitlements + pricing + collab-match). BE `ea4c95b` |
+| 60 | 2026-05-25 | "another plan, complete all (payment later)" | **M23 Layer 2 — vendor↔vendor collaboration invites (§20.2, NO payment)**. The on-platform layer over the ledger: lead invites another WW vendor (matched by phone/email → notified) → invitee accepts/declines in their dashboard → both notified. Amounts TRACKED not collected. Migration `20260525180000` (applied): `SubcontractInvites` table; `subcontractInvite` model; `collaborationController` (send/incoming/outgoing/accept/decline/cancel) + `/api/v1/collaborations`. FE: `/dashboard/collaborations` (send form + incoming accept/decline + outgoing status), sidebar 'Collaborations' in flag-gated Grow group (`NEXT_PUBLIC_SUBCONTRACT`), i18n. BE `9fef954` · FE `e9129fe`. **§20 updated: Layer 2 now SHIPPED; only payment-mediation decision remains.** |
+| 59 | 2026-05-25 | "another plan, complete all (payment later)" | **Lead pipeline Kanban (§M6)**. Leads had only an inbox; added the funnel board: 6 columns (New→Contacted→Qualified→Quoted→Booked + Lost), lead cards with name/phone/event/source/value + a 'Move' select that transitions via the EXISTING `LeadAPI.transition` (no new BE). Inbox/Pipeline toggle on `/dashboard/leads` (`?view=pipeline`, bookmarkable). FE-only. FE `e38c6f9` |
+| 58 | 2026-05-25 | "another plan, complete all (payment later)" | **Pin best reviews (§M8)**. Migration `20260525170000` (applied): `Reviews.isPinned`. `togglePinReview` owner-only + `PATCH /reviews/:id/pin`; getReputation.topReview prefers a pinned review (so the shareable card shows the vendor's pick). FE: Pin/Unpin row action in the reviews table. **Audit note: Business Health Score §M9 was NOT built — it already exists as the Reliability score (`/dashboard/reliability`); building a parallel one would be a rebuild.** BE `3fd0f95` · FE `6ea8663` |
 | 57 | 2026-05-25 | "mega plan, except real payment" | **M23 vendor sub-contract ledger (§20) — tracking MVP**. The 'spec TBD' gets built via the proven pillar pattern: additive `subcontractsJson` on FunctionSheets (migration `20260525160000`, applied) + model + controller whitelist; `<SubcontractCard/>` for ALL vendor types — per-sub {name, craft, phone, scope, agreedAmount, amountPaid, status planned→paid/cancelled} + live totals (subs · agreed · paid · you-still-owe) + notes. Flag `NEXT_PUBLIC_SUBCONTRACT` OFF. MVP = lead-vendor ledger; full on-platform collab (linked sheets, sub accept/decline) is the documented later layer. BE `f5b65c3` · FE `e1ba6f6` |
 | 56 | 2026-05-25 | "mega plan, except real payment" | **Unit tests** for the new monetization logic (12 tests, all pass, no DB): `entitlementHelper.test.js` (7 — tier gate matrix) + `promotionPricing.test.js` (5 — pricing + catalog). Exported quotePrice/pricingCatalog for testability. BE `97d0efb` |
 | 55 | 2026-05-25 | "mega plan, except real payment" | **Reputation polish (§M8)**: benchmark now EXCLUDES self (true peer compare), keyword tally (top-12 words customers mention, stopword-filtered, no NLP), and a **PNG shareable card** (1080² canvas render — gold border, stars, wrapped quote, business — downloadable for Instagram/WhatsApp status; closes the §M8 'review card image' gap). BE `a0ac53c` · FE `e4ca444` |
