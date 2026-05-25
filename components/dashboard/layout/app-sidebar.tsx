@@ -51,21 +51,36 @@ const SUPER_ONLY_PLATFORM = new Set(["Audit logs", "Roles", "Users"])
 function buildVendorSections(user: ReturnType<typeof useUser>["user"]): NavSection[] {
   const vendorConfig = getVendorTypeConfig(user?.vendorType)
   const allowedMain = vendorConfig?.mainNavItems ?? DEFAULT_VENDOR_CONFIG.mainNavItems
+  // §19.4 type-conditional Operations tools (only for types that define them).
+  const extra = vendorConfig?.extraNavItems ?? []
+  const allowedKeys = new Set<NavItemKey>([...allowedMain, ...extra])
 
   const navLabels = vendorConfig?.navLabels
-  const allowed = data.vendorMainNav
-    .filter((i) => allowedMain.includes(i.name as NavItemKey))
-    .map((i) => {
-      // §19.3 — attach the craft-localized label when this vendor type
-      // defines one for the item. Route + nav key are untouched.
-      const override = navLabels?.[i.name as NavItemKey]
-      return override ? { ...i, labelOverride: override } : i
-    })
+  const applyLabel = (i: (typeof data.vendorMainNav)[number]) => {
+    // §19.3 — attach the craft-localized label when this vendor type
+    // defines one for the item. Route + nav key are untouched.
+    const override = navLabels?.[i.name as NavItemKey]
+    return override ? { ...i, labelOverride: override } : i
+  }
 
-  // Partition into the operational "Main" group and the "Khata" (money)
-  // group. Order within each is preserved from nav-data.
-  const main = allowed.filter((i) => !MONEY_NAV_KEYS.has(i.name as NavItemKey))
+  const allowed = data.vendorMainNav
+    .filter((i) => allowedKeys.has(i.name as NavItemKey))
+    .map(applyLabel)
+
+  // Partition: operational "Main", "Khata" (money), and type-specific
+  // "Operations" (extra). Order within each preserved from nav-data.
+  const extraSet = new Set<NavItemKey>(extra)
+  const main = allowed.filter(
+    (i) =>
+      !MONEY_NAV_KEYS.has(i.name as NavItemKey) &&
+      !extraSet.has(i.name as NavItemKey),
+  )
   const money = allowed.filter((i) => MONEY_NAV_KEYS.has(i.name as NavItemKey))
+  // Render extras in the order the config declares them (not nav-data
+  // order) so the most craft-relevant tool leads.
+  const operations = extra
+    .map((key) => allowed.find((i) => (i.name as NavItemKey) === key))
+    .filter((i): i is NonNullable<typeof i> => Boolean(i))
 
   const settingsTabs = vendorConfig?.settingsTabs ?? DEFAULT_VENDOR_CONFIG.settingsTabs
   const isStationery = user?.vendorType === "Wedding Invitations and Stationery"
@@ -82,6 +97,9 @@ function buildVendorSections(user: ReturnType<typeof useUser>["user"]): NavSecti
   const sections: NavSection[] = [{ label: "Main", items: main }]
   if (money.length > 0) {
     sections.push({ label: "Khata", items: money })
+  }
+  if (operations.length > 0) {
+    sections.push({ label: "Operations", items: operations })
   }
   sections.push({
     label: "My Business",
