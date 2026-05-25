@@ -216,6 +216,23 @@ export class BusinessesAPI {
     );
     return res.data?.data;
   }
+
+  // Pricing-rules engine (flag-gated by env PRICING_RULES_ENGINE).
+  static async getPricingRules(id: number): Promise<PricingRulesResponse> {
+    const res = await axiosInstance.get(`/api/v1/businesses/${id}/pricing-rules`);
+    return res.data?.data;
+  }
+
+  static async setPricingRules(
+    id: number,
+    rules: PricingRulesConfig,
+  ): Promise<{ rules: PricingRulesConfig; engineEnabled: boolean }> {
+    const res = await axiosInstance.patch(
+      `/api/v1/businesses/${id}/pricing-rules`,
+      rules,
+    );
+    return res.data?.data;
+  }
 }
 
 // BK-100.5 — types mirror the backend `cancellationPolicyPresets.js` util.
@@ -249,6 +266,34 @@ export interface CancellationPolicyResponse {
   currentPolicy: CancellationPolicy | null;
   currentPresetKey: CancellationPresetKey | null;
   presets: CancellationPolicyPreset[];
+}
+
+// Pricing-rules engine — weekend premium + early-bird discount layered
+// on seasonal surge. Mirrors backend pricingRulesService. weekdayMask
+// uses Mon=1..Sun=64 (default Sat+Sun = 96).
+export interface PricingRulesWeekendPremium {
+  enabled: boolean;
+  percent: number;
+  weekdayMask?: number;
+}
+export interface PricingRulesEarlyBird {
+  enabled: boolean;
+  percent: number;
+  thresholdDays: number;
+}
+export interface PricingRulesConfig {
+  enabled: boolean;
+  weekendPremium: PricingRulesWeekendPremium;
+  earlyBird: PricingRulesEarlyBird;
+}
+export interface PricingRulesResponse {
+  rules: PricingRulesConfig | null;
+  engineEnabled: boolean;
+  bounds: {
+    premiumMaxPercent: number;
+    discountMaxPercent: number;
+    defaultWeekendMask: number;
+  };
 }
 
 // VR-050.10 — vendor profile completeness widget. Shape mirrors the

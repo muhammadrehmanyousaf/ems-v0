@@ -21,6 +21,8 @@ import { toast } from 'sonner'
 import { Loader2, Building2, MapPin, DollarSign, Shield } from 'lucide-react'
 // BK-100.5 — vendor-selectable cancellation policy presets.
 import { CancellationPolicyCard } from '../subComponents/cancellation-policy-card'
+// Pricing-rules engine (flag-gated) — weekend premium + early-bird.
+import { PricingRulesCard } from '../subComponents/pricing-rules-card'
 // BK-100.52 — vendor in-house bundled services (catering / decor / DJ / etc).
 import { BundledServicesCard } from '../subComponents/bundled-services-card'
 // BK-100.51 — multi-resource vendor capacity (halls / kitchen / crews / tents).
@@ -343,6 +345,16 @@ const BasicInfoTab = ({ business, onSuccess }: BasicInfoTabProps) => {
             <div className="pt-6">
                 <CancellationPolicyCard businessId={business.id} />
             </div>
+
+            {/* Pricing-rules engine — weekend premium + early-bird discount.
+                Flag-gated (NEXT_PUBLIC_PRICING_RULES); the backend engine is
+                separately gated by env PRICING_RULES_ENGINE, so configuring
+                here never changes prices until both are on. */}
+            {process.env.NEXT_PUBLIC_PRICING_RULES === '1' && (
+                <div className="pt-6">
+                    <PricingRulesCard businessId={business.id} />
+                </div>
+            )}
 
             {/* BK-100.52 — vendor in-house bundled services. Vendor
                 declares catering / decor / DJ / valet etc. they bundle
