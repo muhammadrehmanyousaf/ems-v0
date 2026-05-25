@@ -17,7 +17,7 @@
 import React, { useMemo } from 'react';
 import { CalendarEvent, ymd } from '@/lib/utils';
 import type { BookingDetail } from './add-booking-dialog';
-import type { TeamCalendarShift } from '@/lib/api/staff';
+import type { TeamCalendarShift, AttendanceStatus } from '@/lib/api/staff';
 import { STAFF_ROLE_LABELS } from '@/lib/api/staff';
 import { Badge } from '@/components/ui/badge';
 import { CalendarDays, Clock, Users, Phone } from 'lucide-react';
@@ -47,6 +47,15 @@ function fmtTime(d: Date) {
     minute: '2-digit',
   }).format(d);
 }
+
+// Small attendance dot beside each on-duty chip.
+const ATT_DOT: Partial<Record<AttendanceStatus, string>> = {
+  checked_in: 'bg-blue-500',
+  completed: 'bg-emerald-500',
+  absent: 'bg-rose-500',
+  excused: 'bg-amber-500',
+  replaced: 'bg-violet-500',
+};
 
 export default function AgendaView({
   cursor,
@@ -192,18 +201,22 @@ export default function AgendaView({
                   <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
                     <Users className="h-3 w-3" /> On duty
                   </span>
-                  {team.map((s) => (
-                    <span
-                      key={s.id}
-                      className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2 py-0.5 text-[10px]"
-                      title={`${s.staffName} — ${STAFF_ROLE_LABELS[s.role] || s.role}`}
-                    >
-                      <span className="font-medium">{s.staffName}</span>
-                      <span className="text-muted-foreground">
-                        {STAFF_ROLE_LABELS[s.role] || s.role}
+                  {team.map((s) => {
+                    const dot = s.attendanceStatus ? ATT_DOT[s.attendanceStatus] : undefined;
+                    return (
+                      <span
+                        key={s.id}
+                        className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2 py-0.5 text-[10px]"
+                        title={`${s.staffName} — ${STAFF_ROLE_LABELS[s.role] || s.role}${s.attendanceStatus ? ` · ${s.attendanceStatus}` : ''}`}
+                      >
+                        {dot && <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />}
+                        <span className="font-medium">{s.staffName}</span>
+                        <span className="text-muted-foreground">
+                          {STAFF_ROLE_LABELS[s.role] || s.role}
+                        </span>
                       </span>
-                    </span>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

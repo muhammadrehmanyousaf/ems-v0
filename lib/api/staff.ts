@@ -37,6 +37,23 @@ export type EmploymentType = "permanent_monthly" | "casual_dihari" | "contract";
 
 export type PaymentStatus = "pending" | "paid" | "disputed" | "void";
 
+export type AttendanceStatus =
+  | "scheduled"
+  | "checked_in"
+  | "completed"
+  | "absent"
+  | "excused"
+  | "replaced";
+
+export interface ReplacementDetails {
+  name: string;
+  phone?: string | null;
+  role?: StaffRole | null;
+  rate?: number | null;
+  note?: string | null;
+  assignedAt?: string;
+}
+
 export type PaymentMethod =
   | "cash"
   | "jazzcash"
@@ -112,6 +129,13 @@ export interface StaffShift {
   thumbprintCaptured: boolean;
   notes: string | null;
   disputeNotes: string | null;
+  // Attendance (orthogonal to payment).
+  attendanceStatus: AttendanceStatus;
+  attendanceMarkedAt: string | null;
+  checkInAt: string | null;
+  checkOutAt: string | null;
+  attendanceNotes: string | null;
+  replacementDetailsJson: ReplacementDetails | null;
   createdAt: string;
   updatedAt: string;
   staffMember?: {
@@ -218,6 +242,20 @@ export interface TransitionShiftInput {
   reason?: string; // for void
 }
 
+export interface MarkAttendanceInput {
+  to: AttendanceStatus;
+  checkInAt?: string;
+  checkOutAt?: string;
+  notes?: string;
+  replacement?: {
+    name: string;
+    phone?: string;
+    role?: StaffRole;
+    rate?: number;
+    note?: string;
+  };
+}
+
 export class StaffAPI {
   // Members
   static async listMembers(filters: {
@@ -322,6 +360,19 @@ export class StaffAPI {
     return res.data?.data?.shift;
   }
 
+  // Attendance state machine: check-in / complete / absent / excuse /
+  // assign-replacement. Orthogonal to the payment transition above.
+  static async markAttendance(
+    id: number,
+    body: MarkAttendanceInput,
+  ): Promise<StaffShift> {
+    const res = await axiosInstance.post(
+      `/api/v1/staff/shifts/${id}/attendance`,
+      body,
+    );
+    return res.data?.data?.shift;
+  }
+
   static async removeShift(id: number): Promise<void> {
     await axiosInstance.delete(`/api/v1/staff/shifts/${id}`);
   }
@@ -386,6 +437,7 @@ export interface TeamCalendarShift {
   staffName: string;
   role: StaffRole;
   paymentStatus: PaymentStatus;
+  attendanceStatus?: AttendanceStatus;
   bookingId: number | null;
   businessId: number;
   startTime: string | null;
@@ -446,6 +498,27 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   sadapay: "SadaPay",
   nayapay: "NayaPay",
   other: "Other",
+};
+
+export const ATTENDANCE_STATUS_LABELS: Record<AttendanceStatus, string> = {
+  scheduled: "Scheduled",
+  checked_in: "Checked in",
+  completed: "Worked",
+  absent: "No-show",
+  excused: "Excused",
+  replaced: "Replaced",
+};
+
+export const ATTENDANCE_STATUS_TONES: Record<
+  AttendanceStatus,
+  { bg: string; text: string; border: string }
+> = {
+  scheduled: { bg: "bg-neutral-100", text: "text-neutral-700", border: "border-neutral-300" },
+  checked_in: { bg: "bg-blue-50", text: "text-blue-800", border: "border-blue-300" },
+  completed: { bg: "bg-emerald-50", text: "text-emerald-800", border: "border-emerald-300" },
+  absent: { bg: "bg-rose-50", text: "text-rose-800", border: "border-rose-300" },
+  excused: { bg: "bg-amber-50", text: "text-amber-800", border: "border-amber-300" },
+  replaced: { bg: "bg-violet-50", text: "text-violet-800", border: "border-violet-300" },
 };
 
 export const PAYMENT_STATUS_TONES: Record<

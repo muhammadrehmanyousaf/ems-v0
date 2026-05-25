@@ -47,6 +47,10 @@ import {
   CheckCircle2,
   XCircle,
   HandCoins,
+  UserCheck,
+  UserX,
+  Repeat,
+  Clock,
 } from 'lucide-react';
 import axiosInstance from '@/lib/axiosConfig';
 
@@ -93,6 +97,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+import { Label } from '@/components/ui/label';
 import { LinkedFunctionSheetBadge } from '@/components/shared/linked-function-sheet-badge';
 import {
   StaffAPI,
@@ -101,12 +106,15 @@ import {
   PAYMENT_STATUS_LABELS,
   PAYMENT_STATUS_TONES,
   PAYMENT_METHOD_LABELS,
+  ATTENDANCE_STATUS_LABELS,
+  ATTENDANCE_STATUS_TONES,
   type StaffMember,
   type StaffShift,
   type StaffRole,
   type EmploymentType,
   type PaymentStatus,
   type PaymentMethod,
+  type AttendanceStatus,
   type MemberSummary,
   type PayrollSummary,
   type CreateMemberInput,
@@ -137,6 +145,18 @@ const NEXT_STATUS_OPTIONS: Record<PaymentStatus, PaymentStatus[]> = {
   paid: ['disputed'],
   disputed: ['paid', 'void', 'pending'],
   void: ['pending'],
+};
+
+// Forward attendance actions the vendor can take from each status. Mirrors
+// the backend VALID_ATTENDANCE_TRANSITIONS, trimmed to the useful buttons
+// ('replaced' is handled via a dialog, not a plain button).
+const NEXT_ATTENDANCE_OPTIONS: Record<AttendanceStatus, AttendanceStatus[]> = {
+  scheduled: ['checked_in', 'absent', 'excused'],
+  checked_in: ['completed', 'absent'],
+  completed: ['checked_in'],
+  absent: ['excused', 'scheduled'],
+  excused: ['scheduled', 'absent'],
+  replaced: ['scheduled'],
 };
 
 interface VendorBusinessOption {
@@ -1119,6 +1139,7 @@ function ShiftsTab({ businesses }: { businesses: VendorBusinessOption[] }) {
   const [disputeShift, setDisputeShift] = useState<StaffShift | null>(null);
   const [voidShift, setVoidShift] = useState<StaffShift | null>(null);
   const [deleteShift, setDeleteShift] = useState<StaffShift | null>(null);
+  const [replaceShift, setReplaceShift] = useState<StaffShift | null>(null);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -1173,6 +1194,23 @@ function ShiftsTab({ businesses }: { businesses: VendorBusinessOption[] }) {
       await fetchAll();
     } catch (e: any) {
       toast.error(e?.response?.data?.message || 'Transition failed');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleAttendance = async (shift: StaffShift, to: AttendanceStatus) => {
+    if (to === 'replaced') {
+      setReplaceShift(shift);
+      return;
+    }
+    setBusy(shift.id);
+    try {
+      await StaffAPI.markAttendance(shift.id, { to });
+      toast.success(`Attendance: ${ATTENDANCE_STATUS_LABELS[to]}`);
+      await fetchAll();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Could not update attendance');
     } finally {
       setBusy(null);
     }
@@ -1316,6 +1354,7 @@ function ShiftsTab({ businesses }: { businesses: VendorBusinessOption[] }) {
               shift={s}
               busy={busy === s.id}
               onTransition={(to) => handleQuickTransition(s, to)}
+              onAttendance={(to) => handleAttendance(s, to)}
               onDelete={() => setDeleteShift(s)}
             />
           ))}
@@ -1360,6 +1399,15 @@ function ShiftsTab({ businesses }: { businesses: VendorBusinessOption[] }) {
         }}
       />
 
+      <ReplaceDialog
+        shift={replaceShift}
+        onOpenChange={(o) => !o && setReplaceShift(null)}
+        onSaved={async () => {
+          setReplaceShift(null);
+          await fetchAll();
+        }}
+      />
+
       <AlertDialog
         open={!!deleteShift}
         onOpenChange={(o) => !o && setDeleteShift(null)}
@@ -1387,15 +1435,27 @@ function ShiftCard({
   shift,
   busy,
   onTransition,
+  onAttendance,
   onDelete,
 }: {
   shift: StaffShift;
   busy: boolean;
   onTransition: (to: PaymentStatus) => void;
+  onAttendance: (to: AttendanceStatus) => void;
   onDelete: () => void;
 }) {
   const tone = PAYMENT_STATUS_TONES[shift.paymentStatus];
   const next = NEXT_STATUS_OPTIONS[shift.paymentStatus];
+  const att = shift.attendanceStatus || 'scheduled';
+  const attTone = ATTENDANCE_STATUS_TONES[att];
+  const attNext = NEXT_ATTENDANCE_OPTIONS[att] || [];
+  const ATT_ICON: Partial<Record<AttendanceStatus, typeof UserCheck>> = {
+    checked_in: UserCheck,
+    completed: CheckCircle2,
+    absent: UserX,
+    excused: Clock,
+    scheduled: ArrowRight,
+  };
 
   const base = Number(shift.dihariRate) || 0;
   const overtime =
@@ -1420,6 +1480,12 @@ function ShiftCard({
                 className={`${tone.bg} ${tone.text} ${tone.border}`}
               >
                 {PAYMENT_STATUS_LABELS[shift.paymentStatus]}
+              </Badge>
+              <Badge
+                variant="outline"
+                className={`${attTone.bg} ${attTone.text} ${attTone.border}`}
+              >
+                {ATTENDANCE_STATUS_LABELS[att]}
               </Badge>
             </div>
             <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
@@ -1496,6 +1562,68 @@ function ShiftCard({
             <strong>Dispute:</strong> {shift.disputeNotes}
           </p>
         )}
+
+        {/* Attendance — check-in/out times + replacement details */}
+        {(shift.checkInAt || shift.checkOutAt || shift.replacementDetailsJson || shift.attendanceNotes) && (
+          <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+            {shift.checkInAt && (
+              <span className="inline-flex items-center gap-1">
+                <UserCheck className="h-3 w-3 text-blue-600" />
+                In {new Date(shift.checkInAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+              </span>
+            )}
+            {shift.checkOutAt && (
+              <span className="inline-flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                Out {new Date(shift.checkOutAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+              </span>
+            )}
+            {shift.replacementDetailsJson?.name && (
+              <span className="inline-flex items-center gap-1 text-violet-700">
+                <Repeat className="h-3 w-3" />
+                Covered by {shift.replacementDetailsJson.name}
+                {shift.replacementDetailsJson.phone ? ` (${shift.replacementDetailsJson.phone})` : ''}
+              </span>
+            )}
+            {shift.attendanceNotes && <span className="italic">“{shift.attendanceNotes}”</span>}
+          </div>
+        )}
+
+        {/* Attendance action row */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Attendance</span>
+          {attNext.map((to) => {
+            const at = ATTENDANCE_STATUS_TONES[to];
+            const Icon = ATT_ICON[to] || ArrowRight;
+            return (
+              <Button
+                key={to}
+                size="sm"
+                variant="outline"
+                disabled={busy}
+                onClick={() => onAttendance(to)}
+                className={`h-7 ${at.border} ${at.text}`}
+              >
+                <Icon className="mr-1 h-3 w-3" />
+                {to === 'checked_in' ? 'Check in'
+                  : to === 'completed' ? 'Worked'
+                  : ATTENDANCE_STATUS_LABELS[to]}
+              </Button>
+            );
+          })}
+          {att !== 'replaced' && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              onClick={() => onAttendance('replaced')}
+              className="h-7 border-violet-300 text-violet-700"
+            >
+              <Repeat className="mr-1 h-3 w-3" />
+              Replace
+            </Button>
+          )}
+        </div>
 
         <div className="flex flex-wrap items-center gap-2 pt-1">
           {next.map((to) => {
@@ -2288,6 +2416,118 @@ function VoidDialog({
           <Button onClick={submit} disabled={submitting}>
             {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Confirm void
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ReplaceDialog({
+  shift,
+  onOpenChange,
+  onSaved,
+}: {
+  shift: StaffShift | null;
+  onOpenChange: (v: boolean) => void;
+  onSaved: () => Promise<void> | void;
+}) {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [rate, setRate] = useState('');
+  const [note, setNote] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    setName('');
+    setPhone('');
+    setRate('');
+    setNote('');
+  }, [shift?.id]);
+
+  if (!shift) return null;
+
+  const submit = async () => {
+    if (!name.trim()) {
+      toast.error('Replacement name required');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await StaffAPI.markAttendance(shift.id, {
+        to: 'replaced',
+        replacement: {
+          name: name.trim(),
+          phone: phone.trim() || undefined,
+          role: shift.roleSnapshot,
+          rate: rate ? Number(rate) : undefined,
+          note: note.trim() || undefined,
+        },
+      });
+      toast.success('Replacement recorded');
+      await onSaved();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Could not record replacement');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!shift} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Assign replacement — {shift.staffNameSnapshot}</DialogTitle>
+          <DialogDescription>
+            {shift.staffNameSnapshot} couldn&apos;t make it. Record who covered the
+            shift so the rota and your records stay accurate.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Replacement name</Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Asif Khan"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Phone (optional)</Label>
+              <Input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="0300-1234567"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Rate paid (optional)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={rate}
+                onChange={(e) => setRate(e.target.value)}
+                placeholder="Rs."
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Note (optional)</Label>
+            <Input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="e.g. Regular cover, came on short notice"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button onClick={submit} disabled={submitting}>
+            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Record replacement
           </Button>
         </DialogFooter>
       </DialogContent>
