@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useNotifications } from "@/context/NotificationContext";
 import type { Notification } from "@/lib/api/notifications";
+import { groupNotificationsByDate } from "@/lib/notificationGroups";
 
 const NOTIFICATION_CONFIG: Record<
   string,
@@ -226,16 +227,25 @@ export default function NotificationDropdown({ notificationsPageUrl }: Notificat
               </p>
             </div>
           ) : (
-          <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
+          <div>
               <AnimatePresence initial={false}>
-                {displayedNotifications.map((notification) => (
-                  <NotificationItem
-                    key={notification.id}
-                    notification={notification}
-                    onRead={markAsRead}
-                    onDelete={deleteNotification}
-                    onNavigate={() => setOpen(false)}
-                  />
+                {groupNotificationsByDate(displayedNotifications).map((group) => (
+                  <div key={group.key}>
+                    <div className="sticky top-0 z-10 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-sm px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-400 border-b border-neutral-100 dark:border-neutral-800">
+                      {group.label}
+                    </div>
+                    <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                      {group.items.map((notification) => (
+                        <NotificationItem
+                          key={notification.id}
+                          notification={notification}
+                          onRead={markAsRead}
+                          onDelete={deleteNotification}
+                          onNavigate={() => setOpen(false)}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </AnimatePresence>
             </div>

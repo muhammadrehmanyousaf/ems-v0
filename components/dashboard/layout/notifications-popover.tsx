@@ -27,6 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/context/NotificationContext";
 import type { Notification } from "@/lib/api/notifications";
+import { groupNotificationsByDate } from "@/lib/notificationGroups";
 
 const NOTIFICATION_ICONS: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
   booking_created: { icon: CalendarCheck, color: "text-blue-600", bg: "bg-blue-50" },
@@ -212,17 +213,28 @@ const NotificationsPopover = () => {
             </div>
           ) : (
             <>
-              {notifications.map((n, i) => (
-                <React.Fragment key={n.id}>
-                  <NotificationItem
-                    notification={n}
-                    onRead={markAsRead}
-                    onDelete={deleteNotification}
-                  />
-                  {i < notifications.length - 1 && (
-                    <DropdownMenuSeparator className="my-0" />
-                  )}
-                </React.Fragment>
+              {groupNotificationsByDate(notifications).map((group) => (
+                <div key={group.key}>
+                  {/* Sticky date-bucket header */}
+                  <div className="sticky top-0 z-10 bg-popover/95 backdrop-blur-sm px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70 border-b">
+                    {group.label}
+                    <span className="ml-1.5 font-normal text-muted-foreground/50">
+                      {group.items.length}
+                    </span>
+                  </div>
+                  {group.items.map((n, i) => (
+                    <React.Fragment key={n.id}>
+                      <NotificationItem
+                        notification={n}
+                        onRead={markAsRead}
+                        onDelete={deleteNotification}
+                      />
+                      {i < group.items.length - 1 && (
+                        <DropdownMenuSeparator className="my-0" />
+                      )}
+                    </React.Fragment>
+                  ))}
+                </div>
               ))}
               {hasMore && (
                 <button
