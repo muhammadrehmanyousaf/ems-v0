@@ -104,6 +104,7 @@ import CarRentalCard from './car-rental-card';
 import HennaScheduleCard from './henna-schedule-card';
 import StationeryCard from './stationery-card';
 import MakeupCard from './makeup-card';
+import SubcontractCard from './subcontract-card';
 import PhotographyCard from './photography-card';
 import { useUser } from '@/context/UserContext';
 import { SignDialog, type SignSide } from './sign-dialog';
@@ -578,6 +579,11 @@ export default function FunctionSheetDetailView({
             user?.vendorType === 'Makeup artist' && (
               <MakeupCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
             )}
+          {/* Sub-contract ledger (M23, §20) — ALL vendor types. Flag
+              NEXT_PUBLIC_SUBCONTRACT. */}
+          {process.env.NEXT_PUBLIC_SUBCONTRACT === '1' && (
+            <SubcontractCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
+          )}
           {/* Photography shoot sheet — days + crew + shot list + family
               groups + RAW/drone policy + targets. Flag NEXT_PUBLIC_PHOTOGRAPHY
               + vendor-type gated. */}

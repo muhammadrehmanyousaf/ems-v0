@@ -349,6 +349,26 @@ export interface StationeryData {
   notes?: string;
 }
 
+// M23 (§20) — vendor↔vendor sub-contract ledger. PK weddings are
+// rarely one vendor; the lead vendor tracks each sub here.
+export type SubcontractStatus =
+  | "planned" | "confirmed" | "in_progress" | "delivered" | "paid" | "cancelled";
+export interface SubcontractItem {
+  id: string;
+  subName: string;            // the sub-vendor / person
+  subType?: string;          // craft (Caterer, Photographer, Decorator…)
+  subPhone?: string;
+  scope?: string;            // what they're doing
+  agreedAmount?: number | null;
+  amountPaid?: number | null;
+  status: SubcontractStatus;
+  notes?: string;
+}
+export interface SubcontractData {
+  items?: SubcontractItem[];
+  notes?: string;
+}
+
 // Structured day-of BEO / run-sheet (venue operations).
 export interface BeoTimelineRow { time: string; activity: string }
 export interface BeoData {
@@ -391,6 +411,7 @@ export interface FunctionSheet {
   stationeryJson?: StationeryData | null;
   makeupJson?: MakeupData | null;
   photographyJson?: PhotographyData | null;
+  subcontractsJson?: SubcontractData | null;
   notes: string | null;
   sentAt: string | null;
   signedAt: string | null;
@@ -621,6 +642,7 @@ export interface UpdateFunctionSheetInput {
   stationeryJson?: StationeryData | null;
   makeupJson?: MakeupData | null;
   photographyJson?: PhotographyData | null;
+  subcontractsJson?: SubcontractData | null;
   notes?: string | null;
 }
 
