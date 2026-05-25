@@ -441,6 +441,26 @@ export class AnalyticsAPI {
       return null;
     }
   }
+
+  /**
+   * Monthly P&L — accrual profit/loss per month stitching booking
+   * revenue against the four cost ledgers (operating expenses, supplier
+   * bills, broker commissions, staff pay). The first view that answers
+   * "did I actually make money this month?" rather than just "how much
+   * came in?". Vendor-scoped; read-only.
+   */
+  static async getMonthlyPnl(
+    monthsBack: number = 12,
+  ): Promise<MonthlyPnlData | null> {
+    try {
+      const res = await axiosInstance.get(
+        `${BACKEND_URL}api/v1/analytics/monthly-pnl?monthsBack=${monthsBack}`
+      );
+      return res.data.data;
+    } catch {
+      return null;
+    }
+  }
 }
 
 // ─── A/R aging types ───────────────────────────────────────────────
@@ -675,4 +695,57 @@ export interface ResponseTimesData {
   distribution: ResponseBucket[];
   bySource: ResponseBySource[];
   range: { from: string; to: string };
+}
+
+// ─── Monthly P&L types ─────────────────────────────────────────────
+export interface MonthlyPnlCosts {
+  expenses: number;
+  supplierInvoices: number;
+  brokerCommissions: number;
+  staffPay: number;
+  total: number;
+}
+export interface MonthlyPnlMonth {
+  key: string;            // "YYYY-MM"
+  label: string;          // "May 2026"
+  year: number;
+  monthOfYear: number;    // 1-12
+  revenue: number;
+  bookingCount: number;
+  costs: MonthlyPnlCosts;
+  grossProfit: number;    // revenue - costs.total (can be negative)
+  margin: number | null;  // % (1 decimal); null when revenue is 0
+  isCurrentMonth: boolean;
+}
+export interface MonthlyPnlCostBreakdown {
+  key: "expenses" | "supplierInvoices" | "brokerCommissions" | "staffPay";
+  label: string;
+  amount: number;
+  pct: number;
+}
+export interface MonthlyPnlSummaryMonth {
+  key: string;
+  label: string;
+  grossProfit: number;
+  margin: number | null;
+}
+export interface MonthlyPnlData {
+  months: MonthlyPnlMonth[];
+  totals: {
+    revenue: number;
+    expenses: number;
+    supplierInvoices: number;
+    brokerCommissions: number;
+    staffPay: number;
+    totalCosts: number;
+    grossProfit: number;
+    margin: number | null;
+    monthsCovered: number;
+  };
+  costBreakdown: MonthlyPnlCostBreakdown[];
+  best: MonthlyPnlSummaryMonth | null;
+  worst: MonthlyPnlSummaryMonth | null;
+  averageMonthlyProfit: number;
+  basis: "accrual";
+  generatedAt: string;
 }

@@ -30,6 +30,7 @@ import { cn } from '@/lib/utils';
 import { InsightsAPI, type InsightsAdvanced } from '@/lib/api/insights';
 import { LEAD_SOURCE_LABELS, type LeadSource } from '@/lib/api/leads';
 import RevenueBreakdowns from './revenue-breakdowns';
+import MonthlyPnl from './monthly-pnl';
 import CashFlowForecast from './cash-flow-forecast';
 import SeasonalDemandHeatmap from './seasonal-demand-heatmap';
 import ResponseTimes from './response-times';
@@ -261,6 +262,10 @@ export default function InsightsView() {
           mix, top customers by revenue, by-business slice. Self-
           contained component, fetches its own data on mount. */}
       <RevenueBreakdowns />
+
+      {/* Monthly P&L — accrual profit per month, revenue against the four
+          cost ledgers. The "did I actually make money?" view. */}
+      <MonthlyPnl />
 
       {/* Cash-flow forecast (audit gap G4) — month-by-month expected
           inflows from BOOKED installments. Pairs with /receivables. */}
