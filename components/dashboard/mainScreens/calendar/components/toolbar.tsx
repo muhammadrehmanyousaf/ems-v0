@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, Building2 } from 'lucide-react'
 import React from 'react'
 import { AvailabilityDrawer } from './availability-drawer'
 
-type Mode = 'month' | 'week' | 'day';
+type Mode = 'month' | 'week' | 'day' | 'agenda';
 
 export interface CalendarBusinessOption {
     id: number;
@@ -37,9 +37,14 @@ const Toolbar = ({
         { value: 'month', label: 'Month' },
         { value: 'week', label: 'Week' },
         { value: 'day', label: 'Day' },
+        { value: 'agenda', label: 'Agenda' },
     ] as const;
 
-    const headerTitle = mode === 'month' ? monthTitle : mode === 'week' ? weekTitle : dayTitle;
+    const headerTitle =
+        mode === 'month' ? monthTitle
+        : mode === 'week' ? weekTitle
+        : mode === 'day' ? dayTitle
+        : monthTitle; // agenda anchors on the cursor month
 
     return (
         <div className="flex items-center justify-between">

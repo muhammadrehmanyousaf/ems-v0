@@ -326,6 +326,25 @@ export class StaffAPI {
     await axiosInstance.delete(`/api/v1/staff/shifts/${id}`);
   }
 
+  /**
+   * Calendar overlay — non-void shifts in a date window grouped by date,
+   * with minimal fields. Powers the agenda view's "team on duty" row.
+   */
+  static async teamCalendar(filters: {
+    from?: string;
+    to?: string;
+    businessId?: number;
+  } = {}): Promise<TeamCalendarData> {
+    try {
+      const res = await axiosInstance.get(`/api/v1/staff/team-calendar`, {
+        params: filters,
+      });
+      return res.data?.data ?? { days: {}, range: { from: "", to: "" }, totalShifts: 0 };
+    } catch {
+      return { days: {}, range: { from: "", to: "" }, totalShifts: 0 };
+    }
+  }
+
   static async payrollSummary(filters: {
     from?: string;
     to?: string;
@@ -359,6 +378,23 @@ export interface PayBreakdown {
     bonus: number;
     deduction: number;
   };
+}
+
+// ─── Team calendar overlay ──────────────────────────────────────────
+export interface TeamCalendarShift {
+  id: number;
+  staffName: string;
+  role: StaffRole;
+  paymentStatus: PaymentStatus;
+  bookingId: number | null;
+  businessId: number;
+  startTime: string | null;
+  endTime: string | null;
+}
+export interface TeamCalendarData {
+  days: Record<string, TeamCalendarShift[]>; // keyed by YYYY-MM-DD
+  range: { from: string; to: string };
+  totalShifts: number;
 }
 
 // ─── Display helpers ────────────────────────────────────────────────

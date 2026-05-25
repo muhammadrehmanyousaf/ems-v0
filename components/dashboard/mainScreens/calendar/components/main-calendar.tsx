@@ -4,7 +4,9 @@ import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import WeekCalendar from './week-calendar';
 import { DayView } from './day-view';
 import MonthView from './month-view';
+import AgendaView from './agenda-view';
 import Toolbar from './toolbar';
+import { StaffAPI, type TeamCalendarShift } from '@/lib/api/staff';
 import { buildMonth, buildWeekRange, CalendarEvent, endOfDay, filterEvents, startOfDay, ymd } from '@/lib/utils';
 import AddBookingDialog, { BookingDetail } from './add-booking-dialog';
 import axiosInstance from '@/lib/axiosConfig';
@@ -20,7 +22,9 @@ import {
 // Phase 3 #9.2 — Hijri overlay + Islamic-events suggestion strip.
 import { IslamicEventsStrip } from './islamic-events-strip';
 
-type Mode = 'month' | 'week' | 'day';
+type Mode = 'month' | 'week' | 'day' | 'agenda';
+
+const AGENDA_HORIZON_DAYS = 60;
 
 export default function MainCalendar() {
     const [mode, setMode] = useState<Mode>('month');
@@ -54,6 +58,10 @@ export default function MainCalendar() {
     const [businessOptions, setBusinessOptions] = useState<
         Array<{ id: number; name: string; hasTemplates: boolean }>
     >([]);
+
+    // §AGENDA — team-on-duty overlay (staff shifts grouped by date) for the
+    // agenda view. Fetched lazily when the agenda mode is first opened.
+    const [teamByDate, setTeamByDate] = useState<Record<string, TeamCalendarShift[]>>({});
 
     const [cursor, setCursor] = useState<Date>(() => {
         const t = new Date();
@@ -131,6 +139,21 @@ export default function MainCalendar() {
     }, []);
 
     useEffect(() => { fetchBookings(); }, [fetchBookings]);
+
+    // §AGENDA — fetch the team-on-duty overlay for the agenda window
+    // whenever agenda mode is active and the cursor moves. Resilient:
+    // returns {} on any error so the agenda still renders bookings.
+    useEffect(() => {
+        if (mode !== 'agenda') return;
+        let alive = true;
+        const start = new Date(cursor);
+        const end = new Date(cursor);
+        end.setDate(end.getDate() + AGENDA_HORIZON_DAYS);
+        StaffAPI.teamCalendar({ from: ymd(start), to: ymd(end) })
+            .then((r) => { if (alive) setTeamByDate(r.days || {}); })
+            .catch(() => { if (alive) setTeamByDate({}); });
+        return () => { alive = false; };
+    }, [mode, cursor]);
 
     // §M4 — drag-drop reschedule (offline bookings only; gated by
     // NEXT_PUBLIC_CALENDAR_DND). Online/customer bookings can't be moved
@@ -354,7 +377,7 @@ export default function MainCalendar() {
     const step = useCallback(
         (dir: 1 | -1) => {
             const d = new Date(cursor);
-            if (mode === 'month') d.setMonth(d.getMonth() + dir, 1);
+            if (mode === 'month' || mode === 'agenda') d.setMonth(d.getMonth() + dir, 1);
             else if (mode === 'week') d.setDate(d.getDate() + dir * 7);
             else d.setDate(d.getDate() + dir);
             d.setHours(0, 0, 0, 0);
@@ -479,6 +502,17 @@ export default function MainCalendar() {
                     date={cursor}
                     events={eventsThisDay}
                     onOpenCellDialog={onOpenCellDialog}
+                />
+            )}
+
+            {mode === 'agenda' && (
+                <AgendaView
+                    cursor={cursor}
+                    events={events}
+                    bookingDetails={bookingDetailsMap}
+                    teamByDate={teamByDate}
+                    onOpenEvent={onOpenCellDialog}
+                    horizonDays={AGENDA_HORIZON_DAYS}
                 />
             )}
 
