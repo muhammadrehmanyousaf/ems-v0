@@ -41,6 +41,7 @@ export type NavItemKey =
   | "Drone NOC"
   // Growth
   | "Promote"
+  | "Plan & billing"
   // Admin / shared
   | "Users"
   | "Vendors"

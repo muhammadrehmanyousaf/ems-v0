@@ -101,10 +101,20 @@ function buildVendorSections(user: ReturnType<typeof useUser>["user"]): NavSecti
   if (operations.length > 0) {
     sections.push({ label: "Operations", items: operations })
   }
-  // Growth — Promote (§5), gated by NEXT_PUBLIC_PROMOTIONS (default OFF).
+  // Growth — Promote (§5) + Plan & billing (§17.1), each flag-gated
+  // (default OFF). Grouped together so the monetization surfaces live
+  // in one place.
+  const growItems = []
   if (process.env.NEXT_PUBLIC_PROMOTIONS === "1") {
     const promote = data.vendorMainNav.find((i) => i.name === "Promote")
-    if (promote) sections.push({ label: "Grow", items: [promote] })
+    if (promote) growItems.push(promote)
+  }
+  if (process.env.NEXT_PUBLIC_BILLING === "1") {
+    const billing = data.vendorMainNav.find((i) => i.name === "Plan & billing")
+    if (billing) growItems.push(billing)
+  }
+  if (growItems.length > 0) {
+    sections.push({ label: "Grow", items: growItems })
   }
   sections.push({
     label: "My Business",

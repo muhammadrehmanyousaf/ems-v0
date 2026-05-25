@@ -12,6 +12,7 @@ import {
   Truck,
   CircleDollarSign,
   ClipboardList,
+  CreditCard,
   FileBadge,
   Gauge,
   Gavel,
@@ -66,8 +67,9 @@ export const data = {
     { name: "Drone NOC",     url: "/dashboard/drone-noc",      icon: Plane,           i18nKey: "nav.drone_noc" },
     { name: "Reviews",       url: "/dashboard/reviews",        icon: Smile,           i18nKey: "nav.reviews" },
     { name: "Notifications", url: "/dashboard/notifications",  icon: Bell,            i18nKey: "nav.notifications" },
-    // Growth — gated by NEXT_PUBLIC_PROMOTIONS in buildVendorSections.
+    // Growth — gated by feature flags in buildVendorSections.
     { name: "Promote",       url: "/dashboard/promote",        icon: Megaphone,       i18nKey: "nav.promote" },
+    { name: "Plan & billing", url: "/dashboard/billing",       icon: CreditCard,      i18nKey: "nav.billing" },
   ],
 
   vendorMyBusiness: [
