@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, MoreHorizontal, Trash2, MessageSquareReply } from "lucide-react";
+import { Eye, MoreHorizontal, Trash2, MessageSquareReply, Pin, PinOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -17,9 +17,10 @@ interface RowActionsProps {
     onView: (review: Review) => void;
     onDelete: (review: Review) => void;
     onReply: (review: Review) => void;
+    onPin?: (review: Review) => void;
 }
 
-export function RowActions({ data, onView, onDelete, onReply }: RowActionsProps) {
+export function RowActions({ data, onView, onDelete, onReply, onPin }: RowActionsProps) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -43,6 +44,15 @@ export function RowActions({ data, onView, onDelete, onReply }: RowActionsProps)
                     <MessageSquareReply className="size-4 opacity-70" />
                     {data.vendorReply ? "Edit Reply" : "Reply"}
                 </DropdownMenuItem>
+                {onPin && (
+                    <DropdownMenuItem className="gap-2" onClick={() => onPin(data)}>
+                        {data.isPinned ? (
+                            <><PinOff className="size-4 opacity-70" /> Unpin</>
+                        ) : (
+                            <><Pin className="size-4 opacity-70" /> Pin (showcase)</>
+                        )}
+                    </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                     className="gap-2 text-destructive focus:text-destructive"

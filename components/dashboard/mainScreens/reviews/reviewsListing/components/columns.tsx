@@ -11,6 +11,7 @@ export const columns = (
     onView: (review: Review) => void,
     onDelete: (review: Review) => void,
     onReply: (review: Review) => void,
+    onPin?: (review: Review) => void,
 ): ColumnDef<Review>[] => [
     {
         id: "select",
@@ -84,6 +85,7 @@ export const columns = (
                 onView={onView}
                 onDelete={onDelete}
                 onReply={onReply}
+                onPin={onPin}
             />
         ),
     },

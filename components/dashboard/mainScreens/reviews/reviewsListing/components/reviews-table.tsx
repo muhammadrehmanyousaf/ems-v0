@@ -42,12 +42,23 @@ const ReviewsTable = () => {
         }
     };
 
+    const handlePin = async (review: Review) => {
+        try {
+            const res = await ReviewsAPI.togglePin(review.id, !review.isPinned);
+            toast.success(res?.isPinned ? 'Review pinned — it’ll showcase first' : 'Review unpinned');
+            fetchData();
+        } catch {
+            toast.error('Failed to update pin');
+        }
+    };
+
     const { table, paginationState } = useDataTable<Review>({
         data,
         columns: columns(
             (review) => setViewReview(review),
             (review) => setDeleteReview(review),
             (review) => setReplyReview(review),
+            handlePin,
         ),
         totalItems: data.length,
     });

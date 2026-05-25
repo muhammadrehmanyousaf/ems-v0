@@ -500,6 +500,15 @@ export class ReviewsAPI {
     await axiosInstance.delete(`/api/v1/reviews/${reviewId}`);
   }
 
+  // §M8 — pin / unpin a review (vendor showcases their best).
+  static async togglePin(reviewId: number | string, isPinned?: boolean): Promise<{ id: number; isPinned: boolean }> {
+    const res = await axiosInstance.patch(
+      `/api/v1/reviews/${reviewId}/pin`,
+      typeof isPinned === "boolean" ? { isPinned } : {},
+    );
+    return res.data?.data;
+  }
+
   // BK-100.7 — customer submits a review for a specific business on a
   // specific booking. Backend gates to booking.status === 'Completed'
   // and enforces one review per (user, business, booking).

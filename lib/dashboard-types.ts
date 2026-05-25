@@ -116,6 +116,7 @@ export interface Review {
   createdAt: string;
   vendorReply?: string;
   vendorReplyDate?: string;
+  isPinned?: boolean;
 }
 
 // ─── User ─────────────────────────────────────────────────────
