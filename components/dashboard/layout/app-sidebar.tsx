@@ -101,6 +101,11 @@ function buildVendorSections(user: ReturnType<typeof useUser>["user"]): NavSecti
   if (operations.length > 0) {
     sections.push({ label: "Operations", items: operations })
   }
+  // Growth — Promote (§5), gated by NEXT_PUBLIC_PROMOTIONS (default OFF).
+  if (process.env.NEXT_PUBLIC_PROMOTIONS === "1") {
+    const promote = data.vendorMainNav.find((i) => i.name === "Promote")
+    if (promote) sections.push({ label: "Grow", items: [promote] })
+  }
   sections.push({
     label: "My Business",
     items: data.vendorMyBusiness,
@@ -120,9 +125,15 @@ function buildAdminSections(role: DashboardRole): NavSection[] {
     (i) => isSuper || !SUPER_ONLY_PLATFORM.has(i.name),
   )
 
+  // Promotions queue (§5) is super-admin only + gated by the flag.
+  const promotionsOn = process.env.NEXT_PUBLIC_PROMOTIONS === "1"
+  const operations = data.adminOperations.filter(
+    (i) => i.name !== "Promotions" || (promotionsOn && isSuper),
+  )
+
   const sections: NavSection[] = [
     { label: "Overview",   items: data.adminOverview },
-    { label: "Operations", items: data.adminOperations },
+    { label: "Operations", items: operations },
     { label: "Directory",  items: data.adminDirectory },
     { label: "Platform",   items: platform },
   ]

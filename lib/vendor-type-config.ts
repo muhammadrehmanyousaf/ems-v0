@@ -39,6 +39,8 @@ export type NavItemKey =
   | "Generator fuel"
   | "Halal certs"
   | "Drone NOC"
+  // Growth
+  | "Promote"
   // Admin / shared
   | "Users"
   | "Vendors"
