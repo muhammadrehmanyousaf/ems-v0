@@ -281,6 +281,18 @@ export class StaffAPI {
     return res.data?.data?.shift ?? null;
   }
 
+  // §M5 — open the payslip PDF for a shift in a new tab (auth via axios,
+  // blob → object URL).
+  static async openPayslipPdf(id: number): Promise<void> {
+    const res = await axiosInstance.get(`/api/v1/staff/shifts/${id}/payslip-pdf`, {
+      responseType: "blob",
+    });
+    const url = URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
+    window.open(url, "_blank");
+    // Revoke a little later so the new tab has time to load it.
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+
   static async createShift(
     body: CreateShiftInput,
   ): Promise<{ shift: StaffShift; pay: PayBreakdown }> {

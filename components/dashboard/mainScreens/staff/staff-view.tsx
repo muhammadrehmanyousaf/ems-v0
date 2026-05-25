@@ -1520,6 +1520,20 @@ function ShiftCard({
               </Button>
             );
           })}
+          {/* §M5 — printable payslip */}
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={() => {
+              StaffAPI.openPayslipPdf(shift.id).catch(() =>
+                toast.error('Could not open payslip'),
+              );
+            }}
+          >
+            <Receipt className="mr-1 h-3 w-3" />
+            Payslip
+          </Button>
           {shift.paymentStatus !== 'paid' && (
             <Button
               size="sm"
