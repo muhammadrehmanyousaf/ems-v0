@@ -7,6 +7,8 @@ import PageContainer from '@/components/dashboard/layout/page-container'
 import { ReviewAutomationStatsCard } from '../automation-stats-card'
 // Phase 5 — AI sentiment summary card.
 import { AiReviewSummaryCard } from '../ai-review-summary-card'
+// §M8 — reputation dashboard panel (avg vs peers, trend, shareable review).
+import ReputationPanel from '../reputation-panel'
 
 const ReviewsListingView = () => {
     return (
@@ -17,6 +19,7 @@ const ReviewsListingView = () => {
                         title="Reviews"
                     />
                     <Separator/>
+                    <ReputationPanel />
                     <ReviewAutomationStatsCard />
                     <AiReviewSummaryCard />
                     <ReviewsTable/>

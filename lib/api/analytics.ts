@@ -391,6 +391,19 @@ export class AnalyticsAPI {
   }
 
   /**
+   * Reputation (§M8) — avg + star distribution + response rate +
+   * 6-month trend + category benchmark + best review (shareable card).
+   */
+  static async getReputation(): Promise<ReputationData | null> {
+    try {
+      const res = await axiosInstance.get(`${BACKEND_URL}api/v1/analytics/reputation`);
+      return res.data.data;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Seasonality — 24-month per-vendor heatmap with year-over-year
    * compare and all-time peaks. Tells each vendor THEIR OWN rhythm
    * (every vendor's pattern differs from the industry average).
@@ -552,6 +565,39 @@ export interface CashFlowForecastData {
   };
   biggestMonth: { key: string; label: string; amount: number } | null;
   generatedAt: string;
+}
+
+// ─── Reputation types ──────────────────────────────────────────────
+export interface ReputationTrendPoint {
+  key: string;
+  label: string;
+  count: number;
+  average: number | null;
+}
+export interface ReputationCategoryBenchmark {
+  vendorType: string;
+  average: number | null;
+  reviewCount: number;
+  businessCount: number;
+}
+export interface ReputationTopReview {
+  id: number;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  businessName: string | null;
+  reviewerName: string | null;
+}
+export interface ReputationData {
+  hasData: boolean;
+  average: number;
+  total: number;
+  distribution: { stars: number; count: number }[];
+  repliedCount: number;
+  responseRate: number | null;
+  trend: ReputationTrendPoint[];
+  categoryBenchmark: ReputationCategoryBenchmark | null;
+  topReview: ReputationTopReview | null;
 }
 
 // ─── Seasonality types ─────────────────────────────────────────────
