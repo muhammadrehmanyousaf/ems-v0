@@ -64,6 +64,7 @@ import {
 import { InstallmentsCard } from '@/components/bookings/installments-card';
 import { VendorChangeRequestsCard } from '@/components/bookings/vendor-change-requests-card';
 import { VendorNoShowDialog } from '@/components/bookings/vendor-no-show-dialog';
+import EventWeatherChip from '@/components/dashboard/mainScreens/bookings/event-weather-chip';
 import type { BookingData } from '@/lib/dashboard-types';
 
 const statusColors: Record<string, string> = {
@@ -399,6 +400,10 @@ export default function BookingDetailView({
                   </div>
                 )}
               </div>
+
+              {/* §M4 — event-day weather (renders only when a forecast is
+                  available + NEXT_PUBLIC_WEATHER on). */}
+              <EventWeatherChip bookingId={booking.id} />
 
               {/* BK-100.53 — off-vendor service location */}
               {booking.serviceLocationMode &&
