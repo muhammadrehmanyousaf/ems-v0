@@ -70,6 +70,9 @@ export default function LeadsPipelineView() {
       load();
     } catch (e: any) {
       toast.error(e?.response?.data?.message || "Could not move lead");
+      // Refetch so a rejected transition doesn't leave the card stranded in
+      // the wrong column until a manual page refresh.
+      load();
     } finally {
       setMovingId(null);
     }
@@ -114,9 +117,9 @@ export default function LeadsPipelineView() {
                   <div className="flex items-center gap-1 flex-wrap">
                     <Badge variant="outline" className="text-[9px]">{lead.source.replace(/_/g, " ")}</Badge>
                     {lead.eventType && <Badge variant="outline" className="text-[9px]">{lead.eventType}</Badge>}
-                    {fmtPKR((lead as { estimatedValue?: number }).estimatedValue) && (
+                    {Number(lead.estimatedBudget) > 0 && (
                       <span className="text-[10px] font-semibold tabular-nums text-bridal-gold-dark">
-                        {fmtPKR((lead as { estimatedValue?: number }).estimatedValue)}
+                        {fmtPKR(Number(lead.estimatedBudget))}
                       </span>
                     )}
                   </div>
