@@ -113,6 +113,11 @@ function buildVendorSections(user: ReturnType<typeof useUser>["user"]): NavSecti
     const billing = data.vendorMainNav.find((i) => i.name === "Plan & billing")
     if (billing) growItems.push(billing)
   }
+  // Collaborations (M23 Layer 2) — shares the sub-contract flag.
+  if (process.env.NEXT_PUBLIC_SUBCONTRACT === "1") {
+    const collab = data.vendorMainNav.find((i) => i.name === "Collaborations")
+    if (collab) growItems.push(collab)
+  }
   if (growItems.length > 0) {
     sections.push({ label: "Grow", items: growItems })
   }

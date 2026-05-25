@@ -70,6 +70,7 @@ export const data = {
     // Growth — gated by feature flags in buildVendorSections.
     { name: "Promote",       url: "/dashboard/promote",        icon: Megaphone,       i18nKey: "nav.promote" },
     { name: "Plan & billing", url: "/dashboard/billing",       icon: CreditCard,      i18nKey: "nav.billing" },
+    { name: "Collaborations", url: "/dashboard/collaborations", icon: Handshake,      i18nKey: "nav.collaborations" },
   ],
 
   vendorMyBusiness: [

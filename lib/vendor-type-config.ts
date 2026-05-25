@@ -42,6 +42,7 @@ export type NavItemKey =
   // Growth
   | "Promote"
   | "Plan & billing"
+  | "Collaborations"
   // Admin / shared
   | "Users"
   | "Vendors"
