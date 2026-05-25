@@ -18,6 +18,9 @@ interface User {
   emailVerified?: boolean;
   phoneVerified?: boolean;
   twoFactorEnabled?: boolean;
+  // Subscription tier (§17.1). Flows in via verifyWithServer; absent =
+  // treat as 'free'. Drives soft upgrade nudges (lib/entitlements.ts).
+  subscriptionTier?: "free" | "pro" | "premium";
   roles: Array<{ id: number; name: string }>;
 }
 

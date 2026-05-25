@@ -34,6 +34,7 @@ import CashFlowForecast from './cash-flow-forecast';
 import SeasonalDemandHeatmap from './seasonal-demand-heatmap';
 import ResponseTimes from './response-times';
 import WhatsAppTemplatePerformance from './whatsapp-template-performance';
+import UpgradeNudge from '@/components/dashboard/shared/upgrade-nudge';
 
 function fmtPKR(n: number): string {
   if (!Number.isFinite(n)) return '—';
@@ -74,6 +75,11 @@ export default function InsightsView() {
 
   return (
     <div className="space-y-6">
+      {/* Soft upgrade nudge — advanced insights are a Business-plan
+          feature (§17.1). Non-blocking; renders only when billing is on
+          and the vendor is on a lower tier. */}
+      <UpgradeNudge feature="analytics" message="Advanced insights are a Business-plan feature — you're previewing them." />
+
       {/* Quote acceptance + LTV summary */}
       <div className="grid gap-3 md:grid-cols-4">
         <KpiCard
