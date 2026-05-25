@@ -20,6 +20,10 @@ type MonthViewProps = {
   slotAvailabilityByDate?: Record<string, SlotAvailabilityRow[]>;
   onOpenCellDialog: (events: CalendarEvent[] | [], date?: Date) => void;
   onDateBlockToggle: (date: Date) => void;
+  // §M4 — drag-drop reschedule. When provided, OFFLINE booking chips
+  // become draggable and day cells become drop targets. Undefined =
+  // feature off (default), drag behaviour fully inert.
+  onEventDrop?: (eventId: string, date: Date) => void;
 };
 
 const MonthView = ({
@@ -32,7 +36,9 @@ const MonthView = ({
   slotAvailabilityByDate,
   onOpenCellDialog,
   onDateBlockToggle,
+  onEventDrop,
 }: MonthViewProps) => {
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
   const byDate = React.useMemo(() => {
     const m = new Map<string, CalendarEvent[]>();
     for (const ev of events) {
@@ -125,9 +131,22 @@ const MonthView = ({
                 e.preventDefault();
                 onDateBlockToggle(c.date);
               }}
+              {...(onEventDrop && c.inCurrentMonth && !isBlocked
+                ? {
+                    onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragOverKey(key); },
+                    onDragLeave: () => setDragOverKey((k) => (k === key ? null : k)),
+                    onDrop: (e: React.DragEvent) => {
+                      e.preventDefault();
+                      const id = e.dataTransfer.getData("text/plain");
+                      setDragOverKey(null);
+                      if (id) onEventDrop(id, c.date);
+                    },
+                  }
+                : {})}
               title={cellTitle}
               className={[
                 'border p-2 relative cursor-pointer select-none group',
+                dragOverKey === key ? 'ring-2 ring-inset ring-bridal-gold-dark bg-bridal-gold-dark/5' : '',
                 !c.inCurrentMonth
                   ? 'bg-accent dark:bg-accent/30 text-muted-foreground'
                   : isBlocked
@@ -276,18 +295,30 @@ const MonthView = ({
 
               {/* Events */}
               <div className="mt-1 xlarge:mt-2 space-y-1">
-                {visible.map(ev => (
+                {visible.map(ev => {
+                  const canDrag = !!onEventDrop && ev.bookingSource === 'offline';
+                  return (
                   <div
                     key={ev.id}
-                    title={`${ev.title}${ev.bookingSource === 'offline' ? ' · Offline' : ''}`}
-                    className="w-full truncate rounded-md bg-emerald-600/10 text-emerald-700 px-2 py-0.5 text-[10px] md:text-[11px] flex items-center gap-1"
+                    draggable={canDrag}
+                    onDragStart={canDrag ? (e) => {
+                      e.stopPropagation();
+                      e.dataTransfer.setData("text/plain", String(ev.id));
+                      e.dataTransfer.effectAllowed = "move";
+                    } : undefined}
+                    title={`${ev.title}${ev.bookingSource === 'offline' ? ' · Offline' : ''}${canDrag ? ' · drag to reschedule' : ''}`}
+                    className={[
+                      "w-full truncate rounded-md bg-emerald-600/10 text-emerald-700 px-2 py-0.5 text-[10px] md:text-[11px] flex items-center gap-1",
+                      canDrag ? "cursor-grab active:cursor-grabbing" : "",
+                    ].join(" ")}
                   >
                     {ev.bookingSource === 'offline' && (
                       <Store className="h-2.5 w-2.5 shrink-0 text-orange-500" />
                     )}
                     <span className="truncate">{ev.title}</span>
                   </div>
-                ))}
+                  );
+                })}
                 {more > 0 && (
                   <div className="text-[11px] text-muted-foreground">+{more} more</div>
                 )}

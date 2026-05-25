@@ -65,8 +65,7 @@ export default function MainCalendar() {
     type RawBooking = Record<string, any>;
 
     // Fetch bookings and convert to CalendarEvents
-    useEffect(() => {
-        const fetchBookings = async () => {
+    const fetchBookings = useCallback(async () => {
             try {
                 const res = await axiosInstance.get('/api/v1/bookings');
                 const bookings: RawBooking[] = res.data?.data?.data || res.data?.data || [];
@@ -129,9 +128,32 @@ export default function MainCalendar() {
             } finally {
                 setLoading(false);
             }
-        };
-        fetchBookings();
     }, []);
+
+    useEffect(() => { fetchBookings(); }, [fetchBookings]);
+
+    // §M4 — drag-drop reschedule (offline bookings only; gated by
+    // NEXT_PUBLIC_CALENDAR_DND). Online/customer bookings can't be moved
+    // unilaterally (they go through the change-request flow), so we
+    // toast instead of calling the (403-for-vendors) reschedule path.
+    const handleEventDrop = useCallback(async (eventId: string, date: Date) => {
+        const detail = bookingDetailsMap[eventId];
+        if (detail && detail.bookingSource !== 'offline') {
+            toast.message("Only offline bookings can be dragged — online bookings reschedule via the customer / change request");
+            return;
+        }
+        const target = ymd(date);
+        try {
+            await axiosInstance.post(`/api/v1/bookings/${eventId}/vendor-reschedule`, { newBookingDate: target });
+            toast.success('Booking moved');
+            fetchBookings();
+        } catch (e: unknown) {
+            const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+            toast.error(msg || 'Could not move booking');
+        }
+    }, [bookingDetailsMap, fetchBookings]);
+
+    const calendarDndOn = process.env.NEXT_PUBLIC_CALENDAR_DND === '1';
 
     // Fetch blocked dates whenever month changes
     const fetchBlockedDates = useCallback(async (monthDate: Date) => {
@@ -439,6 +461,7 @@ export default function MainCalendar() {
                     slotAvailabilityByDate={slotAvailabilityByDate}
                     onOpenCellDialog={onOpenCellDialog}
                     onDateBlockToggle={onDateBlockToggle}
+                    onEventDrop={calendarDndOn ? handleEventDrop : undefined}
                 />
             )}
 
