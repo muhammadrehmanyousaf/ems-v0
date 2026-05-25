@@ -779,6 +779,68 @@ export class CustomersAPI {
     );
     return res.data?.data ?? null;
   }
+
+  /**
+   * Unified communication timeline — every touchpoint with one customer
+   * (enquiry, booking, status changes, WhatsApp sends, smart files,
+   * reviews) merged into one reverse-chronological feed.
+   */
+  static async getTimeline(params: {
+    email?: string;
+    phone?: string;
+    offlineId?: number;
+  }): Promise<CustomerTimelineResponse | null> {
+    const qs = new URLSearchParams();
+    if (params.email) qs.set("email", params.email);
+    if (params.phone) qs.set("phone", params.phone);
+    if (params.offlineId != null) qs.set("offlineId", String(params.offlineId));
+    if (qs.toString() === "") return null;
+    try {
+      const res = await axiosInstance.get(
+        `/api/v1/analytics/customers/timeline?${qs.toString()}`,
+      );
+      return res.data?.data ?? null;
+    } catch {
+      return null;
+    }
+  }
+}
+
+// ─── Customer communication timeline ──────────────────────────────
+export type CustomerTimelineEventType =
+  | "booking_created"
+  | "lead_created"
+  | "lead_responded"
+  | "sheet_created"
+  | "status_change"
+  | "whatsapp"
+  | "review"
+  | "vendor_reply";
+
+export interface CustomerTimelineEvent {
+  type: CustomerTimelineEventType;
+  at: string; // ISO
+  title: string;
+  detail: string | null;
+  bookingId?: number | null;
+  leadId?: number | null;
+  sheetId?: number | null;
+  actorRole?: string;
+  rating?: number | null;
+  amount?: number | null;
+}
+
+export interface CustomerTimelineResponse {
+  customer: {
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+    offlineCustomerId: number | null;
+  };
+  events: CustomerTimelineEvent[];
+  counts: Partial<Record<CustomerTimelineEventType, number>>;
+  totalEvents: number;
+  generatedAt: string;
 }
 
 // ─── Bookings ────────────────────────────────────────────────

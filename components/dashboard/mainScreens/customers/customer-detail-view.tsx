@@ -50,6 +50,7 @@ import { cn } from '@/lib/utils';
 import WhatsAppQuickSend from '@/components/dashboard/shared/whatsapp-quick-send';
 import CustomerTrustCard from './customer-trust-card';
 import CommunityTrustPanel from './community-trust-panel';
+import CustomerTimeline from './customer-timeline';
 
 import {
   CustomersAPI,
@@ -432,6 +433,9 @@ export default function CustomerDetailView({
           )}
         </CardContent>
       </Card>
+
+      {/* ─── Communication timeline ─────────────────────────────── */}
+      <CustomerTimeline params={params} />
 
       {/* ─── Two-column: Function sheets + Leads ─────────────────── */}
       <div className="grid gap-6 lg:grid-cols-2">
