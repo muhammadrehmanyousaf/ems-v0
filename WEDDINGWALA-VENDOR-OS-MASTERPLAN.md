@@ -4,11 +4,61 @@
 > WeddingWala dashboard (vendor + admin + super-admin). Every role, module,
 > gap, decision, and build phase is recorded here and updated as we ship.
 > **Owner of record:** muhammadrehmanyousaf786@gmail.com
-> **Last updated:** 2026-05-24
+> **Last updated:** 2026-05-25
 >
 > **Prime directive (non-negotiable):** WeddingWala is LIVE production. Every
 > change is **additive, backward-compatible, flag-gated, zero-downtime**.
 > Never break a working surface. Nothing ships without a build + a flag/kill-switch.
+
+---
+
+## Navigation
+
+**Foundations:** [§0 Reality check](#0-the-honest-reality-check-read-this-first) · [§1 Roles](#1-roles--access-matrix) · [§2 Competitor benchmark](#2-competitor-benchmark-what-world-class-means) · [§3 Pain→feature map](#3-pakistani-vendor-pain--feature-map) · [§4 The 10 modules](#4-the-10-modules--status-gap-contract) · [§6 Cross-cutting standards](#6-cross-cutting-standards-apply-to-every-module) · [§9 Locked decisions](#9-decisions-locked-2026-05-24)
+**Plan & delivery:** [§7 Phased delivery](#7-phased-delivery-plan-additive-flag-gated-in-priority-order) · [§11 v2 gap analysis](#11-v2-gap-analysis--is-the-plan-100-complete-honest-answer-no-v1-was-70) · [§14 Revised priority](#14-revised-priority-supersedes-7-ordering) · [§23 OWNER DIRECTIVES LOG](#23-owner-directives-log--running-intake-nothing-gets-lost)
+**Vendor depth:** [§15 Venue](#15-venue--marquee-vendor--real-pakistani-management-problems-researched-2026) · [§16 Every vendor type](#16-every-vendor-type--real-pakistani-problems--features-researched-2026) · [§19 Sidebar module map](#19-sidebar-module-map--common-vs-per-type-with-craft-localized-names) · [§21 Booking engine](#21-booking--availability-engine--granular-vendor-controlled-the-heart-of-the-system) · [§24 Scenario library](#24-complete-scenario-library--every-vendor-every-situation-telescope-level)
+**Money:** [§17 Monetization](#17-monetization-model-d6-locked--subscription--freemium--promotions-no-booking-commission) · [§18 Zero-external test](#18-will-a-vendor-need-nothing-external--honest-answer--the-last-mile-gaps)
+
+---
+
+## Build status snapshot (as of directive #42, 2026-05-25)
+
+Consolidates the directives log (§23) into a feature-status view. Every shipped item is additive + flag-gated (or read-only analytics). **Flags default OFF** — flip on Vercel + rebuild.
+
+### Vendor day-of pillars (10/10 — the "abandon Excel" core) — function-sheet JSONB cards
+| Pillar | Vendor type | Flag | Directive |
+|---|---|---|---|
+| BEO / run-sheet | All | `NEXT_PUBLIC_BEO_EDITOR` | #18 |
+| Deliverables tracker | All (photographer-origin) | `NEXT_PUBLIC_DELIVERABLES` | #24 |
+| Kitchen sheet | Catering | `NEXT_PUBLIC_KITCHEN_SHEET` | #25 |
+| Bridal fitting schedule | Bridal wearing | `NEXT_PUBLIC_BRIDAL_FITTING` | #26 |
+| Decorator setup + inventory | Decorator | `NEXT_PUBLIC_DECORATOR_SETUP` | #27 |
+| Car-rental fleet + drivers | Car rental | `NEXT_PUBLIC_CAR_RENTAL` | #28 |
+| Henna / mehndi schedule | Henna artist | `NEXT_PUBLIC_HENNA_SCHEDULE` | #29 |
+| Stationery / invitations | Wedding Invitations | `NEXT_PUBLIC_STATIONERY` | #30 |
+| Makeup day sheet | Makeup artist | `NEXT_PUBLIC_MAKEUP` | #31 |
+| Photography shoot sheet | Photographer | `NEXT_PUBLIC_PHOTOGRAPHY` | #32 |
+
+### Analytics audit (8/8 gaps closed) — all on `/dashboard/insights`, read-only, no flag
+| Gap | Feature | Directive |
+|---|---|---|
+| G5 | A/R aging board (`/dashboard/receivables`) | #34 |
+| G1+G6+G7 | Revenue breakdowns (payment-method · top customers · by-business) | #35 |
+| G4 | Cash-flow forecast | #36 |
+| G2 | Seasonal demand heatmap | #37 |
+| G3 | Lead → booking conversion tile (dashboard home) | #38 |
+| G8 | Response-time analytics | #39 |
+
+### Cross-cutting & tooling
+| Feature | Surface | Flag | Directive |
+|---|---|---|---|
+| Two-way rating (vendor rates customer, §26.4) | Customer detail | `NEXT_PUBLIC_CUSTOMER_TRUST` | #33 |
+| Photographer ↔ Deliverables cross-link | Deliverables card | (rides pillar flags) | #38 |
+| Booking CSV import (historical backfill) | `/dashboard/bookings` | `NEXT_PUBLIC_BOOKING_IMPORT` | #40 |
+| WhatsApp template performance | `/dashboard/insights` | `NEXT_PUBLIC_WA_TEMPLATES` | #41 |
+| Brand audit (100% Wedding Wala user-facing) | codebase-wide | — | #42 |
+
+> **Build-pattern reference (proven 16× this cycle):** vendor pillar = migration (`ADD COLUMN IF NOT EXISTS <field>Json JSONB`) → model field → controller whitelist (≤50KB JSON cap) → FE types → self-contained card hydrating from `sheet.<field>Json` → wire into `function-sheet-detail-view.tsx` gated by `NEXT_PUBLIC_<FLAG>` + `user?.vendorType`. Analytics = new read-only `analyticsController` method + `analyticsRouter` line + FE component on `/insights`. Always audit-before-build; commit BE then FE then docs; hold push until owner says so.
 
 ---
 
