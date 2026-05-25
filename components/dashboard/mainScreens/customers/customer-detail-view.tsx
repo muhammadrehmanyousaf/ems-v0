@@ -49,6 +49,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import WhatsAppQuickSend from '@/components/dashboard/shared/whatsapp-quick-send';
 import CustomerTrustCard from './customer-trust-card';
+import CommunityTrustPanel from './community-trust-panel';
 
 import {
   CustomersAPI,
@@ -352,6 +353,11 @@ export default function CustomerDetailView({
           offlineCustomerId={profile.offlineCustomerId}
           customerName={displayName}
         />
+      )}
+
+      {/* ─── Community trust (cross-vendor aggregate) ───────────── */}
+      {process.env.NEXT_PUBLIC_COMMUNITY_TRUST === '1' && (profile.phone || profile.email) && (
+        <CommunityTrustPanel phone={profile.phone} email={profile.email} />
       )}
 
       {/* ─── Bookings ───────────────────────────────────────────── */}

@@ -650,6 +650,43 @@ export interface CustomerRatingsResponse {
   allowedFlags: CustomerRatingFlag[];
 }
 
+// ─── Community trust (cross-vendor aggregate) ──────────────────────
+// Anonymized signal from OTHER vendors who rated the same customer
+// (matched by phone/email). k-anonymity ≥2 other vendors; never
+// returns identities or notes. Vendor-only.
+export interface CommunityTrustFlag {
+  flag: CustomerRatingFlag;
+  count: number;
+}
+export interface CommunityTrustData {
+  hasData: boolean;
+  reason?: "insufficient";
+  raterVendorCount: number;
+  threshold?: number;
+  totalRatings?: number;
+  avgStars?: number | null;
+  wouldBookAgainPct?: number | null;
+  flags?: CommunityTrustFlag[];
+}
+
+export class CommunityTrustAPI {
+  /** GET /offlineCustomers/community-trust?phone=&email= */
+  static async get(params: { phone?: string | null; email?: string | null }): Promise<CommunityTrustData | null> {
+    const qs = new URLSearchParams();
+    if (params.phone) qs.set("phone", params.phone);
+    if (params.email) qs.set("email", params.email);
+    if (qs.toString() === "") return null;
+    try {
+      const res = await axiosInstance.get(
+        `/api/v1/offlineCustomers/community-trust?${qs.toString()}`,
+      );
+      return res.data?.data ?? null;
+    } catch {
+      return null;
+    }
+  }
+}
+
 export class CustomerRatingsAPI {
   /** GET /offlineCustomers/:id/ratings — vendor-private list. */
   static async list(offlineCustomerId: number): Promise<CustomerRatingsResponse> {
