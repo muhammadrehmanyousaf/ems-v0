@@ -62,8 +62,11 @@ Consolidates the directives log (§23) into a feature-status view. Every shipped
 | Promotions / featured-listing workflow | `/dashboard/promote` + admin queue | `NEXT_PUBLIC_PROMOTIONS` | #49, #51 |
 | Subscription / plan tiers (Free/Pro/Premium) | `/dashboard/billing` | `NEXT_PUBLIC_BILLING` | #50 |
 | Tier entitlements (soft upgrade nudges) | cross-cutting | `NEXT_PUBLIC_BILLING` | #52 |
-| Reputation dashboard (avg vs peers, trend, shareable review) | `/dashboard/reviews` | — | #53 |
+| Reputation dashboard (avg vs peers, trend, shareable PNG review, keywords) | `/dashboard/reviews` | — | #53, #55 |
 | Promotion auto-expiry + sponsored-first marketplace sort | cron + public listing | — (active when promo approved) | #51 |
+| Vendor notifications on promo/sub decisions + sub-upgrade admin queue | `/dashboard/admin/subscriptions` | `NEXT_PUBLIC_BILLING` | #54 |
+| Free-tier quote-PDF branding gate (§17.1) | quote/contract/invoice PDFs | (active when paid tier set) | #54 |
+| M23 sub-contract ledger | function-sheet detail (all types) | `NEXT_PUBLIC_SUBCONTRACT` | #57 |
 
 > **Build-pattern reference (proven 16× this cycle):** vendor pillar = migration (`ADD COLUMN IF NOT EXISTS <field>Json JSONB`) → model field → controller whitelist (≤50KB JSON cap) → FE types → self-contained card hydrating from `sheet.<field>Json` → wire into `function-sheet-detail-view.tsx` gated by `NEXT_PUBLIC_<FLAG>` + `user?.vendorType`. Analytics = new read-only `analyticsController` method + `analyticsRouter` line + FE component on `/insights`. Always audit-before-build; commit BE then FE then docs; hold push until owner says so.
 
@@ -726,11 +729,28 @@ On top of the common set, each type gets its winning module(s):
 - **PLATFORM:** Revenue · *(super-only)* Audit logs · Roles · Users
 - **EMERGENCY** *(super-only)*: Force majeure
 
-## 20. M23 — Vendor↔Vendor sub-contracting / collaboration (PRIORITY — full spec TBD)
-Game-changer per owner. Placeholder for the full authentic spec: a vendor (e.g. a Venue) books/refers
-another WeddingWala vendor (e.g. a Photographer) *through* the platform — request, quote, accept,
-shared event/BEO, split payment/commission, ratings between vendors. Network-effect moat that keeps
-inter-vendor coordination inside WeddingWala instead of WhatsApp. **To be fully detailed next.**
+## 20. M23 — Vendor↔Vendor sub-contracting / collaboration (PRIORITY)
+Game-changer per owner: a vendor (e.g. a Venue) books/refers another WeddingWala vendor (e.g. a
+Photographer) *through* the platform — request, quote, accept, shared event/BEO, split
+payment/commission, ratings between vendors. Network-effect moat that keeps inter-vendor coordination
+inside WeddingWala instead of WhatsApp.
+
+### 20.1 Layer 1 — Sub-contract ledger (SHIPPED, directive #57)
+The lead vendor records each sub they bring onto a booking — a back-office ledger so "who's doing what
++ who owes whom" leaves WhatsApp. `FunctionSheet.subcontractsJson`: per-sub `{ subName, subType (craft),
+subPhone, scope, agreedAmount, amountPaid, status (planned/confirmed/in_progress/delivered/paid/
+cancelled), notes }` + live totals (agreed · paid · outstanding). `<SubcontractCard/>`, all vendor
+types, flag `NEXT_PUBLIC_SUBCONTRACT`. Same JSONB-pillar pattern; zero coupling to the sub's own account.
+
+### 20.2 Layer 2 — On-platform collaboration (NEXT, needs owner sign-off on flow)
+The full network version, layered on top of 20.1: the sub is a real WeddingWala vendor →
+- lead sends a sub-contract *invite* (links to the sub's userId) → sub **accepts/declines** in their own dashboard;
+- on accept, a **linked function sheet** is created on the sub's side (their own BEO/run-sheet for the slice);
+- **split payment / commission** tracked both sides; settlement status syncs;
+- **vendor↔vendor rating** after the event (distinct from customer ratings + the community-trust layer #48).
+Open decisions for the owner: does the platform mediate the inter-vendor payment, or just track it? Is
+there a referral fee to the platform (vs the D6 "no booking commission" rule — likely an exception or a
+flat referral fee)? Until decided, Layer 1 stands alone and is fully useful.
 
 ---
 
@@ -862,6 +882,10 @@ the section that captures it. **New directives get appended at the top and route
 
 | # | Date | Owner directive | Captured in |
 |---|---|---|---|
+| 57 | 2026-05-25 | "mega plan, except real payment" | **M23 vendor sub-contract ledger (§20) — tracking MVP**. The 'spec TBD' gets built via the proven pillar pattern: additive `subcontractsJson` on FunctionSheets (migration `20260525160000`, applied) + model + controller whitelist; `<SubcontractCard/>` for ALL vendor types — per-sub {name, craft, phone, scope, agreedAmount, amountPaid, status planned→paid/cancelled} + live totals (subs · agreed · paid · you-still-owe) + notes. Flag `NEXT_PUBLIC_SUBCONTRACT` OFF. MVP = lead-vendor ledger; full on-platform collab (linked sheets, sub accept/decline) is the documented later layer. BE `f5b65c3` · FE `e1ba6f6` |
+| 56 | 2026-05-25 | "mega plan, except real payment" | **Unit tests** for the new monetization logic (12 tests, all pass, no DB): `entitlementHelper.test.js` (7 — tier gate matrix) + `promotionPricing.test.js` (5 — pricing + catalog). Exported quotePrice/pricingCatalog for testability. BE `97d0efb` |
+| 55 | 2026-05-25 | "mega plan, except real payment" | **Reputation polish (§M8)**: benchmark now EXCLUDES self (true peer compare), keyword tally (top-12 words customers mention, stopword-filtered, no NLP), and a **PNG shareable card** (1080² canvas render — gold border, stars, wrapped quote, business — downloadable for Instagram/WhatsApp status; closes the §M8 'review card image' gap). BE `a0ac53c` · FE `e4ca444` |
+| 54 | 2026-05-25 | "mega plan, except real payment" | **Closed both 'unbacked promise' defects + entitlement branding gate.** (1) Promotions approve/reject + subscription activate/decline now send REAL vendor notifications (NotificationService, offline-safe) — copy made honest. (2) New super-admin **subscription-upgrade queue** (`/dashboard/admin/subscriptions`, gated billing+super) — upgrade intents no longer dead-end; activate sets tier + dates + notifies. (3) **Free-tier quote-PDF branding gate** (§17.1): Free PDFs show 'Powered by Wedding Wala', Pro/Premium clean — `_resolveOwnerTier` threaded through all 3 buildPdfData paths. Explicitly EXCLUDED real card payment per owner — settlement stays offline/admin-confirmed. BE `3f4260c`+`b3e30b2` · FE `3c86cbf`. **Audit-first win: broker ledger FE was found already complete (2257 lines) — no rebuild.** §M7 Quote Generator confirmed = function sheets + branding |
 | 53 | 2026-05-25 | "another giant plan, execute" | **EPIC C — Reputation dashboard** (§M8). New `GET /analytics/reputation` (BE `9f8be7b`): avg + 1-5 star distribution + responseRate (vendorReply/total) + 6-month rating trend + **categoryBenchmark** (avg across same-vendorType peers — where you stand) + topReview (best ≥4★ w/ comment). FE `b148219`: `<ReputationPanel/>` atop /dashboard/reviews — headline avg + benchmark compare badge (+0.3 vs peers), star-distribution bars, 6-month mini bar trend, response-rate, and a **shareable best-review card** (Share→wa.me text broadcast + Copy). Renders nothing until reviews exist. No flag, no migration, read-only |
 | 52 | 2026-05-25 | "another giant plan, execute" | **EPIC B — Tier entitlements** (§17.1, completes #50). Makes plans MEAN something via SOFT nudges (never hard-locks a live feature). `lib/entitlements.ts`: FEATURE_MIN_TIER map (analytics/cheque/contracts/wa/staff/branding→pro; fbr/multi-business/client-portal/automations/forecasting→premium) + `useEntitlement(feature)` → {allowed, showNudge}; showNudge only when `NEXT_PUBLIC_BILLING==='1'` AND tier insufficient. UserContext User += subscriptionTier (flows via verifyWithServer). `<UpgradeNudge/>` soft banner + compact pill → /dashboard/billing; renders nothing when off/entitled. First wiring: non-blocking nudge atop /dashboard/insights. BE mirror `utils/entitlementHelper.js` (canUse — ready, not yet a hard gate). BE `b948514` · FE `70ec784` |
 | 51 | 2026-05-25 | "another giant plan, execute" | **EPIC A — Promotion lifecycle activation** (completes #49, §5). (1) Auto-expiry: `vrSweepers.js` §10 daily sweep flips sponsored=false + promotionStatus='expired' past promotionEndsAt (else a paid placement stays live forever). (2) Sponsored-first public sort: both `businessController` public listing queries now order active sponsors (`sponsored AND promotionEndsAt>NOW()`) FIRST via CASE literal, then completeness→newest — a NO-OP with zero active sponsors (safe on live marketplace). `sponsored` already flows to the FE + VendorCard ribbon already renders → loop complete end-to-end. BE `89b8fce`, no FE change |
