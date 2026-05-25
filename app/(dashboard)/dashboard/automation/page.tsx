@@ -1,5 +1,6 @@
 import PageContainer from '@/components/dashboard/layout/page-container';
 import AutomationStatusView from '@/components/dashboard/mainScreens/automation/automation-status-view';
+import AutomationBuilderCard from '@/components/dashboard/mainScreens/automation/automation-builder-card';
 import { Heading } from '@/components/heading';
 import { Separator } from '@/components/ui/separator';
 import type { Metadata } from 'next';
@@ -17,6 +18,9 @@ export default function Page() {
         <div className="space-y-4">
           <Heading title="Automation" />
           <Separator />
+          {/* §M10 builder — vendor-defined rules (flag-gated). Above the
+              built-in automation status surface. */}
+          {process.env.NEXT_PUBLIC_AUTOMATION_BUILDER === '1' && <AutomationBuilderCard />}
           <AutomationStatusView />
         </div>
       </PageContainer>
