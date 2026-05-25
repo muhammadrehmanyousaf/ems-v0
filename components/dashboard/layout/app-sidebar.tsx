@@ -22,6 +22,7 @@ import { useUser } from "@/context/UserContext"
 import {
   getVendorTypeConfig,
   DEFAULT_VENDOR_CONFIG,
+  MONEY_NAV_KEYS,
   type NavItemKey,
   type SettingsTabKey,
 } from "@/lib/vendor-type-config"
@@ -52,7 +53,7 @@ function buildVendorSections(user: ReturnType<typeof useUser>["user"]): NavSecti
   const allowedMain = vendorConfig?.mainNavItems ?? DEFAULT_VENDOR_CONFIG.mainNavItems
 
   const navLabels = vendorConfig?.navLabels
-  const main = data.vendorMainNav
+  const allowed = data.vendorMainNav
     .filter((i) => allowedMain.includes(i.name as NavItemKey))
     .map((i) => {
       // §19.3 — attach the craft-localized label when this vendor type
@@ -60,6 +61,11 @@ function buildVendorSections(user: ReturnType<typeof useUser>["user"]): NavSecti
       const override = navLabels?.[i.name as NavItemKey]
       return override ? { ...i, labelOverride: override } : i
     })
+
+  // Partition into the operational "Main" group and the "Khata" (money)
+  // group. Order within each is preserved from nav-data.
+  const main = allowed.filter((i) => !MONEY_NAV_KEYS.has(i.name as NavItemKey))
+  const money = allowed.filter((i) => MONEY_NAV_KEYS.has(i.name as NavItemKey))
 
   const settingsTabs = vendorConfig?.settingsTabs ?? DEFAULT_VENDOR_CONFIG.settingsTabs
   const isStationery = user?.vendorType === "Wedding Invitations and Stationery"
@@ -73,17 +79,19 @@ function buildVendorSections(user: ReturnType<typeof useUser>["user"]): NavSecti
         : TAB_LABELS[tabKey],
   }))
 
-  return [
-    { label: "Main", items: main },
-    {
-      label: "My Business",
-      items: data.vendorMyBusiness,
-      collapsibleSettings: {
-        triggerId: "Business Settings",
-        subItems: settingsSubItems,
-      },
+  const sections: NavSection[] = [{ label: "Main", items: main }]
+  if (money.length > 0) {
+    sections.push({ label: "Khata", items: money })
+  }
+  sections.push({
+    label: "My Business",
+    items: data.vendorMyBusiness,
+    collapsibleSettings: {
+      triggerId: "Business Settings",
+      subItems: settingsSubItems,
     },
-  ]
+  })
+  return sections
 }
 
 function buildAdminSections(role: DashboardRole): NavSection[] {

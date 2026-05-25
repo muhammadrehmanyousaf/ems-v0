@@ -15,13 +15,22 @@ import {
 // ─── Nav item keys (must match `name` in nav-data.ts) ──────
 export type NavItemKey =
   | "Dashboard"
+  | "Today"
+  | "Lead inbox"
   | "Bookings"
+  | "Function sheets"
   | "Customers"
   | "Calendar"
   | "Conversations"
-  | "Payments"
   | "Reviews"
   | "Notifications"
+  // Khata (money) group
+  | "Payments"
+  | "Receivables"
+  | "Receipts"
+  | "Cheque ledger"
+  | "Expenses"
+  // Admin / shared
   | "Users"
   | "Vendors"
   | "Businesses"
@@ -78,17 +87,46 @@ export interface VendorTypeConfig {
   navLabels?: Partial<Record<NavItemKey, string>>;
 }
 
-// All vendors share these main nav items
+// All vendors share these nav items. Operational core + Khata (money).
+// The sidebar partitions these into a "Main" group and a "Khata" group
+// via MONEY_NAV_KEYS (see app-sidebar.tsx); order here is preserved
+// within each rendered group.
+//
+// Previously only 8 items showed and ~13 built pages were orphaned
+// (reachable by URL only). This surfaces the universally-useful ones —
+// the daily view, lead inbox, function sheets, and the full khata
+// (receivables / receipts / cheque ledger / expenses). Niche +
+// type-specific tools (inventory, staff, suppliers, brokers, generator
+// fuel, halal certs, drone NOC) remain a type-conditional follow-up so
+// a solo vendor's sidebar isn't cluttered.
 const COMMON_MAIN_NAV: NavItemKey[] = [
+  // Main
   "Dashboard",
+  "Today",
+  "Lead inbox",
   "Bookings",
+  "Function sheets",
   "Customers",
   "Calendar",
   "Conversations",
-  "Payments",
   "Reviews",
   "Notifications",
+  // Khata (money) — rendered as its own group
+  "Payments",
+  "Receivables",
+  "Receipts",
+  "Cheque ledger",
+  "Expenses",
 ];
+
+// Keys that render under the "Khata" (money) section rather than "Main".
+export const MONEY_NAV_KEYS: ReadonlySet<NavItemKey> = new Set<NavItemKey>([
+  "Payments",
+  "Receivables",
+  "Receipts",
+  "Cheque ledger",
+  "Expenses",
+]);
 
 // Regular vendors only see Business Settings in controls
 const VENDOR_CONTROLS: NavItemKey[] = ["Business Settings"];
