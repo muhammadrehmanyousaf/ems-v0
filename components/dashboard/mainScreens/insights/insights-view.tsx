@@ -33,6 +33,7 @@ import RevenueBreakdowns from './revenue-breakdowns';
 import CashFlowForecast from './cash-flow-forecast';
 import SeasonalDemandHeatmap from './seasonal-demand-heatmap';
 import ResponseTimes from './response-times';
+import WhatsAppTemplatePerformance from './whatsapp-template-performance';
 
 function fmtPKR(n: number): string {
   if (!Number.isFinite(n)) return '—';
@@ -267,6 +268,10 @@ export default function InsightsView() {
           hours from lead arrival to first response + distribution +
           per-source breakdown. */}
       <ResponseTimes />
+
+      {/* WhatsApp template performance — per-template sends correlated
+          with Lead → booked / Booking → paid outcomes. */}
+      <WhatsAppTemplatePerformance />
     </div>
   );
 }

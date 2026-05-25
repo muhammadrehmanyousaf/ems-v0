@@ -288,6 +288,9 @@ export default function CustomerDetailView({
                   phone={profile.phone}
                   customerName={profile.name}
                   buttonClassName="h-7 px-2 text-xs"
+                  targetType="customer"
+                  targetId={profile.offlineCustomerId || undefined}
+                  customerId={profile.offlineCustomerId || undefined}
                 />
               )}
             </div>

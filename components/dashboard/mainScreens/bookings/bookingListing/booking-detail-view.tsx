@@ -350,6 +350,9 @@ export default function BookingDetailView({
                         amount: String(Number(booking.totalAmount || 0).toLocaleString('en-PK')),
                       }}
                       buttonClassName="h-8 w-full justify-center"
+                      targetType="booking"
+                      targetId={booking.id}
+                      bookingId={booking.id}
                     />
                   </div>
                 )}
