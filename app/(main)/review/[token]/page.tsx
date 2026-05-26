@@ -105,15 +105,18 @@ export default function Page({ params }: PageProps) {
         try {
           const fd = new FormData();
           for (const p of photos.slice(0, 5)) fd.append('photos', p);
+          fd.append('reviewId', String(reviewId));
+          // Token-scoped public endpoint — the authed /reviews/:id/photos
+          // route 401s for token reviewers (no account).
           await axios.post(
-            `${BACKEND_URL}api/v1/reviews/${reviewId}/photos`,
+            `${BACKEND_URL}api/v1/public/bookings/review/${encodeURIComponent(token)}/photos`,
             fd,
             { headers: { 'Content-Type': 'multipart/form-data' } },
           );
         } catch {
           // Surface a hint without rolling the review back.
           setError(
-            'Review saved, but photo upload failed. You can attach photos later from your account.',
+            'Your review was saved, but the photos could not be uploaded. Please try again.',
           );
         }
       }
