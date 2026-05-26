@@ -294,7 +294,7 @@ export function Header() {
             {/* Logo — full brand lockup */}
             <Link href="/" className="flex items-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="Wedding Wala" className="h-9 sm:h-11 w-auto" />
+              <img src="/logo.png" alt="Wedding Wala" className="h-12 sm:h-14 w-auto" />
             </Link>
           </div>
 
