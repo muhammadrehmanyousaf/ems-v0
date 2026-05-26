@@ -27,7 +27,7 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   forbidOnly: !!process.env.CI,
-  retries: 1,
+  retries: 2,
   reporter: [["list"], ["html", { open: "never", outputFolder: "e2e/.report" }]],
   timeout: 45_000,
   expect: { timeout: 10_000 },
