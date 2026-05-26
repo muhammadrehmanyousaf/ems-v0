@@ -160,10 +160,16 @@ const ProfilePage = () => {
     try {
       setIsSaving(true);
       if (!user || !user.id) throw new Error("User ID not found");
-      const requestBody = { ...profile, roleIds: [3], id: user.id };
+      // Self-service profile update. Must NOT use the admin /users?id= endpoint
+      // (super-admin only, and it touches roles) — use /users/profile, which is
+      // auth-scoped to the caller and never modifies roles.
       const res = await axiosInstance.patch(
-        `${BACKEND_URL}api/v1/users?id=${user.id}`,
-        requestBody,
+        `${BACKEND_URL}api/v1/users/profile`,
+        {
+          fullName: profile.fullName,
+          email: profile.email,
+          phoneNumber: profile.phoneNumber,
+        },
       );
       let updatedData = profile;
       const resData = res.data;

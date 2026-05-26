@@ -262,6 +262,7 @@ function PaymentBody({
   vendorName,
   bookingDate,
   bookingId,
+  paymentType = "down_payment",
   onSuccess,
   onCancel,
 }: BookingPaymentScreenProps) {
@@ -286,7 +287,9 @@ function PaymentBody({
     setErrorMsg(null)
 
     const origin = typeof window !== "undefined" ? window.location.origin : ""
-    const returnUrl = `${origin}${window.location.pathname}?ps=1&bid=${bookingId}&pt=down_payment`
+    // Use the actual paymentType — hardcoding down_payment mislabeled the
+    // return for remaining/full-payment flows on the post-redirect screen.
+    const returnUrl = `${origin}${window.location.pathname}?ps=1&bid=${bookingId}&pt=${paymentType}`
 
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
