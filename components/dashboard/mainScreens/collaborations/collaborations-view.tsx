@@ -95,6 +95,17 @@ export default function CollaborationsView() {
     } finally { setBusyId(null); }
   };
 
+  const cancelInvite = async (id: number) => {
+    setBusyId(id);
+    try {
+      await CollaborationsAPI.cancel(id);
+      toast.success("Invite cancelled");
+      load();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || "Could not cancel invite");
+    } finally { setBusyId(null); }
+  };
+
   return (
     <div className="space-y-6">
       {/* Send invite */}
@@ -211,6 +222,14 @@ export default function CollaborationsView() {
                       </p>
                       {iv.status === "declined" && iv.declineReason && (
                         <p className="text-[11px] text-rose-700">Reason: {iv.declineReason}</p>
+                      )}
+                      {iv.status === "pending" && (
+                        <div className="flex pt-1">
+                          <Button size="sm" variant="outline" className="h-8 gap-1 text-rose-700 border-rose-200"
+                            disabled={busyId === iv.id} onClick={() => cancelInvite(iv.id)}>
+                            {busyId === iv.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />} Cancel invite
+                          </Button>
+                        </div>
                       )}
                     </div>
                   ))}
