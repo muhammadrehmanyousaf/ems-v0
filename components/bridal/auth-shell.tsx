@@ -69,7 +69,8 @@ export function AuthShell({
   asideSubtitle,
   asideExtra,
   children,
-  mobileCrestIcon = <Heart className="w-5 h-5 text-bridal-gold" />,
+  // eslint-disable-next-line @next/next/no-img-element
+  mobileCrestIcon = <img src="/icon-mark.png" alt="Wedding Wala" className="w-7 h-7" />,
   formMaxWidth = 460,
 }: AuthShellProps) {
   const photoSrc = asidePhoto ?? ASIDE_PHOTOS[variant]

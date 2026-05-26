@@ -118,7 +118,7 @@ export function LoginForm() {
           initial="S"
         />
       }
-      mobileCrestIcon={<Heart className="w-5 h-5 text-bridal-gold" />}
+      mobileCrestIcon={<img src="/icon-mark.png" alt="Wedding Wala" className="w-7 h-7" />}
     >
       <BridalCrown className="mb-3">Welcome Back</BridalCrown>
       <BridalTitle size="h2" className="text-center mb-2">
