@@ -1,0 +1,7 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" role="img" aria-label="Wedding Wala" xmlns="http://www.w3.org/2000/svg">
+  <title>Wedding Wala</title>
+  <!-- Lotus -->
+  <path d="M100 45 Q82 30 70 48 Q78 25 95 32 Q110 20 125 45 Q140 35 132 62 Q120 75 100 65 Z" fill="#E8B4B8"/>
+  <!-- W heart monogram -->
+  <path d="M65 85 Q45 110 50 145 Q55 165 75 155 Q90 175 105 140 Q125 160 145 125 Q155 95 135 85 Q115 72 95 88 Q80 72 65 85 Z" fill="none" stroke="#C48B5C" stroke-width="22" stroke-linejoin="round"/>
+</svg>
