@@ -114,16 +114,11 @@ export function Header() {
                   <div className="relative flex items-center">
                     <Link
                       href="/"
-                      className="flex items-center gap-2.5"
+                      className="flex items-center"
                       onClick={() => setIsOpen(false)}
                     >
-                      <span className="w-9 h-9 rounded-full bg-bridal-cream border border-bridal-gold/45 flex items-center justify-center">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src="/icon-mark.png" alt="Wedding Wala" className="w-[20px] h-[20px]" />
-                      </span>
-                      <span className="font-display italic text-2xl text-bridal-charcoal leading-none">
-                        Wedding Wala
-                      </span>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/logo.png" alt="Wedding Wala" className="h-12 w-auto" />
                     </Link>
                     {/* Note: SheetContent renders a built-in close (X) at
                         top-right via Radix's SheetPrimitive.Close. We deleted
@@ -296,27 +291,10 @@ export function Header() {
               </SheetContent>
             </Sheet>
 
-            {/* Logo — bridal wordmark */}
-            <Link href="/" className="flex items-center gap-2.5 group">
-              <span
-                className="
-                  w-10 h-10 rounded-full
-                  bg-bridal-cream border border-bridal-gold/45
-                  flex items-center justify-center
-                  group-hover:border-bridal-gold transition-colors duration-300
-                "
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/icon-mark.png" alt="Wedding Wala" className="w-[24px] h-[24px]" />
-              </span>
-              <span className="leading-none">
-                <span className="block font-display italic text-[22px] sm:text-[24px] text-bridal-charcoal leading-none">
-                  Wedding Wala
-                </span>
-                <span className="hidden sm:block font-bridal text-[9px] uppercase tracking-[0.32em] text-bridal-gold mt-1">
-                  Pakistan&apos;s Shaadi Platform
-                </span>
-              </span>
+            {/* Logo — full brand lockup */}
+            <Link href="/" className="flex items-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="Wedding Wala" className="h-11 sm:h-14 w-auto" />
             </Link>
           </div>
 

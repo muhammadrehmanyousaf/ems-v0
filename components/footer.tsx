@@ -204,19 +204,9 @@ export function Footer() {
           >
             {/* Brand block */}
             <StaggerItem className="lg:col-span-4 space-y-5">
-              <Link href="/" className="inline-flex items-center gap-3 group">
-                <span className="w-12 h-12 rounded-full bg-bridal-cream border border-bridal-gold/45 flex items-center justify-center group-hover:border-bridal-gold transition-colors">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/icon-mark.png" alt="Wedding Wala" className="w-7 h-7" />
-                </span>
-                <span className="leading-none">
-                  <span className="block font-display italic text-[28px] text-bridal-charcoal leading-none">
-                    Wedding Wala
-                  </span>
-                  <span className="block font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold mt-1">
-                    Pakistan&apos;s Shaadi Platform
-                  </span>
-                </span>
+              <Link href="/" className="inline-flex items-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo.png" alt="Wedding Wala" className="h-20 w-auto" />
               </Link>
 
               <p className="font-bridal text-[14px] text-bridal-text leading-relaxed max-w-sm">
