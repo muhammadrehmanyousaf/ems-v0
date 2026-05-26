@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
+import { shareCurrentTool } from "@/lib/shareTool";
 import { useIsMobile } from "@/components/ui/use-mobile";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -213,7 +214,15 @@ export default function ChecklistPage() {
               <Download className="w-4 h-4" />
               Export
             </Button>
-            <Button variant="outline" className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={async () => {
+                const r = await shareCurrentTool({ title: "Wedding Checklist · Wedding Wala", text: "Plan your wedding checklist on Wedding Wala" });
+                if (r === "copied") toast({ title: "Link copied", description: "Paste it anywhere to share this checklist." });
+                else if (r === "failed") toast({ title: "Couldn't share", description: "Sharing isn't supported on this device.", variant: "destructive" });
+              }}
+            >
               <Share2 className="w-4 h-4" />
               Share
             </Button>

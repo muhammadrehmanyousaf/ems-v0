@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { shareCurrentTool } from "@/lib/shareTool";
 import { useIsMobile } from "@/components/ui/use-mobile";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -284,7 +285,15 @@ export default function BudgetPage() {
                 <Download className="w-4 h-4" />
                 Export
               </Button>
-              <Button variant="outline" className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                className="flex items-center gap-2"
+                onClick={async () => {
+                  const r = await shareCurrentTool({ title: "Wedding Budget Planner · Wedding Wala", text: "Plan your wedding budget on Wedding Wala" });
+                  if (r === "copied") toast({ title: "Link copied", description: "Paste it anywhere to share this planner." });
+                  else if (r === "failed") toast({ title: "Couldn't share", description: "Sharing isn't supported on this device.", variant: "destructive" });
+                }}
+              >
                 <Share2 className="w-4 h-4" />
                 Share
               </Button>
