@@ -182,7 +182,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <Link href="/dashboard" className="flex items-center gap-2">
                 {/* Brand mark (lotus + W). SVG → crisp at the collapsed icon size. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/icon.svg" alt="Wedding Wala" className="size-8 shrink-0" />
+                <img src="/icon-mark.png" alt="Wedding Wala" className="size-8 shrink-0" />
                 <div className="grid flex-1 text-left leading-tight">
                   <span className="text-[15px] font-semibold tracking-tight text-foreground">
                     Wedding Wala

@@ -119,7 +119,7 @@ export function Header() {
                     >
                       <span className="w-9 h-9 rounded-full bg-bridal-cream border border-bridal-gold/45 flex items-center justify-center">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src="/icon.svg" alt="Wedding Wala" className="w-[20px] h-[20px]" />
+                        <img src="/icon-mark.png" alt="Wedding Wala" className="w-[20px] h-[20px]" />
                       </span>
                       <span className="font-display italic text-2xl text-bridal-charcoal leading-none">
                         Wedding Wala
@@ -307,7 +307,7 @@ export function Header() {
                 "
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/icon.svg" alt="Wedding Wala" className="w-[24px] h-[24px]" />
+                <img src="/icon-mark.png" alt="Wedding Wala" className="w-[24px] h-[24px]" />
               </span>
               <span className="leading-none">
                 <span className="block font-display italic text-[22px] sm:text-[24px] text-bridal-charcoal leading-none">
