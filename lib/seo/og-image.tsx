@@ -20,6 +20,7 @@
 
 import { ImageResponse } from "next/og"
 import { SITE_NAME } from "./constants"
+import { BRAND_MARK_DATA_URI } from "./brand-mark"
 
 export const OG_SIZE = { width: 1200, height: 630 } as const
 export const OG_CONTENT_TYPE = "image/png" as const
@@ -116,16 +117,20 @@ export function renderOGImage({
           >
             {eyebrow ?? "Wedding Wala"}
           </div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              fontSize: 22,
-              fontStyle: "italic",
-              color: COLOR_CHARCOAL,
-            }}
-          >
-            {SITE_NAME}
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={BRAND_MARK_DATA_URI} width={60} height={60} alt="" />
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                fontSize: 30,
+                fontStyle: "italic",
+                color: COLOR_CHARCOAL,
+              }}
+            >
+              {SITE_NAME}
+            </div>
           </div>
         </div>
 
