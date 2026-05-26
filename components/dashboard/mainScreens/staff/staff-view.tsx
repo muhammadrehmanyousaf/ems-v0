@@ -2506,6 +2506,7 @@ function ReplaceDialog({
               <Input
                 type="number"
                 min={0}
+                max={100000}
                 value={rate}
                 onChange={(e) => setRate(e.target.value)}
                 placeholder="Rs."

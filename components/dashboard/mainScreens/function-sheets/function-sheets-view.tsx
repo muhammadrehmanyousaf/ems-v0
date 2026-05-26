@@ -22,6 +22,7 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import axiosInstance from '@/lib/axiosConfig';
 import {
@@ -133,8 +134,17 @@ export default function FunctionSheetsView() {
   });
   const [businesses, setBusinesses] = useState<VendorBusinessOption[]>([]);
   const [loading, setLoading] = useState(true);
+  // Seed the state filter from ?state= so deep-links (e.g. the dashboard
+  // "to collect" chip → ?state=invoiced) land pre-filtered instead of on the
+  // unfiltered list.
+  const searchParams = useSearchParams();
   const [stateFilter, setStateFilter] = useState<FunctionSheetState | 'all'>(
-    'all',
+    () => {
+      const s = searchParams?.get('state');
+      return s && Object.prototype.hasOwnProperty.call(NEXT_STATES, s)
+        ? (s as FunctionSheetState)
+        : 'all';
+    },
   );
   const [bookingFilter, setBookingFilter] = useState('');
   const [eventFrom, setEventFrom] = useState('');
