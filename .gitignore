@@ -34,3 +34,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# playwright e2e — never commit credentials, auth state, or reports
+/e2e/.auth/
+/e2e/.report/
+/test-results/
+/playwright-report/
+/blob-report/
+
