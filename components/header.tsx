@@ -90,7 +90,7 @@ export function Header() {
               <SheetTrigger asChild>
                 <button
                   type="button"
-                  className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-md text-bridal-charcoal hover:bg-bridal-blush/55 hover:text-bridal-mauve transition-colors duration-200"
+                  className="min-[1400px]:hidden inline-flex h-10 w-10 items-center justify-center rounded-md text-bridal-charcoal hover:bg-bridal-blush/55 hover:text-bridal-mauve transition-colors duration-200"
                   aria-label="Open menu"
                 >
                   <Menu className="h-5 w-5" />
@@ -114,11 +114,19 @@ export function Header() {
                   <div className="relative flex items-center">
                     <Link
                       href="/"
-                      className="flex items-center"
+                      className="flex items-center gap-2"
                       onClick={() => setIsOpen(false)}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/logo.png" alt="Wedding Wala" className="h-9 w-auto" />
+                      <img
+                        src="/icon-mark.png"
+                        alt=""
+                        aria-hidden="true"
+                        className="h-9 w-auto shrink-0"
+                      />
+                      <span className="font-display italic leading-none tracking-tight whitespace-nowrap text-[24px] text-bridal-charcoal">
+                        Wedding <span className="text-bridal-gold">Wala</span>
+                      </span>
                     </Link>
                     {/* Note: SheetContent renders a built-in close (X) at
                         top-right via Radix's SheetPrimitive.Close. We deleted
@@ -291,15 +299,23 @@ export function Header() {
               </SheetContent>
             </Sheet>
 
-            {/* Logo — full brand lockup */}
-            <Link href="/" className="flex items-center">
+            {/* Logo — crest + Playfair wordmark */}
+            <Link href="/" className="flex items-center gap-2 sm:gap-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="Wedding Wala" className="h-12 sm:h-14 w-auto" />
+              <img
+                src="/icon-mark.png"
+                alt=""
+                aria-hidden="true"
+                className="h-10 sm:h-12 w-auto shrink-0"
+              />
+              <span className="font-display italic leading-none tracking-tight whitespace-nowrap text-[26px] sm:text-[32px] min-[1400px]:text-[28px] text-bridal-charcoal">
+                Wedding <span className="text-bridal-gold">Wala</span>
+              </span>
             </Link>
           </div>
 
           {/* ── Center: Desktop Nav ── */}
-          <NavigationMenu className="hidden lg:flex">
+          <NavigationMenu className="hidden min-[1400px]:flex">
             <NavigationMenuList className="gap-1">
               {/* Vendors mega menu — editorial three-pane layout */}
               <NavigationMenuItem>

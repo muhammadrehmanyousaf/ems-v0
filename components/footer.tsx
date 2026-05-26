@@ -204,9 +204,17 @@ export function Footer() {
           >
             {/* Brand block */}
             <StaggerItem className="lg:col-span-4 space-y-5">
-              <Link href="/" className="inline-flex items-center">
+              <Link href="/" className="inline-flex items-center gap-2.5">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logo.png" alt="Wedding Wala" className="h-24 sm:h-28 w-auto" />
+                <img
+                  src="/icon-mark.png"
+                  alt=""
+                  aria-hidden="true"
+                  className="h-12 sm:h-14 w-auto shrink-0"
+                />
+                <span className="font-display italic leading-none tracking-tight whitespace-nowrap text-[34px] sm:text-[40px] text-bridal-charcoal">
+                  Wedding <span className="text-bridal-gold">Wala</span>
+                </span>
               </Link>
 
               <p className="font-bridal text-[14px] text-bridal-text leading-relaxed max-w-sm">
