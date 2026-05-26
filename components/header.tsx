@@ -118,7 +118,7 @@ export function Header() {
                       onClick={() => setIsOpen(false)}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/logo.png" alt="Wedding Wala" className="h-12 w-auto" />
+                      <img src="/logo.png" alt="Wedding Wala" className="h-9 w-auto" />
                     </Link>
                     {/* Note: SheetContent renders a built-in close (X) at
                         top-right via Radix's SheetPrimitive.Close. We deleted
@@ -294,7 +294,7 @@ export function Header() {
             {/* Logo — full brand lockup */}
             <Link href="/" className="flex items-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="Wedding Wala" className="h-11 sm:h-14 w-auto" />
+              <img src="/logo.png" alt="Wedding Wala" className="h-9 sm:h-11 w-auto" />
             </Link>
           </div>
 

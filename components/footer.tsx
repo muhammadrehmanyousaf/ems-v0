@@ -206,7 +206,7 @@ export function Footer() {
             <StaggerItem className="lg:col-span-4 space-y-5">
               <Link href="/" className="inline-flex items-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logo.png" alt="Wedding Wala" className="h-20 w-auto" />
+                <img src="/logo.png" alt="Wedding Wala" className="h-24 sm:h-28 w-auto" />
               </Link>
 
               <p className="font-bridal text-[14px] text-bridal-text leading-relaxed max-w-sm">
