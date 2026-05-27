@@ -22,7 +22,10 @@ export interface ApiUser {
 export class UsersAPI {
   static async getAll(): Promise<ApiUser[]> {
     const res = await axiosInstance.get("/api/v1/users");
-    return res.data?.data ?? [];
+    // getUsers returns { data: { results: User[], meta } }. Reading `.data`
+    // alone handed callers the wrapper object, so `users.map(...)` threw and
+    // the table rendered empty with a "Failed to load users" toast.
+    return res.data?.data?.results ?? res.data?.data ?? [];
   }
 
   static async getById(id: number): Promise<ApiUser> {
