@@ -107,30 +107,61 @@ function normalizeBusiness(raw: any): any {
   }
 }
 
+// Fetch EVERY page of a paginated /businesses listing so the category grid
+// shows ALL approved vendors — not just the backend's default first page (20).
+// The backend caps `limit` at 100, so we read totalPages off page 1 and pull
+// the remaining pages in parallel, then return the merged raw rows. Previously
+// the listing only ever fetched the top 20 (by completeness), leaving every
+// vendor ranked 21+ unreachable in the UI.
+async function fetchAllBusinessPages(
+  url: string,
+  baseParams: Record<string, unknown> = {},
+): Promise<any[]> {
+  const PAGE_SIZE = 100
+  const rowsOf = (resp: any): any[] => {
+    const d = resp?.data?.data
+    return Array.isArray(d) ? d : d?.data || []
+  }
+  const first = await axiosInstance.get(url, {
+    params: { ...baseParams, page: 1, limit: PAGE_SIZE },
+  })
+  let rows = rowsOf(first)
+  const totalPages = first?.data?.data?.pagination?.totalPages || 1
+  if (totalPages > 1) {
+    const rest = await Promise.all(
+      Array.from({ length: totalPages - 1 }, (_, i) =>
+        axiosInstance
+          .get(url, { params: { ...baseParams, page: i + 2, limit: PAGE_SIZE } })
+          .then(rowsOf)
+          .catch(() => []),
+      ),
+    )
+    for (const r of rest) rows = rows.concat(r)
+  }
+  return rows
+}
+
 export class VendorAPI {
-  // Get all businesses
+  // Get all businesses (every page, not just the first)
   static async getAllBusinesses(): Promise<Vendor[]> {
     try {
-      const response = await axiosInstance.get(BASE)
-      const result = response.data.data
-      const list = Array.isArray(result) ? result : result?.data || []
+      const list = await fetchAllBusinessPages(BASE)
       return list.map(normalizeBusiness)
     } catch {
       return []
     }
   }
 
-  // Get businesses by vendor type
+  // Get businesses by vendor type (every page, not just the first)
   static async getBusinessesByVendorType(
     vendorType: string,
     pakistaniFilters?: PakistaniFilterParams,
   ): Promise<Vendor[]> {
     try {
-      const response = await axiosInstance.get(`${BASE}/businesses-by-vendor`, {
-        params: { vendorType, ...(pakistaniFilters || {}) },
+      const list = await fetchAllBusinessPages(`${BASE}/businesses-by-vendor`, {
+        vendorType,
+        ...(pakistaniFilters || {}),
       })
-      const result = response.data.data
-      const list = Array.isArray(result) ? result : result?.data || []
       return list.map(normalizeBusiness)
     } catch {
       return []
