@@ -27,6 +27,12 @@ interface BeforeInstallPromptEvent extends Event {
 
 const DISMISS_KEY = 'ww:pwa-dismissed-until';
 const DISMISS_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+// Show the banner at most once per 24h even when the user neither installs nor
+// explicitly dismisses it (just navigates away). Without this, the browser's
+// `beforeinstallprompt` re-fires the banner on every full page load — far too
+// naggy. An explicit dismiss still wins with the longer 14-day window above.
+const SHOWN_KEY = 'ww:pwa-shown-at';
+const SHOWN_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 function isIos(): boolean {
   if (typeof navigator === 'undefined') return false;
@@ -61,6 +67,23 @@ function dismiss(): void {
   }
 }
 
+function recentlyShown(): boolean {
+  try {
+    const at = Number(localStorage.getItem(SHOWN_KEY) || '0');
+    return at && Date.now() - at < SHOWN_COOLDOWN_MS ? true : false;
+  } catch {
+    return false;
+  }
+}
+
+function markShown(): void {
+  try {
+    localStorage.setItem(SHOWN_KEY, String(Date.now()));
+  } catch {
+    // ignore
+  }
+}
+
 export function PwaInstallPrompt() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(
     null,
@@ -69,12 +92,18 @@ export function PwaInstallPrompt() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (isStandalone() || isDismissed()) return;
+    if (isStandalone() || isDismissed() || recentlyShown()) return;
 
     const beforeInstallHandler = (e: Event) => {
       e.preventDefault();
+      // Always stash the event so Install works if/when we show the banner,
+      // but only surface it (and start the 24h cooldown) if we haven't shown
+      // it recently and the user hasn't dismissed it.
       setDeferred(e as BeforeInstallPromptEvent);
-      setVisible(true);
+      if (!recentlyShown() && !isDismissed()) {
+        markShown();
+        setVisible(true);
+      }
     };
 
     window.addEventListener('beforeinstallprompt', beforeInstallHandler);
@@ -84,7 +113,8 @@ export function PwaInstallPrompt() {
       // a short delay so the user has time to interact with the page
       // first (avoids the modal feeling pushy on first paint).
       const t = setTimeout(() => {
-        if (!isDismissed()) {
+        if (!isDismissed() && !recentlyShown()) {
+          markShown();
           setShowIosHint(true);
           setVisible(true);
         }
