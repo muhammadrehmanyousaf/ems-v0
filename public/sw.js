@@ -18,14 +18,24 @@
  * old shell HTML loading after a routing change.
  */
 
-const CACHE_VERSION = "ww-v1-2026-05-20";
+const CACHE_VERSION = "ww-v2-2026-05-28";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
 
 const PRECACHE_URLS = ["/", "/dashboard", "/dashboard/today", "/offline.html"];
 
-const API_TIMEOUT_MS = 4000;
+// HTML navigation freshness timeout — short so a stale shell doesn't hang.
+const NAV_TIMEOUT_MS = 6000;
+// API freshness timeout when we ALREADY have a cached copy (stale-while-
+// revalidate): fall back to cache quickly if the network is slow.
+const API_STALE_TIMEOUT_MS = 6000;
+// API timeout when there is NO cache: wait long enough for a cold Neon
+// backend under concurrent dashboard load. The old 4s value aborted valid
+// in-flight requests and fabricated a fake "Offline" 503 for online users.
+// A genuinely offline fetch still rejects immediately, so this doesn't slow
+// the true-offline path.
+const API_NO_CACHE_TIMEOUT_MS = 20000;
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -109,36 +119,37 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 2) API — network-first with timeout, fall back to cache.
+  // 2) API — network-first, but never abort a slow-but-valid request into a
+  //    fake "offline" error. If we have a cached copy, race the network
+  //    against a short timeout (stale-while-revalidate). If we DON'T, wait
+  //    out a cold/slow backend — a truly offline fetch still rejects fast.
   if (isApi(url)) {
     event.respondWith(
-      networkWithTimeout(request, API_TIMEOUT_MS)
-        .then((res) => {
+      (async () => {
+        const cached = await caches.match(request);
+        try {
+          const res = await networkWithTimeout(
+            request,
+            cached ? API_STALE_TIMEOUT_MS : API_NO_CACHE_TIMEOUT_MS,
+          );
           if (res && res.status === 200) {
             const clone = res.clone();
             caches.open(API_CACHE).then((c) => c.put(request, clone));
           }
           return res;
-        })
-        .catch(() =>
-          caches
-            .match(request)
-            .then(
-              (cached) =>
-                cached ||
-                new Response(
-                  JSON.stringify({
-                    success: false,
-                    message: "Offline — no cached response available",
-                    data: null,
-                  }),
-                  {
-                    headers: { "Content-Type": "application/json" },
-                    status: 503,
-                  },
-                ),
-            ),
-        ),
+        } catch (e) {
+          // Network genuinely failed (offline) or exceeded the timeout.
+          if (cached) return cached;
+          return new Response(
+            JSON.stringify({
+              success: false,
+              message: "Offline — no cached response available",
+              data: null,
+            }),
+            { headers: { "Content-Type": "application/json" }, status: 503 },
+          );
+        }
+      })(),
     );
     return;
   }
@@ -146,7 +157,7 @@ self.addEventListener("fetch", (event) => {
   // 3) HTML navigations — network-first, fall back to cached page, then offline.html.
   if (isNavigation(request)) {
     event.respondWith(
-      networkWithTimeout(request, API_TIMEOUT_MS)
+      networkWithTimeout(request, NAV_TIMEOUT_MS)
         .then((res) => {
           if (res && res.status === 200) {
             const clone = res.clone();
