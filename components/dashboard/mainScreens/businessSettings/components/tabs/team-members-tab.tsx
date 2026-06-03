@@ -26,10 +26,15 @@
 
 import * as React from 'react';
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+// 03-DRAFT-RESILIENCE — persist in-progress "Add Member" form so a
+// refresh mid-typing doesn't wipe the vendor's input.
+import { useFormDraft } from '@/lib/draftStorage/useFormDraft';
+import { DraftResumeBanner, relativeTimeAgo } from '@/components/shared/DraftResumeBanner';
+import { AutoSaveIndicator } from '@/components/VendorStepForms/AutoSaveIndicator';
 import {
   Loader2,
   Plus,
@@ -130,6 +135,29 @@ const TeamMembersTab = () => {
     },
   });
 
+  // 03-DRAFT-RESILIENCE — auto-save the in-progress NEW member.
+  //
+  // CREATE mode only: edit mode would need a pristine-vs-current
+  // comparator to avoid the always-save loop (initial state mirrors the
+  // member being edited). Tracked as a follow-up.
+  //
+  // Hook lives at the tab level (not inside the dialog) so save state
+  // survives a dialog Cancel — the vendor's typing isn't lost just
+  // because they accidentally hit Esc.
+  const watched = useWatch({ control: form.control });
+  const draftEnabled = dialogOpen && !editing && !!businessId;
+  const memberDraft = useFormDraft<FormValues>({
+    storageKey: `team-member-create-${businessId ?? 'no-biz'}`,
+    state: watched as FormValues,
+    isMeaningful: (s) =>
+      !!s.name?.trim() ||
+      !!s.role?.trim() ||
+      !!s.bio?.trim() ||
+      !!s.yearsExperience?.trim() ||
+      !!s.specialtiesText?.trim(),
+    enabled: draftEnabled,
+  });
+
   const load = React.useCallback(async () => {
     if (!businessId) return;
     setLoading(true);
@@ -212,6 +240,8 @@ const TeamMembersTab = () => {
       } else {
         await TeamMembersAPI.create(businessId, payload);
         toast.success('Team member added');
+        // Drop the local draft now that the server has the member.
+        memberDraft.discard();
       }
       setDialogOpen(false);
       await load();
@@ -461,11 +491,31 @@ const TeamMembersTab = () => {
               Photos + bios convert ~3× better than blank profiles.
             </DialogDescription>
           </DialogHeader>
+          {/* 03-DRAFT-RESILIENCE — resume banner. CREATE-mode only. */}
+          {!editing && (
+            <DraftResumeBanner
+              visible={memberDraft.hasResumableDraft}
+              title="Resume your unfinished member"
+              meta={memberDraft.storedDraft ? `Last edited ${relativeTimeAgo(memberDraft.storedDraft.updatedAt)}` : undefined}
+              onResume={() => {
+                if (!memberDraft.storedDraft) return;
+                form.reset(memberDraft.storedDraft.state);
+                memberDraft.discard();
+                toast.success('Restored your unsaved member');
+              }}
+              onDiscard={() => memberDraft.discard()}
+            />
+          )}
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
               className="space-y-4 pt-2"
             >
+              {!editing && (
+                <div className="flex justify-end -mb-2">
+                  <AutoSaveIndicator lastSavedAt={memberDraft.lastSavedAt} saving={memberDraft.saving} />
+                </div>
+              )}
               <div className="grid sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
