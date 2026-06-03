@@ -70,8 +70,59 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingSnapshot: Omit<LocalDraft, "v" | "updatedAt"> | null = null;
 const listeners = new Set<(d: LocalDraft | null) => void>();
 
+/**
+ * A snapshot is "meaningful" if the vendor has actually touched something —
+ * picked a business type, typed any contact field, or set a name. The
+ * initial all-defaults render IS NOT meaningful, and we MUST refuse to
+ * overwrite a stored meaningful draft with one of these.
+ *
+ * This is the fix for the mount-overwrite race: on every page load, the
+ * registration form's local-save effect fires once with the initial empty
+ * formData. If that fired commit() blindly, it would destroy the previous
+ * session's draft before the resume prompt could read it. So commit()
+ * checks here before writing.
+ */
+function snapshotIsMeaningful(s: Omit<LocalDraft, "v" | "updatedAt">): boolean {
+  if (s.businessType) return true;
+  if (s.currentStep > 0) return true;
+  const f = s.formData as Record<string, unknown>;
+  if (!f) return false;
+  const textKeys = [
+    "fullName", "email", "phoneNumber", "name", "businessType",
+    "city", "subArea", "officeAddress", "description",
+    "whatsappNumber", "ownerName", "ownerBio",
+  ];
+  for (const k of textKeys) {
+    if (typeof f[k] === "string" && (f[k] as string).trim() !== "") return true;
+  }
+  // Any non-empty subBusinessType / staff / package / image set counts too.
+  if (Array.isArray(f.subBusinessType) && (f.subBusinessType as unknown[]).length > 0) return true;
+  if (Array.isArray(f.staff) && (f.staff as unknown[]).length > 0) return true;
+  if (s.imageRefs?.profileImageFile) return true;
+  if (Array.isArray(s.imageRefs?.imageFiles) && s.imageRefs!.imageFiles!.length > 0) return true;
+  return false;
+}
+
 function commit(snapshot: Omit<LocalDraft, "v" | "updatedAt">) {
   if (!isBrowser()) return;
+
+  // Refuse to clobber a real draft with an empty one. This guards against
+  // the page-load race where the form's local-save effect fires once with
+  // initial empty state before the resume prompt's useEffect can read the
+  // previous session. Without this, a refresh would silently destroy the
+  // vendor's progress every single time.
+  if (!snapshotIsMeaningful(snapshot)) {
+    const existing = readStoredRaw();
+    if (existing && snapshotIsMeaningful({
+      formData: existing.formData,
+      currentStep: existing.currentStep,
+      businessType: existing.businessType,
+      imageRefs: existing.imageRefs,
+    })) {
+      return; // keep the meaningful prior draft
+    }
+  }
+
   const record: LocalDraft = {
     v: 1,
     updatedAt: Date.now(),
@@ -82,6 +133,24 @@ function commit(snapshot: Omit<LocalDraft, "v" | "updatedAt">) {
     for (const l of listeners) l(record);
   } catch {
     // Quota / private-browsing — silent. The server layer is the durable one.
+  }
+}
+
+/**
+ * Raw read without TTL enforcement or side-effect cleanup. Used internally
+ * by commit() so the "is the existing draft meaningful?" check can fire
+ * cheaply on every save without piggybacking the TTL sweep.
+ */
+function readStoredRaw(): LocalDraft | null {
+  if (!isBrowser()) return null;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || parsed.v !== 1) return null;
+    return parsed as LocalDraft;
+  } catch {
+    return null;
   }
 }
 
