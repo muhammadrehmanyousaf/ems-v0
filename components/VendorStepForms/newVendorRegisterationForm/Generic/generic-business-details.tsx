@@ -42,8 +42,6 @@ import {
 import RadioButton from "@/components/VendorStepForms/components/radio-button";
 import MultipleSelect from "@/components/VendorStepForms/components/multiple-select";
 import { useFormContext } from "@/lib/context/form-context";
-import { BiFemale } from "react-icons/bi";
-import { FaFemale, FaMale } from "react-icons/fa";
 
 interface Errors {
   [key: string]: string | undefined;
@@ -72,10 +70,14 @@ const SectionCard = ({
   </div>
 );
 
+// MultipleSelect expects { value, label } — passing { value, icon } meant the
+// option list rendered empty, which combined with the prop-name mismatch below
+// is why every new vendor type couldn't get past step 4 ("Staff is required"
+// with no checkboxes to pick).
 const STAFF_OPTIONS = [
-  { value: "Male", icon: <FaMale /> },
-  { value: "Female", icon: <FaFemale /> },
-  { value: "Transgender", icon: <BiFemale /> },
+  { value: "Male", label: "Male" },
+  { value: "Female", label: "Female" },
+  { value: "Transgender", label: "Transgender" },
 ];
 
 const CANCELLATION_POLICIES = [
@@ -163,9 +165,17 @@ const GenericBusinessDetails = ({
           Pakistani families often filter for female-only or mahram-only crews. Pick all that apply.
         </p>
         <MultipleSelect
-          options={STAFF_OPTIONS}
-          selectedValues={formData.staff || []}
-          onChange={(values: string[]) => handleChange("staff", values)}
+          label=""
+          placeholder="Choose staff gender(s)"
+          data={STAFF_OPTIONS}
+          selectedOption={formData.staff || []}
+          handleSelectOption={(id: string) => {
+            const cur: string[] = formData.staff || [];
+            const next = cur.includes(id)
+              ? cur.filter((v) => v !== id)
+              : [...cur, id];
+            handleChange("staff", next);
+          }}
         />
         {errors.staff && (
           <p className="text-xs text-red-500 mt-2">{errors.staff}</p>
@@ -235,9 +245,9 @@ const GenericBusinessDetails = ({
             You can switch to one of our structured presets later (Flexible / Standard / Strict) from your business settings.
           </p>
           <RadioButton
-            options={CANCELLATION_POLICIES}
-            selectedValue={formData.cancelationPolicy || ""}
-            onChange={(value: string) => handleChange("cancelationPolicy", value)}
+            data={CANCELLATION_POLICIES}
+            selectedOption={formData.cancelationPolicy || ""}
+            setSelectedOption={(value: string) => handleChange("cancelationPolicy", value)}
           />
           {errors.cancelationPolicy && (
             <p className="text-xs text-red-500 mt-1">{errors.cancelationPolicy}</p>
