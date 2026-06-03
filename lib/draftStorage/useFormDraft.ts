@@ -179,24 +179,31 @@ export function useFormDraft<T>({
   const effectiveIsMeaningful = buildIsMeaningful(isMeaningful, pristineState);
   const fullKey = `${KEY_PREFIX}${storageKey}:v${SCHEMA_VERSION}`;
 
-  // One-shot read on mount. useState lazy initialiser keeps it from
-  // re-reading on every render.
-  const [storedDraft, setStoredDraft] = useState<StoredDraft<T> | null>(() => {
+  // Read the stored draft for the current full key. Pure; called on
+  // mount AND on every storageKey change so consumers like the
+  // bundled-services + resources cards (which swap between
+  // create / edit-<id> keys as the user moves around) get a fresh
+  // banner pointed at the new key.
+  const readStored = (k: string): StoredDraft<T> | null => {
     if (!isBrowser()) return null;
     try {
-      const raw = window.localStorage.getItem(fullKey);
+      const raw = window.localStorage.getItem(k);
       if (!raw) return null;
       const parsed = JSON.parse(raw) as StoredDraft<T>;
       if (!parsed || parsed.v !== SCHEMA_VERSION || typeof parsed.updatedAt !== "number") return null;
       if (Date.now() - parsed.updatedAt > ttlMs) {
-        try { window.localStorage.removeItem(fullKey); } catch {}
+        try { window.localStorage.removeItem(k); } catch {}
         return null;
       }
       return parsed;
     } catch {
       return null;
     }
-  });
+  };
+
+  // One-shot read on mount. useState lazy initialiser keeps it from
+  // re-reading on every render.
+  const [storedDraft, setStoredDraft] = useState<StoredDraft<T> | null>(() => readStored(fullKey));
 
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [saving, setSaving] = useState(false);
@@ -204,6 +211,22 @@ export function useFormDraft<T>({
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingState = useRef<T | null>(null);
   const lastSig = useRef<string>("");
+
+  // Re-read when storageKey changes — consumers may swap keys as the
+  // user navigates (e.g. clicks Edit on a different record). Skip the
+  // very first run because the lazy initialiser already loaded it.
+  const firstStoredRunRef = useRef(true);
+  useEffect(() => {
+    if (firstStoredRunRef.current) {
+      firstStoredRunRef.current = false;
+      return;
+    }
+    setStoredDraft(readStored(fullKey));
+    // Reset the last-signature cache so the next state change definitely
+    // triggers a save under the new key.
+    lastSig.current = "";
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fullKey]);
 
   // Stable refs for the meaningfulness check and storage key so the flush
   // callback never goes stale and doesn't force its consumers to rebuild

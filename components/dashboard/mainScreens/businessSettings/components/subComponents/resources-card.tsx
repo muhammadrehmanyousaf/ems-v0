@@ -60,6 +60,12 @@ import {
   type BusinessResourceKind,
   type UpsertResourceInput,
 } from "@/lib/api/businessResources";
+// 03-DRAFT-RESILIENCE — persist in-flight resource edits so a refresh
+// doesn't blow away the vendor's typing. Per-record keying so editing
+// resource A then resource B doesn't share drafts.
+import { useFormDraft } from "@/lib/draftStorage/useFormDraft";
+import { DraftResumeBanner, relativeTimeAgo } from "@/components/shared/DraftResumeBanner";
+import { AutoSaveIndicator } from "@/components/VendorStepForms/AutoSaveIndicator";
 
 interface ResourcesCardProps {
   businessId: number;
@@ -156,6 +162,42 @@ export function ResourcesCard({ businessId }: ResourcesCardProps) {
   const [deletingId, setDeletingId] = React.useState<number | null>(null);
   const [savingFlag, setSavingFlag] = React.useState(false);
 
+  // 03-DRAFT-RESILIENCE — persistence for the in-flight `draft`. Key
+  // swaps between create / edit-<id> so different actions don't share.
+  const draftStorageKey = draft?.id
+    ? `business-resource-edit-${businessId}-${draft.id}`
+    : `business-resource-create-${businessId}`;
+  const editingResource = draft?.id ? resources.find((r) => r.id === draft.id) : undefined;
+  const pristineForDraft: DraftResource | null | undefined = !draft
+    ? undefined
+    : draft.id
+      ? (editingResource
+          ? {
+              id: editingResource.id,
+              kind: editingResource.kind,
+              label: editingResource.label,
+              description: editingResource.description || "",
+              quantity: String(editingResource.quantity),
+              capacityUnit: editingResource.capacityUnit === null ? "" : String(editingResource.capacityUnit),
+              unitsPerBooking: String(editingResource.unitsPerBooking),
+              isActive: editingResource.isActive,
+            }
+          : undefined)
+      : { ...EMPTY_DRAFT };
+  const draftPersist = useFormDraft<DraftResource | null>({
+    storageKey: draftStorageKey,
+    state: draft,
+    pristineState: pristineForDraft,
+    isMeaningful: !draft?.id
+      ? ((s) =>
+          !!s &&
+          (s.label.trim() !== "" ||
+            s.description.trim() !== "" ||
+            s.quantity !== ""))
+      : undefined,
+    enabled: draft !== null && !loading,
+  });
+
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -236,6 +278,8 @@ export function ResourcesCard({ businessId }: ResourcesCardProps) {
         await BusinessResourcesAPI.create(businessId, payload);
         toast.success("Resource added");
       }
+      // Server has the truth — drop the local draft for this key.
+      draftPersist.discard();
       setDraft(null);
       await load();
     } catch (e) {
@@ -481,19 +525,35 @@ export function ResourcesCard({ businessId }: ResourcesCardProps) {
         {/* Draft form */}
         {draft && (
           <div className="rounded-md border-2 border-bridal-gold/45 bg-bridal-cream/40 p-4 space-y-3">
+            {/* 03-DRAFT-RESILIENCE — resume banner for this exact record. */}
+            <DraftResumeBanner
+              visible={draftPersist.hasResumableDraft}
+              title={draft.id ? "Resume your edits" : "Resume your unfinished resource"}
+              meta={draftPersist.storedDraft ? `Last edited ${relativeTimeAgo(draftPersist.storedDraft.updatedAt)}` : undefined}
+              onResume={() => {
+                if (!draftPersist.storedDraft?.state) return;
+                setDraft(draftPersist.storedDraft.state);
+                draftPersist.discard();
+                toast.success(draft.id ? "Restored your unsaved edits" : "Restored your unfinished resource");
+              }}
+              onDiscard={() => draftPersist.discard()}
+            />
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-neutral-900">
                 {draft.id ? "Edit resource" : "Add resource"}
               </p>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={cancelDraft}
-                disabled={submitting}
-              >
-                <X className="h-3.5 w-3.5" />
-              </Button>
+              <div className="flex items-center gap-2">
+                <AutoSaveIndicator lastSavedAt={draftPersist.lastSavedAt} saving={draftPersist.saving} />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={cancelDraft}
+                  disabled={submitting}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

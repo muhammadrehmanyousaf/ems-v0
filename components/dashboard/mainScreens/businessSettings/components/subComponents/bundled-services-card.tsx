@@ -65,6 +65,12 @@ import {
   type BundledServicePriceModel,
   type UpsertBundledServiceInput,
 } from "@/lib/api/bundledServices";
+// 03-DRAFT-RESILIENCE — persist the in-progress add/edit draft so a
+// refresh mid-fill doesn't lose the vendor's typing. Per-record key so
+// editing service A then service B doesn't cross-contaminate drafts.
+import { useFormDraft } from "@/lib/draftStorage/useFormDraft";
+import { DraftResumeBanner, relativeTimeAgo } from "@/components/shared/DraftResumeBanner";
+import { AutoSaveIndicator } from "@/components/VendorStepForms/AutoSaveIndicator";
 
 interface BundledServicesCardProps {
   businessId: number;
@@ -276,6 +282,47 @@ export function BundledServicesCard({ businessId }: BundledServicesCardProps) {
   const [submitting, setSubmitting] = React.useState(false);
   const [deletingId, setDeletingId] = React.useState<number | null>(null);
 
+  // 03-DRAFT-RESILIENCE — persistence for the in-flight `draft`.
+  // Storage key changes between create / edit-<id> so different actions
+  // don't share state. useFormDraft re-reads on key change.
+  const draftStorageKey = draft?.id
+    ? `bundled-service-edit-${businessId}-${draft.id}`
+    : `bundled-service-create-${businessId}`;
+  // Pristine derived from the source-of-truth record. For create:
+  // EMPTY_DRAFT. For edit: the service from `services` that matches the
+  // active draft id.
+  const editingService = draft?.id ? services.find((s) => s.id === draft.id) : undefined;
+  const pristineForDraft: DraftService | null | undefined = !draft
+    ? undefined
+    : draft.id
+      ? (editingService
+          ? {
+              id: editingService.id,
+              category: editingService.category,
+              name: editingService.name,
+              description: editingService.description || "",
+              priceModel: editingService.priceModel,
+              priceAmount: editingService.priceAmount === null ? "" : String(editingService.priceAmount),
+              included: editingService.included,
+              mandatory: editingService.mandatory,
+              isActive: editingService.isActive,
+            }
+          : undefined)
+      : { ...EMPTY_DRAFT };
+  const draftPersist = useFormDraft<DraftService | null>({
+    storageKey: draftStorageKey,
+    state: draft,
+    pristineState: pristineForDraft,
+    isMeaningful: !draft?.id
+      ? ((s) =>
+          !!s &&
+          (s.name.trim() !== "" ||
+            s.description.trim() !== "" ||
+            s.priceAmount !== ""))
+      : undefined,
+    enabled: draft !== null && !loading,
+  });
+
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -405,6 +452,8 @@ export function BundledServicesCard({ businessId }: BundledServicesCardProps) {
         await BundledServicesAPI.create(businessId, payload);
         toast.success("Service added");
       }
+      // Server has the truth — drop the local draft for this key.
+      draftPersist.discard();
       setDraft(null);
       await load();
     } catch (e) {
@@ -580,13 +629,31 @@ export function BundledServicesCard({ businessId }: BundledServicesCardProps) {
         {/* ── Draft (create/edit) form ── */}
         {draft && (
           <div className="rounded-md border-2 border-bridal-gold/45 bg-bridal-cream/40 p-4 space-y-3">
+            {/* 03-DRAFT-RESILIENCE — resume banner for this exact draft
+                key (per-record). Only fires when current state differs
+                from pristine (handled in useFormDraft via pristineState). */}
+            <DraftResumeBanner
+              visible={draftPersist.hasResumableDraft}
+              title={draft.id ? "Resume your edits" : "Resume your unfinished service"}
+              meta={draftPersist.storedDraft ? `Last edited ${relativeTimeAgo(draftPersist.storedDraft.updatedAt)}` : undefined}
+              onResume={() => {
+                if (!draftPersist.storedDraft?.state) return;
+                setDraft(draftPersist.storedDraft.state);
+                draftPersist.discard();
+                toast.success(draft.id ? "Restored your unsaved edits" : "Restored your unfinished service");
+              }}
+              onDiscard={() => draftPersist.discard()}
+            />
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-neutral-900">
                 {draft.id ? "Edit service" : "Add service"}
               </p>
-              <Button type="button" size="sm" variant="ghost" onClick={cancelDraft} disabled={submitting}>
-                <X className="h-3.5 w-3.5" />
-              </Button>
+              <div className="flex items-center gap-2">
+                <AutoSaveIndicator lastSavedAt={draftPersist.lastSavedAt} saving={draftPersist.saving} />
+                <Button type="button" size="sm" variant="ghost" onClick={cancelDraft} disabled={submitting}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
