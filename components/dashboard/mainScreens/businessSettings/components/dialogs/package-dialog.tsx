@@ -18,6 +18,13 @@ import { toast } from 'sonner';
 import { ImagePlus, Loader2, Plus, Trash2, X } from 'lucide-react';
 import Image from 'next/image';
 import { getImageUrl } from '@/lib/utils/image-utils';
+// 03-DRAFT-RESILIENCE — preserve in-progress package creation across refresh.
+// Scoped to CREATE mode for now; edit-mode draft support is a follow-up
+// because the initial state matches the existing package, which would
+// create an "always save" loop without a pristine-state comparator.
+import { useFormDraft } from '@/lib/draftStorage/useFormDraft';
+import { DraftResumeBanner, relativeTimeAgo } from '@/components/shared/DraftResumeBanner';
+import { AutoSaveIndicator } from '@/components/VendorStepForms/AutoSaveIndicator';
 
 // ── Feature categories per vendor type (mirrors registration form) ────────────
 const BUSINESS_CATEGORIES: Record<string, { id: string; label: string }[]> = {
@@ -216,6 +223,35 @@ export function PackageDialog({
     const isEditing = !!editingPackage;
     const totalImages = existingImages.length + newImageFiles.length;
 
+    // 03-DRAFT-RESILIENCE — persist in-progress CREATE state.
+    //
+    // We intentionally only enable this for create-mode: in edit mode the
+    // initial state mirrors the existing package, so the draft layer would
+    // need a pristine-vs-current comparator to avoid writing "the same
+    // thing again" on every open. Tracked as a follow-up.
+    //
+    // File-bearing fields (newImageFiles, newImagePreviews) are excluded —
+    // localStorage can't hold Files, and the existing image-upload flow in
+    // this dialog doesn't have a Blob-restoration path yet. Text fields
+    // (name / price / features / cars) are the high-value persistence.
+    const draftState = {
+        name,
+        price,
+        featureMap,
+        featuresText,
+        carFields,
+        existingImages,
+    };
+    const draftEnabled = open && !isEditing;
+    const draft = useFormDraft<typeof draftState>({
+        storageKey: `package-create-${businessId}-${vendorType ?? 'unknown'}`,
+        state: draftState,
+        isMeaningful: (s) => !!s.name.trim() || !!s.price.trim() ||
+            Object.keys(s.featureMap).length > 0 || !!s.featuresText.trim() ||
+            (s.carFields && (s.carFields.make || s.carFields.model || s.carFields.year)) ? true : false,
+        enabled: draftEnabled,
+    });
+
     // ── Populate form when opening for edit ───────────────────────────────────
     useEffect(() => {
         if (editingPackage) {
@@ -356,6 +392,8 @@ export function PackageDialog({
                 });
                 toast.success(isCarRental ? 'Vehicle added' : isStationery ? 'Product added' : 'Package created');
             }
+            // Drop the local draft now that the server has the package.
+            draft.discard();
             onSuccess();
             onOpenChange(false);
         } catch {
@@ -383,7 +421,38 @@ export function PackageDialog({
                     </DialogTitle>
                 </DialogHeader>
 
+                {/* 03-DRAFT-RESILIENCE — resume banner. Only fires in
+                    CREATE mode and only when a fresh draft was saved on
+                    this device (the hook returns hasResumableDraft only
+                    for create-mode keys). */}
+                {!isEditing && (
+                    <DraftResumeBanner
+                        visible={draft.hasResumableDraft}
+                        title="Resume your unsaved package"
+                        meta={draft.storedDraft ? `Last edited ${relativeTimeAgo(draft.storedDraft.updatedAt)}` : undefined}
+                        warning="Image uploads from your previous session aren't restored — re-attach them after Resume."
+                        onResume={() => {
+                            if (!draft.storedDraft) return;
+                            const s = draft.storedDraft.state;
+                            setName(s.name || '');
+                            setPrice(s.price || '');
+                            setFeatureMap(s.featureMap || {});
+                            setFeaturesText(s.featuresText || '');
+                            setCarFields(s.carFields || DEFAULT_CAR_FIELDS);
+                            setExistingImages(s.existingImages || []);
+                            draft.discard();
+                            toast.success('Restored your unsaved package');
+                        }}
+                        onDiscard={() => draft.discard()}
+                    />
+                )}
+
                 <form onSubmit={handleSubmit} className="space-y-5">
+                    {!isEditing && (
+                        <div className="flex justify-end -mb-2">
+                            <AutoSaveIndicator lastSavedAt={draft.lastSavedAt} saving={draft.saving} />
+                        </div>
+                    )}
                     {/* Name + Price */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">

@@ -14,11 +14,16 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { zodResolver } from '@hookform/resolvers/zod'
 import React, { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { BusinessesAPI, type ApiBusiness } from '@/lib/api/dashboard'
 import { toast } from 'sonner'
 import { Loader2, Building2, MapPin, DollarSign, Shield } from 'lucide-react'
+// 03-DRAFT-RESILIENCE — auto-save unsaved edits to localStorage so a
+// refresh or accidental tab-close doesn't blow them away.
+import { useFormDraft } from '@/lib/draftStorage/useFormDraft'
+import { DraftResumeBanner, relativeTimeAgo } from '@/components/shared/DraftResumeBanner'
+import { AutoSaveIndicator } from '@/components/VendorStepForms/AutoSaveIndicator'
 // BK-100.5 — vendor-selectable cancellation policy presets.
 import { CancellationPolicyCard } from '../subComponents/cancellation-policy-card'
 // Pricing-rules engine (flag-gated) — weekend premium + early-bird.
@@ -71,6 +76,20 @@ const BasicInfoTab = ({ business, onSuccess }: BasicInfoTabProps) => {
 
     const downPaymentType = form.watch('downPaymentType');
 
+    // 03-DRAFT-RESILIENCE — auto-save the in-progress edit to localStorage.
+    // Key includes business.id so different businesses don't share drafts on
+    // a shared device. Meaningfulness is gated on react-hook-form's `isDirty`
+    // so we don't write a draft just because the user opened the page (which
+    // would create an empty draft that overwrites the previous session's
+    // real edits).
+    const watched = useWatch({ control: form.control });
+    const isDirty = form.formState.isDirty;
+    const draft = useFormDraft<FormValues>({
+        storageKey: `business-basic-info-${business.id}`,
+        state: watched as FormValues,
+        isMeaningful: () => isDirty,
+    });
+
     const onSubmit = async (values: FormValues) => {
         setSaving(true);
         try {
@@ -88,6 +107,11 @@ const BasicInfoTab = ({ business, onSuccess }: BasicInfoTabProps) => {
                 cancelationPolicy: values.cancelationPolicy || null,
             });
             toast.success('Business updated successfully');
+            // Clear the local draft now that the server has the truth.
+            draft.discard();
+            // Reset the dirty flag so a fresh save doesn't immediately
+            // queue another draft write.
+            form.reset(values);
             onSuccess();
         } catch {
             toast.error('Failed to update business');
@@ -98,8 +122,32 @@ const BasicInfoTab = ({ business, onSuccess }: BasicInfoTabProps) => {
 
     return (
         <div className='max-w-4xl'>
+            {/* 03-DRAFT-RESILIENCE — resume banner. Shown only when a
+                fresh stored draft exists from a previous session. Resume
+                pulls the saved values into the form via form.reset(); the
+                fields below come alive instantly. */}
+            <DraftResumeBanner
+                visible={draft.hasResumableDraft}
+                meta={draft.storedDraft ? `Last edited ${relativeTimeAgo(draft.storedDraft.updatedAt)}` : undefined}
+                onResume={() => {
+                    if (draft.storedDraft) {
+                        form.reset(draft.storedDraft.state, { keepDirty: true, keepDirtyValues: true });
+                    }
+                    draft.discard();
+                    toast.success('Restored your unsaved changes');
+                }}
+                onDiscard={() => draft.discard()}
+            />
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8'>
+                    {/* Auto-save state — small "Saved 5 sec ago" badge so the
+                        vendor knows it's safe to leave the page. */}
+                    <div className="flex justify-end">
+                        <AutoSaveIndicator
+                            lastSavedAt={draft.lastSavedAt}
+                            saving={draft.saving}
+                        />
+                    </div>
                     {/* Section: Basic Details */}
                     <div className="space-y-4">
                         <div className="flex items-center gap-2">
