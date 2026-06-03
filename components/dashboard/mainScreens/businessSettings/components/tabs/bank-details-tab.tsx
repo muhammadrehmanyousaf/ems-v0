@@ -79,6 +79,12 @@ import {
   BankDetailsAPI,
   type BankDetail,
 } from '@/lib/api/bankDetails';
+// 03-DRAFT-RESILIENCE — bank details intentionally do NOT use
+// useFormDraft (localStorage plaintext for financial PII would be a
+// regulatory and security incident on a shared device). Instead we use
+// the beforeunload guard + a Cancel confirmation so an accidental
+// refresh or close turns into a deliberate two-click decision.
+import { useBeforeUnloadGuard } from '@/lib/hooks/useBeforeUnloadGuard';
 
 const formSchema = z.object({
   bankName: z
@@ -127,6 +133,33 @@ const BankDetailsTab = () => {
       isActive: false,
     },
   });
+
+  // 03-DRAFT-RESILIENCE — warn the vendor before refresh/close while
+  // they have unsaved bank-details typing. Active only when the dialog
+  // is open AND the form is dirty. See lib/hooks/useBeforeUnloadGuard.ts
+  // for why we don't use the localStorage draft layer here.
+  const isDirty = form.formState.isDirty;
+  useBeforeUnloadGuard({
+    enabled: dialogOpen && isDirty && !saving,
+    message: "You have unsaved bank-details. Leave anyway?",
+  });
+
+  // Wrapped close handler that confirms BEFORE dismissing the dialog
+  // when the form has unsaved changes. Covers all three dismiss paths:
+  // explicit Cancel click, outside click, and Esc key (the Dialog's
+  // onOpenChange fires for all of them).
+  const closeWithConfirm = React.useCallback(
+    (force = false) => {
+      if (!force && isDirty && !saving) {
+        const ok = typeof window !== "undefined"
+          ? window.confirm("Discard your unsaved bank-details?")
+          : true;
+        if (!ok) return;
+      }
+      setDialogOpen(false);
+    },
+    [isDirty, saving],
+  );
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -380,8 +413,15 @@ const BankDetailsTab = () => {
         </div>
       )}
 
-      {/* Add / edit dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {/* Add / edit dialog. onOpenChange routes through closeWithConfirm
+          so Esc / outside-click / Cancel all prompt before discarding. */}
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(next) => {
+          if (next) setDialogOpen(true);
+          else closeWithConfirm();
+        }}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
@@ -511,7 +551,7 @@ const BankDetailsTab = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setDialogOpen(false)}
+                  onClick={() => closeWithConfirm()}
                   disabled={saving}
                 >
                   Cancel
