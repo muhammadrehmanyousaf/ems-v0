@@ -26,6 +26,9 @@ import { useBookingDraft } from "@/hooks/use-booking-draft"
 import PaymentSuccessScreen from "./steps/payment-success-screen"
 import BankTransferScreen from "./steps/bank-transfer-screen"
 import BookingPaymentScreen from "./steps-v2/booking-payment-screen"
+// 03-DRAFT-RESILIENCE — couples lose laborious vendor/package/menu
+// choices on refresh because useBookingDraft's load was never wired.
+import { DraftResumeBanner, relativeTimeAgo } from "@/components/shared/DraftResumeBanner"
 
 export default function BookingForm() {
   // Global steps: 1=Event Selection; Afterwards, per-event steps tracked in each event
@@ -68,6 +71,43 @@ export default function BookingForm() {
   const { timeRemaining, isHolding, holdFailed, holdFailedUntil, createHold, releaseHold } = useDateHold()
   const { user, loading: userLoading } = getUser();
   const { save: saveDraft, load: loadDraft, clear: clearDraft } = useBookingDraft(venueId, user?.id ? String(user.id) : null)
+
+  // 03-DRAFT-RESILIENCE — booking-flow resume.
+  //
+  // `useBookingDraft` saves drafts to localStorage but until now `load` was
+  // destructured and never called: every saved draft was orphaned. Couples
+  // who refreshed mid-booking thought the system was broken.
+  //
+  // We load on mount (once user + venueId are known) and surface a banner.
+  // On Resume we restore the form/event state but DELIBERATELY drop the
+  // bookingDate/timeSlot/slotTemplateId of the active event: the 15-min
+  // slot hold from the previous session is almost certainly stale (the
+  // client-side hold timer doesn't survive refresh), so we force the user
+  // back to the date/time step to re-pick + re-hold. Vendor/package/menu
+  // selections — the laborious choices — are preserved.
+  const [pendingDraft, setPendingDraft] = useState<{
+    formData: BookingFormData;
+    events: EventBooking[];
+    globalStep: number;
+    activeEventIndex: number;
+    savedAt: number;
+  } | null>(null);
+  const draftLoadAttemptedRef = useRef(false);
+  useEffect(() => {
+    if (draftLoadAttemptedRef.current) return;
+    if (userLoading || !user?.id || !venueId) return;
+    draftLoadAttemptedRef.current = true;
+    const d = loadDraft();
+    if (d && d.events && d.events.length > 0) {
+      setPendingDraft({
+        formData: d.formData,
+        events: d.events,
+        globalStep: d.globalStep,
+        activeEventIndex: d.activeEventIndex,
+        savedAt: d.savedAt,
+      });
+    }
+  }, [userLoading, user?.id, venueId, loadDraft]);
 
   const fetchVenue = async (id: string) => {
     try {
@@ -962,6 +1002,57 @@ export default function BookingForm() {
               currentStep={currentDisplayStep}
               isVenueBooking={isVenueBooking}
             />
+
+            {/* 03-DRAFT-RESILIENCE — resume banner.
+                Shown only when a saved draft exists AND the couple is still
+                at the entry point (globalStep===1 with no events yet).
+                Resume restores vendor/package/menu choices but resets the
+                active event's date+time so the stale 15-min slot hold is
+                re-acquired on the next step. */}
+            {pendingDraft && globalStep === 1 && events.length === 0 && (
+              <DraftResumeBanner
+                visible={true}
+                title="Resume your booking"
+                meta={`Last edited ${relativeTimeAgo(pendingDraft.savedAt)} — ${pendingDraft.events.length} event${pendingDraft.events.length === 1 ? '' : 's'} · step ${pendingDraft.globalStep}`}
+                warning="Your previous date hold has expired — we'll send you back to the date & time step to re-confirm."
+                onResume={() => {
+                  // Restore form + events, but blank the active event's
+                  // date/time so the user re-picks (and re-holds) the slot.
+                  const restoredEvents = pendingDraft.events.map((e, idx) =>
+                    idx === pendingDraft.activeEventIndex
+                      ? {
+                          ...e,
+                          currentStep: 0,
+                          formData: {
+                            ...e.formData,
+                            bookingDate: undefined,
+                            timeSlot: '',
+                            slotTemplateId: null,
+                          },
+                        }
+                      : e
+                  );
+                  setFormData({
+                    ...pendingDraft.formData,
+                    bookingDate: undefined,
+                    timeSlot: '',
+                    slotTemplateId: null,
+                  });
+                  setEvents(restoredEvents);
+                  setActiveEventIndex(pendingDraft.activeEventIndex);
+                  setGlobalStep(pendingDraft.globalStep);
+                  setPendingDraft(null);
+                  toast({
+                    title: 'Booking restored',
+                    description: 'Your vendor and package choices are back. Please re-confirm date and time.',
+                  });
+                }}
+                onDiscard={() => {
+                  clearDraft();
+                  setPendingDraft(null);
+                }}
+              />
+            )}
 
             {/* Step body — full-width bridal cream card */}
             <div className="min-w-0 rounded-md bg-bridal-cream border border-bridal-beige shadow-[0_8px_24px_-20px_rgba(176,125,84,0.45)] overflow-hidden">
