@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PersonalDetailsStep } from "./steps/personal-details-step";
 import { BusinessTypeStep } from "./steps/business-type-step";
 import Image from "next/image";
@@ -71,6 +71,23 @@ import { Package } from "@/lib/types";
 // 01-VR-ENHANCE-V1-FE — server-side draft sync
 import { useDraftSync } from "@/lib/hooks/useDraftSync";
 import { DraftResumePrompt } from "@/components/auth/DraftResumePrompt";
+// 02-VR-RESILIENCE-V1 — local (device) draft layer + autosave indicator
+import {
+  queueLocalDraftSave,
+  flushPendingLocalDraft,
+  subscribeLocalDraft,
+  clearLocalDraft,
+  readLocalDraft,
+  type LocalDraft,
+} from "@/lib/draftStorage/localDraftStore";
+import { clearAllBlobs, sweepExpiredBlobs } from "@/lib/draftStorage/imageBlobStore";
+import {
+  useImageBlobSync,
+  restoreImageBlobsFromRefs,
+  type ImageRefs,
+} from "@/lib/draftStorage/useImageBlobSync";
+import { AutoSaveIndicator } from "@/components/VendorStepForms/AutoSaveIndicator";
+import { LocalDraftResumePrompt } from "@/components/VendorStepForms/LocalDraftResumePrompt";
 
 // Bridal primitives (Phase 0 — design revamp)
 import { BridalButton } from "@/components/bridal/bridal-button";
@@ -118,6 +135,145 @@ export function BusinessRegistrationForm() {
     vendorType: businessType ? String(businessType) : null,
     enabled: !openModal,
   });
+
+  // 02-VR-RESILIENCE-V1 — local (device) draft layer.
+  //
+  // Covers the dangerous window before useDraftSync engages (i.e. before a
+  // valid email has been typed). Saves debounced 500 ms to localStorage on
+  // every change to formData / currentStep / businessType. The server layer
+  // keeps writing in parallel once email is valid; both layers are wiped on
+  // successful submit. Disabled after submit for the same reason as the
+  // server layer.
+  const [localLastSavedAt, setLocalLastSavedAt] = useState<Date | null>(null);
+  const [localSaving, setLocalSaving] = useState(false);
+  // Latest known blob id-map for the three image fields. Updated by
+  // useImageBlobSync as files come and go. Kept in a ref instead of state
+  // so the localStorage save effect doesn't loop on every blob assignment.
+  const imageRefsRef = useRef<ImageRefs>({});
+
+  // Refs-of-truth so the stable image-refs callback can save with current
+  // state without re-creating on every keystroke (and so it can fire AFTER
+  // useImageBlobSync's async pass completes, when refs are fresh but the
+  // outer field-change effect has already run with stale refs).
+  const formDataRef = useRef(formData);
+  const currentStepRef = useRef(currentStep);
+  const businessTypeRef = useRef(businessType);
+  const openModalRef = useRef(openModal);
+  useEffect(() => { formDataRef.current = formData; }, [formData]);
+  useEffect(() => { currentStepRef.current = currentStep; }, [currentStep]);
+  useEffect(() => { businessTypeRef.current = businessType; }, [businessType]);
+  useEffect(() => { openModalRef.current = openModal; }, [openModal]);
+
+  // Persist image binaries to IndexedDB so a refresh doesn't wipe a 10 MB
+  // shop photo. Stash the id-map in a ref AND immediately schedule a draft
+  // save with the fresh refs — otherwise, picking an image then refreshing
+  // before any other interaction loses the blob-id mapping.
+  const onImageRefsChange = useCallback((refs: ImageRefs) => {
+    imageRefsRef.current = refs;
+    if (openModalRef.current) return;
+    queueLocalDraftSave({
+      formData: formDataRef.current,
+      currentStep: currentStepRef.current,
+      businessType: businessTypeRef.current ? String(businessTypeRef.current) : "",
+      imageRefs: refs,
+    });
+  }, []);
+
+  useImageBlobSync({
+    profileImageFile: formData.profileImageFile,
+    imageFiles: formData.imageFiles,
+    packageImageFiles: formData.packageImageFiles,
+    enabled: !openModal,
+    onChangeRefs: onImageRefsChange,
+  });
+
+  useEffect(() => {
+    if (openModal) return; // already submitted; don't write back over success state
+    setLocalSaving(true);
+    queueLocalDraftSave({
+      formData,
+      currentStep,
+      businessType: businessType ? String(businessType) : "",
+      imageRefs: imageRefsRef.current,
+    });
+    // queueLocalDraftSave is debounced; clear the "saving" flag once the
+    // debounce window passes. Slight over-estimate is fine.
+    const t = setTimeout(() => setLocalSaving(false), 700);
+    return () => clearTimeout(t);
+  }, [formData, currentStep, businessType, openModal]);
+
+  // Subscribe to commits so the indicator reflects the actual write time
+  // (not just the queue time).
+  useEffect(() => {
+    const off = subscribeLocalDraft((d) => {
+      if (d) setLocalLastSavedAt(new Date(d.updatedAt));
+    });
+    return off;
+  }, []);
+
+  // Flush any pending debounced write when the tab is closing. Best-effort —
+  // browsers limit work during unload — but the queued snapshot is already
+  // in memory so we just need to synchronously hit setItem.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const flush = () => flushPendingLocalDraft();
+    window.addEventListener("beforeunload", flush);
+    window.addEventListener("pagehide", flush);
+    // Tab backgrounded on mobile → may be reaped without firing unload.
+    const onVis = () => { if (document.visibilityState === "hidden") flush(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("beforeunload", flush);
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, []);
+
+  // Drop stale IndexedDB blobs from prior abandoned registrations on first
+  // mount so the user's quota doesn't bloat.
+  useEffect(() => {
+    sweepExpiredBlobs().catch(() => null);
+  }, []);
+
+  // The indicator shows whichever layer wrote most recently.
+  const combinedLastSavedAt: Date | null = (() => {
+    const a = draftSync.lastSavedAt;
+    const b = localLastSavedAt;
+    if (a && b) return a.getTime() > b.getTime() ? a : b;
+    return a || b;
+  })();
+  const combinedSaving = draftSync.saving || localSaving;
+
+  // Hydrate state from a localDraft when the user opts in via the resume prompt.
+  // Restores formData / step / business type AND any image binaries that were
+  // mirrored to IndexedDB (brand logo, gallery, per-package photos).
+  const hydrateFromLocalDraft = async (d: LocalDraft) => {
+    if (d.formData && typeof d.formData === "object") {
+      setFormData((prev) => ({ ...prev, ...(d.formData as Partial<FormType>) }));
+    }
+    if (typeof d.currentStep === "number") setCurrentStep(d.currentStep);
+    if (d.businessType) setBusinessType(d.businessType);
+
+    // Pull image binaries back from IDB and slot them into the three image
+    // arrays. Done after the formData merge so it overwrites any (empty)
+    // image arrays the spread above re-introduced.
+    try {
+      const restored = await restoreImageBlobsFromRefs(d.imageRefs);
+      setFormData((prev) => ({
+        ...prev,
+        profileImageFile: restored.profileImageFile,
+        imageFiles: restored.imageFiles,
+        packageImageFiles: restored.packageImageFiles,
+      }));
+    } catch {/* IDB failure is non-blocking */}
+
+    toast({
+      title: "Progress restored",
+      description: `Picked up where you left off${
+        typeof d.currentStep === "number" ? ` (step ${d.currentStep + 1})` : ""
+      }.`,
+    });
+  };
 
   const carRental = businessType === "Car rental";
   const bridalWear = businessType === "Bridal wearing";
@@ -713,6 +869,10 @@ export function BusinessRegistrationForm() {
         if (formData?.email) {
           draftSync.clearDraft(formData.email).catch(() => null);
         }
+        // 02-VR-RESILIENCE-V1 — drop the device draft + image blobs too,
+        // so the next vendor on the same browser starts clean.
+        clearLocalDraft();
+        clearAllBlobs().catch(() => null);
       }
     } catch (error: any) {
       loadingToastId.dismiss();
@@ -763,13 +923,24 @@ export function BusinessRegistrationForm() {
             </div>
           </Link>
 
-          <Link
-            href="/get-help"
-            className="inline-flex items-center gap-1.5 px-3 sm:px-4 h-9 sm:h-10 rounded-[4px] border border-bridal-beige bg-bridal-cream font-bridal text-[12px] tracking-wide text-bridal-mauve hover:border-bridal-gold/60 hover:text-bridal-charcoal transition-colors"
-          >
-            <HelpCircle className="w-4 h-4" />
-            <span className="hidden sm:inline">Need Help?</span>
-          </Link>
+          <div className="flex items-center gap-3 sm:gap-4">
+            {/* 02-VR-RESILIENCE-V1 — autosave indicator. Visible from the
+                moment the vendor types anything; gives them confidence the
+                form is being preserved. */}
+            <div className="hidden sm:block">
+              <AutoSaveIndicator
+                lastSavedAt={combinedLastSavedAt}
+                saving={combinedSaving}
+              />
+            </div>
+            <Link
+              href="/get-help"
+              className="inline-flex items-center gap-1.5 px-3 sm:px-4 h-9 sm:h-10 rounded-[4px] border border-bridal-beige bg-bridal-cream font-bridal text-[12px] tracking-wide text-bridal-mauve hover:border-bridal-gold/60 hover:text-bridal-charcoal transition-colors"
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">Need Help?</span>
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -900,9 +1071,22 @@ export function BusinessRegistrationForm() {
                   while a tall step (e.g. the business-type grid) just grows
                   and scrolls from the top — no clipping. */}
               <div className="lg:min-h-full lg:flex lg:flex-col lg:justify-center">
+              {/* 02-VR-RESILIENCE-V1 — device-local resume prompt.
+                  Fires the moment the page loads if a local draft exists,
+                  even before the vendor types an email. This is the common
+                  case (refresh / tab close / browser crash on the same
+                  device). Suppressed while the form has any meaningful
+                  content already (e.g. mid-typing or the server prompt
+                  just hydrated) so we don't second-guess the user. */}
+              <LocalDraftResumePrompt
+                suppress={!!formData?.name || !!formData?.businessType || currentStep > 1}
+                onResume={hydrateFromLocalDraft}
+              />
+
               {/* 01-VR-ENHANCE-V1-FE — server-side resume prompt.
                   Shown only when an email is typed, the form is still empty
-                  enough to safely overwrite, and the server has a saved draft. */}
+                  enough to safely overwrite, and the server has a saved draft.
+                  Surfaces the cross-device case (vendor switches phone → laptop). */}
               {formData?.email && currentStep <= 1 && !formData?.name && (
                 <DraftResumePrompt
                   email={formData.email}
