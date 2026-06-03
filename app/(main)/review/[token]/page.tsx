@@ -23,6 +23,15 @@ import {
   Heart,
   Upload,
 } from 'lucide-react';
+// 03-DRAFT-RESILIENCE — public review form, no auth. Couples writing a
+// review with photos + comment can lose 10+ min on accidental refresh
+// (and the photos are gone for good without IDB persistence). Wire it
+// up so they don't have to re-rate, re-type, re-upload.
+import { useFormDraft } from '@/lib/draftStorage/useFormDraft';
+import { useFileArrayBlobSync, restoreFilesFromIds } from '@/lib/draftStorage/useFileArrayBlobSync';
+import { sweepExpiredBlobs } from '@/lib/draftStorage/imageBlobStore';
+import { DraftResumeBanner, relativeTimeAgo } from '@/components/shared/DraftResumeBanner';
+import { AutoSaveIndicator } from '@/components/VendorStepForms/AutoSaveIndicator';
 
 interface BizRow {
   id: number;
@@ -57,6 +66,35 @@ export default function Page({ params }: PageProps) {
   const [submitting, setSubmitting] = useState(false);
   const [doneMessage, setDoneMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // 03-DRAFT-RESILIENCE — local draft for this review token. Includes
+  // selectedBizId so resuming brings back BOTH the right vendor AND
+  // their unsaved review fields. Photos are mirrored to IndexedDB so
+  // 10 MB phone photos don't vanish on F5.
+  const [photoBlobIds, setPhotoBlobIds] = useState<string[]>([]);
+  const draftEnabled = !loading && !loadErr && !!data;
+  useFileArrayBlobSync({
+    files: photos,
+    enabled: draftEnabled,
+    onIdsChange: setPhotoBlobIds,
+  });
+  const draftState = {
+    selectedBizId,
+    rating,
+    comment,
+    photoBlobIds,
+    photoCount: photos.length,
+  };
+  const reviewDraft = useFormDraft<typeof draftState>({
+    storageKey: `review-${token}`,
+    state: draftState,
+    isMeaningful: (s) =>
+      s.rating > 0 || s.comment.trim() !== '' || s.photoCount > 0,
+    enabled: draftEnabled,
+  });
+
+  // Sweep stale blobs from prior abandoned reviews on mount.
+  useEffect(() => { sweepExpiredBlobs().catch(() => null); }, []);
 
   const load = () => {
     setLoading(true);
@@ -130,6 +168,8 @@ export default function Page({ params }: PageProps) {
       setRating(0);
       setComment('');
       setPhotos([]);
+      // Drop the local draft now that the review is on the server.
+      reviewDraft.discard();
       load();
     } catch (e: any) {
       setError(
@@ -207,6 +247,30 @@ export default function Page({ params }: PageProps) {
             onSubmit={onSubmit}
             className="bg-white border border-neutral-200 rounded-xl p-5 space-y-4"
           >
+            {/* 03-DRAFT-RESILIENCE — resume banner. Restores the
+                vendor selection, stars, comment, and photos from a
+                previous session. Photos are pulled back from IDB. */}
+            <DraftResumeBanner
+              visible={reviewDraft.hasResumableDraft}
+              title="Resume your unfinished review"
+              meta={reviewDraft.storedDraft ? `Last edited ${relativeTimeAgo(reviewDraft.storedDraft.updatedAt)}` : undefined}
+              onResume={async () => {
+                if (!reviewDraft.storedDraft) return;
+                const s = reviewDraft.storedDraft.state;
+                if (s.selectedBizId) setSelectedBizId(s.selectedBizId);
+                setRating(s.rating || 0);
+                setComment(s.comment || '');
+                try {
+                  const restored = await restoreFilesFromIds(s.photoBlobIds);
+                  setPhotos(restored);
+                } catch { /* IDB failure: leave photos empty */ }
+                reviewDraft.discard();
+              }}
+              onDiscard={() => reviewDraft.discard()}
+            />
+            <div className="flex justify-end">
+              <AutoSaveIndicator lastSavedAt={reviewDraft.lastSavedAt} saving={reviewDraft.saving} />
+            </div>
             <div>
               <label className="text-xs font-semibold uppercase tracking-wide text-neutral-600">
                 Which vendor?
