@@ -25,6 +25,11 @@ import {
   BusinessesAPI,
   type PricingRulesConfig,
 } from "@/lib/api/dashboard";
+// 03-DRAFT-RESILIENCE — persist in-progress edits to pricing rules so a
+// refresh mid-thought (vendor tweaking percentages) doesn't blow them away.
+import { useFormDraft } from "@/lib/draftStorage/useFormDraft";
+import { DraftResumeBanner, relativeTimeAgo } from "@/components/shared/DraftResumeBanner";
+import { AutoSaveIndicator } from "@/components/VendorStepForms/AutoSaveIndicator";
 
 interface PricingRulesCardProps {
   businessId: number;
@@ -43,6 +48,9 @@ export function PricingRulesCard({ businessId }: PricingRulesCardProps) {
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  // 03-DRAFT-RESILIENCE — pristine snapshot captured after server load
+  // so the hook can decide "did the vendor actually change anything?"
+  const [pristineCfg, setPristineCfg] = React.useState<PricingRulesConfig | null>(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -55,7 +63,7 @@ export function PricingRulesCard({ businessId }: PricingRulesCardProps) {
         discountMaxPercent: res.bounds?.discountMaxPercent ?? 50,
       });
       if (res.rules) {
-        setCfg({
+        const loadedCfg: PricingRulesConfig = {
           enabled: !!res.rules.enabled,
           weekendPremium: {
             enabled: !!res.rules.weekendPremium?.enabled,
@@ -67,7 +75,12 @@ export function PricingRulesCard({ businessId }: PricingRulesCardProps) {
             percent: Number(res.rules.earlyBird?.percent) || 0,
             thresholdDays: Number(res.rules.earlyBird?.thresholdDays) || 0,
           },
-        });
+        };
+        setCfg(loadedCfg);
+        setPristineCfg(loadedCfg);
+      } else {
+        // No saved rules — pristine is the EMPTY default.
+        setPristineCfg(EMPTY);
       }
     } catch (e) {
       setError(
@@ -84,11 +97,26 @@ export function PricingRulesCard({ businessId }: PricingRulesCardProps) {
     load();
   }, [load]);
 
+  // 03-DRAFT-RESILIENCE — auto-save in-progress edits. Pristine comparison
+  // gates meaningfulness so opening the card without changing anything
+  // never writes a draft.
+  const draft = useFormDraft<PricingRulesConfig>({
+    storageKey: `pricing-rules-${businessId}`,
+    state: cfg,
+    pristineState: pristineCfg ?? undefined,
+    enabled: !loading && pristineCfg !== null,
+  });
+
   const save = async () => {
     setSaving(true);
     try {
       const res = await BusinessesAPI.setPricingRules(businessId, cfg);
-      if (res?.rules) setCfg(res.rules);
+      if (res?.rules) {
+        setCfg(res.rules);
+        setPristineCfg(res.rules);
+      }
+      // Server is now the truth — drop the local draft.
+      draft.discard();
       toast.success("Pricing rules saved", {
         description: engineEnabled
           ? "Applies to new bookings only — existing bookings keep their price."
@@ -132,6 +160,26 @@ export function PricingRulesCard({ businessId }: PricingRulesCardProps) {
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* 03-DRAFT-RESILIENCE — resume banner. Only fires when the
+            stored draft differs from the server's pristine cfg (handled
+            inside useFormDraft via pristineState). */}
+        <DraftResumeBanner
+          visible={draft.hasResumableDraft}
+          title="Resume your pricing-rule edits"
+          meta={draft.storedDraft ? `Last edited ${relativeTimeAgo(draft.storedDraft.updatedAt)}` : undefined}
+          onResume={() => {
+            if (!draft.storedDraft) return;
+            setCfg(draft.storedDraft.state);
+            draft.discard();
+            toast.success("Restored your unsaved pricing rules");
+          }}
+          onDiscard={() => draft.discard()}
+        />
+        {/* Auto-save status */}
+        <div className="flex justify-end -mt-2 -mb-2">
+          <AutoSaveIndicator lastSavedAt={draft.lastSavedAt} saving={draft.saving} />
+        </div>
+
         {loading ? (
           <div className="flex items-center gap-2 py-8 text-sm text-neutral-500">
             <Loader2 className="h-4 w-4 animate-spin" /> Loading…

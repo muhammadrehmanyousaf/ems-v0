@@ -18,11 +18,13 @@ import { toast } from 'sonner';
 import { ImagePlus, Loader2, Plus, Trash2, X } from 'lucide-react';
 import Image from 'next/image';
 import { getImageUrl } from '@/lib/utils/image-utils';
-// 03-DRAFT-RESILIENCE — preserve in-progress package creation across refresh.
-// Scoped to CREATE mode for now; edit-mode draft support is a follow-up
-// because the initial state matches the existing package, which would
-// create an "always save" loop without a pristine-state comparator.
+// 03-DRAFT-RESILIENCE — preserve in-progress package work across refresh.
+// CREATE + EDIT supported (edit mode via pristineState in the hook).
+// Image binaries are mirrored to IndexedDB so 10 MB product photos
+// don't vanish on F5.
 import { useFormDraft } from '@/lib/draftStorage/useFormDraft';
+import { useFileArrayBlobSync, restoreFilesFromIds } from '@/lib/draftStorage/useFileArrayBlobSync';
+import { deleteBlob, sweepExpiredBlobs } from '@/lib/draftStorage/imageBlobStore';
 import { DraftResumeBanner, relativeTimeAgo } from '@/components/shared/DraftResumeBanner';
 import { AutoSaveIndicator } from '@/components/VendorStepForms/AutoSaveIndicator';
 
@@ -225,14 +227,17 @@ export function PackageDialog({
 
     // 03-DRAFT-RESILIENCE — persist in-progress CREATE or EDIT state.
     //
-    // File-bearing fields (newImageFiles, newImagePreviews) are excluded —
-    // localStorage can't hold Files, and this dialog doesn't have a Blob
-    // restoration path yet. Text fields (name / price / features / cars
-    // / existingImages references) are the high-value persistence.
+    // Files themselves can't go in localStorage, so newImageFiles is mirrored
+    // into IndexedDB via useFileArrayBlobSync (below). The draft holds an
+    // ordered list of blob ids (`imageBlobIds`) plus a `newImageCount` so
+    // draftState identity changes the moment the user picks a file (even
+    // before the IDB put resolves). Resume reads the id list, fetches
+    // Files from IDB, and slots them back into newImageFiles.
     //
     // Edit mode uses pristineState: the hook auto-treats "current matches
     // pristine" as not-meaningful, so opening a package for edit and
     // looking at it without changing anything does NOT write a draft.
+    const [imageBlobIds, setImageBlobIds] = useState<string[]>([]);
     const draftState = {
         name,
         price,
@@ -240,10 +245,13 @@ export function PackageDialog({
         featuresText,
         carFields,
         existingImages,
+        imageBlobIds,
+        newImageCount: newImageFiles.length,
     };
     // What pristine state would be for an edit. Mirrors the populate
     // useEffect below so they stay in sync — if you change the populate
-    // logic, mirror it here.
+    // logic, mirror it here. newImageBlobIds + newImageCount are zero in
+    // pristine since edit-mode opens with no pending uploads.
     type DraftShape = typeof draftState;
     const editPristine: DraftShape | undefined = editingPackage ? {
         name: editingPackage.name || '',
@@ -252,6 +260,8 @@ export function PackageDialog({
         featuresText: !hasCategoryUI && !isCarRental ? toFlatText(editingPackage.features) : '',
         carFields: isCarRental ? carFieldsFromFeatures(editingPackage.features) : DEFAULT_CAR_FIELDS,
         existingImages: editingPackage.images ?? [],
+        imageBlobIds: [],
+        newImageCount: 0,
     } : undefined;
     // Per-resource storage key so create + edit-of-pkg-A + edit-of-pkg-B
     // each have their own draft on a shared device.
@@ -262,15 +272,33 @@ export function PackageDialog({
     const draft = useFormDraft<DraftShape>({
         storageKey: draftStorageKey,
         state: draftState,
-        // CREATE: gate on any text content. EDIT: pristine comparison via opt.
+        // CREATE: gate on any text content OR pending file pick. EDIT:
+        // pristine comparison via opt.
         pristineState: editPristine,
         isMeaningful: !isEditing
             ? ((s) => !!s.name.trim() || !!s.price.trim() ||
                 Object.keys(s.featureMap).length > 0 || !!s.featuresText.trim() ||
+                s.newImageCount > 0 ||
                 (s.carFields && (s.carFields.make || s.carFields.model || s.carFields.year)) ? true : false)
             : undefined,
         enabled: draftEnabled,
     });
+
+    // Mirror newImageFiles into IndexedDB. The hook calls our callback
+    // each time the id list changes; we update local state which feeds
+    // into draftState so the next useFormDraft tick persists the new
+    // ordering. Disabled while the dialog is closed so we don't write
+    // to IDB unnecessarily.
+    useFileArrayBlobSync({
+        files: newImageFiles,
+        enabled: draftEnabled,
+        onIdsChange: setImageBlobIds,
+    });
+
+    // Sweep stale blobs from prior abandoned dialogs once per mount.
+    useEffect(() => {
+        sweepExpiredBlobs().catch(() => null);
+    }, []);
 
     // ── Populate form when opening for edit ───────────────────────────────────
     useEffect(() => {
@@ -413,6 +441,12 @@ export function PackageDialog({
                 toast.success(isCarRental ? 'Vehicle added' : isStationery ? 'Product added' : 'Package created');
             }
             // Drop the local draft now that the server has the package.
+            // IDB blobs the user just uploaded will be reaped naturally
+            // on next open (the file→id WeakMap is gone with this mount)
+            // or via sweepExpiredBlobs after the TTL — safer than a
+            // global clearAllBlobs() which could wipe blobs from OTHER
+            // surfaces (e.g. an active vendor-registration draft) on a
+            // shared device.
             draft.discard();
             onSuccess();
             onOpenChange(false);
@@ -451,8 +485,7 @@ export function PackageDialog({
                     visible={draft.hasResumableDraft}
                     title={isEditing ? 'Resume your edits' : 'Resume your unsaved package'}
                     meta={draft.storedDraft ? `Last edited ${relativeTimeAgo(draft.storedDraft.updatedAt)}` : undefined}
-                    warning="Image uploads from your previous session aren't restored — re-attach them after Resume."
-                    onResume={() => {
+                    onResume={async () => {
                         if (!draft.storedDraft) return;
                         const s = draft.storedDraft.state;
                         setName(s.name || '');
@@ -461,10 +494,29 @@ export function PackageDialog({
                         setFeaturesText(s.featuresText || '');
                         setCarFields(s.carFields || DEFAULT_CAR_FIELDS);
                         setExistingImages(s.existingImages || []);
+                        // Restore image blobs from IDB so the in-flight
+                        // uploads come back as actual Files (not just URLs).
+                        try {
+                            const restored = await restoreFilesFromIds(s.imageBlobIds);
+                            setNewImageFiles(restored);
+                            setNewImagePreviews(restored.map((f) => URL.createObjectURL(f)));
+                        } catch { /* IDB failure: leave new files empty */ }
                         draft.discard();
                         toast.success(isEditing ? 'Restored your unsaved edits' : 'Restored your unsaved package');
                     }}
-                    onDiscard={() => draft.discard()}
+                    onDiscard={() => {
+                        // Best-effort delete of the IDB blobs the
+                        // discarded draft was referencing so the user's
+                        // quota isn't bloated by abandoned work. Skip the
+                        // global clearAllBlobs() because it would also
+                        // wipe blobs from other surfaces (vendor-reg)
+                        // on a shared device.
+                        const stale = draft.storedDraft?.state.imageBlobIds ?? [];
+                        for (const id of stale) {
+                            deleteBlob(id).catch(() => null);
+                        }
+                        draft.discard();
+                    }}
                 />
 
                 <form onSubmit={handleSubmit} className="space-y-5">
