@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { PasswordInput } from "../ui/password-input";
@@ -15,6 +15,21 @@ const PersonalDetails = ({
   const { setFormData, formData } = useFormContext();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  // 02-VR-RESILIENCE-V1 — derive the preview from formData.profileImageFile
+  // so a restored draft re-shows the picture instead of just holding it in
+  // form state with no UI cue. blob: URLs are revoked on unmount to avoid
+  // leaks.
+  useEffect(() => {
+    const f = formData.profileImageFile;
+    if (!f) {
+      setImagePreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(f);
+    setImagePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [formData.profileImageFile]);
 
   const handleProfileImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

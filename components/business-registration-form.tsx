@@ -265,14 +265,31 @@ export function BusinessRegistrationForm() {
         imageFiles: restored.imageFiles,
         packageImageFiles: restored.packageImageFiles,
       }));
+      // The brand-logo preview reads from this parent-owned `file` state,
+      // NOT from formData.profileImageFile — so without this line the
+      // photo restores into form state but never appears in the upload
+      // tile after refresh + Resume.
+      if (restored.profileImageFile) setFile(restored.profileImageFile);
     } catch {/* IDB failure is non-blocking */}
 
-    toast({
-      title: "Progress restored",
-      description: `Picked up where you left off${
-        typeof d.currentStep === "number" ? ` (step ${d.currentStep + 1})` : ""
-      }.`,
-    });
+    // Password is intentionally NOT persisted (localStorage is plaintext
+    // and would leak if the device is shared/stolen). Vendor must re-enter
+    // on resume — flag it so they know what to do.
+    const passwordRequired = (d.currentStep ?? 0) >= 1;
+    if (passwordRequired) {
+      toast({
+        title: "Progress restored",
+        description:
+          "Welcome back. You'll need to re-enter your password before submitting (we don't store passwords on your device for security).",
+      });
+    } else {
+      toast({
+        title: "Progress restored",
+        description: `Picked up where you left off${
+          typeof d.currentStep === "number" ? ` (step ${d.currentStep + 1})` : ""
+        }.`,
+      });
+    }
   };
 
   const carRental = businessType === "Car rental";

@@ -16,7 +16,7 @@
 // so we never show two banners simultaneously.
 
 import { useEffect, useState } from "react";
-import { History, X } from "lucide-react";
+import { History, Lock, X } from "lucide-react";
 import { BridalButton } from "@/components/bridal/bridal-button";
 import { readLocalDraft, clearLocalDraft, type LocalDraft } from "@/lib/draftStorage/localDraftStore";
 import { clearAllBlobs } from "@/lib/draftStorage/imageBlobStore";
@@ -56,6 +56,11 @@ export function LocalDraftResumePrompt({ onResume, suppress }: LocalDraftResumeP
 
   if (!draft || dismissed || suppress) return null;
 
+  // Password re-entry is required if the saved draft has reached step 1+
+  // (the personal-details step where the password is set). We never store
+  // the password on the device because localStorage is plaintext.
+  const passwordRequired = (draft.currentStep ?? 0) >= 1;
+
   return (
     <div
       role="status"
@@ -71,6 +76,12 @@ export function LocalDraftResumePrompt({ onResume, suppress }: LocalDraftResumeP
               {draft.businessType ? <>{draft.businessType} · </> : null}
               Step {draft.currentStep + 1} · last edited {timeAgo(draft.updatedAt)}.
             </p>
+            {passwordRequired && (
+              <p className="text-bridal-text-soft text-[11px] mt-1.5 inline-flex items-center gap-1">
+                <Lock className="w-3 h-3 text-bridal-mauve" />
+                You'll need to re-enter your password (we don't save passwords on your device).
+              </p>
+            )}
           </div>
         </div>
         <div className="flex gap-2 shrink-0">
