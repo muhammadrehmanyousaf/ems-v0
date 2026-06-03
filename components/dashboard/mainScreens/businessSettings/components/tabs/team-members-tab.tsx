@@ -135,26 +135,42 @@ const TeamMembersTab = () => {
     },
   });
 
-  // 03-DRAFT-RESILIENCE — auto-save the in-progress NEW member.
-  //
-  // CREATE mode only: edit mode would need a pristine-vs-current
-  // comparator to avoid the always-save loop (initial state mirrors the
-  // member being edited). Tracked as a follow-up.
+  // 03-DRAFT-RESILIENCE — auto-save the in-progress NEW or EDITED member.
   //
   // Hook lives at the tab level (not inside the dialog) so save state
   // survives a dialog Cancel — the vendor's typing isn't lost just
   // because they accidentally hit Esc.
+  //
+  // CREATE mode: gated on "user typed something" via isMeaningful.
+  // EDIT mode: gated via pristineState — opening a member for edit and
+  // looking at them without changes does NOT write a draft, so the
+  // "always save loop" that plagued the first cut is gone.
   const watched = useWatch({ control: form.control });
-  const draftEnabled = dialogOpen && !editing && !!businessId;
+  const editPristine: FormValues | undefined = editing ? {
+    name: editing.name || '',
+    role: editing.role || '',
+    bio: editing.bio || '',
+    profileImageUrl: editing.profileImageUrl || '',
+    yearsExperience: editing.yearsExperience != null ? String(editing.yearsExperience) : '',
+    specialtiesText: (editing.specialties || []).join(', '),
+    isLeadArtist: !!editing.isLeadArtist,
+  } : undefined;
+  const memberDraftStorageKey = editing
+    ? `team-member-edit-${businessId ?? 'no-biz'}-${editing.id}`
+    : `team-member-create-${businessId ?? 'no-biz'}`;
+  const draftEnabled = dialogOpen && !!businessId;
   const memberDraft = useFormDraft<FormValues>({
-    storageKey: `team-member-create-${businessId ?? 'no-biz'}`,
+    storageKey: memberDraftStorageKey,
     state: watched as FormValues,
-    isMeaningful: (s) =>
-      !!s.name?.trim() ||
-      !!s.role?.trim() ||
-      !!s.bio?.trim() ||
-      !!s.yearsExperience?.trim() ||
-      !!s.specialtiesText?.trim(),
+    pristineState: editPristine,
+    isMeaningful: !editing
+      ? ((s) =>
+          !!s.name?.trim() ||
+          !!s.role?.trim() ||
+          !!s.bio?.trim() ||
+          !!s.yearsExperience?.trim() ||
+          !!s.specialtiesText?.trim())
+      : undefined,
     enabled: draftEnabled,
   });
 
@@ -240,9 +256,10 @@ const TeamMembersTab = () => {
       } else {
         await TeamMembersAPI.create(businessId, payload);
         toast.success('Team member added');
-        // Drop the local draft now that the server has the member.
-        memberDraft.discard();
       }
+      // Drop the local draft (covers both create and edit) now that the
+      // server has the authoritative copy.
+      memberDraft.discard();
       setDialogOpen(false);
       await load();
     } catch (e) {
@@ -491,31 +508,30 @@ const TeamMembersTab = () => {
               Photos + bios convert ~3× better than blank profiles.
             </DialogDescription>
           </DialogHeader>
-          {/* 03-DRAFT-RESILIENCE — resume banner. CREATE-mode only. */}
-          {!editing && (
-            <DraftResumeBanner
-              visible={memberDraft.hasResumableDraft}
-              title="Resume your unfinished member"
-              meta={memberDraft.storedDraft ? `Last edited ${relativeTimeAgo(memberDraft.storedDraft.updatedAt)}` : undefined}
-              onResume={() => {
-                if (!memberDraft.storedDraft) return;
-                form.reset(memberDraft.storedDraft.state);
-                memberDraft.discard();
-                toast.success('Restored your unsaved member');
-              }}
-              onDiscard={() => memberDraft.discard()}
-            />
-          )}
+          {/* 03-DRAFT-RESILIENCE — resume banner. Works for both CREATE
+              and EDIT mode; edit-mode meaningfulness is gated by the
+              hook's pristineState so we don't show a banner for "you
+              opened this member but changed nothing". */}
+          <DraftResumeBanner
+            visible={memberDraft.hasResumableDraft}
+            title={editing ? 'Resume your edits' : 'Resume your unfinished member'}
+            meta={memberDraft.storedDraft ? `Last edited ${relativeTimeAgo(memberDraft.storedDraft.updatedAt)}` : undefined}
+            onResume={() => {
+              if (!memberDraft.storedDraft) return;
+              form.reset(memberDraft.storedDraft.state);
+              memberDraft.discard();
+              toast.success(editing ? 'Restored your unsaved edits' : 'Restored your unsaved member');
+            }}
+            onDiscard={() => memberDraft.discard()}
+          />
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
               className="space-y-4 pt-2"
             >
-              {!editing && (
-                <div className="flex justify-end -mb-2">
-                  <AutoSaveIndicator lastSavedAt={memberDraft.lastSavedAt} saving={memberDraft.saving} />
-                </div>
-              )}
+              <div className="flex justify-end -mb-2">
+                <AutoSaveIndicator lastSavedAt={memberDraft.lastSavedAt} saving={memberDraft.saving} />
+              </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}

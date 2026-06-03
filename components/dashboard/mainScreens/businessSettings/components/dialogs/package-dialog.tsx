@@ -223,17 +223,16 @@ export function PackageDialog({
     const isEditing = !!editingPackage;
     const totalImages = existingImages.length + newImageFiles.length;
 
-    // 03-DRAFT-RESILIENCE — persist in-progress CREATE state.
-    //
-    // We intentionally only enable this for create-mode: in edit mode the
-    // initial state mirrors the existing package, so the draft layer would
-    // need a pristine-vs-current comparator to avoid writing "the same
-    // thing again" on every open. Tracked as a follow-up.
+    // 03-DRAFT-RESILIENCE — persist in-progress CREATE or EDIT state.
     //
     // File-bearing fields (newImageFiles, newImagePreviews) are excluded —
-    // localStorage can't hold Files, and the existing image-upload flow in
-    // this dialog doesn't have a Blob-restoration path yet. Text fields
-    // (name / price / features / cars) are the high-value persistence.
+    // localStorage can't hold Files, and this dialog doesn't have a Blob
+    // restoration path yet. Text fields (name / price / features / cars
+    // / existingImages references) are the high-value persistence.
+    //
+    // Edit mode uses pristineState: the hook auto-treats "current matches
+    // pristine" as not-meaningful, so opening a package for edit and
+    // looking at it without changing anything does NOT write a draft.
     const draftState = {
         name,
         price,
@@ -242,13 +241,34 @@ export function PackageDialog({
         carFields,
         existingImages,
     };
-    const draftEnabled = open && !isEditing;
-    const draft = useFormDraft<typeof draftState>({
-        storageKey: `package-create-${businessId}-${vendorType ?? 'unknown'}`,
+    // What pristine state would be for an edit. Mirrors the populate
+    // useEffect below so they stay in sync — if you change the populate
+    // logic, mirror it here.
+    type DraftShape = typeof draftState;
+    const editPristine: DraftShape | undefined = editingPackage ? {
+        name: editingPackage.name || '',
+        price: editingPackage.price?.toString() || '',
+        featureMap: hasCategoryUI ? toFeatureMap(editingPackage.features, categories) : {},
+        featuresText: !hasCategoryUI && !isCarRental ? toFlatText(editingPackage.features) : '',
+        carFields: isCarRental ? carFieldsFromFeatures(editingPackage.features) : DEFAULT_CAR_FIELDS,
+        existingImages: editingPackage.images ?? [],
+    } : undefined;
+    // Per-resource storage key so create + edit-of-pkg-A + edit-of-pkg-B
+    // each have their own draft on a shared device.
+    const draftStorageKey = isEditing
+        ? `package-edit-${businessId}-${editingPackage!.id}`
+        : `package-create-${businessId}-${vendorType ?? 'unknown'}`;
+    const draftEnabled = open;
+    const draft = useFormDraft<DraftShape>({
+        storageKey: draftStorageKey,
         state: draftState,
-        isMeaningful: (s) => !!s.name.trim() || !!s.price.trim() ||
-            Object.keys(s.featureMap).length > 0 || !!s.featuresText.trim() ||
-            (s.carFields && (s.carFields.make || s.carFields.model || s.carFields.year)) ? true : false,
+        // CREATE: gate on any text content. EDIT: pristine comparison via opt.
+        pristineState: editPristine,
+        isMeaningful: !isEditing
+            ? ((s) => !!s.name.trim() || !!s.price.trim() ||
+                Object.keys(s.featureMap).length > 0 || !!s.featuresText.trim() ||
+                (s.carFields && (s.carFields.make || s.carFields.model || s.carFields.year)) ? true : false)
+            : undefined,
         enabled: draftEnabled,
     });
 
@@ -421,38 +441,36 @@ export function PackageDialog({
                     </DialogTitle>
                 </DialogHeader>
 
-                {/* 03-DRAFT-RESILIENCE — resume banner. Only fires in
-                    CREATE mode and only when a fresh draft was saved on
-                    this device (the hook returns hasResumableDraft only
-                    for create-mode keys). */}
-                {!isEditing && (
-                    <DraftResumeBanner
-                        visible={draft.hasResumableDraft}
-                        title="Resume your unsaved package"
-                        meta={draft.storedDraft ? `Last edited ${relativeTimeAgo(draft.storedDraft.updatedAt)}` : undefined}
-                        warning="Image uploads from your previous session aren't restored — re-attach them after Resume."
-                        onResume={() => {
-                            if (!draft.storedDraft) return;
-                            const s = draft.storedDraft.state;
-                            setName(s.name || '');
-                            setPrice(s.price || '');
-                            setFeatureMap(s.featureMap || {});
-                            setFeaturesText(s.featuresText || '');
-                            setCarFields(s.carFields || DEFAULT_CAR_FIELDS);
-                            setExistingImages(s.existingImages || []);
-                            draft.discard();
-                            toast.success('Restored your unsaved package');
-                        }}
-                        onDiscard={() => draft.discard()}
-                    />
-                )}
+                {/* 03-DRAFT-RESILIENCE — resume banner. Fires for both
+                    CREATE and EDIT mode when a fresh draft was saved on
+                    this device for this exact package (or for "new").
+                    Edit-mode meaningfulness is gated via the hook's
+                    pristineState option, so just opening a package and
+                    looking at it doesn't write a draft. */}
+                <DraftResumeBanner
+                    visible={draft.hasResumableDraft}
+                    title={isEditing ? 'Resume your edits' : 'Resume your unsaved package'}
+                    meta={draft.storedDraft ? `Last edited ${relativeTimeAgo(draft.storedDraft.updatedAt)}` : undefined}
+                    warning="Image uploads from your previous session aren't restored — re-attach them after Resume."
+                    onResume={() => {
+                        if (!draft.storedDraft) return;
+                        const s = draft.storedDraft.state;
+                        setName(s.name || '');
+                        setPrice(s.price || '');
+                        setFeatureMap(s.featureMap || {});
+                        setFeaturesText(s.featuresText || '');
+                        setCarFields(s.carFields || DEFAULT_CAR_FIELDS);
+                        setExistingImages(s.existingImages || []);
+                        draft.discard();
+                        toast.success(isEditing ? 'Restored your unsaved edits' : 'Restored your unsaved package');
+                    }}
+                    onDiscard={() => draft.discard()}
+                />
 
                 <form onSubmit={handleSubmit} className="space-y-5">
-                    {!isEditing && (
-                        <div className="flex justify-end -mb-2">
-                            <AutoSaveIndicator lastSavedAt={draft.lastSavedAt} saving={draft.saving} />
-                        </div>
-                    )}
+                    <div className="flex justify-end -mb-2">
+                        <AutoSaveIndicator lastSavedAt={draft.lastSavedAt} saving={draft.saving} />
+                    </div>
                     {/* Name + Price */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">

@@ -81,13 +81,25 @@ export interface UseFormDraftOpts<T> {
    */
   state: T;
   /**
-   * Returns true iff the state has something worth preserving. Used to
-   * refuse the destructive mount-overwrite. For a new form, "user picked
-   * a category OR typed at least one text field" is usually right. For
-   * an edit form, "user touched at least one field" (i.e. state differs
-   * from server values) is the right test.
+   * EDIT-MODE pristine snapshot. When provided, the hook automatically
+   * treats "current state equals pristine" as not-meaningful (since the
+   * user hasn't actually changed anything yet). This is the cleanest way
+   * to wire the hook into an EDIT dialog where the initial form state
+   * mirrors a server record.
+   *
+   * Either `pristineState` OR `isMeaningful` must be provided. If both
+   * are passed, `isMeaningful` wins and `pristineState` is ignored.
+   *
+   * For CREATE flows, leave undefined and use `isMeaningful` to gate on
+   * "user typed something".
    */
-  isMeaningful: (state: T) => boolean;
+  pristineState?: T;
+  /**
+   * Custom meaningfulness predicate. Use when pristineState isn't
+   * expressive enough — e.g. when only a SUBSET of fields counts as a
+   * "real edit", or when the form has no edit-mode counterpart.
+   */
+  isMeaningful?: (state: T) => boolean;
   /** Override the default 30-day TTL (in ms). */
   ttlMs?: number;
   /** Override the default 500 ms debounce. */
@@ -120,14 +132,51 @@ function isBrowser(): boolean {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
 
+/**
+ * Build the effective meaningfulness predicate from the two opt-in
+ * mechanisms (`isMeaningful` vs `pristineState`). Explicit `isMeaningful`
+ * wins; pristine comparison is the fallback for edit flows; if neither
+ * is provided we always treat the state as meaningful (the caller chose
+ * to opt out of safeguards).
+ */
+function buildIsMeaningful<T>(
+  explicit: ((state: T) => boolean) | undefined,
+  pristine: T | undefined,
+): (state: T) => boolean {
+  if (explicit) return explicit;
+  if (pristine !== undefined) {
+    let pristineSig: string;
+    try {
+      pristineSig = JSON.stringify(pristine);
+    } catch {
+      pristineSig = "__unserialisable_pristine__";
+    }
+    return (s) => {
+      let sig: string;
+      try {
+        sig = JSON.stringify(s);
+      } catch {
+        return true; // can't compare — trust caller's state
+      }
+      return sig !== pristineSig;
+    };
+  }
+  return () => true;
+}
+
 export function useFormDraft<T>({
   storageKey,
   state,
+  pristineState,
   isMeaningful,
   ttlMs = 30 * 24 * 60 * 60 * 1000,
   debounceMs = 500,
   enabled = true,
 }: UseFormDraftOpts<T>): UseFormDraftResult<T> {
+  // Build the effective meaningfulness predicate once per render. The
+  // helper is pure given (isMeaningful, pristineState) so we don't need
+  // memoisation — calls are cheap.
+  const effectiveIsMeaningful = buildIsMeaningful(isMeaningful, pristineState);
   const fullKey = `${KEY_PREFIX}${storageKey}:v${SCHEMA_VERSION}`;
 
   // One-shot read on mount. useState lazy initialiser keeps it from
@@ -159,8 +208,8 @@ export function useFormDraft<T>({
   // Stable refs for the meaningfulness check and storage key so the flush
   // callback never goes stale and doesn't force its consumers to rebuild
   // their state every render.
-  const isMeaningfulRef = useRef(isMeaningful);
-  isMeaningfulRef.current = isMeaningful;
+  const isMeaningfulRef = useRef(effectiveIsMeaningful);
+  isMeaningfulRef.current = effectiveIsMeaningful;
   const fullKeyRef = useRef(fullKey);
   fullKeyRef.current = fullKey;
 
