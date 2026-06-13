@@ -306,7 +306,12 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess }: OfflineB
         try {
             await BookingsAPI.create({
                 customerName: customerName.trim(),
-                customerEmail: customerEmail.trim() || `offline_${Date.now()}@weddingwala.pk`,
+                // Issue #12 — was generating `offline_<timestamp>@weddingwala.pk`
+                // to satisfy the BE's old required-email check. The BE now
+                // accepts a null/empty customerEmail (see bookingValidator.js
+                // body("customerEmail")). Send undefined when blank so the
+                // customer table doesn't fill with placeholder emails.
+                customerEmail: customerEmail.trim() || undefined,
                 customerPhone: customerPhone.trim(),
                 bookingDate: format(bookingDate, 'yyyy-MM-dd'),
                 bookingTime,
