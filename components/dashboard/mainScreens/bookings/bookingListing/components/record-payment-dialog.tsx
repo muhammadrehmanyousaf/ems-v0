@@ -165,6 +165,18 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, onSuccess }: 
                                 ))}
                             </SelectContent>
                         </Select>
+                        {paymentMethod === 'cheque' ? (
+                            <p className="text-[11px] text-amber-700 leading-snug">
+                                Cheques need cheque number, date, and bank — log them from the
+                                PDC module for a complete record. Recording here won&apos;t
+                                create a PDC entry.
+                            </p>
+                        ) : paymentMethod ? (
+                            <p className="text-[11px] text-muted-foreground leading-snug">
+                                A matching receipt will be auto-logged in the receipts ledger
+                                and the receivables view will update.
+                            </p>
+                        ) : null}
                     </div>
                 </div>
 
