@@ -53,26 +53,56 @@ function VacationModeSection({
   const [message, setMessage] = useState<string>(initial.vacationMessage ?? "");
   const [saving, setSaving] = useState(false);
 
+  // Issue #48 — when vacation mode is enabled, ask the vendor HOW
+  // bookings should behave inside the window. Two modes:
+  //   "block"       Block all bookings (default — current behaviour).
+  //                 vacationMode=true on the backend.
+  //   "team"        Listing stays bookable; customers see the message
+  //                 as a heads-up that response/turnaround may take
+  //                 longer because someone else on the team is
+  //                 handling things. vacationMode=false, message=set.
+  // The radio defaults to "block" if vacation was previously enabled
+  // and "team" if the vendor had only set a vacationMessage with mode
+  // off — matches the most recent state on first render.
+  const [handlingMode, setHandlingMode] = useState<"block" | "team">(
+    initial.vacationMode
+      ? "block"
+      : initial.vacationMessage
+        ? "team"
+        : "block",
+  );
+
   const save = async () => {
     setSaving(true);
     try {
+      // Issue #48 — translate the FE handlingMode into the BE flags.
+      //   "block" → vacationMode=true (refuse bookings)
+      //   "team"  → vacationMode=false but vacationMessage stays set so
+      //            the listing shows a heads-up but bookings flow through.
+      const effectiveMode = vacationMode && handlingMode === "block";
       await BusinessAvailabilityAPI.setVacationMode(businessId, {
-        vacationMode,
+        vacationMode: effectiveMode,
         vacationStartsAt: startsAt || null,
         vacationEndsAt: endsAt || null,
-        vacationMessage: message.trim() || null,
+        vacationMessage: vacationMode ? message.trim() || null : null,
       });
       toast({
-        title: vacationMode ? "Vacation mode on" : "Vacation mode off",
-        description: vacationMode
-          ? "We'll refuse new bookings inside the window."
-          : "Bookings resumed.",
+        title: !vacationMode
+          ? "Vacation mode off"
+          : effectiveMode
+            ? "Vacation mode on (bookings blocked)"
+            : "Vacation note posted — team will manage bookings",
+        description: !vacationMode
+          ? "Bookings resumed."
+          : effectiveMode
+            ? "We'll refuse new bookings inside the window."
+            : "Customers see your note. Bookings still flow through to your team.",
       });
       onSaved({
-        vacationMode,
+        vacationMode: effectiveMode,
         vacationStartsAt: startsAt || null,
         vacationEndsAt: endsAt || null,
-        vacationMessage: message.trim() || null,
+        vacationMessage: vacationMode ? message.trim() || null : null,
       });
     } catch (e: any) {
       toast({
@@ -128,14 +158,60 @@ function VacationModeSection({
               />
             </div>
           </div>
+          {/* Issue #48 — how should bookings behave during this window? */}
+          <div className="space-y-2">
+            <Label className="text-[12px]">
+              How should bookings be handled?
+            </Label>
+            <div className="grid sm:grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setHandlingMode("block")}
+                className={
+                  "text-left rounded-md border p-3 text-sm transition " +
+                  (handlingMode === "block"
+                    ? "border-rose-400 bg-rose-50"
+                    : "border-neutral-200 hover:bg-neutral-50")
+                }
+              >
+                <div className="font-medium">Block all bookings</div>
+                <div className="text-[11px] text-neutral-600 mt-1">
+                  Listing stays visible but I'm fully unavailable; new
+                  bookings inside the window are refused.
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setHandlingMode("team")}
+                className={
+                  "text-left rounded-md border p-3 text-sm transition " +
+                  (handlingMode === "team"
+                    ? "border-emerald-400 bg-emerald-50"
+                    : "border-neutral-200 hover:bg-neutral-50")
+                }
+              >
+                <div className="font-medium">My team will manage</div>
+                <div className="text-[11px] text-neutral-600 mt-1">
+                  Bookings still flow through; customers see your note so
+                  they know response/turnaround may take longer.
+                </div>
+              </button>
+            </div>
+          </div>
           <div>
             <Label className="text-[12px]">
-              Message (shown on listing badge)
+              {handlingMode === "team"
+                ? "Note to customers (required)"
+                : "Message (shown on listing badge)"}
             </Label>
             <Input
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="e.g. Back on Aug 16"
+              placeholder={
+                handlingMode === "team"
+                  ? "e.g. I'm at a wedding abroad — my team is handling enquiries"
+                  : "e.g. Back on Aug 16"
+              }
               maxLength={200}
             />
           </div>
@@ -156,6 +232,8 @@ interface RecurringBlocksSectionProps {
   businessId: number;
 }
 
+const TEAM_MANAGED_TAG = "[Team-managed]";
+
 function RecurringBlocksSection({ businessId }: RecurringBlocksSectionProps) {
   const [blocks, setBlocks] = useState<RecurringBlock[]>([]);
   const [loading, setLoading] = useState(true);
@@ -165,6 +243,12 @@ function RecurringBlocksSection({ businessId }: RecurringBlocksSectionProps) {
   const [endDate, setEndDate] = useState<string>("");
   const [reason, setReason] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+  // Issue #48 — same prompt as vacation mode. "block" creates a hard
+  // recurring block (current behaviour). "team" still records the
+  // pattern so the vendor has a written reminder, but tags the reason
+  // with [Team-managed] so neither the vendor nor a future surface
+  // mistakes it for a hard block.
+  const [handlingMode, setHandlingMode] = useState<"block" | "team">("block");
 
   const load = () => {
     setLoading(true);
@@ -196,18 +280,38 @@ function RecurringBlocksSection({ businessId }: RecurringBlocksSectionProps) {
     }
     setSubmitting(true);
     try {
+      // Issue #48 — tag the reason so "team-managed" patterns are
+      // distinguishable from hard blocks even though the BE schema is
+      // the same. The customer-side enforcement of soft/hard is a
+      // future enhancement; today this gives the vendor a clear log
+      // of what they chose.
+      const trimmedReason = reason.trim();
+      const finalReason =
+        handlingMode === "team"
+          ? `${TEAM_MANAGED_TAG} ${trimmedReason}`.trim()
+          : trimmedReason || undefined;
       await BusinessAvailabilityAPI.createRecurringBlock(businessId, {
         weekdayMask: mask,
         startDate,
         endDate: endDate || null,
-        reason: reason.trim() || undefined,
+        reason: finalReason || undefined,
       });
-      toast({ title: "Recurring block added" });
+      toast({
+        title:
+          handlingMode === "team"
+            ? "Team-managed pattern saved"
+            : "Recurring block added",
+        description:
+          handlingMode === "team"
+            ? "Bookings still flow through. Your team will handle these days."
+            : "Customers can't book these days.",
+      });
       setShowForm(false);
       setMask(0);
       setStartDate("");
       setEndDate("");
       setReason("");
+      setHandlingMode("block");
       load();
     } catch (e: any) {
       toast({
@@ -307,6 +411,45 @@ function RecurringBlocksSection({ businessId }: RecurringBlocksSectionProps) {
               />
             </div>
           </div>
+          {/* Issue #48 — block hard vs let team manage */}
+          <div className="space-y-2">
+            <Label className="text-[12px]">
+              How should these days be handled?
+            </Label>
+            <div className="grid sm:grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setHandlingMode("block")}
+                className={
+                  "text-left rounded-md border p-3 text-sm transition " +
+                  (handlingMode === "block"
+                    ? "border-rose-400 bg-rose-50"
+                    : "border-neutral-200 hover:bg-neutral-50")
+                }
+              >
+                <div className="font-medium">Block these days</div>
+                <div className="text-[11px] text-neutral-600 mt-1">
+                  Customers can't book these weekdays at all.
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setHandlingMode("team")}
+                className={
+                  "text-left rounded-md border p-3 text-sm transition " +
+                  (handlingMode === "team"
+                    ? "border-emerald-400 bg-emerald-50"
+                    : "border-neutral-200 hover:bg-neutral-50")
+                }
+              >
+                <div className="font-medium">My team will manage</div>
+                <div className="text-[11px] text-neutral-600 mt-1">
+                  Save the pattern as a reminder; bookings still flow
+                  through and your team handles them.
+                </div>
+              </button>
+            </div>
+          </div>
           <div>
             <Label className="text-[12px]">
               Reason <span className="text-neutral-400">(optional)</span>
@@ -346,22 +489,35 @@ function RecurringBlocksSection({ businessId }: RecurringBlocksSectionProps) {
         </p>
       ) : (
         <div className="space-y-1.5">
-          {blocks.map((b) => (
+          {blocks.map((b) => {
+            const isTeamManaged = (b.reason ?? "").startsWith(TEAM_MANAGED_TAG);
+            const cleanReason = isTeamManaged
+              ? (b.reason ?? "").slice(TEAM_MANAGED_TAG.length).trim()
+              : (b.reason ?? "");
+            return (
             <div
               key={b.id}
               className="flex items-center justify-between gap-3 rounded-md border border-neutral-100 bg-neutral-50/40 px-3 py-2"
             >
               <div className="min-w-0 flex-1">
-                <p className="text-[12.5px] font-medium text-neutral-800">
+                <p className="text-[12.5px] font-medium text-neutral-800 flex items-center gap-1.5 flex-wrap">
                   {maskToLabels(b.weekdayMask)}
                   {b.slotTemplateId
                     ? ` · slot #${b.slotTemplateId}`
                     : ""}
+                  {isTeamManaged ? (
+                    <Badge
+                      variant="secondary"
+                      className="text-[10px] py-0 px-1.5 bg-emerald-50 text-emerald-700 border-emerald-200"
+                    >
+                      Team-managed
+                    </Badge>
+                  ) : null}
                 </p>
                 <p className="text-[11px] text-neutral-500">
                   {b.startDate}
                   {b.endDate ? ` → ${b.endDate}` : " → ongoing"}
-                  {b.reason ? ` · ${b.reason}` : ""}
+                  {cleanReason ? ` · ${cleanReason}` : ""}
                 </p>
               </div>
               <Button
@@ -374,7 +530,8 @@ function RecurringBlocksSection({ businessId }: RecurringBlocksSectionProps) {
                 <X className="h-3.5 w-3.5" />
               </Button>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
