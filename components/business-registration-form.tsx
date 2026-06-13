@@ -542,6 +542,20 @@ export function BusinessRegistrationForm() {
     setCurrentStep((prev) => prev + 1);
   };
 
+  // Issue #4 — on step change, scroll the form back to its top edge.
+  // Without this the vendor lands mid-form (whichever offset they'd
+  // scrolled the previous step to) and reads the previous question's
+  // tail before realising they've advanced. We scroll BOTH the inner
+  // step-body container (the `.bridal-scroll` overflow-y-auto panel,
+  // queried by class so we don't have to thread a ref through the JSX)
+  // AND the window in case mobile is using the page scrollbar.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const panels = document.querySelectorAll<HTMLElement>(".bridal-scroll");
+    panels.forEach((p) => p.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior }));
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }, [currentStep]);
+
   const handleSubmit = async () => {
     const validationErrors = handleValidations();
 
