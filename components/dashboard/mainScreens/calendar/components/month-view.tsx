@@ -2,7 +2,7 @@ import { CalendarEvent, Cell, ymd } from '@/lib/utils';
 import React, { useEffect, useMemo, useState } from 'react'
 import type { BlockedDate } from '@/lib/api/dashboard';
 import type { SlotAvailabilityRow } from '@/lib/api/businessAvailability';
-import { BanIcon, Moon, Repeat, Store } from 'lucide-react';
+import { BanIcon, CheckCircle2, Moon, Repeat, Store } from 'lucide-react';
 // Phase 3 #9.2 — Hijri overlay (Pakistani-cultural fit).
 import { gregorianToHijri, ramadanWindow } from '@/lib/hijri';
 
@@ -149,8 +149,13 @@ const MonthView = ({
                 dragOverKey === key ? 'ring-2 ring-inset ring-bridal-gold-dark bg-bridal-gold-dark/5' : '',
                 !c.inCurrentMonth
                   ? 'bg-accent dark:bg-accent/30 text-muted-foreground'
+                  // Issue #36 — vendor-blocked dates are now GREEN
+                  // (intentional "vendor took this off the table"
+                  // signal) rather than red. Recurring blocks stay
+                  // amber to distinguish a one-off block from a
+                  // weekly/template-driven one.
                   : isBlocked
-                  ? 'bg-red-50/80 dark:bg-red-950/30'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/30 ring-1 ring-inset ring-emerald-300'
                   : isRecurringBlocked
                   ? 'bg-amber-50/70 dark:bg-amber-950/20'
                   : 'hover:bg-accent/50',
@@ -162,11 +167,21 @@ const MonthView = ({
                   <span className={[
                     'text-sm select-none',
                     c.isToday ? 'h-6 w-6 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-xs' : '',
-                    isBlocked && !c.isToday ? 'text-red-400 line-through' : '',
+                    // Issue #36 — keep the date readable on a blocked
+                    // cell (no line-through). The green background +
+                    // checkmark icon below carry the "blocked" signal.
+                    isBlocked && !c.isToday ? 'text-emerald-700 font-medium' : '',
                     !isBlocked && isRecurringBlocked && !c.isToday ? 'text-amber-700 line-through' : '',
                   ].join(' ')}>
                     {c.date.getDate()}
                   </span>
+                  {/* Issue #36 — explicit "blocked" affordance: small
+                      green checkmark next to the date number so a
+                      vendor scanning the month immediately spots
+                      which days they've taken off. */}
+                  {isBlocked && (
+                    <CheckCircle2 className="h-3 w-3 text-emerald-600" aria-label="Blocked" />
+                  )}
                   {/* Phase 3 #9.2 — Hijri day-of-month subscript. Tiny,
                       muted, never overlaps the Gregorian number. Inside
                       Ramadan window the chip tints emerald so vendor

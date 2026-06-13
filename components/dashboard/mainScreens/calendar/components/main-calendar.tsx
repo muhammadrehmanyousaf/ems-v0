@@ -421,7 +421,16 @@ export default function MainCalendar() {
         if (!blockDialogDate) return;
         const key = ymd(blockDialogDate);
         try {
-            await BlockedDatesAPI.block(key, reason);
+            const blocked = await BlockedDatesAPI.block(key, reason);
+            // Issue #36 — BlockedDatesAPI.block returns the FULL refreshed
+            // list for the month, so we just adopt it as state. The green/
+            // checkmark affordance lands the moment the API resolves
+            // instead of waiting for fetchBlockedDates to race the dialog
+            // close. fetchBlockedDates still runs to reconcile across
+            // month changes.
+            if (Array.isArray(blocked) && blocked.length > 0) {
+                setBlockedDates(blocked);
+            }
             toast.success('Date blocked — customers cannot book on this day');
             fetchBlockedDates(cursor);
         } catch {
@@ -434,6 +443,8 @@ export default function MainCalendar() {
         const key = ymd(blockDialogDate);
         try {
             await BlockedDatesAPI.unblock(key);
+            // Issue #36 — optimistically drop the row matching this date.
+            setBlockedDates((prev) => (prev || []).filter((b) => b.blockedDate !== key));
             toast.success('Date unblocked — customers can book again');
             fetchBlockedDates(cursor);
         } catch {
