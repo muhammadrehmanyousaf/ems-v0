@@ -15,6 +15,10 @@ import {
   CalendarCheck, Wallet, FileWarning, Fuel, Boxes, ClipboardList,
   ShieldAlert, Receipt, CheckCircle2, ChevronRight,
 } from "lucide-react";
+// Issue #54 — gate vendor-type-specific chips (generator fuel, halal
+// certs, drone NOC) so a photographer's strip doesn't surface tiles
+// that genuinely don't apply to their business.
+import { useUser } from "@/context/UserContext";
 
 interface Bucket { count: number; total?: number; overdueCount?: number }
 interface OpsSummary {
@@ -44,9 +48,25 @@ const toneClass: Record<Tone, string> = {
 const fmtPKR = (n?: number) =>
   n != null && Number.isFinite(n) ? `Rs ${Math.round(n).toLocaleString("en-PK")}` : "";
 
+// Issue #54 — vendor types whose physical operations include a
+// generator. Photographers, makeup artists, henna artists, bridal-wear
+// shops, stationery etc. don't run generators; rendering the "low
+// fuel" chip for them was a confusing dead-end.
+const GENERATOR_RELEVANT_VENDOR_TYPES = new Set<string>([
+  "Wedding venue",
+  "Catering",
+  "Generator rental",
+  "Marquee rental",
+  "Live cooking stall",
+  "Sound system rental",
+]);
+
 export default function NeedsAttentionStrip() {
   const [data, setData] = useState<OpsSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const { user } = useUser();
+  const vendorType = (user as any)?.vendorType as string | undefined;
+  const showGenerator = !vendorType || GENERATOR_RELEVANT_VENDOR_TYPES.has(vendorType);
 
   useEffect(() => {
     let alive = true;
@@ -76,7 +96,12 @@ export default function NeedsAttentionStrip() {
   push(data.moneyIn.invoicedUnpaidSheets?.count, { key: "unpaid", label: `to collect${data.moneyIn.invoicedUnpaidSheets?.total ? " · " + fmtPKR(data.moneyIn.invoicedUnpaidSheets.total) : ""}`, count: data.moneyIn.invoicedUnpaidSheets?.count || 0, href: "/dashboard/function-sheets?state=invoiced", icon: Receipt, tone: "amber" });
   push(cmp.pendingFbrSubmissions?.count, { key: "fbr", label: "invoice(s) pending FBR", count: cmp.pendingFbrSubmissions?.count || 0, href: "/dashboard/function-sheets", icon: FileWarning, tone: "amber" });
   push(expiring, { key: "cexpiring", label: "certificate(s) expiring soon", count: expiring, href: "/dashboard/halal-certs", icon: ShieldAlert, tone: "amber" });
-  push(data.todaysFloor.lowFuelGenerators?.count, { key: "fuel", label: "generator(s) low on fuel", count: data.todaysFloor.lowFuelGenerators?.count || 0, href: "/dashboard/generator-fuel", icon: Fuel, tone: "amber" });
+  // Issue #54 — only push the generator-fuel chip for vendor types that
+  // actually run generators. Photographer/makeup/henna/etc. skip it
+  // entirely so the strip doesn't dead-end with an irrelevant module.
+  if (showGenerator) {
+    push(data.todaysFloor.lowFuelGenerators?.count, { key: "fuel", label: "generator(s) low on fuel", count: data.todaysFloor.lowFuelGenerators?.count || 0, href: "/dashboard/generator-fuel", icon: Fuel, tone: "amber" });
+  }
   push(cmp.lowStockItems?.count, { key: "stock", label: "item(s) low in stock", count: cmp.lowStockItems?.count || 0, href: "/dashboard/inventory", icon: Boxes, tone: "amber" });
   push(data.todaysFloor.timelineTasksPending?.count, { key: "tasks", label: "open task(s)", count: data.todaysFloor.timelineTasksPending?.count || 0, href: "/dashboard/function-sheets", icon: ClipboardList, tone: "neutral" });
   push(data.todaysFloor.todaysBookings?.count, { key: "today", label: "event(s) today", count: data.todaysFloor.todaysBookings?.count || 0, href: "/dashboard/bookings", icon: CalendarCheck, tone: "neutral" });
