@@ -176,12 +176,16 @@ const createSchema = z
       'other',
     ]),
     contactName: z.string().trim().max(120).optional(),
+    // Issue #14 — phone is now REQUIRED. Pakistani vendors get phone
+    // numbers off WhatsApp / calls long before they get a name or
+    // email, and the lead's whole value is the ability to contact
+    // back. Schema enforces non-empty + valid format.
     contactPhone: z
       .string()
       .trim()
+      .min(4, 'Phone number is required')
       .max(30)
-      .optional()
-      .refine((v) => !v || phoneRegex.test(v), 'Invalid phone'),
+      .refine((v) => phoneRegex.test(v), 'Invalid phone'),
     contactWhatsapp: z
       .string()
       .trim()
@@ -1268,7 +1272,10 @@ function AddLeadDialog({
                 name="contactPhone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone</FormLabel>
+                    {/* Issue #14 — phone is required for a lead to be
+                        actionable; surface the asterisk to match the
+                        other required labels (Business / Source). */}
+                    <FormLabel>Phone *</FormLabel>
                     <FormControl>
                       <Input placeholder="0300-1234567" {...field} />
                     </FormControl>
