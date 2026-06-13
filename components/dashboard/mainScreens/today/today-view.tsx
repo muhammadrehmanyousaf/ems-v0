@@ -688,6 +688,28 @@ const EventCard: React.FC<EventCardProps> = ({ event, onReload }) => {
                               >
                                 {task.label}
                               </span>
+                              {/* Issue #39 — explicit "Completed" /
+                                  "In progress" / "Skipped" pill next to
+                                  the label. The bg color + strikethrough
+                                  alone read as "deprioritised" rather
+                                  than "task done"; the pill makes the
+                                  status unambiguous when scanning the
+                                  list. Pending tasks stay unpilled. */}
+                              {task.status === 'done' && (
+                                <Badge className="text-[10px] bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-emerald-300">
+                                  Completed
+                                </Badge>
+                              )}
+                              {task.status === 'in_progress' && (
+                                <Badge className="text-[10px] bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-300">
+                                  In progress
+                                </Badge>
+                              )}
+                              {task.status === 'skipped' && (
+                                <Badge variant="outline" className="text-[10px] text-neutral-500">
+                                  Skipped
+                                </Badge>
+                              )}
                               {task.durationMin != null && task.durationMin > 0 && (
                                 <Badge variant="outline" className="text-[10px]">
                                   {task.durationMin} min
