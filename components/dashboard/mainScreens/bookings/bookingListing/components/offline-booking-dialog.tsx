@@ -167,6 +167,51 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
     const [customerEmail, setCustomerEmail] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
 
+    // Issue #27 — existing customer picker. Fetched on dialog open.
+    // Vendor either picks one (autofills name/phone/email) or types a
+    // new customer in the existing fields. The "__new__" sentinel
+    // value resets the form to blank.
+    const [existingCustomers, setExistingCustomers] = useState<
+        Array<{ id: number; name: string; phoneno: string; email: string | null }>
+    >([]);
+    const [pickedCustomerId, setPickedCustomerId] = useState<string>('__new__');
+    useEffect(() => {
+        if (!open) return;
+        let cancelled = false;
+        import('@/lib/axiosConfig').then(({ default: ax }) => {
+            ax.get('/api/v1/offlineCustomers')
+                .then((res) => {
+                    if (cancelled) return;
+                    // Response shape varies — handle both wrapped and bare list.
+                    const raw = res.data?.data?.data ?? res.data?.data ?? [];
+                    setExistingCustomers(
+                        (Array.isArray(raw) ? raw : []).map((c: any) => ({
+                            id: Number(c.id),
+                            name: c.name || '',
+                            phoneno: c.phoneno || c.phone || '',
+                            email: c.email || null,
+                        })),
+                    );
+                })
+                .catch(() => { /* silent — vendor falls back to typing */ });
+        });
+        return () => { cancelled = true; };
+    }, [open]);
+    const handlePickCustomer = (v: string) => {
+        setPickedCustomerId(v);
+        if (v === '__new__') {
+            setCustomerName('');
+            setCustomerPhone('');
+            setCustomerEmail('');
+            return;
+        }
+        const c = existingCustomers.find((x) => String(x.id) === v);
+        if (!c) return;
+        setCustomerName(c.name);
+        setCustomerPhone(c.phoneno);
+        setCustomerEmail(c.email || '');
+    };
+
     // Event / service fields
     const [bookingDate, setBookingDate] = useState<Date | undefined>();
     const [bookingTime, setBookingTime] = useState('');
@@ -372,6 +417,30 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                             <User className="h-4 w-4" />
                             Customer Information
                         </div>
+                        {/* Issue #27 — existing-customer picker. Lists the
+                            vendor's saved offline customers; picking one
+                            autofills name/phone/email. "+ New customer"
+                            clears the form for a fresh entry. Hidden
+                            entirely when no customers exist yet. */}
+                        {existingCustomers.length > 0 && (
+                            <div className="space-y-1.5">
+                                <Label>Existing customer</Label>
+                                <Select value={pickedCustomerId} onValueChange={handlePickCustomer}>
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__new__">+ New customer</SelectItem>
+                                        {existingCustomers.map((c) => (
+                                            <SelectItem key={c.id} value={String(c.id)}>
+                                                {c.name}
+                                                {c.phoneno ? ` · ${c.phoneno}` : ''}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="space-y-1.5">
                                 <Label htmlFor="ob-name">Full Name *</Label>
