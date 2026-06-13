@@ -13,6 +13,10 @@ import { Button } from '@/components/ui/button'
 import { OfflineBookingDialog } from './offline-booking-dialog'
 import { useUser } from '@/context/UserContext'
 import { isAdminLike, getDashboardRole } from '@/lib/dashboard-role'
+// Issue #43 — pull the craft-localized "Bookings" label so the empty
+// state + add button match the sidebar wording (Shoots, Fittings, etc.).
+import { useBusiness } from '@/context/BusinessContext'
+import { getVendorTypeConfig } from '@/lib/vendor-type-config'
 
 type Props = {
   search: string | null;
@@ -27,6 +31,19 @@ const BookingTable = ({ search, bucket = 'active' }: Props) => {
   const queryClient = useQueryClient();
   const { setPage, searchQuery, setSearchQuery } = BookingTableFilters()
   const { user } = useUser();
+  // Issue #43 — craft-localized noun for the empty state ("No shoots yet"
+  // for photographers, "No fittings yet" for bridal wear, etc.). Falls
+  // back to "Bookings" when no craft override is configured.
+  const { business } = useBusiness();
+  const vendorConfig = getVendorTypeConfig((business as any)?.vendor?.vendorType);
+  const craftLabel = vendorConfig?.navLabels?.Bookings ?? 'Bookings';
+  // Singular/lowercase for inline copy (e.g. "No <noun> yet"). Most
+  // craft labels are plural ("Shoots", "Fittings") so we strip a
+  // trailing s; falls back gracefully when the label is already
+  // singular or non-English.
+  const craftNoun = craftLabel
+    .replace(/s$/i, '')
+    .toLowerCase();
 
   // Super-admin / admin gets the platform-wide endpoint (every booking on the
   // platform). Vendors hit the default endpoint that scopes to their own
@@ -87,12 +104,16 @@ const BookingTable = ({ search, bucket = 'active' }: Props) => {
       <>
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <ClipboardList className="h-12 w-12 text-muted-foreground/50 mb-4" />
-          <h3 className="text-lg font-semibold">No bookings yet</h3>
+          <h3 className="text-lg font-semibold">
+            {/* Issue #43 — empty-state heading reads in the vendor's
+                craft language: "No shoots yet" / "No fittings yet" etc. */}
+            No {craftNoun}s yet
+          </h3>
           <p className="text-sm text-muted-foreground mt-1 max-w-sm">
             When customers book your services, they will appear here.
           </p>
           <Button className="mt-4" onClick={() => setAddOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />Add Offline Booking
+            <Plus className="mr-2 h-4 w-4" />Add offline {craftNoun}
           </Button>
         </div>
         <OfflineBookingDialog
