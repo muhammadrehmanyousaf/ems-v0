@@ -45,6 +45,9 @@ import {
   ChevronUp,
   ChevronDown,
   Sparkles,
+  // Issue #44 — Retire / Reactivate icons.
+  UserMinus,
+  UserCheck,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -178,9 +181,11 @@ const TeamMembersTab = () => {
     if (!businessId) return;
     setLoading(true);
     try {
-      const rows = await TeamMembersAPI.list(businessId);
-      // Backend already orders by isLeadArtist DESC, sortOrder ASC,
-      // id ASC; we trust that ordering.
+      // Issue #44 — pull inactive (retired) members too so we can list
+      // them in a separate "Retired" section instead of silently
+      // hiding them. Backend already orders by isLeadArtist DESC,
+      // sortOrder ASC, id ASC.
+      const rows = await TeamMembersAPI.list(businessId, { includeInactive: true });
       setMembers(rows || []);
     } catch (e) {
       toast.error('Could not load team members');
@@ -188,6 +193,48 @@ const TeamMembersTab = () => {
       setLoading(false);
     }
   }, [businessId]);
+
+  // Issue #44 — partition members for the new "Active" + "Retired"
+  // sections. Memoised so the JSX below doesn't recompute on every
+  // unrelated state change.
+  const activeMembers = React.useMemo(() => members.filter((m) => m.isActive !== false), [members]);
+  const retiredMembers = React.useMemo(() => members.filter((m) => m.isActive === false), [members]);
+
+  // Issue #44 — soft-delete (retire) handler. Flips isActive=false via
+  // the existing update endpoint instead of hard-deleting. Keeps
+  // history intact: past bookings still reference the member's name,
+  // analytics rollups still attribute their old work, and a vendor
+  // who clicked too fast can hit Reactivate.
+  const handleRetire = async (row: BusinessTeamMember) => {
+    if (!businessId) return;
+    setDeletingId(row.id);
+    try {
+      await TeamMembersAPI.update(businessId, row.id, { isActive: false });
+      toast.success(`${row.name} marked as retired`);
+      await load();
+    } catch (e) {
+      const err = e as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message || 'Failed to retire member');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // Issue #44 — bring a retired member back to active.
+  const handleReactivate = async (row: BusinessTeamMember) => {
+    if (!businessId) return;
+    setDeletingId(row.id);
+    try {
+      await TeamMembersAPI.update(businessId, row.id, { isActive: true });
+      toast.success(`${row.name} reactivated`);
+      await load();
+    } catch (e) {
+      const err = e as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message || 'Failed to reactivate');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     load();
@@ -354,7 +401,7 @@ const TeamMembersTab = () => {
           <Skeleton className="h-20 w-full" />
           <Skeleton className="h-20 w-full" />
         </div>
-      ) : members.length === 0 ? (
+      ) : activeMembers.length === 0 && retiredMembers.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="p-8 text-center space-y-3">
             <Users className="h-8 w-8 text-muted-foreground mx-auto" />
@@ -373,9 +420,9 @@ const TeamMembersTab = () => {
         </Card>
       ) : (
         <div className="space-y-2">
-          {members.map((row, idx) => {
-            const prev = members[idx - 1];
-            const next = members[idx + 1];
+          {activeMembers.map((row, idx) => {
+            const prev = activeMembers[idx - 1];
+            const next = activeMembers[idx + 1];
             const canMoveUp = !!prev && prev.isLeadArtist === row.isLeadArtist;
             const canMoveDown = !!next && next.isLeadArtist === row.isLeadArtist;
             return (
@@ -472,18 +519,23 @@ const TeamMembersTab = () => {
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
+                        {/* Issue #44 — Retire instead of hard-delete.
+                            Keeps historical bookings/analytics
+                            attribution intact. Permanent delete is
+                            available from the Retired section below. */}
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => setConfirmDelete(row)}
-                          aria-label="Delete team member"
+                          className="text-amber-700 hover:text-amber-800"
+                          onClick={() => handleRetire(row)}
+                          aria-label="Retire team member"
                           disabled={deletingId === row.id}
+                          title="Retire (mark inactive)"
                         >
                           {deletingId === row.id ? (
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
                           ) : (
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <UserMinus className="h-3.5 w-3.5" />
                           )}
                         </Button>
                       </div>
@@ -493,6 +545,73 @@ const TeamMembersTab = () => {
               </Card>
             );
           })}
+
+          {/* Issue #44 — Retired (inactive) members. Listed separately so a
+              vendor can scan their active roster cleanly but still see
+              who used to be on the team. Reactivate restores to active;
+              the destructive Delete remains here behind an explicit
+              "Permanently remove" confirm dialog. */}
+          {retiredMembers.length > 0 && (
+            <div className="pt-6 mt-4 border-t border-dashed">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                Retired ({retiredMembers.length})
+              </p>
+              <div className="space-y-2">
+                {retiredMembers.map((row) => (
+                  <Card key={row.id} className="bg-muted/30">
+                    <CardContent className="p-4 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {row.profileImageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={row.profileImageUrl}
+                            alt={row.name}
+                            className="w-10 h-10 rounded-full object-cover border border-border opacity-70"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground">
+                            {row.name?.[0]?.toUpperCase() || '?'}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-muted-foreground">{row.name}</p>
+                          <p className="text-xs text-muted-foreground/80">{row.role}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleReactivate(row)}
+                          disabled={deletingId === row.id}
+                          aria-label="Reactivate"
+                          title="Reactivate (mark active)"
+                          className="text-emerald-700 hover:text-emerald-800"
+                        >
+                          {deletingId === row.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <UserCheck className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => setConfirmDelete(row)}
+                          disabled={deletingId === row.id}
+                          aria-label="Permanently delete team member"
+                          title="Permanently delete"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -684,11 +803,15 @@ const TeamMembersTab = () => {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove {confirmDelete?.name}?</AlertDialogTitle>
+            <AlertDialogTitle>Permanently delete {confirmDelete?.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              {confirmDelete?.isLeadArtist
-                ? 'This is your lead artist — your public profile will lose its featured team member until you mark another one as lead.'
-                : 'You can always add them back later.'}
+              {/* Issue #44 — explicit wording so the vendor understands
+                  this is the destructive option, not the retire flow. */}
+              This wipes the member completely — past booking attributions
+              that reference this person will lose their name link. If you
+              just want to take them off the active roster, use Retire
+              instead (they stay listed under "Retired" and can be
+              reactivated later).
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

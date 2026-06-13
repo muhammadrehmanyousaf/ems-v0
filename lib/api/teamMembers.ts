@@ -46,9 +46,13 @@ export interface UpsertTeamMemberInput {
 }
 
 export class TeamMembersAPI {
-  static async list(businessId: number): Promise<BusinessTeamMember[]> {
+  static async list(
+    businessId: number,
+    opts: { includeInactive?: boolean } = {},
+  ): Promise<BusinessTeamMember[]> {
     const res = await axiosInstance.get(
       `/api/v1/businesses/${businessId}/team-members`,
+      { params: opts.includeInactive ? { includeInactive: 'true' } : undefined },
     );
     return res.data?.data?.members ?? [];
   }
