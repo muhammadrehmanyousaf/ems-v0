@@ -127,9 +127,17 @@ const schema = z
     transactionRef: z.string().optional(),
     photoUrl: z.string().url().or(z.literal('')).optional(),
     notes: z.string().max(2000).optional(),
-    customerUserId: z.string().refine((v) => Number(v) > 0, {
-      message: 'Customer user ID required (find from booking).',
-    }),
+    // Issue #41 — customerUserId is now optional on the FE schema.
+    // The BE (cdccdd2) auto-derives it from the booking when bookingId
+    // is supplied, so vendors don't have to type a numeric ID for the
+    // common case. The cross-field refine() below enforces that at
+    // least ONE of (customerUserId, bookingId) is present.
+    customerUserId: z
+      .string()
+      .optional()
+      .refine((v) => !v || /^\d+$/.test(v.trim()), {
+        message: 'Customer ID must be a number (not an email or name).',
+      }),
     bookingId: z.string().optional(),
   })
   .refine(
@@ -139,6 +147,15 @@ const schema = z
     {
       message: 'Transaction reference required for this payment method.',
       path: ['transactionRef'],
+    },
+  )
+  .refine(
+    (data) =>
+      (data.bookingId && data.bookingId.trim().length > 0) ||
+      (data.customerUserId && Number(data.customerUserId) > 0),
+    {
+      message: 'Pick a booking — or enter a customer ID if this is a standalone receipt.',
+      path: ['customerUserId'],
     },
   );
 
@@ -255,10 +272,14 @@ const ReceiptDialog: React.FC<ReceiptDialogProps> = ({
         await ReceiptsAPI.update(editing.id, base as UpdateReceiptInput);
         toast.success('Receipt updated');
       } else {
-        const body: CreateReceiptInput = {
+        // Issue #41 — only send customerUserId if the vendor actually
+        // typed one (standalone receipt). For booking-linked receipts
+        // the BE derives it from the booking row.
+        const trimmedCustomerId = (values.customerUserId || '').trim();
+        const body = {
           ...base,
-          customerUserId: Number(values.customerUserId),
-        };
+          customerUserId: trimmedCustomerId ? Number(trimmedCustomerId) : undefined,
+        } as CreateReceiptInput;
         await ReceiptsAPI.create(body);
         toast.success('Receipt logged');
       }
@@ -366,21 +387,26 @@ const ReceiptDialog: React.FC<ReceiptDialogProps> = ({
               )}
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
-              {!editing && (
+              {!editing && !form.watch('bookingId') && (
                 <FormField
                   control={form.control}
                   name="customerUserId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Customer user ID</FormLabel>
+                      <FormLabel>Customer ID</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           inputMode="numeric"
-                          placeholder="Copy from a booking"
+                          pattern="[0-9]*"
+                          placeholder="Only if no booking is picked"
                           {...field}
                         />
                       </FormControl>
+                      <FormDescription className="text-[11px]">
+                        Standalone receipt only. Most receipts: pick a booking and
+                        leave this blank.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

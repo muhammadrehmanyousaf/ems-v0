@@ -129,7 +129,9 @@ function daysUntil(iso: string | null | undefined): number | null {
 
 // ─── Create / Edit dialog ──────────────────────────────────────────
 
-const createSchema = z.object({
+// Issue #41 — see receipts-ledger-view for the rationale. BE cdccdd2
+// derives customerUserId from booking when it's omitted.
+const baseSchema = z.object({
   chequeNumber: z
     .string()
     .regex(/^\d{4,20}$/, { message: 'Cheque number must be 4-20 digits.' }),
@@ -139,16 +141,29 @@ const createSchema = z.object({
     message: 'Amount must be a positive number.',
   }),
   chequeDate: z.string().min(1, { message: 'Cheque date is required.' }),
-  customerUserId: z.string().refine((v) => Number(v) > 0, {
-    message: 'Customer user ID required (find from booking).',
-  }),
+  customerUserId: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^\d+$/.test(v.trim()), {
+      message: 'Customer ID must be a number (not an email or name).',
+    }),
   bookingId: z.string().optional(),
   notes: z.string().max(2000).optional(),
 });
 
+const createSchema = baseSchema.refine(
+  (data) =>
+    (data.bookingId && data.bookingId.trim().length > 0) ||
+    (data.customerUserId && Number(data.customerUserId) > 0),
+  {
+    message: 'Pick a booking — or enter a customer ID for a standalone PDC.',
+    path: ['customerUserId'],
+  },
+);
+
 type CreateFormValues = z.infer<typeof createSchema>;
 
-const editSchema = createSchema.omit({ customerUserId: true });
+const editSchema = baseSchema.omit({ customerUserId: true });
 type EditFormValues = z.infer<typeof editSchema>;
 
 interface PdcDialogProps {
@@ -216,16 +231,18 @@ const PdcDialog: React.FC<PdcDialogProps> = ({ open, onOpenChange, editing, onSa
         await PdcAPI.update(editing.id, patch);
         toast.success('PDC updated');
       } else {
-        const body: CreatePdcInput = {
+        // Issue #41 — only send customerUserId for standalone PDCs.
+        const trimmedCustomerId = (values.customerUserId || '').trim();
+        const body = {
           chequeNumber: values.chequeNumber,
           bankName: values.bankName,
           branchCode: values.branchCode?.trim() || undefined,
           amount: Number(values.amount),
           chequeDate: values.chequeDate,
-          customerUserId: Number(values.customerUserId),
+          customerUserId: trimmedCustomerId ? Number(trimmedCustomerId) : undefined,
           bookingId: values.bookingId ? Number(values.bookingId) : null,
           notes: values.notes?.trim() || undefined,
-        };
+        } as CreatePdcInput;
         await PdcAPI.create(body);
         toast.success('PDC logged');
       }
@@ -327,24 +344,25 @@ const PdcDialog: React.FC<PdcDialogProps> = ({ open, onOpenChange, editing, onSa
                   </FormItem>
                 )}
               />
-              {!editing && (
+              {!editing && !form.watch('bookingId') && (
                 <FormField
                   control={form.control}
                   name="customerUserId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Customer user ID</FormLabel>
+                      <FormLabel>Customer ID</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           inputMode="numeric"
-                          placeholder="Pick from a booking"
+                          pattern="[0-9]*"
+                          placeholder="Only if no booking is picked"
                           {...field}
                         />
                       </FormControl>
                       <FormDescription className="text-[11px]">
-                        For now, copy the customer&apos;s user ID from any of
-                        their bookings. A customer picker ships next sprint.
+                        Standalone PDC only. Most PDCs: pick a booking and
+                        leave this blank.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

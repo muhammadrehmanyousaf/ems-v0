@@ -66,7 +66,10 @@ export interface CreateReceiptInput {
   transactionRef?: string;
   photoUrl?: string;
   notes?: string;
-  customerUserId: number;
+  // Issue #41 — optional on the FE. When bookingId is supplied the BE
+  // derives customerUserId from the booking. At least one of the two
+  // must be present (BE enforces; FE schema enforces).
+  customerUserId?: number;
   bookingId?: number | null;
 }
 

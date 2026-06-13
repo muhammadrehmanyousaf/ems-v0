@@ -68,7 +68,8 @@ export interface CreatePdcInput {
   branchCode?: string;
   amount: number;
   chequeDate: string;
-  customerUserId: number;
+  // Issue #41 — derived from booking on the BE when omitted.
+  customerUserId?: number;
   bookingId?: number | null;
   notes?: string;
 }
