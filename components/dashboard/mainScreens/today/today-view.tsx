@@ -639,7 +639,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onReload }) => {
                             </div>
                           </div>
                           <div className="flex items-center gap-0.5 shrink-0">
-                            {task.status !== 'skipped' && (
+                            {task.status !== 'skipped' && task.status !== 'done' && (
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -651,32 +651,42 @@ const EventCard: React.FC<EventCardProps> = ({ event, onReload }) => {
                                 <XCircle className="h-3.5 w-3.5" />
                               </Button>
                             )}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 w-7 p-0"
-                              onClick={() => {
-                                setEditing(task);
-                                setAddOpen(true);
-                              }}
-                              aria-label="Edit task"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                              onClick={() => setConfirmDelete(task)}
-                              disabled={deletingId === task.id}
-                              aria-label="Delete task"
-                            >
-                              {deletingId === task.id ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-3.5 w-3.5" />
-                              )}
-                            </Button>
+                            {/* Issue #40 — hide edit + delete on completed
+                                tasks. A done task is a record of work
+                                already finished; nobody should be editing
+                                its description after the fact (especially
+                                when it's part of the day's audit trail
+                                for the floor manager). */}
+                            {task.status !== 'done' && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 w-7 p-0"
+                                  onClick={() => {
+                                    setEditing(task);
+                                    setAddOpen(true);
+                                  }}
+                                  aria-label="Edit task"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                  onClick={() => setConfirmDelete(task)}
+                                  disabled={deletingId === task.id}
+                                  aria-label="Delete task"
+                                >
+                                  {deletingId === task.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  )}
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </div>
                       );
