@@ -174,6 +174,45 @@ const ReceiptDialog: React.FC<ReceiptDialogProps> = ({
   const watchMethod = form.watch('method');
   const needsRef = RECEIPT_METHODS_NEEDING_REF.includes(watchMethod);
 
+  // Issue #50 — fetch pending bookings so the vendor can pick the
+  // booking this receipt is against from a dropdown instead of having
+  // to copy/paste the numeric ID. Scoped to pending payment status
+  // because a fully-paid booking shouldn't have new receipts logged.
+  const [pendingBookings, setPendingBookings] = useState<
+    Array<{ id: number; customerName: string | null; totalAmount: number | null }>
+  >([]);
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    import('@/lib/axiosConfig').then(({ default: ax }) => {
+      ax.get('/api/v1/bookings', {
+        params: {
+          page: 1,
+          limit: 50,
+          bucket: 'active',
+          paymentStatus: 'Pending',
+        },
+      })
+        .then((res) => {
+          if (cancelled) return;
+          const raw = res.data?.data?.data ?? [];
+          setPendingBookings(
+            raw.map((b: any) => ({
+              id: Number(b.id),
+              customerName: b.customerName ?? null,
+              totalAmount: Number(b.totalAmount) || null,
+            })),
+          );
+        })
+        .catch(() => {
+          /* silent — falls back to the manual-id behaviour */
+        });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
   useEffect(() => {
     if (editing) {
       form.reset({
@@ -352,17 +391,39 @@ const ReceiptDialog: React.FC<ReceiptDialogProps> = ({
                 name="bookingId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Booking ID (optional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        inputMode="numeric"
-                        placeholder="e.g. 142"
-                        {...field}
-                      />
-                    </FormControl>
+                    {/* Issue #50 — dropdown of PENDING bookings instead
+                        of a free-text numeric id. "(none)" handles the
+                        standalone-receipt case (advance against a
+                        quote). */}
+                    <FormLabel>Booking (optional)</FormLabel>
+                    <Select
+                      value={field.value || ''}
+                      onValueChange={(v) => field.onChange(v === '__none__' ? '' : v)}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={
+                            pendingBookings.length === 0
+                              ? 'No pending bookings — leave blank'
+                              : 'Pick a pending booking'
+                          } />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="__none__">— No linked booking —</SelectItem>
+                        {pendingBookings.map((b) => (
+                          <SelectItem key={b.id} value={String(b.id)}>
+                            #{b.id}
+                            {b.customerName ? ` · ${b.customerName}` : ''}
+                            {b.totalAmount != null
+                              ? ` · Rs ${Math.round(b.totalAmount).toLocaleString('en-PK')}`
+                              : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormDescription className="text-[11px]">
-                      Standalone receipts (advance against a quote) can skip this.
+                      Only bookings with pending payment are listed.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
