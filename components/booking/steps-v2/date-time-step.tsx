@@ -269,10 +269,25 @@ export default function DateTimeStep({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [holdFailed])
 
-  // Guests
-  const isCarRental = venue?.vendor?.vendorType === "Car rental"
-  const isBridalWear = venue?.vendor?.vendorType === "Bridal wearing"
-  const isWeddingStationery = venue?.vendor?.vendorType === "Wedding Invitations and Stationery"
+  // Guests. Issue #62 — switched from a denylist to an explicit
+  // allowlist of vendor types that genuinely price per-guest. Asking
+  // a photographer / makeup artist / florist "how many guests?" was
+  // confusing — their pricing has nothing to do with guest count. The
+  // allowlist is venue + headcount-pricing categories (catering, mithai,
+  // wedding cakes, live cooking stalls). Default for new vendor types
+  // is "don't show" so we err on the side of not asking.
+  const GUEST_COUNT_VENDOR_TYPES = new Set<string>([
+    "Wedding venue",
+    "Catering",
+    "Mithai and sweets",
+    "Wedding cakes",
+    "Live cooking stall",
+  ]);
+  const vendorTypeName = venue?.vendor?.vendorType || "";
+  const isCarRental = vendorTypeName === "Car rental"
+  const isBridalWear = vendorTypeName === "Bridal wearing"
+  const isWeddingStationery = vendorTypeName === "Wedding Invitations and Stationery"
+  const needsGuestCount = GUEST_COUNT_VENDOR_TYPES.has(vendorTypeName)
   const enforceCapacity = !!venue?.maxCapacity || !!venue?.minCapacity
 
   // Venue compliance soft-warnings (flag-gated, advisory only — never blocks).
@@ -621,8 +636,10 @@ export default function DateTimeStep({
         </div>
       )}
 
-      {/* Guest count — inline stepper, only when relevant */}
-      {!isCarRental && !isBridalWear && !isWeddingStationery && enforceCapacity && (
+      {/* Guest count — inline stepper. Issue #62: shown only for the
+          vendor types that genuinely price per-guest (see allowlist
+          above) AND when the venue has set min/max capacity. */}
+      {needsGuestCount && enforceCapacity && (
         <section className="pt-3 border-t border-bridal-beige/70">
           <div className="flex items-center justify-between gap-3">
             <div>

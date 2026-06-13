@@ -79,7 +79,14 @@ export default function ReviewStep({
   const isCarRental = venue?.vendor?.vendorType === "Car rental"
   const isBridalWear = venue?.vendor?.vendorType === "Bridal wearing"
   const isWeddingStationery = venue?.vendor?.vendorType === "Wedding Invitations and Stationery"
-  const showGuests = !isCarRental && !isBridalWear && !isWeddingStationery && (venue?.maxCapacity || venue?.minCapacity)
+  // Issue #62 — same allowlist as date-time-step. Only vendor types
+  // that price per-guest see the headcount row on the review summary;
+  // a photographer's review screen shouldn't surface "guests" at all.
+  const GUEST_COUNT_VENDOR_TYPES = new Set<string>([
+    "Wedding venue", "Catering", "Mithai and sweets",
+    "Wedding cakes", "Live cooking stall",
+  ])
+  const showGuests = GUEST_COUNT_VENDOR_TYPES.has(venue?.vendor?.vendorType || "") && (venue?.maxCapacity || venue?.minCapacity)
 
   const pkgPrice = Number(selectedPackageObj?.price) || 0
   const qty = isCarRental || isBridalWear || isWeddingStationery ? formData.vehicleQuantity || 1 : 1
