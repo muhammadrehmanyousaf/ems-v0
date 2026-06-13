@@ -20,6 +20,10 @@ import {
   type VendorTypeSlug,
 } from "@/lib/seo"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
+// Issue #65 — featured vendors strip on hub pages (when vendors of this
+// type are approved). Falls back gracefully when none yet.
+import { HubFeaturedVendors } from "@/components/seo/hub-featured-vendors"
+import { VENDOR_TYPE_PATHS } from "@/lib/vendor-types"
 
 export function generateVendorTypeHubMetadata(slug: VendorTypeSlug): Metadata {
   const vt = getVendorType(slug)
@@ -94,6 +98,25 @@ export function VendorTypeHubPage({ slug }: { slug: VendorTypeSlug }) {
             {vt.description}
           </p>
         </header>
+
+        {/* Issue #65 — featured approved vendors of this type. Hidden
+            when zero so the hub page still works as an SEO directory
+            while the category is being seeded. Maps the SEO slug back
+            to the canonical backend vendorType string via the same
+            VENDOR_TYPE_PATHS table used by the rest of the system. */}
+        {(() => {
+          const backendType = (VENDOR_TYPE_PATHS as Record<string, string>)[vt.slug]
+          if (!backendType) return null
+          return (
+            <HubFeaturedVendors
+              vendorType={backendType}
+              slug={vt.slug}
+              title={`Featured ${vt.plural}`}
+              subtitle={vt.plural}
+              blurb={vt.description}
+            />
+          )
+        })()}
 
         <section className="mb-12">
           <h2 className="font-display italic text-[24px] text-bridal-charcoal mb-5">
