@@ -136,8 +136,21 @@ export const TrustSignalsSection = () => {
                   whatsappNumber: e.target.value.replace(/\D/g, "").slice(0, 10),
                 }))
               }
+              aria-invalid={
+                !!formData.whatsappNumber &&
+                !/^3\d{9}$/.test(formData.whatsappNumber)
+              }
             />
           </div>
+          {/* Issue #7 — inline validation. Surface the error UNDER the
+              field instead of relying on a submit-time toast, so vendors
+              correct it as they type. */}
+          {formData.whatsappNumber &&
+            !/^3\d{9}$/.test(formData.whatsappNumber) && (
+              <p className="text-xs text-red-500">
+                Enter a valid 10-digit number starting with 3 (e.g. 3001234567).
+              </p>
+            )}
         </div>
       </div>
 
