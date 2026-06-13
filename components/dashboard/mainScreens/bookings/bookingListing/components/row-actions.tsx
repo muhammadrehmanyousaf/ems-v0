@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { MoreHorizontal, Eye, Pencil, XCircle, Loader2, CreditCard, CheckCircle2, ExternalLink } from "lucide-react"
+import { MoreHorizontal, Eye, Pencil, XCircle, Loader2, CreditCard, CheckCircle2, ExternalLink, Undo2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -24,6 +24,7 @@ import {
 import { BookingData } from "@/lib/dashboard-types"
 import { BookingDetailSheet } from "./booking-detail-sheet"
 import { RecordPaymentDialog } from "./record-payment-dialog"
+import { RecordRefundDialog } from "./record-refund-dialog"
 import { EditBookingDialog } from "./edit-booking-dialog"
 import axiosInstance from "@/lib/axiosConfig"
 import { BACKEND_URL } from "@/lib/backend-url"
@@ -39,6 +40,8 @@ export function RowActions({ data }: DataTableRowActionsProps) {
   const [editOpen, setEditOpen] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [paymentOpen, setPaymentOpen] = useState(false)
+  // Issue #63 — manual refund flow.
+  const [refundOpen, setRefundOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [sheetData, setSheetData] = useState<BookingData>(data)
   const queryClient = useQueryClient()
@@ -84,6 +87,10 @@ export function RowActions({ data }: DataTableRowActionsProps) {
   const canEdit = (data.status === "Confirmed" || data.status === "Pending" || data.status === "Awaiting Payment") && data.paymentStatus !== "Paid"
   const canCancel = data.status === "Pending" || data.status === "Confirmed" || data.status === "Awaiting Payment"
   const canRecordPayment = data.paymentStatus !== "Paid" && data.status !== "Cancelled" && data.status !== "Awaiting Payment"
+  // Issue #63 — refund available whenever there's money in (Partial or
+  // Paid) and the booking isn't already cancelled. Lets a vendor refund
+  // a goodwill amount from a Paid booking without cancelling.
+  const canRefund = (data.paymentStatus === "Partial" || data.paymentStatus === "Paid") && data.status !== "Cancelled"
   const canComplete = data.status === "Confirmed" && data.paymentStatus === "Paid"
 
   const handleComplete = async () => {
@@ -141,6 +148,12 @@ export function RowActions({ data }: DataTableRowActionsProps) {
               </DropdownMenuItem>
             </>
           )}
+          {canRefund && (
+            <DropdownMenuItem onClick={() => setRefundOpen(true)}>
+              <Undo2 className="mr-2 h-4 w-4 text-amber-600" />
+              Record refund
+            </DropdownMenuItem>
+          )}
           {canComplete && (
             <>
               <DropdownMenuSeparator />
@@ -174,6 +187,13 @@ export function RowActions({ data }: DataTableRowActionsProps) {
       <RecordPaymentDialog
         open={paymentOpen}
         onOpenChange={setPaymentOpen}
+        booking={data}
+        onSuccess={refreshBookings}
+      />
+
+      <RecordRefundDialog
+        open={refundOpen}
+        onOpenChange={setRefundOpen}
         booking={data}
         onSuccess={refreshBookings}
       />
