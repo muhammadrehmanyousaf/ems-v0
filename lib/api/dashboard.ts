@@ -917,6 +917,10 @@ export interface CreateBookingVendor {
   // Issue #47 — optional per-day rate multiplier. Defaults to 1 on the
   // BE if omitted. Cap is 31 days.
   numberOfDays?: number;
+  // Issue #35 — dynamic rent. Estimated travel distance in km, used
+  // by pricingService travel-surcharge logic (BK-069). Car rental's
+  // travelPolicyJson on the business row drives the per-km math.
+  travelDistanceKm?: number;
   totalAmount: number;
   downPayment: number;
   specialRequests?: string | null;
@@ -932,6 +936,12 @@ export interface CreateBookingPayload {
   bookingTime: string;
   guestCount?: number;
   vendors: CreateBookingVendor[];
+  // Issue #5 / #35 — car-rental pickup + dropoff addresses + estimated
+  // distance. Top-level on the booking row (matches BE Booking
+  // schema). Distance is per-vendor (since each business has its own
+  // travel policy); see CreateBookingVendor.travelDistanceKm.
+  pickupAddress?: string;
+  dropoffAddress?: string;
   isOfflineBooking?: boolean;
 }
 

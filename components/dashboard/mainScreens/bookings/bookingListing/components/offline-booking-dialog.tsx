@@ -279,6 +279,12 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
     // Issue #47 — per-day rate multiplier. Default 1 = single-day,
     // matches the BE default so nothing changes for current bookings.
     const [numberOfDays, setNumberOfDays] = useState(1);
+    // Issue #35 — car-rental pickup / dropoff + dynamic rent distance.
+    // Empty strings = "not entered" so the BE skips them. Distance is
+    // a free-text input bound to a Number on submit.
+    const [pickupAddress, setPickupAddress] = useState('');
+    const [dropoffAddress, setDropoffAddress] = useState('');
+    const [travelDistanceKm, setTravelDistanceKm] = useState('');
 
     // Service selection
     const [selectedBusinessId, setSelectedBusinessId] = useState('');
@@ -314,6 +320,7 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
         setBookingDate(undefined); setBookingTime('');
         setGuestCount(''); setQuantity(1);
         setNumberOfDays(1);
+        setPickupAddress(''); setDropoffAddress(''); setTravelDistanceKm('');
         setSelectedBusinessId(''); setSelectedPackageId(''); setSelectedMenuId('');
         setSpecialRequests('');
         setCarMode('package');
@@ -435,6 +442,15 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                 bookingDate: format(bookingDate, 'yyyy-MM-dd'),
                 bookingTime,
                 guestCount: showGuestCount && guestCount ? Number(guestCount) : undefined,
+                // Issue #5 / #35 — car-rental pickup / dropoff. Send
+                // only when populated so non-car-rental bookings don't
+                // pad the payload.
+                pickupAddress: isCarRental && pickupAddress.trim()
+                    ? pickupAddress.trim()
+                    : undefined,
+                dropoffAddress: isCarRental && dropoffAddress.trim()
+                    ? dropoffAddress.trim()
+                    : undefined,
                 vendors: [{
                     businessId: Number(selectedBusinessId),
                     packageId: selectedPackageId ? Number(selectedPackageId) : null,
@@ -447,6 +463,13 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                     numberOfDays: showNumberOfDays && numberOfDays > 1
                         ? numberOfDays
                         : undefined,
+                    // Issue #35 — vendor-supplied travel distance for
+                    // dynamic-rent surcharge. Pricing service takes
+                    // this over the city-pair lookup.
+                    travelDistanceKm:
+                        isCarRental && travelDistanceKm && Number(travelDistanceKm) > 0
+                            ? Number(travelDistanceKm)
+                            : undefined,
                     totalAmount: 0,   // server overrides
                     downPayment: 0,   // server overrides
                     specialRequests: specialRequests.trim() || null,
@@ -826,6 +849,63 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                     </div>
 
                     <Separator />
+
+                    {/* Issue #5 / #35 — car-rental pickup + dropoff +
+                        dynamic-rent distance. Hidden for all other
+                        vendor types so the dialog stays uncluttered. */}
+                    {isCarRental && (
+                        <>
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                                    <CalendarDays className="h-4 w-4" />
+                                    Trip Details
+                                </div>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="ob-pickup">Pickup address</Label>
+                                        <Input
+                                            id="ob-pickup"
+                                            placeholder="e.g. Gulberg III, Lahore"
+                                            value={pickupAddress}
+                                            onChange={(e) => setPickupAddress(e.target.value)}
+                                            maxLength={300}
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="ob-dropoff">Dropoff address</Label>
+                                        <Input
+                                            id="ob-dropoff"
+                                            placeholder="e.g. Pearl Continental, Lahore"
+                                            value={dropoffAddress}
+                                            onChange={(e) => setDropoffAddress(e.target.value)}
+                                            maxLength={300}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="ob-distance">
+                                        Estimated distance (km) <span className="text-muted-foreground">— for per-km surcharge</span>
+                                    </Label>
+                                    <Input
+                                        id="ob-distance"
+                                        type="number"
+                                        inputMode="numeric"
+                                        min={0}
+                                        max={10000}
+                                        placeholder="Leave blank to use city-pair lookup"
+                                        value={travelDistanceKm}
+                                        onChange={(e) => setTravelDistanceKm(e.target.value)}
+                                    />
+                                    <p className="text-[11px] text-muted-foreground">
+                                        Applied via your business&apos;s travel policy (per-km
+                                        rate × distance). Skip this if your packages already
+                                        bundle the route.
+                                    </p>
+                                </div>
+                            </div>
+                            <Separator />
+                        </>
+                    )}
 
                     {/* ── Notes ── */}
                     <div className="space-y-3">
