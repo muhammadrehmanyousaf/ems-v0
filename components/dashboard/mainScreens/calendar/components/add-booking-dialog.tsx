@@ -31,7 +31,9 @@ import {
     Globe,
     MessageSquare,
     Building2,
+    Pencil,
 } from 'lucide-react';
+import Link from 'next/link';
 
 // --- your existing calendar event type ---
 export type CalendarEvent = {
@@ -342,6 +344,23 @@ export default function AddBookingDialog({
                                             {detail ? formatCurrency(totalBooking(detail), currency) : '—'}
                                         </span>
                                     </div>
+
+                                    {/* Issue #24 — Edit button on the
+                                        per-booking popover so a vendor
+                                        clicking a calendar event can jump
+                                        straight to the booking detail
+                                        page where they can change date,
+                                        time, package, status, etc. The
+                                        booking id is ev.id (numeric event
+                                        id from the calendar event source). */}
+                                    <Separator className="my-3" />
+                                    <Link
+                                        href={`/dashboard/bookings/${ev.id}`}
+                                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-bridal-gold/40 bg-bridal-cream/40 px-3 py-2 text-sm font-medium text-bridal-charcoal hover:bg-bridal-cream/70"
+                                    >
+                                        <Pencil className="size-3.5" />
+                                        Edit booking
+                                    </Link>
                                 </PopoverContent>
                             </Popover>
                         );
