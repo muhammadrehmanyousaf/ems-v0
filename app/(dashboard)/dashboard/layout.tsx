@@ -7,6 +7,10 @@ import Header from "@/components/dashboard/layout/header"
 import ProtectedRoutes from "@/lib/protected-routes"
 import { ThemeProvider } from "@/components/dashboard/layout/ThemeToggle/theme-provider"
 import { VerificationBanner } from "@/components/auth/VerificationBanner"
+// Issue #1 — vendors with reviewProfile=false get the "Under Review"
+// screen instead of the half-broken dashboard. See the component file
+// for the design rationale.
+import { ReviewProfileGate } from "@/components/auth/ReviewProfileGate"
 import { Metadata } from "next"
 import NextTopLoader from "nextjs-toploader"
 // Phase 3 #9.4 — Locale provider wraps the dashboard subtree so any
@@ -30,21 +34,27 @@ const layout = ({ children }: { children: React.ReactNode }) => {
       <NextTopLoader color="hsl(var(--primary))" showSpinner={false} />
       <ProtectedRoutes>
         <LocaleProvider>
-          <SidebarProvider>
-            <AppSidebar />
-            {/* `min-w-0` on SidebarInset is the fix for cards getting clipped at
-                the right edge — without it the flex child can grow past the
-                available width when content is wide. */}
-            <SidebarInset className="min-w-0 overflow-x-hidden">
-              <Header />
-              <div className="flex flex-1 min-w-0 flex-col">
-                <div className="px-4 pt-4 md:px-6">
-                  <VerificationBanner />
+          {/* ReviewProfileGate sits OUTSIDE SidebarProvider on purpose —
+              when active, the vendor sees ONLY the under-review screen,
+              no sidebar / no header / no dashboard chrome that would
+              suggest they have access to features that aren't live yet. */}
+          <ReviewProfileGate>
+            <SidebarProvider>
+              <AppSidebar />
+              {/* `min-w-0` on SidebarInset is the fix for cards getting clipped at
+                  the right edge — without it the flex child can grow past the
+                  available width when content is wide. */}
+              <SidebarInset className="min-w-0 overflow-x-hidden">
+                <Header />
+                <div className="flex flex-1 min-w-0 flex-col">
+                  <div className="px-4 pt-4 md:px-6">
+                    <VerificationBanner />
+                  </div>
+                  {children}
                 </div>
-                {children}
-              </div>
-            </SidebarInset>
-          </SidebarProvider>
+              </SidebarInset>
+            </SidebarProvider>
+          </ReviewProfileGate>
         </LocaleProvider>
       </ProtectedRoutes>
     </ThemeProvider>
