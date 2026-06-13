@@ -387,18 +387,33 @@ const ExpenseDialog: React.FC<ExpenseDialogProps> = ({
             <FormField
               control={form.control}
               name="subcategory"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sub-category (optional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="e.g. mutton + chicken, generator diesel"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                // Issue #42 — when "Other" is picked, prompt the vendor to
+                // describe the expense type so it doesn't just sit as a
+                // generic "Other" row in the rollup. Field stays optional
+                // for all other categories.
+                const isOther = form.watch('category') === 'other';
+                return (
+                  <FormItem>
+                    <FormLabel>
+                      {isOther
+                        ? 'What kind of expense is this? *'
+                        : 'Sub-category (optional)'}
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder={
+                          isOther
+                            ? 'e.g. Wedding gift for client, internet bill, license renewal'
+                            : 'e.g. mutton + chicken, generator diesel'
+                        }
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
             <FormField
               control={form.control}

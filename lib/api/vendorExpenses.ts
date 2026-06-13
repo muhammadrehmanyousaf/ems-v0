@@ -12,6 +12,10 @@ export type ExpenseCategory =
   | "ingredients"
   | "fuel"
   | "labour"
+  // Issue #42 — vendors needed a dedicated "salary" bucket so they
+  // could separate monthly payroll from casual day-labour hours
+  // (labour bucket above).
+  | "salary"
   | "electricity"
   | "rentals"
   | "repairs"
@@ -145,6 +149,7 @@ export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   ingredients: "Ingredients",
   fuel: "Fuel (diesel / petrol)",
   labour: "Casual labour",
+  salary: "Salary / payroll",
   electricity: "Electricity",
   rentals: "Rentals",
   repairs: "Repairs",
@@ -163,6 +168,7 @@ export const EXPENSE_CATEGORY_TONES: Record<
   ingredients: { bg: "bg-orange-50", text: "text-orange-800", border: "border-orange-300" },
   fuel: { bg: "bg-rose-50", text: "text-rose-800", border: "border-rose-300" },
   labour: { bg: "bg-amber-50", text: "text-amber-800", border: "border-amber-300" },
+  salary: { bg: "bg-teal-50", text: "text-teal-800", border: "border-teal-300" },
   electricity: { bg: "bg-yellow-50", text: "text-yellow-800", border: "border-yellow-300" },
   rentals: { bg: "bg-purple-50", text: "text-purple-800", border: "border-purple-300" },
   repairs: { bg: "bg-slate-50", text: "text-slate-800", border: "border-slate-300" },
