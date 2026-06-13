@@ -11,6 +11,12 @@ import { LayoutGrid, Table as TableIcon, FileUp } from 'lucide-react'
 import PipelineView from '../pipeline/pipeline-view'
 // Historical bookings backfill (flag-gated).
 import ImportBookingsDialog from '../import-bookings-dialog'
+// Issue #8 — sidebar uses craft-localized labels ("Shoots" for
+// photographers, "Fittings" for bridal wear, etc.) but the page heading
+// stayed hardcoded as "Bookings", confusing vendors. Source from the
+// same vendor-type-config the sidebar reads.
+import { useBusiness } from '@/context/BusinessContext'
+import { getVendorTypeConfig } from '@/lib/vendor-type-config'
 
 const BookingListingView = () => {
   const searchParams = useSearchParams();
@@ -35,12 +41,20 @@ const BookingListingView = () => {
   const [importOpen, setImportOpen] = useState(false);
   const showImport = process.env.NEXT_PUBLIC_BOOKING_IMPORT === '1';
 
+  // Issue #8 — match the sidebar's craft label so a photographer who
+  // sees "Shoots" in the nav also sees "Shoots" as the page heading.
+  // Falls back to the default English "Bookings" when no craft override
+  // exists OR the business context isn't ready yet.
+  const { business } = useBusiness();
+  const vendorConfig = getVendorTypeConfig((business as any)?.vendor?.vendorType);
+  const headingTitle = vendorConfig?.navLabels?.Bookings ?? 'Bookings';
+
   return (
     <div>
       <PageContainer>
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <Heading title="Bookings" />
+            <Heading title={headingTitle} />
             <div className="flex items-center gap-2">
               {/* Historical bookings backfill (vendor-only, flag-gated).
                   Bulk-load Excel/register backlog as Completed+Paid
