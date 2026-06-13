@@ -26,6 +26,8 @@ import * as React from 'react';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import axiosInstance from '@/lib/axiosConfig';
+// Issue #55 — vendor-type-aware compliance gating.
+import { useUser } from '@/context/UserContext';
 import {
   Loader2,
   Calendar,
@@ -105,10 +107,33 @@ function fmtDate(iso: string | null | undefined): string {
   }
 }
 
+// Issue #55 — which vendor types actually consume each compliance
+// surface. Halal certs are caterers + venues (kitchen guarantee for
+// guests); Drone NOCs are photographers + videographers (CAA drone
+// permit before filming). FBR stays universal — every vendor with PKR
+// revenue can submit invoices.
+const HALAL_VENDOR_TYPES = new Set<string>([
+  'Catering',
+  'Wedding venue',
+  'Live cooking stall',
+  'Mithai and sweets',
+  'Wedding cakes',
+]);
+const DRONE_VENDOR_TYPES = new Set<string>([
+  'Photographer',
+  'Live streaming',
+]);
+
 export default function OperationsSummarySection() {
   const [data, setData] = useState<OperationsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Issue #55 — vendorType drives which compliance cards render.
+  // Super-admin (no vendorType) keeps seeing everything for oversight.
+  const { user } = useUser();
+  const vendorType = (user as any)?.vendorType as string | undefined;
+  const showHalal = !vendorType || HALAL_VENDOR_TYPES.has(vendorType);
+  const showDrone = !vendorType || DRONE_VENDOR_TYPES.has(vendorType);
 
   const load = async () => {
     try {
@@ -350,12 +375,16 @@ export default function OperationsSummarySection() {
         </div>
       </div>
 
-      {/* Compliance */}
+      {/* Compliance. Issue #55 — gate Halal + Drone cards by vendor
+          type so a photographer doesn't see "0 halal certs" sitting
+          irrelevant on their dashboard. FBR + Low stock stay universal
+          because every vendor produces invoices + has inventory. */}
       <div className="space-y-2">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Compliance ({complianceFlags} flag{complianceFlags === 1 ? '' : 's'})
         </h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {showHalal && (
           <WidgetCard
             href="/dashboard/halal-certs"
             icon={ShieldCheck}
@@ -383,6 +412,8 @@ export default function OperationsSummarySection() {
               secondary: `${s.supplierName || '—'} · expires ${fmtDate(s.expiryDate)}`,
             }))}
           />
+          )}
+          {showDrone && (
           <WidgetCard
             href="/dashboard/drone-noc"
             icon={Plane}
@@ -410,6 +441,7 @@ export default function OperationsSummarySection() {
               secondary: `${s.droneModel || '—'} · valid until ${fmtDate(s.validUntil)}`,
             }))}
           />
+          )}
           <WidgetCard
             href="/dashboard/inventory?lowStockOnly=true"
             icon={Boxes}
