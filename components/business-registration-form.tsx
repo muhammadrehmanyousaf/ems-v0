@@ -71,6 +71,13 @@ import { Package } from "@/lib/types";
 // 01-VR-ENHANCE-V1-FE — server-side draft sync
 import { useDraftSync } from "@/lib/hooks/useDraftSync";
 import { DraftResumePrompt } from "@/components/auth/DraftResumePrompt";
+// Issue #10 — shared Pakistani phone validation (accepts 10 + 11 digit
+// forms so vendors can paste their natural "0301..." or "+92 301..."
+// numbers without being told they're wrong).
+import {
+  isValidPakistaniPhone,
+  PHONE_VALIDATION_MESSAGE,
+} from "@/lib/utils/pakistani-phone";
 // 02-VR-RESILIENCE-V1 — local (device) draft layer + autosave indicator
 import {
   queueLocalDraftSave,
@@ -399,8 +406,10 @@ export function BusinessRegistrationForm() {
           currentErrors.email = "Invalid email address";
         if (!formData.phoneNumber) {
           currentErrors.phoneNumber = "Phone number is required";
-        } else if (!/^3\d{9}$/.test(String(formData.phoneNumber))) {
-          currentErrors.phoneNumber = "Enter a valid 10-digit number starting with 3 (e.g. 3001234567)";
+        } else if (!isValidPakistaniPhone(formData.phoneNumber)) {
+          // Issue #10 — accept both 10-digit (3001234567) and
+          // 11-digit (03001234567) forms via the shared util.
+          currentErrors.phoneNumber = PHONE_VALIDATION_MESSAGE;
         }
         if (!formData.password) currentErrors.password = "Password is required";
         if (formData.password && formData.password.length < 8)
@@ -413,8 +422,8 @@ export function BusinessRegistrationForm() {
       if (currentStep === 2) {
         if (!formData.name) currentErrors.name = "Brand Name is required";
         if (formData.secondaryContactNumber) {
-          if (!/^3\d{9}$/.test(String(formData.secondaryContactNumber))) {
-            currentErrors.secondaryContactNumber = "Enter a valid 10-digit number starting with 3 (e.g. 3001234567)";
+          if (!isValidPakistaniPhone(formData.secondaryContactNumber)) {
+            currentErrors.secondaryContactNumber = PHONE_VALIDATION_MESSAGE;
           } else if (String(formData.secondaryContactNumber) === String(formData.phoneNumber)) {
             currentErrors.secondaryContactNumber = "Secondary number must be different from your primary phone number";
           }

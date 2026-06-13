@@ -18,6 +18,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useFormContext } from "@/lib/context/form-context";
 import { MessageCircle, ShieldCheck, Sparkles } from "lucide-react";
+// Issue #7 + #10 — shared Pakistani phone validation util.
+import {
+  isValidPakistaniPhone,
+  PHONE_VALIDATION_MESSAGE,
+} from "@/lib/utils/pakistani-phone";
 
 const KNOWN_LANGUAGES = [
   "Urdu",
@@ -138,18 +143,15 @@ export const TrustSignalsSection = () => {
               }
               aria-invalid={
                 !!formData.whatsappNumber &&
-                !/^3\d{9}$/.test(formData.whatsappNumber)
+                !isValidPakistaniPhone(formData.whatsappNumber)
               }
             />
           </div>
-          {/* Issue #7 — inline validation. Surface the error UNDER the
-              field instead of relying on a submit-time toast, so vendors
-              correct it as they type. */}
+          {/* Issue #7 + #10 — inline validation via the shared util so
+              both 10- and 11-digit Pakistani formats are accepted. */}
           {formData.whatsappNumber &&
-            !/^3\d{9}$/.test(formData.whatsappNumber) && (
-              <p className="text-xs text-red-500">
-                Enter a valid 10-digit number starting with 3 (e.g. 3001234567).
-              </p>
+            !isValidPakistaniPhone(formData.whatsappNumber) && (
+              <p className="text-xs text-red-500">{PHONE_VALIDATION_MESSAGE}</p>
             )}
         </div>
       </div>
