@@ -140,7 +140,9 @@ const VendorDashboardView = () => {
         AnalyticsAPI.getDashboardKpis(dateRange, customStart, customEnd),
         AnalyticsAPI.getBookingTrends(dateRange, customStart, customEnd),
         AnalyticsAPI.getBookingStatusDistribution(dateRange, customStart, customEnd),
-        AnalyticsAPI.getRecentBookings(10),
+        // Issue #56 — pipe the dashboard filter into recent-bookings so
+        // picking "Today" actually narrows this tile.
+        AnalyticsAPI.getRecentBookings(10, dateRange, customStart, customEnd),
         AnalyticsAPI.getReviewSummary(),
         AnalyticsAPI.getTodaysBookings(),
         AnalyticsAPI.getUpcomingBookings7Days(),

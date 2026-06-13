@@ -246,10 +246,20 @@ export class AnalyticsAPI {
     }
   }
 
-  static async getRecentBookings(limit = 10): Promise<RecentBookingsData | null> {
+  // Issue #56 — accept the dashboard date filter so picking "Today"
+  // actually narrows this tile to today's bookings. BE 3c81dd0 ignores
+  // the range param when omitted, so callers that don't pass it keep
+  // the original all-time behaviour.
+  static async getRecentBookings(
+    limit = 10,
+    range?: DateRange,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<RecentBookingsData | null> {
     try {
+      const rangeQs = range ? `&${buildQuery(range, startDate, endDate)}` : "";
       const res = await axiosInstance.get(
-        `${BACKEND_URL}api/v1/analytics/recent-bookings?limit=${limit}`
+        `${BACKEND_URL}api/v1/analytics/recent-bookings?limit=${limit}${rangeQs}`,
       );
       return res.data.data;
     } catch {
