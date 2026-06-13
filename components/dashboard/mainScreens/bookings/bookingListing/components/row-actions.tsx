@@ -49,8 +49,21 @@ export function RowActions({ data }: DataTableRowActionsProps) {
   // Keep sheetData in sync when table data updates (background refetch)
   useEffect(() => { setSheetData(data) }, [data])
 
+  // Issue #11 — useFetchData hashes the query under
+  // `[endpoint, ...queryKey, params]`, so to invalidate every
+  // bookings-flavoured query in one shot we match on the endpoint
+  // string at position [0]. Covers BOTH the vendor endpoint
+  // (`/api/v1/bookings`) AND the admin endpoint
+  // (`/api/v1/bookings/admin/bookings`), plus the pipeline view
+  // which lives under the same vendor endpoint with a different
+  // second-position label. The previous concrete-key match missed
+  // the admin endpoint and was silently inert on the pipeline view.
   const refreshBookings = () => {
-    queryClient.refetchQueries({ queryKey: ['/api/v1/bookings'] })
+    queryClient.invalidateQueries({
+      predicate: (q) =>
+        typeof q.queryKey[0] === 'string' &&
+        q.queryKey[0].includes('/bookings'),
+    })
   }
 
   const handleEditSuccess = (updated: Partial<BookingData> | null) => {

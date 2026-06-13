@@ -81,11 +81,20 @@ const BookingTable = ({ search, bucket = 'active' }: Props) => {
   });
 
   const handleBookingCreated = () => {
-    // Must match the queryKey used by useFetchData above, otherwise a newly
-    // created offline booking won't appear until a manual page refresh.
-    // Refetch BOTH buckets so the new booking shows up regardless of which
-    // tab the vendor is on.
-    queryClient.refetchQueries({ queryKey: ['bookings', isAdmin ? 'admin' : 'vendor'] });
+    // Issue #11 — useFetchData hashes the actual query under
+    //   [endpoint, ...queryKey, params]
+    // so a key prefix like `['bookings', 'vendor']` never matches
+    // (it starts with the endpoint string, not 'bookings'). The
+    // refetch was a silent no-op and the new offline booking only
+    // appeared after a manual page refresh. Match by endpoint
+    // string at position [0] — catches the active table query
+    // (vendor or admin), both buckets, AND the pipeline view since
+    // it shares the `/api/v1/bookings` endpoint.
+    queryClient.invalidateQueries({
+      predicate: (q) =>
+        typeof q.queryKey[0] === 'string' &&
+        q.queryKey[0].includes('/bookings'),
+    });
   };
 
   if (isLoading) {
