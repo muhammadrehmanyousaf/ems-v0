@@ -94,6 +94,10 @@ import {
 } from '@/components/ui/select';
 
 import { LinkedFunctionSheetBadge } from '@/components/shared/linked-function-sheet-badge';
+// Issue #15 — convert-to-booking opens the same dialog the bookings
+// page uses for offline bookings, prefilled with the lead's
+// contact + event date so it lands one decision shorter.
+import { OfflineBookingDialog } from '@/components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog';
 import { AiSuggestButton } from '@/components/ai/ai-suggest-button';
 import { AiAPI } from '@/lib/api/ai';
 import {
@@ -258,6 +262,10 @@ export default function LeadsInboxView() {
   const [whatsappBody, setWhatsappBody] = useState('');
   const [whatsappSending, setWhatsappSending] = useState(false);
   const [deleteLead, setDeleteLead] = useState<Lead | null>(null);
+  // Issue #15 — convert-to-booking. Holds the lead whose convert
+  // button was clicked; drives the offline-booking dialog open and
+  // gets cleared on dialog close OR successful link.
+  const [convertLead, setConvertLead] = useState<Lead | null>(null);
   const [businesses, setBusinesses] = useState<VendorBusinessOption[]>([]);
   // Phase 4 polish — bulk selection state. Set keyed by lead id; the
   // bar appears above the list when at least one is selected.
@@ -752,6 +760,7 @@ export default function LeadsInboxView() {
                       setWhatsappBody('');
                     }}
                     onDelete={() => setDeleteLead(lead)}
+                    onConvert={() => setConvertLead(lead)}
                   />
                 </div>
               </div>
@@ -834,6 +843,43 @@ export default function LeadsInboxView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Issue #15 — convert-to-booking dialog. Prefills customer
+          and event date from the lead. On successful booking creation,
+          links the lead via LeadAPI.linkBooking which sets bookingId +
+          status='booked' atomically, then refetches the inbox so the
+          new "Converted to Booking #X" badge appears. */}
+      {convertLead && (
+        <OfflineBookingDialog
+          open={!!convertLead}
+          onOpenChange={(v) => { if (!v) setConvertLead(null); }}
+          initialDate={
+            convertLead.eventDate
+              ? new Date(convertLead.eventDate)
+              : undefined
+          }
+          initialCustomer={{
+            name: convertLead.contactName || undefined,
+            phone: convertLead.contactPhone || undefined,
+            email: convertLead.contactEmail || undefined,
+          }}
+          onCreated={async (bookingId) => {
+            try {
+              await LeadAPI.linkBooking(convertLead.id, bookingId);
+              toast.success(`Lead converted to booking #${bookingId}`);
+            } catch (e: any) {
+              toast.error(
+                e?.response?.data?.message ||
+                'Booking created, but the lead could not be linked. You can mark it Booked manually.',
+              );
+            }
+          }}
+          onSuccess={async () => {
+            setConvertLead(null);
+            await fetchLeads();
+          }}
+        />
+      )}
 
       {/* Delete confirm */}
       <AlertDialog
@@ -952,12 +998,19 @@ function LeadCard({
   onTransition,
   onWhatsapp,
   onDelete,
+  onConvert,
 }: {
   lead: Lead;
   busy: boolean;
   onTransition: (to: LeadStatus) => void;
   onWhatsapp: () => void;
   onDelete: () => void;
+  /**
+   * Issue #15 — open the offline-booking dialog with this lead's
+   * customer pre-filled. Caller wires the link-back so on success
+   * the lead flips to status='booked' + bookingId is set.
+   */
+  onConvert: () => void;
 }) {
   const tone = LEAD_STATUS_TONES[lead.status];
   const nextOptions = NEXT_STATUS[lead.status] || [];
@@ -1105,6 +1158,25 @@ function LeadCard({
               Terminal — no further moves
             </span>
           )}
+          {/* Issue #15 — convert-to-booking shortcut. Surfaced when a
+              lead is genuinely close to conversion (qualified or
+              quoted) AND isn't already linked to a booking. Opens the
+              offline-booking dialog prefilled with the lead's
+              contact + estimated date; on success the lead auto-
+              flips to status='booked' via LeadAPI.linkBooking. */}
+          {!lead.bookingId &&
+            (lead.status === 'qualified' || lead.status === 'quoted') && (
+              <Button
+                size="sm"
+                variant="default"
+                onClick={onConvert}
+                disabled={busy}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                <CheckCircle2 className="mr-1 h-3 w-3" />
+                Convert to booking
+              </Button>
+            )}
           {(lead.contactWhatsapp || lead.contactPhone) && (
             <Button
               size="sm"

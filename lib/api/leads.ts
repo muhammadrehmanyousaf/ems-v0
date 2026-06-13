@@ -238,6 +238,19 @@ export class LeadAPI {
   }
 
   /**
+   * Issue #15 — POST /api/v1/leads/:id/link-booking { bookingId }.
+   * Sets lead.bookingId + status='booked' in one atomic update.
+   * Used by the convert-to-booking flow after the new booking lands.
+   */
+  static async linkBooking(id: number, bookingId: number): Promise<Lead> {
+    const res = await axiosInstance.post(
+      `/api/v1/leads/${id}/link-booking`,
+      { bookingId },
+    );
+    return res.data?.data?.lead;
+  }
+
+  /**
    * POST /api/v1/leads/bulk-transition
    * Bulk move up to 200 leads in one request. Per-id results returned.
    */

@@ -33,6 +33,23 @@ interface OfflineBookingDialogProps {
     onSuccess: () => void;
     /** Issue #45 — prefill date when opened from a calendar cell click. */
     initialDate?: Date;
+    /**
+     * Issue #15 — prefill customer when opened from the lead pipeline's
+     * "Convert to booking" action. Saves the vendor re-typing the same
+     * name/phone/email they already have on the lead row.
+     */
+    initialCustomer?: {
+        name?: string;
+        phone?: string;
+        email?: string;
+    };
+    /**
+     * Issue #15 — fired with the newly-created booking id so the
+     * caller (lead pipeline) can immediately link the lead to it via
+     * LeadAPI.linkBooking. Optional — bypassing it keeps the
+     * dialog's original behaviour for callers that don't care.
+     */
+    onCreated?: (bookingId: number) => void;
 }
 
 const TIME_SLOTS = [
@@ -172,7 +189,7 @@ function PackageOption({ pkg }: { pkg: ApiPackage }) {
     );
 }
 
-export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDate }: OfflineBookingDialogProps) {
+export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDate, initialCustomer, onCreated }: OfflineBookingDialogProps) {
     // Customer fields
     const [customerName, setCustomerName] = useState('');
     const [customerEmail, setCustomerEmail] = useState('');
@@ -238,6 +255,25 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, initialDate]);
+
+    // Issue #15 — when opened from the lead pipeline's convert-to-
+    // booking action, prefill the customer fields. Only fires on the
+    // dialog's open transition AND when the field is still blank, so
+    // a vendor who typed something doesn't lose it on a parent
+    // re-render.
+    useEffect(() => {
+        if (!open || !initialCustomer) return;
+        if (initialCustomer.name && !customerName) {
+            setCustomerName(initialCustomer.name);
+        }
+        if (initialCustomer.phone && !customerPhone) {
+            setCustomerPhone(initialCustomer.phone);
+        }
+        if (initialCustomer.email && !customerEmail) {
+            setCustomerEmail(initialCustomer.email);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, initialCustomer]);
     const [guestCount, setGuestCount] = useState('');
     const [quantity, setQuantity] = useState(1);
     // Issue #47 — per-day rate multiplier. Default 1 = single-day,
@@ -387,7 +423,7 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
 
         setSaving(true);
         try {
-            await BookingsAPI.create({
+            const response = await BookingsAPI.create({
                 customerName: customerName.trim(),
                 // Issue #12 — was generating `offline_<timestamp>@weddingwala.pk`
                 // to satisfy the BE's old required-email check. The BE now
@@ -418,6 +454,16 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                 isOfflineBooking: true,
             });
             toast.success('Booking created successfully');
+            // Issue #15 — surface the new booking id so the lead
+            // pipeline's "Convert to booking" caller can immediately
+            // link the lead to it. Best-effort: a missing id never
+            // breaks the dialog's primary flow.
+            const newBookingId = Number(
+                (response as { data?: { booking?: { id?: number } } } | undefined)?.data?.booking?.id,
+            );
+            if (Number.isFinite(newBookingId) && newBookingId > 0) {
+                try { onCreated?.(newBookingId); } catch { /* ignore */ }
+            }
             resetForm();
             onOpenChange(false);
             onSuccess();
