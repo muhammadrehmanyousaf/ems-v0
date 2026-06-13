@@ -11,6 +11,8 @@ import { LayoutGrid, Table as TableIcon, FileUp } from 'lucide-react'
 import PipelineView from '../pipeline/pipeline-view'
 // Historical bookings backfill (flag-gated).
 import ImportBookingsDialog from '../import-bookings-dialog'
+// Issue #22 — CSV export companion to the import dialog.
+import ExportBookingsButton from '../export-bookings-button'
 // Issue #8 — sidebar uses craft-localized labels ("Shoots" for
 // photographers, "Fittings" for bridal wear, etc.) but the page heading
 // stayed hardcoded as "Bookings", confusing vendors. Source from the
@@ -83,6 +85,10 @@ const BookingListingView = () => {
                   <span className="hidden sm:inline">Import history</span>
                 </Button>
               )}
+              {/* Issue #22 — CSV export. No flag gate: read-only,
+                  client-side serialisation, safe to ship on by default. */}
+              <ExportBookingsButton bucket={bucket} />
+
               {/* Phase 1 #7.2 — view toggle. Pipeline = kanban grouped
                   by funnel stage; Table = legacy data-grid. */}
               <div className="inline-flex items-center rounded-md border bg-muted p-0.5 text-xs">
