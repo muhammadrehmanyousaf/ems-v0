@@ -31,6 +31,18 @@ const BookingListingView = () => {
   // their preferred view.
   const view = searchParams?.get('view') === 'pipeline' ? 'pipeline' : 'table';
 
+  // Issue #26 — bucket filter. Active (default) hides Completed +
+  // Cancelled so the main list is the vendor's working pipeline.
+  // "Archive" surfaces completed-only rows. URL-driven so it can be
+  // bookmarked.
+  const bucket = searchParams?.get('bucket') === 'completed' ? 'completed' : 'active';
+  const setBucket = (next: 'active' | 'completed') => {
+    const params = new URLSearchParams(searchParams?.toString() || '');
+    if (next === 'completed') params.set('bucket', 'completed');
+    else params.delete('bucket');
+    router.push(`${pathname}${params.toString() ? `?${params}` : ''}`);
+  };
+
   const setView = (next: 'table' | 'pipeline') => {
     const params = new URLSearchParams(searchParams?.toString() || '');
     if (next === 'pipeline') params.set('view', 'pipeline');
@@ -98,7 +110,32 @@ const BookingListingView = () => {
             </div>
           </div>
           <Separator />
-          {view === 'pipeline' ? <PipelineView /> : <BookingTable search={search} />}
+          {/* Issue #26 — Active / Archive toggle. Only shows on table view
+              (pipeline already groups by stage and surfaces completed
+              under its own column). */}
+          {view === 'table' && (
+            <div className="inline-flex items-center rounded-md border bg-muted p-0.5 text-xs">
+              <Button
+                type="button"
+                size="sm"
+                variant={bucket === 'active' ? 'default' : 'ghost'}
+                className="h-7 px-2.5"
+                onClick={() => setBucket('active')}
+              >
+                Active
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={bucket === 'completed' ? 'default' : 'ghost'}
+                className="h-7 px-2.5"
+                onClick={() => setBucket('completed')}
+              >
+                Archive
+              </Button>
+            </div>
+          )}
+          {view === 'pipeline' ? <PipelineView /> : <BookingTable search={search} bucket={bucket} />}
           {showImport && (
             <ImportBookingsDialog
               open={importOpen}

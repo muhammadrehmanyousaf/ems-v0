@@ -16,9 +16,13 @@ import { isAdminLike, getDashboardRole } from '@/lib/dashboard-role'
 
 type Props = {
   search: string | null;
+  // Issue #26 — "active" hides Completed + Cancelled (default working
+  // pipeline); "completed" surfaces the archive. Undefined falls back
+  // to "active" for the URL-deep-link case.
+  bucket?: 'active' | 'completed';
 };
 
-const BookingTable = ({ search }: Props) => {
+const BookingTable = ({ search, bucket = 'active' }: Props) => {
   const [addOpen, setAddOpen] = useState(false);
   const queryClient = useQueryClient();
   const { setPage, searchQuery, setSearchQuery } = BookingTableFilters()
@@ -35,13 +39,16 @@ const BookingTable = ({ search }: Props) => {
 
   const { data, isLoading } = useFetchData({
     endpoint,
-    queryKey: ['bookings', isAdmin ? 'admin' : 'vendor'],
+    // queryKey includes bucket so switching tabs invalidates the cache
+    // cleanly without confusing react-query.
+    queryKey: ['bookings', isAdmin ? 'admin' : 'vendor', bucket],
     Params: {
       page: currentPage,
       limit: pageSizeValue,
       sortBy: "createdAt",
       sortOrder: "DESC",
       search: searchQuery || search || undefined,
+      bucket,
     },
   });
 
@@ -59,6 +66,8 @@ const BookingTable = ({ search }: Props) => {
   const handleBookingCreated = () => {
     // Must match the queryKey used by useFetchData above, otherwise a newly
     // created offline booking won't appear until a manual page refresh.
+    // Refetch BOTH buckets so the new booking shows up regardless of which
+    // tab the vendor is on.
     queryClient.refetchQueries({ queryKey: ['bookings', isAdmin ? 'admin' : 'vendor'] });
   };
 
