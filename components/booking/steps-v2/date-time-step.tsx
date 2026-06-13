@@ -33,10 +33,13 @@ type DayAvailability = {
   blockReason?: string
 }
 
+// Issue #46 — shift hints use a plain "X to Y" format (per user
+// preference) instead of the en-dash version, which Pakistani vendors
+// were reading as a different symbol on some screens.
 const PERIODS = [
-  { value: "09:00", label: "Morning",   hint: "9 AM – 12 PM",  icon: Sun },
-  { value: "14:00", label: "Afternoon", hint: "2 PM – 6 PM",   icon: Sunset },
-  { value: "18:00", label: "Evening",   hint: "6 PM – 11 PM",  icon: Moon },
+  { value: "09:00", label: "Morning",   hint: "9 AM to 12 PM",  icon: Sun },
+  { value: "14:00", label: "Afternoon", hint: "2 PM to 6 PM",   icon: Sunset },
+  { value: "18:00", label: "Evening",   hint: "6 PM to 11 PM",  icon: Moon },
 ] as const
 
 // Flag-gated rollout of the vendor-configured slot engine. Default OFF =

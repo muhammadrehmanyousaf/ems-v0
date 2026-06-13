@@ -37,10 +37,12 @@ interface Props {
   isAuthenticated?: boolean
 }
 
+// Issue #46 — match the "X to Y" format used in date-time-step.tsx
+// PERIODS so the booking review and the date picker read identically.
 const PERIOD_LABEL: Record<string, string> = {
-  "09:00": "Morning · 9 AM – 12 PM",
-  "14:00": "Afternoon · 2 PM – 6 PM",
-  "18:00": "Evening · 6 PM – 11 PM",
+  "09:00": "Morning · 9 AM to 12 PM",
+  "14:00": "Afternoon · 2 PM to 6 PM",
+  "18:00": "Evening · 6 PM to 11 PM",
 }
 
 const TIER_LABEL: Record<number, string> = {

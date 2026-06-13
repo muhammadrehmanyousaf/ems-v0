@@ -152,9 +152,10 @@ export default function DateSelectionStep({
 
   const allTimeSlots = ["09:00", "14:00", "18:00"];
   const timeSlots = [
-    { value: "09:00", label: "Morning", time: "9 AM - 12 PM" },
-    { value: "14:00", label: "Afternoon", time: "2 PM - 6 PM" },
-    { value: "18:00", label: "Evening", time: "6 PM - 11 PM" },
+    // Issue #46 — "X to Y" format for consistency with steps-v2.
+    { value: "09:00", label: "Morning", time: "9 AM to 12 PM" },
+    { value: "14:00", label: "Afternoon", time: "2 PM to 6 PM" },
+    { value: "18:00", label: "Evening", time: "6 PM to 11 PM" },
   ];
 
   // Get availability for the selected date
