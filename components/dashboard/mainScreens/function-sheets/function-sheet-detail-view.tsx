@@ -528,8 +528,15 @@ export default function FunctionSheetDetailView({
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           {/* BEO / run-sheet — flag-gated (NEXT_PUBLIC_BEO_EDITOR). Day-of
-              operations doc; read-only once the sheet is terminal. */}
-          {process.env.NEXT_PUBLIC_BEO_EDITOR === '1' && (
+              operations doc; read-only once the sheet is terminal.
+              Issue #16 — BEO = "Banquet Event Order" — venue/catering
+              concept. Previously rendered for every vendor type, so a
+              photographer's function sheet was dominated by run-sheet
+              fields (table layout, beverage service, MC cues, etc.)
+              that have no meaning to them. Now gated to venue/catering. */}
+          {process.env.NEXT_PUBLIC_BEO_EDITOR === '1' &&
+            (user?.vendorType === 'Wedding venue' ||
+             user?.vendorType === 'Catering') && (
             <BeoRunSheetCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
           )}
           {/* Deliverables tracker — flag-gated (NEXT_PUBLIC_DELIVERABLES).
