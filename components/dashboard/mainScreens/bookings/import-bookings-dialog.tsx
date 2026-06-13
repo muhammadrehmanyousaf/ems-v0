@@ -271,8 +271,10 @@ export default function ImportBookingsDialog({
           <DialogTitle>Import historical bookings</DialogTitle>
           <DialogDescription>
             Bulk-load your Excel/register backlog. Imported bookings come in as
-            <strong> Completed</strong>, <strong>Paid</strong>, source = <em>offline</em>
+            <strong> Completed</strong>, default <strong>Paid</strong>, source = <em>offline</em>
             (you can filter them out of live ops). Bypasses past-date + lead-time checks.
+            Down-payment + payment status are used to write installments so
+            receivables and the payment ledger stay in sync.
           </DialogDescription>
         </DialogHeader>
 
