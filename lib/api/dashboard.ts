@@ -134,6 +134,23 @@ export interface ApiBusiness {
 }
 
 export class BusinessesAPI {
+  // Issue #3 — super-admin profile review surface. Returns the business
+  // attached to `userId` INCLUDING vendors with reviewProfile=false (the
+  // public listing excludes them). Backend auth-gates this to
+  // isSuperAdmin so a vendor calling it for a peer's id gets 403.
+  static async getAdminBusinessByUserId(
+    userId: number | string,
+  ): Promise<ApiBusiness | null> {
+    try {
+      const res = await axiosInstance.get(
+        `/api/v1/businesses/admin/by-user/${userId}`,
+      );
+      return res.data?.data ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   static async getAll(
     page = 1,
     limit = 20,

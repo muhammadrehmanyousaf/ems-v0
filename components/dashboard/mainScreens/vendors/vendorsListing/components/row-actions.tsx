@@ -1,6 +1,6 @@
 'use client';
 
-import { MoreHorizontal, PencilLine, Trash2 } from "lucide-react";
+import { Eye, MoreHorizontal, PencilLine, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -16,9 +16,11 @@ interface RowActionsProps {
     data: Vendor;
     onEdit: (vendor: Vendor) => void;
     onDelete: (vendor: Vendor) => void;
+    /** Issue #3 — open full-detail profile review dialog. */
+    onView?: (vendor: Vendor) => void;
 }
 
-export function RowActions({ data, onEdit, onDelete }: RowActionsProps) {
+export function RowActions({ data, onEdit, onDelete, onView }: RowActionsProps) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -34,6 +36,12 @@ export function RowActions({ data, onEdit, onDelete }: RowActionsProps) {
             <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {onView && (
+                    <DropdownMenuItem className="gap-2" onClick={() => onView(data)}>
+                        <Eye className="size-4 opacity-70" />
+                        View details
+                    </DropdownMenuItem>
+                )}
                 <DropdownMenuItem className="gap-2" onClick={() => onEdit(data)}>
                     <PencilLine className="size-4 opacity-70" />
                     Edit

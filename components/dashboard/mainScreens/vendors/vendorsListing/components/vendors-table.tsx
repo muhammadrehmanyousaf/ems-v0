@@ -8,6 +8,8 @@ import { columns } from "./columns";
 import { VendorsAPI, UsersAPI } from "@/lib/api/dashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EditVendorDialog } from "./edit-vendor-dialog";
+// Issue #3 — super-admin profile review surface.
+import { VendorReviewDialog } from "./vendor-review-dialog";
 import { ConfirmDeleteDialog } from "@/components/dashboard/globalComponents/confirm-delete-dialog";
 import { toast } from "sonner";
 
@@ -16,6 +18,7 @@ const VendorsTable = () => {
   const [loading, setLoading] = useState(true);
   const [editVendor, setEditVendor] = useState<Vendor | null>(null);
   const [deleteVendor, setDeleteVendor] = useState<Vendor | null>(null);
+  const [reviewVendor, setReviewVendor] = useState<Vendor | null>(null);
 
   const fetchData = useCallback(() => {
     setLoading(true);
@@ -62,6 +65,7 @@ const VendorsTable = () => {
     columns: columns(
       (vendor) => setEditVendor(vendor),
       (vendor) => setDeleteVendor(vendor),
+      (vendor) => setReviewVendor(vendor), // Issue #3 — View details
     ),
     totalItems: data.length,
   });
@@ -100,6 +104,13 @@ const VendorsTable = () => {
         title="Delete Vendor"
         description={`Are you sure you want to delete "${deleteVendor?.fullName}"? This action cannot be undone.`}
         onConfirm={handleDelete}
+      />
+
+      {/* Issue #3 — full-detail profile review modal */}
+      <VendorReviewDialog
+        vendor={reviewVendor}
+        onClose={() => setReviewVendor(null)}
+        onReviewStatusChanged={fetchData}
       />
     </div>
   );

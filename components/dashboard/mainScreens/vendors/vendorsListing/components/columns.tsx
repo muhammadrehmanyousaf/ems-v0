@@ -15,6 +15,9 @@ import { BACKEND_URL } from "@/lib/backend-url";
 export const columns = (
     onEdit: (vendor: Vendor) => void,
     onDelete: (vendor: Vendor) => void,
+    /** Issue #3 — open the profile-review dialog. Optional so legacy
+        callers without the dialog keep compiling. */
+    onView?: (vendor: Vendor) => void,
 ): ColumnDef<Vendor>[] => [
     {
         id: "select",
@@ -145,6 +148,7 @@ export const columns = (
                 data={row.original}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                onView={onView}
             />
         ),
     },
