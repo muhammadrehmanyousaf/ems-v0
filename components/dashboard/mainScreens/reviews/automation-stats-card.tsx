@@ -64,16 +64,36 @@ function digitsOnly(phone: string | null): string {
   return (phone || '').replace(/\D/g, '');
 }
 
+/**
+ * Issue #19 — vendors were tapping "Send WhatsApp" on landlines and
+ * disconnected numbers, then complaining that WhatsApp Web said "this
+ * phone number is not on WhatsApp" after the redirect. We can't know
+ * server-side which Pakistani numbers ARE registered with WhatsApp
+ * (no public API), but we CAN refuse to open the link unless the
+ * number is a valid Pakistani mobile (must be E.164-compatible after
+ * normalisation: 923xxxxxxxxx — country code 92, mobile prefix 3,
+ * then 9 digits).
+ *
+ * Returns '#' for invalid input so the calling button can short-circuit
+ * (or pair with `isValidWaTarget` for the disabled state).
+ */
 function waLink(phone: string | null, name: string | null): string {
   const d = digitsOnly(phone);
   if (!d) return '#';
-  // Normalize to E.164 for wa.me — Pakistani numbers start 03... in
-  // local form, 923... in international. Prepend 92 if local.
   const normalized = d.startsWith('0') ? '92' + d.slice(1) : d;
+  // Strict mobile-only check: total 12 digits, starts with 923.
+  if (!/^923\d{9}$/.test(normalized)) return '#';
   const text = encodeURIComponent(
     `Assalam-o-Alaikum ${name || ''} — hope your event went well. Could you take a moment to leave us a review? Shukria!`,
   );
   return `https://wa.me/${normalized}?text=${text}`;
+}
+
+/** True iff `waLink` would produce a real wa.me URL (not '#'). */
+function isValidWaTarget(phone: string | null): boolean {
+  const d = digitsOnly(phone);
+  const normalized = d.startsWith('0') ? '92' + d.slice(1) : d;
+  return /^923\d{9}$/.test(normalized);
 }
 
 export function ReviewAutomationStatsCard() {
@@ -187,7 +207,11 @@ export function ReviewAutomationStatsCard() {
                         Call
                       </a>
                     )}
-                    {s.customerPhone && (
+                    {/* Issue #19 — only render the WhatsApp pill when the
+                        number is a valid Pakistani mobile (12 digits,
+                        starts 923). Avoids the dead-redirect to
+                        "this number is not on WhatsApp". */}
+                    {s.customerPhone && isValidWaTarget(s.customerPhone) && (
                       <a
                         href={waLink(s.customerPhone, s.customerName)}
                         target="_blank"
