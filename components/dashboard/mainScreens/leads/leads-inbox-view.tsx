@@ -234,6 +234,9 @@ type CreateFormValues = z.input<typeof createSchema>;
 interface VendorBusinessOption {
   id: number;
   name: string;
+  // Issue #29 — carry vendor type forward so the Add-Lead dialog can
+  // adapt its labels + visible fields to the selected business.
+  vendorType?: string;
 }
 
 export default function LeadsInboxView() {
@@ -321,7 +324,11 @@ export default function LeadsInboxView() {
         const list = res.data?.data;
         const arr = Array.isArray(list) ? list : list?.data || [];
         setBusinesses(
-          arr.map((b: any) => ({ id: b.id, name: b.name || `Business #${b.id}` })),
+          arr.map((b: any) => ({
+            id: b.id,
+            name: b.name || `Business #${b.id}`,
+            vendorType: b.vendorType || b.vendor?.vendorType || undefined,
+          })),
         );
       })
       .catch(() => {
@@ -1127,6 +1134,49 @@ function LeadCard({
 
 // ─── Add lead dialog ──────────────────────────────────────────────
 
+// Issue #29 — vendor-type-specific labels + field visibility for the
+// Add-Lead dialog. Falls back to generic copy when no override is set.
+const LEAD_VENDOR_LABELS: Record<
+  string,
+  {
+    eventDate?: string;
+    estimatedGuests?: string;
+    showEstimatedGuests?: boolean;
+    showEstimatedBudget?: boolean;
+    inquiry?: string;
+  }
+> = {
+  'Car rental': {
+    eventDate: 'Pickup / service date',
+    showEstimatedGuests: false,
+    inquiry: 'Route, vehicle type, duration…',
+  },
+  Photographer: {
+    eventDate: 'Shoot date',
+    showEstimatedGuests: false,
+    inquiry: 'Shoot type, hours, output deliverables…',
+  },
+  Videographer: {
+    eventDate: 'Shoot date',
+    showEstimatedGuests: false,
+    inquiry: 'Shoot type, hours, output deliverables…',
+  },
+  'Bridal wearing': {
+    eventDate: 'Fitting / event date',
+    showEstimatedGuests: false,
+    inquiry: 'Outfit type, size, colour preferences…',
+  },
+  'Wedding Invitations and Stationery': {
+    eventDate: 'Delivery deadline',
+    showEstimatedGuests: false,
+    estimatedGuests: 'Quantity',
+    inquiry: 'Design preferences, paper, finish…',
+  },
+  'Wedding venue': { eventDate: 'Wedding date', estimatedGuests: 'Expected guests' },
+  Catering: { eventDate: 'Function date', estimatedGuests: 'Plate count' },
+  Decorator: { eventDate: 'Setup date', estimatedGuests: 'Expected guests' },
+};
+
 function AddLeadDialog({
   open,
   onOpenChange,
@@ -1145,6 +1195,18 @@ function AddLeadDialog({
       businessId: businesses[0]?.id,
     },
   });
+
+  // Issue #29 — look up the vendor type of the picked business so we
+  // can swap labels + hide irrelevant fields.
+  const pickedBusinessId = form.watch('businessId');
+  const pickedVendorType = useMemo(
+    () =>
+      businesses.find((b) => b.id === Number(pickedBusinessId))?.vendorType,
+    [pickedBusinessId, businesses],
+  );
+  const leadCopy =
+    (pickedVendorType && LEAD_VENDOR_LABELS[pickedVendorType]) || {};
+  const showGuestField = leadCopy.showEstimatedGuests !== false;
 
   useEffect(() => {
     if (open) {
@@ -1346,7 +1408,8 @@ function AddLeadDialog({
                 name="eventDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Event date</FormLabel>
+                    {/* Issue #29 — label adapts to vendor type. */}
+                    <FormLabel>{leadCopy.eventDate || 'Event date'}</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>
@@ -1354,24 +1417,28 @@ function AddLeadDialog({
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="estimatedGuests"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Est. guests</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        placeholder="e.g. 600"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {showGuestField && (
+                <FormField
+                  control={form.control}
+                  name="estimatedGuests"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        {leadCopy.estimatedGuests || 'Est. guests'}
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="e.g. 600"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
 
             <FormField
@@ -1405,7 +1472,9 @@ function AddLeadDialog({
                   <FormControl>
                     <Textarea
                       rows={3}
-                      placeholder="What did they ask about?"
+                      placeholder={
+                        leadCopy.inquiry || 'What did they ask about?'
+                      }
                       {...field}
                     />
                   </FormControl>
