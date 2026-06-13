@@ -23,7 +23,9 @@ import {
   Phone,
   MessageCircle,
   RotateCw,
+  X,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import axiosInstance from '@/lib/axiosConfig';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -99,6 +101,9 @@ function isValidWaTarget(phone: string | null): boolean {
 export function ReviewAutomationStatsCard() {
   const [data, setData] = useState<AutomationStats | null>(null);
   const [loading, setLoading] = useState(true);
+  // Issue #20 — busy state per booking id so multiple dismiss
+  // clicks don't trample each other while a request is in flight.
+  const [dismissingId, setDismissingId] = useState<number | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -107,6 +112,36 @@ export function ReviewAutomationStatsCard() {
       .then((r) => setData(r.data?.data ?? null))
       .catch(() => setData(null))
       .finally(() => setLoading(false));
+  };
+
+  // Issue #20 — dismiss a silent customer from the automation pool.
+  // Optimistic local update keeps the list responsive; on failure
+  // we toast + re-fetch to put the row back.
+  const dismissBooking = async (bookingId: number) => {
+    setDismissingId(bookingId);
+    setData((d) =>
+      d
+        ? {
+            ...d,
+            silent: Math.max(0, d.silent - 1),
+            prompted: Math.max(0, d.prompted - 1),
+            silentRecent: d.silentRecent.filter((s) => s.id !== bookingId),
+          }
+        : d,
+    );
+    try {
+      await axiosInstance.post(
+        `/api/v1/reviews/automation/${bookingId}/dismiss`,
+        { action: 'dismiss' },
+      );
+      toast.success('Removed from silent list');
+    } catch (e) {
+      const err = e as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message || 'Could not dismiss');
+      load();
+    } finally {
+      setDismissingId(null);
+    }
   };
 
   useEffect(() => {
@@ -223,6 +258,20 @@ export function ReviewAutomationStatsCard() {
                         WhatsApp
                       </a>
                     )}
+                    {/* Issue #20 — vendor-controlled dismiss. Removes
+                        this booking from the silent pool when the
+                        vendor has confirmed there'll be no review
+                        (reviewed elsewhere, refused, etc.). */}
+                    <button
+                      type="button"
+                      onClick={() => dismissBooking(s.id)}
+                      disabled={dismissingId === s.id}
+                      className="inline-flex items-center gap-1 rounded-full border border-neutral-200 px-2 py-1 text-[10px] text-neutral-600 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 disabled:opacity-40"
+                      title="Dismiss from silent list"
+                    >
+                      <X className="h-3 w-3" />
+                      Dismiss
+                    </button>
                   </div>
                 </li>
               ))}
