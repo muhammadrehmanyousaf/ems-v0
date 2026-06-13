@@ -31,6 +31,8 @@ interface OfflineBookingDialogProps {
     open: boolean;
     onOpenChange: (v: boolean) => void;
     onSuccess: () => void;
+    /** Issue #45 — prefill date when opened from a calendar cell click. */
+    initialDate?: Date;
 }
 
 const TIME_SLOTS = [
@@ -159,7 +161,7 @@ function PackageOption({ pkg }: { pkg: ApiPackage }) {
     );
 }
 
-export function OfflineBookingDialog({ open, onOpenChange, onSuccess }: OfflineBookingDialogProps) {
+export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDate }: OfflineBookingDialogProps) {
     // Customer fields
     const [customerName, setCustomerName] = useState('');
     const [customerEmail, setCustomerEmail] = useState('');
@@ -168,6 +170,18 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess }: OfflineB
     // Event / service fields
     const [bookingDate, setBookingDate] = useState<Date | undefined>();
     const [bookingTime, setBookingTime] = useState('');
+
+    // Issue #45 — when opened from a calendar-cell click, prefill the
+    // date so the vendor lands one decision shorter. Only fires when
+    // the dialog transitions to open AND no date has been set yet, so
+    // a vendor who picked a date in the picker doesn't lose it on a
+    // parent re-render.
+    useEffect(() => {
+        if (open && initialDate && !bookingDate) {
+            setBookingDate(initialDate);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, initialDate]);
     const [guestCount, setGuestCount] = useState('');
     const [quantity, setQuantity] = useState(1);
 

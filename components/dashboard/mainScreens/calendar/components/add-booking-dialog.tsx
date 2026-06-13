@@ -66,6 +66,8 @@ type AddBookingDialogProps = {
     selectedEvents: CalendarEvent[]; // events on the chosen day
     /** Mapping of event.id -> booking detail */
     bookingDetails: Record<string, BookingDetail>;
+    /** Issue #45 — fire when vendor clicks "Add booking for this date". */
+    onAddNewBooking?: () => void;
 };
 
 /** Helpers */
@@ -159,6 +161,7 @@ export default function AddBookingDialog({
     setOpen,
     selectedEvents,
     bookingDetails,
+    onAddNewBooking,
 }: AddBookingDialogProps) {
     return (
         <Dialog onOpenChange={setOpen} open={open}>
@@ -174,6 +177,22 @@ export default function AddBookingDialog({
                 </DialogHeader>
 
                 <Separator />
+
+                {/* Issue #45 — Add booking shortcut. The calendar cell
+                    click already knows the date, so jumping straight
+                    into the offline-booking dialog with that date
+                    prefilled saves the vendor a click. */}
+                {onAddNewBooking && (
+                    <Button
+                        onClick={() => {
+                            setOpen(false);
+                            onAddNewBooking();
+                        }}
+                        className="w-full justify-center bg-bridal-gold/15 text-bridal-charcoal border border-bridal-gold/40 hover:bg-bridal-gold/25"
+                    >
+                        + Add booking for this date
+                    </Button>
+                )}
 
                 {/* List of bookings with individual popovers */}
                 <div className="space-y-2 flex-grow">

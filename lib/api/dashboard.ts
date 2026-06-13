@@ -921,7 +921,9 @@ export interface CreateBookingVendor {
 
 export interface CreateBookingPayload {
   customerName: string;
-  customerEmail: string;
+  // Issue #12 — email is optional on BE now; treat as optional on the FE
+  // payload too so offline-booking dialogs can pass undefined when blank.
+  customerEmail?: string;
   customerPhone: string;
   bookingDate: string;
   bookingTime: string;

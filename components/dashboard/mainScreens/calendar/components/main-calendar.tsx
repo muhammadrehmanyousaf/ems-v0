@@ -9,6 +9,8 @@ import Toolbar from './toolbar';
 import { StaffAPI, type TeamCalendarShift } from '@/lib/api/staff';
 import { buildMonth, buildWeekRange, CalendarEvent, endOfDay, filterEvents, startOfDay, ymd } from '@/lib/utils';
 import AddBookingDialog, { BookingDetail } from './add-booking-dialog';
+// Issue #45 — "+ Add booking for this date" reuses the offline-booking dialog.
+import { OfflineBookingDialog } from '@/components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog';
 import axiosInstance from '@/lib/axiosConfig';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
@@ -33,6 +35,11 @@ export default function MainCalendar() {
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [bookingDetailsMap, setBookingDetailsMap] = useState<Record<string, BookingDetail>>({});
     const [loading, setLoading] = useState(true);
+
+    // Issue #45 — "Add booking for this date" flow. State for the
+    // offline-booking dialog + the date prefill captured on cell click.
+    const [offlineBookingOpen, setOfflineBookingOpen] = useState(false);
+    const [offlineBookingDate, setOfflineBookingDate] = useState<Date | undefined>();
 
     // Blocked dates state
     const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
@@ -406,6 +413,9 @@ export default function MainCalendar() {
     const onOpenCellDialog = (evts: CalendarEvent[] | [], date?: Date) => {
         setOpenAddBookeng(true);
         setSelectedEvents(evts);
+        // Issue #45 — remember the clicked date so "Add booking for
+        // this date" knows which Date to prefill the offline dialog with.
+        if (date) setOfflineBookingDate(date);
     };
 
     // When a date cell is right-clicked or long-pressed for blocking
@@ -532,6 +542,21 @@ export default function MainCalendar() {
                 setOpen={setOpenAddBookeng}
                 selectedEvents={selectedEvents}
                 bookingDetails={bookingDetailsMap}
+                onAddNewBooking={() => setOfflineBookingOpen(true)}
+            />
+
+            {/* Issue #45 — offline booking dialog mounted at calendar level
+                so the date captured on the cell click can be prefilled
+                via initialDate. fetchBookings refresh on success keeps
+                the calendar in sync. */}
+            <OfflineBookingDialog
+                open={offlineBookingOpen}
+                onOpenChange={setOfflineBookingOpen}
+                onSuccess={() => {
+                    setOfflineBookingOpen(false);
+                    fetchBookings();
+                }}
+                initialDate={offlineBookingDate}
             />
 
             <BlockDateDialog
