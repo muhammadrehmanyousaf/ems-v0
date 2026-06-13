@@ -148,11 +148,14 @@ function fmtRelative(iso: string | null | undefined): string {
 }
 
 // Forward-only happy path; back edges and terminal moves both surfaced.
+// Issue #13 — quoted → contacted now allowed (re-engagement use case);
+// qualified → new also allowed for parity with the BE state machine in
+// event-planner-api/src/utils/leadHelpers.js.
 const NEXT_STATUS: Record<LeadStatus, LeadStatus[]> = {
   new: ['contacted', 'qualified', 'lost', 'archived'],
   contacted: ['qualified', 'quoted', 'lost', 'archived'],
-  qualified: ['contacted', 'quoted', 'lost', 'archived'],
-  quoted: ['qualified', 'booked', 'lost', 'archived'],
+  qualified: ['new', 'contacted', 'quoted', 'lost', 'archived'],
+  quoted: ['contacted', 'qualified', 'booked', 'lost', 'archived'],
   booked: [],
   lost: [],
   archived: [],
