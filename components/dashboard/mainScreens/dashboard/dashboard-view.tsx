@@ -219,7 +219,13 @@ const VendorDashboardView = () => {
       {business?.id && (
         <CompletenessWidget
           businessId={business.id}
-          editHref="/dashboard/business"
+          // Issue #2 — was "/dashboard/business" which is the platform-
+          // wide businesses LISTING (super-admin view of every vendor on
+          // the platform). Vendors clicking "Edit profile" landed on a
+          // page they shouldn't see. /dashboard/settings is the per-vendor
+          // BusinessSettingsView with the basic-info / packages / team /
+          // bank-details / pricing tabs — i.e. the actual edit surface.
+          editHref="/dashboard/settings"
         />
       )}
       {/* Cross-feature operations summary — Phase 1/2/3 widget grid */}
