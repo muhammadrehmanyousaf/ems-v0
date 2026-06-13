@@ -92,6 +92,9 @@ import {
   type TimelineEventKind,
   type TodayEvent,
 } from '@/lib/api/bookingTimeline';
+// Issue #38 — assignee dropdown reads from vendor's team + "Me" sentinel.
+import { useUser } from '@/context/UserContext';
+import { useBusiness } from '@/context/BusinessContext';
 
 function fmtTime(s: string | null | undefined): string {
   if (!s) return '—';
@@ -143,6 +146,37 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
   const [assignedTo, setAssignedTo] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Issue #38 — assignee dropdown sourced from the vendor's team
+  // members + "Me" sentinel. Fetched when the dialog opens; cached
+  // for the lifetime of the dialog. Falls back to free-text when the
+  // vendor has no team members yet so single-operator setups still
+  // work.
+  const { user } = useUser();
+  const { business } = useBusiness();
+  const meName = user?.fullName?.trim() || 'Me';
+  const [teamMembers, setTeamMembers] = useState<
+    Array<{ id: number; name: string; role: string }>
+  >([]);
+  useEffect(() => {
+    if (!open || !business?.id) return;
+    let cancelled = false;
+    import('@/lib/api/teamMembers').then(({ TeamMembersAPI }) => {
+      TeamMembersAPI.list(Number(business.id))
+        .then((rows) => {
+          if (cancelled) return;
+          setTeamMembers(
+            (rows || [])
+              .filter((m) => m.isActive)
+              .map((m) => ({ id: m.id, name: m.name, role: m.role })),
+          );
+        })
+        .catch(() => {
+          /* silent — falls back to free-text input */
+        });
+    });
+    return () => { cancelled = true; };
+  }, [open, business?.id]);
 
   useEffect(() => {
     if (editing) {
@@ -257,13 +291,42 @@ const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="task-assignee">Assigned to</Label>
-              <Input
-                id="task-assignee"
-                value={assignedTo}
-                onChange={(e) => setAssignedTo(e.target.value)}
-                placeholder="e.g. lead photographer"
-                maxLength={120}
-              />
+              {/* Issue #38 — when the vendor has team members, render
+                  a Select with "Me" + each member. When no team is
+                  configured yet, fall back to the original free-text
+                  Input so solo vendors aren't blocked. */}
+              {teamMembers.length > 0 ? (
+                <Select
+                  value={assignedTo || '__unassigned__'}
+                  onValueChange={(v) =>
+                    setAssignedTo(v === '__unassigned__' ? '' : v)
+                  }
+                >
+                  <SelectTrigger id="task-assignee">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__unassigned__">— Unassigned —</SelectItem>
+                    <SelectItem value={meName}>
+                      Me ({meName})
+                    </SelectItem>
+                    {teamMembers.map((m) => (
+                      <SelectItem key={m.id} value={m.name}>
+                        {m.name}
+                        {m.role ? ` · ${m.role}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id="task-assignee"
+                  value={assignedTo}
+                  onChange={(e) => setAssignedTo(e.target.value)}
+                  placeholder="e.g. lead photographer"
+                  maxLength={120}
+                />
+              )}
             </div>
           </div>
           <div className="space-y-1.5">
