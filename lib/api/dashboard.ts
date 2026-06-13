@@ -921,6 +921,10 @@ export interface CreateBookingVendor {
   // by pricingService travel-surcharge logic (BK-069). Car rental's
   // travelPolicyJson on the business row drives the per-km math.
   travelDistanceKm?: number;
+  // Issue #23 / #34 — venue partition pin. BusinessResource id of the
+  // specific hall / lawn for this line. Triggers PARTITION_CONFLICT
+  // server-side if the hall is already booked on that date.
+  resourceId?: number;
   totalAmount: number;
   downPayment: number;
   specialRequests?: string | null;

@@ -25,6 +25,7 @@ import {
     PackagesAPI, MenusAPI, BookingsAPI,
     type ApiBusiness, type ApiPackage, type ApiMenu,
 } from '@/lib/api/dashboard';
+import { BusinessResourcesAPI, type BusinessResource } from '@/lib/api/businessResources';
 import { useBusiness } from '@/context/BusinessContext';
 
 interface OfflineBookingDialogProps {
@@ -285,6 +286,12 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
     const [pickupAddress, setPickupAddress] = useState('');
     const [dropoffAddress, setDropoffAddress] = useState('');
     const [travelDistanceKm, setTravelDistanceKm] = useState('');
+    // Issue #23 / #34 — venue partition picker. Only loaded + surfaced
+    // for Wedding venue businesses. selectedResourceId='' = "the venue
+    // as a whole" (legacy behaviour); a numeric id pins to a specific
+    // hall and triggers PARTITION_CONFLICT checking on the BE.
+    const [venueResources, setVenueResources] = useState<BusinessResource[]>([]);
+    const [selectedResourceId, setSelectedResourceId] = useState<string>('');
 
     // Service selection
     const [selectedBusinessId, setSelectedBusinessId] = useState('');
@@ -315,12 +322,39 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
             .finally(() => setLoadingOptions(false));
     }, [selectedBusinessId]);
 
+    // Issue #23 / #34 — fetch hall / lawn resources for venue businesses
+    // so the dialog can offer a partition picker. Resets when the
+    // business changes. Silent on failure: the picker just doesn't
+    // render, and the booking falls back to the legacy single-resource
+    // path.
+    useEffect(() => {
+        if (!selectedBusinessId) {
+            setVenueResources([]);
+            setSelectedResourceId('');
+            return;
+        }
+        setSelectedResourceId('');
+        let cancelled = false;
+        BusinessResourcesAPI.list(Number(selectedBusinessId))
+            .then((res) => {
+                if (cancelled) return;
+                setVenueResources(
+                    (res.resources || []).filter(
+                        (r) => r.isActive && r.kind === 'hall',
+                    ),
+                );
+            })
+            .catch(() => { /* silent */ });
+        return () => { cancelled = true; };
+    }, [selectedBusinessId]);
+
     const resetForm = useCallback(() => {
         setCustomerName(''); setCustomerEmail(''); setCustomerPhone('');
         setBookingDate(undefined); setBookingTime('');
         setGuestCount(''); setQuantity(1);
         setNumberOfDays(1);
         setPickupAddress(''); setDropoffAddress(''); setTravelDistanceKm('');
+        setSelectedResourceId(''); setVenueResources([]);
         setSelectedBusinessId(''); setSelectedPackageId(''); setSelectedMenuId('');
         setSpecialRequests('');
         setCarMode('package');
@@ -345,6 +379,10 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
     // that genuinely charge per day. Keeps the dialog uncluttered for
     // single-event vendors (henna, makeup, etc.).
     const showNumberOfDays = PER_DAY_TYPES.includes(vendorType);
+    // Issue #23 / #34 — only render the partition picker when the
+    // business is a Wedding venue AND has at least one configured hall.
+    const showResourcePicker =
+        vendorType === 'Wedding venue' && venueResources.length > 0;
 
     // For car rental: filter packages by mode
     const filteredPackages = isCarRental
@@ -469,6 +507,13 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                     travelDistanceKm:
                         isCarRental && travelDistanceKm && Number(travelDistanceKm) > 0
                             ? Number(travelDistanceKm)
+                            : undefined,
+                    // Issue #23 / #34 — venue partition pin. Sent only
+                    // when the vendor actually picked a hall; the BE
+                    // runs PARTITION_CONFLICT against this.
+                    resourceId:
+                        showResourcePicker && selectedResourceId
+                            ? Number(selectedResourceId)
                             : undefined,
                     totalAmount: 0,   // server overrides
                     downPayment: 0,   // server overrides
@@ -623,6 +668,46 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                                     </p>
                                 )}
                             </div>
+
+                            {/* Issue #23 / #34 — venue partition picker.
+                                Surfaces only for Wedding venue businesses
+                                that have configured halls/lawns in their
+                                settings. Empty value = "the venue as a
+                                whole" (legacy behaviour); a specific id
+                                pins to one hall and triggers PARTITION_
+                                CONFLICT checking on the BE. */}
+                            {showResourcePicker && (
+                                <div className="space-y-1.5">
+                                    <Label>Hall / Lawn</Label>
+                                    <Select
+                                        value={selectedResourceId}
+                                        onValueChange={setSelectedResourceId}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Whole venue (default)" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="">
+                                                Whole venue (default)
+                                            </SelectItem>
+                                            {venueResources.map((r) => (
+                                                <SelectItem key={r.id} value={String(r.id)}>
+                                                    {r.label}
+                                                    {r.capacityUnit
+                                                        ? ` · cap ${r.capacityUnit}`
+                                                        : ''}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-[11px] text-muted-foreground">
+                                        Pick a specific hall so another booking on
+                                        the same date for a different hall can still
+                                        go through. Leave on default to lock the
+                                        whole venue.
+                                    </p>
+                                </div>
+                            )}
 
                             {/* Car Rental mode toggle */}
                             {isCarRental && selectedBusinessId && (
