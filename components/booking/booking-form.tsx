@@ -483,6 +483,15 @@ export default function BookingForm() {
       payload.selectedBundledServices = currentForm.selectedBundledServices;
     }
 
+    // Issue #5 — car-rental pickup / dropoff addresses. Trimmed and
+    // omitted when blank so non-car-rental bookings are byte-identical.
+    if (currentForm.pickupAddress?.trim()) {
+      payload.pickupAddress = currentForm.pickupAddress.trim();
+    }
+    if (currentForm.dropoffAddress?.trim()) {
+      payload.dropoffAddress = currentForm.dropoffAddress.trim();
+    }
+
     try {
       setIsSubmitting(true)
       const response = await axiosInstance.post(`${BACKEND_URL}api/v1/bookings`, payload)

@@ -244,6 +244,13 @@ export interface BookingFormData {
   // (flat / per_plate × guestCount / percentage_of_total / free)
   // before snapshotting to Booking.selectedBundledServicesJson.
   selectedBundledServices?: Record<number, Array<{ serviceId: number }>>;
+
+  // Issue #5 — car-rental pickup / dropoff addresses. Only populated by
+  // the car-rental booking flow; non-car-rental bookings leave these
+  // undefined. Dynamic rent surcharge by distance is tracked separately
+  // (issue #35).
+  pickupAddress?: string;
+  dropoffAddress?: string;
 }
 
 export interface EventBooking {

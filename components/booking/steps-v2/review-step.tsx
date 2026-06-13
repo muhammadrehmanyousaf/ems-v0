@@ -320,6 +320,51 @@ export default function ReviewStep({
         </section>
       </div>
 
+      {/* Issue #5 — pickup / drop-off addresses for car rental bookings.
+          Two optional free-text fields; the dynamic rent surcharge by
+          distance is tracked separately (issue #35). */}
+      {isCarRental && updateFormData && (
+        <section className="rounded-md border border-bridal-beige bg-bridal-ivory overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-bridal-beige bg-bridal-cream/60">
+            <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark inline-flex items-center gap-1.5">
+              <MapPin className="w-3 h-3" />
+              Pickup &amp; Drop-off
+            </p>
+          </div>
+          <div className="px-4 py-3 space-y-3">
+            <div>
+              <label className="block font-bridal text-[10.5px] uppercase tracking-[0.18em] text-bridal-text-label mb-1">
+                Pickup address
+              </label>
+              <input
+                type="text"
+                value={formData.pickupAddress || ""}
+                onChange={(e) => updateFormData({ pickupAddress: e.target.value })}
+                placeholder="e.g. House 12, Street 4, DHA Phase 5, Lahore"
+                className="w-full rounded-md border border-bridal-beige bg-bridal-ivory px-3 py-2 text-[13px] focus:outline-none focus:border-bridal-gold"
+                maxLength={500}
+              />
+            </div>
+            <div>
+              <label className="block font-bridal text-[10.5px] uppercase tracking-[0.18em] text-bridal-text-label mb-1">
+                Drop-off address
+              </label>
+              <input
+                type="text"
+                value={formData.dropoffAddress || ""}
+                onChange={(e) => updateFormData({ dropoffAddress: e.target.value })}
+                placeholder="e.g. Wedding venue address, or 'same as pickup'"
+                className="w-full rounded-md border border-bridal-beige bg-bridal-ivory px-3 py-2 text-[13px] focus:outline-none focus:border-bridal-gold"
+                maxLength={500}
+              />
+            </div>
+            <p className="text-[11px] text-bridal-text-soft">
+              Both optional. Leave drop-off blank if it&apos;s the same as pickup.
+            </p>
+          </div>
+        </section>
+      )}
+
       {/* BK-100.52 Layer 2c — bundled add-on picker. Surfaces this
            vendor's optional in-house services (catering upgrades,
            valet, generator backup, etc.) so the customer can stack
