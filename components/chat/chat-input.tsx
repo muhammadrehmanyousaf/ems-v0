@@ -69,7 +69,13 @@ export function ChatInput() {
             : "border-gray-200 dark:border-gray-800"
         )}
       >
-        {/* Action buttons */}
+        {/* Issue #21 — Attach + Image buttons were rendered with no
+            onClick handler and no backend support for message attachments.
+            Vendors clicked them, nothing happened, they reported the
+            module as broken. Hidden until the upload endpoint ships;
+            the icons stay imported so the wire-up is one-edit when
+            the BE catches up. */}
+        {/*
         <div className="flex items-center gap-0.5 pb-0.5">
           <button
             type="button"
@@ -86,6 +92,7 @@ export function ChatInput() {
             <Image className="h-4.5 w-4.5" />
           </button>
         </div>
+        */}
 
         {/* Textarea */}
         <textarea
