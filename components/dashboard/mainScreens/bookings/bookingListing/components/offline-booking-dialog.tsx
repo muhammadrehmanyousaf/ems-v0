@@ -45,6 +45,17 @@ const TIME_SLOTS = [
 const GUEST_COUNT_TYPES = ['Wedding venue', 'Catering', 'Decorator'];
 const MENU_TYPES = ['Catering'];
 const QUANTITY_TYPES = ['Car rental', 'Bridal wearing', 'Wedding Invitations and Stationery'];
+// Issue #47 — vendor types where multi-day pricing is the norm.
+// Photographer + Videographer often charge per event-day (mehndi vs
+// barat vs walima). Car rental obviously per-day. Decorator can span
+// multi-day setups. Showing the input for everything else would
+// confuse vendors who price by event, not by day.
+const PER_DAY_TYPES = [
+  'Car rental',
+  'Photographer',
+  'Videographer',
+  'Decorator',
+];
 
 // Car rental feature detectors (mirrors packages-tab logic)
 const isCarFleetFeatures = (f: unknown) =>
@@ -229,6 +240,9 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
     }, [open, initialDate]);
     const [guestCount, setGuestCount] = useState('');
     const [quantity, setQuantity] = useState(1);
+    // Issue #47 — per-day rate multiplier. Default 1 = single-day,
+    // matches the BE default so nothing changes for current bookings.
+    const [numberOfDays, setNumberOfDays] = useState(1);
 
     // Service selection
     const [selectedBusinessId, setSelectedBusinessId] = useState('');
@@ -263,6 +277,7 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
         setCustomerName(''); setCustomerEmail(''); setCustomerPhone('');
         setBookingDate(undefined); setBookingTime('');
         setGuestCount(''); setQuantity(1);
+        setNumberOfDays(1);
         setSelectedBusinessId(''); setSelectedPackageId(''); setSelectedMenuId('');
         setSpecialRequests('');
         setCarMode('package');
@@ -283,6 +298,10 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
     const isCarRental = vendorType === 'Car rental';
     const showQuantity = isCarRental ? carMode === 'single' : QUANTITY_TYPES.includes(vendorType);
     const qtyLabel = getQuantityLabel(vendorType);
+    // Issue #47 — only surface per-day rate input for vendor types
+    // that genuinely charge per day. Keeps the dialog uncluttered for
+    // single-event vendors (henna, makeup, etc.).
+    const showNumberOfDays = PER_DAY_TYPES.includes(vendorType);
 
     // For car rental: filter packages by mode
     const filteredPackages = isCarRental
@@ -331,20 +350,25 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
             items.push({ label: 'Base price', amount: Number(selectedBusiness.minimumPrice) });
         }
 
+        // Issue #47 — apply per-day multiplier BEFORE down-payment calc
+        // so a 10% deposit also scales with days (matches BE 77c1f6a).
         const subtotal = items.reduce((s, i) => s + i.amount, 0);
+        const days = showNumberOfDays ? Math.max(1, Math.min(31, numberOfDays || 1)) : 1;
+        const multipliedSubtotal = days > 1 ? subtotal * days : subtotal;
 
-        // Down payment
+        // Down payment (applied on the multiplied subtotal so the deposit
+        // ratio scales with the number of days).
         const dpType = (selectedBusiness.downPaymentType || '').toLowerCase();
         const dpValue = Number(selectedBusiness.downPayment) || 0;
         let downPayment = 0;
         if (dpType === 'percentage' || dpType === 'percent') {
-            downPayment = Math.round(subtotal * (dpValue / 100));
+            downPayment = Math.round(multipliedSubtotal * (dpValue / 100));
         } else {
             downPayment = dpValue;
         }
 
-        return { items, subtotal, downPayment };
-    }, [selectedBusiness, selectedPackageObj, selectedMenuObj, quantity, showQuantity, guestCount, showGuestCount]);
+        return { items, subtotal: multipliedSubtotal, downPayment, perItemSubtotal: subtotal, days };
+    }, [selectedBusiness, selectedPackageObj, selectedMenuObj, quantity, showQuantity, guestCount, showGuestCount, showNumberOfDays, numberOfDays]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -380,6 +404,13 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                     packageId: selectedPackageId ? Number(selectedPackageId) : null,
                     menuId: selectedMenuId ? Number(selectedMenuId) : null,
                     vehicleQuantity: showQuantity ? quantity : undefined,
+                    // Issue #47 — per-day rate multiplier. Omit when 1
+                    // so the BE applies its default (single-day) path
+                    // and the JSON payload size doesn't grow for the
+                    // 99% of bookings that don't need this.
+                    numberOfDays: showNumberOfDays && numberOfDays > 1
+                        ? numberOfDays
+                        : undefined,
                     totalAmount: 0,   // server overrides
                     downPayment: 0,   // server overrides
                     specialRequests: specialRequests.trim() || null,
@@ -637,6 +668,43 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                                     </div>
                                 </div>
                             )}
+                            {/* Issue #47 — per-day rate multiplier. Visible
+                                only for vendor types where multi-day pricing
+                                is the norm. Default 1 = single-day. */}
+                            {showNumberOfDays && (
+                                <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-2.5">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <span className="text-sm font-medium text-neutral-700">
+                                                Number of days
+                                            </span>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                Per-day rate × days. Use for multi-day
+                                                weddings (mehndi / barat / walima).
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => setNumberOfDays(d => Math.max(1, d - 1))}
+                                                disabled={numberOfDays <= 1}
+                                                className="w-7 h-7 rounded-full flex items-center justify-center border border-neutral-300 bg-white text-neutral-600 hover:bg-neutral-100 disabled:opacity-40"
+                                            >
+                                                <Minus className="h-3 w-3" />
+                                            </button>
+                                            <span className="w-8 text-center text-sm font-bold text-neutral-900">{numberOfDays}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setNumberOfDays(d => Math.min(31, d + 1))}
+                                                disabled={numberOfDays >= 31}
+                                                className="w-7 h-7 rounded-full flex items-center justify-center border border-neutral-300 bg-white text-neutral-600 hover:bg-neutral-100 disabled:opacity-40"
+                                            >
+                                                <Plus className="h-3 w-3" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -740,6 +808,19 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                                     <span className="font-medium text-neutral-800">{formatPKR(item.amount)}</span>
                                 </div>
                             ))}
+                            {/* Issue #47 — surface the per-day multiplier
+                                as its own line so the vendor sees how the
+                                total was reached. */}
+                            {priceBreakdown.days > 1 && (
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-neutral-600">
+                                        × {priceBreakdown.days} days
+                                    </span>
+                                    <span className="font-medium text-neutral-800">
+                                        {formatPKR(priceBreakdown.perItemSubtotal)} / day
+                                    </span>
+                                </div>
+                            )}
                             <div className="border-t border-neutral-200 pt-2 flex justify-between text-sm font-semibold">
                                 <span className="text-neutral-800">Total</span>
                                 <span className="text-bridal-gold-dark">{formatPKR(priceBreakdown.subtotal)}</span>

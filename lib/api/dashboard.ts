@@ -914,6 +914,9 @@ export interface CreateBookingVendor {
   packageId?: number | null;
   menuId?: number | null;
   vehicleQuantity?: number;
+  // Issue #47 — optional per-day rate multiplier. Defaults to 1 on the
+  // BE if omitted. Cap is 31 days.
+  numberOfDays?: number;
   totalAmount: number;
   downPayment: number;
   specialRequests?: string | null;
