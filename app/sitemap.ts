@@ -11,6 +11,7 @@ import { BACKEND_URL } from "@/lib/backend-url"
 import { CLUSTERS as BLOG_CLUSTERS, POSTS as BLOG_POSTS } from "@/lib/blog/posts"
 import { REAL_WEDDINGS } from "@/lib/real-weddings/recaps"
 import { GLOSSARY } from "@/lib/glossary/terms"
+import { CONTENT_PILLARS } from "@/lib/content/pillars"
 
 /**
  * Sitemap split into shards via Next.js `generateSitemaps`.
@@ -164,7 +165,16 @@ function buildCoreShard(): MetadataRoute.Sitemap {
     priority: 0.55,
   }))
 
-  return [...core, ...tools, ...vendorTypeHubs, ...cityHubs, ...legal, ...blog, ...realWeddings, ...compareTypes, ...glossary]
+  // Data-driven content pillars (informational guides). Reference:
+  // seo-strategy/SEO-MASTER-PLAN.md §6. Each is a typed PillarData object.
+  const contentPillars: MetadataRoute.Sitemap = CONTENT_PILLARS.map((p) => ({
+    url: `${SITE_URL}/${p.slug}`,
+    lastModified: now,
+    changeFrequency: "monthly" as const,
+    priority: 0.8,
+  }))
+
+  return [...core, ...tools, ...vendorTypeHubs, ...cityHubs, ...legal, ...blog, ...realWeddings, ...compareTypes, ...glossary, ...contentPillars]
 }
 
 // ─── Shard 1: programmatic (city × vendor-type grid) ────────────────────
