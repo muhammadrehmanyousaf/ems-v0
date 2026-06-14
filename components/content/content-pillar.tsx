@@ -126,11 +126,19 @@ function Section({ block }: { block: PillarSection }) {
               {block.label}
             </p>
           )}
-          <ul className="list-disc pl-5 space-y-1.5 font-bridal text-[14px] text-bridal-text">
-            {(block.items ?? []).map((it, i) => (
-              <li key={i}>{it}</li>
-            ))}
-          </ul>
+          {/* callouts may carry a `text` string, an `items` list, or both */}
+          {block.text && (
+            <p className="font-bridal text-[14px] text-bridal-text leading-relaxed">
+              {block.text}
+            </p>
+          )}
+          {block.items && block.items.length > 0 && (
+            <ul className="list-disc pl-5 space-y-1.5 font-bridal text-[14px] text-bridal-text mt-2">
+              {block.items.map((it, i) => (
+                <li key={i}>{it}</li>
+              ))}
+            </ul>
+          )}
         </div>
       )
     default:
@@ -161,7 +169,13 @@ export function ContentPillar({ data }: { data: PillarData }) {
       />
 
       <div className="container-responsive py-10 sm:py-14">
-        <Breadcrumbs items={data.breadcrumb} className="mb-6" />
+        {/* Breadcrumbs auto-prepends Home, so drop any Home the data carries. */}
+        <Breadcrumbs
+          items={data.breadcrumb.filter(
+            (b) => b.href !== "/" && b.name.toLowerCase() !== "home",
+          )}
+          className="mb-6"
+        />
 
         <header className="mb-8 max-w-3xl">
           <p className="font-bridal text-[10px] uppercase tracking-[0.32em] text-bridal-gold mb-3">
