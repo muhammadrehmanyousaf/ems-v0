@@ -255,6 +255,49 @@ export function FunctionSheetComposer({
     name: 'paymentSchedule',
   });
 
+  // Issue #17 — load the vendor's real bookings so the composer can
+  // offer a dropdown instead of the previous free-text "Booking #"
+  // input. Typing a stale or fictional id hit the BE's FK guard and
+  // surfaced the raw Postgres
+  // "violates foreign key constraint FunctionSheets_bookingId_fkey"
+  // toast. Fetched on dialog open + scoped via the standard vendor
+  // bookings endpoint; "(none)" sentinel lets the vendor save a
+  // sheet without a linked booking (standalone quote).
+  const [bookingOptions, setBookingOptions] = useState<
+    Array<{
+      id: number;
+      customerName: string | null;
+      bookingDate: string | null;
+    }>
+  >([]);
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    import('@/lib/axiosConfig').then(({ default: ax }) => {
+      ax.get('/api/v1/bookings', {
+        params: { page: 1, limit: 200, sortBy: 'createdAt', sortOrder: 'DESC' },
+      })
+        .then((res) => {
+          if (cancelled) return;
+          const raw = res.data?.data?.data ?? [];
+          setBookingOptions(
+            (Array.isArray(raw) ? raw : []).map((b: any) => ({
+              id: Number(b.id),
+              customerName: b.customerName ?? null,
+              bookingDate: b.bookingDate ?? null,
+            })),
+          );
+        })
+        .catch(() => {
+          /* silent — the dropdown stays "no bookings" and the
+             vendor can still save a standalone sheet. */
+        });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
   // Live totals computed every render (cheap).
   // Issue #18 — form.watch('lineItems') doesn't reliably re-fire on
   // nested-field edits (the per-row qty/unitPrice inputs at this
@@ -442,19 +485,53 @@ export function FunctionSheetComposer({
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {/* Issue #17 — dropdown of real bookings instead of
+                  a free-text id input. "(none)" sentinel maps to
+                  undefined so the BE treats it as a standalone
+                  sheet. */}
               <FormField
                 control={form.control}
                 name="bookingId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Booking #</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="Optional"
-                        {...field}
-                      />
-                    </FormControl>
+                    <FormLabel>Booking (optional)</FormLabel>
+                    <Select
+                      value={
+                        field.value != null && String(field.value) !== ''
+                          ? String(field.value)
+                          : '__none__'
+                      }
+                      onValueChange={(v) =>
+                        field.onChange(v === '__none__' ? undefined : Number(v))
+                      }
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue
+                            placeholder={
+                              bookingOptions.length === 0
+                                ? 'No bookings yet — leave blank'
+                                : 'Pick a booking'
+                            }
+                          />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="__none__">
+                          — No linked booking —
+                        </SelectItem>
+                        {bookingOptions.map((b) => (
+                          <SelectItem key={b.id} value={String(b.id)}>
+                            #{b.id}
+                            {b.customerName ? ` · ${b.customerName}` : ''}
+                            {b.bookingDate ? ` · ${b.bookingDate}` : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription className="text-[11px]">
+                      Link to a booking, or save as a standalone quote.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
