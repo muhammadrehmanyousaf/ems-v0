@@ -98,12 +98,59 @@ function isValidWaTarget(phone: string | null): boolean {
   return /^923\d{9}$/.test(normalized);
 }
 
+// Issue #19 follow-up — a number can pass the 923xxxxxxxxx mobile-format
+// check but still not be registered on WhatsApp; the FE can't know
+// without an API call. Store a per-vendor "I checked, this number is
+// not on WhatsApp" list in localStorage so the pill hides for that
+// phone going forward. Scoped by the digits-only normalised form so
+// formatting variations (spaces, dashes, leading 0) collapse.
+const NOT_ON_WA_KEY = 'ww:notOnWa:v1';
+
+function getNotOnWa(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = window.localStorage.getItem(NOT_ON_WA_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return new Set(Array.isArray(arr) ? arr.filter((x) => typeof x === 'string') : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function normaliseWa(phone: string | null): string {
+  const d = digitsOnly(phone);
+  return d.startsWith('0') ? '92' + d.slice(1) : d;
+}
+
+function markNotOnWa(phone: string | null): void {
+  if (typeof window === 'undefined') return;
+  const key = normaliseWa(phone);
+  if (!key) return;
+  const set = getNotOnWa();
+  set.add(key);
+  try {
+    window.localStorage.setItem(NOT_ON_WA_KEY, JSON.stringify(Array.from(set)));
+  } catch {
+    /* quota / disabled — silently ignore */
+  }
+}
+
 export function ReviewAutomationStatsCard() {
   const [data, setData] = useState<AutomationStats | null>(null);
   const [loading, setLoading] = useState(true);
   // Issue #20 — busy state per booking id so multiple dismiss
   // clicks don't trample each other while a request is in flight.
   const [dismissingId, setDismissingId] = useState<number | null>(null);
+  // Issue #19 follow-up — hydrate the per-vendor "not on WhatsApp"
+  // list once on mount so the WA pill / "Not on WA" action stay in
+  // sync as the vendor marks numbers.
+  const [notOnWa, setNotOnWa] = useState<Set<string>>(() => getNotOnWa());
+
+  const markNumberNotOnWa = (phone: string | null) => {
+    markNotOnWa(phone);
+    setNotOnWa(getNotOnWa());
+  };
 
   const load = () => {
     setLoading(true);
@@ -244,19 +291,43 @@ export function ReviewAutomationStatsCard() {
                     )}
                     {/* Issue #19 — only render the WhatsApp pill when the
                         number is a valid Pakistani mobile (12 digits,
-                        starts 923). Avoids the dead-redirect to
-                        "this number is not on WhatsApp". */}
-                    {s.customerPhone && isValidWaTarget(s.customerPhone) && (
-                      <a
-                        href={waLink(s.customerPhone, s.customerName)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-800 px-2 py-1 text-[10px] hover:bg-emerald-100"
-                        title="WhatsApp"
-                      >
-                        <MessageCircle className="h-3 w-3" />
-                        WhatsApp
-                      </a>
+                        starts 923) AND the vendor hasn't already
+                        confirmed it's not on WhatsApp (localStorage
+                        flag below). The first check filters out the
+                        landlines and typos before the click; the
+                        second one filters out the well-formatted-but-
+                        not-actually-on-WA numbers the vendor
+                        discovered the hard way and marked. */}
+                    {s.customerPhone &&
+                      isValidWaTarget(s.customerPhone) &&
+                      !notOnWa.has(normaliseWa(s.customerPhone)) && (
+                      <>
+                        <a
+                          href={waLink(s.customerPhone, s.customerName)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-800 px-2 py-1 text-[10px] hover:bg-emerald-100"
+                          title="WhatsApp"
+                        >
+                          <MessageCircle className="h-3 w-3" />
+                          WhatsApp
+                        </a>
+                        {/* Issue #19 follow-up — vendor-controlled
+                            "this number is not on WhatsApp" toggle.
+                            Persists per-vendor in localStorage so
+                            the pill stays hidden across refreshes
+                            and across other silent customers who
+                            happen to share that phone. */}
+                        <button
+                          type="button"
+                          onClick={() => markNumberNotOnWa(s.customerPhone)}
+                          className="inline-flex items-center gap-1 rounded-full border border-neutral-200 px-1.5 py-1 text-[10px] text-neutral-500 hover:bg-neutral-100"
+                          title="Mark this number as not on WhatsApp"
+                          aria-label="Not on WhatsApp"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </>
                     )}
                     {/* Issue #20 — vendor-controlled dismiss. Removes
                         this booking from the silent pool when the
