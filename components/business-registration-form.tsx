@@ -123,6 +123,15 @@ export function BusinessRegistrationForm() {
   console.log("Business type:", businessType);
 
   const [file, setFile] = useState<File | null>(null);
+  // Issue #6 — track which businessType the parent-owned `file` (brand
+  // logo) was uploaded under. When the vendor switches type (e.g.
+  // started a Car Rental registration and then went back to choose
+  // Bridal Wear, or hit "Resume" on a stale draft for a different
+  // category), the previously-uploaded logo would otherwise stay
+  // sitting in `file` state and display as the new category's brand
+  // logo. Use this ref + the effect below to clear it the moment the
+  // category changes to a different one.
+  const fileBusinessTypeRef = useRef<string | null>(null);
   const [openModal, setOpenModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   // T&C acceptance — explicit consent gate on the final step. Submit is
@@ -170,6 +179,27 @@ export function BusinessRegistrationForm() {
   useEffect(() => { currentStepRef.current = currentStep; }, [currentStep]);
   useEffect(() => { businessTypeRef.current = businessType; }, [businessType]);
   useEffect(() => { openModalRef.current = openModal; }, [openModal]);
+
+  // Issue #6 — clear the brand-logo file whenever the user switches
+  // vendor category. This catches the "Resumed a Car Rental draft on
+  // a Bridal Wear session" leak (the brand logo would otherwise stay
+  // in `file` state and show up under the new category) AND the
+  // simpler "went back, picked a different category" case. Only fires
+  // when the type ACTUALLY changes to something different from when
+  // the file was set — leaving a file under the same category alone.
+  useEffect(() => {
+    const current = businessType ? String(businessType) : null;
+    if (!current) return;
+    const owner = fileBusinessTypeRef.current;
+    if (owner != null && owner !== current && file) {
+      setFile(null);
+      // Drop the in-form preview URL too so the upload tile reverts
+      // to its empty state.
+      setFormData((prev) => ({ ...prev, profilePicture: "", profileImageFile: null }));
+    }
+    fileBusinessTypeRef.current = current;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessType]);
 
   // Persist image binaries to IndexedDB so a refresh doesn't wipe a 10 MB
   // shop photo. Stash the id-map in a ref AND immediately schedule a draft
