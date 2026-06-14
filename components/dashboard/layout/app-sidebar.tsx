@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/sidebar"
 import { data } from "./nav-data"
 import { useUser } from "@/context/UserContext"
+import { useBusiness } from "@/context/BusinessContext"
 import {
   getVendorTypeConfig,
   DEFAULT_VENDOR_CONFIG,
@@ -48,8 +49,19 @@ const ROLE_LABEL: Record<DashboardRole, string> = {
 // Items inside `adminPlatform` that are super-admin only.
 const SUPER_ONLY_PLATFORM = new Set(["Audit logs", "Roles", "Users"])
 
-function buildVendorSections(user: ReturnType<typeof useUser>["user"]): NavSection[] {
-  const vendorConfig = getVendorTypeConfig(user?.vendorType)
+function buildVendorSections(
+  user: ReturnType<typeof useUser>["user"],
+  // Issue #32 — the active business's vendor type drives the nav
+  // craft-labels and settings tabs, not the user's vendorType. Both
+  // CAN drift (admin viewing another vendor's business, multi-
+  // business owners) and the silent fallback to DEFAULT_VENDOR_CONFIG
+  // / photographer-flavoured copy was the visible "I'm a makeup
+  // artist but my sidebar says Shoots" bug. Falls back to the user's
+  // vendorType when the business object hasn't loaded yet.
+  businessVendorType: string | null | undefined,
+): NavSection[] {
+  const vendorType = businessVendorType ?? user?.vendorType
+  const vendorConfig = getVendorTypeConfig(vendorType)
   const allowedMain = vendorConfig?.mainNavItems ?? DEFAULT_VENDOR_CONFIG.mainNavItems
   // §19.4 type-conditional Operations tools (only for types that define them).
   const extra = vendorConfig?.extraNavItems ?? []
@@ -83,7 +95,7 @@ function buildVendorSections(user: ReturnType<typeof useUser>["user"]): NavSecti
     .filter((i): i is NonNullable<typeof i> => Boolean(i))
 
   const settingsTabs = vendorConfig?.settingsTabs ?? DEFAULT_VENDOR_CONFIG.settingsTabs
-  const isStationery = user?.vendorType === "Wedding Invitations and Stationery"
+  const isStationery = vendorType === "Wedding Invitations and Stationery"
   const settingsSubItems: SettingsSubItem[] = settingsTabs.map((tabKey) => ({
     id: tabKey,
     label:
@@ -167,10 +179,15 @@ function buildAdminSections(role: DashboardRole): NavSection[] {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useUser()
   const role = getDashboardRole(user)
+  // Issue #32 — pass the active business's vendorType through so the
+  // nav reflects the actual business being managed, not the logged-in
+  // user's stale type.
+  const { business } = useBusiness()
+  const businessVendorType = business?.vendor?.vendorType
 
   const sections: NavSection[] = isAdminLike(role)
     ? buildAdminSections(role)
-    : buildVendorSections(user)
+    : buildVendorSections(user, businessVendorType)
 
   return (
     <Sidebar collapsible="icon" {...props}>

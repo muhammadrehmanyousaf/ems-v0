@@ -30,7 +30,16 @@ const MainView = () => {
     const active = searchParams?.get('tab') || 'overview';
     const { user } = useUser();
     const { business, loading, refreshBusiness } = useBusiness();
-    const vendorConfig = getVendorTypeConfig(user?.vendorType);
+    // Issue #32 — drive the settings tabs + per-type fields from the
+    // ACTUAL BUSINESS's vendor type, not the logged-in user's. The
+    // shape allows them to drift (admins viewing other vendors,
+    // pre-flight users with a stale user.vendorType, multi-business
+    // owners), and we were silently falling through to the
+    // photographer default. Falls back to user.vendorType when the
+    // business object hasn't loaded yet so the first paint isn't
+    // empty.
+    const businessVendorType = business?.vendor?.vendorType ?? user?.vendorType;
+    const vendorConfig = getVendorTypeConfig(businessVendorType);
 
     const onSuccess = () => refreshBusiness(true);
 
@@ -79,7 +88,7 @@ const MainView = () => {
                 {active === 'team' && <TeamMembersTab />}
                 {active === 'availability' && (
                     <>
-                        {VENUE_COMPLIANCE_ENABLED && user?.vendorType === 'Wedding venue' && (
+                        {VENUE_COMPLIANCE_ENABLED && businessVendorType === 'Wedding venue' && (
                             <VenueComplianceCard />
                         )}
                         <AvailabilityTab />
