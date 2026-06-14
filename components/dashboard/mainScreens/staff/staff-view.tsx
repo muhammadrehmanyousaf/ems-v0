@@ -121,6 +121,20 @@ import {
   type CreateShiftInput,
 } from '@/lib/api/staff';
 
+// Issue #37 — phone fields on the staff/team form were plain
+// <Input> tags with no input-mode and no character filter, so a
+// vendor could type letters into a "phone number" field and the
+// row would save (until the BE rejected it on a later mutation,
+// far from where the typo happened). All phone variants
+// (primary, WhatsApp, JazzCash, Easypaisa, emergency contact)
+// share this constraint: digits + the formatting characters a
+// vendor would naturally use to read out a Pakistani mobile
+// number (+, -, space). Anything else is stripped before it
+// hits form state.
+function filterPhoneInput(value: string): string {
+  return value.replace(/[^0-9+\-\s]/g, '');
+}
+
 function fmtPKR(n: number | string | null | undefined): string {
   const x = Number(n);
   if (!Number.isFinite(x)) return '—';
@@ -848,7 +862,13 @@ function MemberDialog({
                   <FormItem>
                     <FormLabel>Phone</FormLabel>
                     <FormControl>
-                      <Input placeholder="0300-1234567" {...field} />
+                      <Input
+                        type="tel"
+                        inputMode="tel"
+                        placeholder="0300-1234567"
+                        {...field}
+                        onChange={(e) => field.onChange(filterPhoneInput(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -861,7 +881,13 @@ function MemberDialog({
                   <FormItem>
                     <FormLabel>WhatsApp</FormLabel>
                     <FormControl>
-                      <Input placeholder="+92 300 1234567" {...field} />
+                      <Input
+                        type="tel"
+                        inputMode="tel"
+                        placeholder="+92 300 1234567"
+                        {...field}
+                        onChange={(e) => field.onChange(filterPhoneInput(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -919,7 +945,13 @@ function MemberDialog({
                   <FormItem>
                     <FormLabel>JazzCash number</FormLabel>
                     <FormControl>
-                      <Input placeholder="0300-1234567" {...field} />
+                      <Input
+                        type="tel"
+                        inputMode="tel"
+                        placeholder="0300-1234567"
+                        {...field}
+                        onChange={(e) => field.onChange(filterPhoneInput(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -935,7 +967,13 @@ function MemberDialog({
                   <FormItem>
                     <FormLabel>Easypaisa number</FormLabel>
                     <FormControl>
-                      <Input placeholder="0345-1234567" {...field} />
+                      <Input
+                        type="tel"
+                        inputMode="tel"
+                        placeholder="0345-1234567"
+                        {...field}
+                        onChange={(e) => field.onChange(filterPhoneInput(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -995,7 +1033,13 @@ function MemberDialog({
                   <FormItem>
                     <FormLabel>Emergency contact phone</FormLabel>
                     <FormControl>
-                      <Input placeholder="0321-1234567" {...field} />
+                      <Input
+                        type="tel"
+                        inputMode="tel"
+                        placeholder="0321-1234567"
+                        {...field}
+                        onChange={(e) => field.onChange(filterPhoneInput(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
