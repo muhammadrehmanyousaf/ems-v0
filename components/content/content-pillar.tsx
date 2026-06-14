@@ -168,7 +168,7 @@ export function ContentPillar({ data }: { data: PillarData }) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
       />
 
-      <div className="container-responsive py-10 sm:py-14">
+      <div className="container-responsive max-w-5xl [&>*]:mx-auto py-10 sm:py-14">
         {/* Breadcrumbs auto-prepends Home, so drop any Home the data carries. */}
         <Breadcrumbs
           items={data.breadcrumb.filter(

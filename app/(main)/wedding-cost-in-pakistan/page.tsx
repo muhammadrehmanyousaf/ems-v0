@@ -221,7 +221,7 @@ export default function WeddingCostPakistanPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
       />
 
-      <div className="container-responsive py-10 sm:py-14">
+      <div className="container-responsive max-w-5xl [&>*]:mx-auto py-10 sm:py-14">
         <Breadcrumbs
           items={[
             { name: "Planning Tools", href: "/planning-tools" },
