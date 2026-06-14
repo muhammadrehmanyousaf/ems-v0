@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { motion, useInView } from "framer-motion"
 import Link from "next/link"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
@@ -90,7 +90,21 @@ export default function VendorCard({
   })()
   const [openAlert, setOpenAlert] = useState(false)
   const router = useRouter()
-  
+
+  // Issue #61 — "bootstrap" the card visual when the vendor's image
+  // URL is missing or 404s. Without this, Next/Image failures left the
+  // card showing raw alt-text ("Shad bagh Photography", "Demo
+  // Photography Studio", …) instead of an image, which is what the
+  // bug report screenshotted as broken cards on the customer-side
+  // listing. Swap to the placeholder on load failure and reset the
+  // flag whenever the parent passes in a new image src.
+  const initialSrc = getFirstImage(Array.isArray(image) ? image : [image])
+  const [imgSrc, setImgSrc] = useState<string>(initialSrc)
+  useEffect(() => {
+    setImgSrc(initialSrc)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [image])
+
   // Use the simple favorites hook
   const { isFavorited, toggleFavorite, isLoading } = useFavorites()
 
@@ -109,7 +123,6 @@ export default function VendorCard({
       const typeMap: { [key: string]: string } = {
         'Photographer': 'photographers',
         'Decorator': 'decor',
-        'Henna artist': 'henna-artists',
         'Henna artist': 'henna-artists',
         'Makeup artist': 'makeup-artists',
         'Wedding venue': 'venues',
@@ -254,13 +267,21 @@ export default function VendorCard({
               `}
             >
               {/* ── Image Section ── */}
-              <div className="relative aspect-[4/3] overflow-hidden">
+              <div className="relative aspect-[4/3] overflow-hidden bg-bridal-cream">
                 <Image
-                  src={getFirstImage(Array.isArray(image) ? image : [image])}
+                  src={imgSrc}
                   alt={name}
                   fill
                   className="object-cover transition-all duration-[2000ms] ease-out group-hover:scale-110"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  onError={() => {
+                    // Issue #61 — listing came back with a stale /
+                    // moved / private image URL. Fall back so the card
+                    // doesn't render raw alt-text inside the image box.
+                    if (imgSrc !== '/placeholder.svg') {
+                      setImgSrc('/placeholder.svg')
+                    }
+                  }}
                 />
 
                 {/* Bridal hover veil — gold/charcoal/blush instead of purple */}
