@@ -288,6 +288,7 @@ export function Footer() {
                 {[
                   { href: "/how-it-works",    name: "How it works" },
                   { href: "/planning-tools",  name: "Planning tools" },
+                  { href: "/wedding-guides",  name: "Wedding guides" },
                   { href: "/cities",          name: "Browse by city" },
                   { href: "/real-weddings",   name: "Real weddings" },
                   { href: "/blog",            name: "Wedding blog" },

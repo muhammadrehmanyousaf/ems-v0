@@ -12,6 +12,11 @@ import { CLUSTERS as BLOG_CLUSTERS, POSTS as BLOG_POSTS } from "@/lib/blog/posts
 import { REAL_WEDDINGS } from "@/lib/real-weddings/recaps"
 import { GLOSSARY } from "@/lib/glossary/terms"
 import { CONTENT_PILLARS } from "@/lib/content/pillars"
+import {
+  LISTICLE_PAGES_ENABLED,
+  MIN_VENDORS_FOR_LISTICLE,
+  buildListicleSlug,
+} from "@/lib/seo/listicle"
 
 /**
  * Single combined sitemap served at /sitemap.xml.
@@ -60,6 +65,8 @@ function buildCoreShard(): MetadataRoute.Sitemap {
     // Compare + glossary indexes
     { url: `${SITE_URL}/compare`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
     { url: `${SITE_URL}/glossary`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    // Content-guides hub — links to every content pillar.
+    { url: `${SITE_URL}/wedding-guides`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
   ]
 
   const tools: MetadataRoute.Sitemap = [
@@ -188,6 +195,9 @@ async function buildProgrammaticShard(): Promise<MetadataRoute.Sitemap> {
   // Built from the same /businesses feed we use for the vendor-shard, so the
   // build never hits the backend twice for the same data per cold render.
   const populated = new Set<string>()
+  // Per-combo vendor counts — drive which combos qualify for a "best of"
+  // listicle (need >= MIN_VENDORS_FOR_LISTICLE for a credible ranked list).
+  const counts = new Map<string, number>()
   try {
     const url = `${BACKEND_URL}api/v1/businesses?limit=2000`
     const res = await fetch(url, {
@@ -208,7 +218,9 @@ async function buildProgrammaticShard(): Promise<MetadataRoute.Sitemap> {
         if (!cityRaw) continue
         const citySlug = slugifyName(cityRaw)
         if (!CITIES.some((c) => c.slug === citySlug)) continue
-        populated.add(`${seoTypeSlug}|${citySlug}`)
+        const comboKey = `${seoTypeSlug}|${citySlug}`
+        populated.add(comboKey)
+        counts.set(comboKey, (counts.get(comboKey) ?? 0) + 1)
       }
     }
   } catch {
@@ -222,7 +234,7 @@ async function buildProgrammaticShard(): Promise<MetadataRoute.Sitemap> {
   // an empty one.
   const useInventory = populated.size > 0
 
-  return VENDOR_TYPES.flatMap((v) =>
+  const grid: MetadataRoute.Sitemap = VENDOR_TYPES.flatMap((v) =>
     CITIES.filter((city) =>
       useInventory ? populated.has(`${v.slug}|${city.slug}`) : true,
     ).map((city) => ({
@@ -232,6 +244,27 @@ async function buildProgrammaticShard(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     })),
   )
+
+  // "Best of" listicle URLs — only when the feature flag is enabled AND the
+  // combo has enough real vendors for a credible ranked list (matches the
+  // page's own MIN_VENDORS guard, so we never sitemap a 404). No-op while the
+  // flag is off; emits nothing on a failed backend fetch (counts then empty).
+  const listicles: MetadataRoute.Sitemap = LISTICLE_PAGES_ENABLED
+    ? VENDOR_TYPES.flatMap((v) =>
+        CITIES.filter(
+          (city) =>
+            (counts.get(`${v.slug}|${city.slug}`) ?? 0) >=
+            MIN_VENDORS_FOR_LISTICLE,
+        ).map((city) => ({
+          url: `${SITE_URL}/best/${buildListicleSlug(v.slug, city.slug)}`,
+          lastModified: now,
+          changeFrequency: "monthly" as const,
+          priority: 0.75,
+        })),
+      )
+    : []
+
+  return [...grid, ...listicles]
 }
 
 // ─── Shard 2: vendors (dynamic, fetched from backend) ───────────────────
