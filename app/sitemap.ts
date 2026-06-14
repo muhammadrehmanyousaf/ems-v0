@@ -80,6 +80,9 @@ function buildCoreShard(): MetadataRoute.Sitemap {
 
   const tools: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/planning-tools`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    // Cost pillar — high-intent, link-magnet content hub that internal-links
+    // into the vendor × city pages. Reference: seo-strategy/SEO-MASTER-PLAN.md §6C.
+    { url: `${SITE_URL}/wedding-cost-in-pakistan`, lastModified: now, changeFrequency: "monthly", priority: 0.85 },
     { url: `${SITE_URL}/planning-tools/budget`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/planning-tools/checklist`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/planning-tools/guest-list`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
