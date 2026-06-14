@@ -26,6 +26,7 @@ import {
   combineGraph,
 } from "@/lib/seo"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
+import { WeddingBudgetEstimator } from "@/components/tools/wedding-budget-estimator"
 
 const PATH = "/wedding-cost-in-pakistan"
 const PUBLISHED = "2026-06-14"
@@ -367,6 +368,25 @@ export default function WeddingCostPakistanPage() {
             headers={["Item", "Estimated cost"]}
             rows={SAMPLE_LAHORE_MID.map((s) => [s.item, s.amount])}
           />
+
+          <h2
+            id="wedding-budget-calculator"
+            className="font-display italic text-[26px] text-bridal-charcoal mt-10 mb-3 scroll-mt-24"
+          >
+            Free wedding budget calculator (Pakistan)
+          </h2>
+          <p className="font-bridal text-[15px] text-bridal-text leading-relaxed mb-5">
+            Get an instant 2026 estimate for your own wedding. Set your guest
+            count, city, style and events, and watch the full PKR breakdown
+            update live — then refine it line by line in our{" "}
+            <Link href="/planning-tools/budget" className="text-bridal-gold hover:underline">
+              detailed budget planner
+            </Link>
+            .
+          </p>
+          <div className="mb-2">
+            <WeddingBudgetEstimator />
+          </div>
 
           <h2 className="font-display italic text-[26px] text-bridal-charcoal mt-10 mb-3">
             How to save money on your wedding (without it looking cheap)
