@@ -8,6 +8,11 @@ import {
 } from "@/lib/seo"
 import { slugifyName } from "@/lib/seo/fetch-vendor"
 import { BACKEND_URL } from "@/lib/backend-url"
+import {
+  LISTICLE_PAGES_ENABLED,
+  MIN_VENDORS_FOR_LISTICLE,
+  buildListicleSlug,
+} from "@/lib/seo/listicle"
 import { CLUSTERS as BLOG_CLUSTERS, POSTS as BLOG_POSTS } from "@/lib/blog/posts"
 import { REAL_WEDDINGS } from "@/lib/real-weddings/recaps"
 import { GLOSSARY } from "@/lib/glossary/terms"
@@ -189,6 +194,9 @@ async function buildProgrammaticShard(): Promise<MetadataRoute.Sitemap> {
   // Built from the same /businesses feed we use for the vendor-shard, so the
   // build never hits the backend twice for the same data per cold render.
   const populated = new Set<string>()
+  // Per-combo vendor counts — used to decide which combos qualify for a
+  // "best of" listicle (need >= MIN_VENDORS_FOR_LISTICLE).
+  const counts = new Map<string, number>()
   try {
     const url = `${BACKEND_URL}api/v1/businesses?limit=2000`
     const res = await fetch(url, {
@@ -209,7 +217,9 @@ async function buildProgrammaticShard(): Promise<MetadataRoute.Sitemap> {
         if (!cityRaw) continue
         const citySlug = slugifyName(cityRaw)
         if (!CITIES.some((c) => c.slug === citySlug)) continue
-        populated.add(`${seoTypeSlug}|${citySlug}`)
+        const comboKey = `${seoTypeSlug}|${citySlug}`
+        populated.add(comboKey)
+        counts.set(comboKey, (counts.get(comboKey) ?? 0) + 1)
       }
     }
   } catch {
@@ -223,7 +233,7 @@ async function buildProgrammaticShard(): Promise<MetadataRoute.Sitemap> {
   // an empty one.
   const useInventory = populated.size > 0
 
-  return VENDOR_TYPES.flatMap((v) =>
+  const grid: MetadataRoute.Sitemap = VENDOR_TYPES.flatMap((v) =>
     CITIES.filter((city) =>
       useInventory ? populated.has(`${v.slug}|${city.slug}`) : true,
     ).map((city) => ({
@@ -233,6 +243,27 @@ async function buildProgrammaticShard(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     })),
   )
+
+  // "Best of" listicle URLs — only when the feature is enabled AND the combo
+  // has enough real vendors for a credible ranked list. Gated by the same flag
+  // as the pages, so this stays a no-op until rollout (and emits nothing on a
+  // failed backend fetch, since `counts` is then empty).
+  const listicles: MetadataRoute.Sitemap = LISTICLE_PAGES_ENABLED
+    ? VENDOR_TYPES.flatMap((v) =>
+        CITIES.filter(
+          (city) =>
+            (counts.get(`${v.slug}|${city.slug}`) ?? 0) >=
+            MIN_VENDORS_FOR_LISTICLE,
+        ).map((city) => ({
+          url: `${SITE_URL}/best/${buildListicleSlug(v.slug, city.slug)}`,
+          lastModified: now,
+          changeFrequency: "monthly" as const,
+          priority: 0.75,
+        })),
+      )
+    : []
+
+  return [...grid, ...listicles]
 }
 
 // ─── Shard 2: vendors (dynamic, fetched from backend) ───────────────────
