@@ -80,7 +80,7 @@ export default function BlogPostPage({ params }: RouteProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
       />
 
-      <article className="container-responsive py-10 sm:py-14">
+      <article className="container-responsive max-w-5xl [&>*]:mx-auto py-10 sm:py-14">
         <Breadcrumbs
           items={[
             { name: "Blog", href: "/blog" },

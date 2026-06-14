@@ -76,7 +76,7 @@ export default function RealWeddingPage({ params }: RouteProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
       />
 
-      <article className="container-responsive py-8 sm:py-12">
+      <article className="container-responsive max-w-5xl [&>*]:mx-auto py-8 sm:py-12">
         <Breadcrumbs
           items={[
             { name: "Real weddings", href: "/real-weddings" },
