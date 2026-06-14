@@ -19,7 +19,7 @@
 
 import * as React from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
@@ -256,9 +256,19 @@ export function FunctionSheetComposer({
   });
 
   // Live totals computed every render (cheap).
-  const liveItems = form.watch('lineItems') || [];
-  const liveDiscount = Number(form.watch('discountAmount')) || 0;
-  const liveTax = Number(form.watch('taxAmount')) || 0;
+  // Issue #18 — form.watch('lineItems') doesn't reliably re-fire on
+  // nested-field edits (the per-row qty/unitPrice inputs at this
+  // path edit children, not the array reference). Subtotal silently
+  // stayed at 0 while the per-line "Rs. 18,000" updated fine because
+  // those bind directly to lineItems.${idx}.qty paths. useWatch
+  // forces a subscription to the array AND its nested fields so any
+  // edit re-runs the reduce below.
+  const liveItems =
+    useWatch({ control: form.control, name: 'lineItems' }) || [];
+  const liveDiscount =
+    Number(useWatch({ control: form.control, name: 'discountAmount' })) || 0;
+  const liveTax =
+    Number(useWatch({ control: form.control, name: 'taxAmount' })) || 0;
   const subtotal = useMemo(() => {
     return liveItems.reduce((sum: number, it: any) => {
       const qty = Number(it?.qty) || 0;
