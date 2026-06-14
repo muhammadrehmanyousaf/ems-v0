@@ -12,6 +12,7 @@ import { Inter, Playfair_Display, DM_Sans, Noto_Nastaliq_Urdu } from "next/font/
 // Phase 2 #8.9 — PWA shell.
 import { PwaRegister } from "@/components/pwa/pwa-register"
 import { PwaInstallPrompt } from "@/components/pwa/install-prompt"
+import { GoogleAnalytics } from "@/components/analytics/google-analytics"
 import {
   SITE_URL,
   SITE_NAME,
@@ -190,6 +191,7 @@ export default function RootLayout({
         className={`${inter.variable} ${playfair.variable} ${dmSans.variable} ${nastaliq.variable} font-sans`}
         suppressHydrationWarning
       >
+        <GoogleAnalytics />
         <QueryProvider>
           <UserProvider>
             <BusinessProvider>
