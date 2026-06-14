@@ -63,8 +63,16 @@ function buildVendorSections(
   const vendorType = businessVendorType ?? user?.vendorType
   const vendorConfig = getVendorTypeConfig(vendorType)
   const allowedMain = vendorConfig?.mainNavItems ?? DEFAULT_VENDOR_CONFIG.mainNavItems
-  // §19.4 type-conditional Operations tools (only for types that define them).
-  const extra = vendorConfig?.extraNavItems ?? []
+  // §19.4 type-conditional Operations tools.
+  // Issue #33 — fall back to DEFAULT_VENDOR_CONFIG.extraNavItems for
+  // vendor types that don't have an explicit entry in
+  // VENDOR_TYPE_CONFIGS (the 14 BK-100.55 categories). Before the
+  // fallback, new vendor types had `extra = []`, so the "Staff &
+  // payroll" surface — the team-user management screen — never
+  // showed in their sidebar. Old vendors with explicit configs are
+  // unaffected; their own extraNavItems still wins.
+  const extra =
+    vendorConfig?.extraNavItems ?? DEFAULT_VENDOR_CONFIG.extraNavItems ?? []
   const allowedKeys = new Set<NavItemKey>([...allowedMain, ...extra])
 
   const navLabels = vendorConfig?.navLabels

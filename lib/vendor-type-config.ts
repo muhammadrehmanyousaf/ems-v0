@@ -437,6 +437,23 @@ export function getVendorTypeConfig(
   return VENDOR_TYPE_CONFIGS[vendorType] ?? null;
 }
 
+// Issue #33 — the 14 BK-100.55 vendor categories (Marquee rental,
+// Mithai and sweets, Wedding cakes, Florist, Generator rental,
+// Furniture rental, Sound system rental, Choreographer, Dhol player,
+// Event host, Live streaming, Live cooking stall, Nikahkhwan, Qawwali
+// and Naat) don't have explicit entries in VENDOR_TYPE_CONFIGS, so
+// they all read this default. Before this change the default had no
+// extraNavItems, so the Operations group — and crucially the
+// "Staff & payroll" surface vendors use to manage their team users —
+// never rendered in their sidebar. Result: old vendors could create
+// staff/users; new vendors couldn't reach the screen at all.
+//
+// Add the universally-useful Operations entries here:
+//   Staff & payroll  — team / users management (the bug report)
+//   Inventory        — most BK-100.55 categories are rental-heavy
+// Per-type overrides in VENDOR_TYPE_CONFIGS continue to win for the
+// original 9 categories (where these are already declared with
+// craft-localised labels like "Drivers" / "Gear / Equipment").
 export const DEFAULT_VENDOR_CONFIG = {
   mainNavItems: COMMON_MAIN_NAV,
   controlNavItems: VENDOR_CONTROLS,
@@ -445,4 +462,5 @@ export const DEFAULT_VENDOR_CONFIG = {
   hasMenus: false,
   pricingLabel: "per event",
   typeSpecificFields: [] as TypeSpecificFieldDef[],
+  extraNavItems: ["Staff & payroll", "Inventory"] as NavItemKey[],
 };
