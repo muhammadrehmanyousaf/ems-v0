@@ -32,6 +32,7 @@ import {
   getVendorTypeQuestions,
   getVendorTypeGuidePillar,
 } from "@/lib/seo/pricing-guide"
+import { getVendorTypeRelatedGuides } from "@/lib/seo/related-guides"
 
 export function generateVendorTypeCityStaticParams() {
   return CITIES.map((c) => ({ city: c.slug }))
@@ -93,6 +94,7 @@ export async function VendorTypeCityPage({
   const pricing = getVendorTypePricing(vt.slug)
   const questions = getVendorTypeQuestions(vt.slug)
   const guidePillar = getVendorTypeGuidePillar(vt.slug)
+  const relatedGuides = getVendorTypeRelatedGuides(vt.slug)
 
   const url = `${SITE_URL}/${vt.slug}/${city.slug}`
   const priceRangeStr = formatPriceRange(vendors)
@@ -411,6 +413,26 @@ export async function VendorTypeCityPage({
             ))}
           </dl>
         </section>
+
+        {relatedGuides.length > 0 && (
+          <section className="mb-12">
+            <h2 className="font-display italic text-[24px] text-bridal-charcoal mb-5">
+              Helpful guides for your {vt.singular.toLowerCase()} search
+            </h2>
+            <ul className="flex flex-wrap gap-2">
+              {relatedGuides.map((g) => (
+                <li key={g.href}>
+                  <Link
+                    href={g.href}
+                    className="inline-block px-3 py-1.5 rounded-full border border-bridal-beige hover:border-bridal-gold font-bridal text-[13px] text-bridal-text-soft hover:text-bridal-charcoal transition-all"
+                  >
+                    {g.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-4">
           <div>
