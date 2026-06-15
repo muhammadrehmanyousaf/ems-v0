@@ -21,7 +21,21 @@ import {
   Music2,
   Pin,
 } from "lucide-react"
-import { getSocialProfiles, type SocialProfile } from "@/lib/seo"
+import { getSocialProfiles, type SocialProfile, VENDOR_TYPES, CITIES } from "@/lib/seo"
+
+// Curated high-value guides for the footer internal-link spine (the cost
+// guides + flagship planning/inspiration pillars). Keep ~8 — the rest are
+// reachable from /wedding-guides and the blog.
+const FOOTER_GUIDES: { href: string; name: string }[] = [
+  { href: "/wedding-cost-in-pakistan", name: "Wedding cost in Pakistan" },
+  { href: "/wedding-cost-in-lahore", name: "Wedding cost in Lahore" },
+  { href: "/pakistani-bridal-dress-guide", name: "Bridal dress guide" },
+  { href: "/bridal-mehndi-designs-guide", name: "Bridal mehndi designs" },
+  { href: "/wedding-decoration-ideas-pakistan", name: "Wedding decor ideas" },
+  { href: "/bridal-makeup-looks-guide-pakistan", name: "Bridal makeup looks" },
+  { href: "/how-to-plan-a-wedding-in-pakistan", name: "How to plan a wedding" },
+  { href: "/pakistani-wedding-checklist-and-timeline", name: "Wedding checklist & timeline" },
+]
 
 // Social-icon mapping — keep in sync with SocialProfile["key"].
 const SOCIAL_ICONS: Record<SocialProfile["key"], typeof Instagram> = {
@@ -441,6 +455,67 @@ export function Footer() {
               </ul>
             </StaggerItem>
           </StaggerContainer>
+        </div>
+
+        {/* ── Browse band: vendor categories · cities · guides (internal-link spine) ── */}
+        <div className="border-t border-bridal-beige/60">
+          <div className="container-responsive py-10 sm:py-12">
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-10">
+              <div>
+                <h4 className="font-bridal text-[10.5px] uppercase tracking-[0.22em] text-bridal-gold font-medium">
+                  Wedding Vendors
+                </h4>
+                <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2.5">
+                  {VENDOR_TYPES.map((vt) => (
+                    <li key={vt.slug}>
+                      <Link
+                        href={`/${vt.slug}`}
+                        className="font-bridal text-[13.5px] text-bridal-text hover:text-bridal-gold transition-colors duration-200"
+                      >
+                        {vt.plural}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="font-bridal text-[10.5px] uppercase tracking-[0.22em] text-bridal-gold font-medium">
+                  Popular Cities
+                </h4>
+                <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2.5">
+                  {CITIES.map((c) => (
+                    <li key={c.slug}>
+                      <Link
+                        href={`/cities/${c.slug}`}
+                        className="font-bridal text-[13.5px] text-bridal-text hover:text-bridal-gold transition-colors duration-200"
+                      >
+                        {c.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="font-bridal text-[10.5px] uppercase tracking-[0.22em] text-bridal-gold font-medium">
+                  Popular Guides
+                </h4>
+                <ul className="mt-4 grid grid-cols-1 gap-y-2.5">
+                  {FOOTER_GUIDES.map((g) => (
+                    <li key={g.href}>
+                      <Link
+                        href={g.href}
+                        className="font-bridal text-[13.5px] text-bridal-text hover:text-bridal-gold transition-colors duration-200"
+                      >
+                        {g.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* ── Floral divider before bottom bar ── */}
