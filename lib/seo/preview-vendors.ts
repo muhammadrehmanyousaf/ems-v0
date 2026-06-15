@@ -16,21 +16,25 @@ const LAHORE_PHOTOGRAPHERS: VendorListItem[] = [
   {
     id: "pv-1", name: "Lens & Loom Studios", city: "Lahore", rating: 4.9, reviewCount: 128,
     priceMin: 120000, vendorType: "Photographer", href: "#",
+    imageUrl: "/images/seo/v1.jpg",
     specialties: ["Cinematic film", "Candid", "Drone"], areaServed: "DHA & Gulberg",
   },
   {
     id: "pv-2", name: "Saaya Wedding Films", city: "Lahore", rating: 4.8, reviewCount: 94,
     priceMin: 150000, vendorType: "Photographer", href: "#",
+    imageUrl: "/images/seo/v3.jpg",
     specialties: ["Storytelling films", "Same-day edit"], areaServed: "Bahria Town",
   },
   {
     id: "pv-3", name: "Roshan Frames", city: "Lahore", rating: 4.7, reviewCount: 61,
     priceMin: 75000, vendorType: "Photographer", href: "#",
+    imageUrl: "/images/seo/v5.jpg",
     specialties: ["Traditional", "Candid", "Albums"], areaServed: "Johar Town",
   },
   {
     id: "pv-4", name: "The Baraat Company", city: "Lahore", rating: 4.9, reviewCount: 112,
     priceMin: 90000, vendorType: "Photographer", href: "#",
+    imageUrl: "/images/seo/v6.jpg",
     specialties: ["Multi-day", "Reels", "Couple shoot"], areaServed: "Model Town",
   },
   {

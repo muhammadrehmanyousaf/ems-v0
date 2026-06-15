@@ -39,6 +39,7 @@ import { getVendorTypeRelatedGuides } from "@/lib/seo/related-guides"
 import { getVendorTypeChecklist } from "@/lib/seo/things-to-check"
 import { getVendorTypeEventNotes } from "@/lib/seo/event-notes"
 import { getPreviewVendors } from "@/lib/seo/preview-vendors"
+import { getLocationImagery } from "@/lib/seo/location-imagery"
 import { PremiumVendorCard } from "@/components/seo/location/premium-vendor-card"
 
 const WHATSAPP_E164 = "923274811220"
@@ -206,6 +207,7 @@ export async function VendorTypeCityPage({
   const relatedGuides = getVendorTypeRelatedGuides(vt.slug)
   const checklist = getVendorTypeChecklist(vt.slug)
   const eventNotes = getVendorTypeEventNotes(vt.slug)
+  const imagery = getLocationImagery(vt.slug)
   const range = indicativeRange(pricing)
   const answerLead = buildAnswerLead(vt.plural, vt.singular, city.name, vt.slug, range)
   const waLink = `https://wa.me/${WHATSAPP_E164}?text=${encodeURIComponent(
@@ -299,45 +301,71 @@ export async function VendorTypeCityPage({
               { name: vt.plural, href: `/${vt.slug}` },
               { name: city.name, href: `/${vt.slug}/${city.slug}` },
             ]}
-            className="mb-7"
+            className="mb-8"
           />
-          <div className="max-w-3xl">
-            <span className="bridal-crown">
-              <span className="bridal-label">
-                {city.region} · Pakistan
+          <div
+            className={`grid items-center gap-10 ${
+              imagery.hero ? "lg:grid-cols-[1.04fr_0.96fr]" : ""
+            }`}
+          >
+            <div className={imagery.hero ? "" : "max-w-3xl"}>
+              <span className="bridal-crown">
+                <span className="bridal-label">{city.region} · Pakistan</span>
               </span>
-            </span>
-            <h1 className="mt-4 font-display text-[40px] leading-[1.04] text-bridal-charcoal sm:text-[52px] lg:text-[60px]">
-              {vt.plural} in{" "}
-              <span className="italic text-bridal-gold-dark">{city.name}</span>
-            </h1>
-            <p className="mt-5 max-w-2xl font-bridal text-[16px] leading-relaxed text-bridal-text sm:text-[17px]">
-              {answerLead}
-            </p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <a href="#vendors" className={BTN_PRIMARY}>
-                Browse {vt.plural.toLowerCase()}
-              </a>
-              <a href={waLink} target="_blank" rel="noopener noreferrer" className={BTN_SECONDARY}>
-                Get free quotes →
-              </a>
+              <h1 className="mt-4 font-display text-[40px] leading-[1.04] text-bridal-charcoal sm:text-[52px] lg:text-[58px]">
+                {vt.plural} in{" "}
+                <span className="italic text-bridal-gold-dark">{city.name}</span>
+              </h1>
+              <p className="mt-5 max-w-2xl font-bridal text-[16px] leading-relaxed text-bridal-text sm:text-[17px]">
+                {answerLead}
+              </p>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <a href="#vendors" className={BTN_PRIMARY}>
+                  Browse {vt.plural.toLowerCase()}
+                </a>
+                <a href={waLink} target="_blank" rel="noopener noreferrer" className={BTN_SECONDARY}>
+                  Get free quotes →
+                </a>
+              </div>
+              <ul className="mt-7 flex flex-wrap gap-x-5 gap-y-2">
+                {[
+                  "Verified vendors",
+                  "Transparent PKR pricing",
+                  "Refund-protected booking",
+                  "Real reviews only",
+                ].map((c) => (
+                  <li
+                    key={c}
+                    className="flex items-center gap-1.5 font-bridal text-[12.5px] text-bridal-text-soft"
+                  >
+                    <span className="text-bridal-gold-dark">✓</span>
+                    {c}
+                  </li>
+                ))}
+              </ul>
             </div>
-            <ul className="mt-7 flex flex-wrap gap-x-5 gap-y-2">
-              {[
-                "Verified vendors",
-                "Transparent PKR pricing",
-                "Refund-protected booking",
-                "Real reviews only",
-              ].map((c) => (
-                <li
-                  key={c}
-                  className="flex items-center gap-1.5 font-bridal text-[12.5px] text-bridal-text-soft"
-                >
-                  <span className="text-bridal-gold-dark">✓</span>
-                  {c}
-                </li>
-              ))}
-            </ul>
+
+            {imagery.hero && (
+              <div className="relative">
+                <div className="relative aspect-[4/5] overflow-hidden rounded-[28px] border border-bridal-gold/20 shadow-[0_34px_90px_-32px_rgba(176,125,84,0.55)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={imagery.hero}
+                    alt={imagery.heroAlt ?? `${vt.singular} in ${city.name}`}
+                    className="h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-bridal-charcoal/35 via-transparent to-transparent" />
+                </div>
+                <div className="absolute -bottom-5 left-4 hidden rounded-2xl border border-bridal-beige bg-bridal-ivory/95 px-4 py-3 shadow-[0_18px_40px_-18px_rgba(176,125,84,0.5)] backdrop-blur sm:block">
+                  <p className="font-bridal text-[9.5px] uppercase tracking-[0.18em] text-bridal-text-label">
+                    Real {city.name} weddings
+                  </p>
+                  <p className="font-display text-[17px] italic text-bridal-charcoal">
+                    600+ couples served
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -423,6 +451,34 @@ export async function VendorTypeCityPage({
             </div>
           </div>
         </section>
+
+        {/* ─────────── INSPIRATION GALLERY ─────────── */}
+        {imagery.gallery && imagery.gallery.length > 0 && (
+          <section className="mb-16">
+            <SectionHeading kicker="Inspiration" title={`A glimpse of ${city.name} weddings`} />
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              {imagery.gallery.map((g) => (
+                <div key={g.src} className="group relative overflow-hidden rounded-xl">
+                  <div className="aspect-[3/4] w-full">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={g.src}
+                      alt={g.alt}
+                      loading="lazy"
+                      decoding="async"
+                      className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                    />
+                  </div>
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-bridal-charcoal/15 to-transparent" />
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 font-bridal text-[12px] italic text-bridal-text-soft">
+              Real Pakistani wedding photography for inspiration — each vendor&apos;s own
+              portfolio appears on their profile.
+            </p>
+          </section>
+        )}
 
         {/* ─────────── B5 PRICE TIERS ─────────── */}
         {pricing && (
@@ -606,24 +662,57 @@ export async function VendorTypeCityPage({
         </section>
 
         {/* ─────────── B13 FINAL CTA ─────────── */}
-        <section className="overflow-hidden rounded-3xl border border-bridal-gold/30 bg-bridal-wash p-8 text-center sm:p-12">
-          <span className="bridal-crown">
-            <span className="bridal-label">Wedding Wala</span>
-          </span>
-          <h2 className="mx-auto mt-3 max-w-2xl font-display text-[28px] italic leading-tight text-bridal-charcoal sm:text-[34px]">
-            Find your {city.name} {vt.singular.toLowerCase()} today
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl font-bridal text-[14.5px] leading-relaxed text-bridal-text-soft">
-            Compare verified {vt.plural.toLowerCase()}, see transparent PKR pricing, and get free
-            quotes — every booking is protected by a refund-backed deposit.
-          </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <a href="#vendors" className={BTN_PRIMARY}>
-              Browse {vt.plural.toLowerCase()}
-            </a>
-            <a href={waLink} target="_blank" rel="noopener noreferrer" className={BTN_SECONDARY}>
-              Get free quotes on WhatsApp
-            </a>
+        <section className="relative overflow-hidden rounded-3xl border border-bridal-gold/30">
+          {imagery.cta ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imagery.cta}
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-bridal-charcoal/78" />
+            </>
+          ) : (
+            <div className="absolute inset-0 bg-bridal-wash" />
+          )}
+          <div className="relative p-8 text-center sm:p-14">
+            <span className="bridal-crown">
+              <span className="bridal-label">Wedding Wala</span>
+            </span>
+            <h2
+              className={`mx-auto mt-3 max-w-2xl font-display text-[28px] italic leading-tight sm:text-[34px] ${
+                imagery.cta ? "text-bridal-ivory" : "text-bridal-charcoal"
+              }`}
+            >
+              Find your {city.name} {vt.singular.toLowerCase()} today
+            </h2>
+            <p
+              className={`mx-auto mt-3 max-w-xl font-bridal text-[14.5px] leading-relaxed ${
+                imagery.cta ? "text-bridal-ivory/85" : "text-bridal-text-soft"
+              }`}
+            >
+              Compare verified {vt.plural.toLowerCase()}, see transparent PKR pricing, and get
+              free quotes — every booking is protected by a refund-backed deposit.
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <a href="#vendors" className={BTN_PRIMARY}>
+                Browse {vt.plural.toLowerCase()}
+              </a>
+              <a
+                href={waLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={
+                  imagery.cta
+                    ? "inline-flex items-center justify-center gap-2 rounded-full border border-bridal-ivory/60 px-6 py-3 font-bridal text-[14px] font-semibold text-bridal-ivory transition-all hover:bg-bridal-ivory/10"
+                    : BTN_SECONDARY
+                }
+              >
+                Get free quotes on WhatsApp
+              </a>
+            </div>
           </div>
         </section>
       </div>
