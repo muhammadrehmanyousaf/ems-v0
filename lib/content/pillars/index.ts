@@ -45,6 +45,13 @@ import { data as p42 } from "./wedding-venue-cost-in-lahore"
 import { data as p43 } from "./wedding-cost-in-lahore"
 import { data as p44 } from "./wedding-cost-in-karachi"
 import { data as p45 } from "./wedding-cost-in-islamabad"
+import { data as p46 } from "./bridal-mehndi-designs-guide"
+import { data as p47 } from "./wedding-decoration-ideas-pakistan"
+import { data as p48 } from "./bridal-jewellery-guide-pakistan"
+import { data as p49 } from "./bridal-hairstyles-guide-pakistan"
+import { data as p50 } from "./pre-wedding-photoshoot-ideas-pakistan"
+import { data as p51 } from "./bridal-makeup-looks-guide-pakistan"
+import { data as p52 } from "./wedding-venue-types-guide-pakistan"
 
 /** All data-driven content pillars (for sitemap + listings). */
-export const CONTENT_PILLARS: PillarData[] = [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22, p23, p24, p25, p26, p27, p28, p29, p30, p31, p32, p33, p34, p35, p36, p37, p38, p39, p40, p41, p42, p43, p44, p45]
+export const CONTENT_PILLARS: PillarData[] = [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22, p23, p24, p25, p26, p27, p28, p29, p30, p31, p32, p33, p34, p35, p36, p37, p38, p39, p40, p41, p42, p43, p44, p45, p46, p47, p48, p49, p50, p51, p52]

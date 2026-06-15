@@ -32,6 +32,7 @@ Read in order. Each file is standalone but cross-references the others.
 | 12 | [12-page-blueprint.md](12-page-blueprint.md) | The definitive 1000× page blueprint + keyword-placement map (primary/secondary/long-tail → exact on-page slot) |
 | — | [TODO.md](TODO.md) | Master execution checklist |
 | — | [briefs/](briefs/) | Per-page competitor teardowns + "100× better" content briefs |
+| — | [authority-execution-pack.md](authority-execution-pack.md) | Ready-to-run link-building assets — NAP, citations, vendor-backlink engine, Decemberistan PR + templates |
 
 ---
 
