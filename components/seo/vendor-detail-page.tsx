@@ -43,6 +43,8 @@ import {
   slugifyName,
   type VendorDetail,
 } from "@/lib/seo/fetch-vendor"
+import { fetchCityVendors } from "@/lib/seo/fetch-vendors"
+import { getVendorTypeGuidePillar } from "@/lib/seo/pricing-guide"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
 
 interface PageInput {
@@ -105,6 +107,21 @@ export async function VendorDetailPage(input: PageInput) {
   if (vendor.city && city.name && vendor.city.toLowerCase() !== city.name.toLowerCase()) {
     notFound()
   }
+
+  // Related vendors (same type + city) — internal-link flywheel + crawl depth.
+  const related = (
+    expectedBackendType
+      ? await fetchCityVendors({
+          city: city.slug,
+          vendorType: expectedBackendType,
+          limit: 7,
+        })
+      : []
+  )
+    .filter((v) => String(v.id) !== String(vendor.id))
+    .slice(0, 4)
+  const guidePillar = getVendorTypeGuidePillar(vt.slug)
+  const otherTypes = VENDOR_TYPES.filter((t) => t.slug !== vt.slug).slice(0, 6)
 
   // Schema — venues use EventVenue, everything else uses LocalBusiness.
   const isVenue = vt.slug === "wedding-venues"
@@ -358,6 +375,82 @@ export async function VendorDetailPage(input: PageInput) {
               </div>
             ))}
           </dl>
+        </section>
+
+        {/* In-depth guide bridge (keyword + helpfulness) */}
+        {guidePillar && (
+          <section className="mb-10">
+            <p className="font-bridal text-[14px] text-bridal-text">
+              Planning ahead?{" "}
+              <Link
+                href={guidePillar.href}
+                className="text-bridal-gold font-semibold hover:underline"
+              >
+                {guidePillar.label} →
+              </Link>
+            </p>
+          </section>
+        )}
+
+        {/* Related vendors — the internal-link flywheel */}
+        {related.length > 0 && (
+          <section className="mb-12">
+            <h2 className="font-display italic text-[24px] text-bridal-charcoal mb-5">
+              More {vt.plural.toLowerCase()} in {city.name}
+            </h2>
+            <ul className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {related.map((v) => (
+                <li key={v.id}>
+                  <Link
+                    href={v.href ?? "#"}
+                    className="group block rounded-md border border-bridal-beige overflow-hidden hover:border-bridal-gold transition-all"
+                  >
+                    <div className="aspect-[4/3] bg-bridal-cream relative overflow-hidden">
+                      {v.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={v.imageUrl}
+                          alt={v.name}
+                          loading="lazy"
+                          decoding="async"
+                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : null}
+                    </div>
+                    <div className="p-3">
+                      <p className="font-display italic text-[15px] text-bridal-charcoal group-hover:text-bridal-gold transition-colors line-clamp-1">
+                        {v.name}
+                      </p>
+                      {v.rating > 0 && (
+                        <p className="mt-1 font-bridal text-[12px] text-bridal-text-soft">
+                          ★ {v.rating.toFixed(1)} ({v.reviewCount})
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* Other vendor types in this city */}
+        <section className="mb-12">
+          <h2 className="font-display italic text-[20px] text-bridal-charcoal mb-3">
+            Other wedding vendors in {city.name}
+          </h2>
+          <ul className="flex flex-wrap gap-2">
+            {otherTypes.map((t) => (
+              <li key={t.slug}>
+                <Link
+                  href={`/${t.slug}/${city.slug}`}
+                  className="inline-block px-3 py-1.5 rounded-full border border-bridal-beige hover:border-bridal-gold font-bridal text-[13px] text-bridal-text-soft hover:text-bridal-charcoal transition-all"
+                >
+                  {t.plural}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
 
         {/* Back to category + city */}
