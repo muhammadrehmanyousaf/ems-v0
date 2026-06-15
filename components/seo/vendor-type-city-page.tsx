@@ -369,7 +369,7 @@ export async function VendorTypeCityPage({
                     Real {city.name} weddings
                   </p>
                   <p className="font-display text-[17px] italic text-bridal-charcoal">
-                    600+ couples served
+                    Verified vendors only
                   </p>
                 </div>
               </div>
