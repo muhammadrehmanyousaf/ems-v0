@@ -27,6 +27,11 @@ import {
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
 import { fetchCityVendors, type VendorListItem } from "@/lib/seo/fetch-vendors"
 import { getCityEditorial, getVendorTypeGuide } from "@/lib/seo/city-editorial"
+import {
+  getVendorTypePricing,
+  getVendorTypeQuestions,
+  getVendorTypeGuidePillar,
+} from "@/lib/seo/pricing-guide"
 
 export function generateVendorTypeCityStaticParams() {
   return CITIES.map((c) => ({ city: c.slug }))
@@ -85,6 +90,9 @@ export async function VendorTypeCityPage({
   const hasListings = vendors.length > 0
   const editorial = getCityEditorial(city.slug)
   const guide = getVendorTypeGuide(vt.slug)
+  const pricing = getVendorTypePricing(vt.slug)
+  const questions = getVendorTypeQuestions(vt.slug)
+  const guidePillar = getVendorTypeGuidePillar(vt.slug)
 
   const url = `${SITE_URL}/${vt.slug}/${city.slug}`
   const priceRangeStr = formatPriceRange(vendors)
@@ -130,6 +138,16 @@ export async function VendorTypeCityPage({
       question: `What if my ${vt.singular.toLowerCase()} cancels?`,
       answer: `${SITE_NAME} holds the deposit until the vendor confirms. If a vendor cancels last-minute, we help you find a replacement and refund per our cancellation policy.`,
     },
+    ...(pricing
+      ? [
+          {
+            question: `What's included at different ${vt.singular.toLowerCase()} price points in ${city.name}?`,
+            answer: `${pricing.tiers
+              .map((t) => `${t.tier} (${t.band}): ${t.includes}`)
+              .join(" ")} ${pricing.note}`,
+          },
+        ]
+      : []),
   ]
 
   const ld = combineGraph(collectionLd, svcLd, faqLD(faqs))
@@ -307,6 +325,74 @@ export async function VendorTypeCityPage({
             </p>
           </div>
         </section>
+
+        {pricing && (
+          <section className="mb-12">
+            <h2 className="font-display italic text-[24px] text-bridal-charcoal mb-5">
+              What does a {vt.singular.toLowerCase()} in {city.name} cost?
+            </h2>
+            <div className="overflow-x-auto max-w-3xl">
+              <table className="w-full border-collapse font-bridal text-[14px]">
+                <thead>
+                  <tr className="border-b border-bridal-beige text-left">
+                    <th className="py-2 pr-4 font-semibold text-bridal-charcoal">Tier</th>
+                    <th className="py-2 pr-4 font-semibold text-bridal-charcoal whitespace-nowrap">
+                      Indicative PKR
+                    </th>
+                    <th className="py-2 font-semibold text-bridal-charcoal">
+                      Typically includes
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pricing.tiers.map((t) => (
+                    <tr
+                      key={t.tier}
+                      className="border-b border-bridal-beige/60 align-top"
+                    >
+                      <td className="py-3 pr-4 font-semibold text-bridal-charcoal whitespace-nowrap">
+                        {t.tier}
+                      </td>
+                      <td className="py-3 pr-4 text-bridal-charcoal whitespace-nowrap">
+                        {t.band}
+                      </td>
+                      <td className="py-3 text-bridal-text leading-relaxed">
+                        {t.includes}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-3 max-w-3xl font-bridal text-[12.5px] italic text-bridal-text-soft">
+              {pricing.note}
+            </p>
+            {guidePillar && (
+              <p className="mt-4 font-bridal text-[14px]">
+                <Link
+                  href={guidePillar.href}
+                  className="text-bridal-gold font-semibold hover:underline"
+                >
+                  {guidePillar.label} →
+                </Link>
+              </p>
+            )}
+          </section>
+        )}
+
+        {questions.length > 0 && (
+          <section className="mb-12">
+            <h2 className="font-display italic text-[24px] text-bridal-charcoal mb-5">
+              Questions to ask before booking a {vt.singular.toLowerCase()} in{" "}
+              {city.name}
+            </h2>
+            <ul className="max-w-3xl list-disc space-y-2 pl-5 font-bridal text-[14px] text-bridal-text leading-relaxed">
+              {questions.map((q) => (
+                <li key={q}>{q}</li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <section className="mb-12">
           <h2 className="font-display italic text-[24px] text-bridal-charcoal mb-5">

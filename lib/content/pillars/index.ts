@@ -31,6 +31,12 @@ import { data as p28 } from "./wedding-catering-menu-guide-pakistan"
 import { data as p29 } from "./what-is-walima-pakistani-wedding-guide"
 import { data as p30 } from "./what-to-wear-to-a-pakistani-wedding-guest-guide"
 import { data as p31 } from "./who-pays-for-what-pakistani-wedding-expenses-guide"
+import { data as p32 } from "./pakistani-bridal-dress-guide"
+import { data as p33 } from "./barat-dress-for-bride"
+import { data as p34 } from "./walima-dress-for-bride"
+import { data as p35 } from "./mehndi-dress-for-bride"
+import { data as p36 } from "./nikkah-dress-for-bride"
+import { data as p37 } from "./wedding-photography-cost-in-lahore"
 
 /** All data-driven content pillars (for sitemap + listings). */
-export const CONTENT_PILLARS: PillarData[] = [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22, p23, p24, p25, p26, p27, p28, p29, p30, p31]
+export const CONTENT_PILLARS: PillarData[] = [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22, p23, p24, p25, p26, p27, p28, p29, p30, p31, p32, p33, p34, p35, p36, p37]
