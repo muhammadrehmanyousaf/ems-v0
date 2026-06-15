@@ -6,12 +6,12 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Heart, Mail, Lock, Eye, EyeOff } from "lucide-react"
+import { Heart, Mail, Lock, Eye, EyeOff, ShieldCheck } from "lucide-react"
 
 import axiosInstance from "@/lib/axiosConfig"
 import { toast } from "./ui/use-toast"
 import { useUser } from "@/context/UserContext"
-import { loginErrorMessage } from "@/lib/api/auth"
+import { loginErrorMessage, loginErrorCode } from "@/lib/api/auth"
 
 import { BridalButton } from "@/components/bridal/bridal-button"
 import { BridalField, BridalInput } from "@/components/bridal/bridal-input"
@@ -33,6 +33,10 @@ type FormData = z.infer<typeof formSchema>
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  // WW-172 — second-factor step-up. Revealed only after the backend asks for it
+  // (TWO_FACTOR_REQUIRED), so password-only accounts see no change.
+  const [twoFactorRequired, setTwoFactorRequired] = useState(false)
+  const [totp, setTotp] = useState("")
   const { login } = useUser()
   const router = useRouter()
 
@@ -48,10 +52,14 @@ export function LoginForm() {
     try {
       setIsLoading(true)
 
-      const response = await axiosInstance.post("/api/v1/auth/login", {
+      const payload: Record<string, string> = {
         email: data.email,
         password: data.password,
-      })
+      }
+      // Only attach the code once the 2FA step is showing and the user typed one.
+      if (twoFactorRequired && totp.trim()) payload.totp = totp.trim()
+
+      const response = await axiosInstance.post("/api/v1/auth/login", payload)
 
       if (response.status === 200) {
         const resData = response.data
@@ -63,6 +71,8 @@ export function LoginForm() {
           description: "You're signed in.",
         })
         reset()
+        setTwoFactorRequired(false)
+        setTotp("")
 
         const isAdmin = user.roles?.some(
           (role: any) =>
@@ -86,10 +96,22 @@ export function LoginForm() {
         toast({ title: "Login failed", description: "Invalid credentials" })
       }
     } catch (error: any) {
-      toast({
-        title: "Login failed",
-        description: loginErrorMessage(error),
-      })
+      const code = loginErrorCode(error)
+      if (code === "TWO_FACTOR_REQUIRED" || code === "TWO_FACTOR_INVALID") {
+        // Password was accepted — reveal (or keep) the 2FA step and let them
+        // enter the authenticator code. Don't surface it as a hard failure.
+        setTwoFactorRequired(true)
+        if (code === "TWO_FACTOR_INVALID") setTotp("")
+        toast({
+          title: code === "TWO_FACTOR_INVALID" ? "Incorrect code" : "One more step",
+          description: loginErrorMessage(error),
+        })
+      } else {
+        toast({
+          title: "Login failed",
+          description: loginErrorMessage(error),
+        })
+      }
     } finally {
       setIsLoading(false)
     }
@@ -181,6 +203,33 @@ export function LoginForm() {
             {...register("password")}
           />
         </BridalField>
+
+        {twoFactorRequired && (
+          <BridalField
+            id="totp"
+            label="Authenticator code"
+            required
+          >
+            <BridalInput
+              id="totp"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              placeholder="6-digit code"
+              leadingIcon={<ShieldCheck className="w-4 h-4" />}
+              value={totp}
+              onChange={(e) =>
+                setTotp(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))
+              }
+              autoFocus
+            />
+            <p className="font-bridal text-[12px] text-bridal-text-soft mt-1.5">
+              Two-factor authentication is on for this account. Enter the current
+              code from your authenticator app to finish signing in.
+            </p>
+          </BridalField>
+        )}
 
         <div className="flex justify-end -mt-2">
           <Link
