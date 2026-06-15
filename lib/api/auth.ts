@@ -11,6 +11,9 @@ export type LoginErrorCode =
   | "NO_ROLE"
   | "NO_PERMISSIONS"
   | "VALIDATION_FAILED"
+  // WW-172 — login now enforces the second factor for 2FA-enabled accounts.
+  | "TWO_FACTOR_REQUIRED"
+  | "TWO_FACTOR_INVALID"
 
 export interface LoginFlags {
   emailVerified: boolean
@@ -109,10 +112,17 @@ const LOGIN_MESSAGES: Record<LoginErrorCode, string> = {
   NO_ROLE: "Your account has no role assigned. Please contact support.",
   NO_PERMISSIONS: "You don't have permission to log in. Please contact support.",
   VALIDATION_FAILED: "Some of the details you entered are invalid.",
+  TWO_FACTOR_REQUIRED: "Enter the 6-digit code from your authenticator app.",
+  TWO_FACTOR_INVALID: "That code wasn't right. Try the current code from your authenticator app.",
 }
 
 export function loginErrorMessage(error: any, fallback = "Something went wrong"): string {
   const code: string | undefined = error?.response?.data?.data?.code
   if (code && code in LOGIN_MESSAGES) return LOGIN_MESSAGES[code as LoginErrorCode]
   return error?.response?.data?.message || fallback
+}
+
+/** WW-172 — the login code returned in the apiResponse envelope, if any. */
+export function loginErrorCode(error: any): string | undefined {
+  return error?.response?.data?.data?.code
 }
