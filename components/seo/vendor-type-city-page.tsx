@@ -102,27 +102,28 @@ function buildAnswerLead(
   return `${plural} in ${cityName} ${rangePart}, depending on ${driver}. Below you'll find verified ${cityName} ${plural.toLowerCase()}, real PKR package tiers, exactly what to check before you book, and how to lock your date.`
 }
 
-/** Crown-rule kicker + serif title — reused by every section. */
+/** Centered crown-rule kicker + serif title — reused by every section. */
 function SectionHeading({ kicker, title }: { kicker?: string; title: string }) {
   return (
-    <div className="mb-7">
-      {kicker && <span className="bridal-label">{kicker}</span>}
-      <h2 className="mt-2 font-display text-[26px] italic leading-tight text-bridal-charcoal sm:text-[31px]">
+    <div className="mb-9 text-center">
+      {kicker && (
+        <span className="bridal-crown">
+          <span className="bridal-label">{kicker}</span>
+        </span>
+      )}
+      <h2 className="mt-3 font-display text-[27px] italic leading-tight text-bridal-charcoal sm:text-[33px]">
         {title}
       </h2>
     </div>
   )
 }
 
-/** Editorial callout card (used in the city-guide column). */
-function Callout({ title, body }: { title: string; body: string }) {
+/** Small gold uppercase label — used to head a de-boxed text block. */
+function FacetLabel({ children }: { children: string }) {
   return (
-    <div className="rounded-2xl border border-bridal-beige bg-bridal-cream/60 p-5">
-      <p className="font-bridal text-[12px] font-semibold uppercase tracking-[0.14em] text-bridal-gold-dark">
-        {title}
-      </p>
-      <p className="mt-2 font-bridal text-[13.5px] leading-relaxed text-bridal-text-soft">{body}</p>
-    </div>
+    <p className="font-bridal text-[11.5px] font-semibold uppercase tracking-[0.16em] text-bridal-gold-dark">
+      {children}
+    </p>
   )
 }
 
@@ -208,6 +209,13 @@ export async function VendorTypeCityPage({
   const checklist = getVendorTypeChecklist(vt.slug)
   const eventNotes = getVendorTypeEventNotes(vt.slug)
   const imagery = getLocationImagery(vt.slug)
+  const editorialFacets: { label: string; body: string }[] = [
+    editorial.notable
+      ? { label: `Where they cluster in ${city.name}`, body: editorial.notable }
+      : null,
+    guide ? { label: "What to look for", body: guide } : null,
+    editorial.priceContext ? { label: "Pricing context", body: editorial.priceContext } : null,
+  ].filter((f): f is { label: string; body: string } => f !== null)
   const range = indicativeRange(pricing)
   const answerLead = buildAnswerLead(vt.plural, vt.singular, city.name, vt.slug, range)
   const waLink = `https://wa.me/${WHATSAPP_E164}?text=${encodeURIComponent(
@@ -425,31 +433,32 @@ export async function VendorTypeCityPage({
             kicker="Local guide"
             title={`About ${vt.plural.toLowerCase()} in ${city.name}`}
           />
-          <div className="grid gap-8 lg:grid-cols-[1.6fr_1fr]">
-            <div className="space-y-4 font-bridal text-[15px] leading-relaxed text-bridal-text">
-              <p>
-                {editorial.intro ??
-                  `${city.name} is one of Pakistan's busiest wedding destinations — whether you're planning a baraat at a banquet hall, a mehndi under string lights, or a walima at a marquee, there's a ${vt.singular.toLowerCase()} here for every style and budget.`}
-              </p>
-              <p>
-                {SITE_NAME} makes the {city.name} {vt.singular.toLowerCase()} search simple:
-                every vendor is identity-verified, every review comes from a real booking, and
-                every quote is transparent before you commit a deposit.
-                {editorial.peakSeason
-                  ? ` Peak season here is ${editorial.peakSeason} — book ahead for those dates.`
-                  : ""}
-              </p>
-            </div>
-            <div className="space-y-4">
-              {editorial.notable && (
-                <Callout title={`Where they cluster in ${city.name}`} body={editorial.notable} />
-              )}
-              {guide && <Callout title="What to look for" body={guide} />}
-              {editorial.priceContext && (
-                <Callout title="Pricing context" body={editorial.priceContext} />
-              )}
-            </div>
+          <div className="mx-auto max-w-3xl space-y-4 font-bridal text-[15.5px] leading-relaxed text-bridal-text">
+            <p>
+              {editorial.intro ??
+                `${city.name} is one of Pakistan's busiest wedding destinations — whether you're planning a baraat at a banquet hall, a mehndi under string lights, or a walima at a marquee, there's a ${vt.singular.toLowerCase()} here for every style and budget.`}
+            </p>
+            <p>
+              {SITE_NAME} makes the {city.name} {vt.singular.toLowerCase()} search simple: every
+              vendor is identity-verified, every review comes from a real booking, and every quote
+              is transparent before you commit a deposit.
+              {editorial.peakSeason
+                ? ` Peak season here is ${editorial.peakSeason} — book ahead for those dates.`
+                : ""}
+            </p>
           </div>
+          {editorialFacets.length > 0 && (
+            <div className="mx-auto mt-10 grid max-w-5xl gap-x-12 gap-y-8 border-t border-bridal-beige/60 pt-9 sm:grid-cols-3">
+              {editorialFacets.map((f) => (
+                <div key={f.label}>
+                  <FacetLabel>{f.label}</FacetLabel>
+                  <p className="mt-2.5 font-bridal text-[13.5px] leading-relaxed text-bridal-text-soft">
+                    {f.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* ─────────── INSPIRATION GALLERY ─────────── */}
@@ -487,27 +496,24 @@ export async function VendorTypeCityPage({
               kicker="Transparent pricing"
               title={`What does a ${vt.singular.toLowerCase()} in ${city.name} cost?`}
             />
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mx-auto grid max-w-6xl gap-x-10 gap-y-9 sm:grid-cols-2 lg:grid-cols-4">
               {pricing.tiers.map((t) => (
-                <div
-                  key={t.tier}
-                  className="flex flex-col rounded-2xl border border-bridal-beige bg-bridal-cream p-5 transition-all hover:-translate-y-1 hover:border-bridal-gold/50 hover:shadow-[0_18px_40px_-22px_rgba(176,125,84,0.45)]"
-                >
-                  <span className="bridal-label">{t.tier}</span>
-                  <span className="mt-2 font-display text-[18px] italic leading-snug text-bridal-gold-dark">
+                <div key={t.tier} className="border-t-2 border-bridal-gold/40 pt-4">
+                  <FacetLabel>{t.tier}</FacetLabel>
+                  <p className="mt-1.5 font-display text-[19px] italic leading-snug text-bridal-gold-dark">
                     {t.band}
-                  </span>
+                  </p>
                   <p className="mt-3 font-bridal text-[12.5px] leading-relaxed text-bridal-text-soft">
                     {t.includes}
                   </p>
                 </div>
               ))}
             </div>
-            <p className="mt-4 max-w-3xl font-bridal text-[12px] italic text-bridal-text-soft">
+            <p className="mx-auto mt-8 max-w-3xl text-center font-bridal text-[12px] italic text-bridal-text-soft">
               {pricing.note}
             </p>
             {guidePillar && (
-              <p className="mt-4">
+              <p className="mt-5 text-center">
                 <Link
                   href={guidePillar.href}
                   className="font-bridal text-[14px] font-semibold text-bridal-gold-dark hover:underline"
@@ -526,14 +532,11 @@ export async function VendorTypeCityPage({
               kicker="Buyer's checklist"
               title={`${checklist.length} things to check before you book`}
             />
-            <ol className="grid gap-4 sm:grid-cols-2">
+            <ol className="mx-auto grid max-w-5xl gap-x-12 gap-y-7 sm:grid-cols-2">
               {checklist.map((item, i) => (
-                <li
-                  key={i}
-                  className="flex gap-3 rounded-xl border border-bridal-beige/70 bg-bridal-cream/50 p-4"
-                >
-                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-bridal-gold/15 font-display text-[14px] italic text-bridal-gold-dark">
-                    {i + 1}
+                <li key={i} className="flex gap-5 border-b border-bridal-beige/50 pb-6">
+                  <span className="font-display text-[30px] italic leading-none text-bridal-gold/60">
+                    {String(i + 1).padStart(2, "0")}
                   </span>
                   <span className="font-bridal text-[13.5px] leading-relaxed text-bridal-text">
                     {item}
@@ -551,13 +554,10 @@ export async function VendorTypeCityPage({
               kicker="Every function"
               title={`${vt.singular} coverage by event in ${city.name}`}
             />
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mx-auto grid max-w-5xl gap-x-12 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
               {eventNotes.map((e) => (
-                <div
-                  key={e.event}
-                  className="rounded-2xl border border-bridal-beige bg-gradient-to-br from-bridal-cream to-bridal-ivory p-5"
-                >
-                  <span className="bridal-label">{e.event}</span>
+                <div key={e.event} className="border-t-2 border-bridal-gold/40 pt-4">
+                  <FacetLabel>{e.event}</FacetLabel>
                   <p className="mt-2 font-bridal text-[13px] leading-relaxed text-bridal-text-soft">
                     {e.note}
                   </p>
@@ -574,11 +574,11 @@ export async function VendorTypeCityPage({
               kicker="Pre-qualify the vendor"
               title={`Questions to ask before booking in ${city.name}`}
             />
-            <ul className="grid gap-3 sm:grid-cols-2">
+            <ul className="mx-auto grid max-w-5xl gap-x-12 gap-y-4 sm:grid-cols-2">
               {questions.map((q) => (
                 <li
                   key={q}
-                  className="flex gap-2.5 font-bridal text-[13.5px] leading-relaxed text-bridal-text"
+                  className="flex gap-3 border-b border-bridal-beige/40 pb-4 font-bridal text-[13.5px] leading-relaxed text-bridal-text"
                 >
                   <span className="mt-0.5 text-bridal-gold-dark">✓</span>
                   <span>{q}</span>
@@ -594,19 +594,16 @@ export async function VendorTypeCityPage({
             kicker="FAQ"
             title={`${vt.singular} in ${city.name} — frequently asked`}
           />
-          <div className="max-w-3xl overflow-hidden rounded-2xl border border-bridal-beige bg-bridal-cream/40">
-            {faqs.map((f, i) => (
-              <details
-                key={f.question}
-                className={`group px-5 ${i > 0 ? "border-t border-bridal-beige/70" : ""}`}
-              >
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 font-bridal text-[14.5px] font-semibold text-bridal-charcoal">
+          <div className="mx-auto max-w-3xl border-t border-bridal-beige/60">
+            {faqs.map((f) => (
+              <details key={f.question} className="group border-b border-bridal-beige/60">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 font-bridal text-[14.5px] font-semibold text-bridal-charcoal">
                   {f.question}
                   <span className="shrink-0 text-[18px] text-bridal-gold-dark transition-transform duration-300 group-open:rotate-45">
                     +
                   </span>
                 </summary>
-                <p className="pb-4 font-bridal text-[13.5px] leading-relaxed text-bridal-text">
+                <p className="pb-5 font-bridal text-[13.5px] leading-relaxed text-bridal-text">
                   {f.answer}
                 </p>
               </details>
@@ -618,7 +615,7 @@ export async function VendorTypeCityPage({
         {relatedGuides.length > 0 && (
           <section className="mb-12">
             <SectionHeading kicker="Helpful guides" title={`For your ${vt.singular.toLowerCase()} search`} />
-            <ul className="flex flex-wrap gap-2">
+            <ul className="flex flex-wrap justify-center gap-2">
               {relatedGuides.map((g) => (
                 <li key={g.href}>
                   <Link href={g.href} className={CHIP}>
@@ -630,12 +627,10 @@ export async function VendorTypeCityPage({
           </section>
         )}
 
-        <section className="mb-16 grid grid-cols-1 gap-8 sm:grid-cols-2">
-          <div>
-            <p className="font-bridal text-[12px] font-semibold uppercase tracking-[0.14em] text-bridal-gold-dark">
-              {vt.plural} in other cities
-            </p>
-            <ul className="mt-3 flex flex-wrap gap-2">
+        <section className="mb-16 grid grid-cols-1 gap-10 sm:grid-cols-2">
+          <div className="text-center">
+            <FacetLabel>{`${vt.plural} in other cities`}</FacetLabel>
+            <ul className="mt-3 flex flex-wrap justify-center gap-2">
               {otherCities.map((c) => (
                 <li key={c.slug}>
                   <Link href={`/${vt.slug}/${c.slug}`} className={CHIP}>
@@ -645,11 +640,9 @@ export async function VendorTypeCityPage({
               ))}
             </ul>
           </div>
-          <div>
-            <p className="font-bridal text-[12px] font-semibold uppercase tracking-[0.14em] text-bridal-gold-dark">
-              Other vendors in {city.name}
-            </p>
-            <ul className="mt-3 flex flex-wrap gap-2">
+          <div className="text-center">
+            <FacetLabel>{`Other vendors in ${city.name}`}</FacetLabel>
+            <ul className="mt-3 flex flex-wrap justify-center gap-2">
               {otherTypes.map((other) => (
                 <li key={other.slug}>
                   <Link href={`/${other.slug}/${city.slug}`} className={CHIP}>
