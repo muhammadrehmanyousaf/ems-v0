@@ -36,6 +36,9 @@ export interface VendorListItem {
   priceMin?: number | null
   vendorType?: string
   href?: string // pre-computed href for the card
+  /** Optional enrichment — populated from backend when available, else omitted. */
+  specialties?: string[]
+  areaServed?: string
 }
 
 interface FetchOptions {
@@ -142,5 +145,9 @@ function normalize(raw: any): VendorListItem {
     priceMin,
     vendorType,
     href,
+    specialties: Array.isArray(raw?.specialties)
+      ? raw.specialties.filter((s: unknown): s is string => typeof s === "string").slice(0, 4)
+      : undefined,
+    areaServed: typeof raw?.areaServed === "string" ? raw.areaServed : undefined,
   }
 }
