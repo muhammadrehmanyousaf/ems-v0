@@ -1161,6 +1161,19 @@ export function BusinessRegistrationForm() {
                 <DraftResumePrompt
                   email={formData.email}
                   onResume={(d) => {
+                    // WW-005 — the server withholds the payload unless the
+                    // saved-on-this-device resume token is presented. When it's
+                    // protected (e.g. the vendor started on another device),
+                    // don't jump to a late step with an empty form — keep them
+                    // where they are and tell them where to resume.
+                    if (d.payloadProtected || !d.payload || Object.keys(d.payload).length === 0) {
+                      toast({
+                        title: "Continue on your original device",
+                        description:
+                          "We found a saved draft, but for your security it can only be restored on the device or browser where you started it.",
+                      });
+                      return;
+                    }
                     setFormData((prev) => ({ ...prev, ...(d.payload || {}) }));
                     if (typeof d.currentStep === "number") setCurrentStep(d.currentStep);
                     if (d.vendorType) setBusinessType(d.vendorType);
