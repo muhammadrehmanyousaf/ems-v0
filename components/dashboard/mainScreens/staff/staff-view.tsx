@@ -100,6 +100,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { LinkedFunctionSheetBadge } from '@/components/shared/linked-function-sheet-badge';
 import { StaffLoginControl } from '@/components/staff-portal/staff-login-control';
+import { StaffLeaveQueue } from '@/components/staff-portal/staff-leave-queue';
 import {
   StaffAPI,
   STAFF_ROLE_LABELS,
@@ -416,6 +417,9 @@ function RosterTab({ businesses }: { businesses: VendorBusinessOption[] }) {
           />
         </div>
       </div>
+
+      {/* Staff Portal — pending leave queue (flag-gated; hidden when none) */}
+      <StaffLeaveQueue />
 
       {/* Members list */}
       {loading ? (

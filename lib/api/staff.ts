@@ -103,6 +103,21 @@ export interface StaffMember {
   shifts?: StaffShift[];
 }
 
+export interface StaffLeaveRequest {
+  id: number;
+  staffMemberId: number;
+  businessId: number;
+  fromDate: string;
+  toDate: string;
+  type: string;
+  reason: string | null;
+  status: "pending" | "approved" | "rejected";
+  reviewNotes: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  staffMember?: { id: number; fullName: string; role: StaffRole } | null;
+}
+
 export interface StaffShift {
   id: number;
   staffMemberId: number | null;
@@ -317,6 +332,22 @@ export class StaffAPI {
 
   static async disableLogin(id: number): Promise<void> {
     await axiosInstance.delete(`/api/v1/staff/members/${id}/login`);
+  }
+
+  // ── Staff Portal leave queue (Phase 4a, flag-gated server-side) ──
+  static async listLeaveRequests(
+    filters: { status?: string; businessId?: number } = {},
+  ): Promise<StaffLeaveRequest[]> {
+    const res = await axiosInstance.get(`/api/v1/staff/leave`, { params: filters });
+    return res.data?.data?.leave || [];
+  }
+
+  static async approveLeave(id: number, reviewNotes?: string): Promise<void> {
+    await axiosInstance.post(`/api/v1/staff/leave/${id}/approve`, { reviewNotes });
+  }
+
+  static async rejectLeave(id: number, reviewNotes?: string): Promise<void> {
+    await axiosInstance.post(`/api/v1/staff/leave/${id}/reject`, { reviewNotes });
   }
 
   // Shifts

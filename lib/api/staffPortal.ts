@@ -118,4 +118,33 @@ export const StaffPortalAPI = {
     window.open(url, "_blank");
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
   },
+
+  async requestLeave(body: {
+    fromDate: string;
+    toDate: string;
+    type?: LeaveType;
+    reason?: string;
+  }): Promise<LeaveRequest> {
+    const res = await staffAxios.post("/api/v1/staff/me/leave", body);
+    return res.data?.data?.leave as LeaveRequest;
+  },
+
+  async getMyLeave(): Promise<LeaveRequest[]> {
+    const res = await staffAxios.get("/api/v1/staff/me/leave");
+    return (res.data?.data?.leave || []) as LeaveRequest[];
+  },
 };
+
+export type LeaveType = "casual" | "sick" | "unpaid" | "other";
+
+export interface LeaveRequest {
+  id: number;
+  fromDate: string;
+  toDate: string;
+  type: LeaveType;
+  reason: string | null;
+  status: "pending" | "approved" | "rejected";
+  reviewNotes: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+}
