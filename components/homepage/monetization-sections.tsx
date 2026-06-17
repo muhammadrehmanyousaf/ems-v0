@@ -361,7 +361,7 @@ export function SponsoredSpotlight() {
 
 export function CitySpotlights() {
   const cities = [
-    { city: "Lahore",     count: "320+",  img: "https://images.pexels.com/photos/2403024/pexels-photo-2403024.jpeg?auto=compress&cs=tinysrgb&w=900", tag: "City of Heritage" },
+    { city: "Lahore",     count: "320+",  img: "https://images.pexels.com/photos/169193/pexels-photo-169193.jpeg?auto=compress&cs=tinysrgb&w=900", tag: "City of Heritage" }, // WW-290: 2403024 404'd — swapped for a live venue image
     { city: "Karachi",    count: "240+",  img: "https://images.pexels.com/photos/265856/pexels-photo-265856.jpeg?auto=compress&cs=tinysrgb&w=900",   tag: "Coastal Elegance" },
     { city: "Islamabad",  count: "180+",  img: "https://images.pexels.com/photos/3038236/pexels-photo-3038236.jpeg?auto=compress&cs=tinysrgb&w=900", tag: "Hill Romance" },
     { city: "Faisalabad", count: "95+",   img: "https://images.pexels.com/photos/931796/pexels-photo-931796.jpeg?auto=compress&cs=tinysrgb&w=900",   tag: "Textile Heart" },
