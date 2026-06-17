@@ -120,6 +120,9 @@ export default function StaffTodayPage() {
           <Link href="/staff/leave" className="text-xs text-bridal-gold-dark underline">
             Leave
           </Link>
+          <Link href="/staff/profile" className="text-xs text-bridal-gold-dark underline">
+            My profile
+          </Link>
           <button onClick={logout} className="text-xs text-muted-foreground underline">
             Sign out
           </button>

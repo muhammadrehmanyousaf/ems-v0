@@ -139,7 +139,48 @@ export const StaffPortalAPI = {
     const res = await staffAxios.post(`/api/v1/staff/me/shifts/${shiftId}/acknowledge-payment`);
     return res.data?.data?.shift as MyShift;
   },
+
+  async getMyProfile(): Promise<StaffEditableProfile> {
+    const res = await staffAxios.get("/api/v1/staff/me/profile");
+    return res.data?.data?.profile as StaffEditableProfile;
+  },
+
+  async updateMyProfile(patch: StaffProfilePatch): Promise<StaffEditableProfile> {
+    const res = await staffAxios.patch("/api/v1/staff/me/profile", patch);
+    return res.data?.data?.profile as StaffEditableProfile;
+  },
 };
+
+export interface StaffEditableProfile {
+  id: number;
+  fullName: string;
+  role: string;
+  businessId: number;
+  phoneNumber: string | null;
+  whatsappNumber: string | null;
+  emergencyContactName: string | null;
+  emergencyContactPhone: string | null;
+  cnicAddress: string | null;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  jazzcashNumber: string | null;
+  easypaisaNumber: string | null;
+}
+
+export type StaffProfilePatch = Partial<
+  Pick<
+    StaffEditableProfile,
+    | "phoneNumber"
+    | "whatsappNumber"
+    | "emergencyContactName"
+    | "emergencyContactPhone"
+    | "cnicAddress"
+    | "bankName"
+    | "bankAccountNumber"
+    | "jazzcashNumber"
+    | "easypaisaNumber"
+  >
+>;
 
 export type LeaveType = "casual" | "sick" | "unpaid" | "other";
 
