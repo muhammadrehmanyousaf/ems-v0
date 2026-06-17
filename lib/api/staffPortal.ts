@@ -64,6 +64,7 @@ export interface MyShift {
   checkOutAt: string | null;
   bookingId: number | null;
   businessId: number;
+  paymentAckAt?: string | null;
   // present on payslip rows
   paidAt?: string | null;
   paidVia?: string | null;
@@ -132,6 +133,11 @@ export const StaffPortalAPI = {
   async getMyLeave(): Promise<LeaveRequest[]> {
     const res = await staffAxios.get("/api/v1/staff/me/leave");
     return (res.data?.data?.leave || []) as LeaveRequest[];
+  },
+
+  async acknowledgePayment(shiftId: number): Promise<MyShift> {
+    const res = await staffAxios.post(`/api/v1/staff/me/shifts/${shiftId}/acknowledge-payment`);
+    return res.data?.data?.shift as MyShift;
   },
 };
 

@@ -21,6 +21,7 @@ export default function StaffPayslipsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openingId, setOpeningId] = useState<number | null>(null);
+  const [ackingId, setAckingId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -51,6 +52,19 @@ export default function StaffPayslipsPage() {
       setError(err?.response?.data?.message || "Could not open the payslip.");
     } finally {
       setOpeningId(null);
+    }
+  }
+
+  async function acknowledge(id: number) {
+    setAckingId(id);
+    setError(null);
+    try {
+      const updated = await StaffPortalAPI.acknowledgePayment(id);
+      setPayslips((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Could not confirm receipt.");
+    } finally {
+      setAckingId(null);
     }
   }
 
@@ -99,6 +113,19 @@ export default function StaffPayslipsPage() {
               >
                 {openingId === p.id ? "Opening…" : "View payslip"}
               </Button>
+              {p.paymentAckAt ? (
+                <p className="mt-2 text-center text-sm font-medium text-green-700">
+                  ✓ Payment confirmed
+                </p>
+              ) : (
+                <Button
+                  className="mt-2 h-11 w-full"
+                  disabled={ackingId === p.id}
+                  onClick={() => acknowledge(p.id)}
+                >
+                  {ackingId === p.id ? "Confirming…" : "I received this payment"}
+                </Button>
+              )}
             </li>
           ))}
         </ul>
