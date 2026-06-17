@@ -64,6 +64,10 @@ export interface MyShift {
   checkOutAt: string | null;
   bookingId: number | null;
   businessId: number;
+  // present on payslip rows
+  paidAt?: string | null;
+  paidVia?: string | null;
+  paidAmount?: string | number | null;
 }
 
 export const StaffPortalAPI = {
@@ -98,5 +102,20 @@ export const StaffPortalAPI = {
   async checkOut(shiftId: number): Promise<MyShift> {
     const res = await staffAxios.post(`/api/v1/staff/me/shifts/${shiftId}/check-out`);
     return res.data?.data?.shift as MyShift;
+  },
+
+  async getMyPayslips(): Promise<MyShift[]> {
+    const res = await staffAxios.get("/api/v1/staff/me/payslips");
+    return (res.data?.data?.payslips || []) as MyShift[];
+  },
+
+  /** Fetch the payslip PDF (with the staff token) and open it in a new tab. */
+  async openPayslipPdf(shiftId: number): Promise<void> {
+    const res = await staffAxios.get(`/api/v1/staff/me/shifts/${shiftId}/payslip-pdf`, {
+      responseType: "blob",
+    });
+    const url = URL.createObjectURL(res.data as Blob);
+    window.open(url, "_blank");
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
   },
 };

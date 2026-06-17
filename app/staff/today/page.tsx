@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   StaffPortalAPI,
@@ -112,9 +113,14 @@ export default function StaffTodayPage() {
             {profile?.businessName ? ` · ${profile.businessName}` : ""}
           </p>
         </div>
-        <button onClick={logout} className="text-xs text-muted-foreground underline">
-          Sign out
-        </button>
+        <div className="flex flex-col items-end gap-1">
+          <Link href="/staff/payslips" className="text-xs text-bridal-gold-dark underline">
+            My payslips
+          </Link>
+          <button onClick={logout} className="text-xs text-muted-foreground underline">
+            Sign out
+          </button>
+        </div>
       </header>
 
       {error && (
