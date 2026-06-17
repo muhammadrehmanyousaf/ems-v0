@@ -99,6 +99,7 @@ import {
 
 import { Label } from '@/components/ui/label';
 import { LinkedFunctionSheetBadge } from '@/components/shared/linked-function-sheet-badge';
+import { StaffLoginControl } from '@/components/staff-portal/staff-login-control';
 import {
   StaffAPI,
   STAFF_ROLE_LABELS,
@@ -442,6 +443,7 @@ function RosterTab({ businesses }: { businesses: VendorBusinessOption[] }) {
               busy={busy === m.id}
               onEdit={() => setEditMember(m)}
               onDelete={() => setDeleteMember(m)}
+              onChanged={fetchMembers}
             />
           ))}
         </div>
@@ -494,11 +496,13 @@ function MemberCard({
   busy,
   onEdit,
   onDelete,
+  onChanged,
 }: {
   member: StaffMember;
   busy: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  onChanged: () => void;
 }) {
   return (
     <Card className={member.isActive ? '' : 'opacity-60'}>
@@ -572,6 +576,7 @@ function MemberCard({
             <Trash2 className="mr-1 h-3 w-3" />
             Remove
           </Button>
+          <StaffLoginControl member={member} onChanged={onChanged} />
         </div>
       </CardContent>
     </Card>

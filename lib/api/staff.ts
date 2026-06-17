@@ -95,6 +95,8 @@ export interface StaffMember {
   joinedDate: string | null;
   notes: string | null;
   isActive: boolean;
+  /** Staff Portal — set when this member has a self-serve login (else null). */
+  userId?: number | null;
   createdAt: string;
   updatedAt: string;
   business?: StaffBusinessInfo | null;
@@ -297,6 +299,24 @@ export class StaffAPI {
 
   static async removeMember(id: number): Promise<void> {
     await axiosInstance.delete(`/api/v1/staff/members/${id}`);
+  }
+
+  // ── Staff Portal login provisioning (flag-gated server-side by
+  // STAFF_LOGINS_ENABLED — returns 404 when off). ──
+  static async enableLogin(
+    id: number,
+    body: { email: string; password: string },
+  ): Promise<{ staffMemberId: number; userId: number; email: string }> {
+    const res = await axiosInstance.post(`/api/v1/staff/members/${id}/login`, body);
+    return res.data?.data;
+  }
+
+  static async resetLogin(id: number, password: string): Promise<void> {
+    await axiosInstance.post(`/api/v1/staff/members/${id}/login/reset`, { password });
+  }
+
+  static async disableLogin(id: number): Promise<void> {
+    await axiosInstance.delete(`/api/v1/staff/members/${id}/login`);
   }
 
   // Shifts
