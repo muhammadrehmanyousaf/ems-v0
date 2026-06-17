@@ -87,47 +87,73 @@ export default function StaffPayslipsPage() {
         <p className="py-16 text-center text-sm text-muted-foreground">Loading…</p>
       ) : payslips.length === 0 ? (
         <p className="py-10 text-center text-sm text-muted-foreground">
-          No paid shifts yet.
+          No payslips yet.
         </p>
       ) : (
         <ul className="space-y-3">
-          {payslips.map((p) => (
-            <li key={p.id} className="rounded-xl border bg-white p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">{fmtDate(p.shiftDate)}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {p.roleSnapshot || "Shift"} · {fmtRs(p.netPayable)}
-                    {p.paidVia ? ` · ${p.paidVia}` : ""}
-                  </p>
+          {payslips.map((p) => {
+            const isPartial = p.paymentStatus === "partial";
+            const balance = Math.max(
+              0,
+              Math.round(Number(p.netPayable) || 0) -
+                Math.round(Number(p.paidAmount) || 0),
+            );
+            return (
+              <li key={p.id} className="rounded-xl border bg-white p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">{fmtDate(p.shiftDate)}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {p.roleSnapshot || "Shift"} · {fmtRs(p.netPayable)}
+                      {p.paidVia ? ` · ${p.paidVia}` : ""}
+                    </p>
+                    {isPartial && (
+                      <p className="mt-0.5 text-xs font-medium text-orange-700">
+                        Paid {fmtRs(p.paidAmount)} · {fmtRs(balance)} still due
+                      </p>
+                    )}
+                  </div>
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs ${
+                      isPartial
+                        ? "bg-orange-50 text-orange-800"
+                        : "bg-green-50 text-green-700"
+                    }`}
+                  >
+                    {isPartial ? "Partial" : "Paid"}
+                  </span>
                 </div>
-                <span className="rounded-full bg-green-50 px-2.5 py-1 text-xs text-green-700">
-                  Paid
-                </span>
-              </div>
-              <Button
-                variant="outline"
-                className="mt-3 h-11 w-full"
-                disabled={openingId === p.id}
-                onClick={() => openPdf(p.id)}
-              >
-                {openingId === p.id ? "Opening…" : "View payslip"}
-              </Button>
-              {p.paymentAckAt ? (
-                <p className="mt-2 text-center text-sm font-medium text-green-700">
-                  ✓ Payment confirmed
-                </p>
-              ) : (
                 <Button
-                  className="mt-2 h-11 w-full"
-                  disabled={ackingId === p.id}
-                  onClick={() => acknowledge(p.id)}
+                  variant="outline"
+                  className="mt-3 h-11 w-full"
+                  disabled={openingId === p.id}
+                  onClick={() => openPdf(p.id)}
                 >
-                  {ackingId === p.id ? "Confirming…" : "I received this payment"}
+                  {openingId === p.id ? "Opening…" : "View payslip"}
                 </Button>
-              )}
-            </li>
-          ))}
+                {/* Receipt confirmation is for a FULLY settled shift. A partial
+                    isn't fully received yet — show what's still owed instead;
+                    the confirm button returns once the vendor pays the balance. */}
+                {isPartial ? (
+                  <p className="mt-2 text-center text-xs text-orange-700">
+                    {fmtRs(balance)} still to be paid by your employer
+                  </p>
+                ) : p.paymentAckAt ? (
+                  <p className="mt-2 text-center text-sm font-medium text-green-700">
+                    ✓ Payment confirmed
+                  </p>
+                ) : (
+                  <Button
+                    className="mt-2 h-11 w-full"
+                    disabled={ackingId === p.id}
+                    onClick={() => acknowledge(p.id)}
+                  >
+                    {ackingId === p.id ? "Confirming…" : "I received this payment"}
+                  </Button>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
