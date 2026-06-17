@@ -48,8 +48,11 @@ const BusinessTable = () => {
             await BusinessesAPI.delete(Number(deleteBusiness.id));
             toast.success('Business deleted successfully');
             fetchData();
-        } catch {
-            toast.error('Failed to delete business');
+        } catch (e: any) {
+            // WW-095 — surface the backend's specific reason (e.g. "Cannot delete
+            // business with active bookings") instead of a generic failure, so the
+            // owner understands a money-safety block rather than seeing a vague error.
+            toast.error(e?.response?.data?.message || 'Failed to delete business');
         }
     };
 
