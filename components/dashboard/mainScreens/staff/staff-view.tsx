@@ -1293,17 +1293,27 @@ function ShiftsTab({ businesses }: { businesses: VendorBusinessOption[] }) {
 
   return (
     <div className="space-y-4">
-      {/* Floor banner */}
-      {summary.pendingTotal > 0 && (
+      {/* Floor banner — what the vendor still owes: unpaid (pending) shifts
+          PLUS the outstanding balance on part-paid shifts. Falls back to
+          pendingTotal against a backend that predates outstandingTotal. */}
+      {(summary.outstandingTotal ?? summary.pendingTotal) > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
           <div className="flex items-center gap-2">
             <HandCoins className="h-5 w-5 text-amber-700" />
             <div>
               <div className="text-sm font-semibold text-amber-900">
-                {fmtPKR(summary.pendingTotal)} to pay out
+                {fmtPKR(summary.outstandingTotal ?? summary.pendingTotal)} to pay out
               </div>
               <div className="text-[11px] text-amber-800">
-                {(summary.byStatus.pending || 0)} pending shift(s) in this window
+                {(summary.byStatus.pending || 0)} pending
+                {(summary.byStatus.partial || 0) > 0 &&
+                  ` · ${summary.byStatus.partial} part-paid (${fmtPKR(
+                    Math.max(
+                      0,
+                      (summary.outstandingTotal ?? 0) - summary.pendingTotal,
+                    ),
+                  )} balance)`}{' '}
+                shift(s) in this window
               </div>
             </div>
           </div>
@@ -1330,7 +1340,7 @@ function ShiftsTab({ businesses }: { businesses: VendorBusinessOption[] }) {
       <div className="flex flex-wrap items-end gap-2">
         <div className="flex flex-wrap items-center gap-1.5">
           {(
-            ['all', 'pending', 'paid', 'disputed', 'void'] as Array<
+            ['all', 'pending', 'partial', 'paid', 'disputed', 'void'] as Array<
               'all' | PaymentStatus
             >
           ).map((s) => {
@@ -2286,6 +2296,20 @@ function PayDialog({
                 )}
               />
             </div>
+
+            {(() => {
+              const amt = Math.round(Number(form.watch('paidAmount')) || 0);
+              const net = Math.round(Number(shift.netPayable) || 0);
+              if (amt > 0 && amt < net) {
+                return (
+                  <p className="rounded-md bg-orange-50 px-3 py-2 text-xs font-medium text-orange-800">
+                    Less than the {fmtPKR(net)} net payable — this records as{' '}
+                    <strong>Partial</strong>, with {fmtPKR(net - amt)} still due.
+                  </p>
+                );
+              }
+              return null;
+            })()}
 
             <FormField
               control={form.control}

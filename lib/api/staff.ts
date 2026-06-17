@@ -184,6 +184,11 @@ export interface PayrollSummary {
   pendingTotal: number;
   paidTotal: number;
   disputedTotal: number;
+  // Added with the partial-payment feature. Optional so the FE degrades
+  // gracefully against a backend that predates them (falls back to
+  // pendingTotal for the "to pay out" floor).
+  partialTotal?: number;
+  outstandingTotal?: number;
 }
 
 export interface CreateMemberInput {
