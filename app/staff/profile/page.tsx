@@ -49,7 +49,7 @@ function Field({
   label: string;
   value: string;
   onChange: (v: string) => void;
-} & React.InputHTMLAttributes<HTMLInputElement>) {
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">) {
   return (
     <div>
       <label className="mb-1 block text-xs text-muted-foreground">{label}</label>
