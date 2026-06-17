@@ -101,6 +101,7 @@ import { Label } from '@/components/ui/label';
 import { LinkedFunctionSheetBadge } from '@/components/shared/linked-function-sheet-badge';
 import { StaffLoginControl } from '@/components/staff-portal/staff-login-control';
 import { StaffLeaveQueue } from '@/components/staff-portal/staff-leave-queue';
+import { formatCnic, formatPkPhone } from '@/lib/format/pk';
 import {
   StaffAPI,
   STAFF_ROLE_LABELS,
@@ -134,7 +135,9 @@ import {
 // number (+, -, space). Anything else is stripped before it
 // hits form state.
 function filterPhoneInput(value: string): string {
-  return value.replace(/[^0-9+\-\s]/g, '');
+  // Live PK phone mask (03XX-XXXXXXX, or keep +intl). Applies to phone, WhatsApp,
+  // emergency contact and the JazzCash/Easypaisa (mobile-wallet) fields.
+  return formatPkPhone(value);
 }
 
 function fmtPKR(n: number | string | null | undefined): string {
@@ -158,6 +161,8 @@ function fmtDate(iso: string | null | undefined): string {
 
 const NEXT_STATUS_OPTIONS: Record<PaymentStatus, PaymentStatus[]> = {
   pending: ['paid', 'disputed', 'void'],
+  // A partial shift still owes a balance — "Mark paid" records the balance/total.
+  partial: ['paid', 'disputed', 'void'],
   paid: ['disputed'],
   disputed: ['paid', 'void', 'pending'],
   void: ['pending'],
@@ -851,7 +856,9 @@ function MemberDialog({
                       <Input
                         placeholder="35202-1234567-1"
                         className="font-mono"
+                        inputMode="numeric"
                         {...field}
+                        onChange={(e) => field.onChange(formatCnic(e.target.value))}
                       />
                     </FormControl>
                     <FormDescription>
@@ -1575,12 +1582,29 @@ function ShiftCard({
             <div className="text-[10px] text-muted-foreground">
               Net payable
             </div>
-            {shift.paymentStatus === 'paid' && shift.paidAmount != null && (
-              <div className="mt-1 text-[11px] text-emerald-700">
-                Paid {fmtPKR(shift.paidAmount)}
-                {shift.paidVia ? ` via ${PAYMENT_METHOD_LABELS[shift.paidVia]}` : ''}
-              </div>
-            )}
+            {(shift.paymentStatus === 'paid' || shift.paymentStatus === 'partial') &&
+              shift.paidAmount != null && (
+                <div
+                  className={`mt-1 text-[11px] ${
+                    shift.paymentStatus === 'partial' ? 'text-orange-700' : 'text-emerald-700'
+                  }`}
+                >
+                  Paid {fmtPKR(shift.paidAmount)}
+                  {shift.paidVia ? ` via ${PAYMENT_METHOD_LABELS[shift.paidVia]}` : ''}
+                  {shift.paymentStatus === 'partial' && (
+                    <span className="block font-semibold">
+                      Balance{' '}
+                      {fmtPKR(
+                        Math.max(
+                          0,
+                          (Number(shift.netPayable) || 0) - (Number(shift.paidAmount) || 0),
+                        ),
+                      )}{' '}
+                      due
+                    </span>
+                  )}
+                </div>
+              )}
           </div>
         </div>
 

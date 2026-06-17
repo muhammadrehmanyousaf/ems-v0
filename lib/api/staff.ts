@@ -35,7 +35,7 @@ export type StaffRole =
 
 export type EmploymentType = "permanent_monthly" | "casual_dihari" | "contract";
 
-export type PaymentStatus = "pending" | "paid" | "disputed" | "void";
+export type PaymentStatus = "pending" | "partial" | "paid" | "disputed" | "void";
 
 export type AttendanceStatus =
   | "scheduled"
@@ -534,6 +534,7 @@ export const EMPLOYMENT_TYPE_LABELS: Record<EmploymentType, string> = {
 
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   pending: "Pending",
+  partial: "Partial",
   paid: "Paid",
   disputed: "Disputed",
   void: "Voided",
@@ -580,6 +581,11 @@ export const PAYMENT_STATUS_TONES: Record<
     bg: "bg-amber-50",
     text: "text-amber-800",
     border: "border-amber-300",
+  },
+  partial: {
+    bg: "bg-orange-50",
+    text: "text-orange-800",
+    border: "border-orange-300",
   },
   paid: {
     bg: "bg-emerald-50",

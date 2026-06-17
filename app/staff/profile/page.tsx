@@ -11,6 +11,7 @@ import {
   type StaffEditableProfile,
   type StaffProfilePatch,
 } from "@/lib/api/staffPortal";
+import { formatPkPhone } from "@/lib/format/pk";
 
 type FormState = Record<keyof StaffProfilePatch, string>;
 
@@ -89,8 +90,15 @@ export default function StaffProfilePage() {
     load();
   }, [router, load]);
 
+  const PHONE_KEYS = new Set<keyof FormState>([
+    "phoneNumber",
+    "whatsappNumber",
+    "emergencyContactPhone",
+    "jazzcashNumber",
+    "easypaisaNumber",
+  ]);
   function set(k: keyof FormState, v: string) {
-    setForm((f) => ({ ...f, [k]: v }));
+    setForm((f) => ({ ...f, [k]: PHONE_KEYS.has(k) ? formatPkPhone(v) : v }));
     setSaved(false);
   }
 

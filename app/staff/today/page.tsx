@@ -184,7 +184,11 @@ function ShiftGroup({
               </div>
               <span className="rounded-full bg-bridal-cream/60 px-2.5 py-1 text-xs text-bridal-gold-dark">
                 {ATT_LABEL[s.attendanceStatus] || s.attendanceStatus}
-                {s.paymentStatus === "paid" ? " · Paid" : ""}
+                {s.paymentStatus === "paid"
+                  ? " · Paid"
+                  : s.paymentStatus === "partial"
+                    ? " · Partly paid"
+                    : ""}
               </span>
             </div>
 
