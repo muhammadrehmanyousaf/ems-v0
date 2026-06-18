@@ -73,35 +73,36 @@ function SectionHeader({
   align?: "left" | "center"
   cta?: { href: string; label: string }
 }) {
-  const alignment = align === "center" ? "items-center text-center mx-auto" : "items-start"
+  // Every section header is CENTERED for a consistent vertical rhythm down the
+  // page (matches the RealWeddings reference: gold line · eyebrow · gold line,
+  // centered title + description). A `cta`, when present, renders as a centered
+  // link BELOW the heading — the same place RealWeddings puts "View more". The
+  // `align` prop is kept for call-site compatibility but no longer varies layout.
+  void align
   return (
-    <div className={`flex flex-col gap-3 mb-10 lg:flex-row lg:items-end lg:justify-between ${align === "center" ? "max-w-2xl" : ""} ${alignment}`}>
-      <div className={align === "center" ? "max-w-2xl mx-auto" : "max-w-xl"}>
-        <div className="flex items-center gap-3 mb-3">
-          {align === "center" && (
-            <span className="block w-10 h-px bg-gradient-to-r from-transparent to-bridal-gold" />
-          )}
-          <span className="font-bridal text-[10.5px] uppercase tracking-[0.32em] text-bridal-gold font-medium">
-            {eyebrow}
-          </span>
-          <span className="block w-10 h-px bg-gradient-to-l from-transparent to-bridal-gold" />
-        </div>
-        <h2 className="font-display italic text-[28px] sm:text-[34px] md:text-[40px] leading-[1.1] text-bridal-charcoal">
-          {title}{" "}
-          {highlight && <span className="text-bridal-gold">{highlight}</span>}
-        </h2>
-        {description && (
-          <p className="font-bridal text-bridal-text-soft text-[14px] sm:text-[15px] mt-3 max-w-lg leading-relaxed">
-            {description}
-          </p>
-        )}
+    <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
+      <div className="flex items-center justify-center gap-3 mb-3">
+        <span className="block w-10 h-px bg-gradient-to-r from-transparent to-bridal-gold" />
+        <span className="font-bridal text-[10.5px] uppercase tracking-[0.32em] text-bridal-gold font-medium">
+          {eyebrow}
+        </span>
+        <span className="block w-10 h-px bg-gradient-to-l from-transparent to-bridal-gold" />
       </div>
-      {cta && align === "left" && (
+      <h2 className="font-display italic text-[28px] sm:text-[34px] md:text-[40px] leading-[1.1] text-bridal-charcoal">
+        {title}{" "}
+        {highlight && <span className="text-bridal-gold">{highlight}</span>}
+      </h2>
+      {description && (
+        <p className="font-bridal text-bridal-text-soft text-[14px] sm:text-[15px] mt-3 leading-relaxed">
+          {description}
+        </p>
+      )}
+      {cta && (
         <Link
           href={cta.href}
           className="
-            inline-flex items-center gap-2 font-bridal text-[12px] uppercase tracking-[0.22em] font-medium
-            text-bridal-mauve hover:text-bridal-gold transition-colors group self-start lg:self-end
+            mt-5 inline-flex items-center gap-2 font-bridal text-[12px] uppercase tracking-[0.22em] font-medium
+            text-bridal-mauve hover:text-bridal-gold transition-colors group
           "
         >
           <span>{cta.label}</span>

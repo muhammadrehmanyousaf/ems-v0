@@ -40,27 +40,26 @@ export function FeaturedVendorsShowcase({
 
       <div className="relative container-responsive">
         <ScrollReveal>
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-10">
-            <div className="max-w-xl">
-              <div className="flex items-center gap-3 mb-3">
-                <span className="block w-10 h-px bg-gradient-to-r from-transparent to-bridal-gold" />
-                <span className="font-bridal text-[10.5px] uppercase tracking-[0.32em] text-bridal-gold font-medium">
-                  {subtitle}
-                </span>
-              </div>
-              <h2 className="font-display italic text-[28px] sm:text-[34px] md:text-[40px] leading-[1.1] text-bridal-charcoal">
-                {title.replace(/Featured\s+/i, "Featured ")}
-              </h2>
-              <p className="font-bridal text-bridal-text-soft text-[14px] sm:text-[15px] mt-3 leading-relaxed">
-                {description}
-              </p>
+          <div className="text-center max-w-2xl mx-auto mb-10">
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <span className="block w-10 h-px bg-gradient-to-r from-transparent to-bridal-gold" />
+              <span className="font-bridal text-[10.5px] uppercase tracking-[0.32em] text-bridal-gold font-medium">
+                {subtitle}
+              </span>
+              <span className="block w-10 h-px bg-gradient-to-l from-transparent to-bridal-gold" />
             </div>
+            <h2 className="font-display italic text-[28px] sm:text-[34px] md:text-[40px] leading-[1.1] text-bridal-charcoal">
+              {title.replace(/Featured\s+/i, "Featured ")}
+            </h2>
+            <p className="font-bridal text-bridal-text-soft text-[14px] sm:text-[15px] mt-3 leading-relaxed">
+              {description}
+            </p>
             <Link
               href={`/${vendorPath}`}
               className="
-                hidden lg:inline-flex items-center gap-2
+                mt-5 inline-flex items-center gap-2
                 font-bridal text-[12px] uppercase tracking-[0.22em] font-medium
-                text-bridal-mauve hover:text-bridal-gold transition-colors group self-end
+                text-bridal-mauve hover:text-bridal-gold transition-colors group
               "
             >
               <span>View all</span>

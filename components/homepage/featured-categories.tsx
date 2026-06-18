@@ -52,26 +52,25 @@ export function FeaturedCategories() {
       <div className="relative container-responsive">
         {/* ── Editorial section header ── */}
         <ScrollReveal>
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-10 sm:mb-12">
-            <div className="max-w-xl">
-              <div className="flex items-center gap-3 mb-3">
-                <span className="block w-10 h-px bg-gradient-to-r from-transparent to-bridal-gold" />
-                <span className="font-bridal text-[10.5px] uppercase tracking-[0.32em] text-bridal-gold">
-                  Browse by Category
-                </span>
-              </div>
-              <h2 className="font-display italic text-[30px] sm:text-[36px] md:text-[40px] leading-[1.1] text-bridal-charcoal">
-                Every detail of your{" "}
-                <span className="text-bridal-gold">shaadi</span>, in one place
-              </h2>
-              <p className="font-bridal text-bridal-text-soft text-[14px] sm:text-[15px] mt-3">
-                Browse Pakistan&apos;s most trusted vendors across nine wedding
-                categories — from mehndi to walima.
-              </p>
+          <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-10">
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <span className="block w-10 h-px bg-gradient-to-r from-transparent to-bridal-gold" />
+              <span className="font-bridal text-[10.5px] uppercase tracking-[0.32em] text-bridal-gold">
+                Browse by Category
+              </span>
+              <span className="block w-10 h-px bg-gradient-to-l from-transparent to-bridal-gold" />
             </div>
+            <h2 className="font-display italic text-[30px] sm:text-[36px] md:text-[40px] leading-[1.1] text-bridal-charcoal">
+              Every detail of your{" "}
+              <span className="text-bridal-gold">shaadi</span>, in one place
+            </h2>
+            <p className="font-bridal text-bridal-text-soft text-[14px] sm:text-[15px] mt-3">
+              Browse Pakistan&apos;s most trusted vendors across nine wedding
+              categories — from mehndi to walima.
+            </p>
 
-            {/* Carousel arrows */}
-            <div className="flex items-center gap-3 self-start lg:self-end">
+            {/* Carousel arrows — centered below the header */}
+            <div className="flex items-center justify-center gap-3 mt-5">
               <button
                 type="button"
                 onClick={() => swiperRef.current?.slidePrev()}
