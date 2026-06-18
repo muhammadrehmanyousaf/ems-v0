@@ -295,13 +295,13 @@ export function SponsoredSpotlight() {
         alt=""
         className="absolute inset-0 w-full h-full object-cover opacity-50"
       />
-      <div aria-hidden className="absolute inset-0 bg-gradient-to-r from-bridal-charcoal via-bridal-charcoal/70 to-bridal-charcoal/40" />
+      <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-bridal-charcoal/80 via-bridal-charcoal/55 to-bridal-charcoal/80" />
       <div aria-hidden className="absolute inset-0 bg-mughal-jaal opacity-20 mix-blend-soft-light" />
       <FloatingPetals />
 
-      <div className="relative container-responsive grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-        <ScrollReveal variant="fade-left">
-          <div className="max-w-lg">
+      <div className="relative container-responsive flex justify-center">
+        <ScrollReveal>
+          <div className="max-w-3xl mx-auto text-center">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 mb-5 rounded-full bg-bridal-gold/15 border border-bridal-gold/55 backdrop-blur-sm font-bridal text-[10px] uppercase tracking-[0.22em] text-bridal-gold">
               <Sparkles className="w-3 h-3" />
               Sponsored Spotlight
@@ -310,12 +310,12 @@ export function SponsoredSpotlight() {
               Royal Palace, where{" "}
               <span className="text-bridal-gold">grand weddings</span> begin
             </h2>
-            <p className="mt-4 font-bridal text-[15px] text-bridal-ivory/85 leading-relaxed">
+            <p className="mt-4 font-bridal text-[15px] text-bridal-ivory/85 leading-relaxed max-w-2xl mx-auto">
               Pakistan&apos;s most-booked Wedding Venue of the year — 2,000+ guest
               capacity, in-house catering, and a courtyard built for cinematic
               ceremonies. Now booking 2026 dates.
             </p>
-            <div className="mt-7 flex flex-wrap items-center gap-3">
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
               <Link href="/venues/1">
                 <BridalButton variant="primary" size="lg">
                   View Venue
@@ -333,13 +333,13 @@ export function SponsoredSpotlight() {
               </Link>
             </div>
             {/* Quick stats */}
-            <div className="mt-8 flex flex-wrap items-center gap-6">
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-8">
               {[
                 { v: "2,000+", l: "Guest capacity" },
                 { v: "120+",   l: "Weddings hosted" },
                 { v: "4.9★",   l: "Couple rating" },
               ].map((s) => (
-                <div key={s.l} className="flex flex-col">
+                <div key={s.l} className="flex flex-col items-center">
                   <span className="font-display italic text-[24px] text-bridal-gold leading-none">
                     {s.v}
                   </span>
