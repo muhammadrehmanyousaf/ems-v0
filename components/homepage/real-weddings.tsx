@@ -24,8 +24,21 @@ import { useToast } from "@/hooks/use-toast"
 import { ScrollReveal } from "@/components/ui/motion-wrapper"
 import { BridalButton } from "@/components/bridal/bridal-button"
 
-const px = (id: number, w = 800) =>
-  `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=${w}`
+// Self-hosted, hand-curated modest imagery (no couple-intimacy). The demo
+// weddings below are illustrative, so px() maps each legacy id deterministically
+// onto our local pool — replacing the old hot-linked Pexels stock (which
+// included an inappropriate couple shot) in one place.
+// See public/images/home/credits.md for provenance.
+const HOME_IMAGES = [
+  "/images/home/hero/h1.jpg", "/images/home/hero/h2.jpg", "/images/home/hero/h3.jpg",
+  "/images/home/hero/h4.jpg", "/images/home/hero/h5.jpg", "/images/home/hero/h6.jpg",
+  "/images/home/hero/h7.jpg", "/images/home/partners/venue.jpg", "/images/home/partners/decor.jpg",
+  "/images/home/partners/henna.jpg", "/images/home/cities/lahore.jpg", "/images/home/cities/karachi.jpg",
+  "/images/home/cities/islamabad.jpg", "/images/home/cities/faisalabad.jpg", "/images/home/venues/v1.jpg",
+  "/images/home/venues/v2.jpg", "/images/home/lookbook/l1.jpg", "/images/home/lookbook/l2.jpg",
+  "/images/home/lookbook/l3.jpg", "/images/home/lookbook/l4.jpg", "/images/home/spotlight/spotlight.jpg",
+]
+const px = (id: number, _w = 800) => HOME_IMAGES[Math.abs(id) % HOME_IMAGES.length]
 
 const weddings = [
   {

@@ -603,15 +603,17 @@ export function HeroSection() {
   // Hero background — cinematic Pakistani bridal & mehndi photography.
   // Curated pool biased toward South-Asian wedding visuals (bridal couture,
   // mehndi hands, henna patterns, gold jewellery, marigold florals, dupatta).
-  // All URLs Pexels CDN, free for commercial use.
+  // Self-hosted, hand-curated for a Pakistani Muslim audience — modest
+  // subjects only (mehndi, decor, jewellery, solo bride). See
+  // public/images/home/credits.md for Pexels provenance (free commercial use).
   const heroImages = [
-    "https://images.pexels.com/photos/2253870/pexels-photo-2253870.jpeg?auto=compress&cs=tinysrgb&w=1920", // bridal portrait, traditional jewellery
-    "https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=1920", // bride couple
-    "https://images.pexels.com/photos/1456613/pexels-photo-1456613.jpeg?auto=compress&cs=tinysrgb&w=1920", // mehndi hands close-up
-    "https://images.pexels.com/photos/2253839/pexels-photo-2253839.jpeg?auto=compress&cs=tinysrgb&w=1920", // bridal close-up, golden hour
-    "https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg?auto=compress&cs=tinysrgb&w=1920", // wedding ceremony
-    "https://images.pexels.com/photos/1485469/pexels-photo-1485469.jpeg?auto=compress&cs=tinysrgb&w=1920", // bride solo portrait
-    "https://images.pexels.com/photos/1779487/pexels-photo-1779487.jpeg?auto=compress&cs=tinysrgb&w=1920", // henna pattern art
+    "/images/home/hero/h1.jpg", // gold floral stage
+    "/images/home/hero/h2.jpg", // mehndi hands + bangles
+    "/images/home/hero/h3.jpg", // floral stage decor
+    "/images/home/hero/h4.jpg", // henna + jewellery hands
+    "/images/home/hero/h5.jpg", // ornate gold & red stage
+    "/images/home/hero/h6.jpg", // modest bride, gold veil
+    "/images/home/hero/h7.jpg", // draped stage, red & gold flowers
   ]
 
   return (
@@ -955,7 +957,7 @@ export function HeroSection() {
                                   <div className="flex items-center gap-3 w-full p-1.5">
                                     <div className="w-12 h-12 rounded-md overflow-hidden flex-shrink-0 ring-1 ring-bridal-beige relative">
                                       <Image
-                                        src={vendor.images?.[0] || "/placeholder.jpg"}
+                                        src={vendor.images?.[0] || "/images/placeholders/default.jpg"}
                                         alt={vendor.name}
                                         fill
                                         sizes="48px"
@@ -1215,7 +1217,7 @@ export function HeroSection() {
                           >
                             <div className="w-10 h-10 rounded-md overflow-hidden flex-shrink-0 ring-1 ring-bridal-beige relative">
                               <Image
-                                src={venue.images?.[0] || "/placeholder.jpg"}
+                                src={venue.images?.[0] || "/images/placeholders/venue.jpg"}
                                 alt={venue.name}
                                 fill
                                 sizes="40px"

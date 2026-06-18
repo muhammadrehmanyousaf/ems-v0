@@ -199,12 +199,12 @@ export function HowItWorks() {
 export function PremiumPartnersStrip() {
   // Demo data — production wires to /api/v1/vendors?featured=true
   const partners = [
-    { name: "SQ Photo's",       city: "Lahore",     img: "https://images.pexels.com/photos/2253870/pexels-photo-2253870.jpeg?auto=compress&cs=tinysrgb&w=600", price: "Rs. 2,000+",  category: "Photography" },
-    { name: "Royal Lawns",      city: "Karachi",    img: "https://images.pexels.com/photos/265947/pexels-photo-265947.jpeg?auto=compress&cs=tinysrgb&w=600",   price: "Rs. 8 Lakh+", category: "Wedding Venue" },
-    { name: "Bridal by Sana",   city: "Islamabad",  img: "https://images.pexels.com/photos/1485469/pexels-photo-1485469.jpeg?auto=compress&cs=tinysrgb&w=600", price: "Rs. 25,000+", category: "Bridal Makeup" },
-    { name: "Mehndi Atelier",   city: "Lahore",     img: "https://images.pexels.com/photos/1456613/pexels-photo-1456613.jpeg?auto=compress&cs=tinysrgb&w=600", price: "Rs. 12,000+", category: "Henna Artist" },
-    { name: "Decor Diaries",    city: "Karachi",    img: "https://images.pexels.com/photos/169198/pexels-photo-169198.jpeg?auto=compress&cs=tinysrgb&w=600",   price: "Rs. 1.5 Lakh+", category: "Decoration" },
-    { name: "Spice Studio",     city: "Islamabad",  img: "https://images.pexels.com/photos/461198/pexels-photo-461198.jpeg?auto=compress&cs=tinysrgb&w=600",   price: "Rs. 800/plate+", category: "Catering" },
+    { name: "SQ Photo's",       city: "Lahore",     img: "/images/home/partners/photography.jpg", price: "Rs. 2,000+",  category: "Photography" },
+    { name: "Royal Lawns",      city: "Karachi",    img: "/images/home/partners/venue.jpg",       price: "Rs. 8 Lakh+", category: "Wedding Venue" },
+    { name: "Bridal by Sana",   city: "Islamabad",  img: "/images/home/partners/makeup.jpg",      price: "Rs. 25,000+", category: "Bridal Makeup" },
+    { name: "Mehndi Atelier",   city: "Lahore",     img: "/images/home/partners/henna.jpg",       price: "Rs. 12,000+", category: "Henna Artist" },
+    { name: "Decor Diaries",    city: "Karachi",    img: "/images/home/partners/decor.jpg",       price: "Rs. 1.5 Lakh+", category: "Decoration" },
+    { name: "Spice Studio",     city: "Islamabad",  img: "/images/home/partners/catering.jpg",    price: "Rs. 800/plate+", category: "Catering" },
   ]
 
   return (
@@ -290,7 +290,7 @@ export function SponsoredSpotlight() {
     <section className="relative section-padding overflow-hidden bg-bridal-charcoal">
       {/* Backdrop image */}
       <img
-        src="https://images.pexels.com/photos/2253839/pexels-photo-2253839.jpeg?auto=compress&cs=tinysrgb&w=1920"
+        src="/images/home/spotlight/spotlight.jpg"
         alt=""
         className="absolute inset-0 w-full h-full object-cover opacity-50"
       />
@@ -361,10 +361,10 @@ export function SponsoredSpotlight() {
 
 export function CitySpotlights() {
   const cities = [
-    { city: "Lahore",     count: "320+",  img: "https://images.pexels.com/photos/169193/pexels-photo-169193.jpeg?auto=compress&cs=tinysrgb&w=900", tag: "City of Heritage" }, // WW-290: 2403024 404'd — swapped for a live venue image
-    { city: "Karachi",    count: "240+",  img: "https://images.pexels.com/photos/265856/pexels-photo-265856.jpeg?auto=compress&cs=tinysrgb&w=900",   tag: "Coastal Elegance" },
-    { city: "Islamabad",  count: "180+",  img: "https://images.pexels.com/photos/3038236/pexels-photo-3038236.jpeg?auto=compress&cs=tinysrgb&w=900", tag: "Hill Romance" },
-    { city: "Faisalabad", count: "95+",   img: "https://images.pexels.com/photos/931796/pexels-photo-931796.jpeg?auto=compress&cs=tinysrgb&w=900",   tag: "Textile Heart" },
+    { city: "Lahore",     count: "320+",  img: "/images/home/cities/lahore.jpg",     tag: "City of Heritage" },
+    { city: "Karachi",    count: "240+",  img: "/images/home/cities/karachi.jpg",    tag: "Coastal Elegance" },
+    { city: "Islamabad",  count: "180+",  img: "/images/home/cities/islamabad.jpg",  tag: "Hill Romance" },
+    { city: "Faisalabad", count: "95+",   img: "/images/home/cities/faisalabad.jpg", tag: "Textile Heart" },
   ]
   return (
     <section className="relative bg-bridal-ivory section-padding overflow-hidden">
@@ -425,8 +425,8 @@ export function CitySpotlights() {
 
 export function FeaturedVenueShowcase() {
   const venues = [
-    { name: "Royal Palace Lahore",    img: "https://images.pexels.com/photos/2306281/pexels-photo-2306281.jpeg?auto=compress&cs=tinysrgb&w=1200", price: "Rs. 8 Lakh+", city: "Lahore", capacity: "2,000+ guests" },
-    { name: "Coastal Crest Karachi",  img: "https://images.pexels.com/photos/931796/pexels-photo-931796.jpeg?auto=compress&cs=tinysrgb&w=1200",   price: "Rs. 12 Lakh+", city: "Karachi", capacity: "1,500 guests" },
+    { name: "Royal Palace Lahore",    img: "/images/home/venues/v1.jpg", price: "Rs. 8 Lakh+", city: "Lahore", capacity: "2,000+ guests" },
+    { name: "Coastal Crest Karachi",  img: "/images/home/venues/v2.jpg", price: "Rs. 12 Lakh+", city: "Karachi", capacity: "1,500 guests" },
   ]
   return (
     <section className="relative bg-bridal-ivory section-padding overflow-hidden">
@@ -492,10 +492,10 @@ export function FeaturedVenueShowcase() {
 
 export function BridalLookbook() {
   const looks = [
-    { brand: "Sana Safinaz",      img: "https://images.pexels.com/photos/1844012/pexels-photo-1844012.jpeg?auto=compress&cs=tinysrgb&w=600", price: "From Rs. 4.5 Lakh" },
-    { brand: "Élan Couture",      img: "https://images.pexels.com/photos/1844547/pexels-photo-1844547.jpeg?auto=compress&cs=tinysrgb&w=600", price: "From Rs. 6 Lakh" },
-    { brand: "Zara Shahjahan",    img: "https://images.pexels.com/photos/2253870/pexels-photo-2253870.jpeg?auto=compress&cs=tinysrgb&w=600", price: "From Rs. 5.5 Lakh" },
-    { brand: "Bunto Kazmi",       img: "https://images.pexels.com/photos/1485469/pexels-photo-1485469.jpeg?auto=compress&cs=tinysrgb&w=600", price: "From Rs. 8 Lakh" },
+    { brand: "Sana Safinaz",      img: "/images/home/lookbook/l1.jpg", price: "From Rs. 4.5 Lakh" },
+    { brand: "Élan Couture",      img: "/images/home/lookbook/l2.jpg", price: "From Rs. 6 Lakh" },
+    { brand: "Zara Shahjahan",    img: "/images/home/lookbook/l3.jpg", price: "From Rs. 5.5 Lakh" },
+    { brand: "Bunto Kazmi",       img: "/images/home/lookbook/l4.jpg", price: "From Rs. 8 Lakh" },
   ]
   return (
     <section className="relative bg-bridal-blush/35 section-padding overflow-hidden">
