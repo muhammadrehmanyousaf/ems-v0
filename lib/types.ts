@@ -1,3 +1,17 @@
+// Legacy camelCase keys used by the mock filter data in lib/data.ts and
+// components/FilterContent.tsx. (Live vendor types are the 23 enum values in
+// lib/vendor-types.ts — this union is only for the legacy filter mock.)
+export type VendorType =
+  | "venues"
+  | "photographers"
+  | "makeupArtists"
+  | "decor"
+  | "catering"
+  | "hennaArtists"
+  | "weddingStationery"
+  | "bridalWear"
+  | "carRental";
+
 export interface Vendor {
   id: string | number;
   userId?: number;

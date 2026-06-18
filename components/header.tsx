@@ -33,6 +33,21 @@ import {
   Search,
   MessageCircle,
   Flower2,
+  // BK-100.55 — 14 new categories
+  Cake,
+  Candy,
+  ChefHat,
+  Flower,
+  Tent,
+  Sofa,
+  Zap,
+  Speaker,
+  Drum,
+  Music2,
+  PersonStanding,
+  Mic,
+  Video,
+  ScrollText,
 } from "lucide-react"
 import { useUser } from "@/context/UserContext"
 import { useChat } from "@/context/ChatContext"
@@ -41,17 +56,58 @@ import HeaderAvatar from "./header-avatar"
 
 import { BridalButton } from "@/components/bridal/bridal-button"
 
-// Vendor categories for the mega menu — taglines double as one-line hover copy.
-const vendorCategories = [
-  { name: "Photographers",  href: "/photographers",       icon: Camera,    desc: "Capture every moment" },
-  { name: "Venues",         href: "/venues",              icon: MapPin,    desc: "Where memories begin" },
-  { name: "Decorators",     href: "/decor",               icon: Sparkles,  desc: "Transform every space" },
-  { name: "Makeup",         href: "/makeup-artists",      icon: Palette,   desc: "The bridal glow" },
-  { name: "Catering",       href: "/catering",            icon: Utensils,  desc: "Flavours to remember" },
-  { name: "Car Rental",     href: "/car-rental",          icon: Car,       desc: "Arrive in elegance" },
-  { name: "Henna Artists",  href: "/henna-artists",       icon: Flower2,   desc: "The mehndi tradition" },
-  { name: "Bridal Wear",    href: "/bridal-wear",         icon: Crown,     desc: "Couture for the bride" },
-  { name: "Stationery",     href: "/wedding-stationery",  icon: PenTool,   desc: "Invitations that last" },
+// Vendor categories for the mega menu — grouped so all 23 categories stay
+// digestible. Taglines double as one-line hover copy. Slugs match
+// lib/vendor-types.ts VENDOR_TYPE_PATHS (each has a live browse route).
+const VENDOR_GROUPS = [
+  {
+    group: "Core Services",
+    items: [
+      { name: "Photographers", href: "/photographers",      icon: Camera,    desc: "Capture every moment" },
+      { name: "Venues",        href: "/venues",             icon: MapPin,    desc: "Where memories begin" },
+      { name: "Decorators",    href: "/decor",              icon: Sparkles,  desc: "Transform every space" },
+      { name: "Makeup",        href: "/makeup-artists",     icon: Palette,   desc: "The bridal glow" },
+      { name: "Catering",      href: "/catering",           icon: Utensils,  desc: "Flavours to remember" },
+      { name: "Car Rental",    href: "/car-rental",         icon: Car,       desc: "Arrive in elegance" },
+      { name: "Henna Artists", href: "/henna-artists",      icon: Flower2,   desc: "The mehndi tradition" },
+      { name: "Bridal Wear",   href: "/bridal-wear",        icon: Crown,     desc: "Couture for the bride" },
+      { name: "Stationery",    href: "/wedding-stationery", icon: PenTool,   desc: "Invitations that last" },
+    ],
+  },
+  {
+    group: "Food & Sweets",
+    items: [
+      { name: "Wedding Cakes",  href: "/wedding-cakes",       icon: Cake,    desc: "Tiered & themed" },
+      { name: "Mithai & Sweets", href: "/mithai",             icon: Candy,   desc: "Sweeten the day" },
+      { name: "Live Cooking",   href: "/live-cooking-stalls", icon: ChefHat, desc: "Tandoor, chaat & paan" },
+    ],
+  },
+  {
+    group: "Décor & Rentals",
+    items: [
+      { name: "Florists",      href: "/florists",             icon: Flower,  desc: "Fresh blooms" },
+      { name: "Marquee & Tent", href: "/marquee-rental",      icon: Tent,    desc: "Canopies & shamiana" },
+      { name: "Furniture",     href: "/furniture-rental",     icon: Sofa,    desc: "Seating & stage" },
+      { name: "Generators",    href: "/generator-rental",     icon: Zap,     desc: "Power backup" },
+      { name: "Sound System",  href: "/sound-system-rental",  icon: Speaker, desc: "Speakers & mics" },
+    ],
+  },
+  {
+    group: "Entertainment & Hosting",
+    items: [
+      { name: "Dhol Players",   href: "/dhol-players",          icon: Drum,           desc: "Set the rhythm" },
+      { name: "Qawwali & Naat", href: "/qawwali",               icon: Music2,         desc: "Spiritual evenings" },
+      { name: "Choreographers", href: "/wedding-choreographers", icon: PersonStanding, desc: "Mehndi performances" },
+      { name: "Event Hosts",    href: "/event-hosts",           icon: Mic,            desc: "MCs & anchors" },
+      { name: "Live Streaming", href: "/live-streaming",        icon: Video,          desc: "Stream to family abroad" },
+    ],
+  },
+  {
+    group: "Ceremony",
+    items: [
+      { name: "Nikahkhwan", href: "/wedding-officiants", icon: ScrollText, desc: "Officiate the nikah" },
+    ],
+  },
 ]
 
 const planningTools = [
@@ -151,40 +207,49 @@ export function Header() {
                           Vendor Categories
                         </span>
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        {vendorCategories.map((item) => {
-                          const Icon = item.icon
-                          return (
-                            <Link
-                              key={item.name}
-                              href={item.href}
-                              onClick={() => setIsOpen(false)}
-                              className="
-                                group flex flex-col items-center gap-2 p-3
-                                rounded-md border border-bridal-beige bg-bridal-cream
-                                hover:border-bridal-gold/55 hover:bg-bridal-blush/45
-                                transition-all duration-200 text-center
-                              "
-                            >
-                              <span
-                                className="
-                                  w-9 h-9 rounded-full bg-bridal-blush/70 border border-bridal-beige
-                                  flex items-center justify-center
-                                  group-hover:bg-bridal-gold/15 group-hover:border-bridal-gold/45
-                                  transition-colors
-                                "
-                              >
-                                <Icon
-                                  className="w-[16px] h-[16px] text-bridal-gold-dark group-hover:text-bridal-gold transition-colors"
-                                  strokeWidth={1.6}
-                                />
-                              </span>
-                              <span className="font-display italic text-[12px] text-bridal-charcoal leading-tight">
-                                {item.name}
-                              </span>
-                            </Link>
-                          )
-                        })}
+                      <div className="space-y-4">
+                        {VENDOR_GROUPS.map((grp) => (
+                          <div key={grp.group}>
+                            <div className="font-bridal text-[9px] uppercase tracking-[0.2em] text-bridal-text-label font-medium mb-1.5 px-0.5">
+                              {grp.group}
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                              {grp.items.map((item) => {
+                                const Icon = item.icon
+                                return (
+                                  <Link
+                                    key={item.name}
+                                    href={item.href}
+                                    onClick={() => setIsOpen(false)}
+                                    className="
+                                      group flex flex-col items-center gap-2 p-3
+                                      rounded-md border border-bridal-beige bg-bridal-cream
+                                      hover:border-bridal-gold/55 hover:bg-bridal-blush/45
+                                      transition-all duration-200 text-center
+                                    "
+                                  >
+                                    <span
+                                      className="
+                                        w-9 h-9 rounded-full bg-bridal-blush/70 border border-bridal-beige
+                                        flex items-center justify-center
+                                        group-hover:bg-bridal-gold/15 group-hover:border-bridal-gold/45
+                                        transition-colors
+                                      "
+                                    >
+                                      <Icon
+                                        className="w-[16px] h-[16px] text-bridal-gold-dark group-hover:text-bridal-gold transition-colors"
+                                        strokeWidth={1.6}
+                                      />
+                                    </span>
+                                    <span className="font-display italic text-[12px] text-bridal-charcoal leading-tight">
+                                      {item.name}
+                                    </span>
+                                  </Link>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
 
@@ -377,44 +442,56 @@ export function Header() {
                           <span className="flex-1 h-px bg-gradient-to-r from-bridal-beige via-bridal-beige/40 to-transparent" />
                         </div>
 
-                        {/* 3×3 vertical-stacked editorial cards — full names, no truncation */}
-                        <div className="grid grid-cols-3 gap-3 flex-1">
-                          {vendorCategories.map((item) => {
-                            const Icon = item.icon
-                            return (
-                              <NavigationMenuLink key={item.name} asChild>
-                                <Link
-                                  href={item.href}
-                                  className="
-                                    group/item relative flex flex-col items-start gap-2.5 p-4
-                                    rounded-md border border-transparent
-                                    hover:border-bridal-gold/55 hover:bg-bridal-blush/45 hover:-translate-y-0.5
-                                    transition-all duration-300
-                                  "
-                                >
-                                  <span className="
-                                    relative w-11 h-11 rounded-full bg-bridal-blush/65 border border-bridal-beige
-                                    flex items-center justify-center flex-shrink-0
-                                    group-hover/item:bg-bridal-gold/15 group-hover/item:border-bridal-gold/55
-                                    transition-colors
-                                  ">
-                                    <Icon
-                                      className="w-[18px] h-[18px] text-bridal-gold-dark group-hover/item:text-bridal-gold transition-colors"
-                                      strokeWidth={1.6}
-                                    />
-                                  </span>
-                                  <div className="min-w-0 w-full">
-                                    <div className="font-display italic text-[16px] text-bridal-charcoal leading-tight whitespace-nowrap">
-                                      {item.name}
-                                    </div>
-                                    <div className="font-bridal text-[11.5px] text-bridal-text-soft mt-0.5 leading-snug line-clamp-2">
-                                      {item.desc}
-                                    </div>
-                                  </div>
-                                </Link>
-                              </NavigationMenuLink>
-                            )
-                          })}
+                        {/* Grouped categories — all 23, scrollable so the menu never overflows */}
+                        <div className="flex-1 space-y-4 max-h-[58vh] overflow-y-auto pr-1">
+                          {VENDOR_GROUPS.map((grp) => (
+                            <div key={grp.group}>
+                              <div className="flex items-center gap-2 mb-2 px-1">
+                                <span className="font-bridal text-[9.5px] uppercase tracking-[0.22em] text-bridal-text-label font-medium whitespace-nowrap">
+                                  {grp.group}
+                                </span>
+                                <span className="flex-1 h-px bg-gradient-to-r from-bridal-beige/70 to-transparent" />
+                              </div>
+                              <div className="grid grid-cols-3 gap-2.5">
+                                {grp.items.map((item) => {
+                                  const Icon = item.icon
+                                  return (
+                                    <NavigationMenuLink key={item.name} asChild>
+                                      <Link
+                                        href={item.href}
+                                        className="
+                                          group/item relative flex flex-col items-start gap-2 p-3
+                                          rounded-md border border-transparent
+                                          hover:border-bridal-gold/55 hover:bg-bridal-blush/45 hover:-translate-y-0.5
+                                          transition-all duration-300
+                                        "
+                                      >
+                                        <span className="
+                                          relative w-10 h-10 rounded-full bg-bridal-blush/65 border border-bridal-beige
+                                          flex items-center justify-center flex-shrink-0
+                                          group-hover/item:bg-bridal-gold/15 group-hover/item:border-bridal-gold/55
+                                          transition-colors
+                                        ">
+                                          <Icon
+                                            className="w-[17px] h-[17px] text-bridal-gold-dark group-hover/item:text-bridal-gold transition-colors"
+                                            strokeWidth={1.6}
+                                          />
+                                        </span>
+                                        <div className="min-w-0 w-full">
+                                          <div className="font-display italic text-[15px] text-bridal-charcoal leading-tight whitespace-nowrap">
+                                            {item.name}
+                                          </div>
+                                          <div className="font-bridal text-[11px] text-bridal-text-soft mt-0.5 leading-snug line-clamp-1">
+                                            {item.desc}
+                                          </div>
+                                        </div>
+                                      </Link>
+                                    </NavigationMenuLink>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          ))}
                         </div>
 
                         {/* Quick links strip */}

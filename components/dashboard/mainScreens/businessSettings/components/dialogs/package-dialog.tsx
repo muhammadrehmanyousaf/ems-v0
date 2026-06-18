@@ -75,6 +75,72 @@ const BUSINESS_CATEGORIES: Record<string, { id: string; label: string }[]> = {
         { id: 'productType', label: 'Product Type' },
         { id: 'event', label: 'Suitable For (Event)' },
     ],
+    // ── BK-100.55 — 14 new categories ──
+    'Nikahkhwan': [
+        { id: 'ceremony', label: 'Ceremony' },
+        { id: 'documentation', label: 'Documentation' },
+        { id: 'extras', label: 'Extras' },
+    ],
+    'Choreographer': [
+        { id: 'sessions', label: 'Sessions' },
+        { id: 'performance', label: 'Performance' },
+        { id: 'extras', label: 'Extras' },
+    ],
+    'Dhol player': [
+        { id: 'coverage', label: 'Event Coverage' },
+        { id: 'instruments', label: 'Instruments' },
+        { id: 'extras', label: 'Extras' },
+    ],
+    'Event host': [
+        { id: 'hosting', label: 'Hosting' },
+        { id: 'addons', label: 'Add-ons' },
+    ],
+    'Live streaming': [
+        { id: 'coverage', label: 'Coverage' },
+        { id: 'equipment', label: 'Equipment' },
+        { id: 'delivery', label: 'Delivery' },
+    ],
+    'Generator rental': [
+        { id: 'unit', label: 'Unit' },
+        { id: 'service', label: 'Service' },
+    ],
+    'Marquee rental': [
+        { id: 'structure', label: 'Structure' },
+        { id: 'furnishing', label: 'Furnishing' },
+        { id: 'extras', label: 'Extras' },
+    ],
+    'Furniture rental': [
+        { id: 'items', label: 'Items' },
+        { id: 'service', label: 'Service' },
+    ],
+    'Florist': [
+        { id: 'arrangements', label: 'Arrangements' },
+        { id: 'flowers', label: 'Flowers' },
+        { id: 'service', label: 'Service' },
+    ],
+    'Wedding cakes': [
+        { id: 'cake', label: 'Cake' },
+        { id: 'design', label: 'Design' },
+        { id: 'service', label: 'Service' },
+    ],
+    'Mithai and sweets': [
+        { id: 'sweets', label: 'Sweets' },
+        { id: 'packaging', label: 'Packaging' },
+        { id: 'service', label: 'Service' },
+    ],
+    'Live cooking stall': [
+        { id: 'stations', label: 'Stations' },
+        { id: 'service', label: 'Service' },
+        { id: 'staff', label: 'Staff' },
+    ],
+    'Sound system rental': [
+        { id: 'equipment', label: 'Equipment' },
+        { id: 'service', label: 'Service' },
+    ],
+    'Qawwali and Naat': [
+        { id: 'performance', label: 'Performance' },
+        { id: 'instruments', label: 'Instruments' },
+    ],
 };
 
 type FeatureMap = Record<string, string[]>;

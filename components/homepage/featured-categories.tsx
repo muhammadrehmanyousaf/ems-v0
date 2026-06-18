@@ -15,6 +15,21 @@ import {
   ArrowRight,
   ChevronLeft,
   ChevronRight,
+  // BK-100.55 — 14 new categories
+  Cake,
+  Candy,
+  ChefHat,
+  Flower,
+  Tent,
+  Sofa,
+  Zap,
+  Speaker,
+  Drum,
+  Music2,
+  PersonStanding,
+  Mic,
+  Video,
+  ScrollText,
 } from "lucide-react"
 import { ScrollReveal } from "@/components/ui/motion-wrapper"
 import { FloralDivider } from "@/components/bridal/floral-divider"
@@ -24,18 +39,38 @@ import type { Swiper as SwiperType } from "swiper"
 import "swiper/css"
 import "swiper/css/free-mode"
 
-// 9 wedding categories. Taglines feed the hover overlay so each card reads
-// like a small editorial vignette rather than a button label.
+// All 23 wedding categories. Taglines feed the hover overlay so each card
+// reads like a small editorial vignette rather than a button label. Paths
+// match lib/vendor-types.ts VENDOR_TYPE_PATHS (each has a live browse route).
 const categoryData = [
-  { path: "photographers",       icon: Camera,    title: "Photographers", tagline: "Capture every moment" },
-  { path: "venues",              icon: MapPin,    title: "Venues",        tagline: "Where memories begin" },
-  { path: "decor",               icon: Palette,   title: "Decorators",    tagline: "Transform every space" },
-  { path: "makeup-artists",      icon: Heart,     title: "Makeup",        tagline: "The bridal glow" },
-  { path: "catering",            icon: Utensils,  title: "Catering",      tagline: "Flavours to remember" },
-  { path: "henna-artists",       icon: Flower2,   title: "Henna Artists", tagline: "The mehndi tradition" },
-  { path: "car-rental",          icon: Car,       title: "Car Rental",    tagline: "Arrive in elegance" },
-  { path: "bridal-wear",         icon: Crown,     title: "Bridal Wear",   tagline: "Couture for the bride" },
-  { path: "wedding-stationery",  icon: Mail,      title: "Stationery",    tagline: "Invitations that last" },
+  // Core
+  { path: "photographers",       icon: Camera,         title: "Photographers", tagline: "Capture every moment" },
+  { path: "venues",              icon: MapPin,         title: "Venues",        tagline: "Where memories begin" },
+  { path: "decor",               icon: Palette,        title: "Decorators",    tagline: "Transform every space" },
+  { path: "makeup-artists",      icon: Heart,          title: "Makeup",        tagline: "The bridal glow" },
+  { path: "catering",            icon: Utensils,       title: "Catering",      tagline: "Flavours to remember" },
+  { path: "henna-artists",       icon: Flower2,        title: "Henna Artists", tagline: "The mehndi tradition" },
+  { path: "car-rental",          icon: Car,            title: "Car Rental",    tagline: "Arrive in elegance" },
+  { path: "bridal-wear",         icon: Crown,          title: "Bridal Wear",   tagline: "Couture for the bride" },
+  { path: "wedding-stationery",  icon: Mail,           title: "Stationery",    tagline: "Invitations that last" },
+  // Food & Sweets
+  { path: "wedding-cakes",       icon: Cake,           title: "Wedding Cakes", tagline: "Tiered & themed" },
+  { path: "mithai",              icon: Candy,          title: "Mithai & Sweets", tagline: "Sweeten the day" },
+  { path: "live-cooking-stalls", icon: ChefHat,        title: "Live Cooking",  tagline: "Tandoor, chaat & paan" },
+  // Décor & Rentals
+  { path: "florists",            icon: Flower,         title: "Florists",      tagline: "Fresh blooms" },
+  { path: "marquee-rental",      icon: Tent,           title: "Marquee & Tent", tagline: "Canopies & shamiana" },
+  { path: "furniture-rental",    icon: Sofa,           title: "Furniture",     tagline: "Seating & stage" },
+  { path: "generator-rental",    icon: Zap,            title: "Generators",    tagline: "Power backup" },
+  { path: "sound-system-rental", icon: Speaker,        title: "Sound System",  tagline: "Speakers & mics" },
+  // Entertainment & Hosting
+  { path: "dhol-players",        icon: Drum,           title: "Dhol Players",  tagline: "Set the rhythm" },
+  { path: "qawwali",             icon: Music2,         title: "Qawwali & Naat", tagline: "Spiritual evenings" },
+  { path: "wedding-choreographers", icon: PersonStanding, title: "Choreographers", tagline: "Mehndi performances" },
+  { path: "event-hosts",         icon: Mic,            title: "Event Hosts",   tagline: "MCs & anchors" },
+  { path: "live-streaming",      icon: Video,          title: "Live Streaming", tagline: "Stream to family abroad" },
+  // Ceremony
+  { path: "wedding-officiants",  icon: ScrollText,     title: "Nikahkhwan",    tagline: "Officiate the nikah" },
 ]
 
 export function FeaturedCategories() {
@@ -65,8 +100,8 @@ export function FeaturedCategories() {
               <span className="text-bridal-gold">shaadi</span>, in one place
             </h2>
             <p className="font-bridal text-bridal-text-soft text-[14px] sm:text-[15px] mt-3">
-              Browse Pakistan&apos;s most trusted vendors across nine wedding
-              categories — from mehndi to walima.
+              Browse Pakistan&apos;s most trusted vendors across every wedding
+              category — from mehndi and dhol to catering, cakes and qawwali.
             </p>
 
             {/* Carousel arrows — centered below the header */}

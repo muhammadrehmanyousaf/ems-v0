@@ -34,6 +34,14 @@ const CATEGORY_LABELS: Record<string, string> = {
     soundLighting: 'Sound & Lighting', catering: 'Catering', additionalServices: 'Additional Services',
     // Catering
     starter: 'Starter', mainCourse: 'Main Course', desserts: 'Desserts', drinks: 'Drinks',
+    // BK-100.55 — 14 new categories
+    ceremony: 'Ceremony', documentation: 'Documentation', extras: 'Extras',
+    sessions: 'Sessions', performance: 'Performance', coverage: 'Coverage',
+    instruments: 'Instruments', hosting: 'Hosting', addons: 'Add-ons',
+    equipment: 'Equipment', delivery: 'Delivery', unit: 'Unit', service: 'Service',
+    structure: 'Structure', furnishing: 'Furnishing', items: 'Items',
+    arrangements: 'Arrangements', flowers: 'Flowers', cake: 'Cake', design: 'Design',
+    sweets: 'Sweets', packaging: 'Packaging', stations: 'Stations', staff: 'Staff',
 };
 
 function isCarFleetFeatures(features: unknown): boolean {
