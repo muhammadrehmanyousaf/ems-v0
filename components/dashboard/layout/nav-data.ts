@@ -87,6 +87,7 @@ export const data = {
   // Day-to-day platform operations — review queues + monitoring.
   adminOperations: [
     { name: "Vendor queue",   url: "/dashboard/admin/vendor-queue", icon: UserCheck },
+    { name: "Claim requests", url: "/dashboard/claims",             icon: ShieldCheck },
     { name: "KYC documents",  url: "/dashboard/admin/documents",    icon: FileBadge },
     { name: "Disputes",       url: "/dashboard/admin/disputes",     icon: Gavel },
     { name: "Promotions",     url: "/dashboard/admin/promotions",   icon: Megaphone },

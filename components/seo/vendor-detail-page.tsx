@@ -43,6 +43,7 @@ import {
   slugifyName,
   type VendorDetail,
 } from "@/lib/seo/fetch-vendor"
+import { getVendorGuidance } from "@/lib/seo/vendor-type-guidance"
 import { fetchCityVendors } from "@/lib/seo/fetch-vendors"
 import { getVendorTypeGuidePillar } from "@/lib/seo/pricing-guide"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
@@ -191,7 +192,19 @@ export async function VendorDetailPage(input: PageInput) {
     },
   ]
 
-  const ld = combineGraph(ldSchema, ...reviewLds, faqLD(faqs))
+  // Per-type guidance + FAQ (true, keyword-rich) — rendered on the page AND
+  // merged into the FAQPage schema. The SERP is feature-sparse in PK wedding
+  // search, so structured FAQ + citable content is a cheap, early win.
+  const guidance = getVendorGuidance(getBackendVendorType(vt.slug) ?? "")
+  const fillCity = (s: string) => s.replace(/\{city\}/g, city.name)
+  const allFaqs = guidance
+    ? [
+        ...faqs,
+        ...guidance.faqs.map((f) => ({ question: fillCity(f.q), answer: fillCity(f.a) })),
+      ]
+    : faqs
+
+  const ld = combineGraph(ldSchema, ...reviewLds, faqLD(allFaqs))
 
   return (
     <>
@@ -358,13 +371,38 @@ export async function VendorDetailPage(input: PageInput) {
           </section>
         )}
 
+        {/* Category guidance — true, keyword-rich; helps rank + AI-cite */}
+        {guidance && (
+          <section className="mb-12 max-w-3xl">
+            <h2 className="font-display italic text-[24px] text-bridal-charcoal mb-4">
+              Booking a {vt.singular.toLowerCase()} in {city.name}
+            </h2>
+            <p className="font-bridal text-[14.5px] text-bridal-text leading-relaxed mb-4">
+              {fillCity(guidance.intro)}
+            </p>
+            <p className="font-bridal text-[11px] uppercase tracking-[0.22em] font-medium text-bridal-gold mb-2.5">
+              What to ask
+            </p>
+            <ul className="space-y-2.5">
+              {guidance.ask.map((a, i) => (
+                <li
+                  key={i}
+                  className="font-bridal text-[14px] text-bridal-text leading-relaxed pl-4 border-l-2 border-bridal-beige"
+                >
+                  {fillCity(a)}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {/* FAQ */}
         <section className="mb-12">
           <h2 className="font-display italic text-[24px] text-bridal-charcoal mb-5">
             Frequently asked questions
           </h2>
           <dl className="space-y-5 max-w-3xl">
-            {faqs.map((f) => (
+            {allFaqs.map((f) => (
               <div key={f.question}>
                 <dt className="font-bridal text-[15px] font-semibold text-bridal-charcoal">
                   {f.question}
