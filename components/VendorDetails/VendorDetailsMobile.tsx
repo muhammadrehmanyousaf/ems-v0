@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import type { Vendor, Review, AvailabilityDay, VendorMenu, Package } from "@/lib/types";
 import { getVendorTypeConfig } from "@/lib/vendor-type-config";
+import { getVendorGuidance } from "@/lib/seo/vendor-type-guidance";
 import Image from "next/image";
 import { BACKEND_URL } from "@/lib/backend-url";
 import { useRouter } from "next/navigation";
@@ -896,8 +897,40 @@ export default function VendorDetailsMobile({
       : 0,
   }));
 
+  // ── Honest enrichment for thin / unclaimed listings ──
+  // No fabricated specifics: copy is true for any vendor of this type+city.
+  const cityName = vendor.location || vendor.city || "Pakistan";
+  const typeName = vendor.type || "wedding vendor";
+  const isThinProfile =
+    (!vendor.packages || vendor.packages.length === 0) &&
+    allReviews.length === 0 &&
+    (!vendor.description || /listed from public records|unclaimed/i.test(vendor.description));
+  const aboutText = isThinProfile
+    ? `${vendor.name} is a ${typeName.toLowerCase()} based in ${cityName}, Pakistan, listed on Wedding Wala. Contact ${vendor.name} to discuss availability, packages and a custom quote for your wedding or event. Verified details and photos are added by the business owner.`
+    : vendor.description || "";
+  // Per-type guidance + FAQ — true, generic, rankable content (no fabrication).
+  const fillCity = (s: string) => s.replace(/\{city\}/g, cityName);
+  const guidance = getVendorGuidance(vendor.type);
+  const guidanceFaqLd = guidance
+    ? {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: guidance.faqs.map((f) => ({
+          "@type": "Question",
+          name: fillCity(f.q),
+          acceptedAnswer: { "@type": "Answer", text: fillCity(f.a) },
+        })),
+      }
+    : null;
+
   return (
     <div className="min-h-screen bg-bridal-ivory">
+      {guidanceFaqLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(guidanceFaqLd) }}
+        />
+      )}
       {/* ===== PARALLAX HERO SECTION ===== */}
       <div
         ref={heroRef}
@@ -1006,10 +1039,14 @@ export default function VendorDetailsMobile({
                   <span className="font-display italic text-[18px]">{(liveAvgRating ?? vendor.rating)?.toFixed(1)}</span>
                   <span className="text-bridal-ivory/70 text-[12px]">({allReviews.length} reviews)</span>
                 </span>
-                <span className="flex items-center gap-2 text-[14px]">
-                  <Shield className="w-4 h-4 text-bridal-sage" />
-                  Verified
-                </span>
+                {(Boolean((vendor as any).emailVerified) ||
+                  Boolean((vendor as any).phoneVerified) ||
+                  Boolean((vendor as any).claimedAt)) && (
+                  <span className="flex items-center gap-2 text-[14px]">
+                    <Shield className="w-4 h-4 text-bridal-sage" />
+                    Verified
+                  </span>
+                )}
               </div>
 
               {/* Price + CTA */}
@@ -1145,15 +1182,65 @@ export default function VendorDetailsMobile({
                     )}
                   </div>
 
-                  {/* Description */}
-                  {vendor.description ? (
+                  {/* About — polished + true. Enriched for thin/unclaimed listings; no fabricated specifics. */}
+                  {aboutText ? (
                     <div className="bg-bridal-cream rounded-md border border-bridal-beige shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)] p-5">
                       <h2 className="font-display italic text-[20px] text-bridal-charcoal mb-3">About</h2>
                       <p className="text-sm text-bridal-charcoal/85 leading-relaxed break-words">
-                        {vendor.description}
+                        {aboutText}
                       </p>
+                      {isThinProfile && (
+                        <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3 rounded-md border border-bridal-gold/40 bg-bridal-ivory px-4 py-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bridal text-[13px] font-semibold text-bridal-charcoal">Is this your business?</p>
+                            <p className="font-bridal text-[12.5px] text-bridal-text-soft">Claim this listing to add your packages, prices and real photos.</p>
+                          </div>
+                          <Link
+                            href={`/claim/${vendor.id}`}
+                            className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-bridal-gold text-bridal-charcoal hover:bg-bridal-gold-dark hover:text-bridal-ivory font-bridal text-[11px] uppercase tracking-[0.18em] font-medium transition-colors whitespace-nowrap"
+                          >
+                            Claim this listing
+                          </Link>
+                        </div>
+                      )}
                     </div>
                   ) : null}
+
+                  {/* Category guidance + FAQ — true, helpful, rankable (no fabrication). Shown on every page. */}
+                  {guidance && (
+                    <div className="bg-bridal-cream rounded-md border border-bridal-beige shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)] p-5 space-y-5">
+                      <div>
+                        <h3 className="font-display italic text-[20px] text-bridal-charcoal mb-2">
+                          Booking a {typeName.toLowerCase()} in {cityName}
+                        </h3>
+                        <p className="text-sm text-bridal-charcoal/85 leading-relaxed break-words">
+                          {fillCity(guidance.intro)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="font-bridal text-[11px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark mb-2.5">What to ask</p>
+                        <ul className="space-y-2">
+                          {guidance.ask.map((a, i) => (
+                            <li key={i} className="flex gap-2 text-sm text-bridal-charcoal/85 leading-relaxed">
+                              <CheckCircle className="w-4 h-4 mt-0.5 shrink-0 text-bridal-gold" />
+                              <span>{fillCity(a)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="font-bridal text-[11px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark mb-2.5">Frequently asked</p>
+                        <dl className="space-y-3">
+                          {guidance.faqs.map((f, i) => (
+                            <div key={i}>
+                              <dt className="font-bridal text-[14px] font-semibold text-bridal-charcoal">{fillCity(f.q)}</dt>
+                              <dd className="mt-1 text-sm text-bridal-charcoal/85 leading-relaxed break-words">{fillCity(f.a)}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </div>
+                    </div>
+                  )}
 
                   {/* subBusinessType — multi-select types (Photographer, Decorator, Henna, Makeup) */}
                   {isSubBizTypeMulti && subBizTypeValues.length > 0 && (
@@ -1866,9 +1953,25 @@ export default function VendorDetailsMobile({
                       </StaggerItem>
                     ))
                   ) : (
-                    <p className="text-sm text-bridal-text-soft text-center py-6">
-                      No packages available yet. Contact the vendor for pricing.
-                    </p>
+                    <div className="rounded-md border border-bridal-beige bg-bridal-cream p-6 sm:p-8 text-center shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)]">
+                      <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-bridal-gold/15 text-bridal-gold-dark">
+                        <PackageIcon className="h-5 w-5" />
+                      </div>
+                      <p className="font-display italic text-[20px] text-bridal-charcoal">Pricing on request</p>
+                      <p className="mx-auto mt-2 max-w-md font-bridal text-[13.5px] text-bridal-text-soft leading-relaxed">
+                        {vendor.name} tailors packages to your date, guest count and requirements.
+                        Share your details to get a custom quote — no obligation.
+                      </p>
+                      <div className="mt-5 flex justify-center">
+                        <button
+                          type="button"
+                          onClick={handleMessageVendor}
+                          className="inline-flex items-center justify-center gap-2 h-11 px-7 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.2em] font-medium transition-colors"
+                        >
+                          <MessageCircle className="w-4 h-4" /> Request pricing
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </StaggerContainer>
               )}
@@ -1958,7 +2061,8 @@ export default function VendorDetailsMobile({
                 </div>
               </ScrollReveal>
 
-              {/* Review summary */}
+              {/* Review summary — only when there are real reviews (honest empty state shown below) */}
+              {allReviews.length > 0 && (
               <ScrollReveal>
                 <Card className="border-bridal-beige mb-6">
                   <CardContent className="p-6">
@@ -1985,6 +2089,7 @@ export default function VendorDetailsMobile({
                   </CardContent>
                 </Card>
               </ScrollReveal>
+              )}
 
               {/* Write a review */}
               {isAuthenticated && userBookingId && !alreadyReviewed && (
@@ -2054,9 +2159,16 @@ export default function VendorDetailsMobile({
                 </div>
               )}
               {!reviewsLoading && allReviews.length === 0 && (
-                <p className="text-sm text-bridal-text-soft text-center py-8">
-                  No reviews yet. Be the first to book and leave a review!
-                </p>
+                <div className="rounded-md border border-bridal-beige bg-bridal-cream p-6 sm:p-8 text-center shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)]">
+                  <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-bridal-gold/15 text-bridal-gold-dark">
+                    <Star className="h-5 w-5" />
+                  </div>
+                  <p className="font-display italic text-[20px] text-bridal-charcoal">No reviews yet</p>
+                  <p className="mx-auto mt-2 max-w-md font-bridal text-[13.5px] text-bridal-text-soft leading-relaxed">
+                    Reviews on Wedding Wala come only from verified, completed bookings — so every rating
+                    you see is real. Be the first to book {vendor.name} and share your experience.
+                  </p>
+                </div>
               )}
               <StaggerContainer staggerDelay={0.1} className="space-y-4">
                 {allReviews.map((review) => (
