@@ -36,8 +36,12 @@ const nextConfig = {
       // Localhost dev is included so local builds don't 500 on backend
       // image references.
       { protocol: "http", hostname: "localhost" },
-      // TODO: add the production CDN hostname once vendor uploads move
-      // off the API origin (e.g. cdn.weddingwala.pk or an S3/R2 bucket).
+      // Cloudinary — vendor media (imported listing images + all uploads:
+      // profiles, business galleries, review photos, KYC, booking milestones)
+      // is stored on Cloudinary so it survives Railway redeploys. next/image
+      // refuses to optimize any host not listed here, so these URLs MUST be
+      // allow-listed or every vendor image renders broken.
+      { protocol: "https", hostname: "res.cloudinary.com" },
     ],
   },
   experimental: {
