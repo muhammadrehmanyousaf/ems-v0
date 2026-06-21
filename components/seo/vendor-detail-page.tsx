@@ -109,7 +109,14 @@ export async function VendorDetailPage(input: PageInput) {
   if (vendor.vendorType && backendToSeoSlug(vendor.vendorType) !== vt.slug) {
     notFound()
   }
-  if (vendor.city && city.name && vendor.city.toLowerCase() !== city.name.toLowerCase()) {
+  // The "pakistan" national catch-all accepts vendors whose real city is
+  // unknown/unparseable in the source data, so skip the city-match guard there.
+  if (
+    city.slug !== "pakistan" &&
+    vendor.city &&
+    city.name &&
+    vendor.city.toLowerCase() !== city.name.toLowerCase()
+  ) {
     notFound()
   }
 

@@ -174,6 +174,10 @@ export const CITIES = [
   { slug: "jahanian", name: "Jahanian", region: "Punjab" },
   { slug: "jalalpur", name: "Jalalpur", region: "Punjab" },
   { slug: "ghakhar", name: "Ghakhar", region: "Punjab" },
+  // National catch-all for vendors whose city is unknown/unparseable in the
+  // source data — keeps every vendor indexable instead of dropped from the
+  // sitemap. The vendor-detail page skips the city-match guard for this slug.
+  { slug: "pakistan", name: "Pakistan", region: "Pakistan" },
 ] as const;
 
 export type CitySlug = (typeof CITIES)[number]["slug"];

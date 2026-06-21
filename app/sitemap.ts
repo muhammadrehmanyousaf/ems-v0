@@ -328,11 +328,11 @@ function projectToCanonical(raw: any): DynamicVendor | null {
   if (!seoTypeSlug) return null
 
   const cityRaw: string = raw?.city ?? raw?.location ?? vendor?.city ?? ""
-  if (!cityRaw) return null
-
-  const citySlug = slugifyName(cityRaw)
-  const cityKnown = CITIES.some((c) => c.slug === citySlug)
-  if (!cityKnown) return null
+  // Fallback so EVERY vendor is indexable: an unknown/unparseable city (null,
+  // Urdu that strips to empty, or a value not in CITIES) routes the vendor
+  // under the national "pakistan" catch-all instead of being dropped.
+  let citySlug = slugifyName(cityRaw)
+  if (!citySlug || !CITIES.some((c) => c.slug === citySlug)) citySlug = "pakistan"
 
   const name: string = raw?.name ?? raw?.businessName ?? ""
   if (!name) return null
