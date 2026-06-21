@@ -92,19 +92,104 @@ export type Locale = (typeof SUPPORTED_LOCALES)[number];
 export const CITIES = [
   { slug: "karachi", name: "Karachi", region: "Sindh" },
   { slug: "lahore", name: "Lahore", region: "Punjab" },
-  { slug: "islamabad", name: "Islamabad", region: "ICT" },
-  { slug: "rawalpindi", name: "Rawalpindi", region: "Punjab" },
   { slug: "faisalabad", name: "Faisalabad", region: "Punjab" },
-  { slug: "multan", name: "Multan", region: "Punjab" },
-  { slug: "peshawar", name: "Peshawar", region: "KP" },
+  { slug: "islamabad", name: "Islamabad", region: "Islamabad Capital Territory" },
+  { slug: "rawalpindi", name: "Rawalpindi", region: "Punjab" },
+  { slug: "peshawar", name: "Peshawar", region: "Khyber Pakhtunkhwa" },
+  { slug: "hyderabad", name: "Hyderabad", region: "Sindh" },
+  { slug: "nawabshah", name: "Nawabshah", region: "Sindh" },
   { slug: "sialkot", name: "Sialkot", region: "Punjab" },
   { slug: "gujranwala", name: "Gujranwala", region: "Punjab" },
-  { slug: "hyderabad", name: "Hyderabad", region: "Sindh" },
-  { slug: "quetta", name: "Quetta", region: "Balochistan" },
+  { slug: "jhelum", name: "Jhelum", region: "Punjab" },
+  { slug: "gujrat", name: "Gujrat", region: "Punjab" },
+  { slug: "multan", name: "Multan", region: "Punjab" },
+  { slug: "sheikhupura", name: "Sheikhupura", region: "Punjab" },
+  { slug: "shahdara", name: "Shahdara", region: "Punjab" },
+  { slug: "sargodha", name: "Sargodha", region: "Punjab" },
   { slug: "bahawalpur", name: "Bahawalpur", region: "Punjab" },
+  { slug: "abbottabad", name: "Abbottabad", region: "Khyber Pakhtunkhwa" },
+  { slug: "wah-cantonment", name: "Wah Cantonment", region: "Punjab" },
+  { slug: "mardan", name: "Mardan", region: "Khyber Pakhtunkhwa" },
+  { slug: "quetta", name: "Quetta", region: "Balochistan" },
+  { slug: "jacobabad", name: "Jacobabad", region: "Sindh" },
+  { slug: "gilgit", name: "Gilgit", region: "Gilgit-Baltistan" },
+  { slug: "usta-muhammad", name: "Usta Muhammad", region: "Balochistan" },
+  { slug: "rahim-yar-khan", name: "Rahim Yar Khan", region: "Punjab" },
+  { slug: "khanewal", name: "Khanewal", region: "Punjab" },
+  { slug: "sukkur", name: "Sukkur", region: "Sindh" },
+  { slug: "hafizabad", name: "Hafizabad", region: "Punjab" },
+  { slug: "larkana", name: "Larkana", region: "Sindh" },
+  { slug: "mirpur-khas", name: "Mirpur Khas", region: "Sindh" },
+  { slug: "shakargarh", name: "Shakargarh", region: "Punjab" },
+  { slug: "mandi-bahauddin", name: "Mandi Bahauddin", region: "Punjab" },
+  { slug: "sadiqabad", name: "Sadiqabad", region: "Punjab" },
+  { slug: "chiniot", name: "Chiniot", region: "Punjab" },
+  { slug: "mingora", name: "Mingora", region: "Khyber Pakhtunkhwa" },
+  { slug: "okara", name: "Okara", region: "Punjab" },
+  { slug: "muridke", name: "Muridke", region: "Punjab" },
+  { slug: "kamoke", name: "Kamoke", region: "Punjab" },
+  { slug: "burewala", name: "Burewala", region: "Punjab" },
+  { slug: "mandra", name: "Mandra", region: "Punjab" },
+  { slug: "nowshera", name: "Nowshera", region: "Khyber Pakhtunkhwa" },
+  { slug: "bhakkar", name: "Bhakkar", region: "Punjab" },
+  { slug: "raiwind", name: "Raiwind", region: "Punjab" },
+  { slug: "chakwal", name: "Chakwal", region: "Punjab" },
+  { slug: "ahmad-abad", name: "Ahmad Abad", region: "Punjab" },
+  { slug: "gambat", name: "Gambat", region: "Sindh" },
+  { slug: "dera-ghazi-khan", name: "Dera Ghazi Khan", region: "Punjab" },
+  { slug: "bannu", name: "Bannu", region: "Khyber Pakhtunkhwa" },
+  { slug: "sahiwal", name: "Sahiwal", region: "Punjab" },
+  { slug: "kasur", name: "Kasur", region: "Punjab" },
+  { slug: "ranipur-riyast", name: "Ranipur Riyast", region: "Sindh" },
+  { slug: "sardarabad", name: "Sardarabad", region: "Punjab" },
+  { slug: "sanghar", name: "Sanghar", region: "Sindh" },
+  { slug: "tarramri", name: "Tarramri", region: "Punjab" },
+  { slug: "matiari", name: "Matiari", region: "Sindh" },
+  { slug: "mohra-mandho", name: "Mohra Mandho", region: "Punjab" },
+  { slug: "khuzdar", name: "Khuzdar", region: "Balochistan" },
+  { slug: "nushki", name: "Nushki", region: "Balochistan" },
+  { slug: "thokar-niaz-baig", name: "Thokar Niaz Baig", region: "Punjab" },
+  { slug: "allai", name: "Allai", region: "Khyber Pakhtunkhwa" },
+  { slug: "jampur", name: "Jampur", region: "Punjab" },
+  { slug: "nooriabad", name: "Nooriabad", region: "Sindh" },
+  { slug: "ferozwala", name: "Ferozwala", region: "Punjab" },
+  { slug: "bhalwal", name: "Bhalwal", region: "Punjab" },
+  { slug: "daska", name: "Daska", region: "Punjab" },
+  { slug: "kandiaro", name: "Kandiaro", region: "Sindh" },
+  { slug: "sohawa", name: "Sohawa", region: "Punjab" },
+  { slug: "thatta", name: "Thatta", region: "Sindh" },
+  { slug: "qasimabad", name: "Qasimabad", region: "Sindh" },
+  { slug: "kahror-pakka", name: "Kahror Pakka", region: "Punjab" },
+  { slug: "malir-cantt", name: "Malir Cantt", region: "Sindh" },
+  { slug: "taobat-village", name: "Taobat Village", region: "Azad Kashmir" },
+  { slug: "muzaffarabad", name: "Muzaffarabad", region: "Azad Kashmir" },
+  { slug: "qazi-ahmed", name: "Qazi Ahmed", region: "Sindh" },
+  { slug: "malankand", name: "Malankand", region: "Khyber Pakhtunkhwa" },
+  { slug: "farooqabad", name: "Farooqabad", region: "Punjab" },
+  { slug: "dhabeji", name: "Dhabeji", region: "Sindh" },
+  { slug: "shahdadpur", name: "Shahdadpur", region: "Sindh" },
+  { slug: "gandhian", name: "Gandhian", region: "Khyber Pakhtunkhwa" },
+  { slug: "dando", name: "Dando", region: "Sindh" },
+  { slug: "muzaffargarh", name: "Muzaffargarh", region: "Punjab" },
+  { slug: "jahanian", name: "Jahanian", region: "Punjab" },
+  { slug: "jalalpur", name: "Jalalpur", region: "Punjab" },
+  { slug: "ghakhar", name: "Ghakhar", region: "Punjab" },
 ] as const;
 
 export type CitySlug = (typeof CITIES)[number]["slug"];
+
+/**
+ * Subset of CITIES surfaced in the nav dropdown + homepage so the UI stays
+ * clean. The full CITIES list still powers /cities, city hubs, vendor-type×city
+ * pages, canonical URLs, and the sitemap — so every real city is indexable.
+ */
+export const FEATURED_CITY_SLUGS = [
+  "karachi", "lahore", "islamabad", "rawalpindi", "faisalabad", "multan",
+  "peshawar", "sialkot", "gujranwala", "hyderabad", "quetta", "bahawalpur",
+] as const;
+export const FEATURED_CITIES = CITIES.filter((c) =>
+  (FEATURED_CITY_SLUGS as readonly string[]).includes(c.slug),
+);
 
 /**
  * Vendor type slugs — match L6 of 03-url-conventions-LOCKED.md.
@@ -176,7 +261,31 @@ export const VENDOR_TYPES = [
     slug: "wedding-djs",
     singular: "Wedding DJ",
     plural: "Wedding DJs",
-    description: "DJs, dholis, and live performers for every wedding function.",
+    description: "DJs, dholis, qawwals, and live performers for every wedding function.",
+  },
+  {
+    slug: "wedding-mithai",
+    singular: "Mithai & Sweets Shop",
+    plural: "Mithai & Sweets",
+    description: "Traditional mithai, barfi, ladoo, and wedding sweets for every shaadi function.",
+  },
+  {
+    slug: "nikah-khwan",
+    singular: "Nikah Khwan",
+    plural: "Nikah Khwans",
+    description: "Nikah khwans and officiants to solemnise your nikah ceremony.",
+  },
+  {
+    slug: "wedding-generators",
+    singular: "Generator Rental",
+    plural: "Generator Rentals",
+    description: "Backup power and generator rentals to keep every wedding function running.",
+  },
+  {
+    slug: "wedding-cake-designers",
+    singular: "Wedding Cake Designer",
+    plural: "Wedding Cake Designers",
+    description: "Custom wedding cakes and dessert tables for the big day.",
   },
 ] as const;
 
@@ -201,7 +310,25 @@ export const VENDOR_TYPE_BACKEND_MAP: Record<VendorTypeSlug, string | null> = {
   "bridal-wear": "Bridal wearing",
   "wedding-cars": "Car rental",
   "wedding-stationery": "Wedding Invitations and Stationery",
-  "wedding-djs": null, // backend does not yet have this type
+  "wedding-djs": "Dhol player",
+  "wedding-mithai": "Mithai and sweets",
+  "nikah-khwan": "Nikahkhwan",
+  "wedding-generators": "Generator rental",
+  "wedding-cake-designers": "Wedding cakes",
+};
+
+/**
+ * Extra backend `vendorType` strings folded into an existing SEO slug, so small
+ * categories share a relevant page instead of needing their own route. Merged
+ * into the reverse lookup by backendToSeoSlug(). ALWAYS resolve a vendor's SEO
+ * type via that helper (detail page, category page, sitemap) so folds stay
+ * consistent and never 404.
+ */
+export const BACKEND_TYPE_ALIASES: Record<string, VendorTypeSlug> = {
+  "Marquee rental": "wedding-venues",
+  Florist: "wedding-decorators",
+  "Qawwali and Naat": "wedding-djs",
+  "Sound system rental": "wedding-djs",
 };
 
 export function getCity(slug: string) {
@@ -214,4 +341,20 @@ export function getVendorType(slug: string) {
 
 export function getBackendVendorType(slug: string): string | null {
   return VENDOR_TYPE_BACKEND_MAP[slug as VendorTypeSlug] ?? null;
+}
+
+/**
+ * Reverse map (primary 1:1 entries + fold aliases): backend `vendorType`
+ * string -> SEO slug. Returns null for types with no SEO page (e.g. types the
+ * backend has but we haven't surfaced). Single source of truth for "which SEO
+ * page does this vendor belong on".
+ */
+export function backendToSeoSlug(
+  backendType: string | null | undefined,
+): VendorTypeSlug | null {
+  if (!backendType) return null;
+  for (const [slug, backend] of Object.entries(VENDOR_TYPE_BACKEND_MAP)) {
+    if (backend === backendType) return slug as VendorTypeSlug;
+  }
+  return BACKEND_TYPE_ALIASES[backendType] ?? null;
 }

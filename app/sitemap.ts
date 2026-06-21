@@ -3,7 +3,7 @@ import {
   SITE_URL,
   CITIES,
   VENDOR_TYPES,
-  VENDOR_TYPE_BACKEND_MAP,
+  backendToSeoSlug,
   type VendorTypeSlug,
 } from "@/lib/seo"
 import { slugifyName } from "@/lib/seo/fetch-vendor"
@@ -33,12 +33,47 @@ import {
  * Reference: docs/seo/00-master-seo-playbook.md §1 item 28 (split when >50k or >50MB)
  */
 
-// ─── Reverse map: backend `vendorType` string → SEO slug. ───────────────
-const BACKEND_TO_SEO: Record<string, VendorTypeSlug> = Object.fromEntries(
-  Object.entries(VENDOR_TYPE_BACKEND_MAP)
-    .filter(([, backend]) => backend != null)
-    .map(([seo, backend]) => [backend as string, seo as VendorTypeSlug]),
-)
+/**
+ * Fetch the FULL vendor inventory by paginating the backend — the old single
+ * `?limit=2000` call silently capped coverage (we have >3k vendors). Dedupes by
+ * id, stops on the last/empty page or when an endpoint ignores `page`, and is
+ * bounded by MAX_PAGES so a misbehaving backend can't loop forever. Cached 1h
+ * via the fetch `revalidate`, so the three shards share one set of requests.
+ */
+async function fetchAllBusinesses(): Promise<any[]> {
+  const PAGE = 500
+  const MAX_PAGES = 15 // hard ceiling: 7,500 vendors
+  const seen = new Set<string>()
+  const all: any[] = []
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    let rows: any[] = []
+    try {
+      const res = await fetch(
+        `${BACKEND_URL}api/v1/businesses?page=${page}&limit=${PAGE}`,
+        { next: { revalidate: 3600 }, headers: { Accept: "application/json" } },
+      )
+      if (!res.ok) break
+      const json = (await res.json()) as { data?: any }
+      const result = json?.data
+      rows = Array.isArray(result) ? result : result?.data ?? []
+    } catch {
+      break
+    }
+    if (!rows.length) break
+    let added = 0
+    for (const r of rows) {
+      const id = String(r?.id ?? r?.businessId ?? "")
+      if (id && !seen.has(id)) {
+        seen.add(id)
+        all.push(r)
+        added++
+      }
+    }
+    if (added === 0) break // endpoint ignored `page`, or no new rows
+    if (rows.length < PAGE) break // last page
+  }
+  return all
+}
 
 // ─── Shard 0: core (static + hubs + legal + tools) ──────────────────────
 
@@ -199,29 +234,20 @@ async function buildProgrammaticShard(): Promise<MetadataRoute.Sitemap> {
   // listicle (need >= MIN_VENDORS_FOR_LISTICLE for a credible ranked list).
   const counts = new Map<string, number>()
   try {
-    const url = `${BACKEND_URL}api/v1/businesses?limit=2000`
-    const res = await fetch(url, {
-      next: { revalidate: 3600 },
-      headers: { Accept: "application/json" },
-    })
-    if (res.ok) {
-      const json = (await res.json()) as { data?: any }
-      const raws: any[] = Array.isArray(json?.data) ? json.data : json?.data?.data ?? []
-      for (const raw of raws) {
-        const vendor = raw?.vendor ?? {}
-        const backendType: string | undefined =
-          raw?.type || vendor?.vendorType || raw?.subBusinessType
-        if (!backendType) continue
-        const seoTypeSlug = BACKEND_TO_SEO[backendType]
-        if (!seoTypeSlug) continue
-        const cityRaw: string = raw?.city ?? raw?.location ?? vendor?.city ?? ""
-        if (!cityRaw) continue
-        const citySlug = slugifyName(cityRaw)
-        if (!CITIES.some((c) => c.slug === citySlug)) continue
-        const comboKey = `${seoTypeSlug}|${citySlug}`
-        populated.add(comboKey)
-        counts.set(comboKey, (counts.get(comboKey) ?? 0) + 1)
-      }
+    const raws = await fetchAllBusinesses()
+    for (const raw of raws) {
+      const vendor = raw?.vendor ?? {}
+      const backendType: string | undefined =
+        raw?.type || vendor?.vendorType || raw?.subBusinessType
+      const seoTypeSlug = backendToSeoSlug(backendType)
+      if (!seoTypeSlug) continue
+      const cityRaw: string = raw?.city ?? raw?.location ?? vendor?.city ?? ""
+      if (!cityRaw) continue
+      const citySlug = slugifyName(cityRaw)
+      if (!CITIES.some((c) => c.slug === citySlug)) continue
+      const comboKey = `${seoTypeSlug}|${citySlug}`
+      populated.add(comboKey)
+      counts.set(comboKey, (counts.get(comboKey) ?? 0) + 1)
     }
   } catch {
     /* backend unreachable — fall through, keep nothing in `populated`,
@@ -275,20 +301,7 @@ interface DynamicVendor {
 }
 
 async function buildVendorsShard(): Promise<MetadataRoute.Sitemap> {
-  const url = `${BACKEND_URL}api/v1/businesses?limit=2000`
-  let raws: any[] = []
-  try {
-    const res = await fetch(url, {
-      next: { revalidate: 3600 }, // ISR: refresh hourly
-      headers: { Accept: "application/json" },
-    })
-    if (!res.ok) return []
-    const json = (await res.json()) as { data?: any }
-    const result = json?.data
-    raws = Array.isArray(result) ? result : result?.data ?? []
-  } catch {
-    return [] // backend unreachable at build time → still produce a valid shard
-  }
+  const raws = await fetchAllBusinesses()
 
   const vendors = raws
     .map(projectToCanonical)
@@ -311,7 +324,7 @@ function projectToCanonical(raw: any): DynamicVendor | null {
     raw?.type || vendor?.vendorType || raw?.subBusinessType
   if (!backendType) return null
 
-  const seoTypeSlug = BACKEND_TO_SEO[backendType]
+  const seoTypeSlug = backendToSeoSlug(backendType)
   if (!seoTypeSlug) return null
 
   const cityRaw: string = raw?.city ?? raw?.location ?? vendor?.city ?? ""
@@ -383,30 +396,19 @@ async function buildImagesShard(): Promise<MetadataRoute.Sitemap> {
   // Vendor leaf images — fetched once, attached to the canonical leaf URL.
   // Reuses the dynamic-vendor fetch path; bounded to the same 1h ISR cache.
   try {
-    const url = `${SITE_URL.replace(/\/$/, "")}` // satisfies type narrowing
-    const res = await fetch(`${BACKEND_URL}api/v1/businesses?limit=2000`, {
-      next: { revalidate: 3600 },
-      headers: { Accept: "application/json" },
-    })
-    if (res.ok) {
-      const json = (await res.json()) as { data?: any }
-      const list: any[] = Array.isArray(json?.data)
-        ? json.data
-        : json?.data?.data ?? []
-      for (const raw of list) {
-        const projected = projectToCanonical(raw)
-        if (!projected) continue
-        const img = pickFirstImage(raw)
-        if (!img) continue
-        entries.push({
-          url: projected.url,
-          lastModified: projected.lastModified,
-          changeFrequency: "weekly",
-          priority: 0.6,
-          images: [img],
-        })
-      }
-      void url // suppress unused warning
+    const list = await fetchAllBusinesses()
+    for (const raw of list) {
+      const projected = projectToCanonical(raw)
+      if (!projected) continue
+      const img = pickFirstImage(raw)
+      if (!img) continue
+      entries.push({
+        url: projected.url,
+        lastModified: projected.lastModified,
+        changeFrequency: "weekly",
+        priority: 0.6,
+        images: [img],
+      })
     }
   } catch {
     // Backend unreachable — vendor images skipped for this build, will
