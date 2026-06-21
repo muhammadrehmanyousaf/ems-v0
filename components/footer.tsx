@@ -21,7 +21,7 @@ import {
   Music2,
   Pin,
 } from "lucide-react"
-import { getSocialProfiles, type SocialProfile, VENDOR_TYPES, CITIES } from "@/lib/seo"
+import { getSocialProfiles, type SocialProfile, VENDOR_TYPES, FEATURED_CITIES } from "@/lib/seo"
 
 // Curated high-value guides for the footer internal-link spine (the cost
 // guides + flagship planning/inspiration pillars). Keep ~8 — the rest are
@@ -484,7 +484,7 @@ export function Footer() {
                   Popular Cities
                 </h4>
                 <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2.5">
-                  {CITIES.map((c) => (
+                  {FEATURED_CITIES.map((c) => (
                     <li key={c.slug}>
                       <Link
                         href={`/cities/${c.slug}`}

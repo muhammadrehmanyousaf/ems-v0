@@ -28,6 +28,7 @@ import {
   getCity,
   getVendorType,
   getBackendVendorType,
+  backendToSeoSlug,
   buildPageMetadata,
   vendorLD,
   venueLD,
@@ -102,10 +103,20 @@ export async function VendorDetailPage(input: PageInput) {
   // match its actual category or city. Could 301, but 404 is safer for SEO
   // (avoid duplicate-content footguns).
   const expectedBackendType = getBackendVendorType(vt.slug)
-  if (expectedBackendType && vendor.vendorType && vendor.vendorType !== expectedBackendType) {
+  // Alias-aware: a vendor belongs on this type page when its backend type
+  // resolves (directly or via a fold alias, e.g. Marquee->wedding-venues) to
+  // this SEO slug. Using backendToSeoSlug keeps folds from 404-ing here.
+  if (vendor.vendorType && backendToSeoSlug(vendor.vendorType) !== vt.slug) {
     notFound()
   }
-  if (vendor.city && city.name && vendor.city.toLowerCase() !== city.name.toLowerCase()) {
+  // The "pakistan" national catch-all accepts vendors whose real city is
+  // unknown/unparseable in the source data, so skip the city-match guard there.
+  if (
+    city.slug !== "pakistan" &&
+    vendor.city &&
+    city.name &&
+    vendor.city.toLowerCase() !== city.name.toLowerCase()
+  ) {
     notFound()
   }
 

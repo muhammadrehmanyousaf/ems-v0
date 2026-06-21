@@ -13,16 +13,23 @@
 
 import { BACKEND_URL } from "@/lib/backend-url"
 import { slugifyName } from "./fetch-vendor"
-import { VENDOR_TYPE_BACKEND_MAP, type VendorTypeSlug } from "./constants"
+import {
+  VENDOR_TYPE_BACKEND_MAP,
+  BACKEND_TYPE_ALIASES,
+  type VendorTypeSlug,
+} from "./constants"
 
-// Reverse the SEO→backend map so we can derive the SEO slug from the
-// backend's `vendorType` string. Used to compute canonical leaf URLs
-// for listing cards.
-const BACKEND_TO_SEO: Record<string, VendorTypeSlug> = Object.fromEntries(
-  Object.entries(VENDOR_TYPE_BACKEND_MAP)
-    .filter(([, backend]) => backend != null)
-    .map(([seo, backend]) => [backend as string, seo as VendorTypeSlug]),
-)
+// Reverse the SEO→backend map (primary 1:1 entries + fold aliases) so we can
+// derive the SEO slug from the backend's `vendorType` string. Used to compute
+// canonical leaf URLs for listing cards.
+const BACKEND_TO_SEO: Record<string, VendorTypeSlug> = {
+  ...Object.fromEntries(
+    Object.entries(VENDOR_TYPE_BACKEND_MAP)
+      .filter(([, backend]) => backend != null)
+      .map(([seo, backend]) => [backend as string, seo as VendorTypeSlug]),
+  ),
+  ...BACKEND_TYPE_ALIASES,
+}
 
 export interface VendorListItem {
   id: number | string
