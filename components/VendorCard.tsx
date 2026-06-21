@@ -21,6 +21,7 @@ import {
 import { useRouter } from "next/navigation"
 import { useFavorites } from "@/hooks/use-favorites"
 import { getFirstImage } from "@/lib/utils/image-utils"
+import { VENDOR_TYPE_PATHS } from "@/lib/vendor-types"
 import {
   ListingBadges,
   type ListingBadgeBusiness,
@@ -120,18 +121,18 @@ export default function VendorCard({
     
     // Map vendor type to URL path - Support ALL vendor types
     const getVendorTypePath = (vendorType: string) => {
-      const typeMap: { [key: string]: string } = {
-        'Photographer': 'photographers',
-        'Decorator': 'decor',
-        'Henna artist': 'henna-artists',
-        'Makeup artist': 'makeup-artists',
-        'Wedding venue': 'venues',
-        'Car rental': 'car-rental',
-        'Catering': 'catering',
-        // `bridal-wear` / `wedding-stationery` are SEO listing routes that
-        // own /bridal-wear/[city] and /wedding-stationery/[city]; routing a
-        // numeric id there collides with [city] and never reaches a detail
-        // page. The numeric-id detail routes live under these slugs instead.
+      // Reverse the canonical slug->type map (lib/vendor-types.ts) so EVERY one
+      // of the 23 categories resolves to its numeric-id detail route — not just
+      // the original handful (which sent the rest, e.g. Mithai / Marquee /
+      // Florist / Generator / Cakes / Qawwali / Dhol, to /vendors).
+      const reverse: { [key: string]: string } = {}
+      for (const [slug, type] of Object.entries(VENDOR_TYPE_PATHS)) reverse[type] = slug
+
+      // Casing/label variants + the two whose numeric-id detail route
+      // deliberately differs from the SEO browse slug: those SEO slugs own
+      // /bridal-wear/[city] and /wedding-stationery/[city], so a numeric id
+      // there would be read as a [city]. Detail routes live at these slugs.
+      const overrides: { [key: string]: string } = {
         'Bridal wearing': 'bridal-wearing',
         'Wedding Invitations and Stationery': 'wedding-invitations',
         'Venue': 'venues',
@@ -140,19 +141,12 @@ export default function VendorCard({
         'Henna Artist': 'henna-artists',
         'Car Rental': 'car-rental',
         'Wedding Stationery': 'wedding-invitations',
-        'Bridal Wear': 'bridal-wearing'
+        'Bridal Wear': 'bridal-wearing',
       }
-      
-      // Clean the vendor type before mapping
+
       const cleanVendorType = vendorType?.trim() || ''
-      
-      // Check if we have a direct mapping
-      if (typeMap[cleanVendorType]) {
-        return typeMap[cleanVendorType]
-      }
-      
-      // For unmapped types like "Event Planning", redirect to vendors page
-      return 'vendors'
+      // For genuinely unknown types fall back to the main vendors page.
+      return overrides[cleanVendorType] || reverse[cleanVendorType] || 'vendors'
     }
     
     const vendorTypePath = getVendorTypePath(type)
