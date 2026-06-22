@@ -18,12 +18,14 @@ export interface StartClaimResult {
   otpSentTo: string // masked
 }
 
-/** Step A — POST /start { listingId, name, email, phone }. */
+/** Step A — POST /start { listingId, name, email, phone? }. Email-only flow:
+ *  email is required, phone is an optional confidence signal. otpSentTo is a
+ *  masked email. */
 export async function startClaim(payload: {
   listingId: string | number
   name: string
   email: string
-  phone: string
+  phone?: string
 }): Promise<StartClaimResult> {
   const res = await axiosInstance.post(`/api/v1/claims/start`, payload)
   return unwrap<StartClaimResult>(res) as StartClaimResult

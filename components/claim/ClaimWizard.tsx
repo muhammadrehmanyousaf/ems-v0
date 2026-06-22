@@ -13,7 +13,7 @@
 // the page shows a "Claiming is not available yet" notice instead of mounting
 // this component.
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
@@ -124,6 +124,35 @@ export function ClaimWizard({ listingId }: { listingId: string }) {
   const [evidenceNote, setEvidenceNote] = useState("")
   const [evidenceError, setEvidenceError] = useState<string | null>(null)
 
+  // ── Magic-link landing ───────────────────────────────────────────────────
+  // The verification email's link carries ?claim=<id>&code=<6 digits>. If the
+  // claimant clicked it (any device), auto-verify and jump straight to the
+  // evidence step — no re-typing.
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search)
+    const c = sp.get("claim")
+    const cd = sp.get("code")
+    if (!c || !cd || !/^\d{6}$/.test(cd)) return
+    const cid = Number(c)
+    if (!Number.isFinite(cid)) return
+    setClaimId(cid)
+    setCode(cd)
+    setStep("otp")
+    setSubmitting(true)
+    verifyClaim(cid, cd)
+      .then(() => setStep("evidence"))
+      .catch((err: any) =>
+        setOtpError(
+          apiMessage(
+            err,
+            "This link expired or was already used. Enter the code from your email instead.",
+          ),
+        ),
+      )
+      .finally(() => setSubmitting(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // ── Step A submit ────────────────────────────────────────────────────────
   const onContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -131,8 +160,6 @@ export function ClaimWizard({ listingId }: { listingId: string }) {
     if (!name.trim()) return setContactError("Please enter your name.")
     if (!EMAIL_RE.test(email.trim()))
       return setContactError("Please enter a valid email address.")
-    if (phone.trim().length < 7)
-      return setContactError("Please enter a valid phone number.")
 
     setSubmitting(true)
     try {
@@ -140,15 +167,15 @@ export function ClaimWizard({ listingId }: { listingId: string }) {
         listingId,
         name: name.trim(),
         email: email.trim(),
-        phone: phone.trim(),
+        phone: phone.trim(), // optional — sent as a confidence signal only
       })
       setClaimId(res.claimId)
-      setOtpSentTo(res.otpSentTo || phone.trim())
+      setOtpSentTo(res.otpSentTo || email.trim())
       setCode("")
       setStep("otp")
       toast({
-        title: "Code sent",
-        description: `We sent a 6-digit code to ${res.otpSentTo || "your phone"}.`,
+        title: "Code emailed",
+        description: `We emailed a 6-digit code (and a one-tap link) to ${res.otpSentTo || email.trim()}.`,
       })
     } catch (err: any) {
       setContactError(
@@ -273,8 +300,8 @@ export function ClaimWizard({ listingId }: { listingId: string }) {
                   <span className="text-bridal-gold">business?</span>
                 </BridalTitle>
                 <p className="text-center font-bridal text-bridal-text-soft text-sm mb-7">
-                  Tell us how to reach you. We&apos;ll send a 6-digit code to
-                  verify it&apos;s really you.
+                  Tell us how to reach you. We&apos;ll email you a 6-digit code
+                  (and a one-tap link) to verify it&apos;s really you.
                 </p>
 
                 <form onSubmit={onContactSubmit} className="space-y-4">
@@ -306,9 +333,8 @@ export function ClaimWizard({ listingId }: { listingId: string }) {
 
                   <BridalField
                     id="phone"
-                    label="Phone Number"
-                    hint="Use the number associated with your business — it speeds up verification."
-                    required
+                    label="Phone Number (optional)"
+                    hint="If it matches the number on the listing, it helps our team verify you faster."
                   >
                     <BridalInput
                       id="phone"
@@ -345,20 +371,20 @@ export function ClaimWizard({ listingId }: { listingId: string }) {
             {/* ── STEP B — OTP ── */}
             {step === "otp" && (
               <>
-                <BridalCrown className="mb-3">Verify Your Phone</BridalCrown>
+                <BridalCrown className="mb-3">Verify Your Email</BridalCrown>
                 <BridalTitle size="h2" className="text-center mb-2">
                   Enter the <span className="text-bridal-gold">6-digit code</span>
                 </BridalTitle>
                 <p className="text-center font-bridal text-bridal-text-soft text-sm mb-2">
-                  We sent a code to{" "}
+                  We emailed a code to{" "}
                   <span className="text-bridal-charcoal font-medium">
                     {otpSentTo}
                   </span>
-                  .
+                  . You can also just tap the link in that email.
                 </p>
                 <p className="text-center font-bridal text-[12px] text-bridal-text-label mb-6">
-                  In development the code is printed in the backend server
-                  console.
+                  Can&apos;t find it? Check your spam folder, or go back and try
+                  again.
                 </p>
 
                 <form onSubmit={onOtpSubmit} className="space-y-4">
@@ -406,7 +432,7 @@ export function ClaimWizard({ listingId }: { listingId: string }) {
                   className="mt-5 inline-flex items-center gap-1.5 font-bridal text-[12px] tracking-wide text-bridal-text-soft hover:text-bridal-mauve transition-colors"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
-                  Use a different number
+                  Use a different email
                 </button>
               </>
             )}
@@ -495,9 +521,9 @@ export function ClaimWizard({ listingId }: { listingId: string }) {
                   <span className="text-bridal-gold">business</span>
                 </BridalTitle>
                 <p className="text-center font-bridal text-bridal-text-soft text-sm mb-7">
-                  We couldn&apos;t auto-match your phone, so our team will review
-                  your claim. Share a few details that prove this business is
-                  yours.
+                  Almost done — our team reviews every claim. Share a few details
+                  that prove this business is yours, and we&apos;ll email you when
+                  it&apos;s approved.
                 </p>
 
                 <form onSubmit={onEvidenceSubmit} className="space-y-4">
