@@ -146,7 +146,7 @@ export function Header() {
               <SheetTrigger asChild>
                 <button
                   type="button"
-                  className="min-[1400px]:hidden hidden sm:inline-flex h-10 w-10 items-center justify-center rounded-md text-bridal-charcoal hover:bg-bridal-blush/55 hover:text-bridal-mauve transition-colors duration-200"
+                  className="min-[1400px]:hidden inline-flex h-10 w-10 items-center justify-center rounded-md text-bridal-charcoal hover:bg-bridal-blush/55 hover:text-bridal-mauve transition-colors duration-200"
                   aria-label="Open menu"
                 >
                   <Menu className="h-5 w-5" />
@@ -373,7 +373,7 @@ export function Header() {
                 aria-hidden="true"
                 className="h-10 sm:h-12 w-auto shrink-0"
               />
-              <span className="font-display italic leading-none tracking-tight whitespace-nowrap text-[26px] sm:text-[32px] min-[1400px]:text-[28px] text-bridal-charcoal">
+              <span className="hidden sm:inline font-display italic leading-none tracking-tight whitespace-nowrap text-[26px] sm:text-[32px] min-[1400px]:text-[28px] text-bridal-charcoal">
                 Wedding <span className="text-bridal-gold">Wala</span>
               </span>
             </Link>
@@ -604,8 +604,8 @@ export function Header() {
             </NavigationMenuList>
           </NavigationMenu>
 
-          {/* ── Right: Actions ── (hidden on mobile — logo-only navbar) */}
-          <div className="hidden sm:flex items-center gap-1 sm:gap-1.5">
+          {/* ── Right: Actions ── */}
+          <div className="flex items-center gap-1 sm:gap-1.5">
             {isAuthenticated ? (
               <>
                 <Link
