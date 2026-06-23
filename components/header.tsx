@@ -146,7 +146,7 @@ export function Header() {
               <SheetTrigger asChild>
                 <button
                   type="button"
-                  className="min-[1400px]:hidden inline-flex h-10 w-10 items-center justify-center rounded-md text-bridal-charcoal hover:bg-bridal-blush/55 hover:text-bridal-mauve transition-colors duration-200"
+                  className="min-[1400px]:hidden hidden sm:inline-flex h-10 w-10 items-center justify-center rounded-md text-bridal-charcoal hover:bg-bridal-blush/55 hover:text-bridal-mauve transition-colors duration-200"
                   aria-label="Open menu"
                 >
                   <Menu className="h-5 w-5" />
@@ -604,8 +604,8 @@ export function Header() {
             </NavigationMenuList>
           </NavigationMenu>
 
-          {/* ── Right: Actions ── */}
-          <div className="flex items-center gap-1 sm:gap-1.5">
+          {/* ── Right: Actions ── (hidden on mobile — logo-only navbar) */}
+          <div className="hidden sm:flex items-center gap-1 sm:gap-1.5">
             {isAuthenticated ? (
               <>
                 <Link
