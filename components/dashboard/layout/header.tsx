@@ -2,7 +2,7 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import React from "react"
 import { UserNav } from "./user-nav"
-import ThemeToggle from "./ThemeToggle/theme-toggle"
+import { ThemePicker } from "./ThemeToggle/ThemePicker"
 import NotificationsPopover from "./notifications-popover"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { LanguageToggle } from "@/components/dashboard/language-toggle"
@@ -19,7 +19,7 @@ const Header = () => {
       <div className="flex items-center gap-1 px-3">
         <LanguageToggle />
         <NotificationsPopover />
-        <ThemeToggle />
+        <ThemePicker />
         <Separator orientation="vertical" className="mx-1 h-4" />
         <UserNav />
       </div>
