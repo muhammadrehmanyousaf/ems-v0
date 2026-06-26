@@ -57,6 +57,8 @@ export function useCommands(): AppCommand[] {
       nav("Bookings", "/dashboard/bookings", "Calendar", "Operate", "events shoots"),
       nav("Bookings — new design", "/dashboard/bookings-new", "Sparkles", "Operate", "redesigned preview"),
       nav("Leads", "/dashboard/leads", "Inbox", "Operate", "inquiries"),
+      nav("Leads — new design", "/dashboard/leads-new", "Sparkles", "Operate", "redesigned preview"),
+      nav("Customers — new design", "/dashboard/customers-new", "Sparkles", "Operate", "redesigned clients preview"),
       nav("Calendar", "/dashboard/calendar", "Calendar", "Operate", "schedule"),
       nav("Function sheets", "/dashboard/function-sheets", "FileText", "Operate", "BEO"),
       nav("Customers", "/dashboard/customers", "Users", "Operate", "clients"),
