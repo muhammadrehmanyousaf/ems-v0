@@ -1,14 +1,19 @@
 "use client"
 
 import { useApplyTheme } from "@/lib/hooks/use-apply-theme"
+import { CommandPalette } from "@/components/dashboard/shared/command-palette"
 
 /**
- * Mounts the theme engine for the dashboard subtree. The active palette lives as
- * `data-theme` on <html> (stamped pre-paint by the bootstrap script and kept in
- * sync by useApplyTheme), so this component renders nothing of its own — it just
- * runs the hook. Additive + behavior-frozen.
+ * Mounts the theme engine + the ⌘K command palette for the dashboard subtree.
+ * Theming applies via inline tokens on <html> (useApplyTheme); the palette is
+ * always-present and opens from anywhere. Additive + behavior-frozen.
  */
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   useApplyTheme()
-  return <>{children}</>
+  return (
+    <>
+      {children}
+      <CommandPalette />
+    </>
+  )
 }

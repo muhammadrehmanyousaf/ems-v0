@@ -6,6 +6,7 @@ import { ThemePicker } from "./ThemeToggle/ThemePicker"
 import NotificationsPopover from "./notifications-popover"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { LanguageToggle } from "@/components/dashboard/language-toggle"
+import { CommandTrigger } from "./command-trigger"
 
 const Header = () => {
   return (
@@ -17,6 +18,7 @@ const Header = () => {
       </div>
 
       <div className="flex items-center gap-1 px-3">
+        <CommandTrigger />
         <LanguageToggle />
         <NotificationsPopover />
         <ThemePicker />
