@@ -39,6 +39,7 @@ body {
 @layer base {
   :root {
     /* ── Surfaces ───────────────────────────────────────── */
+    /* (token engine: theme palettes appended at end of file, unlayered) */
     --background: 0 0% 100%;            /* white canvas */
     --foreground: 240 10% 3.9%;          /* zinc-950ish text */
     --card: 0 0% 100%;
@@ -149,3 +150,4 @@ body {
     @apply bg-background text-foreground;
   }
 }
+

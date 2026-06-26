@@ -1,61 +1,46 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
 import { useTheme as useNextTheme } from "next-themes"
 import { useThemePrefs } from "@/lib/store/theme-prefs"
+import { THEMES } from "@/lib/theme/theme-tokens"
 import { deriveAccent } from "@/lib/color/derive-accent"
 
-const ACCENT_PROPS = [
-  "--primary",
-  "--primary-foreground",
-  "--ring",
-  "--primary-hover",
-  "--primary-active",
-] as const
-
 /**
- * Attach to a ref on the dashboard shell root (the element carrying data-theme).
- *   const shellRef = useRef<HTMLDivElement>(null)
- *   useApplyTheme(shellRef)
- *   return <div ref={shellRef} data-theme={theme}>…</div>
+ * Applies the active theme by writing its token values as inline CSS custom
+ * properties on <html>. Inline styles outrank every stylesheet rule (including
+ * the dashboard's stock :root/.dark tokens) and don't depend on the CSS build
+ * pipeline, so theming is bulletproof. A custom accent overrides just the brand
+ * tokens on top.
  */
-export function useApplyTheme(ref: React.RefObject<HTMLElement>) {
+export function useApplyTheme() {
   const { theme, mode, customAccent } = useThemePrefs()
   const { setTheme: setNextMode, resolvedTheme } = useNextTheme()
-  const hydrated = useRef(false)
 
-  // 1) data-theme attribute (palette)
-  useEffect(() => {
-    const el = ref.current
-    if (el) el.setAttribute("data-theme", theme)
-  }, [ref, theme])
-
-  // 2) mode → next-themes (owns the .dark class on <html>)
+  // mode → next-themes (owns the .dark class on <html>, used by any
+  // dark:* utilities and the rest of the app)
   useEffect(() => {
     setNextMode(mode)
   }, [mode, setNextMode])
 
-  // 3) custom accent → inline vars (or clear). Recompute when the *resolved*
-  //    light/dark changes, because hover/foreground tuning is mode-aware.
+  // theme + resolved light/dark → inline token vars on <html>
   useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    if (!customAccent) {
-      ACCENT_PROPS.forEach((p) => el.style.removeProperty(p))
-      return
-    }
+    const el = document.documentElement
     const m = resolvedTheme === "dark" ? "dark" : "light"
-    const a = deriveAccent(customAccent, m)
-    if (!a) {
-      ACCENT_PROPS.forEach((p) => el.style.removeProperty(p))
-      return
-    }
-    el.style.setProperty("--primary", a.primary)
-    el.style.setProperty("--primary-foreground", a.primaryForeground)
-    el.style.setProperty("--ring", a.ring)
-    el.style.setProperty("--primary-hover", a.primaryHover)
-    el.style.setProperty("--primary-active", a.primaryActive)
-  }, [ref, customAccent, resolvedTheme])
+    const map = THEMES[theme]?.[m] ?? THEMES.champagne[m]
+    el.setAttribute("data-theme", theme)
+    for (const [k, v] of Object.entries(map)) el.style.setProperty(k, v)
 
-  hydrated.current = true
+    // custom accent overrides the brand tokens on top of the theme
+    if (customAccent) {
+      const a = deriveAccent(customAccent, m)
+      if (a) {
+        el.style.setProperty("--primary", a.primary)
+        el.style.setProperty("--primary-foreground", a.primaryForeground)
+        el.style.setProperty("--ring", a.ring)
+        el.style.setProperty("--sidebar-primary", a.primary)
+        el.style.setProperty("--sidebar-ring", a.ring)
+      }
+    }
+  }, [theme, customAccent, resolvedTheme])
 }
