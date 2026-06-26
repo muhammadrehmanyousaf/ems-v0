@@ -6,6 +6,7 @@ import { Icon } from "@/components/dashboard/shared/icon"
 import { Spinner } from "@/components/dashboard/shared/icon"
 import { EmptyState, type EmptyStateProps } from "./empty-state"
 import { TableSkeleton } from "./skeletons"
+import { useUiStore } from "@/lib/store/ui-store"
 
 /**
  * DataTable<T> — the shared list surface. Column-config driven, token-only, with
@@ -69,6 +70,8 @@ export function DataTable<T>({
   onRowClick,
   className,
 }: DataTableProps<T>) {
+  const density = useUiStore((s) => s.density)
+  const rowPad = density === "compact" ? "py-2" : "py-3"
   const sel = selectedIds ?? new Set<string>()
   const allIds = React.useMemo(() => data.map(getRowId), [data, getRowId])
   const allSelected = data.length > 0 && allIds.every((id) => sel.has(id))
@@ -167,7 +170,7 @@ export function DataTable<T>({
                     )}
                   >
                     {selectable && (
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <td className={cn("px-4", rowPad)} onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           aria-label="Select row"
@@ -180,7 +183,7 @@ export function DataTable<T>({
                     {columns.map((c) => (
                       <td
                         key={c.key}
-                        className={cn("px-4 py-3 text-foreground", alignCls(c.align), c.cellClassName)}
+                        className={cn("px-4 text-foreground", rowPad, alignCls(c.align), c.cellClassName)}
                       >
                         {c.render ? c.render(row, i) : (row as any)[c.key]}
                       </td>

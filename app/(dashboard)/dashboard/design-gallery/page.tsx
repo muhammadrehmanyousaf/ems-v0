@@ -18,6 +18,9 @@ import { EmptyState } from "@/components/dashboard/primitives/empty-state"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
 import { CardSkeleton, TableSkeleton } from "@/components/dashboard/primitives/skeletons"
 import { Icon, Spinner, type IconName } from "@/components/dashboard/shared/icon"
+import { ExportMenu } from "@/components/dashboard/shared/export-menu"
+import { BulkImportDialog } from "@/components/dashboard/shared/bulk-import-dialog"
+import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Button } from "@/components/ui/button"
 
 type Booking = {
@@ -50,6 +53,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function DesignGallery() {
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
+  const [importOpen, setImportOpen] = React.useState(false)
 
   const columns: Column<Booking>[] = [
     { key: "event", header: "Event", render: (r) => <span className="font-medium">{r.event}</span> },
@@ -139,9 +143,23 @@ export default function DesignGallery() {
                 />
               </div>
               <Button size="sm" variant="secondary">All</Button>
-              <div className="ml-auto flex gap-2">
-                <Button size="sm" variant="outline"><Icon name="Download" size={14} className="mr-1" /> Export</Button>
-                <Button size="sm" variant="outline"><Icon name="Upload" size={14} className="mr-1" /> Import</Button>
+              <div className="ml-auto flex items-center gap-2">
+                <DensityToggle />
+                <ExportMenu
+                  rows={BOOKINGS}
+                  filename="bookings"
+                  columns={[
+                    { header: "Event", value: (r) => r.event },
+                    { header: "Customer", value: (r) => r.customer },
+                    { header: "Date", value: (r) => r.date },
+                    { header: "Amount", value: (r) => r.amount },
+                    { header: "Paid", value: (r) => r.paid },
+                    { header: "Status", value: (r) => r.status },
+                  ]}
+                />
+                <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+                  <Icon name="Upload" size={14} className="mr-1" /> Import
+                </Button>
               </div>
             </>
           }
@@ -187,6 +205,21 @@ export default function DesignGallery() {
           ))}
         </div>
       </Section>
+
+      <BulkImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        config={{
+          domain: "demo",
+          entityLabel: "booking",
+          fields: [
+            { key: "event", label: "Event", required: true, aliases: ["type"] },
+            { key: "customer", label: "Customer", required: true, aliases: ["client", "name"] },
+            { key: "amount", label: "Amount", type: "number", aliases: ["total"] },
+          ],
+          importRow: async () => ({ result: "imported" }),
+        }}
+      />
     </div>
   )
 }
