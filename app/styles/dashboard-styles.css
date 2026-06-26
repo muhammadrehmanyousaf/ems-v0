@@ -151,3 +151,51 @@ body {
   }
 }
 
+
+/* ============================================================
+   MOTION SYSTEM (B5) — 150–300ms, transform/opacity only, calm.
+   Tokens + a few keyframe utilities screens & primitives reuse.
+   Honors prefers-reduced-motion globally.
+   ============================================================ */
+:root {
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-slow: 300ms;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+}
+
+@keyframes ww-fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes ww-scale-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes ww-success-flash {
+  0%   { background-color: hsl(142 70% 45% / 0.18); }
+  100% { background-color: transparent; }
+}
+
+.animate-fade-up   { animation: ww-fade-up var(--motion-base) var(--ease-out-expo) both; }
+.animate-scale-in  { animation: ww-scale-in var(--motion-base) var(--ease-out-expo) both; }
+.animate-success   { animation: ww-success-flash 600ms ease-out both; }
+
+/* Stagger helper — apply to a container; children fade up in sequence. */
+.stagger > * { animation: ww-fade-up var(--motion-base) var(--ease-out-expo) both; }
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 40ms; }
+.stagger > *:nth-child(3) { animation-delay: 80ms; }
+.stagger > *:nth-child(4) { animation-delay: 120ms; }
+.stagger > *:nth-child(5) { animation-delay: 160ms; }
+.stagger > *:nth-child(6) { animation-delay: 200ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
