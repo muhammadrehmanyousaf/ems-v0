@@ -141,7 +141,7 @@ export function GeneratorFuelRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
-              <ExportMenu rows={entries} filename="generator-fuel" columns={[
+              <ExportMenu selectedIds={selected} getRowId={(e) => String(e.id)} rows={entries} filename="generator-fuel" columns={[
                 { header: "Generator", value: (e) => e.generatorIdentifier ?? "" },
                 { header: "Type", value: (e) => typeLabel(e.type) },
                 { header: "Fuel", value: (e) => e.fuelType ?? "" },

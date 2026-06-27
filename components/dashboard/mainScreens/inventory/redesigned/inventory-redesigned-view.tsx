@@ -102,7 +102,7 @@ export function InventoryRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
-              <ExportMenu rows={items} filename="inventory" columns={[
+              <ExportMenu selectedIds={selected} getRowId={(i) => String(i.id)} rows={items} filename="inventory" columns={[
                 { header: "Item", value: (i) => i.name },
                 { header: "SKU", value: (i) => i.sku ?? "" },
                 { header: "Category", value: (i) => i.category },

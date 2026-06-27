@@ -116,7 +116,7 @@ export function LeadsRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
-              <ExportMenu
+              <ExportMenu selectedIds={selected} getRowId={(l) => String(l.id)}
                 rows={leads}
                 filename="leads"
                 columns={[

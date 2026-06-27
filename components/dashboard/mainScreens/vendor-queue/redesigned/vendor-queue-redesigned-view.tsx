@@ -146,7 +146,7 @@ export function VendorQueueRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
-              <ExportMenu
+              <ExportMenu selectedIds={selected} getRowId={(r) => String(r.id)}
                 rows={rows}
                 filename="vendor-queue"
                 columns={[

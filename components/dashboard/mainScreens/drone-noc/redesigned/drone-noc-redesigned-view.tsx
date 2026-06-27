@@ -149,7 +149,7 @@ export function DroneNocRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
-              <ExportMenu rows={permits} filename="drone-noc-permits" columns={[
+              <ExportMenu selectedIds={selected} getRowId={(p) => String(p.id)} rows={permits} filename="drone-noc-permits" columns={[
                 { header: "Reference", value: (p) => p.referenceNumber ?? "" },
                 { header: "Type", value: (p) => typeLabel(p) },
                 { header: "Authority", value: (p) => authorityLabel(p) },

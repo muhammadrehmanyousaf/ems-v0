@@ -117,7 +117,7 @@ export function RolesAdminRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
-              <ExportMenu rows={roles} filename="roles" columns={[
+              <ExportMenu selectedIds={selected} getRowId={(r) => String(r.id)} rows={roles} filename="roles" columns={[
                 { header: "Role", value: (r) => r.name ?? "" },
                 { header: "Type", value: (r) => r.type ?? "" },
                 { header: "Description", value: (r) => r.description ?? "" },

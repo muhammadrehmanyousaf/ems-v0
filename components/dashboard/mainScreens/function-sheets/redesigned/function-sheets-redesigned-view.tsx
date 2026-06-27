@@ -165,7 +165,7 @@ export function FunctionSheetsRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
-              <ExportMenu rows={sheets} filename="function-sheets" columns={[
+              <ExportMenu selectedIds={selected} getRowId={(f) => String(f.id)} rows={sheets} filename="function-sheets" columns={[
                 { header: "ID", value: (f) => f.id },
                 { header: "Title", value: (f) => f.title ?? "" },
                 { header: "Customer", value: (f) => f.customerName ?? f.customer?.fullName ?? "" },

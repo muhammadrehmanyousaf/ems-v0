@@ -112,7 +112,7 @@ export function CustomersRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
-              <ExportMenu
+              <ExportMenu selectedIds={selected} getRowId={(c) => c._id}
                 rows={customers}
                 filename="customers"
                 columns={[

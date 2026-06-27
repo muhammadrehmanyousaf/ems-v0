@@ -31,6 +31,10 @@ export interface ExportMenuProps<T> {
   fetchAll?: () => Promise<T[]>
   label?: string
   className?: string
+  /** When a selection exists, the menu also offers "export selected". */
+  selectedIds?: Set<string>
+  /** Row identity — must match the DataTable's getRowId for selection to resolve. */
+  getRowId?: (row: T) => string
 }
 
 function escapeCsv(v: string): string {
@@ -64,28 +68,36 @@ export function ExportMenu<T>({
   fetchAll,
   label = "Export",
   className,
+  selectedIds,
+  getRowId,
 }: ExportMenuProps<T>) {
   const [busy, setBusy] = React.useState(false)
 
-  const resolveRows = async () => (fetchAll ? await fetchAll() : rows)
+  const selectedCount = selectedIds && getRowId ? rows.filter((r) => selectedIds.has(getRowId(r))).length : 0
 
-  const exportCsv = async () => {
+  const resolveRows = async (selectedOnly?: boolean) => {
+    const base = fetchAll ? await fetchAll() : rows
+    if (selectedOnly && selectedIds && getRowId) return base.filter((r) => selectedIds.has(getRowId(r)))
+    return base
+  }
+
+  const exportCsv = async (selectedOnly?: boolean) => {
     setBusy(true)
     try {
-      const data = await resolveRows()
+      const data = await resolveRows(selectedOnly)
       const matrix = toMatrix(data, columns)
       const csv = matrix.map((row) => row.map((c) => escapeCsv(String(c))).join(",")).join("\n")
       // Prepend BOM so Excel reads UTF-8 correctly.
-      downloadBlob(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" }), `${filename}.csv`)
+      downloadBlob(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" }), `${filename}${selectedOnly ? "-selected" : ""}.csv`)
     } finally {
       setBusy(false)
     }
   }
 
-  const exportXlsx = async () => {
+  const exportXlsx = async (selectedOnly?: boolean) => {
     setBusy(true)
     try {
-      const data = await resolveRows()
+      const data = await resolveRows(selectedOnly)
       const XLSX = await import("xlsx")
       const matrix = toMatrix(data, columns)
       const ws = XLSX.utils.aoa_to_sheet(matrix)
@@ -94,7 +106,7 @@ export function ExportMenu<T>({
       const out = XLSX.write(wb, { bookType: "xlsx", type: "array" })
       downloadBlob(
         new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
-        `${filename}.xlsx`,
+        `${filename}${selectedOnly ? "-selected" : ""}.xlsx`,
       )
     } finally {
       setBusy(false)
@@ -114,11 +126,24 @@ export function ExportMenu<T>({
         {label}
         <Icon name="ChevronDown" size={13} className="text-muted-foreground" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
-        <DropdownMenuItem onClick={exportCsv} className="gap-2">
+      <DropdownMenuContent align="end" className="w-52">
+        {selectedCount > 0 && (
+          <>
+            <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">{selectedCount} selected</div>
+            <DropdownMenuItem onClick={() => exportCsv(true)} className="gap-2">
+              <Icon name="FileText" size={15} /> Selected → CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => exportXlsx(true)} className="gap-2">
+              <Icon name="FileText" size={15} /> Selected → Excel
+            </DropdownMenuItem>
+            <div className="my-1 h-px bg-border" />
+            <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">All rows</div>
+          </>
+        )}
+        <DropdownMenuItem onClick={() => exportCsv(false)} className="gap-2">
           <Icon name="FileText" size={15} /> CSV (.csv)
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={exportXlsx} className="gap-2">
+        <DropdownMenuItem onClick={() => exportXlsx(false)} className="gap-2">
           <Icon name="FileText" size={15} /> Excel (.xlsx)
         </DropdownMenuItem>
       </DropdownMenuContent>

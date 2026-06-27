@@ -143,7 +143,7 @@ export function BusinessesAdminRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
-              <ExportMenu rows={businesses} filename="businesses" columns={[
+              <ExportMenu selectedIds={selected} getRowId={(b) => String(b.id)} rows={businesses} filename="businesses" columns={[
                 { header: "Business", value: (b) => b.name ?? "" },
                 { header: "City", value: (b) => b.city ?? "" },
                 { header: "Sub area", value: (b) => b.subArea ?? "" },

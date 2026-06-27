@@ -102,7 +102,7 @@ export function ReceivablesRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
-              <ExportMenu rows={customers} filename="receivables" columns={[
+              <ExportMenu selectedIds={selected} getRowId={(c) => c.customerPhone || c.customerEmail || c.customerName || JSON.stringify(c)} rows={customers} filename="receivables" columns={[
                 { header: "Customer", value: (c) => c.customerName ?? "" },
                 { header: "Phone", value: (c) => c.customerPhone ?? "" },
                 { header: "Bookings", value: (c) => num(c.bookingCount) },

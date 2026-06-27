@@ -135,7 +135,7 @@ export function HalalCertsRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
-              <ExportMenu rows={certs} filename="halal-certs" columns={[
+              <ExportMenu selectedIds={selected} getRowId={(c) => String(c.id)} rows={certs} filename="halal-certs" columns={[
                 { header: "Cert #", value: (c) => c.certNumber ?? "" },
                 { header: "Supplier", value: (c) => supplierName(c) },
                 { header: "Item", value: (c) => c.itemDescription ?? "" },

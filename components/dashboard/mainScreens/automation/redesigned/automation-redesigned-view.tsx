@@ -121,7 +121,7 @@ export function AutomationRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
-              <ExportMenu rows={rules} filename="automation-rules" columns={[
+              <ExportMenu selectedIds={selected} getRowId={(r) => String(r?.id)} rows={rules} filename="automation-rules" columns={[
                 { header: "Name", value: (r) => r?.name ?? "" },
                 { header: "Trigger", value: (r) => triggerLabel(r) },
                 { header: "Offset days", value: (r) => num(r?.offsetDays) },

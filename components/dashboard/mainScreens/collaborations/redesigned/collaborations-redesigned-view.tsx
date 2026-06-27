@@ -125,7 +125,7 @@ export function CollaborationsRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
-              <ExportMenu rows={invites} filename="collaborations" columns={[
+              <ExportMenu selectedIds={selected} getRowId={(c) => String(c.id)} rows={invites} filename="collaborations" columns={[
                 { header: "Event", value: (c) => c.eventLabel ?? "" },
                 { header: "From", value: (c) => c.fromName ?? "" },
                 { header: "With", value: (c) => counterpartName(c) },

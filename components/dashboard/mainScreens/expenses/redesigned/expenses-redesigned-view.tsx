@@ -103,7 +103,7 @@ export function ExpensesRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
-              <ExportMenu rows={expenses} filename="expenses" columns={[
+              <ExportMenu selectedIds={selected} getRowId={(e) => String(e.id)} rows={expenses} filename="expenses" columns={[
                 { header: "Category", value: (e) => e.category },
                 { header: "Paid to", value: (e) => e.vendorName ?? "" },
                 { header: "Note", value: (e) => e.description ?? "" },

@@ -152,7 +152,7 @@ export function PromoteRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
-              <ExportMenu rows={requests} filename="promotions" columns={[
+              <ExportMenu selectedIds={selected} getRowId={(r) => String(r.id)} rows={requests} filename="promotions" columns={[
                 { header: "Business", value: (r) => r.business?.name ?? `#${r.businessId}` },
                 { header: "Placement", value: (r) => placementLabel(r) },
                 { header: "Window (days)", value: (r) => num(r.windowDays) },

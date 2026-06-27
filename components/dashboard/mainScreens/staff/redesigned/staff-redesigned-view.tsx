@@ -110,7 +110,7 @@ export function StaffRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
-              <ExportMenu rows={members} filename="staff" columns={[
+              <ExportMenu selectedIds={selected} getRowId={(m) => String(m.id)} rows={members} filename="staff" columns={[
                 { header: "Name", value: (m) => m.fullName },
                 { header: "Role", value: (m) => m.role ?? "" },
                 { header: "Type", value: (m) => m.employmentType ?? "" },

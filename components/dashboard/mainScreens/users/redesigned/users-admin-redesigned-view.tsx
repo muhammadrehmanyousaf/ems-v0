@@ -122,7 +122,7 @@ export function UsersAdminRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
-              <ExportMenu rows={users} filename="users" columns={[
+              <ExportMenu selectedIds={selected} getRowId={(u) => String(u.id)} rows={users} filename="users" columns={[
                 { header: "Name", value: (u) => u.fullName ?? "" },
                 { header: "Email", value: (u) => u.email ?? "" },
                 { header: "Phone", value: (u) => u.phoneNumber ?? "" },

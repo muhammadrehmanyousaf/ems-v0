@@ -165,7 +165,7 @@ export function BrokersRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
-              <ExportMenu rows={rows} filename="broker-commissions" columns={[
+              <ExportMenu selectedIds={selected} getRowId={(c) => String(c.id)} rows={rows} filename="broker-commissions" columns={[
                 { header: "Broker", value: (c) => c.brokerNameSnapshot ?? "" },
                 { header: "Type", value: (c) => brokerTypeLabel(c) },
                 { header: "Commission", value: (c) => num(c.commissionAmount) },

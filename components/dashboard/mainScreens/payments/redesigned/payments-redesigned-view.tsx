@@ -102,7 +102,7 @@ export function PaymentsRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
-              <ExportMenu rows={payments} filename="payments" columns={[
+              <ExportMenu selectedIds={selected} getRowId={(p) => String(p.bookingId)} rows={payments} filename="payments" columns={[
                 { header: "Customer", value: (p) => p.customerName ?? "" },
                 { header: "Phone", value: (p) => p.customerPhone ?? "" },
                 { header: "Event date", value: (p) => fmtDate(p.bookingDate) },

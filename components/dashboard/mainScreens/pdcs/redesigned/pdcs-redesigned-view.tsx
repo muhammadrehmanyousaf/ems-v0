@@ -106,7 +106,7 @@ export function PdcsRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
-              <ExportMenu rows={pdcs} filename="cheques" columns={[
+              <ExportMenu selectedIds={selected} getRowId={(p) => String(p.id)} rows={pdcs} filename="cheques" columns={[
                 { header: "Cheque #", value: (p) => p.chequeNumber },
                 { header: "Bank", value: (p) => p.bankName ?? "" },
                 { header: "Customer", value: (p) => p.customer?.fullName ?? "" },
