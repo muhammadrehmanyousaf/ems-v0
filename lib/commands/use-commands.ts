@@ -84,6 +84,7 @@ export function useCommands(): AppCommand[] {
       nav("Expenses", "/dashboard/expenses", "Wallet", "Money", "costs"),
       nav("Brokers", "/dashboard/brokers", "Users", "Money", "commission"),
       nav("Tax", "/dashboard/tax", "FileText", "Money", "FBR"),
+      nav("Billing — new design", "/dashboard/billing-new", "Sparkles", "Money", "redesigned plan pricing"),
 
       // Grow
       nav("Insights", "/dashboard/insights", "BarChart3", "Grow", "analytics"),
