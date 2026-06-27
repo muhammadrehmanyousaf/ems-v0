@@ -88,7 +88,6 @@ export function ReceiptsRedesignedView() {
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
-        bulkActions={() => <Button size="sm" variant="outline">Export selected</Button>}
         empty={{
           icon: "FileText",
           title: "No receipts yet",

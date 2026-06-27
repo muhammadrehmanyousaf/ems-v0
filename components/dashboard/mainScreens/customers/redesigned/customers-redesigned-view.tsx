@@ -90,7 +90,6 @@ export function CustomersRedesignedView() {
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
-        bulkActions={() => <Button size="sm" variant="outline">Export selected</Button>}
         empty={{
           icon: "Users",
           title: "No customers yet",

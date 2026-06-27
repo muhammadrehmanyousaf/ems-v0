@@ -33,7 +33,9 @@ const STATE_TONE: Record<FunctionSheetState, StatusTone> = {
   beo_ready: "warning", invoiced: "info", paid: "success", archived: "neutral", cancelled: "error",
 }
 
-interface Item { label: string; qty: number | string; unitPrice: number | string; notes?: string | null }
+interface Item { label: string; qty: number | string; unitPrice: number | string; notes?: string | null; _rid: string }
+let _ridSeq = 0
+const newRid = () => `r${++_ridSeq}`
 
 const labelCls = "text-xs font-medium text-muted-foreground"
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
@@ -75,14 +77,14 @@ export function FunctionSheetComposerView() {
         notes: sheet.notes ?? "",
         terms: Array.isArray(sheet.termsJson?.lines) ? sheet.termsJson.lines.join("\n") : "",
       })
-      setItems((sheet.lineItemsJson ?? []).map((i: any) => ({ label: i.label ?? "", qty: i.qty ?? 1, unitPrice: i.unitPrice ?? 0, notes: i.notes ?? "" })))
+      setItems((sheet.lineItemsJson ?? []).map((i: any) => ({ label: i.label ?? "", qty: i.qty ?? 1, unitPrice: i.unitPrice ?? 0, notes: i.notes ?? "", _rid: newRid() })))
       setDirty(false)
     }
   }, [sheet])
 
   const setField = (k: keyof typeof form, v: string) => { setForm((f) => ({ ...f, [k]: v })); setDirty(true) }
   const setItem = (idx: number, patch: Partial<Item>) => { setItems((it) => it.map((x, i) => (i === idx ? { ...x, ...patch } : x))); setDirty(true) }
-  const addItem = () => { setItems((it) => [...it, { label: "", qty: 1, unitPrice: 0, notes: "" }]); setDirty(true) }
+  const addItem = () => { setItems((it) => [...it, { label: "", qty: 1, unitPrice: 0, notes: "", _rid: newRid() }]); setDirty(true) }
   const removeItem = (idx: number) => { setItems((it) => it.filter((_, i) => i !== idx)); setDirty(true) }
 
   const subtotal = items.reduce((s, i) => s + num(i.qty) * num(i.unitPrice), 0)
@@ -134,7 +136,7 @@ export function FunctionSheetComposerView() {
         actions={<StatusPill tone={STATE_TONE[sheet.state]}>{STATE_LABELS[sheet.state]}</StatusPill>}
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr,300px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
         <div className="space-y-6">
           {/* Header fields */}
           <div className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-sm">
@@ -162,12 +164,12 @@ export function FunctionSheetComposerView() {
             <div className="space-y-2 p-3">
               {items.length === 0 && <p className="px-1 py-3 text-sm text-muted-foreground">No items yet — add the first.</p>}
               {items.map((it, i) => (
-                <div key={i} className="grid grid-cols-12 items-center gap-2 rounded-lg border border-border/70 p-2">
+                <div key={it._rid} className="grid grid-cols-12 items-center gap-2 rounded-lg border border-border/70 p-2">
                   <input className={cn(inputCls, "col-span-12 sm:col-span-5")} placeholder="Description" value={it.label} onChange={(e) => setItem(i, { label: e.target.value })} />
                   <input className={cn(inputCls, "col-span-3 sm:col-span-2 text-right tabular-nums")} type="number" placeholder="Qty" value={it.qty} onChange={(e) => setItem(i, { qty: e.target.value })} />
                   <input className={cn(inputCls, "col-span-5 sm:col-span-2 text-right tabular-nums")} type="number" placeholder="Unit" value={it.unitPrice} onChange={(e) => setItem(i, { unitPrice: e.target.value })} />
                   <div className="col-span-3 sm:col-span-2 text-right text-sm font-medium tabular-nums">{formatPkr(num(it.qty) * num(it.unitPrice))}</div>
-                  <button onClick={() => removeItem(i)} aria-label="Remove item" className="col-span-1 grid h-9 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-red-600"><Icon name="Trash2" size={15} /></button>
+                  <button onClick={() => removeItem(i)} aria-label="Remove item" className="col-span-1 grid h-9 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive"><Icon name="Trash2" size={15} /></button>
                 </div>
               ))}
             </div>

@@ -95,7 +95,7 @@ export function CalendarRedesignedView() {
         actions={<Button><Icon name="Plus" size={16} className="mr-1.5" /> Add booking</Button>}
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr,320px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
         {/* Month grid */}
         <div className="rounded-xl border border-border bg-card shadow-sm">
           <div className="flex items-center justify-between border-b border-border p-3">

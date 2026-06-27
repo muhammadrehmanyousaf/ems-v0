@@ -86,7 +86,6 @@ export function PaymentsRedesignedView() {
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
-        bulkActions={() => <Button size="sm" variant="outline">Export selected</Button>}
         empty={{
           icon: "Wallet",
           title: "No payments yet",

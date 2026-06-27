@@ -79,14 +79,13 @@ export function ReceivablesRedesignedView() {
       <DataTable
         columns={columns}
         data={customers}
-        getRowId={(c) => c.customerPhone || c.customerEmail || c.customerName || Math.random().toString()}
+        getRowId={(c) => c.customerPhone || c.customerEmail || c.customerName || JSON.stringify(c)}
         loading={isLoading}
         error={isError ? "Couldn't load receivables." : null}
         onRetry={() => refetch()}
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
-        bulkActions={() => <Button size="sm" variant="outline">Send reminder</Button>}
         empty={{
           icon: "CheckCircle2",
           title: "Nothing outstanding",

@@ -148,7 +148,6 @@ export function FunctionSheetsRedesignedView() {
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
-        bulkActions={() => <Button size="sm" variant="outline">Export selected</Button>}
         empty={{
           icon: "FileText",
           title: "No function sheets yet",

@@ -52,9 +52,9 @@ export function AvailabilityManager() {
 
       <div className="space-y-4 p-4">
         {/* Block a date */}
-        <div className="grid grid-cols-1 gap-3 rounded-lg border border-border/70 p-3 sm:grid-cols-[180px,1fr,auto] sm:items-end">
-          <div className="space-y-1.5"><label className={labelCls}>Date</label><input type="date" className={inputCls} value={date} onChange={(e) => setDate(e.target.value)} /></div>
-          <div className="space-y-1.5"><label className={labelCls}>Reason (optional)</label><input className={inputCls} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Personal leave, already booked" /></div>
+        <div className="grid grid-cols-1 gap-3 rounded-lg border border-border/70 p-3 sm:grid-cols-[180px_1fr_auto] sm:items-end">
+          <div className="space-y-1.5"><label className={labelCls} htmlFor="block-date">Date</label><input id="block-date" aria-label="Block date" type="date" className={inputCls} value={date} onChange={(e) => setDate(e.target.value)} /></div>
+          <div className="space-y-1.5"><label className={labelCls} htmlFor="block-reason">Reason (optional)</label><input id="block-reason" aria-label="Reason for blocking" className={inputCls} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Personal leave, already booked" /></div>
           <Button disabled={!date || blockMut.isPending} onClick={() => blockMut.mutate()}>{blockMut.isPending ? <Spinner size={14} className="mr-1.5" /> : <Icon name="Plus" size={14} className="mr-1.5" />} Block date</Button>
         </div>
 
@@ -69,7 +69,7 @@ export function AvailabilityManager() {
               <div key={b.id} className="flex items-center gap-3 rounded-lg border border-border p-3">
                 <span className="grid h-9 w-9 place-items-center rounded-lg bg-muted text-muted-foreground"><Icon name="Calendar" size={16} /></span>
                 <div className="min-w-0"><div className="text-sm font-medium">{fmt(b.blockedDate)}</div>{b.reason && <div className="truncate text-xs text-muted-foreground">{b.reason}</div>}</div>
-                <Button size="sm" variant="ghost" className="ml-auto" disabled={unblockMut.isPending} onClick={() => unblockMut.mutate(b.blockedDate)}><Icon name="Trash2" size={14} className="mr-1 text-muted-foreground hover:text-red-600" /> Free</Button>
+                <Button size="sm" variant="ghost" className="ml-auto" disabled={unblockMut.isPending} onClick={() => unblockMut.mutate(b.blockedDate)}><Icon name="Trash2" size={14} className="mr-1 text-muted-foreground hover:text-destructive" /> Free</Button>
               </div>
             ))}
           </div>

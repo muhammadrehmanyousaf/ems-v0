@@ -164,7 +164,7 @@ function SignedBlock({ sig, who }: { sig: any; who: string }) {
     <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
       {sig.dataUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={sig.dataUrl} alt="signature" className="h-16 object-contain" />
+        <img src={sig.dataUrl} alt={`${who} signature`} className="h-16 object-contain" />
       ) : (
         <div className="text-2xl leading-none text-foreground" style={{ fontFamily: SIGNATURE_FONT }}>{sig.name}</div>
       )}

@@ -135,7 +135,6 @@ export function PromoteRedesignedView() {
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
-        bulkActions={() => <Button size="sm" variant="outline">Export selected</Button>}
         empty={{
           icon: "Megaphone",
           title: "No placement requests yet",

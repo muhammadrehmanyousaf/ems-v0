@@ -61,7 +61,7 @@ export function ImagesManager({ businessId, images }: { businessId: number; imag
             {images.map((src, i) => (
               <div key={src + i} className="group relative aspect-square overflow-hidden rounded-lg border border-border">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={src} alt="" className="h-full w-full object-cover" />
+                <img src={src} alt={i === 0 ? "Cover photo" : `Gallery image ${i + 1}`} className="h-full w-full object-cover" />
                 <button
                   onClick={() => removeMut.mutate(src)}
                   disabled={removeMut.isPending}

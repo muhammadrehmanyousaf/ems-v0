@@ -32,12 +32,16 @@ const inputCls = "h-9 w-full rounded-md border border-input bg-background px-2.5
 const spanStyle = (span: number) => ({ ["--gc" as any]: `span ${span} / span ${span}` } as React.CSSProperties)
 const gcCell = "[grid-column:1/-1] sm:[grid-column:var(--gc)]"
 
+let _ridSeq = 0
+const newRid = () => `r${++_ridSeq}`
+const stripRid = (r: Row): Row => { const { _rid, ...rest } = r; return rest }
+
 function buildInitialState(sheet: FunctionSheet | null): RowState {
   const state: RowState = {}
   for (const t of TRADE_OPS) {
     const field = (sheet?.[t.jsonField as keyof FunctionSheet] || {}) as any
     state[t.trade] = {}
-    for (const s of t.sections) state[t.trade][s.key] = Array.isArray(field?.[s.key]) ? field[s.key] : []
+    for (const s of t.sections) state[t.trade][s.key] = (Array.isArray(field?.[s.key]) ? field[s.key] : []).map((r: any) => ({ ...r, _rid: newRid() }))
   }
   return state
 }
@@ -77,7 +81,7 @@ export function TradeOperationsHubView() {
     markDirty(active)
   }
   const addRow = (sectionKey: string, cols: TradeOpsColumn[]) => {
-    const blank: Row = Object.fromEntries(cols.map((c) => [c.key, c.type === "select" ? (c.options?.[0] ?? "") : ""]))
+    const blank: Row = { ...Object.fromEntries(cols.map((c) => [c.key, c.type === "select" ? (c.options?.[0] ?? "") : ""])), _rid: newRid() }
     setRows((prev) => ({ ...prev, [active]: { ...prev[active], [sectionKey]: [...(prev[active]?.[sectionKey] ?? []), blank] } }))
     markDirty(active)
   }
@@ -90,7 +94,7 @@ export function TradeOperationsHubView() {
     mutationFn: () => {
       const t = trade!
       const obj: Record<string, Row[]> = {}
-      for (const s of t.sections) obj[s.key] = (rows[active]?.[s.key] ?? []).map((r) => ({ ...r }))
+      for (const s of t.sections) obj[s.key] = (rows[active]?.[s.key] ?? []).map(stripRid)
       return FunctionSheetAPI.update(sheet!.id, { [t.jsonField]: obj } as any)
     },
     onSuccess: () => {
@@ -163,14 +167,14 @@ export function TradeOperationsHubView() {
                 </div>
               )}
               {sectionRows.map((row, i) => (
-                <div key={i} className="grid grid-cols-12 items-end gap-2 rounded-lg border border-border/70 p-2">
+                <div key={String(row._rid ?? i)} className="grid grid-cols-12 items-end gap-2 rounded-lg border border-border/70 p-2">
                   {s.columns.map((c) => (
                     <div key={c.key} className={gcCell} style={spanStyle(c.span)}>
                       <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground sm:hidden">{c.label}</div>
                       <CellInput col={c} value={row[c.key]} onChange={(v) => setCell(s.key, i, c.key, v)} />
                     </div>
                   ))}
-                  <button onClick={() => removeRow(s.key, i)} aria-label="Remove row" className="grid h-9 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-red-600 [grid-column:1/-1] sm:[grid-column:span_1/span_1]">
+                  <button onClick={() => removeRow(s.key, i)} aria-label="Remove row" className="grid h-9 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive [grid-column:1/-1] sm:[grid-column:span_1/span_1]">
                     <Icon name="Trash2" size={15} />
                   </button>
                 </div>

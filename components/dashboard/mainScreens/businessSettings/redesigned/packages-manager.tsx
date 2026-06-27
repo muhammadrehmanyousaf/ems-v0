@@ -61,7 +61,7 @@ export function PackagesManager({ businessId }: { businessId: number }) {
       <div className="space-y-3 p-4">
         {adding && (
           <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr,160px]">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_160px]">
               <div className="space-y-1.5"><label className={labelCls}>Package name</label><input className={inputCls} value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="e.g. Silver Wedding Package" /></div>
               <div className="space-y-1.5"><label className={labelCls}>Price (Rs)</label><input type="number" className={inputCls} value={form.price} onChange={(e) => set("price", e.target.value)} placeholder="150000" /></div>
             </div>
@@ -89,12 +89,12 @@ export function PackagesManager({ businessId }: { businessId: number }) {
                 {asFeatures(p.features).length > 0 && (
                   <ul className="mt-2 space-y-1">
                     {asFeatures(p.features).slice(0, 5).map((f, i) => (
-                      <li key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground"><Icon name="Check" size={12} className="mt-0.5 shrink-0 text-emerald-500" /> {f}</li>
+                      <li key={`${p.id}-${i}-${f}`} className="flex items-start gap-1.5 text-xs text-muted-foreground"><Icon name="Check" size={12} className="mt-0.5 shrink-0 text-emerald-500" /> {f}</li>
                     ))}
                   </ul>
                 )}
                 <div className="mt-3 flex justify-end border-t border-border/60 pt-2">
-                  <Button size="sm" variant="ghost" disabled={removeMut.isPending} onClick={() => removeMut.mutate(p.id)}><Icon name="Trash2" size={14} className="mr-1 text-muted-foreground hover:text-red-600" /> Remove</Button>
+                  <Button size="sm" variant="ghost" disabled={removeMut.isPending} onClick={() => removeMut.mutate(p.id)}><Icon name="Trash2" size={14} className="mr-1 text-muted-foreground hover:text-destructive" /> Remove</Button>
                 </div>
               </div>
             ))}

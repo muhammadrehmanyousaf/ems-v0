@@ -27,9 +27,12 @@ import { cn } from "@/lib/utils"
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 
-interface Shot { moment: string; notes?: string }
-interface Crew { role: string; name?: string }
-interface Deliverable { label: string; qty: number | string; format?: string; dueDate?: string; status?: string }
+interface Shot { moment: string; notes?: string; _rid?: string }
+interface Crew { role: string; name?: string; _rid?: string }
+interface Deliverable { label: string; qty: number | string; format?: string; dueDate?: string; status?: string; _rid?: string }
+let _ridSeq = 0
+const newRid = () => `r${++_ridSeq}`
+const stripRid = <T extends { _rid?: string }>(r: T) => { const { _rid, ...rest } = r; return rest }
 
 const DELIVERY_STATUS: Record<string, StatusTone> = { pending: "neutral", "in progress": "info", editing: "warning", delivered: "success" }
 
@@ -57,9 +60,10 @@ export function FunctionSheetOperationsView() {
       loadedId.current = sheet.id
       const p = (sheet.photographyJson || {}) as any
       const d = (sheet.deliverablesJson || {}) as any
-      setShots(Array.isArray(p.shotList) ? p.shotList : [])
-      setCrew(Array.isArray(p.crew) ? p.crew : [])
-      setDeliverables(Array.isArray(d.items) ? d.items : [])
+      const withRid = (arr: any[]) => arr.map((x) => ({ ...x, _rid: newRid() }))
+      setShots(Array.isArray(p.shotList) ? withRid(p.shotList) : [])
+      setCrew(Array.isArray(p.crew) ? withRid(p.crew) : [])
+      setDeliverables(Array.isArray(d.items) ? withRid(d.items) : [])
       setDirty(false)
     }
   }, [sheet])
@@ -67,7 +71,7 @@ export function FunctionSheetOperationsView() {
   const mark = () => setDirty(true)
   const upd = <T,>(setter: React.Dispatch<React.SetStateAction<T[]>>) => ({
     set: (i: number, patch: Partial<T>) => { setter((arr) => arr.map((x, ix) => (ix === i ? { ...x, ...patch } : x))); mark() },
-    add: (blank: T) => { setter((arr) => [...arr, blank]); mark() },
+    add: (blank: T) => { setter((arr) => [...arr, { ...blank, _rid: newRid() } as T]); mark() },
     remove: (i: number) => { setter((arr) => arr.filter((_, ix) => ix !== i)); mark() },
   })
   const shotOps = upd<Shot>(setShots)
@@ -77,8 +81,8 @@ export function FunctionSheetOperationsView() {
   const saveMut = useMutation({
     mutationFn: () =>
       FunctionSheetAPI.update(sheet!.id, {
-        photographyJson: { shotList: shots, crew },
-        deliverablesJson: { items: deliverables.map((d) => ({ ...d, qty: Number(d.qty) || 0 })) },
+        photographyJson: { shotList: shots.map(stripRid), crew: crew.map(stripRid) },
+        deliverablesJson: { items: deliverables.map((d) => ({ ...stripRid(d), qty: Number(d.qty) || 0 })) },
       } as any),
     onSuccess: () => { showSuccessToast("Operations saved"); setDirty(false); qc.invalidateQueries({ queryKey: ["fs-operations"] }) },
     onError: (e: any) => toast.error(e?.message || "Save failed"),
@@ -109,7 +113,7 @@ export function FunctionSheetOperationsView() {
       <Card icon="Camera" title="Shot list" desc="Key moments to capture, in running order." onAdd={() => shotOps.add({ moment: "", notes: "" })} addLabel="Add moment">
         {shots.length === 0 && <Empty>No moments yet — add the first (e.g. Nikah, Rukhsati).</Empty>}
         {shots.map((s, i) => (
-          <RowGrid key={i} onRemove={() => shotOps.remove(i)}>
+          <RowGrid key={s._rid ?? i} onRemove={() => shotOps.remove(i)}>
             <input className={cn(inputCls, "col-span-12 sm:col-span-4")} placeholder="Moment" value={s.moment} onChange={(e) => shotOps.set(i, { moment: e.target.value })} />
             <input className={cn(inputCls, "col-span-12 sm:col-span-7")} placeholder="Notes (lens, location, must-haves…)" value={s.notes ?? ""} onChange={(e) => shotOps.set(i, { notes: e.target.value })} />
           </RowGrid>
@@ -120,7 +124,7 @@ export function FunctionSheetOperationsView() {
       <Card icon="Users2" title="Crew" desc="Who's on the shoot." onAdd={() => crewOps.add({ role: "", name: "" })} addLabel="Add crew">
         {crew.length === 0 && <Empty>No crew assigned yet.</Empty>}
         {crew.map((c, i) => (
-          <RowGrid key={i} onRemove={() => crewOps.remove(i)}>
+          <RowGrid key={c._rid ?? i} onRemove={() => crewOps.remove(i)}>
             <input className={cn(inputCls, "col-span-12 sm:col-span-5")} placeholder="Role (Lead photographer, Videographer…)" value={c.role} onChange={(e) => crewOps.set(i, { role: e.target.value })} />
             <input className={cn(inputCls, "col-span-12 sm:col-span-6")} placeholder="Name" value={c.name ?? ""} onChange={(e) => crewOps.set(i, { name: e.target.value })} />
           </RowGrid>
@@ -138,7 +142,7 @@ export function FunctionSheetOperationsView() {
       >
         {deliverables.length === 0 && <Empty>No deliverables yet (e.g. edited album, highlight reel).</Empty>}
         {deliverables.map((d, i) => (
-          <RowGrid key={i} onRemove={() => delOps.remove(i)}>
+          <RowGrid key={d._rid ?? i} onRemove={() => delOps.remove(i)}>
             <input className={cn(inputCls, "col-span-12 sm:col-span-4")} placeholder="Deliverable" value={d.label} onChange={(e) => delOps.set(i, { label: e.target.value })} />
             <input className={cn(inputCls, "col-span-4 sm:col-span-1 text-right tabular-nums")} type="number" placeholder="Qty" value={d.qty} onChange={(e) => delOps.set(i, { qty: e.target.value })} />
             <input className={cn(inputCls, "col-span-8 sm:col-span-2")} placeholder="Format" value={d.format ?? ""} onChange={(e) => delOps.set(i, { format: e.target.value })} />
@@ -184,7 +188,7 @@ function RowGrid({ children, onRemove }: { children: React.ReactNode; onRemove: 
   return (
     <div className="grid grid-cols-12 items-center gap-2 rounded-lg border border-border/70 p-2">
       {children}
-      <button onClick={onRemove} aria-label="Remove" className="col-span-12 grid h-9 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-red-600 sm:col-span-1">
+      <button onClick={onRemove} aria-label="Remove" className="col-span-12 grid h-9 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive sm:col-span-1">
         <Icon name="Trash2" size={15} />
       </button>
     </div>

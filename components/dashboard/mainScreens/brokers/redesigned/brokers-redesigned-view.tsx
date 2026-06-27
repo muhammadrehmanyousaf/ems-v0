@@ -148,7 +148,6 @@ export function BrokersRedesignedView() {
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
-        bulkActions={() => <Button size="sm" variant="outline">Export selected</Button>}
         empty={{
           icon: "Users",
           title: "No commissions yet",

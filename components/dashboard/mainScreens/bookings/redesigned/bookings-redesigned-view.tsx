@@ -110,12 +110,6 @@ export function BookingsRedesignedView() {
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
-        bulkActions={() => (
-          <>
-            <Button size="sm" variant="outline">Mark paid</Button>
-            <Button size="sm" variant="outline">Export selected</Button>
-          </>
-        )}
         empty={{
           icon: "Calendar",
           title: "No bookings yet",

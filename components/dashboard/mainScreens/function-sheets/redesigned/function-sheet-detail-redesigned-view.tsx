@@ -145,7 +145,7 @@ export function FunctionSheetDetailRedesignedView() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr,300px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
         <div className="space-y-6">
           {/* Customer + event */}
           <Section title="Customer & event">
@@ -169,7 +169,7 @@ export function FunctionSheetDetailRedesignedView() {
             {items.length === 0 ? (
               <p className="py-4 text-sm text-muted-foreground">No line items.</p>
             ) : (
-              <table className="w-full text-sm" style={{ fontVariantNumeric: "tabular-nums" }}>
+              <div className="overflow-x-auto"><table className="w-full min-w-[420px] text-sm" style={{ fontVariantNumeric: "tabular-nums" }}>
                 <thead>
                   <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted-foreground">
                     <th className="py-2 font-medium">Description</th>
@@ -191,13 +191,13 @@ export function FunctionSheetDetailRedesignedView() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             )}
             {/* Totals */}
             <div className="mt-4 ml-auto max-w-xs space-y-1.5 text-sm">
               <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="tabular-nums">{formatPkr(num(sheet.subtotal))}</span></div>
               {num(sheet.discountAmount) > 0 && <div className="flex justify-between text-rose-600 dark:text-rose-400"><span>− Discount</span><span className="tabular-nums">{formatPkr(num(sheet.discountAmount))}</span></div>}
-              {num(sheet.taxAmount) > 0 && <div className="flex justify-between text-blue-600 dark:text-blue-400"><span>+ Sales tax</span><span className="tabular-nums">{formatPkr(num(sheet.taxAmount))}</span></div>}
+              {num(sheet.taxAmount) > 0 && <div className="flex justify-between text-foreground"><span>+ Sales tax</span><span className="tabular-nums">{formatPkr(num(sheet.taxAmount))}</span></div>}
               <div className="flex justify-between border-t border-border pt-1.5 text-base font-semibold"><span>Grand total</span><span className="tabular-nums text-emerald-600 dark:text-emerald-400">{formatPkr(num(sheet.grandTotal))}</span></div>
             </div>
           </Section>
@@ -238,13 +238,17 @@ export function FunctionSheetDetailRedesignedView() {
           <Section title="Lifecycle">
             <div className="space-y-2">
               {currentIdx >= 0 && currentIdx < STATE_ORDER.length - 1 ? (
-                <Button className="w-full justify-between">
-                  Move to {STATE_LABELS[STATE_ORDER[currentIdx + 1]]} <Icon name="ChevronRight" size={15} />
-                </Button>
+                <a href={`/dashboard/function-sheet-composer-new?id=${sheet.id}`} className="block">
+                  <Button className="w-full justify-between">
+                    Move to {STATE_LABELS[STATE_ORDER[currentIdx + 1]]} <Icon name="ChevronRight" size={15} />
+                  </Button>
+                </a>
               ) : (
                 <div className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">This sheet is {STATE_LABELS[sheet.state].toLowerCase()}.</div>
               )}
-              <Button variant="outline" className="w-full justify-between">Edit sheet <Icon name="Pencil" size={14} /></Button>
+              <a href={`/dashboard/function-sheet-composer-new?id=${sheet.id}`} className="block">
+                <Button variant="outline" className="w-full justify-between">Edit sheet <Icon name="Pencil" size={14} /></Button>
+              </a>
             </div>
           </Section>
 

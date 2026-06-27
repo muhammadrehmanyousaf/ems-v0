@@ -66,7 +66,7 @@ export function LeadsRedesignedView() {
     { key: "event", header: "Event", cellClassName: "text-muted-foreground", render: (l) => pretty(l.eventType) },
     { key: "date", header: "Event date", cellClassName: "text-muted-foreground", render: (l) => fmtDate(l.eventDate) },
     { key: "budget", header: "Budget", align: "right", render: (l) => <MoneyCell amount={l.estimatedBudget != null ? Number(l.estimatedBudget) || null : null} tone="muted" /> },
-    { key: "status", header: "Status", render: (l) => <StatusPill tone={TONE[l.status]}>{cap(l.status)}</StatusPill> },
+    { key: "status", header: "Status", render: (l) => <StatusPill tone={TONE[l.status] ?? "neutral"}>{cap(l.status)}</StatusPill> },
   ]
 
   return (
@@ -95,12 +95,6 @@ export function LeadsRedesignedView() {
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
-        bulkActions={() => (
-          <>
-            <Button size="sm" variant="outline">Mark contacted</Button>
-            <Button size="sm" variant="outline">Archive</Button>
-          </>
-        )}
         empty={{
           icon: "Inbox",
           title: "No leads yet",

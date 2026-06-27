@@ -89,7 +89,6 @@ export function PdcsRedesignedView() {
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
-        bulkActions={() => <Button size="sm" variant="outline">Export selected</Button>}
         empty={{
           icon: "FileText",
           title: "No cheques logged",

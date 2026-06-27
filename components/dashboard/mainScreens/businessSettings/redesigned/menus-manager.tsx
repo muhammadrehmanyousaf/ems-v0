@@ -64,7 +64,7 @@ export function MenusManager({ businessId }: { businessId: number }) {
       <div className="space-y-3 p-4">
         {adding && (
           <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr,180px]">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_180px]">
               <div className="space-y-1.5"><label className={labelCls}>Menu title</label><input className={inputCls} value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="e.g. Standard Buffet (per head)" /></div>
               <div className="space-y-1.5"><label className={labelCls}>Price / head (Rs)</label><input type="number" className={inputCls} value={form.price} onChange={(e) => set("price", e.target.value)} placeholder="2200" /></div>
             </div>
@@ -90,11 +90,11 @@ export function MenusManager({ businessId }: { businessId: number }) {
                 </div>
                 {itemsOf(m).length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1">
-                    {itemsOf(m).slice(0, 8).map((d, i) => <span key={i} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{d}</span>)}
+                    {itemsOf(m).slice(0, 8).map((d, i) => <span key={`${m.id}-${i}-${d}`} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{d}</span>)}
                   </div>
                 )}
                 <div className="mt-3 flex justify-end border-t border-border/60 pt-2">
-                  <Button size="sm" variant="ghost" disabled={removeMut.isPending} onClick={() => removeMut.mutate(m.id)}><Icon name="Trash2" size={14} className="mr-1 text-muted-foreground hover:text-red-600" /> Remove</Button>
+                  <Button size="sm" variant="ghost" disabled={removeMut.isPending} onClick={() => removeMut.mutate(m.id)}><Icon name="Trash2" size={14} className="mr-1 text-muted-foreground hover:text-destructive" /> Remove</Button>
                 </div>
               </div>
             ))}

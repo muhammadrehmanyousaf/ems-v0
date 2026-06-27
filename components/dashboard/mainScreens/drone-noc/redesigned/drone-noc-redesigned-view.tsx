@@ -132,7 +132,6 @@ export function DroneNocRedesignedView() {
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
-        bulkActions={() => <Button size="sm" variant="outline">Export selected</Button>}
         empty={{
           icon: "ShieldCheck",
           title: "No permits yet",

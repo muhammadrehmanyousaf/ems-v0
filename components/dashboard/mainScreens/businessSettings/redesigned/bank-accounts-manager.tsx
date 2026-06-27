@@ -94,7 +94,7 @@ export function BankAccountsManager() {
               </div>
               <div className="ml-auto flex items-center gap-1">
                 {!a.isActive && <Button size="sm" variant="ghost" disabled={activeMut.isPending} onClick={() => activeMut.mutate(a.id)}><Icon name="Star" size={14} className="mr-1" /> Set default</Button>}
-                <Button size="sm" variant="ghost" disabled={removeMut.isPending} onClick={() => removeMut.mutate(a.id)} aria-label="Remove account"><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-red-600" /></Button>
+                <Button size="sm" variant="ghost" disabled={removeMut.isPending} onClick={() => removeMut.mutate(a.id)} aria-label="Remove account"><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
               </div>
             </div>
           ))

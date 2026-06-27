@@ -85,7 +85,6 @@ export function InventoryRedesignedView() {
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
-        bulkActions={() => <Button size="sm" variant="outline">Export selected</Button>}
         empty={{
           icon: "Package",
           title: "No inventory yet",

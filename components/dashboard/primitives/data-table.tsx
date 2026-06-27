@@ -236,7 +236,7 @@ export function DataTable<T>({
         </div>
       )}
       {body}
-      {loading && (
+      {loading && data.length > 0 && (
         <div className="flex items-center justify-center gap-2 border-t border-border py-2 text-xs text-muted-foreground">
           <Spinner size={12} /> Loading…
         </div>

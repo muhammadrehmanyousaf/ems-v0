@@ -134,7 +134,7 @@ export function BusinessSettingsHubView() {
         actions={biz.vendor?.vendorType ? <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">{biz.vendor.vendorType}</span> : undefined}
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px,1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">
         {/* Tab rail */}
         <nav className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible" aria-label="Settings sections">
           {TABS.map((t) => (

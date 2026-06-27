@@ -89,11 +89,11 @@ export function OverviewRedesignedView() {
 
       {/* KPI row */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <StatCard label="Total bookings" value={kpisQ.isLoading ? "…" : num(k?.totalBookings?.value)} icon="Calendar" />
-        <StatCard label="Revenue collected" value={kpisQ.isLoading ? "…" : formatPkr(num(k?.totalRevenue?.value))} icon="Wallet" trend="up" delta="received" />
-        <StatCard label="Revenue due" value={kpisQ.isLoading ? "…" : formatPkr(num(k?.revenueDue?.value))} icon="Clock" delta="to chase" />
-        <StatCard label="Today's events" value={kpisQ.isLoading ? "…" : num(k?.todaysEvents?.value)} icon="Star" />
-        <StatCard label="Upcoming (7d)" value={kpisQ.isLoading ? "…" : num(k?.upcomingBookings?.value)} icon="TrendingUp" />
+        <StatCard label="Total bookings" value={kpisQ.isLoading ? "…" : kpisQ.isError ? "—" :num(k?.totalBookings?.value)} icon="Calendar" />
+        <StatCard label="Revenue collected" value={kpisQ.isLoading ? "…" : kpisQ.isError ? "—" :formatPkr(num(k?.totalRevenue?.value))} icon="Wallet" trend="up" delta="received" />
+        <StatCard label="Revenue due" value={kpisQ.isLoading ? "…" : kpisQ.isError ? "—" :formatPkr(num(k?.revenueDue?.value))} icon="Clock" delta="to chase" />
+        <StatCard label="Today's events" value={kpisQ.isLoading ? "…" : kpisQ.isError ? "—" :num(k?.todaysEvents?.value)} icon="Star" />
+        <StatCard label="Upcoming (7d)" value={kpisQ.isLoading ? "…" : kpisQ.isError ? "—" :num(k?.upcomingBookings?.value)} icon="TrendingUp" />
       </div>
 
       {/* Recent bookings */}

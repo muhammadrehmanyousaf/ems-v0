@@ -104,7 +104,6 @@ export function AutomationRedesignedView() {
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
-        bulkActions={() => <Button size="sm" variant="outline">Export selected</Button>}
         empty={{
           icon: "Settings",
           title: "No automation rules yet",

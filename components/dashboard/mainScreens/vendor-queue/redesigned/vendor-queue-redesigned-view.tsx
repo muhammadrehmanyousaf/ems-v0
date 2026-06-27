@@ -64,7 +64,7 @@ export function VendorQueueRedesignedView() {
     ? Math.round(all.reduce((sum, r) => sum + num(r.completenessScore), 0) / all.length)
     : 0
   const submittedCount = all.filter((r) => r.status === "submitted").length
-  const needsChangesCount = all.filter((r) => r.status === "rejected" || r.status === "draft").length
+  const needsChangesCount = all.filter((r) => r.status === "rejected").length
 
   const columns: Column<QueueBusiness>[] = [
     {
@@ -126,7 +126,6 @@ export function VendorQueueRedesignedView() {
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
-        bulkActions={() => <Button size="sm" variant="outline">Export selected</Button>}
         empty={{
           icon: "Building2",
           title: "Queue is clear",

@@ -118,7 +118,6 @@ export function HalalCertsRedesignedView() {
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
-        bulkActions={() => <Button size="sm" variant="outline">Export selected</Button>}
         empty={{
           icon: "ShieldCheck",
           title: "No certificates yet",

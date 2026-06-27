@@ -12,7 +12,7 @@ import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
 import { StatusPill } from "@/components/dashboard/primitives/status-pill"
-import { MoneyCell } from "@/components/dashboard/primitives/money-cell"
+import { MoneyCell, formatPkr } from "@/components/dashboard/primitives/money-cell"
 import { ExportMenu } from "@/components/dashboard/shared/export-menu"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
@@ -73,7 +73,7 @@ export function SuppliersRedesignedView() {
         <StatCard label="Total suppliers" value={all.length} icon="Building2" />
         <StatCard label="Active" value={active} icon="ShieldCheck" trend="up" />
         <StatCard label="Categories" value={categories} icon="LayoutGrid" />
-        <StatCard label="Credit available" value={creditTotal ? `Rs ${creditTotal.toLocaleString("en-PK")}` : "—"} icon="Wallet" />
+        <StatCard label="Credit available" value={creditTotal ? formatPkr(creditTotal) : "—"} icon="Wallet" />
       </div>
 
       <DataTable
@@ -86,7 +86,6 @@ export function SuppliersRedesignedView() {
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
-        bulkActions={() => <Button size="sm" variant="outline">Export selected</Button>}
         empty={{
           icon: "Building2",
           title: "No suppliers yet",
