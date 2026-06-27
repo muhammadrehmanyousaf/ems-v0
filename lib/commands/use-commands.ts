@@ -52,6 +52,7 @@ export function useCommands(): AppCommand[] {
       // Today
       nav("Today", "/dashboard/today", "Home", "Today", "home start"),
       nav("Dashboard", "/dashboard", "LayoutGrid", "Today", "overview home"),
+      nav("Overview — new design", "/dashboard/overview-new", "Sparkles", "Today", "redesigned dashboard home"),
 
       // Operate
       nav("Bookings", "/dashboard/bookings", "Calendar", "Operate", "events shoots"),
