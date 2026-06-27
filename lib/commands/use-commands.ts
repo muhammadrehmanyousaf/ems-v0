@@ -116,6 +116,7 @@ export function useCommands(): AppCommand[] {
 
       // Settings
       nav("Settings", "/dashboard/settings", "Settings", "Settings", "preferences"),
+      nav("Account settings — new design", "/dashboard/settings-new", "Sparkles", "Settings", "redesigned account profile"),
       nav("Design gallery", "/dashboard/design-gallery", "LayoutGrid", "Settings", "components theme"),
     ]
   }, [router])
