@@ -99,6 +99,7 @@ export function useCommands(): AppCommand[] {
       nav("Function sheets — new design", "/dashboard/function-sheets-new", "Sparkles", "Operate", "redesigned BEO preview"),
       nav("Function sheet detail — new design", "/dashboard/function-sheet-detail-new", "Sparkles", "Operate", "redesigned quote invoice document"),
       nav("Compose function sheet — editor", "/dashboard/function-sheet-composer-new", "Pencil", "Operate", "edit function sheet line items composer quote invoice"),
+      nav("Trade operations — editor", "/dashboard/function-sheet-operations-new", "ClipboardList", "Operate", "shot list crew deliverables photography operations per-trade BEO"),
       nav("Drone NOC — new design", "/dashboard/drone-noc-new", "Sparkles", "Compliance", "redesigned permits preview"),
       nav("Halal certs — new design", "/dashboard/halal-certs-new", "Sparkles", "Compliance", "redesigned certs preview"),
       nav("Generator fuel — new design", "/dashboard/generator-fuel-new", "Sparkles", "Compliance", "redesigned fuel preview"),
