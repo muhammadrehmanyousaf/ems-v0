@@ -20,6 +20,7 @@ import { DetailSkeleton } from "@/components/dashboard/primitives/skeletons"
 import { Icon, Spinner, type IconName } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
+import { BankAccountsManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/bank-accounts-manager"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -38,7 +39,7 @@ const TABS: TabDef[] = [
   { key: "images", label: "Images", icon: "Image", wired: false, href: "/dashboard/settings", hint: "Upload & reorder gallery photos." },
   { key: "packages", label: "Packages", icon: "Package", wired: false, href: "/dashboard/settings", hint: "Pricing packages & bundles." },
   { key: "menus", label: "Menus", icon: "ClipboardList", wired: false, href: "/dashboard/settings", hint: "Catering menus & per-head pricing." },
-  { key: "bank", label: "Bank details", icon: "CreditCard", wired: false, href: "/dashboard/settings", hint: "Payout account for receivables." },
+  { key: "bank", label: "Bank details", icon: "CreditCard", wired: false, hint: "Payout accounts for receivables." },
   { key: "team", label: "Team members", icon: "Users2", wired: false, href: "/dashboard/staff-new", hint: "Staff & roles." },
   { key: "availability", label: "Availability", icon: "CalendarCheck", wired: false, href: "/dashboard/calendar-new", hint: "Blocked dates & lead time." },
 ]
@@ -144,7 +145,7 @@ export function BusinessSettingsHubView() {
             >
               <Icon name={t.icon} size={16} />
               <span>{t.label}</span>
-              {!t.wired && <Icon name="ExternalLink" size={12} className="ml-auto opacity-50" />}
+              {!t.wired && t.href && <Icon name="ExternalLink" size={12} className="ml-auto opacity-50" />}
             </button>
           ))}
         </nav>
@@ -199,7 +200,9 @@ export function BusinessSettingsHubView() {
             </Section>
           )}
 
-          {!tab.wired && (
+          {active === "bank" && <BankAccountsManager />}
+
+          {!tab.wired && active !== "bank" && (
             <Section icon={tab.icon} title={tab.label} desc={tab.hint || ""}>
               {active === "images" && biz.images?.length ? (
                 <div className="mb-4 flex flex-wrap gap-2">
