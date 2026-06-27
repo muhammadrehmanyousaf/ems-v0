@@ -126,6 +126,8 @@ import {
   Inbox,
   Building2,
   HelpCircle,
+  Truck,
+  Utensils,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -258,6 +260,9 @@ const LUCIDE_MAP = {
   Save,
   Inbox,
   Building2,
+  // trade-ops domain glyphs (kitchen / fleet / live stalls)
+  Truck,
+  Utensils,
 } satisfies Record<string, LucideIcon>
 
 export type IconName = keyof typeof ICONLY_MAP | keyof typeof LUCIDE_MAP
