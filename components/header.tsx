@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent } from "@/components/ui/sheet"
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -141,17 +141,9 @@ export function Header() {
         <div className="flex items-center justify-between h-16 sm:h-[72px]">
           {/* ── Left: Mobile menu trigger + bridal logo ── */}
           <div className="flex items-center gap-2.5 sm:gap-4">
-            {/* Mobile Sheet */}
+            {/* Mobile Sheet — controlled; the trigger lives in the right
+                actions group so the toggle sits on the right of the navbar. */}
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
-              <SheetTrigger asChild>
-                <button
-                  type="button"
-                  className="min-[1400px]:hidden inline-flex h-10 w-10 items-center justify-center rounded-md text-bridal-charcoal hover:bg-bridal-blush/55 hover:text-bridal-mauve transition-colors duration-200"
-                  aria-label="Open menu"
-                >
-                  <Menu className="h-5 w-5" />
-                </button>
-              </SheetTrigger>
               <SheetContent
                 side="left"
                 className="w-[320px] sm:w-[380px] p-0 border-bridal-beige bg-bridal-cream"
@@ -373,7 +365,7 @@ export function Header() {
                 aria-hidden="true"
                 className="h-10 sm:h-12 w-auto shrink-0"
               />
-              <span className="font-display italic leading-none tracking-tight whitespace-nowrap text-[26px] sm:text-[32px] min-[1400px]:text-[28px] text-bridal-charcoal">
+              <span className="hidden sm:inline font-display italic leading-none tracking-tight whitespace-nowrap text-[26px] sm:text-[32px] min-[1400px]:text-[28px] text-bridal-charcoal">
                 Wedding <span className="text-bridal-gold">Wala</span>
               </span>
             </Link>
@@ -661,6 +653,16 @@ export function Header() {
                 </Link>
               </>
             )}
+
+            {/* Mobile menu toggle — right-aligned; opens the controlled Sheet. */}
+            <button
+              type="button"
+              onClick={() => setIsOpen(true)}
+              aria-label="Open menu"
+              className="min-[1400px]:hidden inline-flex h-10 w-10 items-center justify-center rounded-md text-bridal-charcoal hover:bg-bridal-blush/55 hover:text-bridal-mauve transition-colors duration-200"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
           </div>
         </div>
       </div>

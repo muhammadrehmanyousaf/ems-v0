@@ -389,6 +389,21 @@ html[data-locale="ur"] body {
   }
 }
 
+/* Theme engine — selectors are :root[data-theme] / .dark[data-theme] so they
+   outrank the dashboard's stock :root token set in dashboard-styles.css. */
+/* ============================================================
+   THEME ENGINE — user-switchable palettes keyed by [data-theme]
+   on the dashboard shell root. Light: [data-theme="x"].
+   Dark:  .dark [data-theme="x"]  +  [data-theme="x"].dark
+   (the compound form covers the pre-hydration <html> stamp).
+   Base :root/.dark are intentionally untouched (shared with the
+   public site). AA-verified; the 4 corrected values from the
+   redesign plan's C-1 are applied (champagne-light, emerald-light,
+   indigo-dark) so every theme/mode passes WCAG AA.
+   UNLAYERED (no @layer) so they outrank the dashboard's layered :root tokens.
+   ============================================================ */
+  /* --- CHAMPAGNE (default) --- C-1: charcoal-on-gold for AA --- */
+
 @layer base {
   * {
     @apply border-border;
