@@ -96,6 +96,12 @@ export function useCommands(): AppCommand[] {
       nav("Automation — new design", "/dashboard/automation-new", "Sparkles", "Grow", "redesigned automation preview"),
       nav("Promote — new design", "/dashboard/promote-new", "Sparkles", "Grow", "redesigned promote preview"),
 
+      // Admin — redesigned (reachable via ⌘K; need admin role)
+      nav("Vendors — new design", "/dashboard/vendors-new", "Sparkles", "Admin", "redesigned admin vendors"),
+      nav("Users — new design", "/dashboard/users-new", "Sparkles", "Admin", "redesigned admin users"),
+      nav("Roles — new design", "/dashboard/roles-new", "Sparkles", "Admin", "redesigned admin roles"),
+      nav("Businesses — new design", "/dashboard/businesses-new", "Sparkles", "Admin", "redesigned admin businesses"),
+
       // Settings
       nav("Settings", "/dashboard/settings", "Settings", "Settings", "preferences"),
       nav("Design gallery", "/dashboard/design-gallery", "LayoutGrid", "Settings", "components theme"),
