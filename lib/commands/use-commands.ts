@@ -72,7 +72,9 @@ export function useCommands(): AppCommand[] {
 
       // Money
       nav("Payments", "/dashboard/payments", "Wallet", "Money", "khata"),
+      nav("Payments — new design", "/dashboard/payments-new", "Sparkles", "Money", "redesigned revenue preview"),
       nav("Receivables", "/dashboard/receivables", "Wallet", "Money", "owed AR"),
+      nav("Receivables — new design", "/dashboard/receivables-new", "Sparkles", "Money", "redesigned AR preview"),
       nav("Receipts", "/dashboard/receipts", "FileText", "Money"),
       nav("Cheque ledger", "/dashboard/pdcs", "FileText", "Money", "PDC cheques"),
       nav("Cheque ledger — new design", "/dashboard/pdcs-new", "Sparkles", "Money", "redesigned pdc preview"),
