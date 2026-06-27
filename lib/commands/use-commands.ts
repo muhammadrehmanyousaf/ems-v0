@@ -86,6 +86,16 @@ export function useCommands(): AppCommand[] {
       nav("Reviews", "/dashboard/reviews", "Star", "Grow", "ratings"),
       nav("Promote", "/dashboard/promote", "Megaphone", "Grow", "ads boost"),
 
+      // Redesigned (batch) — reachable via ⌘K
+      nav("Function sheets — new design", "/dashboard/function-sheets-new", "Sparkles", "Operate", "redesigned BEO preview"),
+      nav("Drone NOC — new design", "/dashboard/drone-noc-new", "Sparkles", "Compliance", "redesigned permits preview"),
+      nav("Halal certs — new design", "/dashboard/halal-certs-new", "Sparkles", "Compliance", "redesigned certs preview"),
+      nav("Generator fuel — new design", "/dashboard/generator-fuel-new", "Sparkles", "Compliance", "redesigned fuel preview"),
+      nav("Brokers — new design", "/dashboard/brokers-new", "Sparkles", "Money", "redesigned brokers preview"),
+      nav("Collaborations — new design", "/dashboard/collaborations-new", "Sparkles", "Grow", "redesigned collabs preview"),
+      nav("Automation — new design", "/dashboard/automation-new", "Sparkles", "Grow", "redesigned automation preview"),
+      nav("Promote — new design", "/dashboard/promote-new", "Sparkles", "Grow", "redesigned promote preview"),
+
       // Settings
       nav("Settings", "/dashboard/settings", "Settings", "Settings", "preferences"),
       nav("Design gallery", "/dashboard/design-gallery", "LayoutGrid", "Settings", "components theme"),
