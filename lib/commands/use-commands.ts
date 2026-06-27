@@ -119,6 +119,7 @@ export function useCommands(): AppCommand[] {
       // Settings
       nav("Settings", "/dashboard/settings", "Settings", "Settings", "preferences"),
       nav("Account settings — new design", "/dashboard/settings-new", "Sparkles", "Settings", "redesigned account profile"),
+      nav("Business settings — editor hub", "/dashboard/business-settings-new", "Building2", "Settings", "business profile pricing amenities packages images bank team availability editor"),
       nav("Design gallery", "/dashboard/design-gallery", "LayoutGrid", "Settings", "components theme"),
     ]
   }, [router])
