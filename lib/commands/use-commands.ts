@@ -63,6 +63,9 @@ export function useCommands(): AppCommand[] {
       nav("Function sheets", "/dashboard/function-sheets", "FileText", "Operate", "BEO"),
       nav("Customers", "/dashboard/customers", "Users", "Operate", "clients"),
       nav("Inventory", "/dashboard/inventory", "Package", "Operate", "stock gear"),
+      nav("Inventory — new design", "/dashboard/inventory-new", "Sparkles", "Operate", "redesigned stock preview"),
+      nav("Expenses — new design", "/dashboard/expenses-new", "Sparkles", "Money", "redesigned costs preview"),
+      nav("Receipts — new design", "/dashboard/receipts-new", "Sparkles", "Money", "redesigned receipts preview"),
       nav("Suppliers", "/dashboard/suppliers", "Building2", "Operate", "vendors"),
       nav("Staff", "/dashboard/staff", "Users", "Operate", "team shifts"),
 
