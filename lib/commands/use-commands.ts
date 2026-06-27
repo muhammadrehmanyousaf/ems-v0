@@ -86,6 +86,10 @@ export function useCommands(): AppCommand[] {
 
       // Grow
       nav("Insights", "/dashboard/insights", "BarChart3", "Grow", "analytics"),
+      nav("Insights — new design", "/dashboard/insights-new", "Sparkles", "Grow", "redesigned analytics funnel"),
+      nav("Revenue — new design", "/dashboard/revenue-new", "Sparkles", "Money", "redesigned revenue trends"),
+      nav("Tax & P&L — new design", "/dashboard/tax-new", "Sparkles", "Money", "redesigned tax report"),
+      nav("Today — new design", "/dashboard/today-new", "Sparkles", "Today", "redesigned day view"),
       nav("Reviews", "/dashboard/reviews", "Star", "Grow", "ratings"),
       nav("Promote", "/dashboard/promote", "Megaphone", "Grow", "ads boost"),
 
