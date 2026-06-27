@@ -24,6 +24,7 @@ import { BankAccountsManager } from "@/components/dashboard/mainScreens/business
 import { PackagesManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/packages-manager"
 import { MenusManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/menus-manager"
 import { AvailabilityManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/availability-manager"
+import { ImagesManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/images-manager"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -39,7 +40,7 @@ const TABS: TabDef[] = [
   { key: "profile", label: "Profile", icon: "Building2", wired: true },
   { key: "pricing", label: "Capacity & pricing", icon: "DollarSign", wired: true },
   { key: "amenities", label: "Amenities & services", icon: "SlidersHorizontal", wired: true },
-  { key: "images", label: "Images", icon: "Image", wired: false, href: "/dashboard/settings", hint: "Upload & reorder gallery photos." },
+  { key: "images", label: "Images", icon: "Image", wired: false, hint: "Upload & reorder gallery photos." },
   { key: "packages", label: "Packages", icon: "Package", wired: false, hint: "Pricing packages & bundles." },
   { key: "menus", label: "Menus", icon: "ClipboardList", wired: false, hint: "Catering menus & per-head pricing." },
   { key: "bank", label: "Bank details", icon: "CreditCard", wired: false, hint: "Payout accounts for receivables." },
@@ -207,19 +208,12 @@ export function BusinessSettingsHubView() {
           {active === "packages" && <PackagesManager businessId={biz.id} />}
           {active === "menus" && <MenusManager businessId={biz.id} />}
           {active === "availability" && <AvailabilityManager />}
+          {active === "images" && <ImagesManager businessId={biz.id} images={biz.images || []} />}
 
-          {!tab.wired && !["bank", "packages", "menus", "availability"].includes(active) && (
+          {!tab.wired && tab.href && (
             <Section icon={tab.icon} title={tab.label} desc={tab.hint || ""}>
-              {active === "images" && biz.images?.length ? (
-                <div className="mb-4 flex flex-wrap gap-2">
-                  {biz.images.slice(0, 8).map((src, i) => (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img key={i} src={src} alt="" className="h-20 w-20 rounded-lg border border-border object-cover" />
-                  ))}
-                </div>
-              ) : null}
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-border bg-muted/30 px-4 py-4">
-                <p className="text-sm text-muted-foreground">This section is managed in the current settings screen (its dialogs &amp; uploads).</p>
+                <p className="text-sm text-muted-foreground">This section has a dedicated redesigned screen.</p>
                 <a href={tab.href}><Button variant="outline" size="sm"><Icon name="ExternalLink" size={14} className="mr-1.5" /> Open {tab.label.toLowerCase()}</Button></a>
               </div>
             </Section>
