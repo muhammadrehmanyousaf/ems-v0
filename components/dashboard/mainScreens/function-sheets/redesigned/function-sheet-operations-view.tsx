@@ -102,7 +102,7 @@ export function FunctionSheetOperationsView() {
         title="Photography operations"
         description="Shot list, crew and deliverables for this function sheet."
         breadcrumb={
-          <a href="/dashboard/function-sheet-detail-new" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+          <a href={sheet ? `/dashboard/function-sheets/${sheet.id}` : "/dashboard/function-sheets"} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
             <Icon name="ChevronLeft" size={14} /> {sheet.title || "Function sheet"}
           </a>
         }

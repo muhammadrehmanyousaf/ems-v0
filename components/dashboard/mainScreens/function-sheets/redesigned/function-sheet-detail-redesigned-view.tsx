@@ -55,12 +55,18 @@ function Section({ title, action, children }: { title: string; action?: React.Re
   )
 }
 
-export function FunctionSheetDetailRedesignedView() {
+export function FunctionSheetDetailRedesignedView({ id }: { id?: number } = {}) {
+  const resolvedId = id ?? null
   const { data: sheet, isLoading, isError } = useQuery<FunctionSheet | null>({
-    queryKey: ["fs-detail-redesigned"],
+    queryKey: ["fs-detail-redesigned", id ?? null],
     queryFn: async () => {
-      const idParam = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("id") : null
-      if (idParam) return FunctionSheetAPI.get(Number(idParam))
+      const idParam =
+        resolvedId == null
+          ? typeof window !== "undefined"
+            ? new URLSearchParams(window.location.search).get("id")
+            : null
+          : resolvedId
+      if (idParam != null && idParam !== "" && !Number.isNaN(Number(idParam))) return FunctionSheetAPI.get(Number(idParam))
       const list = await FunctionSheetAPI.list()
       const first = list?.functionSheets?.[0]
       return first ? FunctionSheetAPI.get(first.id) : null
@@ -91,7 +97,7 @@ export function FunctionSheetDetailRedesignedView() {
         eyebrow="Operate · Function sheet"
         title={sheet.title}
         breadcrumb={
-          <a href="/dashboard/function-sheets-new" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+          <a href="/dashboard/function-sheets" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
             <Icon name="ChevronLeft" size={14} /> Function sheets
           </a>
         }

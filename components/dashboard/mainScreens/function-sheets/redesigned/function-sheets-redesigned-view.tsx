@@ -142,6 +142,7 @@ export function FunctionSheetsRedesignedView() {
       key: "actions", header: "", align: "right",
       render: (f) => (
         <div className="flex items-center justify-end gap-0.5">
+          <Button size="sm" variant="ghost" onClick={() => router.push(`/dashboard/function-sheets/${f.id}`)} aria-label="View function sheet"><Icon name="Eye" size={14} /></Button>
           <Button size="sm" variant="ghost" onClick={() => toComposer(f.id)} aria-label="Edit function sheet"><Icon name="Pencil" size={14} /></Button>
           <Button size="sm" variant="ghost" onClick={() => setDeleting(f)} aria-label="Remove function sheet"><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
         </div>
