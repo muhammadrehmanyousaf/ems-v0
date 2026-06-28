@@ -7,8 +7,14 @@
  */
 
 import * as React from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { InventoryAPI, type InventoryItem } from "@/lib/api/inventory"
+import { BusinessesAPI } from "@/lib/api/dashboard"
+import { InventoryFormDialog } from "@/components/dashboard/mainScreens/inventory/redesigned/inventory-form-dialog"
+import { InventoryMovementDialog } from "@/components/dashboard/mainScreens/inventory/redesigned/inventory-movement-dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { showSuccessToast } from "@/lib/toast/undo"
+import { toast } from "sonner"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
@@ -31,12 +37,28 @@ const stockState = (it: InventoryItem): { tone: StatusTone; label: string } => {
 }
 
 export function InventoryRedesignedView() {
+  const qc = useQueryClient()
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
+  const [dialogOpen, setDialogOpen] = React.useState(false)
+  const [editing, setEditing] = React.useState<InventoryItem | undefined>(undefined)
+  const [deleting, setDeleting] = React.useState<InventoryItem | null>(null)
+  const [moving, setMoving] = React.useState<InventoryItem | undefined>(undefined)
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["inventory-redesigned"],
     queryFn: () => InventoryAPI.listItems(),
+  })
+  const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
+  const businessId = businesses?.[0]?.id
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["inventory-redesigned"] })
+  const openCreate = () => { setEditing(undefined); setDialogOpen(true) }
+  const openEdit = (i: InventoryItem) => { setEditing(i); setDialogOpen(true) }
+  const removeMut = useMutation({
+    mutationFn: (id: number) => InventoryAPI.removeItem(id),
+    onSuccess: () => { showSuccessToast("Item removed"); setDeleting(null); invalidate() },
+    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove item (stock must be zero first)"),
   })
 
   const all = data?.items ?? []
@@ -57,6 +79,16 @@ export function InventoryRedesignedView() {
     { key: "stock", header: "Stock", align: "right", render: (i) => <span className="tabular-nums">{num(i.currentStock)} <span className="text-muted-foreground">{String(i.unit)}</span></span> },
     { key: "cost", header: "Last cost / unit", align: "right", render: (i) => <MoneyCell amount={i.lastRestockCostPerUnit != null ? num(i.lastRestockCostPerUnit) : null} tone="muted" /> },
     { key: "status", header: "Status", render: (i) => { const s = stockState(i); return <StatusPill tone={s.tone}>{s.label}</StatusPill> } },
+    {
+      key: "actions", header: "", align: "right",
+      render: (i) => (
+        <div className="flex items-center justify-end gap-0.5">
+          <Button size="sm" variant="ghost" onClick={() => setMoving(i)} aria-label="Adjust stock"><Icon name="RefreshCw" size={14} /></Button>
+          <Button size="sm" variant="ghost" onClick={() => openEdit(i)} aria-label="Edit item"><Icon name="Pencil" size={14} /></Button>
+          <Button size="sm" variant="ghost" onClick={() => setDeleting(i)} aria-label="Remove item"><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
+        </div>
+      ),
+    },
   ]
 
   return (
@@ -65,7 +97,7 @@ export function InventoryRedesignedView() {
         eyebrow="Operate"
         title="Inventory"
         description="Gear, props and consumables — redesigned, wired to live data."
-        actions={<Button><Icon name="Plus" size={16} className="mr-1.5" /> Add item</Button>}
+        actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Add item</Button>}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -89,7 +121,7 @@ export function InventoryRedesignedView() {
           icon: "Package",
           title: "No inventory yet",
           description: "Track your gear, props and consumables so you never run short on a shoot day.",
-          action: <Button size="sm"><Icon name="Plus" size={14} className="mr-1" /> Add item</Button>,
+          action: <Button size="sm" onClick={openCreate}><Icon name="Plus" size={14} className="mr-1" /> Add item</Button>,
         }}
         toolbar={
           <>
@@ -127,6 +159,22 @@ export function InventoryRedesignedView() {
           )
         }}
       />
+
+      <InventoryFormDialog open={dialogOpen} onOpenChange={setDialogOpen} item={editing} businessId={businessId} onSaved={invalidate} />
+      <InventoryMovementDialog open={!!moving} onOpenChange={(v) => !v && setMoving(undefined)} item={moving} onSaved={invalidate} />
+
+      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove this item?</AlertDialogTitle>
+            <AlertDialogDescription>{deleting?.name} will be removed from inventory. This can't be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleting && removeMut.mutate(deleting.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remove</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
