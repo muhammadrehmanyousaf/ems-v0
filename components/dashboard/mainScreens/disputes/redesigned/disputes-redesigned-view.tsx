@@ -7,8 +7,9 @@
  */
 
 import * as React from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { listAdminDisputes, type AdminDisputeRow } from "@/lib/api/disputes"
+import { ResolveDisputeDialog } from "@/components/dashboard/mainScreens/disputes/redesigned/resolve-dispute-dialog"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
@@ -46,8 +47,11 @@ const bookingDate = (r: AdminDisputeRow) => r.booking?.bookingDate ?? null
 const totalAmount = (r: AdminDisputeRow) => num(r.booking?.totalAmount)
 
 export function DisputesRedesignedView() {
+  const qc = useQueryClient()
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
+  const [resolving, setResolving] = React.useState<AdminDisputeRow | null>(null)
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["disputes-redesigned"] })
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["disputes-redesigned"],
@@ -91,6 +95,12 @@ export function DisputesRedesignedView() {
     },
     { key: "opened", header: "Opened", cellClassName: "text-muted-foreground", render: (r) => fmtDate(r.openedAt) },
     { key: "status", header: "Status", render: (r) => <StatusPill tone={toneFor(r.status)}>{cap(r.status)}</StatusPill> },
+    {
+      key: "actions", header: "", align: "right",
+      render: (r) => r.status === "open" ? (
+        <Button size="sm" variant="outline" onClick={() => setResolving(r)}><Icon name="CheckCircle2" size={14} className="mr-1" /> Resolve</Button>
+      ) : <span className="text-xs text-muted-foreground">—</span>,
+    },
   ]
 
   return (
@@ -170,6 +180,8 @@ export function DisputesRedesignedView() {
           </div>
         )}
       />
+
+      <ResolveDisputeDialog open={!!resolving} onOpenChange={(v) => !v && setResolving(null)} disputeId={resolving?.id} label={resolving?.booking?.customerName ? `Dispute for ${resolving.booking.customerName}` : undefined} onSaved={() => { invalidate(); setResolving(null) }} />
     </div>
   )
 }

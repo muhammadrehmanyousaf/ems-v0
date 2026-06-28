@@ -7,8 +7,10 @@
  */
 
 import * as React from "react"
-import { useQuery } from "@tanstack/react-query"
-import { listVendorQueue, type QueueBusiness, type BusinessStatus } from "@/lib/api/adminQueue"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { listVendorQueue, approveBusiness, rejectBusiness, requestChangesBusiness, type QueueBusiness, type BusinessStatus } from "@/lib/api/adminQueue"
+import { showSuccessToast } from "@/lib/toast/undo"
+import { toast } from "sonner"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
@@ -41,8 +43,20 @@ const statusTone = (s?: string | null): StatusTone =>
   STATUS_TONE[(s as BusinessStatus)] ?? "neutral"
 
 export function VendorQueueRedesignedView() {
+  const qc = useQueryClient()
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["vendor-queue-redesigned"] })
+  const approveMut = useMutation({
+    mutationFn: (id: number) => approveBusiness(id),
+    onSuccess: () => { showSuccessToast("Vendor approved"); invalidate() },
+    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't approve"),
+  })
+  const rejectMut = useMutation({
+    mutationFn: (id: number) => rejectBusiness(id),
+    onSuccess: () => { showSuccessToast("Vendor rejected"); invalidate() },
+    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't reject"),
+  })
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["vendor-queue-redesigned"],
@@ -98,6 +112,15 @@ export function VendorQueueRedesignedView() {
       key: "status",
       header: "Status",
       render: (r) => <StatusPill tone={statusTone(r.status)}>{cap(r.status)}</StatusPill>,
+    },
+    {
+      key: "actions", header: "", align: "right",
+      render: (r) => r.status === "submitted" ? (
+        <div className="flex items-center justify-end gap-1">
+          <Button size="sm" variant="outline" disabled={approveMut.isPending} onClick={() => approveMut.mutate(r.id)}><Icon name="Check" size={14} className="mr-1 text-emerald-600" /> Approve</Button>
+          <Button size="sm" variant="ghost" disabled={rejectMut.isPending} onClick={() => rejectMut.mutate(r.id)} aria-label="Reject"><Icon name="XCircle" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
+        </div>
+      ) : <span className="text-xs text-muted-foreground">—</span>,
     },
   ]
 
