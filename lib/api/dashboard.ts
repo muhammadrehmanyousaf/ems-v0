@@ -51,6 +51,16 @@ export class UsersAPI {
     await axiosInstance.patch("/api/v1/users", data);
   }
 
+  // Mirrors the original /dashboard/profile page: edits the vendor's
+  // personal + business-contact fields (fullName, phoneNumber, city,
+  // subArea, bookingEmail, primaryContactNumber, secondaryContactNumber,
+  // website, officeAddress) via the dedicated profile endpoint. Distinct
+  // from updateProfile (PATCH /api/v1/users) which only touches the core
+  // identity triplet. Does NOT edit email here (parity with original).
+  static async updateMyProfile(data: Record<string, string>): Promise<void> {
+    await axiosInstance.patch("/api/v1/users/profile", data);
+  }
+
   static async getMyProfile(): Promise<{ user: ApiUser; token: string }> {
     const res = await axiosInstance.get("/api/v1/users/profile/me");
     return res.data?.data;

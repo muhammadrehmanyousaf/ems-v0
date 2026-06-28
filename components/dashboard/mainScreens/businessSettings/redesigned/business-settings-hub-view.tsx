@@ -44,7 +44,7 @@ const TABS: TabDef[] = [
   { key: "packages", label: "Packages", icon: "Package", wired: false, hint: "Pricing packages & bundles." },
   { key: "menus", label: "Menus", icon: "ClipboardList", wired: false, hint: "Catering menus & per-head pricing." },
   { key: "bank", label: "Bank details", icon: "CreditCard", wired: false, hint: "Payout accounts for receivables." },
-  { key: "team", label: "Team members", icon: "Users2", wired: false, href: "/dashboard/staff-new", hint: "Staff & roles." },
+  { key: "team", label: "Team members", icon: "Users2", wired: false, href: "/dashboard/staff", hint: "Staff & roles." },
   { key: "availability", label: "Availability", icon: "CalendarCheck", wired: false, hint: "Blocked dates & lead time." },
 ]
 

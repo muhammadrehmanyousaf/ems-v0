@@ -1,9 +1,11 @@
 "use client"
 
 /**
- * Account settings — redesigned (Track C, bespoke). Clean profile + account
- * cards, wired to UsersAPI.getMyProfile(). Edit profile + change password are
- * live (UsersAPI.updateProfile / UsersAPI.changePassword); 2FA reuses the shared
+ * Account settings — redesigned (Track C, bespoke). Clean profile + account +
+ * business-contact cards, wired to UsersAPI.getMyProfile(). Edit profile is at
+ * full 9-field parity with the original /dashboard/profile (PATCH
+ * /api/v1/users/profile via UsersAPI.updateMyProfile, email excluded by design);
+ * change password is live (UsersAPI.changePassword); 2FA reuses the shared
  * TwoFactor enrol/disable modals. Original settings/profile untouched. Route
  * /dashboard/settings-new. Token-only (themes).
  */
@@ -74,7 +76,22 @@ function Card({ title, action, children, className }: { title: string; action?: 
   )
 }
 
-/* ── Edit profile dialog — PATCH /api/v1/users {fullName,email,phoneNumber} ── */
+/* ── Edit profile dialog — full 9-field parity with /dashboard/profile.
+   PATCH /api/v1/users/profile {fullName, phoneNumber, city, subArea,
+   bookingEmail, primaryContactNumber, secondaryContactNumber, website,
+   officeAddress}. Email is intentionally NOT edited here (parity). ── */
+const EMPTY_PROFILE_FORM = {
+  fullName: "",
+  phoneNumber: "",
+  city: "",
+  subArea: "",
+  bookingEmail: "",
+  primaryContactNumber: "",
+  secondaryContactNumber: "",
+  website: "",
+  officeAddress: "",
+}
+
 function EditProfileDialog({
   open,
   onOpenChange,
@@ -85,24 +102,35 @@ function EditProfileDialog({
   user?: ApiUser
 }) {
   const qc = useQueryClient()
-  const [form, setForm] = React.useState({ fullName: "", email: "", phoneNumber: "" })
+  const { refreshUser } = useUser()
+  const [form, setForm] = React.useState({ ...EMPTY_PROFILE_FORM })
 
-  // Re-seed from live data whenever the dialog opens.
+  // Re-seed from live data whenever the dialog opens. The business-contact
+  // fields ride on the user object even though ApiUser doesn't type them,
+  // so we read them through a string-record cast (mirrors the original).
   React.useEffect(() => {
     if (open) {
+      const x = (user ?? {}) as unknown as Record<string, string>
       setForm({
         fullName: user?.fullName ?? "",
-        email: user?.email ?? "",
         phoneNumber: user?.phoneNumber ?? "",
+        city: user?.city ?? "",
+        subArea: user?.subArea ?? "",
+        bookingEmail: x.bookingEmail ?? "",
+        primaryContactNumber: x.primaryContactNumber ?? "",
+        secondaryContactNumber: x.secondaryContactNumber ?? "",
+        website: x.website ?? "",
+        officeAddress: x.officeAddress ?? "",
       })
     }
-  }, [open, user?.fullName, user?.email, user?.phoneNumber])
+  }, [open, user])
 
   const mutation = useMutation({
-    mutationFn: () => UsersAPI.updateProfile(form),
-    onSuccess: () => {
+    mutationFn: () => UsersAPI.updateMyProfile(form),
+    onSuccess: async () => {
       showSuccessToast("Profile updated")
       qc.invalidateQueries({ queryKey: ["account-settings-redesigned"] })
+      await refreshUser()
       onOpenChange(false)
     },
     onError: (err) => toast.error(errMsg(err, "Failed to update profile")),
@@ -113,30 +141,74 @@ function EditProfileDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit profile</DialogTitle>
-          <DialogDescription>Update your name, email and phone number.</DialogDescription>
+          <DialogDescription>
+            Update your personal details and business contact information.
+          </DialogDescription>
         </DialogHeader>
         <form
-          className="space-y-4 py-2"
+          className="space-y-5 py-2"
           onSubmit={(e) => {
             e.preventDefault()
             mutation.mutate()
           }}
         >
-          <div className="space-y-2">
-            <Label htmlFor="rsa-fullName">Full name</Label>
-            <Input id="rsa-fullName" value={form.fullName} onChange={set("fullName")} placeholder="Your full name" />
+          {/* Personal */}
+          <div className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Personal
+            </p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="rsa-fullName">Full name</Label>
+                <Input id="rsa-fullName" value={form.fullName} onChange={set("fullName")} placeholder="Your full name" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rsa-phone">Phone number</Label>
+                <Input id="rsa-phone" value={form.phoneNumber} onChange={set("phoneNumber")} placeholder="+92 300 0000000" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rsa-city">City</Label>
+                <Input id="rsa-city" value={form.city} onChange={set("city")} placeholder="e.g. Lahore" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rsa-subArea">Area / sub-area</Label>
+                <Input id="rsa-subArea" value={form.subArea} onChange={set("subArea")} placeholder="e.g. DHA Phase 5" />
+              </div>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="rsa-email">Email</Label>
-            <Input id="rsa-email" type="email" value={form.email} onChange={set("email")} placeholder="you@example.com" />
+
+          {/* Business contact */}
+          <div className="space-y-4 border-t border-border/60 pt-5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Business contact
+            </p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="rsa-bookingEmail">Booking email</Label>
+                <Input id="rsa-bookingEmail" type="email" value={form.bookingEmail} onChange={set("bookingEmail")} placeholder="bookings@yourbusiness.com" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rsa-primaryContact">Primary contact</Label>
+                <Input id="rsa-primaryContact" value={form.primaryContactNumber} onChange={set("primaryContactNumber")} placeholder="+92 300 0000000" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rsa-secondaryContact">Secondary contact</Label>
+                <Input id="rsa-secondaryContact" value={form.secondaryContactNumber} onChange={set("secondaryContactNumber")} placeholder="+92 300 0000000" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rsa-website">Website</Label>
+                <Input id="rsa-website" value={form.website} onChange={set("website")} placeholder="https://yourbusiness.com" />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="rsa-officeAddress">Office address</Label>
+                <Input id="rsa-officeAddress" value={form.officeAddress} onChange={set("officeAddress")} placeholder="Full office address" />
+              </div>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="rsa-phone">Phone</Label>
-            <Input id="rsa-phone" value={form.phoneNumber} onChange={set("phoneNumber")} placeholder="+92 300 0000000" />
-          </div>
+
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
@@ -242,6 +314,9 @@ export function AccountSettingsRedesignedView() {
     queryFn: () => UsersAPI.getMyProfile(),
   })
   const u: ApiUser | undefined = data?.user
+  // Business-contact fields ride on the user object but aren't typed on
+  // ApiUser; read them through a string-record cast (mirrors the original).
+  const biz = (u ?? {}) as unknown as Record<string, string>
 
   const { user: authUser, flags } = useUser()
   const twoFactorEnabled = flags?.twoFactorEnabled ?? !!authUser?.twoFactorEnabled
@@ -293,6 +368,22 @@ export function AccountSettingsRedesignedView() {
           <Field icon="ShieldCheck" label="Role" value={u?.isVendor ? "Vendor" : "Customer"} />
           <div className="border-t border-border/60" />
           <Field icon="Calendar" label="Member since" value={fmtDate(u?.createdAt)} />
+        </Card>
+
+        <Card
+          title="Business contact"
+          className="lg:col-span-2"
+          action={<Button size="sm" variant="ghost" onClick={() => setEditOpen(true)}><Icon name="Pencil" size={14} className="mr-1" /> Edit</Button>}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-6">
+            <Field icon="Mail" label="Booking email" value={biz.bookingEmail} />
+            <Field icon="Phone" label="Primary contact" value={biz.primaryContactNumber} />
+            <Field icon="Phone" label="Secondary contact" value={biz.secondaryContactNumber} />
+            <Field icon="Globe" label="Website" value={biz.website} />
+            <div className="sm:col-span-2">
+              <Field icon="MapPin" label="Office address" value={biz.officeAddress} />
+            </div>
+          </div>
         </Card>
 
         <Card title="Security" className="lg:col-span-2">
