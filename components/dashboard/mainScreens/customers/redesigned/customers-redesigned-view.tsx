@@ -7,8 +7,9 @@
  */
 
 import * as React from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { CustomersAPI, type ApiCustomer } from "@/lib/api/dashboard"
+import { AddCustomerDialog } from "@/components/dashboard/mainScreens/customers/redesigned/add-customer-dialog"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
@@ -27,8 +28,11 @@ const initials = (name: string) =>
   (name || "?").split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("")
 
 export function CustomersRedesignedView() {
+  const qc = useQueryClient()
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
+  const [dialogOpen, setDialogOpen] = React.useState(false)
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["customers-redesigned"] })
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["customers-redesigned"],
@@ -70,7 +74,7 @@ export function CustomersRedesignedView() {
         eyebrow="Operate"
         title="Customers"
         description="Your client book — redesigned, wired to live data."
-        actions={<Button><Icon name="Plus" size={16} className="mr-1.5" /> Add customer</Button>}
+        actions={<Button onClick={() => setDialogOpen(true)}><Icon name="Plus" size={16} className="mr-1.5" /> Add customer</Button>}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -94,7 +98,7 @@ export function CustomersRedesignedView() {
           icon: "Users",
           title: "No customers yet",
           description: "Customers appear here as you take bookings. Import your existing client list to get a head start.",
-          action: <Button size="sm"><Icon name="Plus" size={14} className="mr-1" /> Add customer</Button>,
+          action: <Button size="sm" onClick={() => setDialogOpen(true)}><Icon name="Plus" size={14} className="mr-1" /> Add customer</Button>,
           secondaryAction: <Button size="sm" variant="outline"><Icon name="Upload" size={14} className="mr-1" /> Import</Button>,
         }}
         toolbar={
@@ -144,6 +148,8 @@ export function CustomersRedesignedView() {
           </div>
         )}
       />
+
+      <AddCustomerDialog open={dialogOpen} onOpenChange={setDialogOpen} onSaved={invalidate} />
     </div>
   )
 }
