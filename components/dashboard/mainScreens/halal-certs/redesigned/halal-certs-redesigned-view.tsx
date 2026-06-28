@@ -7,7 +7,7 @@
  */
 
 import * as React from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   HalalCertAPI,
   type HalalCert,
@@ -15,6 +15,11 @@ import {
   ISSUING_AUTHORITY_LABELS,
   CERT_STATUS_LABELS,
 } from "@/lib/api/halalCerts"
+import { BusinessesAPI } from "@/lib/api/dashboard"
+import { HalalCertFormDialog } from "@/components/dashboard/mainScreens/halal-certs/redesigned/halal-cert-form-dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { showSuccessToast } from "@/lib/toast/undo"
+import { toast } from "sonner"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
@@ -46,12 +51,26 @@ const authorityLabel = (c: HalalCert) => ISSUING_AUTHORITY_LABELS[c.issuingAutho
 const supplierName = (c: HalalCert) => c.supplier?.name ?? c.supplierNameSnapshot ?? "—"
 
 export function HalalCertsRedesignedView() {
+  const qc = useQueryClient()
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
+  const [dialogOpen, setDialogOpen] = React.useState(false)
+  const [editing, setEditing] = React.useState<HalalCert | undefined>(undefined)
+  const [deleting, setDeleting] = React.useState<HalalCert | null>(null)
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["halal-certs-redesigned"],
     queryFn: () => HalalCertAPI.list(),
+  })
+  const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
+  const businessId = businesses?.[0]?.id
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["halal-certs-redesigned"] })
+  const openCreate = () => { setEditing(undefined); setDialogOpen(true) }
+  const openEdit = (c: HalalCert) => { setEditing(c); setDialogOpen(true) }
+  const removeMut = useMutation({
+    mutationFn: (id: number) => HalalCertAPI.remove(id),
+    onSuccess: () => { showSuccessToast("Certificate removed"); setDeleting(null); invalidate() },
+    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove certificate"),
   })
 
   const all = data?.certs ?? []
@@ -90,6 +109,15 @@ export function HalalCertsRedesignedView() {
     { key: "authority", header: "Authority", cellClassName: "text-muted-foreground", render: (c) => authorityLabel(c) },
     { key: "expiry", header: "Expires", align: "right", cellClassName: "tabular-nums", render: (c) => fmtDate(c.expiryDate) },
     { key: "status", header: "Status", render: (c) => <StatusPill tone={statusTone(c.status)}>{statusLabel(c.status)}</StatusPill> },
+    {
+      key: "actions", header: "", align: "right",
+      render: (c) => (
+        <div className="flex items-center justify-end gap-0.5">
+          <Button size="sm" variant="ghost" onClick={() => openEdit(c)} aria-label="Edit certificate"><Icon name="Pencil" size={14} /></Button>
+          <Button size="sm" variant="ghost" onClick={() => setDeleting(c)} aria-label="Remove certificate"><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
+        </div>
+      ),
+    },
   ]
 
   return (
@@ -98,7 +126,7 @@ export function HalalCertsRedesignedView() {
         eyebrow="Compliance"
         title="Halal certificates"
         description="Supplier halal certificates, authorities and expiry tracking — redesigned, wired to live data."
-        actions={<Button><Icon name="Plus" size={16} className="mr-1.5" /> Add certificate</Button>}
+        actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Add certificate</Button>}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -122,7 +150,7 @@ export function HalalCertsRedesignedView() {
           icon: "ShieldCheck",
           title: "No certificates yet",
           description: "Add supplier halal certificates to track authorities, expiry dates and renewals.",
-          action: <Button size="sm"><Icon name="Plus" size={14} className="mr-1" /> Add certificate</Button>,
+          action: <Button size="sm" onClick={openCreate}><Icon name="Plus" size={14} className="mr-1" /> Add certificate</Button>,
         }}
         toolbar={
           <>
@@ -162,6 +190,21 @@ export function HalalCertsRedesignedView() {
           </div>
         )}
       />
+
+      <HalalCertFormDialog open={dialogOpen} onOpenChange={setDialogOpen} cert={editing} businessId={businessId} onSaved={invalidate} />
+
+      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove this certificate?</AlertDialogTitle>
+            <AlertDialogDescription>{deleting?.certNumber} will be removed. This can't be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleting && removeMut.mutate(deleting.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remove</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
