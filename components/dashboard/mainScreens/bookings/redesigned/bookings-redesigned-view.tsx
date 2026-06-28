@@ -21,6 +21,8 @@ import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { OfflineBookingDialog } from "@/components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog"
+import { EditBookingDialog } from "@/components/dashboard/mainScreens/bookings/bookingListing/components/edit-booking-dialog"
 
 const statusTone = (s: BookingStatus): StatusTone =>
   s === "Confirmed" ? "success"
@@ -51,6 +53,8 @@ export function BookingsRedesignedView() {
   const [search, setSearch] = React.useState("")
   const [bucket, setBucket] = React.useState<"active" | "completed">("active")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
+  const [createOpen, setCreateOpen] = React.useState(false)
+  const [editing, setEditing] = React.useState<BookingData | null>(null)
 
   const { data, isLoading, isError, refetch } = useFetchData({
     endpoint: "/api/v1/bookings",
@@ -78,6 +82,12 @@ export function BookingsRedesignedView() {
     { key: "paid", header: "Paid", align: "right", render: (b) => <MoneyCell amount={Number(b.downPayment) || 0} tone="muted" /> },
     { key: "status", header: "Status", render: (b) => <StatusPill tone={statusTone(b.status)}>{b.status}</StatusPill> },
     { key: "payment", header: "Payment", render: (b) => <StatusPill tone={payTone(b.paymentStatus)} variant="icon">{b.paymentStatus || "—"}</StatusPill> },
+    {
+      key: "actions", header: "", align: "right",
+      render: (b) => (
+        <Button size="sm" variant="ghost" onClick={() => setEditing(b)} aria-label="Edit booking"><Icon name="Pencil" size={14} /></Button>
+      ),
+    },
   ]
 
   return (
@@ -87,7 +97,7 @@ export function BookingsRedesignedView() {
         title="Bookings"
         description="Every event with its payment status — redesigned, wired to live data."
         actions={
-          <Button>
+          <Button onClick={() => setCreateOpen(true)}>
             <Icon name="Plus" size={16} className="mr-1.5" /> Add booking
           </Button>
         }
@@ -114,7 +124,7 @@ export function BookingsRedesignedView() {
           icon: "Calendar",
           title: "No bookings yet",
           description: "When you log a booking it'll appear here with its payment status and timeline.",
-          action: <Button size="sm"><Icon name="Plus" size={14} className="mr-1" /> Add booking</Button>,
+          action: <Button size="sm" onClick={() => setCreateOpen(true)}><Icon name="Plus" size={14} className="mr-1" /> Add booking</Button>,
         }}
         toolbar={
           <>
@@ -177,6 +187,11 @@ export function BookingsRedesignedView() {
           </div>
         )}
       />
+
+      <OfflineBookingDialog open={createOpen} onOpenChange={setCreateOpen} onSuccess={() => refetch()} />
+      {editing && (
+        <EditBookingDialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)} booking={editing} onSuccess={() => { refetch(); setEditing(null) }} />
+      )}
     </div>
   )
 }
