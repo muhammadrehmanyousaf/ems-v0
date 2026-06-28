@@ -9,15 +9,34 @@
  */
 
 import * as React from "react"
-import { useQuery } from "@tanstack/react-query"
-import { FunctionSheetAPI, STATE_LABELS, type FunctionSheet, type FunctionSheetState } from "@/lib/api/functionSheets"
+import { toast } from "sonner"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  FunctionSheetAPI,
+  STATE_LABELS,
+  PDF_VARIANT_LABELS,
+  variantsAvailable,
+  type FunctionSheet,
+  type FunctionSheetState,
+  type PdfVariant,
+} from "@/lib/api/functionSheets"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatusPill, type StatusTone } from "@/components/dashboard/primitives/status-pill"
 import { formatPkr } from "@/components/dashboard/primitives/money-cell"
 import { DetailSkeleton } from "@/components/dashboard/primitives/skeletons"
 import { EmptyState } from "@/components/dashboard/primitives/empty-state"
-import { Icon, type IconName } from "@/components/dashboard/shared/icon"
+import { Icon, type IconName, Spinner } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { ShareLinkDialog } from "../share-link-dialog"
+import { SendWhatsappDialog } from "../send-whatsapp-dialog"
 import { cn } from "@/lib/utils"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
@@ -57,6 +76,7 @@ function Section({ title, action, children }: { title: string; action?: React.Re
 
 export function FunctionSheetDetailRedesignedView({ id }: { id?: number } = {}) {
   const resolvedId = id ?? null
+  const queryClient = useQueryClient()
   const { data: sheet, isLoading, isError } = useQuery<FunctionSheet | null>({
     queryKey: ["fs-detail-redesigned", id ?? null],
     queryFn: async () => {
@@ -72,6 +92,43 @@ export function FunctionSheetDetailRedesignedView({ id }: { id?: number } = {}) 
       return first ? FunctionSheetAPI.get(first.id) : null
     },
   })
+
+  // Dropped PDF + Share-link actions, restored (ported from the original
+  // function-sheet-detail-view): a per-variant PDF dropdown
+  // (preview/download/WhatsApp) + the customer share-link dialog. The two
+  // dialogs are reused verbatim from the original screen.
+  const [pdfBusy, setPdfBusy] = React.useState(false)
+  const [shareOpen, setShareOpen] = React.useState(false)
+  const [whatsappVariant, setWhatsappVariant] = React.useState<PdfVariant | null>(null)
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["fs-detail-redesigned", id ?? null] })
+
+  const handlePdf = async (variant: PdfVariant, mode: "preview" | "download") => {
+    if (!sheet) return
+    setPdfBusy(true)
+    try {
+      const blob = await FunctionSheetAPI.pdfBlob(sheet.id, variant)
+      const url = window.URL.createObjectURL(blob)
+      if (mode === "preview") {
+        window.open(url, "_blank")
+        setTimeout(() => window.URL.revokeObjectURL(url), 60_000)
+      } else {
+        const a = document.createElement("a")
+        a.href = url
+        a.download = `${PDF_VARIANT_LABELS[variant]
+          .replace(/[^a-z0-9-]+/gi, "-")
+          .toLowerCase()}-${sheet.id}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        window.URL.revokeObjectURL(url)
+      }
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || "Could not generate PDF")
+    } finally {
+      setPdfBusy(false)
+    }
+  }
 
   if (isLoading) {
     return <div className="p-4 md:p-6"><DetailSkeleton /></div>
@@ -91,6 +148,12 @@ export function FunctionSheetDetailRedesignedView({ id }: { id?: number } = {}) 
   const schedule: any[] = Array.isArray(sheet.paymentScheduleJson) ? sheet.paymentScheduleJson : []
   const currentIdx = STATE_ORDER.indexOf(sheet.state)
 
+  const variants = variantsAvailable(sheet.state)
+  const shareTokenLive =
+    !!sheet.customerShareToken &&
+    !sheet.shareTokenRevokedAt &&
+    (!sheet.shareTokenExpiresAt || new Date(sheet.shareTokenExpiresAt) > new Date())
+
   return (
     <div className="space-y-6 p-4 md:p-6">
       <PageHeader
@@ -103,8 +166,46 @@ export function FunctionSheetDetailRedesignedView({ id }: { id?: number } = {}) 
         }
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline"><Icon name="Download" size={15} className="mr-1.5" /> PDF</Button>
-            <Button variant="outline"><Icon name="Send" size={15} className="mr-1.5" /> Share</Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" disabled={pdfBusy || variants.length === 0}>
+                  {pdfBusy ? <Spinner size={15} className="mr-1.5" /> : <Icon name="Download" size={15} className="mr-1.5" />}
+                  PDF
+                  <Icon name="ChevronDown" size={14} className="ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <DropdownMenuLabel>
+                  {variants.length === 0 ? "No variants unlocked yet" : "Available variants"}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {variants.map((v) => (
+                  <React.Fragment key={v}>
+                    <DropdownMenuItem onClick={() => handlePdf(v, "preview")}>
+                      <Icon name="ExternalLink" size={14} className="mr-2" />
+                      Preview {PDF_VARIANT_LABELS[v]}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handlePdf(v, "download")}>
+                      <Icon name="Download" size={14} className="mr-2" />
+                      Download {PDF_VARIANT_LABELS[v]}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setWhatsappVariant(v)}>
+                      <Icon name="MessageSquare" size={14} className="mr-2" />
+                      Send {PDF_VARIANT_LABELS[v]} via WhatsApp
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </React.Fragment>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              variant="outline"
+              onClick={() => setShareOpen(true)}
+              className={shareTokenLive ? "border-sky-300 text-sky-700 dark:text-sky-400" : undefined}
+            >
+              <Icon name="Send" size={15} className="mr-1.5" />
+              {shareTokenLive ? "Manage share link" : "Share link"}
+            </Button>
           </div>
         }
       />
@@ -300,6 +401,22 @@ export function FunctionSheetDetailRedesignedView({ id }: { id?: number } = {}) 
           )}
         </div>
       </div>
+
+      {/* Reused dialogs (verbatim from the original detail view) */}
+      <ShareLinkDialog
+        sheet={shareOpen ? sheet : null}
+        onOpenChange={setShareOpen}
+        onSaved={refresh}
+      />
+      <SendWhatsappDialog
+        sheet={whatsappVariant ? sheet : null}
+        initialVariant={whatsappVariant ?? undefined}
+        onOpenChange={(o) => !o && setWhatsappVariant(null)}
+        onSent={async () => {
+          setWhatsappVariant(null)
+          await refresh()
+        }}
+      />
     </div>
   )
 }

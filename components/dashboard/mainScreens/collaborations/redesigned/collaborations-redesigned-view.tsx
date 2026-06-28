@@ -1,9 +1,10 @@
 "use client"
 
 /**
- * Collaborations — redesigned (Track C). Wired to CollaborationsAPI.incoming();
- * rendered through the primitives. Read-only; original screen untouched.
- * Route /dashboard/collaborations-new.
+ * Collaborations — redesigned (Track C). Wired to CollaborationsAPI for both
+ * directions: Incoming (invites to you — Accept/Decline) and Outgoing (invites
+ * you sent — Cancel). Rendered through the redesign primitives. Original screen
+ * untouched. Route /dashboard/collaborations-new.
  */
 
 import * as React from "react"
@@ -21,6 +22,19 @@ import { ExportMenu } from "@/components/dashboard/shared/export-menu"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { cn } from "@/lib/utils"
+
+type Direction = "incoming" | "outgoing"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
@@ -37,13 +51,22 @@ const STATUS_TONE: Record<CollabStatus, StatusTone> = {
   cancelled: "neutral",
 }
 
-const counterpartName = (c: CollabInvite) =>
-  c.toVendor?.fullName || c.toNameSnapshot || c.toPhone || c.toEmail || "—"
+/** Who the current vendor is collaborating WITH, by direction. */
+const counterpartName = (c: CollabInvite, dir: Direction) =>
+  dir === "incoming"
+    ? c.fromVendor?.fullName || c.fromName || "A vendor"
+    : c.toVendor?.fullName || c.toNameSnapshot || c.toPhone || c.toEmail || "—"
 
 export function CollaborationsRedesignedView() {
   const qc = useQueryClient()
   const [dialogOpen, setDialogOpen] = React.useState(false)
+  const [tab, setTab] = React.useState<Direction>("incoming")
+  const [search, setSearch] = React.useState("")
+  const [selected, setSelected] = React.useState<Set<string>>(new Set())
+  const [cancelTarget, setCancelTarget] = React.useState<CollabInvite | null>(null)
+
   const invalidate = () => qc.invalidateQueries({ queryKey: ["collaborations-redesigned"] })
+
   const acceptMut = useMutation({
     mutationFn: (id: number) => CollaborationsAPI.accept(id),
     onSuccess: () => { showSuccessToast("Invite accepted"); invalidate() },
@@ -54,26 +77,45 @@ export function CollaborationsRedesignedView() {
     onSuccess: () => { showSuccessToast("Invite declined"); invalidate() },
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't decline"),
   })
-  const [search, setSearch] = React.useState("")
-  const [selected, setSelected] = React.useState<Set<string>>(new Set())
+  const cancelMut = useMutation({
+    mutationFn: (id: number) => CollaborationsAPI.cancel(id),
+    onSuccess: () => { showSuccessToast("Invite cancelled"); setCancelTarget(null); invalidate() },
+    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't cancel invite"),
+  })
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["collaborations-redesigned"],
-    queryFn: () => CollaborationsAPI.incoming(),
+    queryFn: async () => {
+      const [incoming, outgoing] = await Promise.all([
+        CollaborationsAPI.incoming(),
+        CollaborationsAPI.outgoing(),
+      ])
+      return { incoming, outgoing }
+    },
   })
 
-  const all = data ?? []
-  const invites = React.useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return all
-    return all.filter((c) =>
-      [c.fromName, counterpartName(c), c.eventLabel].some((v) => (v ?? "").toLowerCase().includes(q)),
-    )
-  }, [all, search])
+  const incoming = data?.incoming ?? []
+  const outgoing = data?.outgoing ?? []
 
-  const pending = all.filter((c) => c.status === "pending").length
-  const accepted = all.filter((c) => c.status === "accepted").length
-  const agreedTotal = all.reduce((sum, c) => sum + num(c.agreedAmount), 0)
+  // Reset selection whenever the active tab changes (row ids are not unique across tabs).
+  React.useEffect(() => { setSelected(new Set()) }, [tab])
+
+  const rows = tab === "incoming" ? incoming : outgoing
+  const filtered = React.useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return rows
+    return rows.filter((c) =>
+      [counterpartName(c, tab), c.eventLabel, c.scope].some((v) => (v ?? "").toLowerCase().includes(q)),
+    )
+  }, [rows, search, tab])
+
+  // Stat cards reflect BOTH directions.
+  const allInvites = React.useMemo(() => [...incoming, ...outgoing], [incoming, outgoing])
+  const pending = allInvites.filter((c) => c.status === "pending").length
+  const accepted = allInvites.filter((c) => c.status === "accepted").length
+  const agreedTotal = allInvites.reduce((sum, c) => sum + num(c.agreedAmount), 0)
+
+  const withHeader = tab === "incoming" ? "From" : "To"
 
   const columns: Column<CollabInvite>[] = [
     {
@@ -81,8 +123,19 @@ export function CollaborationsRedesignedView() {
       header: "Event",
       render: (c) => <span className="font-medium">{c.eventLabel || "Untitled collaboration"}</span>,
     },
-    { key: "from", header: "From", cellClassName: "text-muted-foreground", render: (c) => c.fromName || c.fromVendor?.fullName || "—" },
-    { key: "with", header: "With", cellClassName: "text-muted-foreground", render: (c) => counterpartName(c) },
+    {
+      key: "with",
+      header: withHeader,
+      cellClassName: "text-muted-foreground",
+      render: (c) => (
+        <span>
+          {counterpartName(c, tab)}
+          {tab === "outgoing" && !c.toUserId && (
+            <span className="ml-1 text-[11px] italic">· not on Wedding Wala yet</span>
+          )}
+        </span>
+      ),
+    },
     { key: "scope", header: "Scope", cellClassName: "text-muted-foreground", render: (c) => cap(c.scope) },
     {
       key: "amount",
@@ -97,35 +150,77 @@ export function CollaborationsRedesignedView() {
       render: (c) => <StatusPill tone={STATUS_TONE[c.status] ?? "neutral"}>{cap(c.status)}</StatusPill>,
     },
     {
-      key: "actions", header: "", align: "right",
-      render: (c) => c.status === "pending" ? (
-        <div className="flex items-center justify-end gap-1">
-          <Button size="sm" variant="outline" disabled={acceptMut.isPending} onClick={() => acceptMut.mutate(c.id)}><Icon name="Check" size={14} className="mr-1" /> Accept</Button>
-          <Button size="sm" variant="ghost" disabled={declineMut.isPending} onClick={() => declineMut.mutate(c.id)} aria-label="Decline"><Icon name="XCircle" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
-        </div>
-      ) : <span className="text-xs text-muted-foreground">—</span>,
+      key: "actions",
+      header: "",
+      align: "right",
+      render: (c) => {
+        if (c.status !== "pending") return <span className="text-xs text-muted-foreground">—</span>
+        if (tab === "incoming") {
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <Button size="sm" variant="outline" disabled={acceptMut.isPending} onClick={() => acceptMut.mutate(c.id)}>
+                <Icon name="Check" size={14} className="mr-1" /> Accept
+              </Button>
+              <Button size="sm" variant="ghost" disabled={declineMut.isPending} onClick={() => declineMut.mutate(c.id)} aria-label="Decline">
+                <Icon name="XCircle" size={14} className="text-muted-foreground hover:text-destructive" />
+              </Button>
+            </div>
+          )
+        }
+        return (
+          <div className="flex items-center justify-end gap-1">
+            <Button size="sm" variant="ghost" disabled={cancelMut.isPending} onClick={() => setCancelTarget(c)} aria-label="Cancel invite">
+              <Icon name="XCircle" size={14} className="mr-1 text-muted-foreground hover:text-destructive" /> Cancel
+            </Button>
+          </div>
+        )
+      },
     },
   ]
+
+  const tabBtn = (id: Direction, label: string, count: number) => (
+    <button
+      key={id}
+      type="button"
+      onClick={() => setTab(id)}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+        tab === id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+      )}
+      aria-pressed={tab === id}
+    >
+      {label}
+      <span className={cn(
+        "rounded-full px-1.5 text-[11px] tabular-nums",
+        tab === id ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
+      )}>{count}</span>
+    </button>
+  )
 
   return (
     <div className="space-y-6 p-4 md:p-6">
       <PageHeader
         eyebrow="Grow"
         title="Collaborations"
-        description="Invites to team up with other Wedding Wala vendors on events — redesigned, wired to live data."
+        description="Invites to team up with other Wedding Wala vendors on events — incoming and outgoing, wired to live data."
         actions={<Button onClick={() => setDialogOpen(true)}><Icon name="Plus" size={16} className="mr-1.5" /> Invite vendor</Button>}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total invites" value={all.length} icon="Users" />
+        <StatCard label="Total invites" value={allInvites.length} icon="Users" />
         <StatCard label="Pending" value={pending} icon="Clock" trend="flat" />
         <StatCard label="Accepted" value={accepted} icon="CheckCircle2" trend="up" />
         <StatCard label="Agreed value" value={formatPkr(agreedTotal)} icon="Wallet" />
       </div>
 
+      <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 w-fit">
+        {tabBtn("incoming", "Invites to you", incoming.length)}
+        {tabBtn("outgoing", "Invites you sent", outgoing.length)}
+      </div>
+
       <DataTable
         columns={columns}
-        data={invites}
+        data={filtered}
         getRowId={(c) => String(c.id)}
         loading={isLoading}
         error={isError ? "Couldn't load collaborations." : null}
@@ -135,8 +230,11 @@ export function CollaborationsRedesignedView() {
         onSelectionChange={setSelected}
         empty={{
           icon: "Users",
-          title: "No collaborations yet",
-          description: "Invite another Wedding Wala vendor to team up on an event — they accept or decline, and agreed amounts are tracked here.",
+          title: tab === "incoming" ? "No invites to you yet" : "No invites sent yet",
+          description:
+            tab === "incoming"
+              ? "When another Wedding Wala vendor invites you onto an event, it'll show up here to accept or decline."
+              : "Invite another Wedding Wala vendor to team up on an event — they accept or decline, and agreed amounts are tracked here.",
           action: <Button size="sm" onClick={() => setDialogOpen(true)}><Icon name="Plus" size={14} className="mr-1" /> Invite vendor</Button>,
         }}
         toolbar={
@@ -150,10 +248,9 @@ export function CollaborationsRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
-              <ExportMenu selectedIds={selected} getRowId={(c) => String(c.id)} rows={invites} filename="collaborations" columns={[
+              <ExportMenu selectedIds={selected} getRowId={(c) => String(c.id)} rows={filtered} filename="collaborations" columns={[
                 { header: "Event", value: (c) => c.eventLabel ?? "" },
-                { header: "From", value: (c) => c.fromName ?? "" },
-                { header: "With", value: (c) => counterpartName(c) },
+                { header: withHeader, value: (c) => counterpartName(c, tab) },
                 { header: "Scope", value: (c) => c.scope ?? "" },
                 { header: "Agreed amount", value: (c) => num(c.agreedAmount) },
                 { header: "Sent", value: (c) => c.createdAt ?? "" },
@@ -167,7 +264,7 @@ export function CollaborationsRedesignedView() {
             <div className="min-w-0">
               <div className="truncate font-medium">{c.eventLabel || "Untitled collaboration"}</div>
               <div className="text-xs text-muted-foreground">
-                {counterpartName(c)} · {formatPkr(num(c.agreedAmount))}
+                {counterpartName(c, tab)} · {formatPkr(num(c.agreedAmount))}
               </div>
             </div>
             <StatusPill tone={STATUS_TONE[c.status] ?? "neutral"}>{cap(c.status)}</StatusPill>
@@ -176,6 +273,28 @@ export function CollaborationsRedesignedView() {
       />
 
       <InviteVendorDialog open={dialogOpen} onOpenChange={setDialogOpen} onSaved={invalidate} />
+
+      <AlertDialog open={!!cancelTarget} onOpenChange={(v) => { if (!v) setCancelTarget(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel this invite?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {cancelTarget
+                ? `The invite to ${counterpartName(cancelTarget, "outgoing")}${cancelTarget.eventLabel ? ` for "${cancelTarget.eventLabel}"` : ""} will be withdrawn. This can't be undone.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelMut.isPending}>Keep invite</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); if (cancelTarget) cancelMut.mutate(cancelTarget.id) }}
+              disabled={cancelMut.isPending}
+            >
+              {cancelMut.isPending ? "Cancelling…" : "Cancel invite"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -10,6 +10,7 @@ import * as React from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { AutomationRulesAPI, type AutomationRule } from "@/lib/api/automationRules"
 import { RuleFormDialog } from "@/components/dashboard/mainScreens/automation/redesigned/rule-form-dialog"
+import { BuiltInRemindersSection } from "@/components/dashboard/mainScreens/automation/redesigned/built-in-reminders-section"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Switch } from "@/components/ui/switch"
 import { showSuccessToast } from "@/lib/toast/undo"
@@ -117,10 +118,29 @@ export function AutomationRedesignedView() {
     <div className="space-y-6 p-4 md:p-6">
       <PageHeader
         eyebrow="Grow"
-        title="Automation rules"
-        description="No-code reminders that fire around your events — redesigned, wired to live data."
+        title="Automation"
+        description="Built-in reminders that fire around every event, plus your own no-code rules — wired to live data."
         actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> New rule</Button>}
       />
+
+      {/* Default surface — the 5 built-in system reminders (per-vendor opt-out). */}
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">Built-in reminders</h2>
+          <p className="text-sm text-muted-foreground">
+            System reminders we send automatically. Toggle any off to opt out for your account.
+          </p>
+        </div>
+        <BuiltInRemindersSection />
+      </section>
+
+      {/* Second surface — vendor-defined custom rules (the existing CRUD builder). */}
+      <div className="border-t border-border pt-2">
+        <h2 className="text-lg font-semibold tracking-tight">Your custom rules</h2>
+        <p className="text-sm text-muted-foreground">
+          Build your own no-code reminders on top of the built-in ones.
+        </p>
+      </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Total rules" value={all.length} icon="Settings" />

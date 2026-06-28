@@ -2,13 +2,21 @@
 
 /**
  * Vendor queue — redesigned (admin). Wired to listVendorQueue() (a FUNCTION,
- * not a class). Read-only list rendered through the shared primitives. The
- * original screen is untouched. Route /dashboard/admin/vendor-queue-new.
+ * not a class), now driven by a status filter so every lifecycle state is
+ * viewable. Per-status admin actions (approve / request changes / reject /
+ * suspend / restore) reuse the ported action dialog
+ * (./vendor-queue-action-dialog) which calls the SAME backend API the original
+ * screen calls. The original screen is untouched. Route
+ * /dashboard/admin/vendor-queue-new.
  */
 
 import * as React from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { listVendorQueue, approveBusiness, rejectBusiness, requestChangesBusiness, type QueueBusiness, type BusinessStatus } from "@/lib/api/adminQueue"
+import {
+  listVendorQueue,
+  type QueueBusiness,
+  type BusinessStatus,
+} from "@/lib/api/adminQueue"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
@@ -17,8 +25,14 @@ import { DataTable, type Column } from "@/components/dashboard/primitives/data-t
 import { StatusPill, type StatusTone } from "@/components/dashboard/primitives/status-pill"
 import { ExportMenu } from "@/components/dashboard/shared/export-menu"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
-import { Icon } from "@/components/dashboard/shared/icon"
+import { Icon, type IconName } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
+import {
+  VendorQueueActionDialog,
+  runAction,
+  type ActionKind,
+  type PendingAction,
+} from "./vendor-queue-action-dialog"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
@@ -42,26 +56,80 @@ const STATUS_TONE: Record<BusinessStatus, StatusTone> = {
 const statusTone = (s?: string | null): StatusTone =>
   STATUS_TONE[(s as BusinessStatus)] ?? "neutral"
 
+/** The status tabs, in lifecycle order (mirrors the original screen's tabs). */
+const STATUS_TABS: { value: BusinessStatus; label: string }[] = [
+  { value: "submitted", label: "Awaiting review" },
+  { value: "approved", label: "Approved" },
+  { value: "rejected", label: "Rejected" },
+  { value: "suspended", label: "Suspended" },
+  { value: "draft", label: "Drafts" },
+]
+
+/** Success copy per action (drives the undo-style success toast). */
+const SUCCESS_COPY: Record<ActionKind, string> = {
+  approve: "Vendor approved",
+  reject: "Vendor rejected",
+  request_changes: "Changes requested",
+  suspend: "Vendor suspended",
+  restore: "Vendor restored",
+}
+
+/** Per-action button glyph + label (icon names verified in the Icon map). */
+const ACTION_BTN: Record<ActionKind, { icon: IconName; label: string }> = {
+  approve: { icon: "Check", label: "Approve" },
+  request_changes: { icon: "MessageSquare", label: "Changes" },
+  reject: { icon: "XCircle", label: "Reject" },
+  suspend: { icon: "Clock", label: "Suspend" },
+  restore: { icon: "Play", label: "Restore" },
+}
+
+/** Which actions are offered for each status (mirrors the original screen). */
+function actionsFor(status: BusinessStatus): ActionKind[] {
+  switch (status) {
+    case "submitted":
+      return ["approve", "request_changes", "reject"]
+    case "draft":
+      return ["approve"]
+    case "approved":
+      return ["suspend"]
+    case "suspended":
+      return ["restore"]
+    default:
+      return []
+  }
+}
+
 export function VendorQueueRedesignedView() {
   const qc = useQueryClient()
+  const [statusTab, setStatusTab] = React.useState<BusinessStatus>("submitted")
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["vendor-queue-redesigned"] })
-  const approveMut = useMutation({
-    mutationFn: (id: number) => approveBusiness(id),
-    onSuccess: () => { showSuccessToast("Vendor approved"); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't approve"),
-  })
-  const rejectMut = useMutation({
-    mutationFn: (id: number) => rejectBusiness(id),
-    onSuccess: () => { showSuccessToast("Vendor rejected"); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't reject"),
-  })
+  const [pending, setPending] = React.useState<PendingAction | null>(null)
+
+  const invalidate = () =>
+    qc.invalidateQueries({ queryKey: ["vendor-queue-redesigned"] })
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["vendor-queue-redesigned"],
-    queryFn: () => listVendorQueue(),
+    queryKey: ["vendor-queue-redesigned", statusTab],
+    queryFn: () => listVendorQueue(statusTab),
   })
+
+  const actionMut = useMutation({
+    mutationFn: ({ kind, id, notes }: { kind: ActionKind; id: number; notes?: string }) =>
+      runAction(kind, id, notes),
+    onSuccess: (_res, vars) => {
+      showSuccessToast(SUCCESS_COPY[vars.kind])
+      setPending(null)
+      invalidate()
+    },
+    onError: (e: any) =>
+      toast.error(e?.response?.data?.message || e?.message || "Action failed"),
+  })
+
+  const confirmAction = (notes: string | undefined) => {
+    if (!pending) return
+    actionMut.mutate({ kind: pending.kind, id: pending.business.id, notes })
+  }
 
   const all = data?.businesses ?? []
   const rows = React.useMemo(() => {
@@ -77,8 +145,42 @@ export function VendorQueueRedesignedView() {
   const avgCompleteness = all.length
     ? Math.round(all.reduce((sum, r) => sum + num(r.completenessScore), 0) / all.length)
     : 0
-  const submittedCount = all.filter((r) => r.status === "submitted").length
-  const needsChangesCount = all.filter((r) => r.status === "rejected").length
+  const tabLabel = STATUS_TABS.find((t) => t.value === statusTab)?.label ?? cap(statusTab)
+
+  const renderActions = (r: QueueBusiness) => {
+    const kinds = actionsFor(r.status)
+    if (kinds.length === 0) return <span className="text-xs text-muted-foreground">—</span>
+    return (
+      <div className="flex items-center justify-end gap-1">
+        {kinds.map((kind) => {
+          const { icon, label } = ACTION_BTN[kind]
+          const isReject = kind === "reject"
+          return (
+            <Button
+              key={kind}
+              size="sm"
+              variant={kind === "approve" || kind === "restore" ? "outline" : "ghost"}
+              disabled={actionMut.isPending}
+              onClick={() => setPending({ kind, business: r })}
+            >
+              <Icon
+                name={icon}
+                size={14}
+                className={
+                  kind === "approve"
+                    ? "mr-1 text-emerald-600"
+                    : isReject
+                      ? "mr-1 text-destructive"
+                      : "mr-1 text-muted-foreground"
+                }
+              />
+              {label}
+            </Button>
+          )
+        })}
+      </div>
+    )
+  }
 
   const columns: Column<QueueBusiness>[] = [
     {
@@ -114,13 +216,10 @@ export function VendorQueueRedesignedView() {
       render: (r) => <StatusPill tone={statusTone(r.status)}>{cap(r.status)}</StatusPill>,
     },
     {
-      key: "actions", header: "", align: "right",
-      render: (r) => r.status === "submitted" ? (
-        <div className="flex items-center justify-end gap-1">
-          <Button size="sm" variant="outline" disabled={approveMut.isPending} onClick={() => approveMut.mutate(r.id)}><Icon name="Check" size={14} className="mr-1 text-emerald-600" /> Approve</Button>
-          <Button size="sm" variant="ghost" disabled={rejectMut.isPending} onClick={() => rejectMut.mutate(r.id)} aria-label="Reject"><Icon name="XCircle" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
-        </div>
-      ) : <span className="text-xs text-muted-foreground">—</span>,
+      key: "actions",
+      header: "",
+      align: "right",
+      render: renderActions,
     },
   ]
 
@@ -129,14 +228,37 @@ export function VendorQueueRedesignedView() {
       <PageHeader
         eyebrow="Admin"
         title="Vendor queue"
-        description="Vendor businesses awaiting review — completeness, submission date and status, wired to live data."
+        description="Vendor businesses across their lifecycle — filter by status, review completeness, and approve, request changes, reject, suspend or restore. Wired to live data."
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="In queue" value={isLoading ? "…" : rows.length} icon="Building2" />
+        <StatCard label={tabLabel} value={isLoading ? "…" : rows.length} icon="Building2" />
         <StatCard label="Avg completeness" value={isLoading ? "…" : `${avgCompleteness}%`} icon="TrendingUp" />
-        <StatCard label="Submitted" value={isLoading ? "…" : submittedCount} icon="FileText" trend="up" />
-        <StatCard label="Needs changes" value={isLoading ? "…" : needsChangesCount} icon="AlertTriangle" />
+        <StatCard label="Total in view" value={isLoading ? "…" : data?.count ?? all.length} icon="FileText" />
+        <StatCard label="Filtered" value={isLoading ? "…" : rows.length} icon="Filter" />
+      </div>
+
+      {/* Status tabs — pass the chosen status straight to listVendorQueue. */}
+      <div className="flex flex-wrap items-center gap-1 border-b border-border">
+        {STATUS_TABS.map((t) => {
+          const active = t.value === statusTab
+          return (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => setStatusTab(t.value)}
+              aria-pressed={active}
+              className={
+                "relative -mb-px rounded-t-md px-3 py-2 text-sm font-medium transition-colors " +
+                (active
+                  ? "border-b-2 border-primary text-foreground"
+                  : "border-b-2 border-transparent text-muted-foreground hover:text-foreground")
+              }
+            >
+              {t.label}
+            </button>
+          )
+        })}
       </div>
 
       <DataTable
@@ -151,8 +273,8 @@ export function VendorQueueRedesignedView() {
         onSelectionChange={setSelected}
         empty={{
           icon: "Building2",
-          title: "Queue is clear",
-          description: "No vendor businesses are waiting for review right now.",
+          title: "Nothing here",
+          description: `No vendor businesses are in "${tabLabel.toLowerCase()}" right now.`,
         }}
         toolbar={
           <>
@@ -188,21 +310,31 @@ export function VendorQueueRedesignedView() {
           </>
         }
         renderCard={(r) => (
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-2.5">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                {initials(r.name)}
-              </span>
-              <div className="min-w-0">
-                <div className="truncate font-medium">{r.name}</div>
-                <div className="text-xs text-muted-foreground">
-                  {(r.vendor?.fullName || "—")} · {num(r.completenessScore)}% · {r.city || "—"}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                  {initials(r.name)}
+                </span>
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{r.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {(r.vendor?.fullName || "—")} · {num(r.completenessScore)}% · {r.city || "—"}
+                  </div>
                 </div>
               </div>
+              <StatusPill tone={statusTone(r.status)}>{cap(r.status)}</StatusPill>
             </div>
-            <StatusPill tone={statusTone(r.status)}>{cap(r.status)}</StatusPill>
+            {actionsFor(r.status).length > 0 && <div>{renderActions(r)}</div>}
           </div>
         )}
+      />
+
+      <VendorQueueActionDialog
+        pending={pending}
+        submitting={actionMut.isPending}
+        onCancel={() => setPending(null)}
+        onConfirm={confirmAction}
       />
     </div>
   )
