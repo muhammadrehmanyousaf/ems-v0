@@ -22,7 +22,7 @@ import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { OfflineBookingDialog } from "@/components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog"
-import { EditBookingDialog } from "@/components/dashboard/mainScreens/bookings/bookingListing/components/edit-booking-dialog"
+import { BookingRowActions } from "./booking-row-actions"
 
 const statusTone = (s: BookingStatus): StatusTone =>
   s === "Confirmed" ? "success"
@@ -54,7 +54,6 @@ export function BookingsRedesignedView() {
   const [bucket, setBucket] = React.useState<"active" | "completed">("active")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
   const [createOpen, setCreateOpen] = React.useState(false)
-  const [editing, setEditing] = React.useState<BookingData | null>(null)
 
   const { data, isLoading, isError, refetch } = useFetchData({
     endpoint: "/api/v1/bookings",
@@ -84,9 +83,7 @@ export function BookingsRedesignedView() {
     { key: "payment", header: "Payment", render: (b) => <StatusPill tone={payTone(b.paymentStatus)} variant="icon">{b.paymentStatus || "—"}</StatusPill> },
     {
       key: "actions", header: "", align: "right",
-      render: (b) => (
-        <Button size="sm" variant="ghost" onClick={() => setEditing(b)} aria-label="Edit booking"><Icon name="Pencil" size={14} /></Button>
-      ),
+      render: (b) => <BookingRowActions data={b} onRefresh={() => refetch()} />,
     },
   ]
 
@@ -189,9 +186,6 @@ export function BookingsRedesignedView() {
       />
 
       <OfflineBookingDialog open={createOpen} onOpenChange={setCreateOpen} onSuccess={() => refetch()} />
-      {editing && (
-        <EditBookingDialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)} booking={editing} onSuccess={() => { refetch(); setEditing(null) }} />
-      )}
     </div>
   )
 }

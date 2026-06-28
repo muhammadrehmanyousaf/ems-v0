@@ -22,6 +22,8 @@ import { ExportMenu } from "@/components/dashboard/shared/export-menu"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { PayrollTab } from "@/components/dashboard/mainScreens/staff/redesigned/payroll-tab"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
@@ -95,8 +97,23 @@ export function StaffRedesignedView() {
     },
   ]
 
+  const businessOptions = React.useMemo(
+    () => (businesses ?? []).map((b) => ({ id: b.id, name: b.name || `Business #${b.id}` })),
+    [businesses],
+  )
+
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <Tabs defaultValue="roster" className="space-y-6 p-4 md:p-6">
+      <TabsList>
+        <TabsTrigger value="roster">
+          <Icon name="Users" size={15} className="mr-1.5" /> Roster
+        </TabsTrigger>
+        <TabsTrigger value="payroll">
+          <Icon name="FileText" size={15} className="mr-1.5" /> Shifts &amp; payroll
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="roster" className="space-y-6">
       <PageHeader
         eyebrow="Operate"
         title="Team & Shooters"
@@ -178,7 +195,12 @@ export function StaffRedesignedView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </TabsContent>
+
+      <TabsContent value="payroll">
+        <PayrollTab businesses={businessOptions} />
+      </TabsContent>
+    </Tabs>
   )
 }
 

@@ -17,6 +17,7 @@ import {
 } from "@/lib/api/brokers"
 import { BusinessesAPI } from "@/lib/api/dashboard"
 import { CommissionFormDialog } from "@/components/dashboard/mainScreens/brokers/redesigned/commission-form-dialog"
+import { RecordPaymentDialog, DisputeCommissionDialog, VoidCommissionDialog } from "@/components/dashboard/mainScreens/brokers/redesigned/commission-action-dialogs"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
@@ -68,6 +69,9 @@ export function BrokersRedesignedView() {
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<BrokerCommission | undefined>(undefined)
   const [deleting, setDeleting] = React.useState<BrokerCommission | null>(null)
+  const [paying, setPaying] = React.useState<BrokerCommission | null>(null)
+  const [disputing, setDisputing] = React.useState<BrokerCommission | null>(null)
+  const [voiding, setVoiding] = React.useState<BrokerCommission | null>(null)
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["brokers-redesigned"],
@@ -141,12 +145,32 @@ export function BrokersRedesignedView() {
     },
     {
       key: "actions", header: "", align: "right",
-      render: (c) => (
-        <div className="flex items-center justify-end gap-0.5">
-          <Button size="sm" variant="ghost" onClick={() => openEdit(c)} aria-label="Edit commission"><Icon name="Pencil" size={14} /></Button>
-          <Button size="sm" variant="ghost" onClick={() => setDeleting(c)} aria-label="Remove commission"><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
-        </div>
-      ),
+      render: (c) => {
+        const canPay = c.status !== "paid" && c.status !== "void"
+        const canVoid = c.status !== "paid" && c.status !== "void"
+        const canDispute = c.status !== "void"
+        return (
+          <div className="flex items-center justify-end gap-0.5">
+            {canPay && (
+              <Button size="sm" variant="ghost" onClick={() => setPaying(c)} aria-label="Record payment" title="Record payment">
+                <Icon name="CheckCircle2" size={14} className="text-emerald-600" />
+              </Button>
+            )}
+            {canDispute && (
+              <Button size="sm" variant="ghost" onClick={() => setDisputing(c)} aria-label="Dispute commission" title="Dispute">
+                <Icon name="AlertTriangle" size={14} className="text-amber-600" />
+              </Button>
+            )}
+            {canVoid && (
+              <Button size="sm" variant="ghost" onClick={() => setVoiding(c)} aria-label="Void commission" title="Void">
+                <Icon name="XCircle" size={14} className="text-muted-foreground hover:text-destructive" />
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => openEdit(c)} aria-label="Edit commission" title="Edit"><Icon name="Pencil" size={14} /></Button>
+            <Button size="sm" variant="ghost" onClick={() => setDeleting(c)} aria-label="Remove commission" title="Remove"><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
+          </div>
+        )
+      },
     },
   ]
 
@@ -222,6 +246,10 @@ export function BrokersRedesignedView() {
       />
 
       <CommissionFormDialog open={dialogOpen} onOpenChange={setDialogOpen} commission={editing} businessId={businessId} onSaved={invalidate} />
+
+      <RecordPaymentDialog commission={paying} onOpenChange={(v) => !v && setPaying(null)} onSaved={() => { setPaying(null); invalidate() }} />
+      <DisputeCommissionDialog commission={disputing} onOpenChange={(v) => !v && setDisputing(null)} onSaved={() => { setDisputing(null); invalidate() }} />
+      <VoidCommissionDialog commission={voiding} onOpenChange={(v) => !v && setVoiding(null)} onSaved={() => { setVoiding(null); invalidate() }} />
 
       <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
         <AlertDialogContent>
