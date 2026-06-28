@@ -55,6 +55,13 @@ export class UsersAPI {
     const res = await axiosInstance.get("/api/v1/users/profile/me");
     return res.data?.data;
   }
+
+  static async changePassword(data: {
+    currentPassword: string;
+    newPassword: string;
+  }): Promise<void> {
+    await axiosInstance.patch("/api/v1/users/change-password", data);
+  }
 }
 
 // ─── Vendors ──────────────────────────────────────────────────

@@ -17,12 +17,25 @@ import { MoneyCell, formatPkr } from "@/components/dashboard/primitives/money-ce
 import { ExportMenu } from "@/components/dashboard/shared/export-menu"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
-import { Button } from "@/components/ui/button"
 
 type ReceivablesCustomer = ReceivablesData["customers"][number]
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
+
+// PK phone normaliser → wa.me link (parity with original receivables screen)
+const waLink = (phone: string | null | undefined, name: string | null | undefined, outstanding: number) => {
+  if (!phone) return null
+  let p = phone.replace(/[^\d+]/g, "")
+  if (p.startsWith("+")) p = p.slice(1)
+  if (p.startsWith("0")) p = "92" + p.slice(1)
+  if (p.startsWith("3") && p.length === 10) p = "92" + p
+  const greeting = name ? `Assalam-o-Alaikum ${name} sahab,` : "Assalam-o-Alaikum,"
+  const text = encodeURIComponent(
+    `${greeting}\n\nYeh aap k booking k against Rs ${Math.round(outstanding).toLocaleString("en-PK")} ka outstanding balance hai. Kindly clear karwa dein. Shukriya.`,
+  )
+  return `https://wa.me/${p}?text=${text}`
+}
 
 const bucketTone = (b?: string): StatusTone => {
   const v = (b || "").toLowerCase()
@@ -58,6 +71,28 @@ export function ReceivablesRedesignedView() {
     { key: "overdue", header: "Days overdue", align: "right", cellClassName: "tabular-nums", render: (c) => num(c.oldestDaysOverdue) },
     { key: "bucket", header: "Aging", render: (c) => <StatusPill tone={bucketTone(c.bucket)}>{cap(c.bucket) || "—"}</StatusPill> },
     { key: "outstanding", header: "Outstanding", align: "right", render: (c) => <MoneyCell amount={num(c.totalOutstanding)} tone="warning" /> },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      render: (c) => {
+        const wa = waLink(c.customerPhone, c.customerName, num(c.totalOutstanding))
+        if (!wa) return <span className="text-muted-foreground">—</span>
+        return (
+          <a
+            href={wa}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center justify-center rounded-md p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950"
+            aria-label="WhatsApp reminder"
+            title="Send WhatsApp reminder"
+          >
+            <Icon name="MessageCircle" size={16} />
+          </a>
+        )
+      },
+    },
   ]
 
   return (
@@ -66,7 +101,6 @@ export function ReceivablesRedesignedView() {
         eyebrow="Money"
         title="Receivables"
         description="Who owes you, and how overdue — redesigned, wired to live data."
-        actions={<Button><Icon name="Send" size={16} className="mr-1.5" /> Send reminders</Button>}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -120,7 +154,26 @@ export function ReceivablesRedesignedView() {
               <div className="text-xs text-muted-foreground">{c.customerPhone} · {num(c.oldestDaysOverdue)}d overdue</div>
               <div className="mt-1"><StatusPill tone={bucketTone(c.bucket)}>{cap(c.bucket)}</StatusPill></div>
             </div>
-            <MoneyCell amount={num(c.totalOutstanding)} tone="warning" className="text-sm font-medium" />
+            <div className="flex flex-col items-end gap-1.5">
+              <MoneyCell amount={num(c.totalOutstanding)} tone="warning" className="text-sm font-medium" />
+              {(() => {
+                const wa = waLink(c.customerPhone, c.customerName, num(c.totalOutstanding))
+                if (!wa) return null
+                return (
+                  <a
+                    href={wa}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center justify-center rounded-md p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950"
+                    aria-label="WhatsApp reminder"
+                    title="Send WhatsApp reminder"
+                  >
+                    <Icon name="MessageCircle" size={16} />
+                  </a>
+                )
+              })()}
+            </div>
           </div>
         )}
       />
