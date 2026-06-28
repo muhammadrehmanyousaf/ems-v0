@@ -7,8 +7,11 @@
  */
 
 import * as React from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { CollaborationsAPI, type CollabInvite, type CollabStatus } from "@/lib/api/collaborations"
+import { InviteVendorDialog } from "@/components/dashboard/mainScreens/collaborations/redesigned/invite-vendor-dialog"
+import { showSuccessToast } from "@/lib/toast/undo"
+import { toast } from "sonner"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
@@ -38,6 +41,19 @@ const counterpartName = (c: CollabInvite) =>
   c.toVendor?.fullName || c.toNameSnapshot || c.toPhone || c.toEmail || "—"
 
 export function CollaborationsRedesignedView() {
+  const qc = useQueryClient()
+  const [dialogOpen, setDialogOpen] = React.useState(false)
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["collaborations-redesigned"] })
+  const acceptMut = useMutation({
+    mutationFn: (id: number) => CollaborationsAPI.accept(id),
+    onSuccess: () => { showSuccessToast("Invite accepted"); invalidate() },
+    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't accept"),
+  })
+  const declineMut = useMutation({
+    mutationFn: (id: number) => CollaborationsAPI.decline(id),
+    onSuccess: () => { showSuccessToast("Invite declined"); invalidate() },
+    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't decline"),
+  })
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
 
@@ -80,6 +96,15 @@ export function CollaborationsRedesignedView() {
       header: "Status",
       render: (c) => <StatusPill tone={STATUS_TONE[c.status] ?? "neutral"}>{cap(c.status)}</StatusPill>,
     },
+    {
+      key: "actions", header: "", align: "right",
+      render: (c) => c.status === "pending" ? (
+        <div className="flex items-center justify-end gap-1">
+          <Button size="sm" variant="outline" disabled={acceptMut.isPending} onClick={() => acceptMut.mutate(c.id)}><Icon name="Check" size={14} className="mr-1" /> Accept</Button>
+          <Button size="sm" variant="ghost" disabled={declineMut.isPending} onClick={() => declineMut.mutate(c.id)} aria-label="Decline"><Icon name="XCircle" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
+        </div>
+      ) : <span className="text-xs text-muted-foreground">—</span>,
+    },
   ]
 
   return (
@@ -88,7 +113,7 @@ export function CollaborationsRedesignedView() {
         eyebrow="Grow"
         title="Collaborations"
         description="Invites to team up with other Wedding Wala vendors on events — redesigned, wired to live data."
-        actions={<Button><Icon name="Plus" size={16} className="mr-1.5" /> Invite vendor</Button>}
+        actions={<Button onClick={() => setDialogOpen(true)}><Icon name="Plus" size={16} className="mr-1.5" /> Invite vendor</Button>}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -112,7 +137,7 @@ export function CollaborationsRedesignedView() {
           icon: "Users",
           title: "No collaborations yet",
           description: "Invite another Wedding Wala vendor to team up on an event — they accept or decline, and agreed amounts are tracked here.",
-          action: <Button size="sm"><Icon name="Plus" size={14} className="mr-1" /> Invite vendor</Button>,
+          action: <Button size="sm" onClick={() => setDialogOpen(true)}><Icon name="Plus" size={14} className="mr-1" /> Invite vendor</Button>,
         }}
         toolbar={
           <>
@@ -149,6 +174,8 @@ export function CollaborationsRedesignedView() {
           </div>
         )}
       />
+
+      <InviteVendorDialog open={dialogOpen} onOpenChange={setDialogOpen} onSaved={invalidate} />
     </div>
   )
 }

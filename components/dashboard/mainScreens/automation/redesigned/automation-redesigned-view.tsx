@@ -7,8 +7,13 @@
  */
 
 import * as React from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { AutomationRulesAPI, type AutomationRule } from "@/lib/api/automationRules"
+import { RuleFormDialog } from "@/components/dashboard/mainScreens/automation/redesigned/rule-form-dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { Switch } from "@/components/ui/switch"
+import { showSuccessToast } from "@/lib/toast/undo"
+import { toast } from "sonner"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
@@ -37,12 +42,32 @@ const triggerLabel = (r: AutomationRule) => {
 }
 
 export function AutomationRedesignedView() {
+  const qc = useQueryClient()
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
+  const [dialogOpen, setDialogOpen] = React.useState(false)
+  const [editing, setEditing] = React.useState<AutomationRule | undefined>(undefined)
+  const [deleting, setDeleting] = React.useState<AutomationRule | null>(null)
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["automation-redesigned"],
     queryFn: () => AutomationRulesAPI.list(),
+  })
+
+  const triggerTypes = data?.triggerTypes ?? []
+  const actionTypes = data?.actionTypes ?? []
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["automation-redesigned"] })
+  const openCreate = () => { setEditing(undefined); setDialogOpen(true) }
+  const openEdit = (r: AutomationRule) => { setEditing(r); setDialogOpen(true) }
+  const toggleMut = useMutation({
+    mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) => AutomationRulesAPI.toggle(id, enabled),
+    onSuccess: () => { invalidate() },
+    onError: (e: any) => toast.error(e?.message || "Couldn't toggle rule"),
+  })
+  const removeMut = useMutation({
+    mutationFn: (id: number) => AutomationRulesAPI.remove(id),
+    onSuccess: () => { showSuccessToast("Rule removed"); setDeleting(null); invalidate() },
+    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove rule"),
   })
 
   const all = data?.rules ?? []
@@ -76,6 +101,16 @@ export function AutomationRedesignedView() {
     { key: "action", header: "Action", render: (r) => <StatusPill tone="info">{cap(r?.actionType)}</StatusPill> },
     { key: "lastRun", header: "Last run", cellClassName: "text-muted-foreground", render: (r) => fmtDate(r?.lastRunAt) },
     { key: "status", header: "Status", render: (r) => <StatusPill tone={r?.enabled ? "success" : "neutral"}>{r?.enabled ? "Active" : "Paused"}</StatusPill> },
+    {
+      key: "actions", header: "", align: "right",
+      render: (r) => (
+        <div className="flex items-center justify-end gap-2">
+          <Switch checked={!!r?.enabled} onCheckedChange={(v) => toggleMut.mutate({ id: r.id, enabled: v })} aria-label="Enabled" />
+          <Button size="sm" variant="ghost" onClick={() => openEdit(r)} aria-label="Edit rule"><Icon name="Pencil" size={14} /></Button>
+          <Button size="sm" variant="ghost" onClick={() => setDeleting(r)} aria-label="Remove rule"><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
+        </div>
+      ),
+    },
   ]
 
   return (
@@ -84,7 +119,7 @@ export function AutomationRedesignedView() {
         eyebrow="Grow"
         title="Automation rules"
         description="No-code reminders that fire around your events — redesigned, wired to live data."
-        actions={<Button><Icon name="Plus" size={16} className="mr-1.5" /> New rule</Button>}
+        actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> New rule</Button>}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -108,7 +143,7 @@ export function AutomationRedesignedView() {
           icon: "Settings",
           title: "No automation rules yet",
           description: "Create a rule like “N days before any event → notify me” to stay ahead of your bookings.",
-          action: <Button size="sm"><Icon name="Plus" size={14} className="mr-1" /> New rule</Button>,
+          action: <Button size="sm" onClick={openCreate}><Icon name="Plus" size={14} className="mr-1" /> New rule</Button>,
         }}
         toolbar={
           <>
@@ -148,6 +183,21 @@ export function AutomationRedesignedView() {
           </div>
         )}
       />
+
+      <RuleFormDialog open={dialogOpen} onOpenChange={setDialogOpen} rule={editing} triggerTypes={triggerTypes} actionTypes={actionTypes} onSaved={invalidate} />
+
+      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove this rule?</AlertDialogTitle>
+            <AlertDialogDescription>{deleting?.name || "This rule"} will be removed. This can't be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleting && removeMut.mutate(deleting.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remove</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
