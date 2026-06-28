@@ -7,9 +7,10 @@
  */
 
 import * as React from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { PaymentsAPI } from "@/lib/api/dashboard"
 import type { VendorPayment } from "@/lib/dashboard-types"
+import { ReceiptFormDialog } from "@/components/dashboard/mainScreens/receipts/redesigned/receipt-form-dialog"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
@@ -35,8 +36,11 @@ const payTone = (s?: string): StatusTone => {
 }
 
 export function PaymentsRedesignedView() {
+  const qc = useQueryClient()
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
+  const [dialogOpen, setDialogOpen] = React.useState(false)
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["payments-redesigned"] })
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["payments-redesigned"],
@@ -66,7 +70,7 @@ export function PaymentsRedesignedView() {
         eyebrow="Money"
         title="Payments"
         description="Revenue collected and outstanding per booking — redesigned, wired to live data."
-        actions={<Button><Icon name="Plus" size={16} className="mr-1.5" /> Record payment</Button>}
+        actions={<Button onClick={() => setDialogOpen(true)}><Icon name="Plus" size={16} className="mr-1.5" /> Record payment</Button>}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -128,6 +132,8 @@ export function PaymentsRedesignedView() {
           </div>
         )}
       />
+
+      <ReceiptFormDialog open={dialogOpen} onOpenChange={setDialogOpen} onSaved={invalidate} />
     </div>
   )
 }
