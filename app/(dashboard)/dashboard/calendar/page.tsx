@@ -1,4 +1,6 @@
 import CalendarView from '@/components/dashboard/mainScreens/calendar/calendar-view';
+import { isRedesignOn } from "@/lib/dashboard-redesign-flag";
+import { CalendarRedesignedView } from "@/components/dashboard/mainScreens/calendar/redesigned/calendar-redesigned-view";
 import { Metadata } from 'next';
 import React from 'react'
 
@@ -8,6 +10,7 @@ export const metadata: Metadata = {
 };
 
 const page = () => {
+    if (isRedesignOn()) return <CalendarRedesignedView />;
     return <CalendarView />
 }
 

@@ -3,6 +3,8 @@ import AutomationStatusView from '@/components/dashboard/mainScreens/automation/
 import AutomationBuilderCard from '@/components/dashboard/mainScreens/automation/automation-builder-card';
 import { Heading } from '@/components/heading';
 import { Separator } from '@/components/ui/separator';
+import { isRedesignOn } from "@/lib/dashboard-redesign-flag";
+import { AutomationRedesignedView } from "@/components/dashboard/mainScreens/automation/redesigned/automation-redesigned-view";
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -12,6 +14,7 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
+  if (isRedesignOn()) return <AutomationRedesignedView />;
   return (
     <div>
       <PageContainer>
