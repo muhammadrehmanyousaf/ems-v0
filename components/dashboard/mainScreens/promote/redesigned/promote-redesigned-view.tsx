@@ -7,13 +7,15 @@
  */
 
 import * as React from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   PromotionsAPI,
   PLACEMENT_LABEL,
   type PromotionRequestRow,
   type PromotionStatus,
 } from "@/lib/api/promotions"
+import { BusinessesAPI } from "@/lib/api/dashboard"
+import { PromoteRequestDialog } from "@/components/dashboard/mainScreens/promote/redesigned/promote-request-dialog"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
@@ -52,12 +54,18 @@ export function PromoteRedesignedView() {
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
 
+  const qc = useQueryClient()
+  const [dialogOpen, setDialogOpen] = React.useState(false)
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["promote-redesigned"],
     queryFn: () => PromotionsAPI.listMine(),
   })
+  const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
+  const businessId = businesses?.[0]?.id
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["promote-redesigned"] })
 
   const all = data?.requests ?? []
+  const pricing = data?.pricing ?? []
   const requests = React.useMemo(() => {
     const q = search.trim().toLowerCase()
     if (!q) return all
@@ -115,7 +123,7 @@ export function PromoteRedesignedView() {
         eyebrow="Grow"
         title="Promote"
         description="Your featured-placement requests — redesigned, wired to live data."
-        actions={<Button><Icon name="Plus" size={16} className="mr-1.5" /> Request placement</Button>}
+        actions={<Button onClick={() => setDialogOpen(true)}><Icon name="Plus" size={16} className="mr-1.5" /> Request placement</Button>}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -139,7 +147,7 @@ export function PromoteRedesignedView() {
           icon: "Megaphone",
           title: "No placement requests yet",
           description: "Request a featured placement to boost your business on the homepage, category, city or search.",
-          action: <Button size="sm"><Icon name="Plus" size={14} className="mr-1" /> Request placement</Button>,
+          action: <Button size="sm" onClick={() => setDialogOpen(true)}><Icon name="Plus" size={14} className="mr-1" /> Request placement</Button>,
         }}
         toolbar={
           <>
@@ -176,6 +184,8 @@ export function PromoteRedesignedView() {
           </div>
         )}
       />
+
+      <PromoteRequestDialog open={dialogOpen} onOpenChange={setDialogOpen} pricing={pricing} businessId={businessId} onSaved={invalidate} />
     </div>
   )
 }
