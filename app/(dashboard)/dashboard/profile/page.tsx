@@ -11,6 +11,8 @@ import { BACKEND_URL } from "@/lib/backend-url";
 import { toast } from "sonner";
 import { User, Building2, Lock, Save } from "lucide-react";
 import { useUser } from "@/context/UserContext";
+import { isRedesignOn } from "@/lib/dashboard-redesign-flag";
+import { AccountSettingsRedesignedView } from "@/components/dashboard/mainScreens/settings/redesigned/account-settings-redesigned-view";
 
 import {
   PageContainer,
@@ -69,7 +71,7 @@ function Field({
   );
 }
 
-export default function ProfilePage() {
+function ProfilePageOriginal() {
   const { refreshUser } = useUser();
   const [user, setUser] = useState<ApiUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -376,4 +378,12 @@ export default function ProfilePage() {
       </SectionCard>
     </PageContainer>
   );
+}
+
+// Cutover guard: render the redesigned account screen when the flag is on
+// (OFF by default → the original profile renders byte-for-byte). The original
+// lives in a child component so its hooks are never conditionally called.
+export default function ProfilePage() {
+  if (isRedesignOn()) return <AccountSettingsRedesignedView />;
+  return <ProfilePageOriginal />;
 }

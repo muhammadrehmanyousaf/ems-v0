@@ -2,6 +2,8 @@ import PageContainer from '@/components/dashboard/layout/page-container';
 import { Heading } from '@/components/heading';
 import { Separator } from '@/components/ui/separator';
 import FunctionSheetsView from '@/components/dashboard/mainScreens/function-sheets/function-sheets-view';
+import { isRedesignOn } from '@/lib/dashboard-redesign-flag';
+import { FunctionSheetsRedesignedView } from '@/components/dashboard/mainScreens/function-sheets/redesigned/function-sheets-redesigned-view';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -11,6 +13,8 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
+  if (isRedesignOn()) return <FunctionSheetsRedesignedView />;
+
   return (
     <div>
       <PageContainer>

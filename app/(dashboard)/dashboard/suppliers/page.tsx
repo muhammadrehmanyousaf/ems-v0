@@ -2,6 +2,8 @@ import PageContainer from '@/components/dashboard/layout/page-container';
 import { Heading } from '@/components/heading';
 import { Separator } from '@/components/ui/separator';
 import SuppliersView from '@/components/dashboard/mainScreens/suppliers/suppliers-view';
+import { isRedesignOn } from '@/lib/dashboard-redesign-flag';
+import { SuppliersRedesignedView } from '@/components/dashboard/mainScreens/suppliers/redesigned/suppliers-redesigned-view';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -11,6 +13,8 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
+  if (isRedesignOn()) return <SuppliersRedesignedView />;
+
   return (
     <div>
       <PageContainer>

@@ -3,6 +3,8 @@ import CollaborationsView from '@/components/dashboard/mainScreens/collaboration
 import { Heading } from '@/components/heading';
 import { Separator } from '@/components/ui/separator';
 import type { Metadata } from 'next';
+import { isRedesignOn } from '@/lib/dashboard-redesign-flag';
+import { CollaborationsRedesignedView } from '@/components/dashboard/mainScreens/collaborations/redesigned/collaborations-redesigned-view';
 
 export const metadata: Metadata = {
   title: 'Dashboard : Collaborations',
@@ -10,6 +12,8 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
+  if (isRedesignOn()) return <CollaborationsRedesignedView />;
+
   return (
     <div>
       <PageContainer>

@@ -100,7 +100,7 @@ export function OverviewRedesignedView() {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Recent bookings</h2>
-          <a href="/dashboard/bookings-new" className="text-sm font-medium text-primary hover:underline">
+          <a href="/dashboard/bookings" className="text-sm font-medium text-primary hover:underline">
             View all →
           </a>
         </div>

@@ -7,8 +7,11 @@
  */
 
 import * as React from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { BusinessesAPI, type ApiBusiness } from "@/lib/api/dashboard"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { showSuccessToast } from "@/lib/toast/undo"
+import { toast } from "sonner"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
@@ -33,8 +36,18 @@ const initials = (name?: string | null) =>
 const PILL_TONE: StatusTone = "neutral"
 
 export function BusinessesAdminRedesignedView() {
+  const qc = useQueryClient()
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = React.useState<ApiBusiness | null>(null)
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["businesses-admin-redesigned"] })
+  const removeMut = useMutation({
+    mutationFn: (id: number) => BusinessesAPI.delete(id),
+    // The backend blocks deletes that would orphan money (e.g. active bookings)
+    // — surface its specific reason rather than a generic failure (WW-095).
+    onSuccess: () => { showSuccessToast("Business removed"); setDeleting(null); invalidate() },
+    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove business"),
+  })
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["businesses-admin-redesigned"],
@@ -98,6 +111,12 @@ export function BusinessesAdminRedesignedView() {
       align: "right",
       render: (b) => (num(b.minimumPrice) > 0 ? <MoneyCell amount={num(b.minimumPrice)} /> : <span className="text-muted-foreground">—</span>),
     },
+    {
+      key: "actions", header: "", align: "right",
+      render: (b) => (
+        <Button size="sm" variant="ghost" onClick={() => setDeleting(b)} aria-label="Remove business"><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
+      ),
+    },
   ]
 
   return (
@@ -106,7 +125,6 @@ export function BusinessesAdminRedesignedView() {
         eyebrow="Admin"
         title="Businesses"
         description="Every vendor business on the platform — cities, types, capacity and pricing at a glance."
-        actions={<Button><Icon name="Plus" size={16} className="mr-1.5" /> Add business</Button>}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -130,7 +148,6 @@ export function BusinessesAdminRedesignedView() {
           icon: "Building2",
           title: "No businesses yet",
           description: "Vendor businesses appear here once vendors complete their profiles.",
-          action: <Button size="sm"><Icon name="Plus" size={14} className="mr-1" /> Add business</Button>,
         }}
         toolbar={
           <>
@@ -172,6 +189,19 @@ export function BusinessesAdminRedesignedView() {
           </div>
         )}
       />
+
+      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove this business?</AlertDialogTitle>
+            <AlertDialogDescription>{deleting?.name ? `"${deleting.name}"` : "This business"} will be removed. This can't be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleting && removeMut.mutate(deleting.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remove</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -1,37 +1,28 @@
-// Dashboard redesign rollout flag — mirrors lib/claim-flag.ts.
+// Dashboard redesign — ON by default.
 //
-// NEXT_PUBLIC_* vars are inlined by Next at build time, so each must be read as
-// a full static `process.env.NEXT_PUBLIC_…` access (no destructuring/indexing),
-// otherwise the value is not substituted.
+// The redesigned vendor/admin dashboard renders at every canonical route with no
+// configuration required. There is NOTHING to set for normal operation.
 //
-// OFF by default. When a canonical dashboard route is wired for cutover it calls
-// `isRedesignOn(businessId?)` and renders the redesigned view when true, else the
-// original — so the swap is additive, per-route, and instantly reversible by
-// flipping the env var. See docs/superpowers/plans/2026-06-28-dashboard-cutover-plan.md.
+// The only env var here is an emergency rollback: set
+//   NEXT_PUBLIC_DASHBOARD_REDESIGN_OFF=true   (or  NEXT_PUBLIC_DASHBOARD_REDESIGN=false)
+// to instantly serve the OLD screens again. You should never need it.
+//
+// (NEXT_PUBLIC_* vars are inlined by Next at build time, so each is read as a full
+// static process.env.NEXT_PUBLIC_… access.)
 
-/** Global kill-switch / default. "true" → redesign on for everyone. */
-const GLOBAL = process.env.NEXT_PUBLIC_DASHBOARD_REDESIGN === "true"
-
-/** Hard global OFF — overrides everything for instant rollback. "true" → force original. */
-const FORCE_OFF = process.env.NEXT_PUBLIC_DASHBOARD_REDESIGN_OFF === "true"
+/** Hard OFF — serve the original screens. Default (unset) → redesign is ON. */
+const OFF =
+  process.env.NEXT_PUBLIC_DASHBOARD_REDESIGN_OFF === "true" ||
+  process.env.NEXT_PUBLIC_DASHBOARD_REDESIGN === "false"
 
 /**
- * Comma-separated business-id allowlist for canary/gradual rollout, e.g.
- * NEXT_PUBLIC_DASHBOARD_REDESIGN_BUSINESSES="3406,512,77". Members get the
- * redesign even when GLOBAL is off.
+ * Whether the redesigned dashboard should render. ON by default; only the
+ * emergency kill-switch above turns it off. The optional argument is accepted
+ * for call-site compatibility and ignored.
  */
-const COHORT = (process.env.NEXT_PUBLIC_DASHBOARD_REDESIGN_BUSINESSES ?? "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean)
-
-/** Resolve whether the redesign should render for the given business. */
-export function isRedesignOn(businessId?: number | string | null): boolean {
-  if (FORCE_OFF) return false
-  if (GLOBAL) return true
-  if (businessId != null && COHORT.includes(String(businessId))) return true
-  return false
+export function isRedesignOn(_businessId?: number | string | null): boolean {
+  return !OFF
 }
 
-/** Convenience for routes with no business context (global/cohort only). */
+/** Convenience for non-conditional consumers. */
 export const DASHBOARD_REDESIGN_ON = isRedesignOn()

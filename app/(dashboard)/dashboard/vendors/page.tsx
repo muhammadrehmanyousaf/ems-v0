@@ -1,4 +1,6 @@
 import VendorListingView from '@/components/dashboard/mainScreens/vendors/vendorsListing/vendor-listing-view';
+import { isRedesignOn } from "@/lib/dashboard-redesign-flag";
+import { VendorsAdminRedesignedView } from "@/components/dashboard/mainScreens/vendors/redesigned/vendors-admin-redesigned-view";
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -7,5 +9,6 @@ export const metadata: Metadata = {
 };
 
 export default function page() {
+  if (isRedesignOn()) return <VendorsAdminRedesignedView />;
   return <VendorListingView/>
 }

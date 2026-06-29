@@ -7,8 +7,12 @@
  */
 
 import * as React from "react"
-import { useQuery } from "@tanstack/react-query"
+import Link from "next/link"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { CustomersAPI, type ApiCustomer } from "@/lib/api/dashboard"
+import { AddCustomerDialog } from "@/components/dashboard/mainScreens/customers/redesigned/add-customer-dialog"
+import { ViewCustomerDialog } from "@/components/dashboard/mainScreens/customers/customersListing/components/view-customer-dialog"
+import ImportCustomersDialog from "@/components/dashboard/mainScreens/customers/customersListing/components/import-customers-dialog"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
@@ -27,8 +31,13 @@ const initials = (name: string) =>
   (name || "?").split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("")
 
 export function CustomersRedesignedView() {
+  const qc = useQueryClient()
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
+  const [dialogOpen, setDialogOpen] = React.useState(false)
+  const [importOpen, setImportOpen] = React.useState(false)
+  const [viewCustomer, setViewCustomer] = React.useState<ApiCustomer | null>(null)
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["customers-redesigned"] })
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["customers-redesigned"],
@@ -62,6 +71,32 @@ export function CustomersRedesignedView() {
     { key: "email", header: "Email", cellClassName: "text-muted-foreground", render: (c) => c.email || "—" },
     { key: "bookings", header: "Bookings", align: "right", render: (c) => <span className="tabular-nums font-medium">{c.total_booking ?? 0}</span> },
     { key: "last", header: "Last booking", cellClassName: "text-muted-foreground", render: (c) => fmtDate(c.last_booking) },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      width: "88px",
+      render: (c) => (
+        <div className="flex items-center justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            title="Quick view"
+            onClick={() => setViewCustomer(c)}
+          >
+            <Icon name="Eye" size={16} />
+            <span className="sr-only">Quick view</span>
+          </Button>
+          <Button asChild variant="ghost" size="icon" className="h-8 w-8" title="Open detail">
+            <Link href={`/dashboard/customers/${encodeURIComponent(c._id)}`}>
+              <Icon name="ExternalLink" size={16} />
+              <span className="sr-only">Open detail</span>
+            </Link>
+          </Button>
+        </div>
+      ),
+    },
   ]
 
   return (
@@ -70,7 +105,7 @@ export function CustomersRedesignedView() {
         eyebrow="Operate"
         title="Customers"
         description="Your client book — redesigned, wired to live data."
-        actions={<Button><Icon name="Plus" size={16} className="mr-1.5" /> Add customer</Button>}
+        actions={<Button onClick={() => setDialogOpen(true)}><Icon name="Plus" size={16} className="mr-1.5" /> Add customer</Button>}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -94,8 +129,8 @@ export function CustomersRedesignedView() {
           icon: "Users",
           title: "No customers yet",
           description: "Customers appear here as you take bookings. Import your existing client list to get a head start.",
-          action: <Button size="sm"><Icon name="Plus" size={14} className="mr-1" /> Add customer</Button>,
-          secondaryAction: <Button size="sm" variant="outline"><Icon name="Upload" size={14} className="mr-1" /> Import</Button>,
+          action: <Button size="sm" onClick={() => setDialogOpen(true)}><Icon name="Plus" size={14} className="mr-1" /> Add customer</Button>,
+          secondaryAction: <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}><Icon name="Upload" size={14} className="mr-1" /> Import</Button>,
         }}
         toolbar={
           <>
@@ -143,6 +178,14 @@ export function CustomersRedesignedView() {
             </div>
           </div>
         )}
+      />
+
+      <AddCustomerDialog open={dialogOpen} onOpenChange={setDialogOpen} onSaved={invalidate} />
+      <ImportCustomersDialog open={importOpen} onOpenChange={setImportOpen} onImported={invalidate} />
+      <ViewCustomerDialog
+        open={viewCustomer !== null}
+        onOpenChange={(v) => { if (!v) setViewCustomer(null) }}
+        customer={viewCustomer}
       />
     </div>
   )

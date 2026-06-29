@@ -2,6 +2,7 @@ import {
   Bell,
   Boxes,
   BriefcaseBusiness,
+  Building2,
   CalendarDays,
   FileText,
   Fuel,
@@ -75,6 +76,13 @@ export const data = {
 
   vendorMyBusiness: [
     { name: "Business Settings", url: "/dashboard/settings", icon: Settings, i18nKey: "nav.business_settings" },
+  ],
+
+  // Venue-OS (multi-venue vendor-OS spine) — pilot surface, gated in
+  // buildVendorSections by NEXT_PUBLIC_ORG_MEMBERSHIP_ON (default OFF). No
+  // i18nKey: falls back to `name` so there's no missing-translation key.
+  vendorVenueOs: [
+    { name: "Venue-OS", url: "/dashboard/venue-os", icon: Building2 },
   ],
 
   // ── Admin / Super-admin ────────────────────────────────────────

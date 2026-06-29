@@ -1,6 +1,8 @@
 import BusinessListingView from '@/components/dashboard/mainScreens/businesses/businessListing/business-listing-view';
 import { Metadata } from 'next';
 import React from 'react'
+import { isRedesignOn } from "@/lib/dashboard-redesign-flag"
+import { BusinessesAdminRedesignedView } from "@/components/dashboard/mainScreens/businesses/redesigned/businesses-admin-redesigned-view"
 
 export const metadata: Metadata = {
     title: 'Dashboard : Businesses',
@@ -8,6 +10,7 @@ export const metadata: Metadata = {
 };
 
 function page() {
+    if (isRedesignOn()) return <BusinessesAdminRedesignedView />;
     return <BusinessListingView/>
 }
 

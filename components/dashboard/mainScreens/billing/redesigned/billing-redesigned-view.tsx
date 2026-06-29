@@ -7,14 +7,18 @@
  */
 
 import * as React from "react"
-import { useQuery } from "@tanstack/react-query"
-import { SubscriptionAPI } from "@/lib/api/subscription"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
+import { SubscriptionAPI, type SubscriptionTier } from "@/lib/api/subscription"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatusPill } from "@/components/dashboard/primitives/status-pill"
 import { formatPkr } from "@/components/dashboard/primitives/money-cell"
-import { Icon } from "@/components/dashboard/shared/icon"
+import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
+import { showSuccessToast } from "@/lib/toast/undo"
 import { cn } from "@/lib/utils"
+
+const TIER_RANK: Record<SubscriptionTier, number> = { free: 0, pro: 1, premium: 2 }
 
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1) : "—")
 const fmtDate = (s?: string | null) => {
@@ -24,9 +28,21 @@ const fmtDate = (s?: string | null) => {
 }
 
 export function BillingRedesignedView() {
+  const qc = useQueryClient()
   const { data, isLoading } = useQuery({
     queryKey: ["billing-redesigned"],
     queryFn: () => SubscriptionAPI.getMyPlan(),
+  })
+
+  const upgrade = useMutation({
+    mutationFn: (tier: SubscriptionTier) => SubscriptionAPI.requestUpgrade(tier),
+    onSuccess: () => {
+      showSuccessToast("Upgrade requested — we'll review it and notify you when it's active")
+      qc.invalidateQueries({ queryKey: ["billing-redesigned"] })
+    },
+    onError: (e: any) => {
+      toast.error(e?.response?.data?.message || "Could not request upgrade")
+    },
   })
 
   const current = data?.currentTier
@@ -39,11 +55,6 @@ export function BillingRedesignedView() {
         eyebrow="Money"
         title="Billing & plan"
         description="Your subscription and what each tier unlocks — redesigned, wired to live data."
-        actions={
-          <Button variant="outline">
-            <Icon name="FileText" size={16} className="mr-1.5" /> Invoices
-          </Button>
-        }
       />
 
       {/* Current plan summary */}
@@ -72,6 +83,8 @@ export function BillingRedesignedView() {
         {(isLoading ? Array.from({ length: 3 }) : plans).map((p: any, i: number) => {
           const isCurrent = p && p.tier === current
           const isPending = p && p.tier === pending
+          const isDowngrade =
+            p && current ? TIER_RANK[p.tier as SubscriptionTier] < TIER_RANK[current] : false
           if (!p) return <div key={i} className="h-72 animate-pulse rounded-xl border border-border bg-muted" />
           return (
             <div
@@ -117,10 +130,21 @@ export function BillingRedesignedView() {
               <div className="mt-5 pt-1">
                 {isCurrent ? (
                   <Button variant="outline" className="w-full" disabled>Current plan</Button>
+                ) : isDowngrade ? (
+                  <Button variant="ghost" className="w-full text-muted-foreground" disabled>
+                    Included below your plan
+                  </Button>
                 ) : isPending ? (
                   <Button variant="outline" className="w-full" disabled>Upgrade requested</Button>
                 ) : (
-                  <Button className="w-full">
+                  <Button
+                    className="w-full"
+                    disabled={upgrade.isPending}
+                    onClick={() => upgrade.mutate(p.tier as SubscriptionTier)}
+                  >
+                    {upgrade.isPending && upgrade.variables === p.tier && (
+                      <Spinner size={14} className="mr-2" />
+                    )}
                     {p.pricePkrMonthly > 0 ? "Upgrade" : "Switch"}
                   </Button>
                 )}

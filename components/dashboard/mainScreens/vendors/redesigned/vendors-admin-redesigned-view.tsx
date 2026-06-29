@@ -7,8 +7,12 @@
  */
 
 import * as React from "react"
-import { useQuery } from "@tanstack/react-query"
-import { VendorsAPI, type ApiUser } from "@/lib/api/dashboard"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { VendorsAPI, UsersAPI, type ApiUser } from "@/lib/api/dashboard"
+import { VendorEditDialog } from "@/components/dashboard/mainScreens/vendors/redesigned/vendor-edit-dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { showSuccessToast } from "@/lib/toast/undo"
+import { toast } from "sonner"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
@@ -30,8 +34,22 @@ const fmtDate = (s?: string | null) => {
 }
 
 export function VendorsAdminRedesignedView() {
+  const qc = useQueryClient()
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
+  const [editing, setEditing] = React.useState<ApiUser | undefined>(undefined)
+  const [deleting, setDeleting] = React.useState<ApiUser | null>(null)
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["vendors-admin-redesigned"] })
+  const reviewMut = useMutation({
+    mutationFn: ({ id, approve }: { id: number; approve: boolean }) => VendorsAPI.changeProfileStatus(id, approve),
+    onSuccess: (_d, v) => { showSuccessToast(v.approve ? "Vendor approved" : "Approval revoked"); invalidate() },
+    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't update approval"),
+  })
+  const removeMut = useMutation({
+    mutationFn: (id: number) => UsersAPI.delete(id),
+    onSuccess: () => { showSuccessToast("Vendor removed"); setDeleting(null); invalidate() },
+    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove vendor"),
+  })
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["vendors-admin-redesigned"],
@@ -74,6 +92,20 @@ export function VendorsAdminRedesignedView() {
         return <StatusPill tone={tone}>{r.reviewProfile === true ? "Approved" : "Pending"}</StatusPill>
       },
     },
+    {
+      key: "actions", header: "", align: "right",
+      render: (r) => (
+        <div className="flex items-center justify-end gap-0.5">
+          {r.reviewProfile === true ? (
+            <Button size="sm" variant="ghost" disabled={reviewMut.isPending} onClick={() => reviewMut.mutate({ id: r.id, approve: false })} aria-label="Revoke approval"><Icon name="XCircle" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
+          ) : (
+            <Button size="sm" variant="outline" disabled={reviewMut.isPending} onClick={() => reviewMut.mutate({ id: r.id, approve: true })}><Icon name="Check" size={14} className="mr-1 text-emerald-600" /> Approve</Button>
+          )}
+          <Button size="sm" variant="ghost" onClick={() => setEditing(r)} aria-label="Edit vendor"><Icon name="Pencil" size={14} /></Button>
+          <Button size="sm" variant="ghost" onClick={() => setDeleting(r)} aria-label="Remove vendor"><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
+        </div>
+      ),
+    },
   ]
 
   return (
@@ -82,7 +114,6 @@ export function VendorsAdminRedesignedView() {
         eyebrow="Admin"
         title="Vendors"
         description="Every vendor on the platform — approval status, type and city, wired to live data."
-        actions={<Button><Icon name="Plus" size={16} className="mr-1.5" /> Add vendor</Button>}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -106,7 +137,6 @@ export function VendorsAdminRedesignedView() {
           icon: "Building2",
           title: "No vendors yet",
           description: "Vendors who register on the platform will appear here for review and approval.",
-          action: <Button size="sm"><Icon name="Plus" size={14} className="mr-1" /> Add vendor</Button>,
         }}
         toolbar={
           <>
@@ -146,6 +176,21 @@ export function VendorsAdminRedesignedView() {
           </div>
         )}
       />
+
+      <VendorEditDialog open={!!editing} onOpenChange={(v) => !v && setEditing(undefined)} vendor={editing} onSaved={invalidate} />
+
+      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove this vendor?</AlertDialogTitle>
+            <AlertDialogDescription>{deleting?.fullName || "This vendor"} will be removed. This can't be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleting && removeMut.mutate(deleting.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remove</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

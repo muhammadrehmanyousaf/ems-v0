@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/dashboard/primitives/empty-state"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { OfflineBookingDialog } from "@/components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -40,8 +41,9 @@ export function CalendarRedesignedView() {
   const now = new Date()
   const [cursor, setCursor] = React.useState(new Date(now.getFullYear(), now.getMonth(), 1))
   const [selected, setSelected] = React.useState<string>(ymd(now))
+  const [createOpen, setCreateOpen] = React.useState(false)
 
-  const { data, isLoading } = useFetchData({
+  const { data, isLoading, refetch } = useFetchData({
     endpoint: "/api/v1/bookings",
     queryKey: ["calendar-redesigned"],
     Params: { page: 1, limit: 200, sortBy: "bookingDate", sortOrder: "ASC", bucket: "active" },
@@ -92,7 +94,7 @@ export function CalendarRedesignedView() {
         eyebrow="Operate"
         title="Calendar"
         description="Every event on one grid — redesigned, wired to live bookings."
-        actions={<Button><Icon name="Plus" size={16} className="mr-1.5" /> Add booking</Button>}
+        actions={<Button onClick={() => setCreateOpen(true)}><Icon name="Plus" size={16} className="mr-1.5" /> Add booking</Button>}
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
@@ -196,6 +198,13 @@ export function CalendarRedesignedView() {
           )}
         </div>
       </div>
+
+      <OfflineBookingDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onSuccess={() => refetch()}
+        initialDate={parseYmd(selected) ?? undefined}
+      />
     </div>
   )
 }

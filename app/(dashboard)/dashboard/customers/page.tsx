@@ -1,4 +1,6 @@
 import CustomersView from "@/components/dashboard/mainScreens/customers/customersListing/customers-view";
+import { isRedesignOn } from "@/lib/dashboard-redesign-flag";
+import { CustomersRedesignedView } from "@/components/dashboard/mainScreens/customers/redesigned/customers-redesigned-view";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -8,6 +10,8 @@ export const metadata: Metadata = {
 
 
 export default function CustomersPage() {
+
+  if (isRedesignOn()) return <CustomersRedesignedView />;
 
   return (
     <div>
