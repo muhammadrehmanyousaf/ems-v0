@@ -52,6 +52,39 @@ export interface ConsolidatedRollup {
   perBusiness: OrgBusinessPnl[];
 }
 
+export interface WageEntry {
+  id: number;
+  businessId: number;
+  eventId: number | null;
+  workerName: string;
+  shiftDate: string;
+  agreedRate: string;
+  amountPaid: string;
+  subFloorFlag: boolean;
+  ageBand: string;
+  glJournalEntryId: number | null;
+}
+export interface WageRecordResult {
+  entry: WageEntry;
+  warnings: string[];
+  ageBand: string;
+  subFloorFlag: boolean;
+  minFloor: number | null;
+}
+export interface WagePostResult {
+  wageEntryId: number;
+  eventId: number | null;
+  amount: number;
+  idempotentHit?: boolean;
+  dryRun?: boolean;
+  journalEntry?: JournalEntryShape;
+}
+export interface LabourByEvent {
+  eventId: number;
+  shifts: number;
+  totalPaid: number;
+}
+
 export interface FixedAsset {
   id: number;
   businessId: number;
@@ -284,6 +317,24 @@ export const venueOsApi = {
 
   runDepreciation: (businessId: number, body: { period: string; dryRun?: boolean; isDeclared?: IsDeclared }): Promise<DepreciationRun> =>
     unwrap<DepreciationRun>(api.post(`${BASE}/business/${businessId}/depreciation/run`, body)),
+
+  recordWage: (body: {
+    businessId: number;
+    eventId?: number;
+    workerName: string;
+    shiftDate: string;
+    agreedRate: number;
+    amountPaid: number;
+    province?: string;
+    paidIn?: string;
+    proof?: string;
+  }): Promise<WageRecordResult> => unwrap<WageRecordResult>(api.post(`${BASE}/wages`, body)),
+
+  postWageToGl: (wageEntryId: number, body?: { dryRun?: boolean; isDeclared?: IsDeclared }): Promise<WagePostResult> =>
+    unwrap<WagePostResult>(api.post(`${BASE}/wages/${wageEntryId}/post-to-gl`, body || {})),
+
+  labourByEvent: (businessId: number, opts?: { from?: string; to?: string }): Promise<LabourByEvent[]> =>
+    unwrap<LabourByEvent[]>(api.get(`${BASE}/business/${businessId}/labour-by-event`, { params: opts })),
 
   computeTax: (body: ComputeTaxBody): Promise<TaxBreakdown> =>
     unwrap<TaxBreakdown>(api.post(`${BASE}/tax/compute`, body)),
