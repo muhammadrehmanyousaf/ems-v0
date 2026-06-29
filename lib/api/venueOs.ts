@@ -52,6 +52,17 @@ export interface ConsolidatedRollup {
   perBusiness: OrgBusinessPnl[];
 }
 
+export interface FullyCostedEventPnl {
+  eventId: number;
+  businessId: number;
+  driver: string;
+  direct: PerEventPnl;
+  allocatedOverhead: number;
+  fullyCostedNet: number;
+  overheadPool: number;
+  weight: number;
+}
+
 export interface TaxPart {
   taxType: string;
   jurisdiction: string;
@@ -197,6 +208,14 @@ export const venueOsApi = {
 
   eventPnl: (bookingId: number, businessId?: number, isDeclared?: IsDeclared): Promise<PerEventPnl> =>
     unwrap<PerEventPnl>(api.get(`${BASE}/bookings/${bookingId}/pnl`, { params: { businessId, isDeclared } })),
+
+  costedEventPnl: (
+    bookingId: number,
+    businessId: number,
+    driver?: "REVENUE_SHARE" | "EVENT_COUNT",
+    isDeclared?: IsDeclared,
+  ): Promise<FullyCostedEventPnl> =>
+    unwrap<FullyCostedEventPnl>(api.get(`${BASE}/bookings/${bookingId}/costed-pnl`, { params: { businessId, driver, isDeclared } })),
 
   computeTax: (body: ComputeTaxBody): Promise<TaxBreakdown> =>
     unwrap<TaxBreakdown>(api.post(`${BASE}/tax/compute`, body)),
