@@ -52,6 +52,51 @@ export interface ConsolidatedRollup {
   perBusiness: OrgBusinessPnl[];
 }
 
+export interface VenueLease {
+  id: number;
+  businessId: number;
+  venueName: string;
+  monthlyRent: string;
+  pagriAmount: string;
+  securityDeposit: string;
+  leaseStartDate: string;
+  leaseTermMonths: number;
+  escalationPercent: string;
+  escalationEveryMonths: number;
+  active: boolean;
+}
+export interface LeaseScheduleItem {
+  leaseId: number;
+  venueName: string;
+  elapsedMonths: number;
+  remainingMonths: number;
+  monthlyRent: number;
+  monthlyPagri: number;
+  futureRent: number;
+  remainingPagri: number;
+  totalCommitted: number;
+  securityDeposit: number;
+}
+export interface RentAccrualLine {
+  leaseId: number;
+  venueName: string;
+  rent?: number;
+  pagri?: number;
+  rentIdempotentHit?: boolean;
+  pagriIdempotentHit?: boolean;
+  skipped?: string;
+}
+export interface RentAccrualRun {
+  businessId: number;
+  period: string;
+  leaseCount: number;
+  totalRent: number;
+  totalPagri: number;
+  total: number;
+  dryRun: boolean;
+  results: RentAccrualLine[];
+}
+
 export interface PeriodStatus {
   businessId: number;
   period: string;
@@ -360,6 +405,27 @@ export const venueOsApi = {
 
   reopenPeriod: (businessId: number, period: string): Promise<PeriodStatus> =>
     unwrap<PeriodStatus>(api.post(`${BASE}/business/${businessId}/period/${period}/reopen`, {})),
+
+  listVenueLeases: (businessId: number): Promise<VenueLease[]> =>
+    unwrap<VenueLease[]>(api.get(`${BASE}/business/${businessId}/venue-leases`)),
+
+  leaseSchedule: (businessId: number, period?: string): Promise<LeaseScheduleItem[]> =>
+    unwrap<LeaseScheduleItem[]>(api.get(`${BASE}/business/${businessId}/lease-schedule`, { params: { period } })),
+
+  createVenueLease: (body: {
+    businessId: number;
+    venueName: string;
+    monthlyRent: number;
+    pagriAmount?: number;
+    securityDeposit?: number;
+    leaseStartDate: string;
+    leaseTermMonths: number;
+    escalationPercent?: number;
+    escalationEveryMonths?: number;
+  }): Promise<VenueLease> => unwrap<VenueLease>(api.post(`${BASE}/venue-leases`, body)),
+
+  runRentAccrual: (businessId: number, body: { period: string; dryRun?: boolean; isDeclared?: IsDeclared }): Promise<RentAccrualRun> =>
+    unwrap<RentAccrualRun>(api.post(`${BASE}/business/${businessId}/lease-accrual/run`, body)),
 
   computeTax: (body: ComputeTaxBody): Promise<TaxBreakdown> =>
     unwrap<TaxBreakdown>(api.post(`${BASE}/tax/compute`, body)),
