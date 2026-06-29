@@ -17,6 +17,9 @@ import { EventPnlView } from "./event-pnl-view";
 import { EventNightGauge } from "./event-night-gauge";
 import { PdcDrawer } from "./pdc-drawer";
 import { CashFloatClose } from "./cash-float-close";
+import { SchedulingCheck } from "./scheduling-check";
+import { CateringRecost } from "./catering-recost";
+import { BookingGlPost } from "./booking-gl-post";
 
 export function VenueOsHubView(): React.ReactElement {
   if (!isOrgMembershipOn()) {
@@ -43,6 +46,11 @@ export function VenueOsHubView(): React.ReactElement {
         <PdcDrawer />
         <CashFloatClose />
       </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SchedulingCheck />
+        <CateringRecost />
+      </div>
+      <BookingGlPost />
     </div>
   );
 }

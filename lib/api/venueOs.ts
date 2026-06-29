@@ -98,6 +98,58 @@ export interface CloseFloatResult {
   short: boolean;
 }
 
+export interface AvailabilityConflict {
+  id: number;
+  bookingId: number | null;
+  s: string;
+  e: string;
+}
+export interface AvailabilityResult {
+  available: boolean;
+  conflicts: AvailabilityConflict[];
+}
+
+export interface RecostAlert {
+  costPerHead: number;
+  quotedPerHead: number;
+  marginPerHead: number;
+  marginPct: number | null;
+  underwater: boolean;
+}
+export interface RecostDish {
+  dishName: string;
+  deghCost: number;
+  platesPerDegh: number;
+  costPerPlate: number;
+  missingRates: number[];
+}
+export interface MenuRecost {
+  costPerHead: number;
+  dishes: RecostDish[];
+  missingRates: number[];
+  alert: RecostAlert | null;
+}
+
+export interface JournalLineShape {
+  accountId: number;
+  debit: number;
+  credit: number;
+  memo?: string | null;
+}
+export interface JournalEntryShape {
+  id?: number;
+  jeNo: string | null;
+  narration: string;
+  isDeclared: string;
+  basis: string;
+  lines: JournalLineShape[];
+}
+export interface GlPostResult {
+  journalEntry: JournalEntryShape;
+  idempotentHit?: boolean;
+  dryRun?: boolean;
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -152,4 +204,19 @@ export const venueOsApi = {
 
   closeCashFloat: (id: number, body: { closingCounted: number; businessId?: number }): Promise<CloseFloatResult> =>
     unwrap<CloseFloatResult>(api.post(`${BASE}/cash-float/${id}/close`, body)),
+
+  checkAvailability: (body: {
+    subVenueId: number;
+    slot: { start: string; end: string };
+    turnaroundMin?: number;
+    businessId?: number;
+  }): Promise<AvailabilityResult> => unwrap<AvailabilityResult>(api.post(`${BASE}/scheduling/check-availability`, body)),
+
+  recostMenu: (body: { cardIds: number[]; businessId?: number; quotedPerHead?: number }): Promise<MenuRecost> =>
+    unwrap<MenuRecost>(api.post(`${BASE}/catering/recost`, body)),
+
+  postBookingToGl: (
+    bookingId: number,
+    body: { eventType: string; amount: number; isDeclared?: IsDeclared; basis?: "CASH" | "ACCRUAL"; businessId?: number; orgId?: number; dryRun?: boolean },
+  ): Promise<GlPostResult> => unwrap<GlPostResult>(api.post(`${BASE}/bookings/${bookingId}/post-to-gl`, body)),
 };
