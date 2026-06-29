@@ -52,6 +52,22 @@ export interface ConsolidatedRollup {
   perBusiness: OrgBusinessPnl[];
 }
 
+export interface PeriodStatus {
+  businessId: number;
+  period: string;
+  status: "OPEN" | "CLOSED";
+  lockedEntryCount?: number;
+  snapshotRevenue?: string | number | null;
+  snapshotCogs?: string | number | null;
+  snapshotOpex?: string | number | null;
+  snapshotNetProfit?: string | number | null;
+  closedAt?: string | null;
+  reopenedAt?: string | null;
+  alreadyClosed?: boolean;
+  alreadyOpen?: boolean;
+  reopened?: boolean;
+}
+
 export interface WageEntry {
   id: number;
   businessId: number;
@@ -335,6 +351,15 @@ export const venueOsApi = {
 
   labourByEvent: (businessId: number, opts?: { from?: string; to?: string }): Promise<LabourByEvent[]> =>
     unwrap<LabourByEvent[]>(api.get(`${BASE}/business/${businessId}/labour-by-event`, { params: opts })),
+
+  periodStatus: (businessId: number, period: string): Promise<PeriodStatus> =>
+    unwrap<PeriodStatus>(api.get(`${BASE}/business/${businessId}/period/${period}/status`)),
+
+  closePeriod: (businessId: number, period: string, body?: { isDeclared?: IsDeclared }): Promise<PeriodStatus> =>
+    unwrap<PeriodStatus>(api.post(`${BASE}/business/${businessId}/period/${period}/close`, body || {})),
+
+  reopenPeriod: (businessId: number, period: string): Promise<PeriodStatus> =>
+    unwrap<PeriodStatus>(api.post(`${BASE}/business/${businessId}/period/${period}/reopen`, {})),
 
   computeTax: (body: ComputeTaxBody): Promise<TaxBreakdown> =>
     unwrap<TaxBreakdown>(api.post(`${BASE}/tax/compute`, body)),
