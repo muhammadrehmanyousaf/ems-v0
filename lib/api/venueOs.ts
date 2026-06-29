@@ -80,6 +80,24 @@ export interface HeadcountResult {
   overCapFlag: boolean;
 }
 
+export interface CashFloat {
+  id: number;
+  businessId: number;
+  openingFloat: string;
+  collected: string;
+  deposited: string;
+  closingCounted: string | null;
+  overShort: string | null;
+  status: "OPEN" | "CLOSED";
+}
+export interface CloseFloatResult {
+  floatId: number;
+  expected: number;
+  closingCounted: number;
+  overShort: number;
+  short: boolean;
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -125,4 +143,13 @@ export const venueOsApi = {
 
   recordHeadcount: (id: number, direction: "IN" | "OUT", count = 1): Promise<HeadcountResult> =>
     unwrap<HeadcountResult>(api.post(`${BASE}/event-nights/${id}/headcount`, { direction, count })),
+
+  openCashFloat: (body: { businessId: number; openingFloat?: number }): Promise<CashFloat> =>
+    unwrap<CashFloat>(api.post(`${BASE}/cash-float`, body)),
+
+  recordToFloat: (id: number, body: { collected?: number; deposited?: number; businessId?: number }): Promise<CashFloat> =>
+    unwrap<CashFloat>(api.post(`${BASE}/cash-float/${id}/record`, body)),
+
+  closeCashFloat: (id: number, body: { closingCounted: number; businessId?: number }): Promise<CloseFloatResult> =>
+    unwrap<CloseFloatResult>(api.post(`${BASE}/cash-float/${id}/close`, body)),
 };
