@@ -52,6 +52,36 @@ export interface ConsolidatedRollup {
   perBusiness: OrgBusinessPnl[];
 }
 
+export interface FixedAsset {
+  id: number;
+  businessId: number;
+  name: string;
+  category: string;
+  cost: string;
+  salvageValue: string;
+  usefulLifeMonths: number;
+  inServiceDate: string;
+  method: string;
+  active: boolean;
+}
+export interface DepreciationLine {
+  assetId: number;
+  name: string;
+  amount?: number;
+  jeNo?: string | null;
+  idempotentHit?: boolean;
+  dryRun?: boolean;
+  skipped?: string;
+}
+export interface DepreciationRun {
+  businessId: number;
+  period: string;
+  assetCount: number;
+  postedCount: number;
+  totalDepreciation: number;
+  results: DepreciationLine[];
+}
+
 export interface FullyCostedEventPnl {
   eventId: number;
   businessId: number;
@@ -237,6 +267,23 @@ export const venueOsApi = {
     businessId: number,
     opts?: { driver?: "REVENUE_SHARE" | "EVENT_COUNT"; from?: string; to?: string; isDeclared?: IsDeclared },
   ): Promise<EventMargins> => unwrap<EventMargins>(api.get(`${BASE}/business/${businessId}/event-margins`, { params: opts })),
+
+  listFixedAssets: (businessId: number): Promise<FixedAsset[]> =>
+    unwrap<FixedAsset[]>(api.get(`${BASE}/business/${businessId}/fixed-assets`)),
+
+  createFixedAsset: (body: {
+    businessId: number;
+    name: string;
+    category?: string;
+    cost: number;
+    salvageValue?: number;
+    usefulLifeMonths: number;
+    inServiceDate: string;
+    method?: string;
+  }): Promise<FixedAsset> => unwrap<FixedAsset>(api.post(`${BASE}/fixed-assets`, body)),
+
+  runDepreciation: (businessId: number, body: { period: string; dryRun?: boolean; isDeclared?: IsDeclared }): Promise<DepreciationRun> =>
+    unwrap<DepreciationRun>(api.post(`${BASE}/business/${businessId}/depreciation/run`, body)),
 
   computeTax: (body: ComputeTaxBody): Promise<TaxBreakdown> =>
     unwrap<TaxBreakdown>(api.post(`${BASE}/tax/compute`, body)),
