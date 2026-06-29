@@ -20,6 +20,7 @@ import { EventCostedPnlView } from "./event-costed-pnl-view";
 import { EventMarginsView } from "./event-margins-view";
 import { DepreciationView } from "./depreciation-view";
 import { VenueLeaseView } from "./venue-lease-view";
+import { OwnVsLeaseView } from "./own-vs-lease-view";
 import { WageCostingView } from "./wage-costing-view";
 import { EventNightGauge } from "./event-night-gauge";
 import { PdcDrawer } from "./pdc-drawer";
@@ -55,6 +56,7 @@ export function VenueOsHubView(): React.ReactElement {
       <EventMarginsView />
       <DepreciationView />
       <VenueLeaseView />
+      <OwnVsLeaseView />
       <WageCostingView />
       <div className="grid gap-6 lg:grid-cols-2">
         <PdcDrawer />

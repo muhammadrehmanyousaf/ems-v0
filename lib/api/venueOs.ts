@@ -97,6 +97,21 @@ export interface RentAccrualRun {
   results: RentAccrualLine[];
 }
 
+export interface OwnVsLeasePath {
+  upfront: number;
+  totalCash: number;
+  npvCost: number;
+}
+export interface OwnVsLeaseResult {
+  horizonMonths: number;
+  annualDiscountRate: number;
+  breakEvenMonth: number | null;
+  lease: OwnVsLeasePath;
+  own: OwnVsLeasePath;
+  recommendation: "OWN" | "LEASE";
+  npvSaving: number;
+}
+
 export interface PeriodStatus {
   businessId: number;
   period: string;
@@ -426,6 +441,15 @@ export const venueOsApi = {
 
   runRentAccrual: (businessId: number, body: { period: string; dryRun?: boolean; isDeclared?: IsDeclared }): Promise<RentAccrualRun> =>
     unwrap<RentAccrualRun>(api.post(`${BASE}/business/${businessId}/lease-accrual/run`, body)),
+
+  ownVsLease: (body: {
+    horizonMonths: number;
+    own: { purchasePrice: number; salvageValue?: number; monthlyMaintenance?: number };
+    lease?: { monthlyRent: number; pagriAmount?: number; securityDeposit?: number; escalationPercent?: number; escalationEveryMonths?: number };
+    leaseId?: number;
+    annualDiscountRate?: number;
+    businessId?: number;
+  }): Promise<OwnVsLeaseResult> => unwrap<OwnVsLeaseResult>(api.post(`${BASE}/capital/own-vs-lease`, body)),
 
   computeTax: (body: ComputeTaxBody): Promise<TaxBreakdown> =>
     unwrap<TaxBreakdown>(api.post(`${BASE}/tax/compute`, body)),
