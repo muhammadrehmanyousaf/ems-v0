@@ -63,6 +63,22 @@ export interface FullyCostedEventPnl {
   weight: number;
 }
 
+export interface EventMargin {
+  eventId: number;
+  revenue: number;
+  directNet: number;
+  allocatedOverhead: number;
+  fullyCostedNet: number;
+  marginPct: number | null;
+}
+export interface EventMargins {
+  businessId: number;
+  driver: string;
+  pool: number;
+  eventCount: number;
+  events: EventMargin[];
+}
+
 export interface TaxPart {
   taxType: string;
   jurisdiction: string;
@@ -216,6 +232,11 @@ export const venueOsApi = {
     isDeclared?: IsDeclared,
   ): Promise<FullyCostedEventPnl> =>
     unwrap<FullyCostedEventPnl>(api.get(`${BASE}/bookings/${bookingId}/costed-pnl`, { params: { businessId, driver, isDeclared } })),
+
+  eventMargins: (
+    businessId: number,
+    opts?: { driver?: "REVENUE_SHARE" | "EVENT_COUNT"; from?: string; to?: string; isDeclared?: IsDeclared },
+  ): Promise<EventMargins> => unwrap<EventMargins>(api.get(`${BASE}/business/${businessId}/event-margins`, { params: opts })),
 
   computeTax: (body: ComputeTaxBody): Promise<TaxBreakdown> =>
     unwrap<TaxBreakdown>(api.post(`${BASE}/tax/compute`, body)),

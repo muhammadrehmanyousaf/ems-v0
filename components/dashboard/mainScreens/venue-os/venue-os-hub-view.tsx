@@ -16,6 +16,7 @@ import { OrgRollupView } from "./org-rollup-view";
 import { GroupConsolidationView } from "./group-consolidation-view";
 import { EventPnlView } from "./event-pnl-view";
 import { EventCostedPnlView } from "./event-costed-pnl-view";
+import { EventMarginsView } from "./event-margins-view";
 import { EventNightGauge } from "./event-night-gauge";
 import { PdcDrawer } from "./pdc-drawer";
 import { CashFloatClose } from "./cash-float-close";
@@ -46,6 +47,7 @@ export function VenueOsHubView(): React.ReactElement {
         <EventNightGauge />
       </div>
       <EventCostedPnlView />
+      <EventMarginsView />
       <div className="grid gap-6 lg:grid-cols-2">
         <PdcDrawer />
         <CashFloatClose />
