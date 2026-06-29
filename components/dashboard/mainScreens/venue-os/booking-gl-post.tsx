@@ -37,6 +37,7 @@ export function BookingGlPost(): React.ReactElement | null {
   const [bookingId, setBookingId] = React.useState<string>("");
   const [eventType, setEventType] = React.useState<string>(EVENT_TYPES[0].value);
   const [amount, setAmount] = React.useState<string>("");
+  const [counterparty, setCounterparty] = React.useState<string>("");
   const [isDeclared, setIsDeclared] = React.useState<IsDeclared>("MANAGEMENT_ONLY");
   const [basis, setBasis] = React.useState<"CASH" | "ACCRUAL">("CASH");
   const [result, setResult] = React.useState<GlPostResult | null>(null);
@@ -53,6 +54,7 @@ export function BookingGlPost(): React.ReactElement | null {
           amount: Number(amount),
           isDeclared,
           basis,
+          counterpartyBusinessId: counterparty ? Number(counterparty) : undefined,
           dryRun,
         }),
       );
@@ -92,6 +94,10 @@ export function BookingGlPost(): React.ReactElement | null {
           <label className="text-sm">
             Amount
             <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="ml-2 w-32 rounded border px-2 py-1" />
+          </label>
+          <label className="text-sm" title="If this deal is with another business in your group (ghar-ka-maal), enter its id so group consolidation can net it out.">
+            Counterparty biz # <span className="text-muted-foreground">(optional)</span>
+            <input type="number" value={counterparty} onChange={(e) => setCounterparty(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
           </label>
         </div>
 

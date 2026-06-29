@@ -13,6 +13,7 @@ import * as React from "react";
 import { isOrgMembershipOn } from "@/lib/org-membership-flag";
 import { VenueOsInsights } from "./venue-os-insights";
 import { OrgRollupView } from "./org-rollup-view";
+import { GroupConsolidationView } from "./group-consolidation-view";
 import { EventPnlView } from "./event-pnl-view";
 import { EventNightGauge } from "./event-night-gauge";
 import { PdcDrawer } from "./pdc-drawer";
@@ -38,6 +39,7 @@ export function VenueOsHubView(): React.ReactElement {
     <div className="space-y-6">
       <VenueOsInsights />
       <OrgRollupView />
+      <GroupConsolidationView />
       <div className="grid gap-6 lg:grid-cols-2">
         <EventPnlView />
         <EventNightGauge />

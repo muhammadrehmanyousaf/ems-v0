@@ -37,6 +37,21 @@ export interface OrgRollup {
   perBusiness: OrgBusinessPnl[];
 }
 
+export interface ConsolidationEliminations {
+  internalTradeVolume: number;
+  intercoRevenue: number;
+  intercoCost: number;
+  netImpact: number;
+}
+export interface ConsolidatedRollup {
+  orgId: number;
+  businessCount: number;
+  gross: PnlShape;
+  consolidated: PnlShape;
+  eliminations: ConsolidationEliminations;
+  perBusiness: OrgBusinessPnl[];
+}
+
 export interface TaxPart {
   taxType: string;
   jurisdiction: string;
@@ -177,6 +192,9 @@ export const venueOsApi = {
   orgRollup: (orgId: number, isDeclared?: IsDeclared): Promise<OrgRollup> =>
     unwrap<OrgRollup>(api.get(`${BASE}/org/${orgId}/rollup`, { params: { isDeclared } })),
 
+  orgConsolidated: (orgId: number, isDeclared?: IsDeclared): Promise<ConsolidatedRollup> =>
+    unwrap<ConsolidatedRollup>(api.get(`${BASE}/org/${orgId}/consolidated`, { params: { isDeclared } })),
+
   eventPnl: (bookingId: number, businessId?: number, isDeclared?: IsDeclared): Promise<PerEventPnl> =>
     unwrap<PerEventPnl>(api.get(`${BASE}/bookings/${bookingId}/pnl`, { params: { businessId, isDeclared } })),
 
@@ -217,6 +235,15 @@ export const venueOsApi = {
 
   postBookingToGl: (
     bookingId: number,
-    body: { eventType: string; amount: number; isDeclared?: IsDeclared; basis?: "CASH" | "ACCRUAL"; businessId?: number; orgId?: number; dryRun?: boolean },
+    body: {
+      eventType: string;
+      amount: number;
+      isDeclared?: IsDeclared;
+      basis?: "CASH" | "ACCRUAL";
+      businessId?: number;
+      orgId?: number;
+      counterpartyBusinessId?: number;
+      dryRun?: boolean;
+    },
   ): Promise<GlPostResult> => unwrap<GlPostResult>(api.post(`${BASE}/bookings/${bookingId}/post-to-gl`, body)),
 };
