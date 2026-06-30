@@ -821,6 +821,82 @@ export interface ProfitDistribution {
   distributedPkr: number;
   allocations: { partnerId: number; partnerName: string; partnerType: string; sharePercent: number; amountPkr: number }[];
 }
+// WS2-depth — full partner cap-table (Capital/Current/Loan ledgers, appropriation, statement)
+export interface PartnerLedger {
+  businessId: number;
+  partnerEquityId: number;
+  partnerName: string;
+  partnerType: string;
+  sharePercent: number;
+  capitalBalancePkr: number;
+  currentBalancePkr: number;
+  loanBalancePkr: number;
+  totalEquityPkr: number;
+  isOverdrawn: boolean;
+  overdrawnByPkr: number;
+  recentEvents: OwnershipEvent[];
+}
+export interface OwnershipEvent {
+  id: number;
+  businessId: number;
+  partnerEquityId: number | null;
+  eventType: string;
+  effectiveDate: string;
+  amountPkr: string;
+  drawingType: string | null;
+  journalEntryId: number | null;
+  note: string | null;
+  integrityHash: string;
+}
+export interface AppropriationLine {
+  partnerEquityId: number;
+  partnerNameSnapshot: string;
+  sharePercent: number;
+  salaryPkr: number;
+  interestOnCapitalPkr: number;
+  profitSharePkr: number;
+  totalAppropriatedPkr: number;
+  s92ExemptPkr: number;
+}
+export interface ProfitAppropriationRun {
+  id: number;
+  businessId: number;
+  period: string;
+  netProfitPkr: number;
+  salaryTotalPkr: number;
+  interestTotalPkr: number;
+  residualPkr: number;
+  appropriatedPkr: number;
+  retainedPkr: number;
+  appropriationJeId: number | null;
+  lines: AppropriationLine[];
+}
+export interface PartnerStatement {
+  id: number;
+  businessId: number;
+  partnerEquityId: number;
+  partnerNameSnapshot: string;
+  asOfDate: string;
+  closingCapitalPkr: number;
+  openingCurrentPkr: number;
+  profitSharePkr: number;
+  salaryPkr: number;
+  interestPkr: number;
+  drawingsPkr: number;
+  closingCurrentPkr: number;
+  loanBalancePkr: number;
+  totalEquityPkr: number;
+  isOverdrawn: boolean;
+  prevHash: string | null;
+  integrityHash: string;
+}
+export interface DrawingResult {
+  journalEntryId: number;
+  drawingType: string;
+  currentBalancePkr: number;
+  isOverdrawn: boolean;
+  overdrawnByPkr: number;
+}
 
 interface ApiEnvelope<T> {
   success: boolean;
@@ -1217,4 +1293,24 @@ export const venueOsApi = {
 
   distributeProfit: (businessId: number, body: { netProfitPkr?: number; from?: string; to?: string; isDeclared?: IsDeclared }): Promise<ProfitDistribution> =>
     unwrap<ProfitDistribution>(api.post(`${BASE}/business/${businessId}/cap-table/distribute`, body)),
+
+  // WS2-depth — Capital/Current/Loan ledgers, profit appropriation (s.92), immutable statement
+  recordCapital: (partnerId: number, body: { amountPkr: number; mode?: "INTRO" | "WITHDRAWAL"; date?: string; isDeclared?: IsDeclared }): Promise<{ journalEntryId: number; capitalBalancePkr: number }> =>
+    unwrap(api.post(`${BASE}/partners/${partnerId}/capital`, body)),
+  recordDrawing: (partnerId: number, body: { amountPkr: number; drawingType: string; date?: string; isDeclared?: IsDeclared }): Promise<DrawingResult> =>
+    unwrap<DrawingResult>(api.post(`${BASE}/partners/${partnerId}/drawing`, body)),
+  recordPartnerLoan: (partnerId: number, body: { amountPkr: number; direction?: "IN" | "REPAY"; date?: string }): Promise<{ journalEntryId: number; loanBalancePkr: number }> =>
+    unwrap(api.post(`${BASE}/partners/${partnerId}/loan`, body)),
+  partnerLedger: (partnerId: number): Promise<PartnerLedger> =>
+    unwrap<PartnerLedger>(api.get(`${BASE}/partners/${partnerId}/ledger`)),
+  generateStatement: (partnerId: number, body: { periodFrom?: string; asOf?: string }): Promise<PartnerStatement> =>
+    unwrap<PartnerStatement>(api.post(`${BASE}/partners/${partnerId}/statement`, body)),
+  listStatements: (partnerId: number): Promise<PartnerStatement[]> =>
+    unwrap<PartnerStatement[]>(api.get(`${BASE}/partners/${partnerId}/statements`)),
+  appropriateProfit: (businessId: number, body: { period: string; netProfitPkr?: number; salaries?: Record<number, number>; interestRatePct?: number; isDeclared?: IsDeclared }): Promise<ProfitAppropriationRun> =>
+    unwrap<ProfitAppropriationRun>(api.post(`${BASE}/business/${businessId}/profit-appropriation`, body)),
+  listAppropriations: (businessId: number): Promise<{ businessId: number; runs: ProfitAppropriationRun[] }> =>
+    unwrap(api.get(`${BASE}/business/${businessId}/profit-appropriations`)),
+  ownershipEvents: (businessId: number, verify?: boolean): Promise<{ businessId: number; events: OwnershipEvent[]; integrity: { ownership: { valid: boolean; breaks: number[] }; statements: { valid: boolean; breaks: number[] } } | null }> =>
+    unwrap(api.get(`${BASE}/business/${businessId}/ownership-events${verify ? "?verify=true" : ""}`)),
 };
