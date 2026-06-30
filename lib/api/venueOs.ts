@@ -1082,6 +1082,33 @@ export interface WeatherClaimResult {
   note: string;
 }
 
+// WS10-depth — GuestList
+export interface GuestSegment {
+  id: number;
+  eventNightId: number;
+  side: string;
+  segmentLabel: string | null;
+  invitedCount: number;
+  rsvpYesCount: number;
+  rsvpNoCount: number;
+  perHeadCostPkr: string;
+}
+export interface GuestReconcile {
+  eventNightId: number;
+  invitedTotal: number;
+  rsvpYesTotal: number;
+  rsvpPendingTotal: number;
+  expectedTotal: number;
+  gauge: { actualPeak: number; live: number; safeCapacity: number | null; overCapFlag: boolean };
+  noShowCount: number;
+  noShowPct: number | null;
+  walkInCount: number;
+  overSafeCap: boolean;
+  headroomToSafeCap: number | null;
+  catering: { plannedPkr: number; actualPkr: number; variancePkr: number; blendedPerHeadPkr: number; overCatered: boolean };
+  note: string;
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -1549,4 +1576,12 @@ export const venueOsApi = {
     unwrap<WeatherClaimResult>(api.post(`${BASE}/weather-events/${weatherEventId}/evaluate-claims`, body || {})),
   listWeatherClaims: (weatherEventId: number): Promise<{ id: number; policyId: number; peril: string; claimedAmount: string; status: string }[]> =>
     unwrap(api.get(`${BASE}/weather-events/${weatherEventId}/claims`)),
+
+  // WS10-depth — GuestList RSVP/headcount reconciliation
+  addGuestSegment: (eventNightId: number, body: { side?: string; segmentLabel?: string; invitedCount?: number; rsvpYesCount?: number; rsvpNoCount?: number; perHeadCostPkr?: number }): Promise<GuestSegment> =>
+    unwrap<GuestSegment>(api.post(`${BASE}/event-nights/${eventNightId}/guest-segments`, body)),
+  listGuestSegments: (eventNightId: number): Promise<GuestSegment[]> =>
+    unwrap<GuestSegment[]>(api.get(`${BASE}/event-nights/${eventNightId}/guest-segments`)),
+  guestReconcile: (eventNightId: number): Promise<GuestReconcile> =>
+    unwrap<GuestReconcile>(api.get(`${BASE}/event-nights/${eventNightId}/guest-reconcile`)),
 };

@@ -33,6 +33,7 @@ import { ForceMajeureBatchView } from "./force-majeure-batch-view";
 import { InsurancePoliciesView } from "./insurance-policies-view";
 import { WeatherClaimView } from "./weather-claim-view";
 import { EventNightConsoleView } from "./event-night-console-view";
+import { GuestListView } from "./guest-list-view";
 import { CapTableView } from "./cap-table-view";
 import { PartnerLedgerView } from "./partner-ledger-view";
 import { EventPnlView } from "./event-pnl-view";
@@ -90,6 +91,7 @@ export function VenueOsHubView(): React.ReactElement {
       </div>
       <WeatherClaimView />
       <EventNightConsoleView />
+      <GuestListView />
       <CapTableView />
       <PartnerLedgerView />
       <div className="grid gap-6 lg:grid-cols-2">
