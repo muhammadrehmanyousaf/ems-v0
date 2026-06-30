@@ -27,6 +27,7 @@ import { CommsEngineView } from "./comms-engine-view";
 import { ForceMajeureBatchView } from "./force-majeure-batch-view";
 import { InsurancePoliciesView } from "./insurance-policies-view";
 import { EventNightConsoleView } from "./event-night-console-view";
+import { CapTableView } from "./cap-table-view";
 import { EventPnlView } from "./event-pnl-view";
 import { EventCostedPnlView } from "./event-costed-pnl-view";
 import { EventMarginsView } from "./event-margins-view";
@@ -76,6 +77,7 @@ export function VenueOsHubView(): React.ReactElement {
         <InsurancePoliciesView />
       </div>
       <EventNightConsoleView />
+      <CapTableView />
       <div className="grid gap-6 lg:grid-cols-2">
         <EventPnlView />
         <EventNightGauge />

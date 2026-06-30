@@ -796,6 +796,32 @@ export interface CleanNightScore {
   breakdown: { incidents: number; complaints: number; lostUnclaimed: number; overCap: number };
 }
 
+export interface PartnerEquity {
+  id: number;
+  businessId: number;
+  partnerName: string;
+  partnerType: string;
+  sharePercent: string;
+  capitalContributedPkr: string | null;
+  active: boolean;
+}
+export interface CapTable {
+  businessId: number;
+  partners: PartnerEquity[];
+  totalSharePercent: number;
+  valid: boolean;
+  retainedPercent: number;
+}
+export interface ProfitDistribution {
+  businessId: number;
+  netProfitPkr: number;
+  totalSharePercent: number;
+  retainedPercent: number;
+  retainedPkr: number;
+  distributedPkr: number;
+  allocations: { partnerId: number; partnerName: string; partnerType: string; sharePercent: number; amountPkr: number }[];
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -1181,4 +1207,14 @@ export const venueOsApi = {
 
   cleanNightScore: (eventNightId: number, persist?: boolean): Promise<CleanNightScore> =>
     unwrap<CleanNightScore>(api.get(`${BASE}/event-nights/${eventNightId}/clean-night-score`, { params: { persist } })),
+
+  // Partner cap-table (WS2)
+  addPartner: (body: { businessId: number; partnerName: string; partnerType?: string; sharePercent: number; capitalContributedPkr?: number }): Promise<PartnerEquity> =>
+    unwrap<PartnerEquity>(api.post(`${BASE}/partners`, body)),
+
+  getCapTable: (businessId: number): Promise<CapTable> =>
+    unwrap<CapTable>(api.get(`${BASE}/business/${businessId}/cap-table`)),
+
+  distributeProfit: (businessId: number, body: { netProfitPkr?: number; from?: string; to?: string; isDeclared?: IsDeclared }): Promise<ProfitDistribution> =>
+    unwrap<ProfitDistribution>(api.post(`${BASE}/business/${businessId}/cap-table/distribute`, body)),
 };
