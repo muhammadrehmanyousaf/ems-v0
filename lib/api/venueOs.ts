@@ -478,6 +478,107 @@ export interface SettleInvoiceResult {
   journalEntry: JournalEntryShape;
 }
 
+export interface GensetReconFlags {
+  skimOverBand: boolean;
+  runHourPadding: boolean;
+  receiptOverClaim: boolean;
+}
+export interface GensetSkimBaseline {
+  n: number;
+  isCalibrated: boolean;
+  isVerified: boolean;
+  skimPercent: number;
+  label: string;
+}
+export interface GensetReconResult {
+  reconciled: boolean;
+  reason?: string;
+  bookingId?: number;
+  generatorIdentifier?: string;
+  bandSource?: string;
+  isCalibrated?: boolean;
+  baseline?: GensetSkimBaseline;
+  skim?: { expectedL: number; recorded: number; skimVarianceL: number; skimPercent: number; flags: GensetReconFlags };
+  flags?: GensetReconFlags;
+}
+export interface GensetSkimEvent {
+  id: number;
+  bookingId: number | null;
+  occurredAt: string;
+  dipConsumptionL: number;
+  expectedConsumptionL: number;
+  skimVarianceL: number;
+  skimPercent: number;
+  flags: Partial<GensetReconFlags>;
+  bandSource: string;
+}
+export interface GensetSkimSummary {
+  businessId: number;
+  generatorIdentifier: string;
+  events: GensetSkimEvent[];
+  flaggedCount: number;
+  baseline: GensetSkimBaseline;
+}
+
+export interface UtilityMeter {
+  id: number;
+  businessId: number;
+  label: string;
+  meterType: string;
+  discoOrUtility: string | null;
+  sanctionedLoadKva: string | null;
+  isSubMeter: boolean;
+  active: boolean;
+}
+export interface UtilityBillLineInput {
+  lineType: string;
+  units?: number;
+  rate?: number;
+  amount: number;
+  isBlackMarket?: boolean;
+  notes?: string;
+}
+export interface UtilityBillResult {
+  bill: { id: number; businessId: number; meterId: number; billingMonth: string; totalPayable: string };
+  reconciliation: { billId: number; totalLines: number; totalPayable: number; residual: number; balanced: boolean };
+}
+export interface EventUtilityShare {
+  eventId: number;
+  weight: number;
+  allocatedPkr: number;
+  basis: string;
+}
+export interface AllocationResult {
+  run?: { id: number; status: string; billingMonth: string; utilityType: string } | null;
+  dryRun?: boolean;
+  basisUsed?: string;
+  totalAllocatable: number;
+  residualPkr: number;
+  eventCosts: EventUtilityShare[];
+  journalCount?: number;
+  reason?: string;
+}
+export interface OffSeasonAccrualResult {
+  total: number;
+  dryRun?: boolean;
+  reason?: string;
+  accruals: { eventType: string; amount: number; journalEntryId?: number; idempotentHit?: boolean }[];
+}
+export interface EventUtilityRollup {
+  eventId: number;
+  byUtility: Record<string, number>;
+  totalPkr: number;
+  basisUsed: string | null;
+}
+export interface SupplierUdhaarBaseline {
+  n: number;
+  isCalibrated: boolean;
+  isVerified: boolean;
+  markupPercent: number;
+  aprPercent: number;
+  label: string;
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -698,4 +799,35 @@ export const venueOsApi = {
 
   settleSupplierInvoice: (id: number, body: { amountPaid: number; paymentMode?: string }): Promise<SettleInvoiceResult> =>
     unwrap<SettleInvoiceResult>(api.post(`${BASE}/supplier-invoices/${id}/settle`, body)),
+
+  // Genset-skim measurement (WS7-A)
+  reconcileGenset: (body: { businessId: number; generatorIdentifier?: string; bookingId: number; kva?: number }): Promise<GensetReconResult> =>
+    unwrap<GensetReconResult>(api.post(`${BASE}/genset/reconcile`, body)),
+
+  gensetSkimSummary: (businessId: number, opts?: { from?: string; to?: string; generatorIdentifier?: string }): Promise<GensetSkimSummary> =>
+    unwrap<GensetSkimSummary>(api.get(`${BASE}/business/${businessId}/genset/skim-summary`, { params: opts })),
+
+  // Utility apportionment (WS7-B)
+  createUtilityMeter: (body: { businessId: number; label: string; meterType: string; discoOrUtility?: string; sanctionedLoadKva?: number; generatorIdentifier?: string }): Promise<UtilityMeter> =>
+    unwrap<UtilityMeter>(api.post(`${BASE}/utility-meters`, body)),
+
+  listUtilityMeters: (businessId: number): Promise<UtilityMeter[]> =>
+    unwrap<UtilityMeter[]>(api.get(`${BASE}/business/${businessId}/utility-meters`)),
+
+  createUtilityBill: (body: { meterId: number; billingMonth: string; totalPayable: number; dueDate?: string; lines?: UtilityBillLineInput[] }): Promise<UtilityBillResult> =>
+    unwrap<UtilityBillResult>(api.post(`${BASE}/utility-bills`, body)),
+
+  runUtilityAllocation: (
+    businessId: number,
+    body: { billingMonth: string; utilityType?: string; requestedBasis?: string; residualShare?: number; isDeclared?: IsDeclared; dryRun?: boolean },
+  ): Promise<AllocationResult> => unwrap<AllocationResult>(api.post(`${BASE}/business/${businessId}/utility-allocation/run`, body)),
+
+  runOffSeasonAccrual: (businessId: number, body: { billingMonth: string; isDeclared?: IsDeclared; dryRun?: boolean }): Promise<OffSeasonAccrualResult> =>
+    unwrap<OffSeasonAccrualResult>(api.post(`${BASE}/business/${businessId}/utility-allocation/off-season`, body)),
+
+  eventUtilityRollup: (bookingId: number, businessId?: number): Promise<EventUtilityRollup> =>
+    unwrap<EventUtilityRollup>(api.get(`${BASE}/bookings/${bookingId}/utility-rollup`, { params: { businessId } })),
+
+  supplierUdhaarBaseline: (businessId: number, supplierName: string): Promise<SupplierUdhaarBaseline> =>
+    unwrap<SupplierUdhaarBaseline>(api.get(`${BASE}/business/${businessId}/supplier-udhaar/${encodeURIComponent(supplierName)}/baseline`)),
 };
