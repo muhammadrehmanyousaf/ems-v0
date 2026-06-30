@@ -763,6 +763,39 @@ export interface ClaimRoi {
   ratio: number | null;
 }
 
+export interface ValetTicket {
+  id: number;
+  tagNumber: string;
+  vehiclePlate: string | null;
+  keyTag: string | null;
+  status: string;
+}
+export interface LostFoundResult {
+  item: { id: number; category: string; status: string; isHighValue: boolean; integrityHash: string | null };
+  idempotentHit: boolean;
+  warnings: string[];
+}
+export interface IncidentResult {
+  incident: { id: number; type: string; severity: string; status: string; insuranceClaimId: number | null; integrityHash: string | null };
+  insuranceClaim: { id: number; status: string } | null;
+  idempotentHit: boolean;
+}
+export interface ChainVerification {
+  ok: boolean;
+  breaks: number[];
+  checked: number;
+}
+export interface ComplaintResult {
+  complaint: { id: number; status: string; reviewPreEmpted: boolean; apologySentAt: string | null };
+  idempotentHit?: boolean;
+  apologyOutboundMessageId?: number | null;
+}
+export interface CleanNightScore {
+  eventNightId: number;
+  score: number;
+  breakdown: { incidents: number; complaints: number; lostUnclaimed: number; overCap: number };
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -1111,4 +1144,41 @@ export const venueOsApi = {
 
   claimRoi: (businessId: number): Promise<ClaimRoi> =>
     unwrap<ClaimRoi>(api.get(`${BASE}/business/${businessId}/insurance/claim-roi`)),
+
+  // EventNight console (WS10)
+  valetIn: (eventNightId: number, body: { tagNumber: string; vehiclePlate?: string; keyTag?: string; driverName?: string; inPhotoUrl?: string; inSignatureRef?: string; clientOpId?: string }): Promise<{ ticket: ValetTicket; idempotentHit: boolean }> =>
+    unwrap<{ ticket: ValetTicket; idempotentHit: boolean }>(api.post(`${BASE}/event-nights/${eventNightId}/valet`, body)),
+
+  valetRelease: (ticketId: number, body: { outPhotoUrl: string; outSignatureRef: string }): Promise<{ ticket: ValetTicket }> =>
+    unwrap<{ ticket: ValetTicket }>(api.post(`${BASE}/valet/${ticketId}/release`, body)),
+
+  listValet: (eventNightId: number): Promise<ValetTicket[]> =>
+    unwrap<ValetTicket[]>(api.get(`${BASE}/event-nights/${eventNightId}/valet`)),
+
+  recordLostFound: (eventNightId: number, body: { category: string; description?: string; declaredValuePkr?: number; photoUrl?: string; foundByUserId?: number; custodyWitnessUserId?: number; isHighValue?: boolean }): Promise<LostFoundResult> =>
+    unwrap<LostFoundResult>(api.post(`${BASE}/event-nights/${eventNightId}/lost-found`, body)),
+
+  releaseLostFound: (itemId: number, body: { releasedToName: string; releasedToCnicMasked?: string; releaseWitnessUserId?: number; releaseSignatureRef?: string; releasePhotoUrl?: string }): Promise<LostFoundResult> =>
+    unwrap<LostFoundResult>(api.post(`${BASE}/lost-found/${itemId}/release`, body)),
+
+  recordIncident: (eventNightId: number, body: { type: string; severity?: string; description?: string; estimatedLossPkr?: number; policeCalled?: boolean; rescue1122Called?: boolean }): Promise<IncidentResult> =>
+    unwrap<IncidentResult>(api.post(`${BASE}/event-nights/${eventNightId}/incidents`, body)),
+
+  appendIncidentTrail: (incidentId: number, body: { action: string; detail?: string }): Promise<unknown> =>
+    unwrap<unknown>(api.post(`${BASE}/incidents/${incidentId}/trail`, body)),
+
+  verifyIncidentChain: (incidentId: number): Promise<ChainVerification> =>
+    unwrap<ChainVerification>(api.get(`${BASE}/incidents/${incidentId}/verify-chain`)),
+
+  postBreakageRecovery: (incidentId: number, body: { amount: number; fromDeposit?: boolean; dryRun?: boolean }): Promise<unknown> =>
+    unwrap<unknown>(api.post(`${BASE}/incidents/${incidentId}/post-recovery`, body)),
+
+  raiseComplaint: (eventNightId: number, body: { bookingId: number; category: string; description?: string; raisedByName?: string; raisedByMsisdn?: string; concessionType?: string; concessionAmountPkr?: number }): Promise<ComplaintResult> =>
+    unwrap<ComplaintResult>(api.post(`${BASE}/event-nights/${eventNightId}/complaints`, body)),
+
+  sendComplaintApology: (complaintId: number): Promise<ComplaintResult> =>
+    unwrap<ComplaintResult>(api.post(`${BASE}/complaints/${complaintId}/send-apology`, {})),
+
+  cleanNightScore: (eventNightId: number, persist?: boolean): Promise<CleanNightScore> =>
+    unwrap<CleanNightScore>(api.get(`${BASE}/event-nights/${eventNightId}/clean-night-score`, { params: { persist } })),
 };
