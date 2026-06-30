@@ -662,6 +662,50 @@ export interface RunwayPlan {
   months?: LiabilityMonth[];
 }
 
+export interface CommsConfig {
+  id: number;
+  businessId: number;
+  smsSenderMask: string | null;
+  displayName: string | null;
+  greenTick: boolean;
+  messagingTier: string | null;
+  qualityRating: string | null;
+  monthlyBudgetPkr: string | null;
+  defaultLanguage: string;
+  ivrEnabled: boolean;
+}
+export interface CommsCostRow {
+  bucket: string;
+  count: number;
+  pkr: string;
+  usd: string;
+}
+export interface CommsCostRollup {
+  businessId: number;
+  groupBy: string;
+  rows: CommsCostRow[];
+}
+export interface ContactWindow {
+  open: boolean;
+  openUntil: string | null;
+  lastInboundAt: string | null;
+}
+export interface MessageEventRow {
+  id: number;
+  businessId: number | null;
+  key: string;
+  defaultCategory: string;
+  channelLadderJson: string[] | null;
+  requiresOptIn: boolean;
+  allowsFreeForm: boolean;
+}
+export interface SendEventResult {
+  message: { id: number; category: string; costPkr: string; state: string; toMsisdn: string };
+  category?: string;
+  windowOpen?: boolean;
+  idempotentHit: boolean;
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -959,4 +1003,26 @@ export const venueOsApi = {
 
   computeRunway: (businessId: number, body: { seasonYear: number; openingCashPkr?: number }): Promise<RunwayPlan> =>
     unwrap<RunwayPlan>(api.post(`${BASE}/business/${businessId}/working-capital/runway`, body)),
+
+  // Multi-channel comms engine (WS6)
+  sendCommsEvent: (body: { businessId: number; toMsisdn?: string; contactId?: number; eventKey: string; variables?: Record<string, string>; bookingId?: number; idempotencyKey?: string }): Promise<SendEventResult> =>
+    unwrap<SendEventResult>(api.post(`${BASE}/comms/send-event`, body)),
+
+  getCommsCostRollup: (businessId: number, groupBy?: "event" | "month"): Promise<CommsCostRollup> =>
+    unwrap<CommsCostRollup>(api.get(`${BASE}/business/${businessId}/comms/cost-rollup`, { params: { groupBy } })),
+
+  getCommsConfig: (businessId: number): Promise<CommsConfig | null> =>
+    unwrap<CommsConfig | null>(api.get(`${BASE}/business/${businessId}/comms/config`)),
+
+  putCommsConfig: (businessId: number, body: Partial<CommsConfig>): Promise<CommsConfig> =>
+    unwrap<CommsConfig>(api.put(`${BASE}/business/${businessId}/comms/config`, body)),
+
+  getContactWindow: (businessId: number, contactId: number): Promise<ContactWindow> =>
+    unwrap<ContactWindow>(api.get(`${BASE}/business/${businessId}/comms/contacts/${contactId}/window`)),
+
+  suppressContact: (contactId: number): Promise<{ contactId: number }> =>
+    unwrap<{ contactId: number }>(api.post(`${BASE}/comms/contacts/${contactId}/suppress`, {})),
+
+  listMessageEvents: (businessId?: number): Promise<MessageEventRow[]> =>
+    unwrap<MessageEventRow[]>(api.get(`${BASE}/comms/events`, { params: { businessId } })),
 };
