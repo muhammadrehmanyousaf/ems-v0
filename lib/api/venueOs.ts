@@ -431,6 +431,53 @@ export interface GlPostResult {
   dryRun?: boolean;
 }
 
+export type ThreeWayMatchStatus = "MATCH" | "SHORT_DELIVERY" | "OVER_RATE" | "MULTI";
+
+export interface PurchaseOrderLine {
+  id: number;
+  purchaseOrderId: number;
+  descr: string | null;
+  qtyOrdered: string;
+  unit: string | null;
+  ratePkr: string;
+  lineTotal: string;
+}
+export interface PurchaseOrder {
+  id: number;
+  businessId: number;
+  supplierId: number | null;
+  bookingId: number | null;
+  paymentMode: string;
+  status: string;
+  lines?: PurchaseOrderLine[];
+}
+export interface GrnLineInput {
+  purchaseOrderLineId: number;
+  qtyAccepted: number;
+  actualRatePkr?: number;
+}
+export interface GoodsReceivedNote {
+  id: number;
+  purchaseOrderId: number;
+  businessId: number;
+  status: string;
+  threeWayMatchStatus: ThreeWayMatchStatus;
+  shortfallPkr: string;
+  acceptedValuePkr: string;
+  supplierInvoiceId?: number | null;
+  glJournalEntryId?: number | null;
+}
+export interface AcceptGrnResult {
+  grn: GoodsReceivedNote;
+  supplierInvoice?: { id: number; totalAmount: string; status: string; supplierNameSnapshot: string };
+  journalEntry: JournalEntryShape | null;
+  idempotentHit: boolean;
+}
+export interface SettleInvoiceResult {
+  supplierInvoice: { id: number; amountPaid: string; status: string };
+  journalEntry: JournalEntryShape;
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -623,4 +670,32 @@ export const venueOsApi = {
       dryRun?: boolean;
     },
   ): Promise<GlPostResult> => unwrap<GlPostResult>(api.post(`${BASE}/bookings/${bookingId}/post-to-gl`, body)),
+
+  // Procurement GRN three-way-match (WS3)
+  createPurchaseOrder: (body: {
+    businessId: number;
+    supplierId?: number;
+    bookingId?: number;
+    paymentMode?: string;
+    tenorDays?: number;
+    lines: { descr?: string; qtyOrdered: number; unit?: string; ratePkr: number; inventoryItemId?: number; cateringItemId?: number }[];
+  }): Promise<PurchaseOrder> => unwrap<PurchaseOrder>(api.post(`${BASE}/purchase-orders`, body)),
+
+  listPurchaseOrders: (businessId: number): Promise<PurchaseOrder[]> =>
+    unwrap<PurchaseOrder[]>(api.get(`${BASE}/business/${businessId}/purchase-orders`)),
+
+  receiveGrn: (body: {
+    purchaseOrderId: number;
+    businessId: number;
+    receivedAt?: string;
+    photoUrl?: string;
+    supplierId?: number;
+    lines: GrnLineInput[];
+  }): Promise<GoodsReceivedNote> => unwrap<GoodsReceivedNote>(api.post(`${BASE}/goods-received-notes`, body)),
+
+  acceptGrn: (id: number, body?: { isDeclared?: IsDeclared; basis?: "CASH" | "ACCRUAL" }): Promise<AcceptGrnResult> =>
+    unwrap<AcceptGrnResult>(api.post(`${BASE}/goods-received-notes/${id}/accept`, body || {})),
+
+  settleSupplierInvoice: (id: number, body: { amountPaid: number; paymentMode?: string }): Promise<SettleInvoiceResult> =>
+    unwrap<SettleInvoiceResult>(api.post(`${BASE}/supplier-invoices/${id}/settle`, body)),
 };
