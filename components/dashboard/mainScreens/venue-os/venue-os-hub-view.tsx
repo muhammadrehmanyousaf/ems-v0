@@ -20,6 +20,7 @@ import { ComplianceExportView } from "./compliance-export-view";
 import { AmlCockpitView } from "./aml-cockpit-view";
 import { AmlRegistersView } from "./aml-registers-view";
 import { ProcurementView } from "./procurement-view";
+import { RateContractView } from "./rate-contract-view";
 import { GensetSkimView } from "./genset-skim-view";
 import { UtilityAllocationView } from "./utility-allocation-view";
 import { LiabilityCalendarView } from "./liability-calendar-view";
@@ -69,6 +70,7 @@ export function VenueOsHubView(): React.ReactElement {
       <AmlCockpitView />
       <AmlRegistersView />
       <ProcurementView />
+      <RateContractView />
       <div className="grid gap-6 lg:grid-cols-2">
         <GensetSkimView />
         <UtilityAllocationView />

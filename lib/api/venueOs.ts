@@ -996,6 +996,33 @@ export interface ComplianceShield {
   packHash: string;
 }
 
+// WS3-depth — rate contracts + recost
+export interface RateContract {
+  id: number;
+  businessId: number;
+  itemNameSnapshot: string;
+  unit: string | null;
+  contractedRatePkr: string;
+  tolerancePct: string;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  status: string;
+}
+export interface GrnContractCheck {
+  businessId: number;
+  checkedLines: number;
+  flagCount: number;
+  totalShortfallPkr: number;
+  flags: { itemName: string; contractedRatePkr: number; actualRatePkr: number; overByPct: number | null; qty: number; shortfallPkr: number }[];
+}
+export interface RecostSweep {
+  businessId: number;
+  count: number;
+  underwaterCount: number;
+  exposurePkr: number;
+  results: { bookingId: number | null; costPerHead: number; quotedPerHead: number; marginPerHead: number; underwater: boolean; totalMarginPkr: number | null }[];
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -1435,4 +1462,14 @@ export const venueOsApi = {
     unwrap(api.get(`${BASE}/business/${businessId}/aml/beneficial-owners`)),
   complianceShield: (businessId: number, body: { periodFrom: string; periodTo: string; persist?: boolean }): Promise<ComplianceShield> =>
     unwrap<ComplianceShield>(api.post(`${BASE}/business/${businessId}/aml/compliance-shield`, body)),
+
+  // WS3-depth — rate contracts + live re-cost sweep
+  createRateContract: (body: { businessId: number; itemNameSnapshot: string; contractedRatePkr: number; effectiveFrom: string; tolerancePct?: number; unit?: string; supplierNameSnapshot?: string }): Promise<RateContract> =>
+    unwrap<RateContract>(api.post(`${BASE}/rate-contracts`, body)),
+  listRateContracts: (businessId: number): Promise<RateContract[]> =>
+    unwrap<RateContract[]>(api.get(`${BASE}/business/${businessId}/rate-contracts`)),
+  checkGrnContracts: (businessId: number, body: { lines: { itemNameSnapshot?: string; itemId?: number; ratePkr: number; qty: number }[]; onDate?: string }): Promise<GrnContractCheck> =>
+    unwrap<GrnContractCheck>(api.post(`${BASE}/business/${businessId}/rate-contracts/check-grn`, body)),
+  recostSweep: (businessId: number, body: { bookings: { bookingId?: number; cardIds: number[]; quotedPerHead: number; headcount?: number }[]; onDate?: string }): Promise<RecostSweep> =>
+    unwrap<RecostSweep>(api.post(`${BASE}/business/${businessId}/recost-sweep`, body)),
 };
