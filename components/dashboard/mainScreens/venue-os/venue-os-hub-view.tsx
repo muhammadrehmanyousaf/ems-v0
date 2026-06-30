@@ -24,6 +24,8 @@ import { LiabilityCalendarView } from "./liability-calendar-view";
 import { WorkingCapitalRunwayView } from "./working-capital-runway-view";
 import { WorkingCapitalInstrumentsView } from "./working-capital-instruments-view";
 import { CommsEngineView } from "./comms-engine-view";
+import { ForceMajeureBatchView } from "./force-majeure-batch-view";
+import { InsurancePoliciesView } from "./insurance-policies-view";
 import { EventPnlView } from "./event-pnl-view";
 import { EventCostedPnlView } from "./event-costed-pnl-view";
 import { EventMarginsView } from "./event-margins-view";
@@ -68,6 +70,10 @@ export function VenueOsHubView(): React.ReactElement {
       <LiabilityCalendarView />
       <WorkingCapitalInstrumentsView />
       <CommsEngineView />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ForceMajeureBatchView />
+        <InsurancePoliciesView />
+      </div>
       <div className="grid gap-6 lg:grid-cols-2">
         <EventPnlView />
         <EventNightGauge />

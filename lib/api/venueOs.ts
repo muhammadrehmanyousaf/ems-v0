@@ -706,6 +706,63 @@ export interface SendEventResult {
   idempotentHit: boolean;
 }
 
+export interface ForceMajeureItem {
+  bookingId: number;
+  advancePaid: number;
+  isPeakDate?: boolean;
+}
+export interface ForceMajeureResultRow {
+  bookingId: number;
+  action: string;
+  creditNoteId?: number;
+  refundedAmount?: number;
+  forfeitedAmount?: number;
+  idempotentHit?: boolean;
+  planned?: boolean;
+  skipped?: string;
+}
+export interface ForceMajeureBatchResult {
+  batchRef: string;
+  ruleApplied: string;
+  dryRun: boolean;
+  affectedCount: number;
+  creditsIssued?: number;
+  refundsIssued?: number;
+  totalCreditAmount?: number;
+  totalRefundAmount?: number;
+  results: ForceMajeureResultRow[];
+}
+export interface CreditNote {
+  id: number;
+  bookingId: number;
+  creditNoteNo: string;
+  disposition: string;
+  principalAmount: string;
+  refundedAmount: string;
+  forfeitedAmount: string;
+  tax236cbReversalStatus: string;
+  pstReversalStatus: string;
+  batchRef: string | null;
+}
+export interface InsurancePolicy {
+  id: number;
+  businessId: number;
+  policyType: string;
+  insurer: string | null;
+  policyNo: string | null;
+  sumInsured: string | null;
+  expiryDate: string;
+  premiumAmount: string | null;
+  status: string;
+  isVendorOwned: boolean;
+}
+export interface ClaimRoi {
+  businessId: number;
+  premiumPaid: number;
+  recovered: number;
+  ratio: number | null;
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -1025,4 +1082,33 @@ export const venueOsApi = {
 
   listMessageEvents: (businessId?: number): Promise<MessageEventRow[]> =>
     unwrap<MessageEventRow[]>(api.get(`${BASE}/comms/events`, { params: { businessId } })),
+
+  // Force-majeure batch + credit notes (WS9)
+  previewForceMajeure: (body: { businessId: number; dateFrom?: string; dateTo?: string; rule?: string; govtOrderRef?: string; items?: ForceMajeureItem[] }): Promise<ForceMajeureBatchResult> =>
+    unwrap<ForceMajeureBatchResult>(api.post(`${BASE}/force-majeure/preview`, body)),
+
+  runForceMajeureBatch: (body: { businessId: number; dateFrom?: string; dateTo?: string; rule?: string; reason?: string; govtOrderRef?: string; items?: ForceMajeureItem[]; perEventOverrides?: Record<number, string>; refundPct?: number }): Promise<ForceMajeureBatchResult> =>
+    unwrap<ForceMajeureBatchResult>(api.post(`${BASE}/force-majeure/batch`, body)),
+
+  forceMajeureRefund: (bookingId: number, body: { businessId: number; advancePaid: number; rule?: string; refundPct?: number; reason?: string; batchRef?: string }): Promise<unknown> =>
+    unwrap<unknown>(api.post(`${BASE}/bookings/${bookingId}/force-majeure-refund`, body)),
+
+  listCreditNotes: (bookingId: number, businessId?: number): Promise<CreditNote[]> =>
+    unwrap<CreditNote[]>(api.get(`${BASE}/bookings/${bookingId}/credit-notes`, { params: { businessId } })),
+
+  // Insurance + weather tracking (WS9)
+  createPolicy: (body: { businessId: number; policyType: string; insurer?: string; policyNo?: string; sumInsured?: number; expiryDate: string; premiumAmount?: number }): Promise<InsurancePolicy> =>
+    unwrap<InsurancePolicy>(api.post(`${BASE}/insurance/policies`, body)),
+
+  listPolicies: (businessId: number, opts?: { status?: string; policyType?: string; expiringWithinDays?: number }): Promise<InsurancePolicy[]> =>
+    unwrap<InsurancePolicy[]>(api.get(`${BASE}/business/${businessId}/insurance/policies`, { params: opts })),
+
+  updatePolicyStatus: (id: number, status: string): Promise<InsurancePolicy> =>
+    unwrap<InsurancePolicy>(api.patch(`${BASE}/insurance/policies/${id}/status`, { status })),
+
+  sweepPolicies: (): Promise<{ recomputed: number; remindersQueued: number }> =>
+    unwrap<{ recomputed: number; remindersQueued: number }>(api.post(`${BASE}/insurance/policies/sweep`, {})),
+
+  claimRoi: (businessId: number): Promise<ClaimRoi> =>
+    unwrap<ClaimRoi>(api.get(`${BASE}/business/${businessId}/insurance/claim-roi`)),
 };
