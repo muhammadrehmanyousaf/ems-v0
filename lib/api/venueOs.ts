@@ -97,6 +97,63 @@ export interface RentAccrualRun {
   results: RentAccrualLine[];
 }
 
+export interface AnnexBLine {
+  accountCode: string;
+  name: string;
+  amount: number;
+}
+export interface AnnexBCodeGroup {
+  annexbCode: string;
+  amount: number;
+  accounts: AnnexBLine[];
+}
+export interface AnnexBReport {
+  businessId: number;
+  periodFrom: string;
+  periodTo: string;
+  isDeclared: string;
+  view: string;
+  revenue: { lines: AnnexBLine[]; total: number };
+  expenses: { byAnnexbCode: AnnexBCodeGroup[]; uncodedExpense: AnnexBLine[]; total: number };
+  netProfit: number;
+}
+export interface TrialBalanceAccount {
+  code: string;
+  name: string;
+  type: string;
+  debit: number;
+  credit: number;
+  balance: number;
+}
+export interface TrialBalance {
+  businessId: number;
+  accounts: TrialBalanceAccount[];
+  totalDebit: number;
+  totalCredit: number;
+  variance: number;
+  balanced: boolean;
+}
+export interface Section21Clause {
+  clause: string;
+  status: "READY" | "NOT_READY" | "NO_RULE";
+  label: string;
+  ruleCode?: string;
+  thresholdPkr?: number;
+  actionType?: string;
+  basePkr?: number;
+  disallowedPkr?: number;
+  byHead?: { accountCode: string; name: string; basePkr: number; disallowedPkr: number; count: number }[];
+  framing?: string;
+}
+export interface Section21Report {
+  businessId: number;
+  periodFrom: string;
+  periodTo: string;
+  clauses: Section21Clause[];
+  totalDisallowedPkr: number;
+  anyNotReady: boolean;
+}
+
 export interface OwnVsLeasePath {
   upfront: number;
   totalCash: number;
@@ -441,6 +498,15 @@ export const venueOsApi = {
 
   runRentAccrual: (businessId: number, body: { period: string; dryRun?: boolean; isDeclared?: IsDeclared }): Promise<RentAccrualRun> =>
     unwrap<RentAccrualRun>(api.post(`${BASE}/business/${businessId}/lease-accrual/run`, body)),
+
+  annexB: (businessId: number, from: string, to: string, isDeclared?: string): Promise<AnnexBReport> =>
+    unwrap<AnnexBReport>(api.get(`${BASE}/business/${businessId}/annex-b`, { params: { from, to, isDeclared } })),
+
+  trialBalance: (businessId: number, opts?: { from?: string; to?: string; asOf?: string; isDeclared?: IsDeclared }): Promise<TrialBalance> =>
+    unwrap<TrialBalance>(api.get(`${BASE}/business/${businessId}/trial-balance`, { params: opts })),
+
+  section21Addbacks: (businessId: number, from: string, to: string): Promise<Section21Report> =>
+    unwrap<Section21Report>(api.get(`${BASE}/business/${businessId}/section-21-addbacks`, { params: { from, to } })),
 
   ownVsLease: (body: {
     horizonMonths: number;
