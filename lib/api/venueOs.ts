@@ -945,6 +945,57 @@ export interface TaxFilingLog {
   createdAt: string;
 }
 
+// WS4-B/C — AML cockpit registers
+export interface StructuringVerdict {
+  warn: boolean;
+  patterns: string[];
+  ctrThresholdPkr: number;
+  instructsDepositInFull: boolean;
+  dismissable: boolean;
+  warningText: string;
+}
+export interface BankDeposit {
+  id: number;
+  businessId: number;
+  depositDate: string;
+  amountPkr: string;
+  bankName: string | null;
+  branchLabel: string | null;
+  structuringFlag: boolean;
+}
+export interface TurnoverRecon {
+  businessId: number;
+  period: string;
+  declaredRevenuePkr: number;
+  cashCollectedPkr: number;
+  bankedPkr: number;
+  unreconciledPkr: number;
+  thresholdPkr: number;
+  status: "RECONCILED" | "GAP" | "OVER_THRESHOLD";
+  note: string;
+}
+export interface BeneficialOwner {
+  id: number;
+  ownerName: string;
+  cnicMasked: string | null;
+  relationship: string;
+  sharePercent: string;
+  role: string;
+  benamiLevel: string | null;
+}
+export interface ComplianceShield {
+  businessId: number;
+  periodFrom: string;
+  periodTo: string;
+  grossDeclaredPkr: number;
+  bankedPkr: number;
+  taxCollectedPkr: number;
+  beneficialOwnerCount: number;
+  structuringFlagCount: number;
+  unreconciledPkr: number;
+  packHash: string;
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -1370,4 +1421,18 @@ export const venueOsApi = {
     unwrap<TaxFilingLog>(api.post(`${BASE}/business/${businessId}/tax-filings`, body)),
   listFilings: (businessId: number): Promise<TaxFilingLog[]> =>
     unwrap<TaxFilingLog[]>(api.get(`${BASE}/business/${businessId}/tax-filings`)),
+
+  // WS4-B/C — AML cockpit registers
+  recordBankDeposit: (body: { businessId: number; amountPkr: number; depositDate?: string; bankName?: string; branchLabel?: string; sourceType?: string; postJe?: boolean }): Promise<{ deposit: BankDeposit; structuring: StructuringVerdict }> =>
+    unwrap(api.post(`${BASE}/aml/bank-deposits`, body)),
+  preDepositCheck: (businessId: number, body: { proposedDepositPkr: number; depositDate?: string }): Promise<StructuringVerdict & { monthBankedSoFarPkr: number }> =>
+    unwrap(api.post(`${BASE}/business/${businessId}/aml/pre-deposit-check`, body)),
+  turnoverRecon: (businessId: number, body: { period: string; thresholdPkr?: number; persist?: boolean }): Promise<TurnoverRecon> =>
+    unwrap<TurnoverRecon>(api.post(`${BASE}/business/${businessId}/aml/turnover-recon`, body)),
+  upsertBeneficialOwner: (body: { businessId: number; id?: number; ownerName: string; relationship?: string; sharePercent?: number; traceableFunding?: boolean; role?: string }): Promise<{ owner: BeneficialOwner; benami: { level: string; reason: string } }> =>
+    unwrap(api.post(`${BASE}/aml/beneficial-owners`, body)),
+  listBeneficialOwners: (businessId: number): Promise<{ owners: BeneficialOwner[]; totalSharePercent: number; sharesValid: boolean; highRisk: { id: number; ownerName: string; level: string }[] }> =>
+    unwrap(api.get(`${BASE}/business/${businessId}/aml/beneficial-owners`)),
+  complianceShield: (businessId: number, body: { periodFrom: string; periodTo: string; persist?: boolean }): Promise<ComplianceShield> =>
+    unwrap<ComplianceShield>(api.post(`${BASE}/business/${businessId}/aml/compliance-shield`, body)),
 };

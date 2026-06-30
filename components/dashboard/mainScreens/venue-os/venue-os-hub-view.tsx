@@ -18,6 +18,7 @@ import { PeriodCloseView } from "./period-close-view";
 import { AccountingDepthView } from "./accounting-depth-view";
 import { ComplianceExportView } from "./compliance-export-view";
 import { AmlCockpitView } from "./aml-cockpit-view";
+import { AmlRegistersView } from "./aml-registers-view";
 import { ProcurementView } from "./procurement-view";
 import { GensetSkimView } from "./genset-skim-view";
 import { UtilityAllocationView } from "./utility-allocation-view";
@@ -66,6 +67,7 @@ export function VenueOsHubView(): React.ReactElement {
       <AccountingDepthView />
       <ComplianceExportView />
       <AmlCockpitView />
+      <AmlRegistersView />
       <ProcurementView />
       <div className="grid gap-6 lg:grid-cols-2">
         <GensetSkimView />
