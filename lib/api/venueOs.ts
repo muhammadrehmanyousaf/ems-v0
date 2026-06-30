@@ -898,6 +898,53 @@ export interface DrawingResult {
   overdrawnByPkr: number;
 }
 
+// WS5-C — §165 + CA/Tally export
+export interface Section165Line {
+  partyName: string | null;
+  cnicMasked: string | null;
+  filerStatus: string | null;
+  grossValuePkr: number;
+  taxCollectedPkr: number;
+  cprNumber: string | null;
+  status: "DEPOSITED" | "PENDING";
+}
+export interface Section165 {
+  businessId: number;
+  periodFrom: string;
+  periodTo: string;
+  sections: { section: string; lines: Section165Line[]; grossPkr: number; taxPkr: number; depositedPkr: number; pendingPkr: number; count: number }[];
+  totals: { grossPkr: number; taxPkr: number; depositedPkr: number; pendingPkr: number; count: number };
+  isNil: boolean;
+  note: string;
+}
+export interface CaExport {
+  businessId: number;
+  periodFrom: string;
+  periodTo: string;
+  basis: string;
+  voucherCount: number;
+  lineCount: number;
+  totalDebit: number;
+  totalCredit: number;
+  variance: number;
+  balanced: boolean;
+  csv: string;
+}
+export interface TaxFilingLog {
+  id: number;
+  businessId: number;
+  filingType: string;
+  periodFrom: string;
+  periodTo: string;
+  grossPkr: string;
+  taxPkr: string;
+  pendingPkr: string;
+  lineCount: number;
+  isNil: boolean;
+  exportHash: string;
+  createdAt: string;
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -1313,4 +1360,14 @@ export const venueOsApi = {
     unwrap(api.get(`${BASE}/business/${businessId}/profit-appropriations`)),
   ownershipEvents: (businessId: number, verify?: boolean): Promise<{ businessId: number; events: OwnershipEvent[]; integrity: { ownership: { valid: boolean; breaks: number[] }; statements: { valid: boolean; breaks: number[] } } | null }> =>
     unwrap(api.get(`${BASE}/business/${businessId}/ownership-events${verify ? "?verify=true" : ""}`)),
+
+  // WS5-C — §165 withholding statement + one-tap CA/Tally export
+  section165: (businessId: number, q: { from: string; to: string; section?: string }): Promise<Section165> =>
+    unwrap<Section165>(api.get(`${BASE}/business/${businessId}/section-165`, { params: q })),
+  caExport: (businessId: number, q: { from: string; to: string; isDeclared?: IsDeclared }): Promise<CaExport> =>
+    unwrap<CaExport>(api.get(`${BASE}/business/${businessId}/ca-export`, { params: q })),
+  recordFiling: (businessId: number, body: { filingType: "SECTION_165" | "CA_EXPORT"; periodFrom: string; periodTo: string; basis?: IsDeclared }): Promise<TaxFilingLog> =>
+    unwrap<TaxFilingLog>(api.post(`${BASE}/business/${businessId}/tax-filings`, body)),
+  listFilings: (businessId: number): Promise<TaxFilingLog[]> =>
+    unwrap<TaxFilingLog[]>(api.get(`${BASE}/business/${businessId}/tax-filings`)),
 };
