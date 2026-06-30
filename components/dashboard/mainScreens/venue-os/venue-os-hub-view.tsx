@@ -31,6 +31,7 @@ import { WorkingCapitalInstrumentsView } from "./working-capital-instruments-vie
 import { CommsEngineView } from "./comms-engine-view";
 import { ForceMajeureBatchView } from "./force-majeure-batch-view";
 import { InsurancePoliciesView } from "./insurance-policies-view";
+import { WeatherClaimView } from "./weather-claim-view";
 import { EventNightConsoleView } from "./event-night-console-view";
 import { CapTableView } from "./cap-table-view";
 import { PartnerLedgerView } from "./partner-ledger-view";
@@ -87,6 +88,7 @@ export function VenueOsHubView(): React.ReactElement {
         <ForceMajeureBatchView />
         <InsurancePoliciesView />
       </div>
+      <WeatherClaimView />
       <EventNightConsoleView />
       <CapTableView />
       <PartnerLedgerView />

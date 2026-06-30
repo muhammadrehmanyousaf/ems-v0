@@ -1071,6 +1071,17 @@ export interface PayoutOptimiser {
   note: string;
 }
 
+// WS9-depth — weather → insurance claim
+export interface WeatherClaimResult {
+  weatherEventId: number;
+  businessId: number;
+  peril: string;
+  lossPkr: number;
+  fired: { policyId: number; policyType: string; claimId: number; claimedAmountPkr: number; trigger: { metric: string; measured: number; threshold: number; basis: string } }[];
+  skipped: { policyId: number; claimId: number; reason: string }[];
+  note: string;
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -1532,4 +1543,10 @@ export const venueOsApi = {
     unwrap<PdcSchedule>(api.post(`${BASE}/business/${businessId}/liability-calendar-pdc`, body)),
   committeePayoutOptimiser: (businessId: number, body: { fromMonth: string; toMonth: string; projectedCashByMonth?: Record<string, number>; bookingIds?: number[]; pdcInflowsByMonth?: Record<string, number> }): Promise<PayoutOptimiser> =>
     unwrap<PayoutOptimiser>(api.post(`${BASE}/business/${businessId}/committee-payout-optimiser`, body)),
+
+  // WS9-depth — weather → insurance-claim parametric workflow
+  evaluateWeatherClaims: (weatherEventId: number, body?: { measurement?: Record<string, number> }): Promise<WeatherClaimResult> =>
+    unwrap<WeatherClaimResult>(api.post(`${BASE}/weather-events/${weatherEventId}/evaluate-claims`, body || {})),
+  listWeatherClaims: (weatherEventId: number): Promise<{ id: number; policyId: number; peril: string; claimedAmount: string; status: string }[]> =>
+    unwrap(api.get(`${BASE}/weather-events/${weatherEventId}/claims`)),
 };
