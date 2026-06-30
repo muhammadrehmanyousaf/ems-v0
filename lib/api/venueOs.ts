@@ -579,6 +579,89 @@ export interface SupplierUdhaarBaseline {
   label: string;
 }
 
+export interface Committee {
+  id: number;
+  businessId: number;
+  name: string;
+  role: string;
+  monthlyContributionPkr: string;
+  cycleMonths: number;
+  potPkr: string;
+  startMonth: string;
+  myPayoutMonth: string | null;
+  status: string;
+}
+export interface IjarahSchedule {
+  leaseId: number;
+  remainingMonths: number;
+  monthlyRental: number;
+  futureRentals: number;
+  balloonResidualPkr: number;
+  takafulRemaining: number;
+  totalCommitted: number;
+}
+export interface IjarahLeaseRow {
+  lease: { id: number; businessId: number; lessor: string; structure: string; monthlyRentalPkr: string; termMonths: number; rentalStartDate: string };
+  schedule: IjarahSchedule;
+}
+export interface SupplierUdhaarResult {
+  udhaar: { id: number; udhaarPricePkr: string; amountOutstandingPkr: string; status: string; impliedMarkupPct: string | null };
+  impliedMarkupPct: number | null;
+  annualizedAprPct: number | null;
+  journalEntryId: number;
+}
+export interface UdhaarAging {
+  businessId: number;
+  asOf: string;
+  buckets: { CURRENT: number; D30: number; D60: number; D90_PLUS: number };
+  totalOutstanding: number;
+  bySupplier: Record<string, number>;
+}
+export interface AdvanceFloat {
+  businessId: number;
+  totalAdvancesHeldPkr: number;
+  securityDepositsPkr: number;
+  refundablePortionPkr: number;
+  netFloatPkr: number;
+}
+export interface LiabilityMonth {
+  month: string;
+  committeeDuePkr: number;
+  ijarahRentalDuePkr: number;
+  supplierUdhaarDuePkr: number;
+  bankMarkupDuePkr: number;
+  pdcChequesDuePkr: number;
+  refundLiabilityPkr: number;
+  totalDuePkr: number;
+  projectedCashPkr: number;
+  shortfallPkr: number;
+  bounceRisk: boolean;
+}
+export interface LiabilityCalendar {
+  businessId: number;
+  fromMonth: string;
+  toMonth: string;
+  months: LiabilityMonth[];
+  bounceRiskMonth: string | null;
+  totalDue: number;
+}
+export interface FacilityMixItem {
+  instrument: string;
+  amount: number;
+  note: string;
+}
+export interface RunwayPlan {
+  businessId: number;
+  seasonYear: number;
+  openingCashPkr: number;
+  financingGapMonth: string | null;
+  peakGapPkr: number;
+  runwayHeadline: string;
+  recommendedFacilityMix: FacilityMixItem[];
+  bounceRiskMonth?: string | null;
+  months?: LiabilityMonth[];
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -830,4 +913,50 @@ export const venueOsApi = {
 
   supplierUdhaarBaseline: (businessId: number, supplierName: string): Promise<SupplierUdhaarBaseline> =>
     unwrap<SupplierUdhaarBaseline>(api.get(`${BASE}/business/${businessId}/supplier-udhaar/${encodeURIComponent(supplierName)}/baseline`)),
+
+  // Working-capital liability calendar (WS8)
+  createCommittee: (body: { businessId: number; name: string; role?: string; memberCount?: number; monthlyContributionPkr: number; cycleMonths: number; potPkr: number; startMonth: string; myPayoutMonth?: string }): Promise<Committee> =>
+    unwrap<Committee>(api.post(`${BASE}/committees`, body)),
+
+  listCommittees: (businessId: number): Promise<Committee[]> =>
+    unwrap<Committee[]>(api.get(`${BASE}/business/${businessId}/committees`)),
+
+  generateCommitteeLedger: (id: number): Promise<unknown> =>
+    unwrap<unknown>(api.post(`${BASE}/committees/${id}/generate-ledger`, {})),
+
+  recordCommitteeContribution: (id: number, body: { period: string; mode?: string }): Promise<unknown> =>
+    unwrap<unknown>(api.post(`${BASE}/committees/${id}/contribution`, body)),
+
+  recordCommitteePayout: (id: number, body?: { period?: string }): Promise<unknown> =>
+    unwrap<unknown>(api.post(`${BASE}/committees/${id}/payout`, body || {})),
+
+  createIjarahLease: (body: { businessId: number; lessor?: string; structure?: string; monthlyRentalPkr: number; termMonths: number; rentalStartDate: string; balloonResidualPkr?: number; takafulPremiumPkr?: number }): Promise<unknown> =>
+    unwrap<unknown>(api.post(`${BASE}/ijarah-leases`, body)),
+
+  listIjarahLeases: (businessId: number, asOf?: string): Promise<IjarahLeaseRow[]> =>
+    unwrap<IjarahLeaseRow[]>(api.get(`${BASE}/business/${businessId}/ijarah-leases`, { params: { asOf } })),
+
+  runIjarahAccrual: (businessId: number, body: { period: string; dryRun?: boolean; isDeclared?: IsDeclared }): Promise<unknown> =>
+    unwrap<unknown>(api.post(`${BASE}/business/${businessId}/ijarah-accrual/run`, body)),
+
+  recordSupplierUdhaar: (body: { businessId: number; supplierType?: string; supplierNameSnapshot?: string; cashPricePkr?: number; udhaarPricePkr: number; dueDate?: string }): Promise<SupplierUdhaarResult> =>
+    unwrap<SupplierUdhaarResult>(api.post(`${BASE}/supplier-udhaar`, body)),
+
+  settleSupplierUdhaar: (id: number, body: { amountPkr: number; mode?: string }): Promise<unknown> =>
+    unwrap<unknown>(api.post(`${BASE}/supplier-udhaar/${id}/settle`, body)),
+
+  supplierUdhaarAging: (businessId: number, asOf?: string): Promise<UdhaarAging> =>
+    unwrap<UdhaarAging>(api.get(`${BASE}/business/${businessId}/supplier-udhaar/aging`, { params: { asOf } })),
+
+  createBankFacility: (body: { businessId: number; lender?: string; type?: string; sanctionedLimitPkr: number; utilisedPkr?: number; kiborPct?: number; spreadPct?: number }): Promise<unknown> =>
+    unwrap<unknown>(api.post(`${BASE}/bank-facilities`, body)),
+
+  advanceFloat: (businessId: number, asOf?: string): Promise<AdvanceFloat> =>
+    unwrap<AdvanceFloat>(api.get(`${BASE}/business/${businessId}/advance-float`, { params: { asOf } })),
+
+  liabilityCalendar: (businessId: number, from: string, to: string, persist?: boolean): Promise<LiabilityCalendar> =>
+    unwrap<LiabilityCalendar>(api.get(`${BASE}/business/${businessId}/liability-calendar`, { params: { from, to, persist } })),
+
+  computeRunway: (businessId: number, body: { seasonYear: number; openingCashPkr?: number }): Promise<RunwayPlan> =>
+    unwrap<RunwayPlan>(api.post(`${BASE}/business/${businessId}/working-capital/runway`, body)),
 };
