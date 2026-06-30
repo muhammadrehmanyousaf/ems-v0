@@ -1023,6 +1023,25 @@ export interface RecostSweep {
   results: { bookingId: number | null; costPerHead: number; quotedPerHead: number; marginPerHead: number; underwater: boolean; totalMarginPkr: number | null }[];
 }
 
+// WS7-depth — auto-tariff slab engine
+export interface TariffEstimate {
+  status: "READY" | "NOT_READY" | "NO_TARIFF";
+  utility?: string;
+  tariffCategory?: string;
+  note: string;
+  bill?: {
+    units: number;
+    energyCharge: number;
+    energyLines: { slab: string; units: number; rate: number; cost: number }[];
+    fixedCharge: number;
+    surchargeTotal: number;
+    dutyAmount: number;
+    gstAmount: number;
+    total: number;
+    isVerified: boolean;
+  };
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -1472,4 +1491,10 @@ export const venueOsApi = {
     unwrap<GrnContractCheck>(api.post(`${BASE}/business/${businessId}/rate-contracts/check-grn`, body)),
   recostSweep: (businessId: number, body: { bookings: { bookingId?: number; cardIds: number[]; quotedPerHead: number; headcount?: number }[]; onDate?: string }): Promise<RecostSweep> =>
     unwrap<RecostSweep>(api.post(`${BASE}/business/${businessId}/recost-sweep`, body)),
+
+  // WS7-depth — auto-tariff slab engine
+  estimateBill: (businessId: number, body: { utility?: string; category?: string; consumption: { totalUnitsKwh?: number; peakUnitsKwh?: number; offPeakUnitsKwh?: number; sanctionedKva?: number } }): Promise<TariffEstimate> =>
+    unwrap<TariffEstimate>(api.post(`${BASE}/business/${businessId}/tariff/estimate-bill`, body)),
+  estimateEventGridCost: (businessId: number, body: { connectedKw: number; hours: number; loadFactor?: number }): Promise<{ kwh: number; marginalRatePkr: number; energyPkr: number; taxesPkr: number; totalPkr: number; isVerified: boolean }> =>
+    unwrap(api.post(`${BASE}/business/${businessId}/tariff/estimate-event`, body)),
 };

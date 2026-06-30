@@ -23,6 +23,7 @@ import { ProcurementView } from "./procurement-view";
 import { RateContractView } from "./rate-contract-view";
 import { GensetSkimView } from "./genset-skim-view";
 import { UtilityAllocationView } from "./utility-allocation-view";
+import { TariffEstimatorView } from "./tariff-estimator-view";
 import { LiabilityCalendarView } from "./liability-calendar-view";
 import { WorkingCapitalRunwayView } from "./working-capital-runway-view";
 import { WorkingCapitalInstrumentsView } from "./working-capital-instruments-view";
@@ -75,6 +76,7 @@ export function VenueOsHubView(): React.ReactElement {
         <GensetSkimView />
         <UtilityAllocationView />
       </div>
+      <TariffEstimatorView />
       <WorkingCapitalRunwayView />
       <LiabilityCalendarView />
       <WorkingCapitalInstrumentsView />
