@@ -10,7 +10,7 @@
  * until ACCOUNTING_DEPTH_ON. Additive.
  */
 import * as React from "react";
-import { venueOsApi, type AnnexBReport, type TrialBalance, type Section21Report } from "@/lib/api/venueOs";
+import { venueOsApi, type AnnexBReport, type TrialBalance, type Section21Report, type CloseRitualResult } from "@/lib/api/venueOs";
 import { isAccountingDepthOn } from "@/lib/accounting-depth-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,20 @@ export function AccountingDepthView(): React.ReactElement | null {
   const [s21, setS21] = React.useState<Section21Report | null>(null);
   const [busy, setBusy] = React.useState<boolean>(false);
   const [err, setErr] = React.useState<string | null>(null);
+  const [ritualPeriod, setRitualPeriod] = React.useState<string>("");
+  const [ritual, setRitual] = React.useState<CloseRitualResult | null>(null);
+
+  async function runRitual(mode: "preview" | "run" | "lock"): Promise<void> {
+    setBusy(true);
+    setErr(null);
+    try {
+      setRitual(await venueOsApi.closeRitual(Number(businessId), ritualPeriod, { dryRun: mode === "preview", lock: mode === "lock" }));
+    } catch (e: unknown) {
+      setErr(readErr(e, "Close ritual is not enabled for your account yet."));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function load(): Promise<void> {
     setBusy(true);
@@ -140,6 +154,52 @@ export function AccountingDepthView(): React.ReactElement | null {
                     <Badge variant="secondary">no rule</Badge>
                   )}
                   {c.framing && <span className="w-full text-xs text-muted-foreground">{c.framing}</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* month-end close ritual */}
+        <div className="flex flex-wrap items-end gap-3 border-t pt-3">
+          <span className="text-sm font-medium">Month-end close ritual</span>
+          <label className="text-sm">
+            Period
+            <input type="month" value={ritualPeriod} onChange={(e) => setRitualPeriod(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+          </label>
+          <Button size="sm" variant="outline" onClick={() => void runRitual("preview")} disabled={!businessId || !ritualPeriod || busy}>
+            Preview accruals
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => void runRitual("run")} disabled={!businessId || !ritualPeriod || busy}>
+            Post accruals
+          </Button>
+          <Button size="sm" onClick={() => void runRitual("lock")} disabled={!businessId || !ritualPeriod || busy}>
+            Close &amp; lock month
+          </Button>
+        </div>
+
+        {ritual && (
+          <div className="rounded-md border p-3 text-sm">
+            <div className="mb-1 flex items-center gap-2">
+              <span className="font-medium">{ritual.period}</span>
+              {ritual.dryRun ? (
+                <Badge variant="secondary">preview (nothing posted)</Badge>
+              ) : ritual.locked ? (
+                <Badge variant="destructive">LOCKED</Badge>
+              ) : (
+                <Badge className="bg-emerald-500">{ritual.monthEndClose?.ritualStatus}</Badge>
+              )}
+              {ritual.trialBalance.balanced ? (
+                <Badge className="bg-emerald-500">trial balanced</Badge>
+              ) : (
+                <Badge variant="destructive">off by {PKR(ritual.trialBalance.variance)}</Badge>
+              )}
+            </div>
+            <ul className="space-y-1">
+              {ritual.steps.map((s) => (
+                <li key={s.step} className="flex justify-between">
+                  <span className="text-muted-foreground">{s.step.replace(/_/g, " + ")}</span>
+                  <span>{PKR(s.totalPkr || 0)}</span>
                 </li>
               ))}
             </ul>

@@ -154,6 +154,23 @@ export interface Section21Report {
   anyNotReady: boolean;
 }
 
+export interface CloseRitualStep {
+  step: string;
+  posted?: number;
+  totalPkr?: number;
+  leaseCount?: number;
+  jeNos?: string[];
+}
+export interface CloseRitualResult {
+  businessId: number;
+  period: string;
+  dryRun: boolean;
+  steps: CloseRitualStep[];
+  trialBalance: { balanced: boolean; variance: number; totalDebit: number; totalCredit: number; accounts: number };
+  monthEndClose: { ritualStatus: string } | null;
+  locked?: boolean;
+}
+
 export interface OwnVsLeasePath {
   upfront: number;
   totalCash: number;
@@ -507,6 +524,12 @@ export const venueOsApi = {
 
   section21Addbacks: (businessId: number, from: string, to: string): Promise<Section21Report> =>
     unwrap<Section21Report>(api.get(`${BASE}/business/${businessId}/section-21-addbacks`, { params: { from, to } })),
+
+  closeRitual: (businessId: number, period: string, body?: { dryRun?: boolean; isDeclared?: IsDeclared; lock?: boolean }): Promise<CloseRitualResult> =>
+    unwrap<CloseRitualResult>(api.post(`${BASE}/business/${businessId}/period/${period}/close-ritual`, body || {})),
+
+  monthEnd: (businessId: number, period: string): Promise<{ businessId: number; period: string; ritualStatus: string }> =>
+    unwrap<{ businessId: number; period: string; ritualStatus: string }>(api.get(`${BASE}/business/${businessId}/month-end/${period}`)),
 
   ownVsLease: (body: {
     horizonMonths: number;
