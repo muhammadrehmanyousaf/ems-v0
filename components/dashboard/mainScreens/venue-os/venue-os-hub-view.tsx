@@ -16,6 +16,7 @@ import { OrgRollupView } from "./org-rollup-view";
 import { GroupConsolidationView } from "./group-consolidation-view";
 import { PeriodCloseView } from "./period-close-view";
 import { AccountingDepthView } from "./accounting-depth-view";
+import { AmlCockpitView } from "./aml-cockpit-view";
 import { EventPnlView } from "./event-pnl-view";
 import { EventCostedPnlView } from "./event-costed-pnl-view";
 import { EventMarginsView } from "./event-margins-view";
@@ -50,6 +51,7 @@ export function VenueOsHubView(): React.ReactElement {
       <GroupConsolidationView />
       <PeriodCloseView />
       <AccountingDepthView />
+      <AmlCockpitView />
       <div className="grid gap-6 lg:grid-cols-2">
         <EventPnlView />
         <EventNightGauge />

@@ -154,6 +154,32 @@ export interface Section21Report {
   anyNotReady: boolean;
 }
 
+export interface Section21Meter {
+  businessId: number;
+  amountPkr: number;
+  paymentMode: string;
+  accountHead: string | null;
+  clause: string;
+  status: string;
+  thresholdPkr: number | null;
+  disallowedPkr: number;
+  disallowedIfCashPkr: number;
+  cleanIfBankedPkr: number;
+  framing: string;
+}
+export interface StructuringResult {
+  warn: boolean;
+  patterns: string[];
+  ctrThresholdPkr: number;
+  instructsDepositInFull: boolean;
+  dismissable: boolean;
+  warningText: string;
+}
+export interface BenamiResult {
+  level: "none" | "family_exempt" | "review" | "high";
+  reason: string;
+}
+
 export interface CloseRitualStep {
   step: string;
   posted?: number;
@@ -530,6 +556,15 @@ export const venueOsApi = {
 
   monthEnd: (businessId: number, period: string): Promise<{ businessId: number; period: string; ritualStatus: string }> =>
     unwrap<{ businessId: number; period: string; ritualStatus: string }>(api.get(`${BASE}/business/${businessId}/month-end/${period}`)),
+
+  section21Meter: (body: { businessId: number; amountPkr: number; paymentMode?: string; accountHead?: string }): Promise<Section21Meter> =>
+    unwrap<Section21Meter>(api.post(`${BASE}/aml/section21-meter`, body)),
+
+  structuringCheck: (body: { businessId: number; proposedDepositPkr: number; sameDayDeposits?: { depositPkr: number; branchLabel?: string }[]; monthDepositsPkr?: number; ctrThresholdPkr?: number }): Promise<StructuringResult> =>
+    unwrap<StructuringResult>(api.post(`${BASE}/aml/structuring-check`, body)),
+
+  benamiCheck: (body: { businessId: number; relationship: string; traceableFunding?: boolean }): Promise<BenamiResult> =>
+    unwrap<BenamiResult>(api.post(`${BASE}/aml/benami-check`, body)),
 
   ownVsLease: (body: {
     horizonMonths: number;
