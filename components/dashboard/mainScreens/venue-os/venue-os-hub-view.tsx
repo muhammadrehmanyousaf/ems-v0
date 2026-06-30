@@ -25,6 +25,7 @@ import { GensetSkimView } from "./genset-skim-view";
 import { UtilityAllocationView } from "./utility-allocation-view";
 import { TariffEstimatorView } from "./tariff-estimator-view";
 import { LiabilityCalendarView } from "./liability-calendar-view";
+import { PdcStressOptimiserView } from "./pdc-stress-optimiser-view";
 import { WorkingCapitalRunwayView } from "./working-capital-runway-view";
 import { WorkingCapitalInstrumentsView } from "./working-capital-instruments-view";
 import { CommsEngineView } from "./comms-engine-view";
@@ -79,6 +80,7 @@ export function VenueOsHubView(): React.ReactElement {
       <TariffEstimatorView />
       <WorkingCapitalRunwayView />
       <LiabilityCalendarView />
+      <PdcStressOptimiserView />
       <WorkingCapitalInstrumentsView />
       <CommsEngineView />
       <div className="grid gap-6 lg:grid-cols-2">

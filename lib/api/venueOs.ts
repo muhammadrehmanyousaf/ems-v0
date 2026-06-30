@@ -1042,6 +1042,35 @@ export interface TariffEstimate {
   };
 }
 
+// WS8-depth — PDC bounce-stress + payout optimiser
+export interface PdcScheduleMonth {
+  month: string;
+  totalDuePkr: number;
+  projectedCashPkr: number;
+  pdcExpectedInflowPkr: number;
+  projectedCashWithPdcPkr: number;
+  shortfallWithoutPdcPkr: number;
+  shortfallWithPdcPkr: number;
+  bounceRisk: boolean;
+  pdcDependent: boolean;
+}
+export interface PdcSchedule {
+  businessId: number;
+  months: PdcScheduleMonth[];
+  bounceRiskMonth: string | null;
+  pdcDependentMonths: string[];
+  totalDue: number;
+  totalPdcInflow: number;
+}
+export interface PayoutOptimiser {
+  businessId: number;
+  gapMonth: string | null;
+  shortfallPkr: number;
+  pdcDependentMonths?: string[];
+  recommendations: { committeeId: number; name: string; potPkr: number; coversShortfall: boolean; recommendedMonth: string; landsInGap: boolean }[];
+  note: string;
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -1497,4 +1526,10 @@ export const venueOsApi = {
     unwrap<TariffEstimate>(api.post(`${BASE}/business/${businessId}/tariff/estimate-bill`, body)),
   estimateEventGridCost: (businessId: number, body: { connectedKw: number; hours: number; loadFactor?: number }): Promise<{ kwh: number; marginalRatePkr: number; energyPkr: number; taxesPkr: number; totalPkr: number; isVerified: boolean }> =>
     unwrap(api.post(`${BASE}/business/${businessId}/tariff/estimate-event`, body)),
+
+  // WS8-depth — PDC bounce-stress + committee payout-optimiser
+  liabilityCalendarPdc: (businessId: number, body: { fromMonth: string; toMonth: string; projectedCashByMonth?: Record<string, number>; bookingIds?: number[]; pdcInflowsByMonth?: Record<string, number> }): Promise<PdcSchedule> =>
+    unwrap<PdcSchedule>(api.post(`${BASE}/business/${businessId}/liability-calendar-pdc`, body)),
+  committeePayoutOptimiser: (businessId: number, body: { fromMonth: string; toMonth: string; projectedCashByMonth?: Record<string, number>; bookingIds?: number[]; pdcInflowsByMonth?: Record<string, number> }): Promise<PayoutOptimiser> =>
+    unwrap<PayoutOptimiser>(api.post(`${BASE}/business/${businessId}/committee-payout-optimiser`, body)),
 };
