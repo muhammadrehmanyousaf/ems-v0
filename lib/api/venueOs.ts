@@ -1210,6 +1210,14 @@ export interface ReferralPack {
   referralPartners: { partner: string; instrument: string; fit: string }[];
 }
 
+// P3-B — capex / asset ROI
+export interface CapexCompare {
+  comparison: { horizonMonths: number; options: { option: string; totalCostPkr: number }[]; recommendedOption: string | null; savingsVsNextPkr: number; note: string };
+  payback: { paybackMonths: number | null; paybackYears?: number; note: string };
+  roi: { roiPct: number | null; paybackYears: number | null };
+  reserve: { futureReplacementPkr: number; monthlyReservePkr: number; note: string };
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -1737,4 +1745,8 @@ export const venueOsApi = {
     unwrap<BnplPreview>(api.post(`${BASE}/financing/bnpl-preview`, body)),
   referralPack: (businessId: number, body: { seasonYear: number; openingCashPkr?: number }): Promise<ReferralPack> =>
     unwrap<ReferralPack>(api.post(`${BASE}/business/${businessId}/financing/referral-pack`, body)),
+
+  // P3-B — capex / asset ROI
+  capexCompare: (body: { assetPricePkr: number; usefulLifeMonths?: number; monthlyMaintenancePkr?: number; rentPerUsePkr?: number; usesPerMonth?: number; ijarahMonthlyPkr?: number; ijarahTermMonths?: number; horizonMonths?: number; monthlyNetEarningsPkr?: number; inflationAnnualPct?: number }): Promise<CapexCompare> =>
+    unwrap<CapexCompare>(api.post(`${BASE}/capex/compare`, body)),
 };
