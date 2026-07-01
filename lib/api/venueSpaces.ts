@@ -67,6 +67,13 @@ export interface DateAvailability {
   date: string;
   spaces: { subVenueId: number; name: string; kind: string; depth: number; parentSubVenueId: number | null; basePricePkr: string | null; bookingMode: BookingMode; status: SpaceStatus }[];
 }
+export interface AvailabilityGrid {
+  businessId: number;
+  from: string;
+  to: string;
+  days: string[];
+  rows: { subVenueId: number; name: string; kind: string; depth: number; parentSubVenueId: number | null; days: SpaceStatus[] }[];
+}
 export interface BookResult {
   bookingId: number | null;
   idempotent: boolean;
@@ -104,6 +111,7 @@ export const venueSpacesApi = {
 
   // booking engine
   availabilityForDate: (businessId: number, date: string): Promise<DateAvailability> => unwrap<DateAvailability>(api.get(`${BASE}/business/${businessId}/availability`, { params: { date } })),
+  availabilityRange: (businessId: number, from: string, to: string): Promise<AvailabilityGrid> => unwrap<AvailabilityGrid>(api.get(`${BASE}/business/${businessId}/availability-range`, { params: { from, to } })),
   checkAvailability: (businessId: number, body: { subVenueIds?: number[]; mergeGroupId?: number; slot: Slot; turnaroundMin?: number }): Promise<SpaceAvailability> =>
     unwrap<SpaceAvailability>(api.post(`${BASE}/business/${businessId}/check-availability`, body)),
   book: (businessId: number, body: { bookingId?: number; subVenueIds?: number[]; mergeGroupId?: number; slot: Slot; state?: string; role?: string; sessionLabel?: string; pricePkr?: number }): Promise<BookResult> =>
