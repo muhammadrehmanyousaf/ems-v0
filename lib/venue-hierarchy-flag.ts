@@ -6,9 +6,12 @@
 //   NEXT_PUBLIC_VENUE_HIERARCHY_ON=true   → render the space-hierarchy surfaces
 //   (unset / anything else)               → OFF (default)
 
-const ON = process.env.NEXT_PUBLIC_VENUE_HIERARCHY_ON === "true"
+// GA'd — ON by default. Still killable: set NEXT_PUBLIC_VENUE_HIERARCHY_ON="false".
+// (The customer-facing space selector additionally self-limits to venues that have
+// actually built more than one space, so single-hall venues show nothing.)
+const ON = process.env.NEXT_PUBLIC_VENUE_HIERARCHY_ON !== "false"
 
-/** Whether the hierarchical-spaces surfaces should render. OFF by default. */
+/** Whether the hierarchical-spaces surfaces should render. ON by default. */
 export function isVenueHierarchyOn(_businessId?: number | string | null): boolean {
   return ON
 }

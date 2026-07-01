@@ -4,9 +4,10 @@
 //   NEXT_PUBLIC_BULK_IMPORT_ON=true   → render the bulk-import panel
 //   (unset / anything else)           → OFF (default)
 
-const ON = process.env.NEXT_PUBLIC_BULK_IMPORT_ON === "true"
+// GA'd — ON by default. Still killable: set NEXT_PUBLIC_BULK_IMPORT_ON="false".
+const ON = process.env.NEXT_PUBLIC_BULK_IMPORT_ON !== "false"
 
-/** Whether the bulk-import surface should render. OFF by default. */
+/** Whether the bulk-import surface should render. ON by default. */
 export function isBulkImportOn(_businessId?: number | string | null): boolean {
   return ON
 }

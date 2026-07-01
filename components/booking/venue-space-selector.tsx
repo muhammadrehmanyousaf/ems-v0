@@ -32,6 +32,27 @@ export function VenueSpaceSelector({ businessId }: { businessId: number }): Reac
   const [picked, setPicked] = React.useState<number[]>([]);
   const [busy, setBusy] = React.useState<boolean>(false);
   const [loaded, setLoaded] = React.useState<boolean>(false);
+  // Only surface for venues that actually built a multi-space tree — otherwise a
+  // single-hall venue would show a pointless one-item "Choose your space" section.
+  const [multiSpace, setMultiSpace] = React.useState<boolean | null>(null);
+
+  React.useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    venueSpacesApi
+      .publicTree(businessId)
+      .then((t) => {
+        if (cancelled) return;
+        let count = 0;
+        const walk = (ns: typeof t.tree) => ns.forEach((n) => { count += 1; if (n.children) walk(n.children); });
+        walk(t.tree || []);
+        setMultiSpace(count > 1);
+      })
+      .catch(() => !cancelled && setMultiSpace(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, businessId]);
 
   React.useEffect(() => {
     if (!enabled || !date) return;
@@ -54,7 +75,7 @@ export function VenueSpaceSelector({ businessId }: { businessId: number }): Reac
     };
   }, [enabled, businessId, date]);
 
-  if (!enabled) return null;
+  if (!enabled || multiSpace !== true) return null; // hidden until the venue has >1 space
 
   const spaces = avail?.spaces || [];
   const byId = new Map(spaces.map((s) => [s.subVenueId, s]));
