@@ -1109,6 +1109,29 @@ export interface GuestReconcile {
   note: string;
 }
 
+// P3-A — BI cockpit
+export interface KpiBundle {
+  businessId: number;
+  REVENUE: number;
+  EXPENSE: number;
+  GROSS_MARGIN: number;
+  MARGIN_PCT: number | null;
+  EVENT_COUNT: number;
+  AVG_EVENT_VALUE: number | null;
+}
+export interface LeagueTable {
+  kpi: string;
+  normalise: string;
+  leaderBusinessId: number | null;
+  table: { businessId: number; rank: number; score: number; gapToLeaderPkr: number; eventCount: number; revenue: number; marginPct: number | null }[];
+}
+export interface HijriYoY {
+  businessId: number;
+  kpi: string;
+  monthName: string;
+  series: { hijriYear: number; monthName: string; from: string; to: string; value: number; yoyDeltaPkr?: number; yoyPct?: number | null }[];
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -1590,4 +1613,16 @@ export const venueOsApi = {
     unwrap(api.get(`${BASE}/comms/channels`)),
   dispatchQueued: (businessId: number, body?: { limit?: number }): Promise<{ dispatched: number; sent: number; failed: number; channels: { channel: string; provider: string; mode: string }[]; results: { id: number; state: string; channelType: string; sandbox?: boolean }[] }> =>
     unwrap(api.post(`${BASE}/business/${businessId}/comms/dispatch`, body || {})),
+
+  // P3-A — BI cockpit
+  kpiDictionary: (): Promise<{ key: string; name: string; unit: string; higherIsBetter: boolean; formula: string }[]> =>
+    unwrap(api.get(`${BASE}/bi/kpi-dictionary`)),
+  businessKpis: (businessId: number, q?: { from?: string; to?: string }): Promise<KpiBundle> =>
+    unwrap<KpiBundle>(api.get(`${BASE}/business/${businessId}/bi/kpis`, { params: q || {} })),
+  leagueTable: (body: { businessIds: number[]; from?: string; to?: string; kpi?: string; normalise?: string }): Promise<LeagueTable> =>
+    unwrap<LeagueTable>(api.post(`${BASE}/bi/league-table`, body)),
+  hijriYoY: (businessId: number, body: { hijriMonth: number; hijriYears: number[]; kpi?: string }): Promise<HijriYoY> =>
+    unwrap<HijriYoY>(api.post(`${BASE}/business/${businessId}/bi/hijri-yoy`, body)),
+  biDrilldown: (businessId: number, q: { side: string; from?: string; to?: string }): Promise<{ side: string; lines: { code: string; name: string; amountPkr: number }[] }> =>
+    unwrap(api.get(`${BASE}/business/${businessId}/bi/drilldown`, { params: q })),
 };

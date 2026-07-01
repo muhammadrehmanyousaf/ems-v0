@@ -12,6 +12,7 @@
 import * as React from "react";
 import { isOrgMembershipOn } from "@/lib/org-membership-flag";
 import { VenueOsInsights } from "./venue-os-insights";
+import { BiCockpitView } from "./bi-cockpit-view";
 import { OrgRollupView } from "./org-rollup-view";
 import { GroupConsolidationView } from "./group-consolidation-view";
 import { PeriodCloseView } from "./period-close-view";
@@ -67,6 +68,7 @@ export function VenueOsHubView(): React.ReactElement {
   return (
     <div className="space-y-6">
       <VenueOsInsights />
+      <BiCockpitView />
       <OrgRollupView />
       <GroupConsolidationView />
       <PeriodCloseView />
