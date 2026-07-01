@@ -21,6 +21,8 @@ import Link from "next/link"
 import type { Metadata } from "next"
 import { notFound, redirect, permanentRedirect } from "next/navigation"
 import { VenueSpaceSelector } from "@/components/booking/venue-space-selector"
+import { fetchVendorHasMultiSpace } from "@/lib/seo/fetch-vendor"
+import { isVenueHierarchyOn } from "@/lib/venue-hierarchy-flag"
 import {
   CITIES,
   VENDOR_TYPES,
@@ -218,6 +220,10 @@ export async function VendorDetailPage(input: PageInput) {
 
   const ld = combineGraph(ldSchema, ...reviewLds, faqLD(allFaqs))
 
+  // Decide server-side (ISR-cached 1h) whether to surface the space selector, and
+  // only make the call at all when the feature is on — zero per-visitor cost.
+  const hasMultiSpace = isVenueHierarchyOn() ? await fetchVendorHasMultiSpace(Number(vendor.id)) : false
+
   return (
     <>
       <script
@@ -354,9 +360,11 @@ export async function VendorDetailPage(input: PageInput) {
 
         {/* Hierarchical spaces (Hall→Floor→Partition) — renders nothing until the
             venue enables NEXT_PUBLIC_VENUE_HIERARCHY_ON; legacy vendors unaffected. */}
-        <div className="mb-12">
-          <VenueSpaceSelector businessId={Number(vendor.id)} />
-        </div>
+        {hasMultiSpace && (
+          <div className="mb-12">
+            <VenueSpaceSelector businessId={Number(vendor.id)} hasMultiSpace />
+          </div>
+        )}
 
         {/* Reviews */}
         {vendor.reviews.length > 0 && (

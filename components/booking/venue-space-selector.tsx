@@ -25,7 +25,7 @@ const CARD: Record<string, string> = {
 const DOT: Record<string, string> = { AVAILABLE: "bg-emerald-500", PARTIAL: "bg-amber-400", UNAVAILABLE: "bg-gray-400" };
 const LABEL: Record<string, string> = { AVAILABLE: "Available", PARTIAL: "Partly available", UNAVAILABLE: "Booked" };
 
-export function VenueSpaceSelector({ businessId }: { businessId: number }): React.ReactElement | null {
+export function VenueSpaceSelector({ businessId, hasMultiSpace }: { businessId: number; hasMultiSpace?: boolean }): React.ReactElement | null {
   const enabled = isVenueHierarchyOn();
   const [date, setDate] = React.useState<string>("");
   const [avail, setAvail] = React.useState<DateAvailability | null>(null);
@@ -34,10 +34,13 @@ export function VenueSpaceSelector({ businessId }: { businessId: number }): Reac
   const [loaded, setLoaded] = React.useState<boolean>(false);
   // Only surface for venues that actually built a multi-space tree — otherwise a
   // single-hall venue would show a pointless one-item "Choose your space" section.
-  const [multiSpace, setMultiSpace] = React.useState<boolean | null>(null);
+  // The parent (server component) normally passes `hasMultiSpace` (decided once,
+  // ISR-cached) so we make NO per-visitor call; the client fetch is only a fallback
+  // for standalone usage where the prop wasn't provided.
+  const [multiSpace, setMultiSpace] = React.useState<boolean | null>(hasMultiSpace ?? null);
 
   React.useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || hasMultiSpace !== undefined) return; // server already decided → skip the call
     let cancelled = false;
     venueSpacesApi
       .publicTree(businessId)
@@ -52,7 +55,7 @@ export function VenueSpaceSelector({ businessId }: { businessId: number }): Reac
     return () => {
       cancelled = true;
     };
-  }, [enabled, businessId]);
+  }, [enabled, businessId, hasMultiSpace]);
 
   React.useEffect(() => {
     if (!enabled || !date) return;
