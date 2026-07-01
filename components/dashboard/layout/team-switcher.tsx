@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Check, ChevronsUpDown, GalleryVerticalEnd, Layers } from "lucide-react"
+import { useQueryClient } from "@tanstack/react-query"
 
 import {
   DropdownMenu,
@@ -31,6 +32,18 @@ export function TeamSwitcher() {
   // across reloads and every dashboard data-hook can read it. null = All venues.
   const activeBusinessId = useActiveBusinessStore((s) => s.activeBusinessId)
   const setActiveBusinessId = useActiveBusinessStore((s) => s.setActiveBusinessId)
+  const queryClient = useQueryClient()
+
+  // Switch venue: persist the choice, then invalidate every dashboard query so
+  // open pages refetch scoped to the new venue (the axios interceptor attaches
+  // the businessId on the refetch).
+  const pickVenue = React.useCallback(
+    (id: number | null) => {
+      setActiveBusinessId(id)
+      queryClient.invalidateQueries()
+    },
+    [setActiveBusinessId, queryClient],
+  )
 
   React.useEffect(() => {
     if (!user) return
@@ -88,7 +101,7 @@ export function TeamSwitcher() {
                 Your Businesses
               </DropdownMenuLabel>
               {/* Combined roll-up across every venue the vendor owns. */}
-              <DropdownMenuItem onClick={() => setActiveBusinessId(null)} className="gap-2 p-2">
+              <DropdownMenuItem onClick={() => pickVenue(null)} className="gap-2 p-2">
                 <div className="flex size-6 items-center justify-center rounded-md border">
                   <Layers className="size-3.5 shrink-0" />
                 </div>
@@ -102,7 +115,7 @@ export function TeamSwitcher() {
               {businesses.map((biz) => (
                 <DropdownMenuItem
                   key={biz.id}
-                  onClick={() => setActiveBusinessId(biz.id)}
+                  onClick={() => pickVenue(biz.id)}
                   className="gap-2 p-2"
                 >
                   <div className="flex size-6 items-center justify-center rounded-md border">
