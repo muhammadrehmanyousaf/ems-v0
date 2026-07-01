@@ -1181,6 +1181,35 @@ export interface ExitValuation {
   exitValuationPkr: number;
 }
 
+// P3-C — financing modeller
+export interface IjarahModel {
+  monthlyRentalPkr: number;
+  totalCostPkr: number;
+  profitPkr: number;
+  effectiveAnnualPct: number | null;
+  conventionalComparator: { monthlyPaymentPkr: number; totalPaidPkr: number; interestPkr: number } | null;
+  note: string;
+}
+export interface BnplPreview {
+  bookingTotalPkr: number;
+  downPaymentPkr: number;
+  financedPkr: number;
+  instalmentCount: number;
+  markupPkr: number;
+  totalPayablePkr: number;
+  effectiveAprPct: number;
+  schedule: { n: number; amountPkr: number; dueDate: string | null }[];
+}
+export interface ReferralPack {
+  seasonYear: number;
+  revenuePkr: number | null;
+  grossMarginPkr: number | null;
+  peakGapPkr: number;
+  gapMonth: string | null;
+  runwayHeadline: string | null;
+  referralPartners: { partner: string; instrument: string; fit: string }[];
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -1698,4 +1727,14 @@ export const venueOsApi = {
     unwrap(api.get(`${BASE}/business/${businessId}/pagri-rights`)),
   createSuccessionPlan: (businessId: number, body: { ownerPartnerEquityId?: number; estatePkr?: number; goodwillPkr?: number; heirs: Record<string, number | boolean> }): Promise<{ plan: { id: number; estatePkr: string; exitValuationPkr: string | null }; faraid: FaraidResult }> =>
     unwrap(api.post(`${BASE}/business/${businessId}/succession-plans`, body)),
+
+  // P3-C — financing modeller
+  modelCommittee: (body: { monthlyContributionPkr: number; members: number; cycleMonths?: number; payoutMonthIndex?: number }): Promise<{ potPkr: number; markupPkr: number; interestFreeBridgePkr: number; note: string }> =>
+    unwrap(api.post(`${BASE}/financing/model-committee`, body)),
+  modelIjarah: (body: { assetPricePkr: number; termMonths: number; monthlyRentalPkr: number; residualPkr?: number; comparatorAnnualPct?: number }): Promise<IjarahModel> =>
+    unwrap<IjarahModel>(api.post(`${BASE}/financing/model-ijarah`, body)),
+  bnplPreview: (body: { bookingTotalPkr: number; downPct?: number; instalmentCount?: number; markupPct?: number }): Promise<BnplPreview> =>
+    unwrap<BnplPreview>(api.post(`${BASE}/financing/bnpl-preview`, body)),
+  referralPack: (businessId: number, body: { seasonYear: number; openingCashPkr?: number }): Promise<ReferralPack> =>
+    unwrap<ReferralPack>(api.post(`${BASE}/business/${businessId}/financing/referral-pack`, body)),
 };

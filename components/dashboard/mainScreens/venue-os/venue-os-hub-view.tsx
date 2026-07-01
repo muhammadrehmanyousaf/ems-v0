@@ -30,6 +30,7 @@ import { LiabilityCalendarView } from "./liability-calendar-view";
 import { PdcStressOptimiserView } from "./pdc-stress-optimiser-view";
 import { WorkingCapitalRunwayView } from "./working-capital-runway-view";
 import { WorkingCapitalInstrumentsView } from "./working-capital-instruments-view";
+import { FinancingView } from "./financing-view";
 import { CommsEngineView } from "./comms-engine-view";
 import { CommsChannelsView } from "./comms-channels-view";
 import { ForceMajeureBatchView } from "./force-majeure-batch-view";
@@ -90,6 +91,7 @@ export function VenueOsHubView(): React.ReactElement {
       <LiabilityCalendarView />
       <PdcStressOptimiserView />
       <WorkingCapitalInstrumentsView />
+      <FinancingView />
       <CommsEngineView />
       <CommsChannelsView />
       <div className="grid gap-6 lg:grid-cols-2">
