@@ -1132,6 +1132,37 @@ export interface HijriYoY {
   series: { hijriYear: number; monthName: string; from: string; to: string; value: number; yoyDeltaPkr?: number; yoyPct?: number | null }[];
 }
 
+// P3-E — kitchen BOM
+export interface RecipeBom {
+  id: number;
+  businessId: number;
+  dishName: string;
+  standardYieldPlates: number;
+  ingredients: { itemId: number; stdQtyPerBatch: number; unit?: string }[];
+}
+export interface ProductionRun {
+  id: number;
+  businessId: number;
+  recipeBomId: number;
+  batchCount: string;
+  actualPlates: number;
+}
+export interface YieldVariance {
+  productionRunId: number;
+  dishName: string;
+  stdPlates: number;
+  actualPlates: number;
+  yieldVariancePlates: number;
+  yieldVariancePct: number | null;
+  yieldShortfall: boolean;
+  stdCostPkr: number;
+  actualCostPkr: number;
+  costVariancePkr: number;
+  overuseCostPkr: number;
+  overuseItems: { itemId: number; stdQty: number; actualQty: number; overuseQty: number; overuseCostPkr: number }[];
+  note: string;
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -1625,4 +1656,16 @@ export const venueOsApi = {
     unwrap<HijriYoY>(api.post(`${BASE}/business/${businessId}/bi/hijri-yoy`, body)),
   biDrilldown: (businessId: number, q: { side: string; from?: string; to?: string }): Promise<{ side: string; lines: { code: string; name: string; amountPkr: number }[] }> =>
     unwrap(api.get(`${BASE}/business/${businessId}/bi/drilldown`, { params: q })),
+
+  // P3-E — kitchen BOM + yield variance
+  createRecipeBom: (body: { businessId: number; dishName: string; standardYieldPlates?: number; ingredients: { itemId: number; stdQtyPerBatch: number; unit?: string }[] }): Promise<RecipeBom> =>
+    unwrap<RecipeBom>(api.post(`${BASE}/recipe-boms`, body)),
+  listRecipeBoms: (businessId: number): Promise<RecipeBom[]> =>
+    unwrap<RecipeBom[]>(api.get(`${BASE}/business/${businessId}/recipe-boms`)),
+  standardCost: (businessId: number, bomId: number, body?: { onDate?: string }): Promise<{ batchCost: number; costPerPlate: number; missingRates: number[] }> =>
+    unwrap(api.post(`${BASE}/business/${businessId}/recipe-boms/${bomId}/standard-cost`, body || {})),
+  recordProductionRun: (body: { businessId: number; recipeBomId: number; batchCount: number; actualPlates: number; actualIngredients?: { itemId: number; actualQty: number }[]; runDate?: string }): Promise<ProductionRun> =>
+    unwrap<ProductionRun>(api.post(`${BASE}/production-runs`, body)),
+  yieldVariance: (runId: number): Promise<YieldVariance> =>
+    unwrap<YieldVariance>(api.get(`${BASE}/production-runs/${runId}/yield-variance`)),
 };

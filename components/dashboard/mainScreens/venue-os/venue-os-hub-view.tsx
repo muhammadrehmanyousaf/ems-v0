@@ -22,6 +22,7 @@ import { AmlCockpitView } from "./aml-cockpit-view";
 import { AmlRegistersView } from "./aml-registers-view";
 import { ProcurementView } from "./procurement-view";
 import { RateContractView } from "./rate-contract-view";
+import { KitchenBomView } from "./kitchen-bom-view";
 import { GensetSkimView } from "./genset-skim-view";
 import { UtilityAllocationView } from "./utility-allocation-view";
 import { TariffEstimatorView } from "./tariff-estimator-view";
@@ -78,6 +79,7 @@ export function VenueOsHubView(): React.ReactElement {
       <AmlRegistersView />
       <ProcurementView />
       <RateContractView />
+      <KitchenBomView />
       <div className="grid gap-6 lg:grid-cols-2">
         <GensetSkimView />
         <UtilityAllocationView />
