@@ -20,6 +20,7 @@ import Image from "next/image"
 import Link from "next/link"
 import type { Metadata } from "next"
 import { notFound, redirect, permanentRedirect } from "next/navigation"
+import { VenueSpaceSelector } from "@/components/booking/venue-space-selector"
 import {
   CITIES,
   VENDOR_TYPES,
@@ -350,6 +351,12 @@ export async function VendorDetailPage(input: PageInput) {
             </ul>
           </section>
         )}
+
+        {/* Hierarchical spaces (Hall→Floor→Partition) — renders nothing until the
+            venue enables NEXT_PUBLIC_VENUE_HIERARCHY_ON; legacy vendors unaffected. */}
+        <div className="mb-12">
+          <VenueSpaceSelector businessId={Number(vendor.id)} />
+        </div>
 
         {/* Reviews */}
         {vendor.reviews.length > 0 && (

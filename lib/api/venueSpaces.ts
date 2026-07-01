@@ -79,6 +79,10 @@ export interface BookResult {
 const BASE = "/api/v1/venue-spaces";
 
 export const venueSpacesApi = {
+  // public (customer-facing) read-only
+  publicTree: (businessId: number): Promise<SpaceTree> => unwrap<SpaceTree>(api.get(`${BASE}/public/business/${businessId}/tree`)),
+  publicAvailability: (businessId: number, date: string): Promise<DateAvailability> => unwrap<DateAvailability>(api.get(`${BASE}/public/business/${businessId}/availability`, { params: { date } })),
+
   // tree
   getTree: (businessId: number): Promise<SpaceTree> => unwrap<SpaceTree>(api.get(`${BASE}/business/${businessId}/tree`)),
   capacityWarnings: (businessId: number): Promise<{ businessId: number; warnings: CapacityWarning[] }> =>
