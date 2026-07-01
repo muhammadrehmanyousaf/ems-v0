@@ -7,6 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { formSchema } from "@/lib/formSchema/vendor-schema";
+import { isVenueHierarchyOn } from "@/lib/venue-hierarchy-flag";
 
 import { Checkbox } from "./ui/checkbox";
 import { Label } from "./ui/label";
@@ -818,6 +819,18 @@ export function BusinessRegistrationForm() {
         Object.keys(formData.typeSpecificDetails).length > 0
           ? { typeSpecificDetails: formData.typeSpecificDetails }
           : {}),
+        // venue-hierarchy — the onboarding space tree (only when the flag is on and
+        // the vendor built one). Inert for legacy signups (nothing appended).
+        ...(typeof window !== "undefined" && isVenueHierarchyOn()
+          ? (() => {
+              try {
+                const t = JSON.parse(localStorage.getItem("ww_reg_spaces_tree") || "[]");
+                return Array.isArray(t) && t.length ? { spacesTree: t } : {};
+              } catch {
+                return {};
+              }
+            })()
+          : {}),
       };
 
       // Build the payload — use FormData so vendor profile image can be included
@@ -855,6 +868,11 @@ export function BusinessRegistrationForm() {
         response.status === 201 &&
         vendorData.business
       ) {
+        // venue-hierarchy — the space tree was persisted server-side with the
+        // business; clear the onboarding stash so it isn't re-sent next signup.
+        try {
+          if (typeof window !== "undefined") localStorage.removeItem("ww_reg_spaces_tree");
+        } catch {}
         // Packages are now included in the business creation payload above,
         // so no separate auth-required API call is needed.
         // TODO: Re-enable separate Package records creation after login flow is implemented
