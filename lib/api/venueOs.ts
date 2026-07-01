@@ -1163,6 +1163,24 @@ export interface YieldVariance {
   note: string;
 }
 
+// P3-D — succession & equity
+export interface FaraidResult {
+  estatePkr: number;
+  shares: { heir: string; count: number; fraction: number; amountPkr: number; perHeadPkr: number }[];
+  totalFraction: number;
+  distributedPkr: number;
+  notes: string[];
+}
+export interface ExitValuation {
+  partnerName: string;
+  sharePercent: number;
+  capitalPkr: number;
+  currentPkr: number;
+  loanPkr: number;
+  goodwillSharePkr: number;
+  exitValuationPkr: number;
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -1668,4 +1686,16 @@ export const venueOsApi = {
     unwrap<ProductionRun>(api.post(`${BASE}/production-runs`, body)),
   yieldVariance: (runId: number): Promise<YieldVariance> =>
     unwrap<YieldVariance>(api.get(`${BASE}/production-runs/${runId}/yield-variance`)),
+
+  // P3-D — succession & equity
+  faraidPreview: (body: { estatePkr: number; husband?: boolean; wives?: number; sons?: number; daughters?: number; father?: boolean; mother?: boolean; siblings?: number }): Promise<FaraidResult> =>
+    unwrap<FaraidResult>(api.post(`${BASE}/succession/faraid-preview`, body)),
+  exitValuation: (businessId: number, body: { partnerEquityId: number; goodwillPkr?: number; revaluationPkr?: number }): Promise<ExitValuation> =>
+    unwrap<ExitValuation>(api.post(`${BASE}/business/${businessId}/exit-valuation`, body)),
+  createPagri: (body: { businessId: number; holderName: string; pagriAmountPkr: number; transferable?: boolean }): Promise<{ id: number; pagriAmountPkr: string }> =>
+    unwrap(api.post(`${BASE}/pagri-rights`, body)),
+  listPagri: (businessId: number): Promise<{ id: number; holderName: string; pagriAmountPkr: string; transferable: boolean }[]> =>
+    unwrap(api.get(`${BASE}/business/${businessId}/pagri-rights`)),
+  createSuccessionPlan: (businessId: number, body: { ownerPartnerEquityId?: number; estatePkr?: number; goodwillPkr?: number; heirs: Record<string, number | boolean> }): Promise<{ plan: { id: number; estatePkr: string; exitValuationPkr: string | null }; faraid: FaraidResult }> =>
+    unwrap(api.post(`${BASE}/business/${businessId}/succession-plans`, body)),
 };
