@@ -1584,4 +1584,10 @@ export const venueOsApi = {
     unwrap<GuestSegment[]>(api.get(`${BASE}/event-nights/${eventNightId}/guest-segments`)),
   guestReconcile: (eventNightId: number): Promise<GuestReconcile> =>
     unwrap<GuestReconcile>(api.get(`${BASE}/event-nights/${eventNightId}/guest-reconcile`)),
+
+  // WS6-depth — swappable channel adapters + outbox dispatcher
+  commsChannels: (): Promise<{ channels: { channel: string; provider: string; live: boolean; mode: string }[] }> =>
+    unwrap(api.get(`${BASE}/comms/channels`)),
+  dispatchQueued: (businessId: number, body?: { limit?: number }): Promise<{ dispatched: number; sent: number; failed: number; channels: { channel: string; provider: string; mode: string }[]; results: { id: number; state: string; channelType: string; sandbox?: boolean }[] }> =>
+    unwrap(api.post(`${BASE}/business/${businessId}/comms/dispatch`, body || {})),
 };
