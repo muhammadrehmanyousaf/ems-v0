@@ -12,9 +12,39 @@
 import * as React from "react";
 import { isOrgMembershipOn } from "@/lib/org-membership-flag";
 import { VenueOsInsights } from "./venue-os-insights";
+import { BiCockpitView } from "./bi-cockpit-view";
 import { OrgRollupView } from "./org-rollup-view";
 import { GroupConsolidationView } from "./group-consolidation-view";
 import { PeriodCloseView } from "./period-close-view";
+import { AccountingDepthView } from "./accounting-depth-view";
+import { ComplianceExportView } from "./compliance-export-view";
+import { AmlCockpitView } from "./aml-cockpit-view";
+import { AmlRegistersView } from "./aml-registers-view";
+import { DnfbpCardView } from "./dnfbp-card-view";
+import { ProcurementView } from "./procurement-view";
+import { RateContractView } from "./rate-contract-view";
+import { KitchenBomView } from "./kitchen-bom-view";
+import { GensetSkimView } from "./genset-skim-view";
+import { UtilityAllocationView } from "./utility-allocation-view";
+import { TariffEstimatorView } from "./tariff-estimator-view";
+import { LiabilityCalendarView } from "./liability-calendar-view";
+import { PdcStressOptimiserView } from "./pdc-stress-optimiser-view";
+import { WorkingCapitalRunwayView } from "./working-capital-runway-view";
+import { WorkingCapitalInstrumentsView } from "./working-capital-instruments-view";
+import { FinancingView } from "./financing-view";
+import { CapexView } from "./capex-view";
+import { CommsEngineView } from "./comms-engine-view";
+import { CommsChannelsView } from "./comms-channels-view";
+import { ForceMajeureBatchView } from "./force-majeure-batch-view";
+import { InsurancePoliciesView } from "./insurance-policies-view";
+import { WeatherClaimView } from "./weather-claim-view";
+import { EventNightConsoleView } from "./event-night-console-view";
+import { LegalEsgView } from "./legal-esg-view";
+import { DiasporaVendorView } from "./diaspora-vendor-view";
+import { GuestListView } from "./guest-list-view";
+import { CapTableView } from "./cap-table-view";
+import { PartnerLedgerView } from "./partner-ledger-view";
+import { SuccessionView } from "./succession-view";
 import { EventPnlView } from "./event-pnl-view";
 import { EventCostedPnlView } from "./event-costed-pnl-view";
 import { EventMarginsView } from "./event-margins-view";
@@ -45,9 +75,43 @@ export function VenueOsHubView(): React.ReactElement {
   return (
     <div className="space-y-6">
       <VenueOsInsights />
+      <BiCockpitView />
       <OrgRollupView />
       <GroupConsolidationView />
       <PeriodCloseView />
+      <AccountingDepthView />
+      <ComplianceExportView />
+      <AmlCockpitView />
+      <AmlRegistersView />
+      <DnfbpCardView />
+      <ProcurementView />
+      <RateContractView />
+      <KitchenBomView />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <GensetSkimView />
+        <UtilityAllocationView />
+      </div>
+      <TariffEstimatorView />
+      <WorkingCapitalRunwayView />
+      <LiabilityCalendarView />
+      <PdcStressOptimiserView />
+      <WorkingCapitalInstrumentsView />
+      <FinancingView />
+      <CapexView />
+      <CommsEngineView />
+      <CommsChannelsView />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ForceMajeureBatchView />
+        <InsurancePoliciesView />
+      </div>
+      <WeatherClaimView />
+      <EventNightConsoleView />
+      <GuestListView />
+      <LegalEsgView />
+      <DiasporaVendorView />
+      <CapTableView />
+      <PartnerLedgerView />
+      <SuccessionView />
       <div className="grid gap-6 lg:grid-cols-2">
         <EventPnlView />
         <EventNightGauge />
