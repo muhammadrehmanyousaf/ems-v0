@@ -44,6 +44,10 @@ import { DiasporaVendorView } from "./diaspora-vendor-view";
 import { GuestListView } from "./guest-list-view";
 import { CapTableView } from "./cap-table-view";
 import { PartnerLedgerView } from "./partner-ledger-view";
+import { VenueSpacesManagerView } from "./venue-spaces-manager-view";
+import { SpaceSlotsEditor } from "./space-slots-editor";
+import { SpaceCalendarView } from "./space-calendar-view";
+import { BulkImportView } from "./bulk-import-view";
 import { SuccessionView } from "./succession-view";
 import { EventPnlView } from "./event-pnl-view";
 import { EventCostedPnlView } from "./event-costed-pnl-view";
@@ -75,6 +79,10 @@ export function VenueOsHubView(): React.ReactElement {
   return (
     <div className="space-y-6">
       <VenueOsInsights />
+      <VenueSpacesManagerView />
+      <SpaceSlotsEditor />
+      <SpaceCalendarView />
+      <BulkImportView />
       <BiCockpitView />
       <OrgRollupView />
       <GroupConsolidationView />

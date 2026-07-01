@@ -105,6 +105,29 @@ export async function fetchVendorById(id: number): Promise<VendorDetail | null> 
   }
 }
 
+/**
+ * Whether a venue has a real multi-space tree (>1 sub-venue). Decided SERVER-SIDE
+ * and ISR-cached 1h per vendor, so the public detail page makes zero per-visitor
+ * calls to gate the space selector. Returns false on any error / no tree.
+ */
+export async function fetchVendorHasMultiSpace(id: number): Promise<boolean> {
+  if (!Number.isFinite(id) || id <= 0) return false
+  try {
+    const res = await fetch(`${BACKEND_URL}api/v1/venue-spaces/public/business/${id}/tree`, {
+      next: { revalidate: 3600 },
+      headers: { Accept: "application/json" },
+    })
+    if (!res.ok) return false
+    const json = (await res.json()) as { data?: { tree?: any[] } }
+    let count = 0
+    const walk = (ns: any[] | undefined) => (ns || []).forEach((n) => { count += 1; walk(n.children) })
+    walk(json?.data?.tree)
+    return count > 1
+  } catch {
+    return false
+  }
+}
+
 function pickFirstImage(raw: any): string | undefined {
   const imgs = raw?.images
   if (Array.isArray(imgs) && imgs.length > 0) {

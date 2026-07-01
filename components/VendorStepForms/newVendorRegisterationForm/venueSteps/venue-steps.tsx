@@ -6,6 +6,7 @@ import VenueSpecialtyTrust from './vanueComponents/specialty-trust';
 import Packages from '../../packages';
 import ImagesStep from '../../images-step';
 import Preview from '../../preview';
+import { RegistrationSpacesBuilder } from './registration-spaces-builder';
 
 interface VenueStepsProps {
     currentStep: number;
@@ -49,6 +50,9 @@ const VenueSteps = ({ currentStep, error, setErrors, file, setFile }: VenueSteps
                                 errors={error}
                                 setErrors={setErrors}
                             />
+                            {/* venue-hierarchy onboarding builder — renders null unless
+                                NEXT_PUBLIC_VENUE_HIERARCHY_ON, so signup is byte-identical by default */}
+                            <RegistrationSpacesBuilder />
                         </div>
                         : currentStep === 4 ?
                             <div className='space-y-6'>
