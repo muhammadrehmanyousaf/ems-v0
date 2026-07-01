@@ -1228,6 +1228,25 @@ export interface DnfbpCard {
   note: string;
 }
 
+// P3-H — diaspora FX + service lines
+export interface FxSummary {
+  businessId: number;
+  byCurrency: { currency: string; inboundForeign: number; inboundPkr: number; refundPkr: number }[];
+  receivedPkr: number;
+  refundedPkr: number;
+  netPkr: number;
+}
+export interface ServiceLine {
+  id: number;
+  businessId: number;
+  vendorType: string;
+  lineType: string;
+  title: string;
+  amountPkr: string;
+  deliverableStatus: string;
+  deliveryDate: string | null;
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -1775,4 +1794,16 @@ export const venueOsApi = {
     unwrap(api.get(`${BASE}/esg/rules`, { params: { jurisdiction, onDate } })),
   esgCheckInput: (body: { jurisdiction: string; item: string }): Promise<{ item: string; banned: boolean; advisoryOnly: boolean; note: string }> =>
     unwrap(api.post(`${BASE}/esg/check-input`, body)),
+
+  // P3-H — diaspora FX rail + multi-vendor service lines
+  captureFx: (body: { businessId: number; currency: string; amountForeign: number; fxRate: number; remittanceChannel?: string; partyName?: string }): Promise<{ id: number; amountPkr: string; currency: string }> =>
+    unwrap(api.post(`${BASE}/diaspora/payments`, body)),
+  fxSummary: (businessId: number): Promise<FxSummary> =>
+    unwrap<FxSummary>(api.get(`${BASE}/business/${businessId}/diaspora/fx-summary`)),
+  createServiceLine: (body: { businessId: number; vendorType: string; lineType: string; title: string; amountPkr?: number }): Promise<ServiceLine> =>
+    unwrap<ServiceLine>(api.post(`${BASE}/service-lines`, body)),
+  listServiceLines: (businessId: number, vendorType?: string): Promise<ServiceLine[]> =>
+    unwrap<ServiceLine[]>(api.get(`${BASE}/business/${businessId}/service-lines`, { params: { vendorType } })),
+  updateDeliverable: (lineId: number, body: { deliverableStatus: string }): Promise<ServiceLine> =>
+    unwrap<ServiceLine>(api.patch(`${BASE}/service-lines/${lineId}/deliverable`, body)),
 };

@@ -40,6 +40,7 @@ import { InsurancePoliciesView } from "./insurance-policies-view";
 import { WeatherClaimView } from "./weather-claim-view";
 import { EventNightConsoleView } from "./event-night-console-view";
 import { LegalEsgView } from "./legal-esg-view";
+import { DiasporaVendorView } from "./diaspora-vendor-view";
 import { GuestListView } from "./guest-list-view";
 import { CapTableView } from "./cap-table-view";
 import { PartnerLedgerView } from "./partner-ledger-view";
@@ -107,6 +108,7 @@ export function VenueOsHubView(): React.ReactElement {
       <EventNightConsoleView />
       <GuestListView />
       <LegalEsgView />
+      <DiasporaVendorView />
       <CapTableView />
       <PartnerLedgerView />
       <SuccessionView />
