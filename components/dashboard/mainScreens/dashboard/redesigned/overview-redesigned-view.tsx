@@ -11,6 +11,7 @@ import * as React from "react"
 import { useQuery } from "@tanstack/react-query"
 import { AnalyticsAPI } from "@/lib/api/analytics"
 import { useUser } from "@/context/UserContext"
+import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
@@ -56,14 +57,17 @@ export function OverviewRedesignedView() {
   const { user } = useUser()
   const firstName = (user?.fullName || "there").split(/\s+/)[0]
   const today = new Date().toLocaleDateString("en-PK", { weekday: "long", day: "numeric", month: "long" })
+  // Per-venue scope: null = All venues (combined). Included in the query key so
+  // switching venue refetches, and forwarded to the API as ?businessId=.
+  const activeBusinessId = useActiveBusinessId()
 
   const kpisQ = useQuery({
-    queryKey: ["overview-kpis-redesigned"],
-    queryFn: () => AnalyticsAPI.getDashboardKpis(),
+    queryKey: ["overview-kpis-redesigned", activeBusinessId],
+    queryFn: () => AnalyticsAPI.getDashboardKpis("this_year", undefined, undefined, activeBusinessId),
   })
   const recentQ = useQuery({
-    queryKey: ["overview-recent-redesigned"],
-    queryFn: () => AnalyticsAPI.getRecentBookings(8),
+    queryKey: ["overview-recent-redesigned", activeBusinessId],
+    queryFn: () => AnalyticsAPI.getRecentBookings(8, undefined, undefined, undefined, activeBusinessId),
   })
 
   const k = kpisQ.data
