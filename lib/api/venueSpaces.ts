@@ -106,4 +106,28 @@ export const venueSpacesApi = {
     unwrap<BookResult>(api.post(`${BASE}/business/${businessId}/book`, body)),
   cancelSpaces: (businessId: number, bookingId: number): Promise<{ bookingId: number; released: number }> => unwrap(api.post(`${BASE}/business/${businessId}/bookings/${bookingId}/cancel-spaces`, {})),
   maintenance: (businessId: number, body: { subVenueId: number; slot: Slot; note?: string }): Promise<BookResult> => unwrap<BookResult>(api.post(`${BASE}/business/${businessId}/maintenance`, body)),
+
+  // per-space slots (onboarding + portal)
+  listSlots: (businessId: number, subVenueId?: number): Promise<{ businessId: number; subVenueId: number | null; scope: string; slots: SlotTemplate[] }> =>
+    unwrap(api.get(`${BASE}/business/${businessId}/slots`, { params: subVenueId ? { subVenueId } : {} })),
+  createSlot: (businessId: number, body: Partial<SlotTemplate>): Promise<SlotTemplate> => unwrap<SlotTemplate>(api.post(`${BASE}/business/${businessId}/slots`, body)),
+  bulkSetSlots: (businessId: number, body: { subVenueId?: number | null; slots: Partial<SlotTemplate>[] }): Promise<{ count: number; slots: SlotTemplate[] }> =>
+    unwrap(api.put(`${BASE}/business/${businessId}/slots`, body)),
+  updateSlot: (id: number, patch: Partial<SlotTemplate>): Promise<SlotTemplate> => unwrap<SlotTemplate>(api.patch(`${BASE}/slots/${id}`, patch)),
+  deleteSlot: (id: number): Promise<{ deleted: number }> => unwrap(api.delete(`${BASE}/slots/${id}`)),
 };
+
+export interface SlotTemplate {
+  id: number;
+  businessId: number;
+  subVenueId: number | null;
+  label: string;
+  startTime: string;
+  endTime: string;
+  capacity: number;
+  weekdayMask: number;
+  bufferAfterMinutes: number;
+  unitGuestCapacity: number | null;
+  sortOrder: number;
+  isActive: boolean;
+}
