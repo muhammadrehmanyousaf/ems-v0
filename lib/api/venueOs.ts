@@ -1218,6 +1218,16 @@ export interface CapexCompare {
   reserve: { futureReplacementPkr: number; monthlyReservePkr: number; note: string };
 }
 
+// P3-F — DNFBP readiness card
+export interface DnfbpCard {
+  businessId: number;
+  beneficialOwnerCount: number;
+  obligations: { key: string; label: string; done: boolean; detail: string | null }[];
+  readinessPct: number;
+  gaps: string[];
+  note: string;
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   message: string;
@@ -1749,4 +1759,10 @@ export const venueOsApi = {
   // P3-B — capex / asset ROI
   capexCompare: (body: { assetPricePkr: number; usefulLifeMonths?: number; monthlyMaintenancePkr?: number; rentPerUsePkr?: number; usesPerMonth?: number; ijarahMonthlyPkr?: number; ijarahTermMonths?: number; horizonMonths?: number; monthlyNetEarningsPkr?: number; inflationAnnualPct?: number }): Promise<CapexCompare> =>
     unwrap<CapexCompare>(api.post(`${BASE}/capex/compare`, body)),
+
+  // P3-F — DNFBP AML/CFT readiness card
+  dnfbpCard: (businessId: number): Promise<DnfbpCard> =>
+    unwrap<DnfbpCard>(api.get(`${BASE}/business/${businessId}/dnfbp-card`)),
+  dnfbpUpsert: (businessId: number, body: { fbrRegistered?: boolean; registrationNo?: string; designatedOfficerName?: string; cddThresholdPkr?: number; riskRating?: string }): Promise<unknown> =>
+    unwrap(api.put(`${BASE}/business/${businessId}/dnfbp-card`, body)),
 };

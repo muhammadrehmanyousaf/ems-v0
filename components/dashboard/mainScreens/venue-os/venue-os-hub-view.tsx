@@ -20,6 +20,7 @@ import { AccountingDepthView } from "./accounting-depth-view";
 import { ComplianceExportView } from "./compliance-export-view";
 import { AmlCockpitView } from "./aml-cockpit-view";
 import { AmlRegistersView } from "./aml-registers-view";
+import { DnfbpCardView } from "./dnfbp-card-view";
 import { ProcurementView } from "./procurement-view";
 import { RateContractView } from "./rate-contract-view";
 import { KitchenBomView } from "./kitchen-bom-view";
@@ -80,6 +81,7 @@ export function VenueOsHubView(): React.ReactElement {
       <ComplianceExportView />
       <AmlCockpitView />
       <AmlRegistersView />
+      <DnfbpCardView />
       <ProcurementView />
       <RateContractView />
       <KitchenBomView />
