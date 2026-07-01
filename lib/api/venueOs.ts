@@ -1765,4 +1765,14 @@ export const venueOsApi = {
     unwrap<DnfbpCard>(api.get(`${BASE}/business/${businessId}/dnfbp-card`)),
   dnfbpUpsert: (businessId: number, body: { fbrRegistered?: boolean; registrationNo?: string; designatedOfficerName?: string; cddThresholdPkr?: number; riskRating?: string }): Promise<unknown> =>
     unwrap(api.put(`${BASE}/business/${businessId}/dnfbp-card`, body)),
+
+  // P3-G — legal cockpit + ESG
+  build489f: (businessId: number, body: { counterpartyName: string; amountPkr: number; bounceDate?: string }): Promise<{ id: number; caseType: string; status: string; statutoryDeadline: string; steps: { step: string; by?: string; done: boolean; note?: string }[] }> =>
+    unwrap(api.post(`${BASE}/business/${businessId}/legal/489f`, body)),
+  reviewResponse: (body: { reviewText?: string; requestedIntent?: string; concessionOffer?: string }): Promise<{ tone: string; publicReply: string; defamationBlocked: boolean }> =>
+    unwrap(api.post(`${BASE}/legal/review-response`, body)),
+  esgRules: (jurisdiction: string, onDate?: string): Promise<{ ruleType: string; title: string; isVerified: boolean; advisoryOnly: boolean }[]> =>
+    unwrap(api.get(`${BASE}/esg/rules`, { params: { jurisdiction, onDate } })),
+  esgCheckInput: (body: { jurisdiction: string; item: string }): Promise<{ item: string; banned: boolean; advisoryOnly: boolean; note: string }> =>
+    unwrap(api.post(`${BASE}/esg/check-input`, body)),
 };
