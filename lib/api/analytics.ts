@@ -178,10 +178,18 @@ export interface PlatformOverviewData {
   totalBookings: PlatformKpiItem;
 }
 
-function buildQuery(range: DateRange, startDate?: string, endDate?: string) {
+function buildQuery(
+  range: DateRange,
+  startDate?: string,
+  endDate?: string,
+  businessId?: number | null,
+) {
   let qs = `range=${range}`;
   if (range === "custom" && startDate) qs += `&startDate=${startDate}`;
   if (range === "custom" && endDate) qs += `&endDate=${endDate}`;
+  // Per-venue scope. Omitted when null/undefined → backend returns the combined
+  // all-venues view (unchanged default).
+  if (businessId != null) qs += `&businessId=${businessId}`;
   return qs;
 }
 
@@ -189,11 +197,12 @@ export class AnalyticsAPI {
   static async getDashboardKpis(
     range: DateRange = "this_year",
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    businessId?: number | null
   ): Promise<DashboardKpis | null> {
     try {
       const res = await axiosInstance.get(
-        `${BACKEND_URL}api/v1/analytics/kpis?${buildQuery(range, startDate, endDate)}`
+        `${BACKEND_URL}api/v1/analytics/kpis?${buildQuery(range, startDate, endDate, businessId)}`
       );
       return res.data.data;
     } catch {
@@ -255,11 +264,13 @@ export class AnalyticsAPI {
     range?: DateRange,
     startDate?: string,
     endDate?: string,
+    businessId?: number | null,
   ): Promise<RecentBookingsData | null> {
     try {
       const rangeQs = range ? `&${buildQuery(range, startDate, endDate)}` : "";
+      const bizQs = businessId != null ? `&businessId=${businessId}` : "";
       const res = await axiosInstance.get(
-        `${BACKEND_URL}api/v1/analytics/recent-bookings?limit=${limit}${rangeQs}`,
+        `${BACKEND_URL}api/v1/analytics/recent-bookings?limit=${limit}${rangeQs}${bizQs}`,
       );
       return res.data.data;
     } catch {
