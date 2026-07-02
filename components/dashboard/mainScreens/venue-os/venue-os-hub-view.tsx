@@ -11,6 +11,7 @@
  */
 import * as React from "react";
 import { isOrgMembershipOn } from "@/lib/org-membership-flag";
+import { useVenueOsFlags } from "@/lib/venue-os-runtime-flags";
 import { VenueOsInsights } from "./venue-os-insights";
 import { BiCockpitView } from "./bi-cockpit-view";
 import { OrgRollupView } from "./org-rollup-view";
@@ -64,6 +65,19 @@ import { CateringRecost } from "./catering-recost";
 import { BookingGlPost } from "./booking-gl-post";
 
 export function VenueOsHubView(): React.ReactElement {
+  // Resolve per-venue flags for the active business (populates the runtime store
+  // the flag functions read). Shows the hub for venues with a per-business
+  // override even when the global env flag is off.
+  const { loading } = useVenueOsFlags();
+
+  if (loading) {
+    return (
+      <div className="rounded-lg border border-dashed p-8 text-center">
+        <p className="text-sm text-muted-foreground">Loading your venue-OS workspace…</p>
+      </div>
+    );
+  }
+
   if (!isOrgMembershipOn()) {
     return (
       <div className="rounded-lg border border-dashed p-8 text-center">

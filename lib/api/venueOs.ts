@@ -1269,7 +1269,8 @@ export interface ComputeTaxBody {
 }
 
 export const venueOsApi = {
-  health: (): Promise<VenueOsHealth> => unwrap<VenueOsHealth>(api.get(`${BASE}/health`)),
+  health: (businessId?: number | null): Promise<VenueOsHealth> =>
+    unwrap<VenueOsHealth>(api.get(`${BASE}/health`, { params: businessId != null ? { businessId } : {} })),
 
   orgRollup: (orgId: number, isDeclared?: IsDeclared): Promise<OrgRollup> =>
     unwrap<OrgRollup>(api.get(`${BASE}/org/${orgId}/rollup`, { params: { isDeclared } })),

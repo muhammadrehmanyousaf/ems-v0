@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/sidebar"
 import { data } from "./nav-data"
 import { useUser } from "@/context/UserContext"
+import { isOrgMembershipOn } from "@/lib/org-membership-flag"
+import { useVenueOsFlags } from "@/lib/venue-os-runtime-flags"
 import { useBusiness } from "@/context/BusinessContext"
 import {
   getVendorTypeConfig,
@@ -141,10 +143,11 @@ function buildVendorSections(
   if (growItems.length > 0) {
     sections.push({ label: "Grow", items: growItems })
   }
-  // Venue-OS (multi-venue vendor-OS spine) — pilot surface, gated by the same
-  // umbrella flag the page + its components read (isOrgMembershipOn). Default
-  // OFF, so the sidebar is byte-for-byte unchanged on prod until a pilot opts in.
-  if (process.env.NEXT_PUBLIC_ORG_MEMBERSHIP_ON === "true") {
+  // Venue-OS (multi-venue vendor-OS spine) — pilot surface. Shows when the global
+  // flag is on OR the active venue has a per-business override (runtime store,
+  // populated by useVenueOsFlags in AppSidebar). Byte-for-byte unchanged for
+  // vendors without the override.
+  if (isOrgMembershipOn()) {
     sections.push({ label: "Venue-OS", items: data.vendorVenueOs })
   }
   sections.push({
@@ -192,6 +195,9 @@ function buildAdminSections(role: DashboardRole): NavSection[] {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useUser()
+  // Resolve per-venue venue-OS flags (populates the runtime store so the
+  // "Venue-OS" nav section appears for pilot venues even with the global flag off).
+  useVenueOsFlags()
   const role = getDashboardRole(user)
   // Issue #32 — pass the active business's vendorType through so the
   // nav reflects the actual business being managed, not the logged-in

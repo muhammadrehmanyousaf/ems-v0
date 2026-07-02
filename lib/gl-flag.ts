@@ -13,15 +13,17 @@
 // arg is accepted for call-site compatibility; the per-business gate is the
 // server-side FeatureFlagOverride table.)
 
+import { runtimeFlagOn } from "@/lib/venue-os-runtime-flags"
+
 /** ON only when explicitly enabled. Default (unset) → OFF. */
 const ON = process.env.NEXT_PUBLIC_GL_ENGINE_ON === "true"
 
 /**
- * Whether the GL / ledger surfaces should render. OFF by default.
- * The optional argument is accepted for call-site compatibility and ignored.
+ * Whether the GL / ledger surfaces should render. OFF globally by default, but
+ * ON when the active venue has a per-business override (runtime store).
  */
 export function isGlEngineOn(_businessId?: number | string | null): boolean {
-  return ON
+  return ON || runtimeFlagOn("GL_ENGINE_ON")
 }
 
 /** Convenience for non-conditional consumers. */
