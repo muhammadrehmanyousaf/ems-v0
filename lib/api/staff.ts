@@ -101,6 +101,9 @@ export interface StaffMember {
   updatedAt: string;
   business?: StaffBusinessInfo | null;
   shifts?: StaffShift[];
+  /** Venue-hierarchy: the crew member's home space (hall/floor/partition). */
+  defaultSubVenueId?: number | null;
+  defaultSubVenue?: { id: number; name: string; kind?: string } | null;
 }
 
 export interface StaffLeaveRequest {

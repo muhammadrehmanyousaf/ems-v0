@@ -83,6 +83,7 @@ export function StaffRedesignedView() {
       ),
     },
     { key: "role", header: "Role", cellClassName: "text-muted-foreground", render: (m) => cap(m.role) },
+    { key: "space", header: "Space", cellClassName: "text-muted-foreground", render: (m) => m.defaultSubVenue?.name || "—" },
     { key: "type", header: "Type", render: (m) => <StatusPill tone="neutral">{cap(m.employmentType)}</StatusPill> },
     { key: "phone", header: "Phone", cellClassName: "text-muted-foreground", render: (m) => m.phoneNumber || "—" },
     { key: "rate", header: "Rate", align: "right", cellClassName: "tabular-nums", render: (m) => rateLabel(m) },
