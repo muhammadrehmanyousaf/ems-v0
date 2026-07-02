@@ -5,11 +5,14 @@
 //   NEXT_PUBLIC_BI_COCKPIT_ON=true  → render the BI cockpit
 //   (unset / anything else)         → OFF (default)
 
+import { runtimeFlagOn } from "@/lib/venue-os-runtime-flags";
+
 const ON = process.env.NEXT_PUBLIC_BI_COCKPIT_ON === "true";
 
-/** Whether the BI cockpit surface should render. OFF by default. */
+/** Whether the BI cockpit surface should render. OFF by default; ON via env
+ *  globally, or per-venue via the ENABLE_BI_COCKPIT runtime override. */
 export function isBiCockpitOn(_businessId?: number | string | null): boolean {
-  return ON;
+  return ON || runtimeFlagOn("ENABLE_BI_COCKPIT");
 }
 
-export const BI_COCKPIT_ON = isBiCockpitOn();
+export const BI_COCKPIT_ON = ON;
