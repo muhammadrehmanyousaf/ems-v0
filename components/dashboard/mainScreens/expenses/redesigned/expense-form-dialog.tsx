@@ -8,8 +8,10 @@
  */
 
 import * as React from "react"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { ExpensesAPI, EXPENSE_CATEGORY_LABELS, type VendorExpense, type ExpenseCategory, type ExpensePaymentMethod } from "@/lib/api/vendorExpenses"
+import { useActiveBusinessId } from "@/lib/store/active-business-store"
+import { venueSpacesApi } from "@/lib/api/venueSpaces"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
@@ -25,7 +27,7 @@ const today = () => new Date().toISOString().slice(0, 10)
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
 
-interface FormState { amount: string; category: ExpenseCategory; vendorName: string; description: string; spentDate: string; paymentMethod: ExpensePaymentMethod; subcategory: string }
+interface FormState { amount: string; category: ExpenseCategory; vendorName: string; description: string; spentDate: string; paymentMethod: ExpensePaymentMethod; subcategory: string; subVenueId: string }
 const blank = (e?: VendorExpense): FormState => ({
   amount: e?.amount != null ? String(e.amount) : "",
   category: (e?.category as ExpenseCategory) ?? "supplies",
@@ -34,7 +36,17 @@ const blank = (e?: VendorExpense): FormState => ({
   spentDate: (e?.spentDate ?? today()).slice(0, 10),
   paymentMethod: (e?.paymentMethod as ExpensePaymentMethod) ?? "cash",
   subcategory: e?.subcategory ?? "",
+  subVenueId: e?.subVenueId != null ? String(e.subVenueId) : "",
 })
+
+// Flatten the Hall→Floor→Partition tree into an indented option list.
+function flattenSpaces(nodes: { id: number; name: string; kind: string; depth: number; children?: any[] }[] | undefined): { id: number; name: string; kind: string; depth: number }[] {
+  const out: { id: number; name: string; kind: string; depth: number }[] = []
+  const walk = (ns?: any[]) => (ns || []).forEach((n) => { out.push({ id: n.id, name: n.name, kind: n.kind, depth: n.depth }); walk(n.children) })
+  walk(nodes)
+  return out
+}
+const scopeForDepth = (d: number): string => (d <= 0 ? "HALL" : d === 1 ? "FLOOR" : "PARTITION")
 
 function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
   return <div className={cn("space-y-1.5", className)}><label className={labelCls}>{label}</label>{children}</div>
@@ -61,8 +73,20 @@ export function ExpenseFormDialog({
 
   const set = (k: keyof FormState, v: string) => setForm((f) => ({ ...f, [k]: v }))
 
+  // Load the active venue's spaces so the expense can be tagged to a hall/floor/partition.
+  const activeBusinessId = useActiveBusinessId()
+  const spacesQ = useQuery({
+    queryKey: ["venueSpacesTree", activeBusinessId],
+    queryFn: () => venueSpacesApi.publicTree(activeBusinessId as number),
+    enabled: open && activeBusinessId != null,
+    staleTime: 5 * 60_000,
+  })
+  const spaces = React.useMemo(() => flattenSpaces(spacesQ.data?.tree as any), [spacesQ.data])
+
   const saveMut = useMutation({
     mutationFn: () => {
+      const sv = form.subVenueId ? Number(form.subVenueId) : null
+      const scopeType = sv != null ? scopeForDepth(spaces.find((s) => s.id === sv)?.depth ?? 2) : undefined
       const body = {
         amount: Number(form.amount) || 0,
         category: form.category,
@@ -71,6 +95,10 @@ export function ExpenseFormDialog({
         description: form.description.trim() || undefined,
         spentDate: form.spentDate,
         paymentMethod: form.paymentMethod,
+        // Venue-hierarchy: attribute this cost to the active venue + chosen space.
+        businessId: activeBusinessId ?? undefined,
+        subVenueId: sv,
+        scopeType,
       }
       return isEdit ? ExpensesAPI.update(expense!.id, body) : ExpensesAPI.create(body)
     },
@@ -104,6 +132,16 @@ export function ExpenseFormDialog({
             </Field>
             <Field label="Paid to"><input className={inputCls} value={form.vendorName} onChange={(e) => set("vendorName", e.target.value)} placeholder="Supplier / payee" /></Field>
             <Field label="Subcategory (optional)"><input className={inputCls} value={form.subcategory} onChange={(e) => set("subcategory", e.target.value)} /></Field>
+            {spaces.length > 0 && (
+              <Field label="Space (optional)" className="sm:col-span-2">
+                <select className={inputCls} value={form.subVenueId} onChange={(e) => set("subVenueId", e.target.value)}>
+                  <option value="">Whole business (no specific space)</option>
+                  {spaces.map((s) => (
+                    <option key={s.id} value={String(s.id)}>{" ".repeat(s.depth * 2)}{s.name} · {s.kind}</option>
+                  ))}
+                </select>
+              </Field>
+            )}
           </div>
           <Field label="Note"><textarea className={cn(inputCls, "h-20 resize-y py-2")} value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="What was this for?" /></Field>
         </div>

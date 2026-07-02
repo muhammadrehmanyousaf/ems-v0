@@ -57,6 +57,11 @@ export interface VendorExpense {
     customerName: string | null;
     totalAmount: number | string | null;
   } | null;
+  // Venue-hierarchy: which space (hall/floor/partition) this expense hit.
+  businessId?: number | null;
+  subVenueId?: number | null;
+  scopeType?: string | null;
+  subVenue?: { id: number; name: string; kind?: string; depth?: number } | null;
 }
 
 export interface ExpenseSummary {
@@ -79,6 +84,9 @@ export interface CreateExpenseInput {
   paymentMethod?: ExpensePaymentMethod;
   photoUrl?: string;
   bookingId?: number | null;
+  businessId?: number | null;
+  subVenueId?: number | null;
+  scopeType?: string | null;
 }
 
 export type UpdateExpenseInput = Partial<CreateExpenseInput>;
