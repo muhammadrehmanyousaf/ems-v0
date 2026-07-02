@@ -13,15 +13,19 @@
 // accepted for call-site compatibility with per-business overrides; the
 // authoritative per-business gate is the server-side FeatureFlagOverride table.)
 
+import { runtimeFlagOn } from "@/lib/venue-os-runtime-flags"
+
 /** ON only when explicitly enabled. Default (unset) → OFF. */
 const ON = process.env.NEXT_PUBLIC_ORG_MEMBERSHIP_ON === "true"
 
 /**
- * Whether the Org/Membership workspace surfaces should render. OFF by default.
- * The optional argument is accepted for call-site compatibility and ignored.
+ * Whether the Org/Membership workspace surfaces should render. OFF by default
+ * globally, but ALSO ON when the active venue has a per-business override (the
+ * runtime store populated by useVenueOsFlags). Lets a pilot venue see the hub
+ * without a global flip.
  */
 export function isOrgMembershipOn(_businessId?: number | string | null): boolean {
-  return ON
+  return ON || runtimeFlagOn("ORG_MEMBERSHIP_ON")
 }
 
 /** Convenience for non-conditional consumers. */

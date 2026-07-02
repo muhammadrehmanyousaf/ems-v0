@@ -13,12 +13,15 @@
 // arg is accepted for call-site compatibility; the authoritative per-business
 // gate is the server-side FeatureFlagOverride table.)
 
+import { runtimeFlagOn } from "@/lib/venue-os-runtime-flags"
+
 /** ON only when explicitly enabled. Default (unset) → OFF. */
 const ON = process.env.NEXT_PUBLIC_EVENT_COSTING_DEPTH_ON === "true"
 
-/** Whether the per-event costing-depth surface should render. OFF by default. */
+/** Whether the per-event costing-depth surface should render. OFF globally by
+ * default, but ON when the active venue has a per-business override. */
 export function isEventCostingOn(_businessId?: number | string | null): boolean {
-  return ON
+  return ON || runtimeFlagOn("EVENT_COSTING_DEPTH_ON")
 }
 
 /** Convenience for non-conditional consumers. */
