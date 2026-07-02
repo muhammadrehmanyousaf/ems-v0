@@ -12,6 +12,8 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { ExpensesAPI, EXPENSE_CATEGORY_LABELS, type VendorExpense, type ExpenseCategory, type ExpensePaymentMethod } from "@/lib/api/vendorExpenses"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { venueSpacesApi } from "@/lib/api/venueSpaces"
+import { CustomFieldsSection } from "@/components/dashboard/shared/custom-fields-section"
+import { CustomFieldsAPI, type CustomFieldValues } from "@/lib/api/customFields"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
@@ -62,12 +64,17 @@ export function ExpenseFormDialog({
 }) {
   const isEdit = !!expense
   const [form, setForm] = React.useState<FormState>(blank(expense))
+  const [cf, setCf] = React.useState<CustomFieldValues>({})
   const loadedId = React.useRef<number | "new" | null>(null)
 
   React.useEffect(() => {
     if (open) {
       const key = expense?.id ?? "new"
-      if (loadedId.current !== key) { setForm(blank(expense)); loadedId.current = key }
+      if (loadedId.current !== key) {
+        setForm(blank(expense))
+        setCf(((expense as any)?.customFields as CustomFieldValues) || {})
+        loadedId.current = key
+      }
     } else { loadedId.current = null }
   }, [open, expense])
 
@@ -84,7 +91,7 @@ export function ExpenseFormDialog({
   const spaces = React.useMemo(() => flattenSpaces(spacesQ.data?.tree as any), [spacesQ.data])
 
   const saveMut = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const sv = form.subVenueId ? Number(form.subVenueId) : null
       const scopeType = sv != null ? scopeForDepth(spaces.find((s) => s.id === sv)?.depth ?? 2) : undefined
       const body = {
@@ -100,7 +107,13 @@ export function ExpenseFormDialog({
         subVenueId: sv,
         scopeType,
       }
-      return isEdit ? ExpensesAPI.update(expense!.id, body) : ExpensesAPI.create(body)
+      const saved = isEdit ? await ExpensesAPI.update(expense!.id, body) : await ExpensesAPI.create(body)
+      // Persist custom field values against the saved expense (safe no-op when off).
+      const savedId = (saved as any)?.expense?.id ?? (saved as any)?.id ?? expense?.id
+      if (activeBusinessId != null && savedId != null && cf && Object.keys(cf).length) {
+        try { await CustomFieldsAPI.putValues("expense", Number(savedId), activeBusinessId, cf) } catch { /* non-fatal */ }
+      }
+      return saved
     },
     onSuccess: () => { showSuccessToast(isEdit ? "Expense updated" : "Expense added"); onSaved?.(); onOpenChange(false) },
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save expense"),
@@ -144,6 +157,7 @@ export function ExpenseFormDialog({
             )}
           </div>
           <Field label="Note"><textarea className={cn(inputCls, "h-20 resize-y py-2")} value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="What was this for?" /></Field>
+          <CustomFieldsSection entityType="expense" businessId={activeBusinessId} values={cf} onChange={setCf} heading="Your custom fields" />
         </div>
 
         <DialogFooter>
