@@ -26,7 +26,7 @@ import { toast } from "sonner"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { CustomFieldsManager } from "@/components/dashboard/shared/custom-fields-manager"
 import { useCustomFieldDefs } from "@/components/dashboard/shared/custom-fields-section"
-import { isCustomFieldsOn } from "@/lib/custom-fields-flag"
+import { useIsCustomFieldsOn } from "@/lib/custom-fields-flag"
 import type { CustomFieldDef } from "@/lib/api/customFields"
 
 const fmtCf = (v: unknown, d: CustomFieldDef): string => {
@@ -63,7 +63,7 @@ export function ExpensesRedesignedView() {
     () => (cfDefsQ.data ?? []).filter((d) => d.isActive && d.showInList).sort((a, b) => a.displayOrder - b.displayOrder),
     [cfDefsQ.data],
   )
-  const cfEnabled = isCustomFieldsOn() && activeBusinessId != null
+  const cfEnabled = useIsCustomFieldsOn() && activeBusinessId != null
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["expenses-redesigned", activeBusinessId],
