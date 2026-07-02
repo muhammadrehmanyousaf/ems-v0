@@ -20,6 +20,7 @@ import { DataTable, type Column } from "@/components/dashboard/primitives/data-t
 import { StatusPill, type StatusTone } from "@/components/dashboard/primitives/status-pill"
 import { MoneyCell } from "@/components/dashboard/primitives/money-cell"
 import { ExportMenu } from "@/components/dashboard/shared/export-menu"
+import { ImportButton } from "@/components/dashboard/shared/import-button"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
@@ -144,6 +145,7 @@ export function LeadsRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
+              <ImportButton target="leads" label="leads" />
               <ExportMenu selectedIds={selected} getRowId={(l) => String(l.id)}
                 rows={leads}
                 filename="leads"

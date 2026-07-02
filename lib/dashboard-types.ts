@@ -206,6 +206,8 @@ export interface BookingDetail {
   business: Business;
   menu: Menu;
   package: Package;
+  // Which hall / lawn / partition this line booked (BusinessResource).
+  resource?: { id: number; label: string; kind: string } | null;
   createdAt: string;
   updatedAt: string;
 }
