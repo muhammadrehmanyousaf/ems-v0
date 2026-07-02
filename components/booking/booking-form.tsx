@@ -355,6 +355,9 @@ export default function BookingForm() {
     }
     if ((isCarRental || isBridalWear || isWeddingStationery) && vehicleQty > 1) mainBusinessEntry.vehicleQuantity = vehicleQty
     if (additionalPackageIds.length > 0) mainBusinessEntry.additionalPackageIds = additionalPackageIds
+    // Pin the booking to the chosen hall/lawn/partition (BusinessResource) when the
+    // customer selected one. Additive — omitted entirely if left as "whole venue".
+    if ((currentForm as any).selectedResourceId) mainBusinessEntry.resourceId = Number((currentForm as any).selectedResourceId)
 
     if (mainBusinessEntry.packageId || mainBusinessEntry.menuId) {
       vendorsPayload.push(mainBusinessEntry)

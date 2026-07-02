@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useCallback } from "react"
 import type { BookingFormData, EventVenue } from "@/lib/types"
 import { ChevronLeft, ChevronRight, Sun, Sunset, Moon, Minus, Plus, AlertTriangle, Timer, XCircle } from "lucide-react"
 import { VendorAPI } from "@/lib/api/vendors"
+import api from "@/lib/axiosConfig"
 // Capacity-aware slot-template availability (BK-008/015/019). Flag-gated:
 // when the vendor has configured slot templates we drive the picker from
 // them (their own slots + per-slot capacity) instead of the fixed
@@ -130,6 +131,21 @@ export default function DateTimeStep({
     const d = new Date(formData.bookingDate)
     return isNaN(d.getTime()) ? undefined : d
   }, [formData.bookingDate])
+
+  // Bookable spaces (halls/lawns/partitions) the venue configured. Additive:
+  // when a venue has >1 space, the customer picks WHICH one; the chosen
+  // resourceId rides the booking payload → pins the booking to that space and
+  // shows in the vendor's Bookings "Space" column. Venues with 0 spaces are
+  // completely unaffected (the picker doesn't render).
+  const [spaces, setSpaces] = useState<Array<{ id: number; label: string; kind?: string }>>([])
+  useEffect(() => {
+    if (!venue?.id) return
+    let cancelled = false
+    api.get(`/api/v1/businesses/${venue.id}/resources`)
+      .then((r) => { if (!cancelled) setSpaces((r?.data?.data || []).filter((x: any) => x && x.isActive !== false).map((x: any) => ({ id: x.id, label: x.label, kind: x.kind }))) })
+      .catch(() => { if (!cancelled) setSpaces([]) })
+    return () => { cancelled = true }
+  }, [venue?.id])
 
   const [availability, setAvailability] = useState<Record<string, DayAvailability>>({})
   const fetchMonth = useCallback(async (d: Date) => {
@@ -583,6 +599,33 @@ export default function DateTimeStep({
             }))
           }
         />
+
+        {/* Which hall / lawn / partition? Only shown when the venue configured
+           bookable spaces. Optional — "whole venue" leaves it unpinned. */}
+        {spaces.length > 0 && (
+          <section className="space-y-2">
+            <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
+              Which space?
+            </p>
+            <select
+              value={(formData as any).selectedResourceId || ""}
+              onChange={(e) =>
+                updateFormData((prev) => ({ ...(prev as any), selectedResourceId: e.target.value }))
+              }
+              className="w-full rounded-md border border-bridal-beige bg-bridal-ivory px-3 py-2.5 font-bridal text-[13px] text-bridal-charcoal outline-none focus:border-bridal-gold-dark"
+            >
+              <option value="">Whole venue / any space</option>
+              {spaces.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}{s.kind ? ` — ${s.kind}` : ""}
+                </option>
+              ))}
+            </select>
+            <p className="font-bridal text-[10.5px] text-bridal-text-soft">
+              Pick a specific hall, lawn or partition, or leave as the whole venue.
+            </p>
+          </section>
+        )}
       </div>{/* end right column */}
 
       </div>{/* end calendar+slots row */}
