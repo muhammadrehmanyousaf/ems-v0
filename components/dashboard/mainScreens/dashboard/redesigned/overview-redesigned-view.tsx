@@ -69,9 +69,22 @@ export function OverviewRedesignedView() {
     queryKey: ["overview-recent-redesigned", activeBusinessId],
     queryFn: () => AnalyticsAPI.getRecentBookings(8, undefined, undefined, undefined, activeBusinessId),
   })
+  // Owner cockpit: which hall earns the most? Always across ALL the owner's
+  // venues (independent of the switcher) so a multi-hall owner can compare.
+  const breakdownsQ = useQuery({
+    queryKey: ["overview-hall-league"],
+    queryFn: () => AnalyticsAPI.getRevenueBreakdowns("this_year"),
+  })
 
   const k = kpisQ.data
   const recent = (recentQ.data?.bookings ?? []) as RecentRow[]
+
+  const halls = React.useMemo(
+    () => [...(breakdownsQ.data?.byBusiness ?? [])].sort((a, b) => (b.totalRevenue || 0) - (a.totalRevenue || 0)),
+    [breakdownsQ.data],
+  )
+  const maxHallRev = halls.reduce((m, h) => Math.max(m, h.totalRevenue || 0), 0)
+  const showHallLeague = halls.length > 1
 
   const columns: Column<RecentRow>[] = [
     { key: "customer", header: "Customer", render: (b) => <span className="font-medium">{b.customerName || "—"}</span> },
@@ -99,6 +112,39 @@ export function OverviewRedesignedView() {
         <StatCard label="Today's events" value={kpisQ.isLoading ? "…" : kpisQ.isError ? "—" :num(k?.todaysEvents?.value)} icon="Star" />
         <StatCard label="Upcoming (7d)" value={kpisQ.isLoading ? "…" : kpisQ.isError ? "—" :num(k?.upcomingBookings?.value)} icon="TrendingUp" />
       </div>
+
+      {/* Per-hall performance — the owner's "which hall wins?" league table.
+          Only shown for multi-venue owners; single-hall vendors don't need it. */}
+      {showHallLeague && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Per-hall performance <span className="font-normal normal-case tracking-normal text-xs">· revenue this year</span>
+            </h2>
+            <span className="text-xs text-muted-foreground">{halls.length} venues</span>
+          </div>
+          <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
+            {halls.map((h, i) => {
+              const pct = maxHallRev > 0 ? Math.round(((h.totalRevenue || 0) / maxHallRev) * 100) : 0
+              return (
+                <div key={h.businessId} className="flex items-center gap-3 px-3 py-2.5">
+                  <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums ${i === 0 ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>{i + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium">{h.businessName}</div>
+                    <div className="mt-1 h-1.5 rounded-full bg-muted">
+                      <div className={`h-full rounded-full ${i === 0 ? "bg-primary" : "bg-primary/50"}`} style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-semibold tabular-nums">{formatPkr(h.totalRevenue || 0)}</div>
+                    <div className="text-xs text-muted-foreground tabular-nums">{h.bookingCount} booking{h.bookingCount === 1 ? "" : "s"}</div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Recent bookings */}
       <div className="space-y-3">
