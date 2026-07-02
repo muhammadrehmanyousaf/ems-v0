@@ -31,6 +31,10 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({ children }
   const [favorites, setFavorites] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+  // Favorites are a customer-only feature; vendor/other accounts get a 403 from the
+  // API. Once we learn this account can't use favorites we disable the fetch so it
+  // never retries (previously it re-fired on every render/storage event → 403 spam).
+  const [favoritesDisabled, setFavoritesDisabled] = useState(false);
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
 
   // Check if user is logged in
@@ -67,21 +71,30 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({ children }
   }, [favorites.length]);
 
   const loadFavorites = async () => {
-    if (!isLoggedIn) return;
-    
+    if (!isLoggedIn || favoritesDisabled) return;
+
+    // Favorites are customer-only. Vendor accounts get a 403 from the API, so skip
+    // the call entirely for them (previously it fired on every render → 403 spam).
+    try {
+      const ud = JSON.parse(localStorage.getItem('user_data') || '{}');
+      if (ud?.isVendor === true) { setFavoritesDisabled(true); setFavorites([]); return; }
+    } catch { /* ignore malformed user_data */ }
+
     // Check if we have cached data that's still valid
     const now = Date.now();
     if (favorites.length > 0 && (now - lastFetchTime) < CACHE_DURATION) {
       return;
     }
-    
+
     setIsLoading(true);
+    setLastFetchTime(now); // stamp up-front so a failure can't trigger a tight refetch loop
     try {
       const userFavorites = await FavoritesAPI.getUserFavorites();
       setFavorites(userFavorites);
-      setLastFetchTime(now);
-    } catch (error) {
-      console.error('Error loading favorites:', error);
+    } catch (error: any) {
+      // 403 = this account isn't allowed favorites (e.g. a vendor). Disable so we
+      // never retry and never spam the console for the rest of the session.
+      if (error?.response?.status === 403) setFavoritesDisabled(true);
     } finally {
       setIsLoading(false);
     }
