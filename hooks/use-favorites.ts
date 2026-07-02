@@ -98,17 +98,28 @@ const clearCachedFavorites = () => {
   }
 }
 
+// Module-level so a single 403 (or a vendor account) silences favorites across
+// EVERY instance of this hook. It's mounted per card, so without this each of the
+// ~14 cards on a listing page independently 403s and clears cache → retry-spam.
+let favoritesUnavailable = false
+
 export function useFavorites(): UseFavoritesReturn {
   const [favorites, setFavorites] = useState<number[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
   // Load favorites from API with caching
   const loadFavorites = useCallback(async (forceRefresh = false) => {
-    if (!isAuthenticated()) {
+    if (!isAuthenticated() || favoritesUnavailable) {
       setFavorites([])
-      clearCachedFavorites()
       return
     }
+
+    // Favorites are customer-only; a vendor account 403s. Skip entirely so a
+    // vendor browsing the public site never fires the call.
+    try {
+      const ud = JSON.parse(localStorage.getItem('user_data') || '{}')
+      if (ud?.isVendor === true) { favoritesUnavailable = true; setFavorites([]); return }
+    } catch { /* ignore malformed user_data */ }
 
     // Try cache first (unless force refresh)
     if (!forceRefresh) {
@@ -124,10 +135,11 @@ export function useFavorites(): UseFavoritesReturn {
       const userFavorites = await FavoritesAPI.getUserFavorites()
       setFavorites(userFavorites)
       setCachedFavorites(userFavorites)
-    } catch (error) {
-      console.error('Error loading favorites:', error)
+    } catch (error: any) {
+      // 403 = this account can't use favorites. Disable for every hook instance
+      // so we don't retry/spam the console for the rest of the session.
+      if (error?.response?.status === 403) favoritesUnavailable = true
       setFavorites([])
-      clearCachedFavorites()
     } finally {
       setIsLoading(false)
     }
