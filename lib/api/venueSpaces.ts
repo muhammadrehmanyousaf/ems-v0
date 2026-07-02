@@ -83,11 +83,35 @@ export interface BookResult {
   mergeGroupId: number | null;
 }
 
+export interface SpacePnlRow {
+  subVenueId: number;
+  name: string;
+  kind: string;
+  depth: number;
+  parentSubVenueId: number | null;
+  ownRevenue: number;
+  ownCost: number;
+  revenue: number;
+  cost: number;
+  margin: number;
+  marginPct: number | null;
+}
+export interface SpacePnl {
+  businessId: number;
+  from: string | null;
+  to: string | null;
+  spaces: SpacePnlRow[];
+  ranked: SpacePnlRow[];
+  businessLevel: { revenue: number; cost: number };
+  totals: { revenue: number; cost: number; margin: number; marginPct: number | null };
+}
+
 const BASE = "/api/v1/venue-spaces";
 
 export const venueSpacesApi = {
   // public (customer-facing) read-only
   publicTree: (businessId: number): Promise<SpaceTree> => unwrap<SpaceTree>(api.get(`${BASE}/public/business/${businessId}/tree`)),
+  spacePnl: (businessId: number): Promise<SpacePnl> => unwrap<SpacePnl>(api.get(`${BASE}/business/${businessId}/space-pnl`)),
   publicAvailability: (businessId: number, date: string): Promise<DateAvailability> => unwrap<DateAvailability>(api.get(`${BASE}/public/business/${businessId}/availability`, { params: { date } })),
 
   // tree
