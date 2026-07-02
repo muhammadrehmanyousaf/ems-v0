@@ -964,6 +964,9 @@ export interface CreateBookingPayload {
   pickupAddress?: string;
   dropoffAddress?: string;
   isOfflineBooking?: boolean;
+  // Groups this booking under a WeddingUmbrella (one logical shaadi over
+  // several functions — mehndi/baraat/walima). The BE validates owner + links.
+  umbrellaId?: number;
 }
 
 export type PaymentType = "down_payment" | "remaining" | "full_payment";

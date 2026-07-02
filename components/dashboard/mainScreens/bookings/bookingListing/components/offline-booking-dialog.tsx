@@ -26,7 +26,9 @@ import {
     type ApiBusiness, type ApiPackage, type ApiMenu,
 } from '@/lib/api/dashboard';
 import { BusinessResourcesAPI, type BusinessResource } from '@/lib/api/businessResources';
+import { WeddingUmbrellasAPI, type WeddingUmbrella } from '@/lib/api/weddingUmbrellas';
 import { useBusiness } from '@/context/BusinessContext';
+import { PartyPopper, CheckCircle2 } from 'lucide-react';
 
 interface OfflineBookingDialogProps {
     open: boolean;
@@ -69,6 +71,10 @@ const ADVANCE_METHODS = [
     { value: 'cheque', label: 'Cheque' },
     { value: 'card', label: 'Card' },
 ];
+
+// The functions a Pakistani wedding is booked as — each is its own dated event
+// under one "wedding group" (WeddingUmbrella).
+const FUNCTION_TYPES = ['Mehndi', 'Nikah', 'Baraat', 'Walima', 'Dholki', 'Reception', 'Other function'];
 
 // Vendor types that need guest count
 const GUEST_COUNT_TYPES = ['Wedding venue', 'Catering', 'Decorator'];
@@ -315,6 +321,29 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
     const [advanceCollected, setAdvanceCollected] = useState(false);
     const [advanceMethod, setAdvanceMethod] = useState('cash');
 
+    // ── Multi-function "full wedding" mode ──────────────────────────────
+    // A shaadi is 2-3 dated functions (mehndi/baraat/walima) grouped under one
+    // WeddingUmbrella. In wedding mode the dialog stays open after each save so
+    // the manager adds the next function; customer + group are preserved.
+    const [weddingMode, setWeddingMode] = useState(false);
+    const [functionType, setFunctionType] = useState('');
+    const [umbrellaChoice, setUmbrellaChoice] = useState<string>('new'); // 'new' | umbrellaId
+    const [myUmbrellas, setMyUmbrellas] = useState<WeddingUmbrella[]>([]);
+    // Once the first function is saved (or an existing group picked), the group
+    // is locked for the rest of this session so every function lands under it.
+    const [activeUmbrellaId, setActiveUmbrellaId] = useState<number | null>(null);
+    const [functionsAdded, setFunctionsAdded] = useState<Array<{ type: string; date: string }>>([]);
+
+    // Load the vendor's existing wedding groups so they can add a function to one.
+    useEffect(() => {
+        if (!open) return;
+        let cancelled = false;
+        WeddingUmbrellasAPI.listMine()
+            .then((list) => { if (!cancelled) setMyUmbrellas(Array.isArray(list) ? list : []); })
+            .catch(() => { /* silent — vendor can still start a new group */ });
+        return () => { cancelled = true; };
+    }, [open]);
+
     // Remote data
     const { businesses, loading: loadingBusinesses } = useBusiness();
     const [packages, setPackages] = useState<ApiPackage[]>([]);
@@ -374,8 +403,21 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
         setSpecialRequests('');
         setCarMode('package');
         setAdvanceCollected(false); setAdvanceMethod('cash');
+        setWeddingMode(false); setFunctionType(''); setUmbrellaChoice('new');
+        setActiveUmbrellaId(null); setFunctionsAdded([]);
         setPackages([]); setMenus([]);
 
+    }, []);
+
+    // Clear only the per-function fields so the customer + wedding group carry
+    // over to the next function (mehndi → baraat → walima) in wedding mode.
+    const resetFunctionFields = useCallback(() => {
+        setBookingDate(undefined); setBookingTime('');
+        setGuestCount(''); setSelectedResourceId('');
+        setSelectedPackageId(''); setSelectedMenuId('');
+        setSpecialRequests(''); setFunctionType('');
+        setAdvanceCollected(false); setAdvanceMethod('cash');
+        setQuantity(1); setNumberOfDays(1);
     }, []);
 
     const handleClose = (v: boolean) => { if (!v) resetForm(); onOpenChange(v); };
@@ -481,9 +523,35 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
             toast.error('Please select a business');
             return;
         }
+        if (weddingMode && !functionType) {
+            toast.error('Pick which function this is (mehndi, baraat, walima…)');
+            return;
+        }
 
         setSaving(true);
         try {
+            // In wedding mode, resolve the group (WeddingUmbrella) first: either the
+            // one already active this session, an existing one the vendor picked, or
+            // a brand-new group titled after the customer.
+            let umbrellaId: number | undefined = activeUmbrellaId ?? undefined;
+            if (weddingMode && umbrellaId == null) {
+                if (umbrellaChoice === 'new') {
+                    const umb = await WeddingUmbrellasAPI.create({
+                        title: `${customerName.trim()} — Shaadi`,
+                        weddingDate: format(bookingDate, 'yyyy-MM-dd'),
+                        primaryCity: selectedBusiness?.city || undefined,
+                        estimatedGuests: showGuestCount && guestCount ? Number(guestCount) : undefined,
+                    });
+                    umbrellaId = umb.id;
+                } else {
+                    umbrellaId = Number(umbrellaChoice);
+                }
+            }
+            // Tag the function (mehndi/baraat/…) onto the booking's notes so it's
+            // identifiable in the group even though a Booking has no function column.
+            const fnLabel = weddingMode && functionType ? `[${functionType}]` : '';
+            const combinedRequests = [fnLabel, specialRequests.trim()].filter(Boolean).join(' ') || null;
+
             const response = await BookingsAPI.create({
                 customerName: customerName.trim(),
                 // Issue #12 — was generating `offline_<timestamp>@weddingwala.pk`
@@ -533,11 +601,12 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                             : undefined,
                     totalAmount: 0,   // server overrides
                     downPayment: 0,   // server overrides
-                    specialRequests: specialRequests.trim() || null,
+                    specialRequests: combinedRequests,
                 }],
                 isOfflineBooking: true,
+                // Group this function under the wedding (mehndi/baraat/walima).
+                umbrellaId: weddingMode ? umbrellaId : undefined,
             });
-            toast.success('Booking created successfully');
             // Issue #15 — surface the new booking id so the lead
             // pipeline's "Convert to booking" caller can immediately
             // link the lead to it. Best-effort: a missing id never
@@ -559,9 +628,20 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                     }
                 }
             }
-            resetForm();
-            onOpenChange(false);
-            onSuccess();
+            if (weddingMode) {
+                // Lock the group and keep the dialog open so the manager adds the
+                // next function (baraat, walima…) without re-typing the customer.
+                if (umbrellaId != null) { setActiveUmbrellaId(umbrellaId); setUmbrellaChoice(String(umbrellaId)); }
+                setFunctionsAdded((prev) => [...prev, { type: functionType || 'Function', date: bookingDate ? format(bookingDate, 'MMM dd') : '' }]);
+                onSuccess();
+                toast.success(`${functionType || 'Function'} saved — add the next function or tap Finish`);
+                resetFunctionFields();
+            } else {
+                toast.success('Booking created successfully');
+                resetForm();
+                onOpenChange(false);
+                onSuccess();
+            }
         } catch (err: any) {
             const msg = err?.response?.data?.message || err?.response?.data?.error || 'Failed to create booking';
             toast.error(msg);
@@ -582,6 +662,73 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
 
                 <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
                 <div className="flex-1 overflow-y-auto px-6 py-2 space-y-5">
+
+                    {/* ── Single event vs full wedding (grouped functions) ── */}
+                    <div className="rounded-xl border border-bridal-beige bg-bridal-cream/40 p-3 space-y-3">
+                        <div className="flex rounded-lg border border-neutral-200 overflow-hidden bg-white">
+                            <button
+                                type="button"
+                                onClick={() => setWeddingMode(false)}
+                                disabled={functionsAdded.length > 0}
+                                className={cn('flex-1 py-2 text-sm font-medium transition-colors',
+                                    !weddingMode ? 'bg-bridal-gold text-white' : 'bg-white text-neutral-600 hover:bg-neutral-50',
+                                    functionsAdded.length > 0 && 'opacity-40 cursor-not-allowed')}
+                            >
+                                Single event
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setWeddingMode(true)}
+                                className={cn('flex-1 py-2 text-sm font-medium border-l border-neutral-200 inline-flex items-center justify-center gap-1.5 transition-colors',
+                                    weddingMode ? 'bg-bridal-gold text-white' : 'bg-white text-neutral-600 hover:bg-neutral-50')}
+                            >
+                                <PartyPopper className="h-4 w-4" /> Full wedding
+                            </button>
+                        </div>
+                        {weddingMode && (
+                            <div className="space-y-3">
+                                <p className="text-[11px] text-muted-foreground">
+                                    Book each function (mehndi, baraat, walima…) as its own date — they&apos;re grouped
+                                    under one wedding. Save one, then add the next.
+                                </p>
+                                {activeUmbrellaId == null && myUmbrellas.length > 0 && (
+                                    <div className="space-y-1.5">
+                                        <Label>Wedding group</Label>
+                                        <Select value={umbrellaChoice} onValueChange={setUmbrellaChoice}>
+                                            <SelectTrigger><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="new">+ New wedding</SelectItem>
+                                                {myUmbrellas.map((u) => (
+                                                    <SelectItem key={u.id} value={String(u.id)}>
+                                                        {u.title || `Wedding #${u.id}`}{u.weddingDate ? ` · ${u.weddingDate}` : ''}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
+                                <div className="space-y-1.5">
+                                    <Label>Which function is this? *</Label>
+                                    <Select value={functionType} onValueChange={setFunctionType}>
+                                        <SelectTrigger><SelectValue placeholder="Mehndi / Baraat / Walima…" /></SelectTrigger>
+                                        <SelectContent>
+                                            {FUNCTION_TYPES.map((f) => (<SelectItem key={f} value={f}>{f}</SelectItem>))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                {functionsAdded.length > 0 && (
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                        <span className="text-[11px] text-muted-foreground">In this wedding:</span>
+                                        {functionsAdded.map((f, i) => (
+                                            <span key={i} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                                                <CheckCircle2 className="h-3 w-3" /> {f.type}{f.date ? ` · ${f.date}` : ''}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
 
                     {/* ── Customer Info ── */}
                     <div className="space-y-3">
@@ -1107,11 +1254,13 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                 </div>
                     <DialogFooter className="px-6 py-4 border-t shrink-0 gap-2 sm:gap-0">
                         <Button type="button" variant="outline" onClick={() => handleClose(false)} disabled={saving}>
-                            Cancel
+                            {weddingMode && functionsAdded.length > 0 ? 'Finish' : 'Cancel'}
                         </Button>
                         <Button type="submit" disabled={saving}>
                             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Create Booking
+                            {weddingMode
+                                ? (functionsAdded.length > 0 ? 'Save & add next' : 'Save function')
+                                : 'Create Booking'}
                         </Button>
                     </DialogFooter>
                 </form>
