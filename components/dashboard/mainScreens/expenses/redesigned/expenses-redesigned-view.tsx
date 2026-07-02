@@ -23,6 +23,21 @@ import { ExpenseFormDialog } from "@/components/dashboard/mainScreens/expenses/r
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
+import { useActiveBusinessId } from "@/lib/store/active-business-store"
+import { CustomFieldsManager } from "@/components/dashboard/shared/custom-fields-manager"
+import { useCustomFieldDefs } from "@/components/dashboard/shared/custom-fields-section"
+import { isCustomFieldsOn } from "@/lib/custom-fields-flag"
+import type { CustomFieldDef } from "@/lib/api/customFields"
+
+const fmtCf = (v: unknown, d: CustomFieldDef): string => {
+  if (v == null || v === "") return "—"
+  if (d.fieldType === "boolean") return v ? "Yes" : "No"
+  if (Array.isArray(v)) return v.map((x) => d.optionsJson?.find((o) => o.value === x)?.label ?? String(x)).join(", ") || "—"
+  if (d.fieldType === "dropdown") return d.optionsJson?.find((o) => o.value === v)?.label ?? String(v)
+  if (d.fieldType === "money") return "Rs " + Number(v).toLocaleString("en-PK")
+  if (d.fieldType === "date" || d.fieldType === "datetime") { const dt = new Date(String(v)); return isNaN(dt.getTime()) ? String(v) : dt.toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) }
+  return String(v)
+}
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
@@ -39,9 +54,19 @@ export function ExpensesRedesignedView() {
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<VendorExpense | undefined>(undefined)
   const [deleting, setDeleting] = React.useState<VendorExpense | null>(null)
+  const [managerOpen, setManagerOpen] = React.useState(false)
+
+  // Per-venue custom fields (Space-level EAV overlay). showInList defs become extra columns.
+  const activeBusinessId = useActiveBusinessId()
+  const cfDefsQ = useCustomFieldDefs("expense", activeBusinessId)
+  const listCfDefs = React.useMemo(
+    () => (cfDefsQ.data ?? []).filter((d) => d.isActive && d.showInList).sort((a, b) => a.displayOrder - b.displayOrder),
+    [cfDefsQ.data],
+  )
+  const cfEnabled = isCustomFieldsOn() && activeBusinessId != null
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["expenses-redesigned"],
+    queryKey: ["expenses-redesigned", activeBusinessId],
     queryFn: () => ExpensesAPI.list(),
   })
 
@@ -88,6 +113,15 @@ export function ExpensesRedesignedView() {
     },
   ]
 
+  // Splice vendor-defined "show in list" custom fields in just before the actions column.
+  const cfCols: Column<VendorExpense>[] = listCfDefs.map((d) => ({
+    key: `cf_${d.fieldKey}`,
+    header: d.label,
+    cellClassName: "text-muted-foreground",
+    render: (e) => fmtCf((e as any).customFields?.[d.fieldKey], d),
+  }))
+  const tableColumns = cfCols.length ? [...columns.slice(0, -1), ...cfCols, columns[columns.length - 1]] : columns
+
   return (
     <div className="space-y-6 p-4 md:p-6">
       <PageHeader
@@ -105,7 +139,7 @@ export function ExpensesRedesignedView() {
       </div>
 
       <DataTable
-        columns={columns}
+        columns={tableColumns}
         data={expenses}
         getRowId={(e) => String(e.id)}
         loading={isLoading}
@@ -131,6 +165,11 @@ export function ExpensesRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
+              {cfEnabled && (
+                <Button variant="outline" size="sm" onClick={() => setManagerOpen(true)} title="Add or edit your own expense fields">
+                  <Icon name="Settings2" size={15} className="mr-1.5" /> Fields
+                </Button>
+              )}
               <ImportButton target="expenses" label="expenses" />
               <ExportMenu selectedIds={selected} getRowId={(e) => String(e.id)} rows={expenses} filename="expenses" columns={[
                 { header: "Category", value: (e) => e.category },
@@ -156,6 +195,16 @@ export function ExpensesRedesignedView() {
       />
 
       <ExpenseFormDialog open={dialogOpen} onOpenChange={setDialogOpen} expense={editing} onSaved={invalidate} />
+
+      {cfEnabled && (
+        <CustomFieldsManager
+          open={managerOpen}
+          onOpenChange={setManagerOpen}
+          entityType="expense"
+          entityLabel="Expenses"
+          businessId={activeBusinessId as number}
+        />
+      )}
 
       <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
         <AlertDialogContent>

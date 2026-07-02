@@ -128,6 +128,14 @@ import {
   HelpCircle,
   Truck,
   Utensils,
+  // custom-fields field-type glyphs
+  Type,
+  AlignLeft,
+  Hash,
+  ToggleRight,
+  ListChecks,
+  Link,
+  Paperclip,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -263,6 +271,14 @@ const LUCIDE_MAP = {
   // trade-ops domain glyphs (kitchen / fleet / live stalls)
   Truck,
   Utensils,
+  // custom-fields field-type glyphs
+  Type,
+  AlignLeft,
+  Hash,
+  ToggleRight,
+  ListChecks,
+  Link,
+  Paperclip,
 } satisfies Record<string, LucideIcon>
 
 export type IconName = keyof typeof ICONLY_MAP | keyof typeof LUCIDE_MAP
