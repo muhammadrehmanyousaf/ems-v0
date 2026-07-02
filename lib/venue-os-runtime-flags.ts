@@ -22,8 +22,38 @@ let runtime: Record<string, boolean> = {}
 export function runtimeFlagOn(key: string): boolean {
   return runtime[key] === true
 }
+
+// External-store subscription so components can REACT when the flags resolve.
+// Without this, a page rendered before the async health call finished would read
+// an empty `runtime` and never re-render when it populates (the flags load "late"
+// on a fresh load / hard navigation, only appearing after an unrelated re-render).
+const flagListeners = new Set<() => void>()
 export function setRuntimeFlags(flags: Record<string, boolean> | null | undefined): void {
-  runtime = flags || {}
+  const next = flags || {}
+  // Only notify when something actually changed (avoids render loops).
+  const keys = new Set([...Object.keys(runtime), ...Object.keys(next)])
+  let changed = false
+  for (const k of keys) { if ((runtime[k] === true) !== (next[k] === true)) { changed = true; break } }
+  runtime = next
+  if (changed) flagListeners.forEach((l) => l())
+}
+function subscribeRuntimeFlags(cb: () => void): () => void {
+  flagListeners.add(cb)
+  return () => flagListeners.delete(cb)
+}
+
+/**
+ * Reactive read of a single runtime flag (env-OR handled by callers). Re-renders
+ * the component when the active venue's flags resolve or change. Use this in
+ * render paths that must appear as soon as the flag is known; `runtimeFlagOn` stays
+ * for synchronous, non-reactive checks.
+ */
+export function useRuntimeFlag(key: string): boolean {
+  return React.useSyncExternalStore(
+    subscribeRuntimeFlags,
+    () => runtime[key] === true,
+    () => false,
+  )
 }
 
 /**
