@@ -71,6 +71,7 @@ export function ExpensesRedesignedView() {
 
   const columns: Column<VendorExpense>[] = [
     { key: "category", header: "Category", render: (e) => <span className="font-medium">{cap(e.category)}</span> },
+    { key: "space", header: "Space", cellClassName: "text-muted-foreground", render: (e) => e.subVenue?.name || "—" },
     { key: "payee", header: "Paid to", cellClassName: "text-muted-foreground", render: (e) => e.vendorName || "—" },
     { key: "note", header: "Note", cellClassName: "max-w-[260px] truncate text-muted-foreground", render: (e) => e.description || "—" },
     { key: "method", header: "Method", render: (e) => <StatusPill tone="neutral">{cap(e.paymentMethod)}</StatusPill> },
