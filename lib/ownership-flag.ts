@@ -3,14 +3,16 @@
 // free read-only surface; this gates the ownership write/plan tools. The backend
 // 404s until ENABLE_OWNERSHIP.
 //
-//   NEXT_PUBLIC_OWNERSHIP_ON=true → render the succession panel
-//   (unset / anything else)       → OFF (default)
+//   NEXT_PUBLIC_OWNERSHIP_ON=true → render for everyone, OR
+//   a per-business FeatureFlagOverride (ENABLE_OWNERSHIP) → render for that venue.
+import { runtimeFlagOn } from "@/lib/venue-os-runtime-flags";
 
 const ON = process.env.NEXT_PUBLIC_OWNERSHIP_ON === "true";
 
-/** Whether the succession & equity surface should render. OFF by default. */
+/** Whether the succession & equity surface should render. OFF by default;
+ *  ON globally via env, or per-venue via the runtime override. */
 export function isOwnershipOn(_businessId?: number | string | null): boolean {
-  return ON;
+  return ON || runtimeFlagOn("ENABLE_OWNERSHIP");
 }
 
-export const OWNERSHIP_ON = isOwnershipOn();
+export const OWNERSHIP_ON = ON;

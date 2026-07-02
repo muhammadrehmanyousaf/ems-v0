@@ -6,11 +6,14 @@
 //   NEXT_PUBLIC_AML_SHIELD_ON=true → render the DNFBP card
 //   (unset / anything else)        → OFF (default)
 
+import { runtimeFlagOn } from "@/lib/venue-os-runtime-flags";
+
 const ON = process.env.NEXT_PUBLIC_AML_SHIELD_ON === "true";
 
-/** Whether the DNFBP readiness card should render. OFF by default. */
+/** Whether the DNFBP readiness card should render. OFF by default; ON via env
+ *  globally, or per-venue via the ENABLE_AML_SHIELD runtime override. */
 export function isAmlShieldOn(_businessId?: number | string | null): boolean {
-  return ON;
+  return ON || runtimeFlagOn("ENABLE_AML_SHIELD");
 }
 
-export const AML_SHIELD_ON = isAmlShieldOn();
+export const AML_SHIELD_ON = ON;
