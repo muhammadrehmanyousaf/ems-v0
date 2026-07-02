@@ -59,6 +59,17 @@ const TIME_SLOTS = [
     { value: '18:00', label: 'Evening  (6 PM – 11 PM)' },
 ];
 
+// Advance/deposit payment methods a hall actually collects at booking.
+const ADVANCE_METHODS = [
+    { value: 'cash', label: 'Cash' },
+    { value: 'bank_transfer', label: 'Bank transfer' },
+    { value: 'jazzcash', label: 'JazzCash' },
+    { value: 'easypaisa', label: 'Easypaisa' },
+    { value: 'raast', label: 'Raast' },
+    { value: 'cheque', label: 'Cheque' },
+    { value: 'card', label: 'Card' },
+];
+
 // Vendor types that need guest count
 const GUEST_COUNT_TYPES = ['Wedding venue', 'Catering', 'Decorator'];
 const MENU_TYPES = ['Catering'];
@@ -299,6 +310,10 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
     const [selectedMenuId, setSelectedMenuId] = useState('');
     const [specialRequests, setSpecialRequests] = useState('');
     const [carMode, setCarMode] = useState<'package' | 'single'>('package');
+    // Record the advance actually taken at booking ("50k advance, baqi baad mein").
+    // When on, we mark the down-payment collected via recordPayment after create.
+    const [advanceCollected, setAdvanceCollected] = useState(false);
+    const [advanceMethod, setAdvanceMethod] = useState('cash');
 
     // Remote data
     const { businesses, loading: loadingBusinesses } = useBusiness();
@@ -358,6 +373,7 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
         setSelectedBusinessId(''); setSelectedPackageId(''); setSelectedMenuId('');
         setSpecialRequests('');
         setCarMode('package');
+        setAdvanceCollected(false); setAdvanceMethod('cash');
         setPackages([]); setMenus([]);
 
     }, []);
@@ -531,6 +547,17 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
             );
             if (Number.isFinite(newBookingId) && newBookingId > 0) {
                 try { onCreated?.(newBookingId); } catch { /* ignore */ }
+                // Record the advance the customer just paid at booking. Best-effort:
+                // if it fails the booking still exists and the vendor can record the
+                // payment later from the booking, so we never block the primary flow.
+                if (advanceCollected) {
+                    try {
+                        await BookingsAPI.recordPayment(newBookingId, 'down_payment', advanceMethod);
+                        toast.success('Advance recorded');
+                    } catch {
+                        toast.warning('Booking saved, but recording the advance failed — record it from the booking.');
+                    }
+                }
             }
             resetForm();
             onOpenChange(false);
@@ -1040,6 +1067,38 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                                 <div className="flex justify-between text-xs text-bridal-gold-dark">
                                     <span>Down Payment (due now)</span>
                                     <span className="font-medium">{formatPKR(priceBreakdown.downPayment)}</span>
+                                </div>
+                            )}
+                            {/* Record the advance the customer pays right now, so the
+                                booking opens already part-paid instead of fully due. */}
+                            {priceBreakdown.downPayment > 0 && (
+                                <div className="mt-2 border-t border-neutral-200 pt-2 space-y-2">
+                                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                                        <input
+                                            type="checkbox"
+                                            className="h-4 w-4 rounded border-neutral-300 accent-bridal-gold"
+                                            checked={advanceCollected}
+                                            onChange={(e) => setAdvanceCollected(e.target.checked)}
+                                        />
+                                        <span className="text-sm font-medium text-neutral-800">
+                                            Advance of {formatPKR(priceBreakdown.downPayment)} received now
+                                        </span>
+                                    </label>
+                                    {advanceCollected && (
+                                        <div className="flex items-center gap-2 pl-6">
+                                            <span className="text-xs text-muted-foreground">Paid via</span>
+                                            <Select value={advanceMethod} onValueChange={setAdvanceMethod}>
+                                                <SelectTrigger className="h-8 w-40">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {ADVANCE_METHODS.map((m) => (
+                                                        <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
