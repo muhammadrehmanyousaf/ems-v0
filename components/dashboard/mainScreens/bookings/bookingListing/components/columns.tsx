@@ -96,6 +96,25 @@ export const columns: ColumnDef<BookingData>[] = [
     },
   },
   {
+    id: "space",
+    header: "Space",
+    accessorFn: (row) => (row.bookingDetails || [])[0]?.resource?.label || "-",
+    cell: ({ row }) => {
+      const first = (row.original.bookingDetails || [])[0]
+      const label = first?.resource?.label
+      return label ? (
+        <div>
+          <p className="text-sm text-neutral-800 truncate max-w-[150px]">{label}</p>
+          {first?.resource?.kind && (
+            <p className="text-xs text-neutral-400 capitalize">{first.resource.kind}</p>
+          )}
+        </div>
+      ) : (
+        <span className="text-xs text-neutral-400">-</span>
+      )
+    },
+  },
+  {
     id: "amount",
     header: "Amount",
     accessorFn: (row) => {

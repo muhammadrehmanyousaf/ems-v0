@@ -19,6 +19,7 @@ import { DataTable, type Column } from "@/components/dashboard/primitives/data-t
 import { StatusPill } from "@/components/dashboard/primitives/status-pill"
 import { formatPkr } from "@/components/dashboard/primitives/money-cell"
 import { ExportMenu } from "@/components/dashboard/shared/export-menu"
+import { ImportButton } from "@/components/dashboard/shared/import-button"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
@@ -155,6 +156,7 @@ export function StaffRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
+              <ImportButton target="staff" label="staff" />
               <ExportMenu selectedIds={selected} getRowId={(m) => String(m.id)} rows={members} filename="staff" columns={[
                 { header: "Name", value: (m) => m.fullName },
                 { header: "Role", value: (m) => m.role ?? "" },

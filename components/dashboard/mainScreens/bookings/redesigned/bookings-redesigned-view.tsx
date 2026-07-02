@@ -75,6 +75,7 @@ export function BookingsRedesignedView() {
 
   const columns: Column<BookingData>[] = [
     { key: "service", header: "Booking", render: (b) => <span className="font-medium">{serviceLabel(b)}</span> },
+    { key: "space", header: "Space", cellClassName: "text-muted-foreground", render: (b) => b.bookingDetails?.[0]?.resource?.label || "—" },
     { key: "customer", header: "Customer", cellClassName: "text-muted-foreground", render: (b) => b.customerName || "—" },
     { key: "date", header: "Date", cellClassName: "text-muted-foreground", render: (b) => fmtDate(b.bookingDate) },
     { key: "amount", header: "Amount", align: "right", render: (b) => <MoneyCell amount={Number(b.totalAmount) || 0} /> },
@@ -158,6 +159,7 @@ export function BookingsRedesignedView() {
                 filename="bookings"
                 columns={[
                   { header: "Booking", value: serviceLabel },
+                  { header: "Space", value: (b) => b.bookingDetails?.[0]?.resource?.label || "" },
                   { header: "Customer", value: (b) => b.customerName },
                   { header: "Phone", value: (b) => b.customerPhone },
                   { header: "Date", value: (b) => fmtDate(b.bookingDate) },
