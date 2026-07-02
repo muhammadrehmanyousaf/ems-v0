@@ -854,14 +854,17 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                                 <div className="space-y-1.5">
                                     <Label>Hall / Lawn</Label>
                                     <Select
-                                        value={selectedResourceId}
-                                        onValueChange={setSelectedResourceId}
+                                        value={selectedResourceId || '__whole__'}
+                                        onValueChange={(v) => setSelectedResourceId(v === '__whole__' ? '' : v)}
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Whole venue (default)" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">
+                                            {/* Radix forbids an empty-string SelectItem value; use a
+                                                sentinel and map it back to '' (= whole venue) so the
+                                                dialog doesn't crash when a hall-configured venue is picked. */}
+                                            <SelectItem value="__whole__">
                                                 Whole venue (default)
                                             </SelectItem>
                                             {venueResources.map((r) => (
