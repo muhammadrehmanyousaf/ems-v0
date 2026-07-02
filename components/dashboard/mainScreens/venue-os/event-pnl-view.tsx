@@ -10,6 +10,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { venueOsApi, type IsDeclared, type PerEventPnl } from "@/lib/api/venueOs";
+import { useActiveBusinessId } from "@/lib/store/active-business-store";
 import { isGlEngineOn } from "@/lib/gl-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,13 +29,15 @@ function Stat({ label, value, tone = "neutral" }: { label: string; value: number
 
 export function EventPnlView(): React.ReactElement | null {
   const enabled = isGlEngineOn();
+  const activeBusinessId = useActiveBusinessId();
   const [bookingInput, setBookingInput] = React.useState<string>("");
   const [bookingId, setBookingId] = React.useState<number | null>(null);
   const [view, setView] = React.useState<IsDeclared>("MANAGEMENT_ONLY");
 
   const pnl = useQuery({
-    queryKey: ["venueOs", "eventPnl", bookingId, view],
-    queryFn: () => venueOsApi.eventPnl(bookingId as number, undefined, view),
+    queryKey: ["venueOs", "eventPnl", bookingId, view, activeBusinessId],
+    // Pass the active venue so the GL_ENGINE_ON gate resolves per-business (else null → 404).
+    queryFn: () => venueOsApi.eventPnl(bookingId as number, activeBusinessId ?? undefined, view),
     enabled: enabled && bookingId != null,
     retry: false,
   });
