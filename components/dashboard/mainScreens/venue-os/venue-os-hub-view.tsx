@@ -53,6 +53,7 @@ import { SuccessionView } from "./succession-view";
 import { EventPnlView } from "./event-pnl-view";
 import { EventCostedPnlView } from "./event-costed-pnl-view";
 import { EventMarginsView } from "./event-margins-view";
+import { SpacePnlView } from "./space-pnl-view";
 import { DepreciationView } from "./depreciation-view";
 import { VenueLeaseView } from "./venue-lease-view";
 import { OwnVsLeaseView } from "./own-vs-lease-view";
@@ -140,6 +141,7 @@ export function VenueOsHubView(): React.ReactElement {
       </div>
       <EventCostedPnlView />
       <EventMarginsView />
+      <SpacePnlView />
       <DepreciationView />
       <VenueLeaseView />
       <OwnVsLeaseView />
