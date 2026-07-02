@@ -12,6 +12,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { venueOsApi, type TaxBreakdown } from "@/lib/api/venueOs";
 import { isOrgMembershipOn } from "@/lib/org-membership-flag";
+import { useActiveBusinessId } from "@/lib/store/active-business-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,9 +23,13 @@ type Jurisdiction = (typeof JURISDICTIONS)[number];
 
 export function VenueOsInsights(): React.ReactElement | null {
   const enabled = isOrgMembershipOn();
+  // Scope status + tax to the ACTIVE venue — the flags are per-business overrides,
+  // so a global health() call would report the env defaults (all off) and the tax
+  // gate would 404 even for a pilot venue.
+  const activeBusinessId = useActiveBusinessId();
   const health = useQuery({
-    queryKey: ["venueOs", "health"],
-    queryFn: () => venueOsApi.health(),
+    queryKey: ["venueOs", "health", activeBusinessId],
+    queryFn: () => venueOsApi.health(activeBusinessId),
     enabled,
     retry: false,
   });
@@ -40,7 +45,7 @@ export function VenueOsInsights(): React.ReactElement | null {
     setComputing(true);
     setErr(null);
     try {
-      setTax(await venueOsApi.computeTax({ baseAmount, jurisdiction, filerStatus: filer }));
+      setTax(await venueOsApi.computeTax({ baseAmount, jurisdiction, filerStatus: filer, businessId: activeBusinessId ?? undefined }));
     } catch (e: unknown) {
       const msg =
         (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
