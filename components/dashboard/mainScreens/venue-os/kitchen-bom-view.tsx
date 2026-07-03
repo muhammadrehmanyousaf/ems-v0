@@ -8,6 +8,7 @@
  * honest"). Gated on isKitchenBomOn() — the backend 404s until ENABLE_KITCHEN_BOM.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type RecipeBom, type YieldVariance } from "@/lib/api/venueOs";
 import { isKitchenBomOn } from "@/lib/kitchen-bom-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +22,7 @@ function readErr(e: unknown, fallback: string): string {
 
 export function KitchenBomView(): React.ReactElement | null {
   const enabled = isKitchenBomOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [boms, setBoms] = React.useState<RecipeBom[] | null>(null);
   const [runId, setRunId] = React.useState<string>("");
   const [variance, setVariance] = React.useState<YieldVariance | null>(null);

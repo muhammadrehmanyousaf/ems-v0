@@ -10,6 +10,7 @@
  * ENABLE_WORKING_CAPITAL. Additive — a pure read over the GL + instruments.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type LiabilityCalendar, type AdvanceFloat } from "@/lib/api/venueOs";
 import { isWorkingCapitalOn } from "@/lib/working-capital-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +25,7 @@ function readErr(e: unknown, fallback: string): string {
 
 export function LiabilityCalendarView(): React.ReactElement | null {
   const enabled = isWorkingCapitalOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [from, setFrom] = React.useState<string>("");
   const [to, setTo] = React.useState<string>("");
   const [busy, setBusy] = React.useState<boolean>(false);

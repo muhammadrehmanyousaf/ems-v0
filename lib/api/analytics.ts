@@ -571,6 +571,11 @@ export interface BusinessRevenueRow {
   businessType: string | null;
   totalRevenue: number;
   bookingCount: number;
+  // C-2 — day-occupancy over the selected period (booked distinct event-days ÷
+  // calendar days in the range). Optional: older API responses omit them.
+  bookedDays?: number;
+  periodDays?: number;
+  occupancyPct?: number;
 }
 
 export interface RevenueBreakdownsData {

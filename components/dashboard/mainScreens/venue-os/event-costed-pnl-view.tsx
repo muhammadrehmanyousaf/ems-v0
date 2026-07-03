@@ -11,7 +11,7 @@
 import * as React from "react";
 import { venueOsApi, type FullyCostedEventPnl } from "@/lib/api/venueOs";
 import { isEventCostingOn } from "@/lib/event-costing-flag";
-import { useActiveBusinessId } from "@/lib/store/active-business-store";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,10 +27,9 @@ function readErr(e: unknown, fallback: string): string {
 
 export function EventCostedPnlView(): React.ReactElement | null {
   const enabled = isEventCostingOn();
-  const activeBusinessId = useActiveBusinessId();
   const [bookingId, setBookingId] = React.useState<string>("");
   // Pre-fill the active venue so the operator only needs to enter a booking #.
-  const [businessId, setBusinessId] = React.useState<string>(activeBusinessId ? String(activeBusinessId) : "");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [driver, setDriver] = React.useState<Driver>("REVENUE_SHARE");
   const [data, setData] = React.useState<FullyCostedEventPnl | null>(null);
   const [busy, setBusy] = React.useState<boolean>(false);

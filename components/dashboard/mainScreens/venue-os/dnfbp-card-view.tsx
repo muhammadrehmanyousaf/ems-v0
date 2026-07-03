@@ -8,6 +8,7 @@
  * isAmlShieldOn() — the backend 404s until ENABLE_AML_SHIELD.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type DnfbpCard } from "@/lib/api/venueOs";
 import { isAmlShieldOn } from "@/lib/aml-shield-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +21,7 @@ function readErr(e: unknown, fallback: string): string {
 
 export function DnfbpCardView(): React.ReactElement | null {
   const enabled = isAmlShieldOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [card, setCard] = React.useState<DnfbpCard | null>(null);
   const [busy, setBusy] = React.useState<boolean>(false);
   const [err, setErr] = React.useState<string | null>(null);

@@ -9,6 +9,7 @@
  * Gated on isWageRegisterOn(); the backend 404s until WAGE_REGISTER_ON. Additive.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type WageRecordResult, type WagePostResult, type LabourByEvent } from "@/lib/api/venueOs";
 import { isWageRegisterOn } from "@/lib/wage-register-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +24,7 @@ function readErr(e: unknown, fallback: string): string {
 
 export function WageCostingView(): React.ReactElement | null {
   const enabled = isWageRegisterOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [eventId, setEventId] = React.useState<string>("");
   const [workerName, setWorkerName] = React.useState<string>("");
   const [shiftDate, setShiftDate] = React.useState<string>("");

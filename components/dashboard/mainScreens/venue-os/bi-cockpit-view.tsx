@@ -8,6 +8,7 @@
  * until ENABLE_BI_COCKPIT.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type KpiBundle, type HijriYoY } from "@/lib/api/venueOs";
 import { isBiCockpitOn } from "@/lib/bi-cockpit-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,7 @@ const HIJRI_MONTHS = ["Muharram", "Safar", "Rabi-ul-Awwal", "Rabi-us-Sani", "Jum
 export function BiCockpitView(): React.ReactElement | null {
   const enabled = isBiCockpitOn();
   const yr = new Date().getFullYear();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [from, setFrom] = React.useState<string>(`${yr}-01-01`);
   const [to, setTo] = React.useState<string>(`${yr}-12-31`);
   const [k, setK] = React.useState<KpiBundle | null>(null);

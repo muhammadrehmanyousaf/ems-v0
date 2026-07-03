@@ -13,6 +13,9 @@ import { BusinessAvailabilityAPI, type SlotAvailabilityRow } from "@/lib/api/bus
 // BK-100.53 — service-location mode picker (optional; lets the
 // customer specify mehndi-at-home / marquee-at-plot / Nikah-at-masjid).
 import { ServiceLocationPicker } from "@/components/booking/service-location-picker"
+// F-2 — canonical sub-venue (venue-hierarchy) picker for the customer flow.
+import { venueSpacesApi, type SubVenueNode } from "@/lib/api/venueSpaces"
+import { isVenueHierarchyOn } from "@/lib/venue-hierarchy-flag"
 
 interface Props {
   formData: BookingFormData
@@ -144,6 +147,26 @@ export default function DateTimeStep({
     api.get(`/api/v1/businesses/${venue.id}/resources`)
       .then((r) => { if (!cancelled) setSpaces((r?.data?.data || []).filter((x: any) => x && x.isActive !== false).map((x: any) => ({ id: x.id, label: x.label, kind: x.kind }))) })
       .catch(() => { if (!cancelled) setSpaces([]) })
+    return () => { cancelled = true }
+  }, [venue?.id])
+
+  // F-2 — canonical sub-venue spaces (venue-hierarchy). When a venue models its
+  // halls as SubVenues (flag-gated), the customer picks one and we send
+  // subVenueId — the canonical per-hall path. Renders only when the venue has a
+  // real multi-space tree; otherwise the BusinessResource picker above stands.
+  const [subVenueSpaces, setSubVenueSpaces] = useState<Array<{ id: number; name: string; kind: string; depth: number }>>([])
+  useEffect(() => {
+    if (!venue?.id || !isVenueHierarchyOn()) return
+    let cancelled = false
+    venueSpacesApi.publicTree(Number(venue.id))
+      .then((t) => {
+        if (cancelled) return
+        const flat: Array<{ id: number; name: string; kind: string; depth: number }> = []
+        const walk = (ns: SubVenueNode[], depth: number) => (ns || []).forEach((n) => { flat.push({ id: n.id, name: n.name, kind: n.kind, depth }); if (n.children) walk(n.children, depth + 1) })
+        walk(t?.tree || [], 0)
+        setSubVenueSpaces(flat)
+      })
+      .catch(() => { if (!cancelled) setSubVenueSpaces([]) })
     return () => { cancelled = true }
   }, [venue?.id])
 
@@ -600,9 +623,10 @@ export default function DateTimeStep({
           }
         />
 
-        {/* Which hall / lawn / partition? Only shown when the venue configured
-           bookable spaces. Optional — "whole venue" leaves it unpinned. */}
-        {spaces.length > 0 && (
+        {/* Which hall / lawn / partition? (BusinessResource model.) Only shown
+           when the venue configured bookable resources AND is NOT using the
+           canonical sub-venue tree (below). Optional — "whole venue" unpins. */}
+        {spaces.length > 0 && subVenueSpaces.length <= 1 && (
           <section className="space-y-2">
             <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
               Which space?
@@ -623,6 +647,33 @@ export default function DateTimeStep({
             </select>
             <p className="font-bridal text-[10.5px] text-bridal-text-soft">
               Pick a specific hall, lawn or partition, or leave as the whole venue.
+            </p>
+          </section>
+        )}
+
+        {/* F-2 — canonical sub-venue picker (venue-hierarchy). Shown when the
+           venue built a multi-space tree; sends subVenueId (the per-hall path). */}
+        {subVenueSpaces.length > 1 && (
+          <section className="space-y-2">
+            <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
+              Which hall?
+            </p>
+            <select
+              value={(formData as any).selectedSubVenueId || ""}
+              onChange={(e) =>
+                updateFormData((prev) => ({ ...(prev as any), selectedSubVenueId: e.target.value }))
+              }
+              className="w-full rounded-md border border-bridal-beige bg-bridal-ivory px-3 py-2.5 font-bridal text-[13px] text-bridal-charcoal outline-none focus:border-bridal-gold-dark"
+            >
+              <option value="">Whole venue / any hall</option>
+              {subVenueSpaces.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {" ".repeat(s.depth * 2)}{s.name}{s.kind ? ` — ${s.kind}` : ""}
+                </option>
+              ))}
+            </select>
+            <p className="font-bridal text-[10.5px] text-bridal-text-soft">
+              Pick a specific hall, floor or partition, or leave as the whole venue.
             </p>
           </section>
         )}

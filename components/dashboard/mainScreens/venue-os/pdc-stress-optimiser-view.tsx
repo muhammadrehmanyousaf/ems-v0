@@ -9,6 +9,7 @@
  * on isWorkingCapitalOn() — the backend 404s until ENABLE_WORKING_CAPITAL.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type PdcSchedule, type PayoutOptimiser } from "@/lib/api/venueOs";
 import { isWorkingCapitalOn } from "@/lib/working-capital-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +24,7 @@ function readErr(e: unknown, fallback: string): string {
 export function PdcStressOptimiserView(): React.ReactElement | null {
   const enabled = isWorkingCapitalOn();
   const yr = new Date().getFullYear();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [from, setFrom] = React.useState<string>(`${yr}-10`);
   const [to, setTo] = React.useState<string>(`${yr + 1}-03`);
   const [sched, setSched] = React.useState<PdcSchedule | null>(null);

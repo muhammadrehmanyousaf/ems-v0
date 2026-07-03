@@ -358,6 +358,11 @@ export default function BookingForm() {
     // Pin the booking to the chosen hall/lawn/partition (BusinessResource) when the
     // customer selected one. Additive — omitted entirely if left as "whole venue".
     if ((currentForm as any).selectedResourceId) mainBusinessEntry.resourceId = Number((currentForm as any).selectedResourceId)
+    // F-2 — canonical per-hall path: when the venue models spaces as SubVenues,
+    // send subVenueId directly. The backend (SCHEDULING_MULTI_RESOURCE) claims a
+    // BookingSpace on it; if omitted it falls back to the resourceId→subVenue
+    // bridge. Additive — omitted for the whole-venue / legacy path.
+    if ((currentForm as any).selectedSubVenueId) mainBusinessEntry.subVenueId = Number((currentForm as any).selectedSubVenueId)
 
     if (mainBusinessEntry.packageId || mainBusinessEntry.menuId) {
       vendorsPayload.push(mainBusinessEntry)

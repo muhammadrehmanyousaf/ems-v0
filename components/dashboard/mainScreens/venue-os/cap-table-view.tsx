@@ -7,6 +7,7 @@
  * posts separately. Gated on isCapTableOn(); the backend 404s until ENABLE_CAP_TABLE.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type CapTable, type ProfitDistribution } from "@/lib/api/venueOs";
 import { isCapTableOn } from "@/lib/cap-table-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +22,7 @@ function readErr(e: unknown, fallback: string): string {
 
 export function CapTableView(): React.ReactElement | null {
   const enabled = isCapTableOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [name, setName] = React.useState<string>("");
   const [ptype, setPtype] = React.useState<string>("WORKING");
   const [share, setShare] = React.useState<string>("");

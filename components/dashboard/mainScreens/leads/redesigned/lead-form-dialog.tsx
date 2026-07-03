@@ -17,7 +17,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
 const STATUSES: LeadStatus[] = ["new", "contacted", "qualified", "quoted", "booked", "lost", "archived"]
-const SOURCES: LeadSource[] = ["manual_phone", "manual_walkin", "whatsapp", "form_inquiry", "in_app_chat", "other"]
+const SOURCES: LeadSource[] = ["manual_phone", "manual_walkin", "whatsapp", "instagram", "referral", "form_inquiry", "in_app_chat", "other"]
 const EVENTS: LeadEventType[] = ["mehndi", "nikah", "baraat", "walima", "engagement", "dholki", "other"]
 const lbl = (s: string) => s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"

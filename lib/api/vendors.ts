@@ -144,9 +144,13 @@ async function fetchAllBusinessPages(
 export class VendorAPI {
   // Get all businesses (every page, not just the first).
   // availableOn (YYYY-MM-DD) → only venues free that day.
-  static async getAllBusinesses(availableOn?: string): Promise<Vendor[]> {
+  // verifiedOnly → D-4: only KYC-verified halls.
+  static async getAllBusinesses(availableOn?: string, verifiedOnly?: boolean): Promise<Vendor[]> {
     try {
-      const list = await fetchAllBusinessPages(BASE, availableOn ? { availableOn } : {})
+      const list = await fetchAllBusinessPages(BASE, {
+        ...(availableOn ? { availableOn } : {}),
+        ...(verifiedOnly ? { verifiedOnly: 'true' } : {}),
+      })
       return list.map(normalizeBusiness)
     } catch {
       return []
@@ -158,12 +162,14 @@ export class VendorAPI {
     vendorType: string,
     pakistaniFilters?: PakistaniFilterParams,
     availableOn?: string,
+    verifiedOnly?: boolean,
   ): Promise<Vendor[]> {
     try {
       const list = await fetchAllBusinessPages(`${BASE}/businesses-by-vendor`, {
         vendorType,
         ...(pakistaniFilters || {}),
         ...(availableOn ? { availableOn } : {}),
+        ...(verifiedOnly ? { verifiedOnly: 'true' } : {}),
       })
       return list.map(normalizeBusiness)
     } catch {

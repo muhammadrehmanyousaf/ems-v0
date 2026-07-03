@@ -9,6 +9,7 @@
  * correctness the doc calls out. Gated on isVenueHierarchyOn().
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueSpacesApi, type AvailabilityGrid } from "@/lib/api/venueSpaces";
 import { isVenueHierarchyOn } from "@/lib/venue-hierarchy-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +26,7 @@ function monthBounds(ym: string): { from: string; to: string } {
 
 export function SpaceCalendarView(): React.ReactElement | null {
   const enabled = isVenueHierarchyOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [month, setMonth] = React.useState<string>("");
   const [grid, setGrid] = React.useState<AvailabilityGrid | null>(null);
   const [busy, setBusy] = React.useState<boolean>(false);

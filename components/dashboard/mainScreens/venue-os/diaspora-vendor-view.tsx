@@ -8,6 +8,7 @@
  * renders on isDiasporaFxOn(), the service-line section on isMultivendorTypesOn().
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type FxSummary, type ServiceLine } from "@/lib/api/venueOs";
 import { isDiasporaFxOn, isMultivendorTypesOn } from "@/lib/diaspora-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,7 @@ function readErr(e: unknown, fallback: string): string {
 export function DiasporaVendorView(): React.ReactElement | null {
   const fxOn = isDiasporaFxOn();
   const mvOn = isMultivendorTypesOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [currency, setCurrency] = React.useState<string>("USD");
   const [amount, setAmount] = React.useState<string>("");
   const [rate, setRate] = React.useState<string>("");

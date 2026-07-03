@@ -8,6 +8,7 @@
  * Gated on isProcurementGrnOn() — the backend 404s until PROCUREMENT_GRN_ON.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type RateContract, type GrnContractCheck } from "@/lib/api/venueOs";
 import { isProcurementGrnOn } from "@/lib/procurement-grn-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +22,7 @@ function readErr(e: unknown, fallback: string): string {
 
 export function RateContractView(): React.ReactElement | null {
   const enabled = isProcurementGrnOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [item, setItem] = React.useState<string>("");
   const [rate, setRate] = React.useState<string>("");
   const [tol, setTol] = React.useState<string>("5");

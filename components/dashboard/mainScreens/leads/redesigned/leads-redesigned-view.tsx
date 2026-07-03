@@ -11,6 +11,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { LeadAPI, type Lead, type LeadStatus } from "@/lib/api/leads"
 import { BusinessesAPI } from "@/lib/api/dashboard"
 import { LeadFormDialog } from "@/components/dashboard/mainScreens/leads/redesigned/lead-form-dialog"
+// F-8 — convert-to-booking reuses the same offline-booking dialog the bookings
+// page uses, prefilled from the lead (parity with the legacy inbox view).
+import { OfflineBookingDialog } from "@/components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
@@ -51,6 +54,8 @@ export function LeadsRedesignedView() {
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<Lead | undefined>(undefined)
   const [deleting, setDeleting] = React.useState<Lead | null>(null)
+  // F-8 — lead whose "Convert to booking" was clicked; drives the dialog.
+  const [convertLead, setConvertLead] = React.useState<Lead | null>(null)
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["leads-redesigned"],
@@ -91,6 +96,15 @@ export function LeadsRedesignedView() {
       key: "actions", header: "", align: "right",
       render: (l) => (
         <div className="flex items-center justify-end gap-0.5">
+          {l.bookingId ? (
+            <span className="mr-1 inline-flex items-center gap-1 text-xs font-medium text-emerald-600" title={`Converted to booking #${l.bookingId}`}>
+              <Icon name="CheckCircle2" size={13} /> #{l.bookingId}
+            </span>
+          ) : (
+            <Button size="sm" variant="ghost" onClick={() => setConvertLead(l)} aria-label="Convert to booking" title="Convert to booking">
+              <Icon name="CalendarCheck" size={14} className="text-primary" />
+            </Button>
+          )}
           <Button size="sm" variant="ghost" onClick={() => openEdit(l)} aria-label="Edit lead"><Icon name="Pencil" size={14} /></Button>
           <Button size="sm" variant="ghost" onClick={() => setDeleting(l)} aria-label="Remove lead"><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
         </div>
@@ -175,6 +189,31 @@ export function LeadsRedesignedView() {
       />
 
       <LeadFormDialog open={dialogOpen} onOpenChange={setDialogOpen} lead={editing} businessId={businessId} onSaved={invalidate} />
+
+      {/* F-8 — convert-to-booking. Prefills customer + event date from the
+          lead; on success links the lead (sets bookingId + status='booked')
+          and refetches so the "#X" converted badge appears. */}
+      {convertLead && (
+        <OfflineBookingDialog
+          open={!!convertLead}
+          onOpenChange={(v) => { if (!v) setConvertLead(null) }}
+          initialDate={convertLead.eventDate ? new Date(convertLead.eventDate) : undefined}
+          initialCustomer={{
+            name: convertLead.contactName || undefined,
+            phone: convertLead.contactPhone || undefined,
+            email: convertLead.contactEmail || undefined,
+          }}
+          onCreated={async (bookingId) => {
+            try {
+              await LeadAPI.linkBooking(convertLead.id, bookingId)
+              toast.success(`Lead converted to booking #${bookingId}`)
+            } catch (e: any) {
+              toast.error(e?.response?.data?.message || "Booking created, but the lead couldn't be linked. You can mark it Booked manually.")
+            }
+          }}
+          onSuccess={async () => { setConvertLead(null); invalidate() }}
+        />
+      )}
 
       <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
         <AlertDialogContent>

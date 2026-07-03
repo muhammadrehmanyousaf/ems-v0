@@ -9,6 +9,7 @@
  * isDepreciationOn(); the backend 404s until DEPRECIATION_ON. Additive.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type FixedAsset, type DepreciationRun } from "@/lib/api/venueOs";
 import { isDepreciationOn } from "@/lib/depreciation-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +25,7 @@ function readErr(e: unknown, fallback: string): string {
 
 export function DepreciationView(): React.ReactElement | null {
   const enabled = isDepreciationOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [assets, setAssets] = React.useState<FixedAsset[] | null>(null);
   const [run, setRun] = React.useState<DepreciationRun | null>(null);
   const [busy, setBusy] = React.useState<boolean>(false);

@@ -9,6 +9,7 @@
  * isForceMajeureBatchOn(); the backend 404s until ENABLE_FORCE_MAJEURE_BATCH.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type ForceMajeureBatchResult, type ForceMajeureItem } from "@/lib/api/venueOs";
 import { isForceMajeureBatchOn } from "@/lib/force-majeure-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +24,7 @@ function readErr(e: unknown, fallback: string): string {
 
 export function ForceMajeureBatchView(): React.ReactElement | null {
   const enabled = isForceMajeureBatchOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [govtOrderRef, setGovtOrderRef] = React.useState<string>("");
   const [rule, setRule] = React.useState<string>("CARRY_FORWARD");
   const [itemsRaw, setItemsRaw] = React.useState<string>(""); // "bookingId:advance, bookingId:advance"

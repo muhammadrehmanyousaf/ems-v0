@@ -9,6 +9,7 @@
  * Gated on isAmlCockpitOn(); the backend 404s until ENABLE_AML_COCKPIT. Additive.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type Section21Meter, type StructuringResult, type BenamiResult } from "@/lib/api/venueOs";
 import { isAmlCockpitOn } from "@/lib/aml-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +24,7 @@ function readErr(e: unknown, fallback: string): string {
 
 export function AmlCockpitView(): React.ReactElement | null {
   const enabled = isAmlCockpitOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [busy, setBusy] = React.useState<boolean>(false);
   const [err, setErr] = React.useState<string | null>(null);
 

@@ -8,6 +8,7 @@
  * section on isEsgOn(); the backend 404s until ENABLE_LEGAL / ENABLE_ESG.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi } from "@/lib/api/venueOs";
 import { isLegalOn, isEsgOn } from "@/lib/legal-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +22,7 @@ function readErr(e: unknown, fallback: string): string {
 export function LegalEsgView(): React.ReactElement | null {
   const legalOn = isLegalOn();
   const esgOn = isEsgOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [amount, setAmount] = React.useState<string>("");
   const [reply, setReply] = React.useState<string | null>(null);
   const [caseMsg, setCaseMsg] = React.useState<string | null>(null);

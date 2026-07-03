@@ -9,6 +9,7 @@
  * the backend 404s until PROCUREMENT_GRN_ON. Additive — zero impact when OFF.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type PurchaseOrder, type GoodsReceivedNote, type AcceptGrnResult } from "@/lib/api/venueOs";
 import { isProcurementGrnOn } from "@/lib/procurement-grn-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +29,7 @@ function matchBadge(status: string): React.ReactElement {
 
 export function ProcurementView(): React.ReactElement | null {
   const enabled = isProcurementGrnOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [busy, setBusy] = React.useState<boolean>(false);
   const [err, setErr] = React.useState<string | null>(null);
 

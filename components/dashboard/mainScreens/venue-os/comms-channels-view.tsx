@@ -8,6 +8,7 @@
  * Gated on isBspCommsOn() — the backend 404s until ENABLE_BSP_COMMS.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi } from "@/lib/api/venueOs";
 import { isBspCommsOn } from "@/lib/comms-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +21,7 @@ function readErr(e: unknown, fallback: string): string {
 
 export function CommsChannelsView(): React.ReactElement | null {
   const enabled = isBspCommsOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [channels, setChannels] = React.useState<{ channel: string; provider: string; mode: string }[] | null>(null);
   const [run, setRun] = React.useState<{ dispatched: number; sent: number; failed: number } | null>(null);
   const [busy, setBusy] = React.useState<boolean>(false);

@@ -8,6 +8,7 @@
  * the backend 404s until ENABLE_FINANCING.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type IjarahModel, type BnplPreview, type ReferralPack } from "@/lib/api/venueOs";
 import { isFinancingOn } from "@/lib/financing-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +25,7 @@ export function FinancingView(): React.ReactElement | null {
   const [ijarah, setIjarah] = React.useState<IjarahModel | null>(null);
   const [bnpl, setBnpl] = React.useState<BnplPreview | null>(null);
   const [booking, setBooking] = React.useState<string>("");
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [pack, setPack] = React.useState<ReferralPack | null>(null);
   const [busy, setBusy] = React.useState<boolean>(false);
   const [err, setErr] = React.useState<string | null>(null);

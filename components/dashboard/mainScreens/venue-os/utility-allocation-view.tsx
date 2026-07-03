@@ -10,6 +10,7 @@
  * 404s until ENABLE_UTILITY_ALLOCATION. Additive — money posts only via the GL.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type UtilityMeter, type AllocationResult } from "@/lib/api/venueOs";
 import { isUtilityAllocationOn } from "@/lib/utility-allocation-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +25,7 @@ function readErr(e: unknown, fallback: string): string {
 
 export function UtilityAllocationView(): React.ReactElement | null {
   const enabled = isUtilityAllocationOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [busy, setBusy] = React.useState<boolean>(false);
   const [err, setErr] = React.useState<string | null>(null);
 
