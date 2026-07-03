@@ -829,15 +829,38 @@ export class CustomersAPI {
       limit: String(limit),
     });
     if (search) qs.set("search", search);
-    const res = await axiosInstance.get(
-      `/api/v1/analytics/customers?${qs.toString()}`,
-    );
-    return (
-      res.data?.data ?? {
+    try {
+      // F-4 — the canonical, deduped Customer entity (real rollups) instead of
+      // the old string-matched analytics aggregate. `_id` prefers email (else
+      // phone) so the existing Customer-360 detail page keeps resolving.
+      const res = await axiosInstance.get(`/api/v1/customers?${qs.toString()}`);
+      const d = res.data?.data ?? {};
+      const rows: Array<Record<string, unknown>> = Array.isArray(d.customers) ? d.customers : [];
+      const customers: ApiCustomer[] = rows.map((c) => ({
+        _id: String(c.email || c.phoneRaw || c.phoneE164 || c.id || ""),
+        name: (c.name as string) ?? "",
+        email: (c.email as string) ?? "",
+        phone: (c.phoneRaw as string) ?? (c.phoneE164 as string) ?? "",
+        address: (c.city as string) ?? "",
+        total_booking: Number(c.totalBookings) || 0,
+        last_booking: (c.lastBookingAt as string) ?? "",
+        first_booking: (c.firstBookingAt as string) ?? undefined,
+      }));
+      return {
+        customers,
+        pagination: {
+          page: Number(d.page) || page,
+          limit,
+          total: Number(d.total) || customers.length,
+          totalPages: Number(d.totalPages) || 1,
+        },
+      };
+    } catch {
+      return {
         customers: [],
-        pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
-      }
-    );
+        pagination: { page: 1, limit, total: 0, totalPages: 0 },
+      };
+    }
   }
 
   /**
