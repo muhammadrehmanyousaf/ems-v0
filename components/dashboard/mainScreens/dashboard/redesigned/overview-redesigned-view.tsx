@@ -126,6 +126,10 @@ export function OverviewRedesignedView() {
           <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
             {halls.map((h, i) => {
               const pct = maxHallRev > 0 ? Math.round(((h.totalRevenue || 0) / maxHallRev) * 100) : 0
+              // C-2 — day-occupancy chip. Wedding halls cluster on weekends +
+              // season, so even ~25% of calendar days booked is a strong year.
+              const occ = typeof h.occupancyPct === "number" ? h.occupancyPct : null
+              const occToneCls = occ === null ? "" : occ >= 25 ? "bg-emerald-100 text-emerald-700" : occ >= 10 ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground"
               return (
                 <div key={h.businessId} className="flex items-center gap-3 px-3 py-2.5">
                   <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums ${i === 0 ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>{i + 1}</span>
@@ -137,7 +141,17 @@ export function OverviewRedesignedView() {
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-semibold tabular-nums">{formatPkr(h.totalRevenue || 0)}</div>
-                    <div className="text-xs text-muted-foreground tabular-nums">{h.bookingCount} booking{h.bookingCount === 1 ? "" : "s"}</div>
+                    <div className="mt-0.5 flex items-center justify-end gap-1.5 text-xs text-muted-foreground tabular-nums">
+                      <span>{h.bookingCount} booking{h.bookingCount === 1 ? "" : "s"}</span>
+                      {occ !== null && (
+                        <span
+                          title={`${h.bookedDays ?? 0} of ${h.periodDays ?? 365} days booked this year`}
+                          className={`rounded-full px-1.5 py-0.5 font-medium ${occToneCls}`}
+                        >
+                          {occ}% booked
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               )
