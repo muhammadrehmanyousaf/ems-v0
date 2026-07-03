@@ -25,6 +25,8 @@ export type LeadStatus =
 export type LeadSource =
   | "in_app_chat"
   | "whatsapp"
+  | "instagram"
+  | "referral"
   | "form_inquiry"
   | "manual_phone"
   | "manual_walkin"
@@ -335,6 +337,8 @@ export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
 export const LEAD_SOURCE_LABELS: Record<LeadSource, string> = {
   in_app_chat: "In-app chat",
   whatsapp: "WhatsApp",
+  instagram: "Instagram",
+  referral: "Referral",
   form_inquiry: "Website form",
   manual_phone: "Phone call",
   manual_walkin: "Walk-in",
