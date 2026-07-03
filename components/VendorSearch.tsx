@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator"
 import {
   ChevronLeft, ChevronRight, Search, MapPin, Star, Users, Filter,
   DollarSign, Tag, Shield, Car, Utensils, Sparkles, Moon, Languages,
+  CalendarCheck, X,
 } from "lucide-react"
 import VendorCard from "./VendorCard"
 import type { Vendor } from "@/lib/types"
@@ -152,18 +153,23 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
     VENDOR_TYPES.HENNA_ARTIST, VENDOR_TYPES.MAKEUP_ARTIST,
   ].includes(vendorTypeFromPath as any)
 
-  const fetchVendors = async () => {
+  // Availability filter — YYYY-MM-DD; empty = no date filter. Unlike the other
+  // (client-side) filters this re-fetches from the server, since only the backend
+  // knows which venues are booked on a given day.
+  const [availableOn, setAvailableOn] = useState<string>("")
+
+  const fetchVendors = async (avail: string = availableOn) => {
     setIsLoading(true)
     try {
       const data = vendorTypeFromPath === "all"
-        ? await VendorAPI.getAllBusinesses()
-        : await VendorAPI.getBusinessesByVendorType(vendorTypeFromPath)
+        ? await VendorAPI.getAllBusinesses(avail || undefined)
+        : await VendorAPI.getBusinessesByVendorType(vendorTypeFromPath, undefined, avail || undefined)
       setVendors(data)
     } catch {}
     finally { setIsLoading(false) }
   }
 
-  useEffect(() => { fetchVendors() }, [])
+  useEffect(() => { fetchVendors(availableOn) }, [availableOn])
   useEffect(() => { setCurrentPage(1) }, [filters, sortOption])
 
   const filteredVendors = useMemo(() => {
@@ -406,6 +412,37 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                     <BridalSeparator />
 
                     {/* Price Range */}
+                    {/* Availability — the killer filter: only venues free on your
+                        date. Re-fetches from the server (booking-aware). */}
+                    <FilterGroup icon={<CalendarCheck className="w-3.5 h-3.5 text-bridal-gold" />} label="Free on your date">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="date"
+                          value={availableOn}
+                          min={new Date().toISOString().slice(0, 10)}
+                          onChange={(e) => setAvailableOn(e.target.value)}
+                          className="h-10 flex-1 rounded-[4px] border border-bridal-beige bg-bridal-ivory px-3 text-sm font-bridal text-bridal-charcoal outline-none focus:ring-1 focus:ring-bridal-gold"
+                        />
+                        {availableOn && (
+                          <button
+                            type="button"
+                            onClick={() => setAvailableOn("")}
+                            aria-label="Clear date"
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[4px] border border-bridal-beige text-bridal-text-soft hover:bg-bridal-cream"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                      {availableOn && (
+                        <p className="pt-2 font-bridal text-[11px] font-medium text-bridal-gold-dark">
+                          Showing only venues with no booking on {availableOn}.
+                        </p>
+                      )}
+                    </FilterGroup>
+
+                    <BridalSeparator />
+
                     <FilterGroup icon={<DollarSign className="w-3.5 h-3.5 text-bridal-gold" />} label="Price Range">
                       <Slider
                         value={filters.priceRange}

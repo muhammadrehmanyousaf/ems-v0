@@ -142,10 +142,11 @@ async function fetchAllBusinessPages(
 }
 
 export class VendorAPI {
-  // Get all businesses (every page, not just the first)
-  static async getAllBusinesses(): Promise<Vendor[]> {
+  // Get all businesses (every page, not just the first).
+  // availableOn (YYYY-MM-DD) → only venues free that day.
+  static async getAllBusinesses(availableOn?: string): Promise<Vendor[]> {
     try {
-      const list = await fetchAllBusinessPages(BASE)
+      const list = await fetchAllBusinessPages(BASE, availableOn ? { availableOn } : {})
       return list.map(normalizeBusiness)
     } catch {
       return []
@@ -156,11 +157,13 @@ export class VendorAPI {
   static async getBusinessesByVendorType(
     vendorType: string,
     pakistaniFilters?: PakistaniFilterParams,
+    availableOn?: string,
   ): Promise<Vendor[]> {
     try {
       const list = await fetchAllBusinessPages(`${BASE}/businesses-by-vendor`, {
         vendorType,
         ...(pakistaniFilters || {}),
+        ...(availableOn ? { availableOn } : {}),
       })
       return list.map(normalizeBusiness)
     } catch {
