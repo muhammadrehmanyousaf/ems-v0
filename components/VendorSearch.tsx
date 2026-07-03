@@ -157,19 +157,21 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
   // (client-side) filters this re-fetches from the server, since only the backend
   // knows which venues are booked on a given day.
   const [availableOn, setAvailableOn] = useState<string>("")
+  // D-4 — "Verified vendors only" (KYC-verified halls).
+  const [verifiedOnly, setVerifiedOnly] = useState<boolean>(false)
 
-  const fetchVendors = async (avail: string = availableOn) => {
+  const fetchVendors = async (avail: string = availableOn, verified: boolean = verifiedOnly) => {
     setIsLoading(true)
     try {
       const data = vendorTypeFromPath === "all"
-        ? await VendorAPI.getAllBusinesses(avail || undefined)
-        : await VendorAPI.getBusinessesByVendorType(vendorTypeFromPath, undefined, avail || undefined)
+        ? await VendorAPI.getAllBusinesses(avail || undefined, verified || undefined)
+        : await VendorAPI.getBusinessesByVendorType(vendorTypeFromPath, undefined, avail || undefined, verified || undefined)
       setVendors(data)
     } catch {}
     finally { setIsLoading(false) }
   }
 
-  useEffect(() => { fetchVendors(availableOn) }, [availableOn])
+  useEffect(() => { fetchVendors(availableOn, verifiedOnly) }, [availableOn, verifiedOnly])
   useEffect(() => { setCurrentPage(1) }, [filters, sortOption])
 
   const filteredVendors = useMemo(() => {
@@ -437,6 +439,25 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                       {availableOn && (
                         <p className="pt-2 font-bridal text-[11px] font-medium text-bridal-gold-dark">
                           Showing only venues with no booking on {availableOn}.
+                        </p>
+                      )}
+                    </FilterGroup>
+
+                    <BridalSeparator />
+
+                    <FilterGroup icon={<Shield className="w-3.5 h-3.5 text-bridal-gold" />} label="Trust">
+                      <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={verifiedOnly}
+                          onChange={(e) => setVerifiedOnly(e.target.checked)}
+                          className="h-4 w-4 rounded-[3px] border-bridal-beige accent-bridal-gold focus:ring-1 focus:ring-bridal-gold"
+                        />
+                        <span className="font-bridal text-sm text-bridal-charcoal">Verified vendors only</span>
+                      </label>
+                      {verifiedOnly && (
+                        <p className="pt-2 font-bridal text-[11px] font-medium text-bridal-gold-dark">
+                          Showing only halls with an approved CNIC or NTN verification.
                         </p>
                       )}
                     </FilterGroup>
