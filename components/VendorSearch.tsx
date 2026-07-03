@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
@@ -172,7 +172,35 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
   }
 
   useEffect(() => { fetchVendors(availableOn, verifiedOnly) }, [availableOn, verifiedOnly])
-  useEffect(() => { setCurrentPage(1) }, [filters, sortOption])
+  // Reset to page 1 when the user changes filters/sort — but NOT on first
+  // mount, so a ?page= deep-link isn't clobbered before it can be read.
+  const didMountFilters = useRef(false)
+  useEffect(() => {
+    if (!didMountFilters.current) { didMountFilters.current = true; return }
+    setCurrentPage(1)
+  }, [filters, sortOption])
+
+  // Restore ?page= on load so a deep listing page survives a refresh / is
+  // shareable. Runs client-side once (a useState lazy-init can't read window on
+  // an SSR page). This route group is noindex/follow, so paginated URLs are free.
+  useEffect(() => {
+    const p = Math.floor(Number(new URLSearchParams(window.location.search).get("page")))
+    if (Number.isFinite(p) && p > 1) setCurrentPage(p)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Mirror the current page into the URL (shallow — no navigation/refetch, this
+  // listing filters client-side). Skip the mount run so an incoming ?page= isn't
+  // stripped before the restore effect above reads it; preserve other params.
+  const pageSyncReady = useRef(false)
+  useEffect(() => {
+    if (!pageSyncReady.current) { pageSyncReady.current = true; return }
+    const params = new URLSearchParams(window.location.search)
+    if (currentPage > 1) params.set("page", String(currentPage))
+    else params.delete("page")
+    const qs = params.toString()
+    window.history.replaceState(window.history.state, "", window.location.pathname + (qs ? `?${qs}` : ""))
+  }, [currentPage])
 
   const filteredVendors = useMemo(() => {
     let result = [...vendors]
