@@ -9,6 +9,7 @@
  * ENABLE_INSURANCE_TRACKING. Premium/recovery are tracked only, not posted to the GL.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type InsurancePolicy, type ClaimRoi } from "@/lib/api/venueOs";
 import { isInsuranceTrackingOn } from "@/lib/insurance-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,7 +32,7 @@ function ExpiryBadge({ p }: { p: InsurancePolicy }): React.ReactElement {
 
 export function InsurancePoliciesView(): React.ReactElement | null {
   const enabled = isInsuranceTrackingOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [policyType, setPolicyType] = React.useState<string>("EVENT");
   const [insurer, setInsurer] = React.useState<string>("");
   const [expiryDate, setExpiryDate] = React.useState<string>("");

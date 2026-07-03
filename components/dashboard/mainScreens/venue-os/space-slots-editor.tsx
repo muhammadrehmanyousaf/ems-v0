@@ -7,6 +7,7 @@
  * slots this hall/partition has". Gated on isVenueHierarchyOn().
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueSpacesApi, type SubVenueNode, type SlotTemplate } from "@/lib/api/venueSpaces";
 import { isVenueHierarchyOn } from "@/lib/venue-hierarchy-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +27,7 @@ function flatten(nodes: SubVenueNode[] | undefined, acc: SubVenueNode[] = []): S
 
 export function SpaceSlotsEditor(): React.ReactElement | null {
   const enabled = isVenueHierarchyOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [nodes, setNodes] = React.useState<SubVenueNode[]>([]);
   const [spaceId, setSpaceId] = React.useState<number | null>(null);
   const [scope, setScope] = React.useState<string>("");

@@ -9,6 +9,7 @@
  * GL; gated on isCapTableOn() — the backend 404s until ENABLE_CAP_TABLE.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type CapTable, type PartnerLedger, type PartnerStatement, type ProfitAppropriationRun } from "@/lib/api/venueOs";
 import { isCapTableOn } from "@/lib/cap-table-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,7 @@ function readErr(e: unknown, fallback: string): string {
 
 export function PartnerLedgerView(): React.ReactElement | null {
   const enabled = isCapTableOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [table, setTable] = React.useState<CapTable | null>(null);
   const [partnerId, setPartnerId] = React.useState<number | null>(null);
   const [ledger, setLedger] = React.useState<PartnerLedger | null>(null);

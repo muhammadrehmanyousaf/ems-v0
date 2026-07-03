@@ -9,6 +9,7 @@
  * P&L). Gated on isVenueLeaseOn(); the backend 404s until VENUE_LEASE_ON. Additive.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type VenueLease, type LeaseScheduleItem, type RentAccrualRun } from "@/lib/api/venueOs";
 import { isVenueLeaseOn } from "@/lib/venue-lease-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +24,7 @@ function readErr(e: unknown, fallback: string): string {
 
 export function VenueLeaseView(): React.ReactElement | null {
   const enabled = isVenueLeaseOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [leases, setLeases] = React.useState<VenueLease[] | null>(null);
   const [schedule, setSchedule] = React.useState<LeaseScheduleItem[] | null>(null);
   const [run, setRun] = React.useState<RentAccrualRun | null>(null);

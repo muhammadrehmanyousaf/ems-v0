@@ -9,6 +9,7 @@
  * Comms never posts to the GL — cost rides the prepaid wallet. Additive.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type CommsConfig, type CommsCostRollup, type MessageEventRow } from "@/lib/api/venueOs";
 import { isBspCommsOn, isCommsIvrOn } from "@/lib/comms-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,7 +31,7 @@ function QualityChip({ rating }: { rating: string | null }): React.ReactElement 
 export function CommsEngineView(): React.ReactElement | null {
   const enabled = isBspCommsOn();
   const ivrUi = isCommsIvrOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [busy, setBusy] = React.useState<boolean>(false);
   const [err, setErr] = React.useState<string | null>(null);
   const [cfg, setCfg] = React.useState<CommsConfig | null>(null);

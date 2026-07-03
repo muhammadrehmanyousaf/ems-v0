@@ -9,6 +9,7 @@
  * isUtilityAllocationOn() — the backend 404s until ENABLE_UTILITY_ALLOCATION.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type TariffEstimate } from "@/lib/api/venueOs";
 import { isUtilityAllocationOn } from "@/lib/utility-allocation-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,7 @@ function readErr(e: unknown, fallback: string): string {
 
 export function TariffEstimatorView(): React.ReactElement | null {
   const enabled = isUtilityAllocationOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [units, setUnits] = React.useState<string>("");
   const [kva, setKva] = React.useState<string>("");
   const [est, setEst] = React.useState<TariffEstimate | null>(null);

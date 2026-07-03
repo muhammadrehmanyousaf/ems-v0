@@ -9,6 +9,7 @@
  * backend 404s until ENABLE_WORKING_CAPITAL. Additive — money posts only via the GL.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type Committee, type IjarahLeaseRow, type SupplierUdhaarResult, type UdhaarAging } from "@/lib/api/venueOs";
 import { isWorkingCapitalOn } from "@/lib/working-capital-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +24,7 @@ function readErr(e: unknown, fallback: string): string {
 
 export function WorkingCapitalInstrumentsView(): React.ReactElement | null {
   const enabled = isWorkingCapitalOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [busy, setBusy] = React.useState<boolean>(false);
   const [err, setErr] = React.useState<string | null>(null);
 

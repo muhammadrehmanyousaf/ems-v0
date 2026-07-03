@@ -8,6 +8,7 @@
  * the backend 404s until ENABLE_VENUE_HIERARCHY.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueSpacesApi, type SubVenueNode, type MergeGroup, type CapacityWarning } from "@/lib/api/venueSpaces";
 import { isVenueHierarchyOn } from "@/lib/venue-hierarchy-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,7 +31,7 @@ function flatten(nodes: SubVenueNode[] | undefined, acc: SubVenueNode[] = []): S
 
 export function VenueSpacesManagerView(): React.ReactElement | null {
   const enabled = isVenueHierarchyOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [tree, setTree] = React.useState<SubVenueNode[]>([]);
   const [warnings, setWarnings] = React.useState<CapacityWarning[]>([]);
   const [groups, setGroups] = React.useState<MergeGroup[]>([]);

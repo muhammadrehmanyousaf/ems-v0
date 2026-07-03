@@ -8,6 +8,7 @@
  * the backend 404s until ENABLE_OWNERSHIP.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type FaraidResult, type ExitValuation } from "@/lib/api/venueOs";
 import { isOwnershipOn } from "@/lib/ownership-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +29,7 @@ export function SuccessionView(): React.ReactElement | null {
   const [father, setFather] = React.useState<boolean>(false);
   const [mother, setMother] = React.useState<boolean>(false);
   const [faraid, setFaraid] = React.useState<FaraidResult | null>(null);
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [partnerId, setPartnerId] = React.useState<string>("");
   const [goodwill, setGoodwill] = React.useState<string>("");
   const [exit, setExit] = React.useState<ExitValuation | null>(null);

@@ -9,6 +9,7 @@
  * existing screen touched.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type CashFloat, type CloseFloatResult } from "@/lib/api/venueOs";
 import { isPaymentLedgerOn } from "@/lib/payment-ledger-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +24,7 @@ function readErr(e: unknown, fallback: string): string {
 
 export function CashFloatClose(): React.ReactElement | null {
   const enabled = isPaymentLedgerOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [openingFloat, setOpeningFloat] = React.useState<string>("0");
   const [collected, setCollected] = React.useState<string>("");
   const [deposited, setDeposited] = React.useState<string>("");

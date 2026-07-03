@@ -9,6 +9,7 @@
  * isGensetSkimOn(); the backend 404s until ENABLE_GENSET_SKIM. Additive.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type GensetReconResult, type GensetSkimSummary } from "@/lib/api/venueOs";
 import { isGensetSkimOn } from "@/lib/genset-skim-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,7 +48,7 @@ function FlagChips({ flags }: { flags?: Partial<{ skimOverBand: boolean; runHour
 
 export function GensetSkimView(): React.ReactElement | null {
   const enabled = isGensetSkimOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [generator, setGenerator] = React.useState<string>("Main");
   const [bookingId, setBookingId] = React.useState<string>("");
   const [kva, setKva] = React.useState<string>("");

@@ -8,6 +8,7 @@
  * the backend 404s until ENABLE_BULK_IMPORT.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { bulkImportApi, type ImportTarget, type ImportPreview } from "@/lib/api/bulkImport";
 import { isBulkImportOn } from "@/lib/bulk-import-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +21,7 @@ function readErr(e: unknown, fallback: string): string {
 
 export function BulkImportView(): React.ReactElement | null {
   const enabled = isBulkImportOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [targets, setTargets] = React.useState<ImportTarget[]>([]);
   const [target, setTarget] = React.useState<string>("leads");
   const [content, setContent] = React.useState<string>("");

@@ -8,6 +8,7 @@
  * PERIOD_CLOSE_ON. Additive — no existing screen touched.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type PeriodStatus } from "@/lib/api/venueOs";
 import { isPeriodCloseOn } from "@/lib/period-close-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,7 @@ function readErr(e: unknown, fallback: string): string {
 
 export function PeriodCloseView(): React.ReactElement | null {
   const enabled = isPeriodCloseOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [period, setPeriod] = React.useState<string>("");
   const [status, setStatus] = React.useState<PeriodStatus | null>(null);
   const [busy, setBusy] = React.useState<boolean>(false);

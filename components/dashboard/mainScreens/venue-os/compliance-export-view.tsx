@@ -9,6 +9,7 @@
  * isAccountingDepthOn() — the backend 404s until ACCOUNTING_DEPTH_ON.
  */
 import * as React from "react";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type Section165, type CaExport } from "@/lib/api/venueOs";
 import { isAccountingDepthOn } from "@/lib/accounting-depth-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,7 @@ function readErr(e: unknown, fallback: string): string {
 
 export function ComplianceExportView(): React.ReactElement | null {
   const enabled = isAccountingDepthOn();
-  const [businessId, setBusinessId] = React.useState<string>("");
+  const [businessId, setBusinessId] = useBusinessIdField();
   const [from, setFrom] = React.useState<string>(`${new Date().getFullYear()}-07-01`);
   const [to, setTo] = React.useState<string>(`${new Date().getFullYear()}-09-30`);
   const [s165, setS165] = React.useState<Section165 | null>(null);
