@@ -41,6 +41,10 @@ const NOTIFICATION_ICONS: Record<string, { icon: React.ElementType; color: strin
   new_review: { icon: Star, color: "text-yellow-600", bg: "bg-yellow-50" },
   welcome: { icon: Sparkles, color: "text-violet-600", bg: "bg-violet-50" },
   system: { icon: Info, color: "text-gray-600", bg: "bg-gray-50" },
+  // F-6 — automation-engine lead reminders (other surfaces fall back to the
+  // `system` icon gracefully; this is the primary vendor bell).
+  lead_followup_due: { icon: CalendarCheck, color: "text-indigo-600", bg: "bg-indigo-50" },
+  lead_stale_48h: { icon: AlertCircle, color: "text-amber-600", bg: "bg-amber-50" },
 };
 
 function timeAgo(dateStr: string): string {
