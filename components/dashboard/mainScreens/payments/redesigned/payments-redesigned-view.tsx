@@ -55,8 +55,18 @@ export function PaymentsRedesignedView() {
     return all.filter((p) => [p.customerName, p.customerPhone, p.businessName].some((v) => (v ?? "").toLowerCase().includes(q)))
   }, [all, search])
 
+  // Show a Venue column only when the rows actually span more than one venue
+  // (the "All venues" view for a multi-hall owner) — otherwise it's redundant.
+  const multiVenue = React.useMemo(
+    () => new Set(all.map((p) => p.businessName).filter(Boolean)).size > 1,
+    [all],
+  )
+
   const columns: Column<VendorPayment>[] = [
     { key: "customer", header: "Customer", render: (p) => <span className="font-medium">{p.customerName || "—"}</span> },
+    ...(multiVenue
+      ? [{ key: "venue", header: "Venue", cellClassName: "text-muted-foreground", render: (p: VendorPayment) => <span className="truncate">{p.businessName || "—"}</span> }]
+      : []),
     { key: "date", header: "Event date", cellClassName: "text-muted-foreground", render: (p) => fmtDate(p.bookingDate) },
     { key: "total", header: "Total", align: "right", render: (p) => <MoneyCell amount={num(p.totalAmount)} /> },
     { key: "received", header: "Received", align: "right", render: (p) => <MoneyCell amount={num(p.received)} tone="success" /> },
@@ -109,6 +119,7 @@ export function PaymentsRedesignedView() {
               <ExportMenu selectedIds={selected} getRowId={(p) => String(p.bookingId)} rows={payments} filename="payments" columns={[
                 { header: "Customer", value: (p) => p.customerName ?? "" },
                 { header: "Phone", value: (p) => p.customerPhone ?? "" },
+                { header: "Venue", value: (p) => p.businessName ?? "" },
                 { header: "Event date", value: (p) => fmtDate(p.bookingDate) },
                 { header: "Total", value: (p) => num(p.totalAmount) },
                 { header: "Received", value: (p) => num(p.received) },
@@ -122,6 +133,7 @@ export function PaymentsRedesignedView() {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="truncate font-medium">{p.customerName}</div>
+              {multiVenue && p.businessName && <div className="truncate text-xs font-medium text-muted-foreground">{p.businessName}</div>}
               <div className="text-xs text-muted-foreground">{fmtDate(p.bookingDate)}</div>
               <div className="mt-1"><StatusPill tone={payTone(p.paymentStatus)} variant="icon">{p.paymentStatus}</StatusPill></div>
             </div>
