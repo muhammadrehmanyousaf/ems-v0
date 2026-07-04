@@ -106,12 +106,20 @@ export function VendorQueueRedesignedView() {
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
   const [pending, setPending] = React.useState<PendingAction | null>(null)
 
+  // F-H — debounce the search term and send it to the backend so it searches
+  // the WHOLE status bucket by name/city, not just the 50 rows already loaded.
+  const [debouncedSearch, setDebouncedSearch] = React.useState("")
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 350)
+    return () => clearTimeout(t)
+  }, [search])
+
   const invalidate = () =>
     qc.invalidateQueries({ queryKey: ["vendor-queue-redesigned"] })
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["vendor-queue-redesigned", statusTab],
-    queryFn: () => listVendorQueue(statusTab),
+    queryKey: ["vendor-queue-redesigned", statusTab, debouncedSearch],
+    queryFn: () => listVendorQueue(statusTab, 50, 0, debouncedSearch),
   })
 
   const actionMut = useMutation({

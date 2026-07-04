@@ -46,11 +46,14 @@ function unwrap<T>(res: any): T {
 export async function listVendorQueue(
   status: BusinessStatus = "submitted",
   limit = 50,
-  offset = 0
+  offset = 0,
+  q = ""
 ): Promise<{ count: number; businesses: QueueBusiness[] }> {
-  const res = await axiosInstance.get(`/api/v1/admin/vendor-queue`, {
-    params: { status, limit, offset },
-  })
+  // F-H — pass the search term to the backend so it searches the WHOLE status
+  // bucket (name/city), not just the 50 rows already loaded in the browser.
+  const params: Record<string, string | number> = { status, limit, offset }
+  if (q && q.trim()) params.q = q.trim()
+  const res = await axiosInstance.get(`/api/v1/admin/vendor-queue`, { params })
   return unwrap<{ count: number; businesses: QueueBusiness[] }>(res) ?? { count: 0, businesses: [] }
 }
 
