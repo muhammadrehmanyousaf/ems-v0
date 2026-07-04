@@ -117,7 +117,12 @@ async function fetchAllBusinessPages(
   url: string,
   baseParams: Record<string, unknown> = {},
 ): Promise<any[]> {
-  const PAGE_SIZE = 100
+  // F-A — larger pages (fewer round-trips; backend cap is 200) + a bounded
+  // concurrency pool instead of firing every remaining page at once. The old
+  // `Promise.all` over ~32 pages burst the single API instance, which 503'd
+  // shared endpoints (the favourites retry-storm, F-B). Same data, same order.
+  const PAGE_SIZE = 200
+  const CONCURRENCY = 5
   const rowsOf = (resp: any): any[] => {
     const d = resp?.data?.data
     return Array.isArray(d) ? d : d?.data || []
@@ -128,15 +133,22 @@ async function fetchAllBusinessPages(
   let rows = rowsOf(first)
   const totalPages = first?.data?.data?.pagination?.totalPages || 1
   if (totalPages > 1) {
-    const rest = await Promise.all(
-      Array.from({ length: totalPages - 1 }, (_, i) =>
-        axiosInstance
-          .get(url, { params: { ...baseParams, page: i + 2, limit: PAGE_SIZE } })
+    const pageNums = Array.from({ length: totalPages - 1 }, (_, i) => i + 2)
+    const results: any[][] = new Array(pageNums.length)
+    let cursor = 0
+    const worker = async () => {
+      while (cursor < pageNums.length) {
+        const idx = cursor++
+        results[idx] = await axiosInstance
+          .get(url, { params: { ...baseParams, page: pageNums[idx], limit: PAGE_SIZE } })
           .then(rowsOf)
-          .catch(() => []),
-      ),
+          .catch(() => [])
+      }
+    }
+    await Promise.all(
+      Array.from({ length: Math.min(CONCURRENCY, pageNums.length) }, worker),
     )
-    for (const r of rest) rows = rows.concat(r)
+    for (const r of results) rows = rows.concat(r)
   }
   return rows
 }
