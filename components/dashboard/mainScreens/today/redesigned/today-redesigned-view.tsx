@@ -10,6 +10,7 @@
  */
 
 import * as React from "react"
+import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
 import { BookingTimelineAPI, type TimelineTask } from "@/lib/api/bookingTimeline"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
@@ -92,7 +93,7 @@ export function TodayRedesignedView() {
         eyebrow="Today"
         title={data?.date ? `Today — ${fmtDate(data.date)}` : "Today"}
         description="Everything happening on your calendar today: events, their day-of tasks, and what's still open."
-        actions={<Button><Icon name="Calendar" size={16} className="mr-1.5" /> View timeline</Button>}
+        actions={<Button asChild><Link href="/dashboard/calendar"><Icon name="Calendar" size={16} className="mr-1.5" /> View timeline</Link></Button>}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
