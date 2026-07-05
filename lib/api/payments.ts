@@ -276,7 +276,7 @@ export class PaymentAPI {
           businesses,
           paymentType:   determinedPaymentType,
           amount:        calculatedAmount,
-          currency:      'usd',
+          currency:      'PKR',
           status:        booking.status,
           paymentStatus: booking.paymentStatus,
           createdAt:     booking.createdAt,
