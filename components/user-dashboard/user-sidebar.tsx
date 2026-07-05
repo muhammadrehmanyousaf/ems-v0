@@ -9,6 +9,7 @@ import {
   Bell,
   Wallet,
   Star,
+  Sparkles,
   User,
   Settings,
   Heart as HeartLogo,
@@ -44,6 +45,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/user/profile", label: "Profile", icon: User },
       { href: "/user/bookings", label: "Bookings", icon: Calendar },
+      { href: "/user/umbrellas", label: "My Wedding", icon: Sparkles },
       { href: "/user/favorites", label: "Favourites", icon: Heart },
     ],
   },

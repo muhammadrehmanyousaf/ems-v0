@@ -23,6 +23,7 @@ import {
   LogIn,
   Building,
   Star,
+  Sparkles,
   Award,
   ChevronDown,
   Crown,
@@ -176,6 +177,7 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
               {[
                 { href: "/user/profile", icon: User, name: "Profile", desc: "Manage account", color: "purple" },
                 { href: "/user/bookings", icon: Calendar, name: "Bookings", desc: "Your appointments", color: "gold" },
+                { href: "/user/umbrellas", icon: Sparkles, name: "My Wedding", desc: "All your functions", color: "purple" },
                 { href: "/user/conversations", icon: MessageCircle, name: "Messages", desc: "Your conversations", color: "purple" },
                 { href: "/user/favorites", icon: Heart, name: "Favorites", desc: "Saved vendors", color: "gold" },
                 { href: "/user/reviews", icon: Star, name: "Reviews", desc: "Your feedback", color: "gold" },
