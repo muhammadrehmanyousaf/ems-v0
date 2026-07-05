@@ -62,6 +62,21 @@ export async function approveBusiness(id: number, notes?: string): Promise<Queue
   return unwrap<{ business: QueueBusiness }>(res)?.business as QueueBusiness
 }
 
+/**
+ * Approve many submitted businesses at once. Pass `dryRun: true` to preview the
+ * count before applying (only businesses currently in `submitted` are touched).
+ */
+export async function bulkApproveBusinesses(
+  ids: number[],
+  opts?: { dryRun?: boolean },
+): Promise<{ approved?: number; count?: number; dryRun?: boolean; sample?: { id: number; name: string }[] }> {
+  const res = await axiosInstance.post(`/api/v1/admin/vendor-queue/bulk-approve`, {
+    ids,
+    dryRun: opts?.dryRun === true,
+  })
+  return (unwrap<{ approved?: number; count?: number; dryRun?: boolean; sample?: { id: number; name: string }[] }>(res) ?? {})
+}
+
 export async function rejectBusiness(id: number, notes?: string): Promise<QueueBusiness> {
   const res = await axiosInstance.post(`/api/v1/admin/vendor-queue/${id}/reject`, { notes })
   return unwrap<{ business: QueueBusiness }>(res)?.business as QueueBusiness
