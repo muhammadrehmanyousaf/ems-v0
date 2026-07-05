@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Popover,
@@ -29,6 +30,7 @@ import {
 import { useNotifications } from "@/context/NotificationContext";
 import type { Notification } from "@/lib/api/notifications";
 import { groupNotificationsByDate } from "@/lib/notificationGroups";
+import { getNotificationHref } from "@/lib/notificationHref";
 
 const NOTIFICATION_CONFIG: Record<
   string,
@@ -73,6 +75,8 @@ function NotificationItem({
   onDelete: (id: number) => void;
   onNavigate: () => void;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const config = NOTIFICATION_CONFIG[notification.type] || NOTIFICATION_CONFIG.system;
   const Icon = config.icon;
 
@@ -87,7 +91,10 @@ function NotificationItem({
       }`}
       onClick={() => {
         if (!notification.isRead) onRead(notification.id);
+        const base = pathname?.startsWith("/user") ? "/user" : "/dashboard";
+        const href = getNotificationHref(notification, base);
         onNavigate();
+        if (href) router.push(href);
       }}
     >
       {/* Unread indicator line */}

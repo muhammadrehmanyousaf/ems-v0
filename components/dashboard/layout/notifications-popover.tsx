@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/context/NotificationContext";
 import type { Notification } from "@/lib/api/notifications";
 import { groupNotificationsByDate } from "@/lib/notificationGroups";
+import { getNotificationHref } from "@/lib/notificationHref";
 
 const NOTIFICATION_ICONS: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
   booking_created: { icon: CalendarCheck, color: "text-blue-600", bg: "bg-blue-50" },
@@ -79,6 +81,8 @@ function NotificationItem({
   onRead: (id: number) => void;
   onDelete: (id: number) => void;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const config = NOTIFICATION_ICONS[notification.type] || NOTIFICATION_ICONS.system;
   const Icon = config.icon;
 
@@ -90,6 +94,9 @@ function NotificationItem({
       onSelect={(e) => {
         e.preventDefault();
         if (!notification.isRead) onRead(notification.id);
+        const base = pathname?.startsWith("/user") ? "/user" : "/dashboard";
+        const href = getNotificationHref(notification, base);
+        if (href) router.push(href);
       }}
     >
       <div
