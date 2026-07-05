@@ -5,9 +5,6 @@ import { useChat } from "@/context/ChatContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   ArrowLeft,
-  Phone,
-  Video,
-  MoreVertical,
   Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -81,30 +78,9 @@ export function ChatHeader({ onBack, showBackButton }: ChatHeaderProps) {
         </div>
       </div>
 
-      {/* Action buttons */}
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          title="Voice call"
-        >
-          <Phone className="h-4.5 w-4.5" />
-        </button>
-        <button
-          type="button"
-          className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          title="Video call"
-        >
-          <Video className="h-4.5 w-4.5" />
-        </button>
-        <button
-          type="button"
-          className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          title="More options"
-        >
-          <MoreVertical className="h-4.5 w-4.5" />
-        </button>
-      </div>
+      {/* Voice/video calling and the overflow menu aren't implemented yet (no
+          backend), so we don't render dead buttons that silently do nothing —
+          that reads as "the app is broken." Re-add when the feature ships. */}
     </div>
   );
 }
