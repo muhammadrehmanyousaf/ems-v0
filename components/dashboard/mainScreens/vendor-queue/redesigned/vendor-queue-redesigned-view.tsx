@@ -14,6 +14,7 @@ import * as React from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   listVendorQueue,
+  bulkApproveBusinesses,
   type QueueBusiness,
   type BusinessStatus,
 } from "@/lib/api/adminQueue"
@@ -137,6 +138,25 @@ export function VendorQueueRedesignedView() {
   const confirmAction = (notes: string | undefined) => {
     if (!pending) return
     actionMut.mutate({ kind: pending.kind, id: pending.business.id, notes })
+  }
+
+  // Bulk-approve the selected submitted vendors in one call (clears the backlog).
+  const bulkMut = useMutation({
+    mutationFn: (ids: number[]) => bulkApproveBusinesses(ids),
+    onSuccess: (res) => {
+      showSuccessToast(`Approved ${res.approved ?? 0} vendor(s)`)
+      setSelected(new Set())
+      invalidate()
+    },
+    onError: (e: any) =>
+      toast.error(e?.response?.data?.message || e?.message || "Bulk approve failed"),
+  })
+
+  const handleBulkApprove = () => {
+    const ids = Array.from(selected).map((s) => parseInt(s, 10)).filter(Number.isFinite)
+    if (ids.length === 0) return
+    if (!window.confirm(`Approve ${ids.length} selected vendor${ids.length > 1 ? "s" : ""}? This lists them as approved.`)) return
+    bulkMut.mutate(ids)
   }
 
   const all = data?.businesses ?? []
@@ -298,6 +318,16 @@ export function VendorQueueRedesignedView() {
               />
             </div>
             <div className="ml-auto flex items-center gap-2">
+              {statusTab === "submitted" && selected.size > 0 && (
+                <Button
+                  size="sm"
+                  variant="default"
+                  disabled={bulkMut.isPending}
+                  onClick={handleBulkApprove}
+                >
+                  {bulkMut.isPending ? "Approving…" : `Approve selected (${selected.size})`}
+                </Button>
+              )}
               <DensityToggle />
               <ExportMenu selectedIds={selected} getRowId={(r) => String(r.id)}
                 rows={rows}
