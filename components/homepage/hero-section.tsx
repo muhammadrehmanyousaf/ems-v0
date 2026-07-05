@@ -1258,27 +1258,28 @@ export function HeroSection() {
             className="flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-6 gap-y-4 mt-10 sm:mt-12"
           >
             {[
+              // Homepage stats: ONLY real, API-backed platform numbers from
+              // platformStatController (vendors / completed weddings / cities).
+              // Removed the fabricated "Avg Rating 4.8/5" (no data source) and the
+              // invented "|| 10000 / || 500 / || 50" fallbacks — per the no-fake-metrics
+              // rule. `.filter(end > 0)` renders nothing until real data loads, so we
+              // never show a made-up number.
               {
-                end: stats?.vendors || allVendors.length || 500,
+                end: stats?.vendors ?? 0,
                 suffix: "+",
                 label: "Verified Vendors",
               },
               {
-                end: stats?.couplesServed || 10000,
+                end: stats?.couplesServed ?? 0,
                 suffix: "+",
-                label: "Happy Couples",
+                label: "Weddings Hosted",
               },
               {
-                end: stats?.cities || 50,
+                end: stats?.cities ?? 0,
                 suffix: "+",
                 label: "Cities",
               },
-              {
-                end: 4.8,
-                suffix: "/5",
-                label: "Avg Rating",
-              },
-            ].map((stat, i, arr) => (
+            ].filter((s) => s.end > 0).map((stat, i, arr) => (
               <div key={i} className="flex items-center gap-3 sm:gap-6">
                 <div className="text-center">
                   <div className="font-display italic font-normal text-bridal-ivory leading-none text-[26px] sm:text-[34px]">
