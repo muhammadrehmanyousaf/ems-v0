@@ -8,6 +8,7 @@
  */
 
 import * as React from "react"
+import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
 import { AnalyticsAPI } from "@/lib/api/analytics"
 import { useUser } from "@/context/UserContext"
@@ -101,7 +102,7 @@ export function OverviewRedesignedView() {
         eyebrow="Vendor console · Overview"
         title={`Welcome back, ${firstName}`}
         description={`${today} — at-a-glance signal for your business: bookings, revenue and what needs you.`}
-        actions={<Button><Icon name="Plus" size={16} className="mr-1.5" /> Add booking</Button>}
+        actions={<Button asChild><Link href="/dashboard/bookings"><Icon name="Plus" size={16} className="mr-1.5" /> Add booking</Link></Button>}
       />
 
       {/* KPI row */}
@@ -179,7 +180,7 @@ export function OverviewRedesignedView() {
             icon: "Calendar",
             title: "No bookings yet",
             description: "Your most recent bookings will appear here as they come in.",
-            action: <Button size="sm"><Icon name="Plus" size={14} className="mr-1" /> Add booking</Button>,
+            action: <Button size="sm" asChild><Link href="/dashboard/bookings"><Icon name="Plus" size={14} className="mr-1" /> Add booking</Link></Button>,
           }}
           renderCard={(b) => (
             <div className="flex items-start justify-between gap-3">
