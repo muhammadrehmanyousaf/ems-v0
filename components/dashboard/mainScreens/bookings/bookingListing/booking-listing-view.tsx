@@ -13,6 +13,7 @@ import PipelineView from '../pipeline/pipeline-view'
 import ImportBookingsDialog from '../import-bookings-dialog'
 // Issue #22 — CSV export companion to the import dialog.
 import ExportBookingsButton from '../export-bookings-button'
+import { OwnerLedgerCard } from '@/components/bookings/owner-ledger-card'
 // Issue #8 — sidebar uses craft-localized labels ("Shoots" for
 // photographers, "Fittings" for bridal wear, etc.) but the page heading
 // stayed hardcoded as "Bookings", confusing vendors. Source from the
@@ -141,6 +142,8 @@ const BookingListingView = () => {
               </Button>
             </div>
           )}
+          {/* Phase-1 SPINE — owner money ledger (self-hides when backend feature is dark). */}
+          {process.env.NEXT_PUBLIC_ORDER_BUILDER === '1' && <OwnerLedgerCard />}
           {view === 'pipeline' ? <PipelineView /> : <BookingTable search={search} bucket={bucket} />}
           {showImport && (
             <ImportBookingsDialog

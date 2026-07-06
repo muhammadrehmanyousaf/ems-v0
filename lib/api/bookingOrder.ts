@@ -87,3 +87,45 @@ export async function saveBookingOrder(
   const { data } = await axiosInstance.put(`${v1}/${bookingId}/order-lines`, payload);
   return data?.data as BookingOrder;
 }
+
+// ── Owner ledger (Receivables) ─────────────────────────────────────────────
+export interface LedgerSummary {
+  booked: number;
+  received: number;
+  outstanding: number;
+  count: number;
+  outstandingCount: number;
+}
+
+export interface LedgerRow {
+  id: number;
+  date: string | null;
+  time: string | null;
+  eventType: string | null;
+  stage: string | null;
+  status: string | null;
+  customerName: string | null;
+  customerPhone: string | null;
+  source: string | null;
+  moneySource: "order" | "legacy";
+  cancelled: boolean;
+  grand: number;
+  advance: number;
+  balance: number;
+}
+
+export interface BookingLedger {
+  summary: LedgerSummary;
+  ledger: LedgerRow[];
+}
+
+/** Returns null when the feature is disabled (404) so the surface can hide. */
+export async function getBookingLedger(): Promise<BookingLedger | null> {
+  try {
+    const { data } = await axiosInstance.get(`${v1}/ledger`);
+    return (data?.data as BookingLedger) ?? null;
+  } catch (e: any) {
+    if (e?.response?.status === 404) return null;
+    throw e;
+  }
+}
