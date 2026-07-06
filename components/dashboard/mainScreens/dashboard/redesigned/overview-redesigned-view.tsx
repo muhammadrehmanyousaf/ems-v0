@@ -20,6 +20,7 @@ import { StatusPill, type StatusTone } from "@/components/dashboard/primitives/s
 import { MoneyCell, formatPkr } from "@/components/dashboard/primitives/money-cell"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
+import { FamiliarityPrompt } from "@/components/dashboard/layout/familiarity-prompt"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
@@ -104,6 +105,9 @@ export function OverviewRedesignedView() {
         description={`${today} — at-a-glance signal for your business: bookings, revenue and what needs you.`}
         actions={<Button asChild><Link href="/dashboard/bookings"><Icon name="Plus" size={16} className="mr-1.5" /> Add booking</Link></Button>}
       />
+
+      {/* Phase-1 NAV — one-time "are you familiar?" register chooser (self-hides after answer / when NAV_V2 off). */}
+      <FamiliarityPrompt />
 
       {/* KPI row */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">

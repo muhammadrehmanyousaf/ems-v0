@@ -94,10 +94,14 @@ interface NavPersonaState {
   persona: NavPersona
   /** Simple (essentials only) vs Full (advanced modules revealed). */
   full: boolean
+  /** Whether the onboarding "are you familiar?" question has been answered/dismissed. */
+  asked: boolean
   setPersona: (p: NavPersona) => void
   setFull: (f: boolean) => void
   /** One-shot from onboarding: "familiar?" yes -> professional+full, no -> aasaan+simple. */
   setFromFamiliarity: (familiar: boolean) => void
+  /** Dismiss the onboarding question without changing the (default) register. */
+  dismissAsk: () => void
 }
 
 /**
@@ -110,10 +114,12 @@ export const useNavPersona = create<NavPersonaState>()(
     (set) => ({
       persona: "aasaan",
       full: false,
+      asked: false,
       setPersona: (persona) => set({ persona }),
       setFull: (full) => set({ full }),
       setFromFamiliarity: (familiar) =>
-        set({ persona: familiar ? "professional" : "aasaan", full: familiar }),
+        set({ persona: familiar ? "professional" : "aasaan", full: familiar, asked: true }),
+      dismissAsk: () => set({ asked: true }),
     }),
     { name: "ww-nav-persona" },
   ),
