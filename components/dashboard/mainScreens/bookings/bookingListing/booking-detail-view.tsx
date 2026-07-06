@@ -62,6 +62,7 @@ import {
   type Lead,
 } from '@/lib/api/leads';
 import { InstallmentsCard } from '@/components/bookings/installments-card';
+import { OrderBuilderCard } from '@/components/bookings/order-builder-card';
 import { VendorChangeRequestsCard } from '@/components/bookings/vendor-change-requests-card';
 import { VendorNoShowDialog } from '@/components/bookings/vendor-no-show-dialog';
 import EventWeatherChip from '@/components/dashboard/mainScreens/bookings/event-weather-chip';
@@ -612,6 +613,12 @@ export default function BookingDetailView({
               </div>
             </CardContent>
           </Card>
+
+          {/* Phase-1 SPINE — editable order builder (flag-gated; the card self-hides
+              when the backend feature ORDER_BUILDER_ON is off / returns 404). */}
+          {process.env.NEXT_PUBLIC_ORDER_BUILDER === '1' && (
+            <OrderBuilderCard bookingId={booking.id} />
+          )}
 
           {/* Installments (BK-042) */}
           <InstallmentsCard bookingId={booking.id} />
