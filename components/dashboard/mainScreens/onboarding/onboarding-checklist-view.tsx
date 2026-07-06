@@ -43,12 +43,19 @@ interface Category {
   max: number;
   items: Item[];
 }
+interface Activation {
+  bookings: number;
+  futureConfirmed: number;
+  baaqiTracked: number;
+  shieldOn: boolean;
+}
 interface BizCompleteness {
   businessId: number;
   name: string;
   score: number;
   categories: Category[];
   suggestions: string[];
+  activation?: Activation;
 }
 
 function tierFor(score: number): {
@@ -144,6 +151,33 @@ function BusinessChecklistCard({ biz }: { biz: BizCompleteness }) {
             </div>
           </div>
         </div>
+
+        {/* Phase-1 EPIC 6 · T6.5 — activation first: reward a WORKING venue, not photos. */}
+        {biz.activation && (
+          <div className="rounded-lg border p-3">
+            <div className="flex items-center gap-1.5 text-xs font-semibold mb-2">
+              <ShieldCheck className={cn("h-3.5 w-3.5", biz.activation.shieldOn ? "text-emerald-600" : "text-muted-foreground")} />
+              {biz.activation.shieldOn ? "Booking shield ON" : "Booking shield off — add your future dates"}
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              {[
+                { n: biz.activation.bookings, label: "bookings logged" },
+                { n: biz.activation.futureConfirmed, label: "future dates locked" },
+                { n: biz.activation.baaqiTracked, label: "baaqi tracked" },
+              ].map((s) => (
+                <div key={s.label} className="rounded-md bg-muted/40 py-2">
+                  <div className="text-lg font-bold tabular-nums">{s.n}</div>
+                  <div className="text-[10px] text-muted-foreground leading-tight">{s.label}</div>
+                </div>
+              ))}
+            </div>
+            {!biz.activation.shieldOn && (
+              <Link href="/dashboard/migrate" className="inline-flex items-center gap-1 mt-2 text-[11px] font-medium text-emerald-700 hover:underline">
+                Switch on the shield <ArrowRight className="h-3 w-3" />
+              </Link>
+            )}
+          </div>
+        )}
 
         {biz.suggestions.length > 0 && (
           <div className="rounded-lg border border-bridal-gold/30 bg-bridal-gold/5 p-3">
