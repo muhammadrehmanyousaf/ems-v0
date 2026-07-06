@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { OfflineBookingDialog } from "@/components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog"
 import { BookingRowActions } from "./booking-row-actions"
+import { OwnerLedgerCard } from "@/components/bookings/owner-ledger-card"
 
 const statusTone = (s: BookingStatus): StatusTone =>
   s === "Confirmed" ? "success"
@@ -107,6 +108,9 @@ export function BookingsRedesignedView() {
         <StatCard label="Due (shown)" value={formatPkr(due)} icon="Clock" delta="to chase" />
         <StatCard label="This month" value={thisMonth} icon="TrendingUp" />
       </div>
+
+      {/* Phase-1 SPINE — owner money ledger (self-hides when backend feature is dark). */}
+      {process.env.NEXT_PUBLIC_ORDER_BUILDER === '1' && <OwnerLedgerCard />}
 
       <DataTable
         columns={columns}
