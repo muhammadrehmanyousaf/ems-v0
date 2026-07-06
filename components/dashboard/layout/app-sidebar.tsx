@@ -30,6 +30,12 @@ import {
   type SettingsTabKey,
 } from "@/lib/vendor-type-config"
 import { getDashboardRole, isAdminLike, type DashboardRole } from "@/lib/dashboard-role"
+import { useNavPersona, navLabel, NAV_LABELS } from "@/lib/nav/nav-persona"
+
+// Phase-1 navigation redesign — persona-aware Roman-Urdu / Professional labels.
+// OFF by default: set NEXT_PUBLIC_NAV_V2=1 to preview. Flag off => the live
+// sidebar is byte-identical (labels untouched).
+const NAV_V2 = process.env.NEXT_PUBLIC_NAV_V2 === "1"
 
 const TAB_LABELS: Record<SettingsTabKey, string> = {
   overview: "Overview",
@@ -209,6 +215,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     ? buildAdminSections(role)
     : buildVendorSections(user, businessVendorType)
 
+  // Phase-1: when NAV_V2 is on, relabel group headings + items through the
+  // bilingual persona dictionary (Aasaan Roman-Urdu vs Professional English).
+  // Routes are never touched — only the words. Flag off => `sections` verbatim.
+  const { persona } = useNavPersona()
+  const displaySections: NavSection[] = NAV_V2
+    ? sections.map((s) => ({
+        ...s,
+        label: NAV_LABELS[s.label] ? navLabel(s.label, persona) : s.label,
+        items: s.items.map((it) => ({
+          ...it,
+          labelOverride: NAV_LABELS[it.name]
+            ? navLabel(it.name, persona)
+            : it.labelOverride,
+        })),
+      }))
+    : sections
+
   return (
     <Sidebar collapsible="icon" {...props}>
       {/* Brand block — flat dark monogram + clean wordmark + role label. */}
@@ -241,7 +264,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </div>
         )}
         <Suspense fallback={null}>
-          <NavSections sections={sections} />
+          <NavSections sections={displaySections} />
         </Suspense>
       </SidebarContent>
 
