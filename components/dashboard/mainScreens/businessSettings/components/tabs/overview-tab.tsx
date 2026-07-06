@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Edit, Images, Package, Settings2, CreditCard, Users, CalendarClock } from 'lucide-react'
+import { PersonaPreference } from '@/components/dashboard/layout/persona-preference'
 
 interface OverviewTabProps {
     business: ApiBusiness;
@@ -33,6 +34,8 @@ const OverviewTab = ({ business }: OverviewTabProps) => {
 
     return (
         <div className='space-y-5'>
+            {/* Phase-1 nav — label style switch (only shows behind NAV_V2). */}
+            <PersonaPreference />
             {/* Status bar */}
             <div className='flex items-center gap-2 flex-wrap'>
                 <Badge variant={imageCount > 0 ? 'default' : 'secondary'} className='text-xs'>
