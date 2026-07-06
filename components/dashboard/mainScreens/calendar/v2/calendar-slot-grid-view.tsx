@@ -11,14 +11,18 @@
  * venue_os_v2; non-pilot vendors keep the current calendar.
  */
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { addDays, format } from "date-fns";
 import { ChevronLeft, ChevronRight, Loader2, CalendarDays } from "lucide-react";
 import { useActiveBusinessId } from "@/lib/store/active-business-store";
 import { useBusiness } from "@/context/BusinessContext";
 import { venueOsApi, type CellState } from "@/lib/api/venueOs";
+import { BlockedDatesAPI } from "@/lib/api/dashboard";
+import { gregorianToHijri } from "@/lib/hijri";
+import { IslamicEventsStrip } from "../components/islamic-events-strip";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const WINDOW = 14; // two-week window per page (≤60d endpoint cap)
@@ -48,11 +52,35 @@ export function CalendarSlotGridView() {
     [from],
   );
 
+  const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["venue-calendar", businessId, from, to],
     queryFn: () => (businessId ? venueOsApi.getCalendar(businessId, from, to) : Promise.resolve(null)),
     enabled: !!businessId,
   });
+
+  // Vendor-blocked dates (leaves / dead months) — overlaid on the grid so a
+  // block reflects instantly regardless of which block table backs it.
+  const { data: blocked } = useQuery({
+    queryKey: ["blocked-dates", businessId],
+    queryFn: () => BlockedDatesAPI.getAll(),
+    enabled: !!businessId,
+  });
+  const blockedSet = useMemo(() => new Set((blocked ?? []).map((b) => b.blockedDate)), [blocked]);
+
+  const blockDate = async (date: Date) => {
+    const ymd = format(date, "yyyy-MM-dd");
+    try {
+      await BlockedDatesAPI.block(ymd, "Islamic dead month / event");
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["blocked-dates", businessId] }),
+        qc.invalidateQueries({ queryKey: ["venue-calendar", businessId] }),
+      ]);
+      toast.success(`${format(date, "d MMM")} blocked`);
+    } catch {
+      toast.error("Could not block that date");
+    }
+  };
 
   if (!businessId) return null;
 
@@ -110,6 +138,9 @@ export function CalendarSlotGridView() {
           ))}
         </div>
 
+        {/* Dead-month + Islamic-event strip — 1-click block (writes a vendor block). */}
+        <IslamicEventsStrip blockedDateSet={blockedSet} onBlock={blockDate} />
+
         {isLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground py-6 justify-center">
             <Loader2 className="size-4 animate-spin" /> Loading calendar…
@@ -126,11 +157,14 @@ export function CalendarSlotGridView() {
                 <div className="w-28 shrink-0" />
                 {days.map((d) => {
                   const c = fmtCol(d);
-                  const blocked = data.days[d]?.isBlocked;
+                  const hj = gregorianToHijri(new Date(d + "T00:00:00"));
+                  const blocked = data.days[d]?.isBlocked || blockedSet.has(d);
                   return (
                     <div key={d} className={cn("w-9 shrink-0 text-center", blocked && "opacity-60")}>
                       <div className="text-[10px] text-muted-foreground uppercase">{c.dow}</div>
                       <div className="text-xs font-medium tabular-nums">{c.dom}</div>
+                      {/* approximate Hijri day — Pakistani families think in both */}
+                      <div className="text-[8px] text-muted-foreground/70 tabular-nums leading-none">{hj.day}</div>
                     </div>
                   );
                 })}
@@ -140,7 +174,7 @@ export function CalendarSlotGridView() {
                 <div key={r.key} className="flex items-center py-0.5">
                   <div className="w-28 shrink-0 pr-2 truncate text-xs font-medium" title={r.name}>{r.name}</div>
                   {days.map((d) => {
-                    const st = r.cellFor(d);
+                    const st: CellState = blockedSet.has(d) || data.days[d]?.isBlocked ? "blocked" : r.cellFor(d);
                     const isSel = sel && sel.row === r.key && sel.day === d;
                     return (
                       <button
