@@ -152,6 +152,27 @@ export interface ActionSummary {
   unreadWhatsApp: number;
 }
 
+// ── Report cards (Phase-2 EPIC 4) ──────────────────────────────────────────
+export interface ReportCard {
+  key: string; labelUr: string; labelEn: string; value: number;
+  format: "money" | "count" | "pct"; tone: "good" | "warn" | "neutral";
+  sub: string | null; delta: number | null;
+}
+export interface ReportCards {
+  period: "month" | "year"; today: string;
+  cards: ReportCard[];
+  seasonality: { month: string; n: number }[];
+}
+export async function getReportCards(period: "month" | "year" = "month"): Promise<ReportCards | null> {
+  try {
+    const { data } = await axiosInstance.get(`${v1}/report-cards`, { params: { period } });
+    return (data?.data as ReportCards) ?? null;
+  } catch (e: any) {
+    if (e?.response?.status === 404) return null;
+    throw e;
+  }
+}
+
 // ── BEO event sheet (Phase-2 EPIC 1) ───────────────────────────────────────
 export interface BeoCustomerLine {
   name: string; kind: string; basis: string; qty: number; unit: string | null;
