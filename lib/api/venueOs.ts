@@ -1827,7 +1827,7 @@ export interface CalendarSlotCell {
   state: CellState; runsThisWeekday?: boolean; lastSpot?: boolean;
 }
 export interface CalendarHallCell { subVenueId: number; state: CellState }
-export interface CalendarDay { isBlocked: boolean; slots: CalendarSlotCell[]; halls: CalendarHallCell[] }
+export interface CalendarDay { isBlocked: boolean; slots: CalendarSlotCell[]; halls: CalendarHallCell[]; bookedCount?: number }
 export interface VenueCalendar {
   businessId: number; from: string; to: string; hallMode: boolean;
   slots: { slotTemplateId: number; label: string; startTime: string; endTime: string }[];

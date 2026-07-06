@@ -161,12 +161,17 @@ export function CalendarSlotGridView() {
                   const c = fmtCol(d);
                   const hj = gregorianToHijri(new Date(d + "T00:00:00"));
                   const blocked = data.days[d]?.isBlocked || blockedSet.has(d);
+                  const booked = data.days[d]?.bookedCount ?? 0;
                   return (
                     <div key={d} className={cn("w-9 shrink-0 text-center", blocked && "opacity-60")}>
                       <div className="text-[10px] text-muted-foreground uppercase">{c.dow}</div>
                       <div className="text-xs font-medium tabular-nums">{c.dom}</div>
                       {/* approximate Hijri day — Pakistani families think in both */}
                       <div className="text-[8px] text-muted-foreground/70 tabular-nums leading-none">{hj.day}</div>
+                      {/* plain-booking count (offline / quick-add / migrated) */}
+                      {booked > 0 && (
+                        <div className="text-[8px] font-semibold text-fuchsia-600 dark:text-fuchsia-400 leading-none mt-0.5">●{booked > 1 ? booked : ""}</div>
+                      )}
                     </div>
                   );
                 })}
