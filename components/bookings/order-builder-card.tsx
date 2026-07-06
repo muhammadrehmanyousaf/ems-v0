@@ -50,7 +50,10 @@ const PRESETS: Preset[] = [
   { label: "Per-head menu", line: { name: "Dinner (per head)", kind: "menu-item", basis: "per_head", qty: 0, rate: 0 } },
   { label: "Extra charge", line: { name: "", kind: "charge", basis: "flat", qty: 1, rate: 0 } },
   { label: "Discount", line: { name: "Discount", kind: "discount", basis: "percent", discountValue: 0 } },
+  { label: "My cost", line: { name: "", kind: "cost", moneyFlow: "expense", basis: "flat", qty: 1, rate: 0 } },
 ];
+
+const isCost = (l: OrderLine) => l.kind === "cost" || l.moneyFlow === "expense";
 
 const num = (v: unknown, def = 0) => {
   const n = Number(v);
@@ -91,6 +94,14 @@ function preview(lines: OrderLine[], advance: number, finalOverride: number | nu
   return { subtotal, discount, negotiatedAdjustment, grand, balance: grand - advance };
 }
 
+/** Local mirror of computeEventProfit — owner economics (server authoritative on save). */
+function eventProfit(lines: OrderLine[], advance: number, finalOverride: number | null) {
+  const { grand } = preview(lines, advance, finalOverride);
+  const cost = lines.filter((l) => !isCustomerLine(l)).reduce((s, l) => s + effectiveQty(l) * num(l.rate), 0);
+  const profit = grand - cost;
+  return { revenue: grand, cost, profit, margin: grand > 0 ? (profit / grand) * 100 : 0 };
+}
+
 export function OrderBuilderCard({ bookingId }: { bookingId: number }) {
   const [loading, setLoading] = useState(true);
   const [enabled, setEnabled] = useState(false);
@@ -128,6 +139,7 @@ export function OrderBuilderCard({ bookingId }: { bookingId: number }) {
   }, [bookingId, hydrate]);
 
   const totals = useMemo(() => preview(lines, advance, finalOverride), [lines, advance, finalOverride]);
+  const profit = useMemo(() => eventProfit(lines, advance, finalOverride), [lines, advance, finalOverride]);
 
   const update = (i: number, patch: Partial<OrderLine>) =>
     setLines((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
@@ -199,15 +211,23 @@ export function OrderBuilderCard({ bookingId }: { bookingId: number }) {
           )}
           {lines.map((l, i) => {
             const isDiscount = l.kind === "discount";
+            const costLine = isCost(l);
             return (
-              <div key={i} className="rounded-lg border p-2.5 space-y-2 bg-muted/20">
+              <div
+                key={i}
+                className={
+                  "rounded-lg border p-2.5 space-y-2 " +
+                  (costLine ? "bg-rose-50/50 dark:bg-rose-950/20 border-rose-200/60 dark:border-rose-900/40" : "bg-muted/20")
+                }
+              >
                 <div className="flex items-center gap-2">
                   <Input
                     value={l.name}
                     onChange={(e) => update(i, { name: e.target.value })}
-                    placeholder={isDiscount ? "Discount label" : "Item name"}
+                    placeholder={isDiscount ? "Discount label" : costLine ? "Your cost (e.g. diesel, dihari)" : "Item name"}
                     className="h-8 flex-1"
                   />
+                  {costLine && <Badge variant="outline" className="text-[10px] shrink-0 text-rose-600 border-rose-300">my cost</Badge>}
                   <button
                     onClick={() => remove(i)}
                     className="text-muted-foreground hover:text-destructive p-1 shrink-0"
@@ -362,6 +382,38 @@ export function OrderBuilderCard({ bookingId }: { bookingId: number }) {
             </Badge>
           </div>
         </div>
+
+        {/* Owner-only economics — only when a cost has been entered */}
+        {profit.cost > 0 && (
+          <div className="rounded-lg border border-dashed p-3 space-y-1.5 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground">Your profit (only you see this)</span>
+              <Badge
+                variant="secondary"
+                className={
+                  "tabular-nums " +
+                  (profit.profit >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400")
+                }
+              >
+                {profit.margin.toFixed(0)}% margin
+              </Badge>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>What customer pays</span>
+              <span className="tabular-nums">{PKR(profit.revenue)}</span>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>Your costs</span>
+              <span className="tabular-nums">−{PKR(profit.cost)}</span>
+            </div>
+            <div className="flex justify-between font-semibold pt-1 border-t">
+              <span>Profit</span>
+              <span className={"tabular-nums " + (profit.profit >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400")}>
+                {PKR(profit.profit)}
+              </span>
+            </div>
+          </div>
+        )}
 
         <Button onClick={save} disabled={saving} className="w-full">
           {saving ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Save className="size-4 mr-2" />}
