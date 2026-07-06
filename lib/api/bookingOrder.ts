@@ -56,11 +56,19 @@ export interface OrderTotals {
   finalOverride: number | null;
 }
 
+export interface EventProfit {
+  revenue: number;
+  cost: number;
+  profit: number;
+  margin: number; // profit / revenue, as a %
+}
+
 export interface BookingOrder {
   bookingId: number;
   header: OrderHeader;
   lines: OrderLine[];
   totals: OrderTotals;
+  profit?: EventProfit;
 }
 
 export interface SaveOrderPayload extends Partial<OrderHeader> {
