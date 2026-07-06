@@ -11,11 +11,13 @@
  */
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Loader2, Wallet, ChevronRight } from "lucide-react";
+import { Loader2, Wallet, ChevronRight, MessageCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getBookingLedger, type BookingLedger, type LedgerRow } from "@/lib/api/bookingOrder";
+import { waLink, WA_TEMPLATES, fillTemplate } from "@/lib/whatsapp";
+import { useBusiness } from "@/context/BusinessContext";
 
 const PKR = (n: number | null | undefined) =>
   "Rs " + Math.round(Number(n) || 0).toLocaleString("en-PK");
@@ -40,6 +42,8 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "ou
 }
 
 export function OwnerLedgerCard() {
+  const { business } = useBusiness();
+  const vendorName = business?.name ?? "";
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<BookingLedger | null>(null);
 
@@ -95,7 +99,7 @@ export function OwnerLedgerCard() {
             </p>
             <div className="rounded-lg border divide-y">
               {outstanding.map((r) => (
-                <LedgerLine key={r.id} row={r} />
+                <LedgerLine key={r.id} row={r} vendorName={vendorName} />
               ))}
             </div>
             {summary.outstandingCount > outstanding.length && (
@@ -110,28 +114,56 @@ export function OwnerLedgerCard() {
   );
 }
 
-function LedgerLine({ row }: { row: LedgerRow }) {
+const REMINDER = WA_TEMPLATES.find((t) => t.key === "reminder");
+
+function LedgerLine({ row, vendorName }: { row: LedgerRow; vendorName: string }) {
+  // Pre-fill the existing balance-reminder template the vendor reviews + taps
+  // send from their own WhatsApp ("we prepare, you tap send"). Uses lib/whatsapp
+  // (waLink + WA_TEMPLATES) — no duplicate infra. Empty when no usable phone.
+  const waHref = row.customerPhone && REMINDER
+    ? waLink(
+        row.customerPhone,
+        fillTemplate(REMINDER.body, {
+          name: row.customerName ?? "",
+          amount: Math.round(row.balance).toLocaleString("en-PK"),
+          date: fmtDate(row.date),
+          vendor: vendorName,
+        }),
+      )
+    : "";
   return (
-    <Link
-      href={`/dashboard/bookings/${row.id}`}
-      className="flex items-center gap-3 p-2.5 hover:bg-muted/40 transition-colors"
-    >
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium truncate">
-          {row.customerName || `Booking #${row.id}`}
-          {row.eventType && <span className="text-muted-foreground font-normal"> · {row.eventType}</span>}
-        </p>
-        <p className="text-xs text-muted-foreground">{fmtDate(row.date)}</p>
-      </div>
-      <div className="text-right shrink-0">
-        <p className="text-sm font-semibold tabular-nums text-amber-600 dark:text-amber-500">{PKR(row.balance)}</p>
-        <p className="text-[11px] text-muted-foreground tabular-nums">of {PKR(row.grand)}</p>
-      </div>
-      {row.moneySource === "legacy" && (
-        <Badge variant="outline" className="text-[10px] shrink-0">est.</Badge>
+    <div className="flex items-center gap-1 p-2.5 hover:bg-muted/40 transition-colors">
+      <Link href={`/dashboard/bookings/${row.id}`} className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium truncate">
+            {row.customerName || `Booking #${row.id}`}
+            {row.eventType && <span className="text-muted-foreground font-normal"> · {row.eventType}</span>}
+          </p>
+          <p className="text-xs text-muted-foreground">{fmtDate(row.date)}</p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-sm font-semibold tabular-nums text-amber-600 dark:text-amber-500">{PKR(row.balance)}</p>
+          <p className="text-[11px] text-muted-foreground tabular-nums">of {PKR(row.grand)}</p>
+        </div>
+        {row.moneySource === "legacy" && (
+          <Badge variant="outline" className="text-[10px] shrink-0">est.</Badge>
+        )}
+      </Link>
+      {waHref ? (
+        <a
+          href={waHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Send balance reminder on WhatsApp"
+          aria-label="WhatsApp reminder"
+          className="shrink-0 rounded-md p-1.5 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+        >
+          <MessageCircle className="size-4" />
+        </a>
+      ) : (
+        <ChevronRight className="size-4 text-muted-foreground shrink-0" />
       )}
-      <ChevronRight className="size-4 text-muted-foreground shrink-0" />
-    </Link>
+    </div>
   );
 }
 
