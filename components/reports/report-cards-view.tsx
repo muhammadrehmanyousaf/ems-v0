@@ -9,11 +9,12 @@
  */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUp, ArrowDown, MessageCircle, Loader2 } from "lucide-react";
+import { ArrowUp, ArrowDown, MessageCircle, Loader2, Image as ImageIcon } from "lucide-react";
 import { getReportCards, type ReportCard } from "@/lib/api/bookingOrder";
 import { useBusiness } from "@/context/BusinessContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { shareCard, type ShareRow } from "@/lib/whatsappShare";
 
 const fmt = (c: ReportCard) => {
   if (c.format === "money") return "Rs " + Math.round(c.value).toLocaleString("en-PK");
@@ -54,16 +55,40 @@ export function ReportCardsView() {
   };
   const maxSeason = Math.max(1, ...data.seasonality.map((s) => s.n));
 
+  // EPIC 8.4 — render all cards as one WhatsApp-shareable image.
+  const shareAllAsImage = () => {
+    const rows: ShareRow[] = data.cards.map((c) => ({
+      label: c.labelUr,
+      value: fmt(c) + (c.sub ? ` (${c.sub})` : ""),
+      tone: c.tone as ShareRow["tone"],
+    }));
+    void shareCard({
+      title: vendor,
+      subtitle: period === "month" ? "Is maheene ka hisaab" : "Is saal ka hisaab",
+      rows,
+      brand: "Wedding Wala",
+    });
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">Report Cards</h1>
-        <div className="inline-flex rounded-md border p-0.5 text-sm">
-          {(["month", "year"] as const).map((p) => (
-            <button key={p} onClick={() => setPeriod(p)} className={cn("px-3 py-1 rounded", period === p && "bg-primary text-primary-foreground")}>
-              {p === "month" ? "Maheena" : "Saal"}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={shareAllAsImage}
+            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-sm hover:bg-muted transition-colors"
+            title="Poori report ek image mein WhatsApp par bhejein"
+          >
+            <ImageIcon className="size-3.5" /> Image
+          </button>
+          <div className="inline-flex rounded-md border p-0.5 text-sm">
+            {(["month", "year"] as const).map((p) => (
+              <button key={p} onClick={() => setPeriod(p)} className={cn("px-3 py-1 rounded", period === p && "bg-primary text-primary-foreground")}>
+                {p === "month" ? "Maheena" : "Saal"}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
