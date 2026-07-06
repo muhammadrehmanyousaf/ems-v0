@@ -65,6 +65,24 @@ export function ReviewProfileGate({ children }: ReviewProfileGateProps) {
   // of their own dashboard on a transient cache miss.
   if (!flags || flags.reviewProfile !== false) return <>{children}</>;
 
+  // Phase-1 EPIC 6 · T6.1 — the operational dashboard now EXISTS (calendar, order
+  // builder, ledger). Where it's enabled, a pending vendor should be able to run
+  // their business (log bookings, manage the calendar) while only their PUBLIC
+  // profile waits for review — so the full-screen block becomes a slim banner.
+  if (process.env.NEXT_PUBLIC_ORDER_BUILDER === "1") {
+    return (
+      <>
+        <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-900/50 px-4 py-2 text-xs text-amber-800 dark:text-amber-300">
+          <Clock className="w-3.5 h-3.5 shrink-0" />
+          <span>
+            Profile under review — couples can’t find you publicly yet (1–2 days), but you can log bookings and manage your calendar now.
+          </span>
+        </div>
+        {children}
+      </>
+    );
+  }
+
   const handleSignOut = async () => {
     try {
       await logout?.();
