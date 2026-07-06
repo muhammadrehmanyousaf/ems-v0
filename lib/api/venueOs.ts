@@ -1807,4 +1807,30 @@ export const venueOsApi = {
     unwrap<ServiceLine[]>(api.get(`${BASE}/business/${businessId}/service-lines`, { params: { vendorType } })),
   updateDeliverable: (lineId: number, body: { deliverableStatus: string }): Promise<ServiceLine> =>
     unwrap<ServiceLine>(api.patch(`${BASE}/service-lines/${lineId}/deliverable`, body)),
+
+  // Phase-1 EPIC 2 · T2.1/T2.2 — fused vendor calendar (slots × halls × state).
+  getCalendar: async (businessId: number, from: string, to: string): Promise<VenueCalendar | null> => {
+    try {
+      return await unwrap<VenueCalendar>(
+        api.get(`${BASE}/business/${businessId}/calendar`, { params: { from, to } }),
+      );
+    } catch (e: any) {
+      if (e?.response?.status === 404) return null; // feature dark for this vendor
+      throw e;
+    }
+  },
 };
+
+export type CellState = "free" | "booked" | "held" | "blocked" | "partial";
+export interface CalendarSlotCell {
+  slotTemplateId: number; capacity: number; used: number; free: number;
+  state: CellState; runsThisWeekday?: boolean; lastSpot?: boolean;
+}
+export interface CalendarHallCell { subVenueId: number; state: CellState }
+export interface CalendarDay { isBlocked: boolean; slots: CalendarSlotCell[]; halls: CalendarHallCell[] }
+export interface VenueCalendar {
+  businessId: number; from: string; to: string; hallMode: boolean;
+  slots: { slotTemplateId: number; label: string; startTime: string; endTime: string }[];
+  halls: { subVenueId: number; name: string; kind: string; depth: number; parentSubVenueId: number | null }[];
+  days: Record<string, CalendarDay>;
+}
