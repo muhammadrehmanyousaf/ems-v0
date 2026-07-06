@@ -40,6 +40,10 @@ export interface TodayEvent {
     bookingTime: string | null;
     status: string;
     totalAmount: number | string | null;
+    // Phase-1 SPINE — order snapshot (present only once a vendor builds an order).
+    orderStage?: string | null;
+    orderGrand?: number | null;
+    orderBalance?: number | null;
     primaryBusiness: { id: number; name: string | null } | null;
   };
   tasks: TimelineTask[];
