@@ -152,6 +152,40 @@ export interface ActionSummary {
   unreadWhatsApp: number;
 }
 
+// ── BEO event sheet (Phase-2 EPIC 1) ───────────────────────────────────────
+export interface BeoCustomerLine {
+  name: string; kind: string; basis: string; qty: number; unit: string | null;
+  rate: number; lineTotal: number | null; isDiscount: boolean;
+}
+export interface BeoKitchenItem {
+  name: string; kind: string; pax: number; unit: string | null;
+  spice: string | null; allergen: string | null; notes: string | null;
+  printFields: Record<string, unknown> | null;
+}
+export interface BeoSheets {
+  customerSheet: {
+    event: { customerName: string | null; customerPhone: string | null; date: string | null; time: string | null; eventType: string | null; sitting: string | null; guaranteedPax: number | null; expectedPax: number | null; stage: string | null };
+    lines: BeoCustomerLine[];
+    totals: { subtotal: number; discount: number; grand: number; advance: number; balance: number };
+  };
+  kitchenSheet: {
+    event: { customerName: string | null; date: string | null; time: string | null; eventType: string | null; sitting: string | null; pax: number | null };
+    items: BeoKitchenItem[];
+    crew: { name: string; qty: number; unit: string | null }[];
+  };
+}
+
+/** Returns null when the feature is disabled (404) so the surface can hide. */
+export async function getBeo(bookingId: number): Promise<BeoSheets | null> {
+  try {
+    const { data } = await axiosInstance.get(`${v1}/${bookingId}/beo`);
+    return (data?.data as BeoSheets) ?? null;
+  } catch (e: any) {
+    if (e?.response?.status === 404) return null;
+    throw e;
+  }
+}
+
 /** Returns null when the feature is disabled (404) so the surface can hide. */
 export async function getActionSummary(businessId?: number): Promise<ActionSummary | null> {
   try {
