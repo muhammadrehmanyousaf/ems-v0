@@ -15,6 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus, Wallet, CalendarClock, Inbox, ChevronRight } from "lucide-react";
 import { useActiveBusinessId } from "@/lib/store/active-business-store";
 import { getActionSummary } from "@/lib/api/bookingOrder";
+import { RemindersDueCard } from "@/components/bookings/reminders-due-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -146,6 +147,9 @@ export function ActionOverviewView() {
           </CardContent>
         </Card>
       )}
+
+      {/* Phase-2 EPIC 8 — recovery reminders (self-hides when WHATSAPP_TIER1_ENABLED is off / 404). */}
+      <RemindersDueCard />
     </div>
   );
 }
