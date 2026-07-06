@@ -9,11 +9,12 @@
  * the summary to WhatsApp. Self-hides when BEO is dark (backend 404).
  */
 import { useState } from "react";
-import { Printer, MessageCircle, FileText, ChefHat, Loader2 } from "lucide-react";
+import { Printer, MessageCircle, FileText, ChefHat, Image as ImageIcon, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useBusiness } from "@/context/BusinessContext";
 import { getBeo, type BeoSheets } from "@/lib/api/bookingOrder";
 import { waLink } from "@/lib/whatsapp";
+import { shareCard, type ShareRow } from "@/lib/whatsappShare";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,18 @@ export function BeoSheetCard({ bookingId }: { bookingId: number }) {
   const shareText = tab === "customer" ? customerShareText(data, vendor) : kitchenShareText(data);
   const phone = data.customerSheet.event.customerPhone;
   const waHref = phone ? waLink(phone, shareText) : "";
+
+  // EPIC 8.4 — the customer order as a clean shareable image.
+  const shareImage = () => {
+    const { event, totals } = data.customerSheet;
+    const rows: ShareRow[] = [
+      { label: "Event", value: `${event.eventType || "—"} · ${fmtDate(event.date)}`, tone: "neutral" },
+      { label: "Grand total", value: PKR(totals.grand), tone: "neutral" },
+      { label: "Advance", value: PKR(totals.advance), tone: "good" },
+      { label: "Balance due", value: PKR(totals.balance), tone: "warn" },
+    ];
+    void shareCard({ title: `${vendor} — Event Order`, subtitle: event.customerName || undefined, rows, footer: "Shukriya!", brand: "Wedding Wala" });
+  };
 
   return (
     <Card>
@@ -64,7 +77,12 @@ export function BeoSheetCard({ bookingId }: { bookingId: number }) {
           </Button>
           {tab === "customer" && waHref && (
             <Button asChild size="sm" variant="outline" className="text-emerald-700 border-emerald-300">
-              <a href={waHref} target="_blank" rel="noopener noreferrer"><MessageCircle className="size-4 mr-1.5" /> Share on WhatsApp</a>
+              <a href={waHref} target="_blank" rel="noopener noreferrer"><MessageCircle className="size-4 mr-1.5" /> WhatsApp</a>
+            </Button>
+          )}
+          {tab === "customer" && (
+            <Button size="sm" variant="outline" onClick={shareImage}>
+              <ImageIcon className="size-4 mr-1.5" /> Image
             </Button>
           )}
         </div>

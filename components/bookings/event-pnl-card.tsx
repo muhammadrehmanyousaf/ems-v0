@@ -11,12 +11,13 @@
  */
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { TrendingUp, TrendingDown, MessageCircle } from "lucide-react";
+import { TrendingUp, TrendingDown, MessageCircle, Image as ImageIcon } from "lucide-react";
 import { getBookingOrder, type OrderLine } from "@/lib/api/bookingOrder";
 import { useBusiness } from "@/context/BusinessContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { shareCard, type ShareRow } from "@/lib/whatsappShare";
 
 const PKR = (n: number | null | undefined) => "Rs " + Math.round(Number(n) || 0).toLocaleString("en-PK");
 const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
@@ -73,6 +74,17 @@ export function EventPnlCard({ bookingId }: { bookingId: number }) {
   // Owner share — no fixed recipient; wa.me/?text= opens the contact picker prefilled.
   const shareHref = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 
+  // EPIC 8.4 — the same P&L as a clean shareable image.
+  const shareImage = () => {
+    const rows: ShareRow[] = [
+      { label: "Aya (customer)", value: PKR(revenue), tone: "good" },
+      { label: "Gaya (kharch)", value: PKR(cost), tone: "warn" },
+      { label: loss ? "Nuqsan" : "Bacha", value: PKR(Math.abs(profit)), tone: loss ? "warn" : "good" },
+      { label: "Margin", value: `${Math.round(margin)}%`, tone: "neutral" },
+    ];
+    void shareCard({ title: `${vendor} — ${data.header?.eventType || "Event"}`, subtitle: "Event ka hisaab", rows, brand: "Wedding Wala" });
+  };
+
   return (
     <Card className={cn(loss ? "border-rose-300 dark:border-rose-900/60" : "border-emerald-200 dark:border-emerald-900/50")}>
       <CardContent className="p-5 space-y-3">
@@ -121,9 +133,14 @@ export function EventPnlCard({ bookingId }: { bookingId: number }) {
           </div>
         )}
 
-        <Button asChild size="sm" variant="outline" className="text-emerald-700 border-emerald-300">
-          <a href={shareHref} target="_blank" rel="noopener noreferrer"><MessageCircle className="size-4 mr-1.5" /> Share on WhatsApp</a>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild size="sm" variant="outline" className="text-emerald-700 border-emerald-300">
+            <a href={shareHref} target="_blank" rel="noopener noreferrer"><MessageCircle className="size-4 mr-1.5" /> WhatsApp</a>
+          </Button>
+          <Button size="sm" variant="outline" onClick={shareImage}>
+            <ImageIcon className="size-4 mr-1.5" /> Image
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
