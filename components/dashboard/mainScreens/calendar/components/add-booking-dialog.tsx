@@ -58,6 +58,10 @@ export type BookingDetail = {
     paymentStatus?: string;
     bookingSource?: 'online' | 'offline';
     specialRequests?: string;
+    // Phase-1 SPINE — order snapshot (present only when the vendor built an order).
+    orderStage?: string | null;
+    orderGrand?: number | null;
+    orderBalance?: number | null;
 };
 
 type AddBookingDialogProps = {
@@ -363,6 +367,23 @@ export default function AddBookingDialog({
                                             {detail ? formatCurrency(totalBooking(detail), currency) : '—'}
                                         </span>
                                     </div>
+
+                                    {/* Phase-1 SPINE — order snapshot, when the vendor has built one */}
+                                    {detail?.orderGrand != null && (
+                                        <div className="mt-2 rounded-md border border-dashed px-2.5 py-1.5 text-xs flex items-center justify-between gap-2">
+                                            <span className="text-muted-foreground">
+                                                Order {detail.orderStage ? `· ${detail.orderStage}` : ''}
+                                            </span>
+                                            <span className="flex items-center gap-2">
+                                                <span className="font-medium">{formatCurrency(detail.orderGrand, currency)}</span>
+                                                {detail.orderBalance != null && detail.orderBalance > 0 && (
+                                                    <span className="text-amber-600 dark:text-amber-500 font-medium">
+                                                        {formatCurrency(detail.orderBalance, currency)} due
+                                                    </span>
+                                                )}
+                                            </span>
+                                        </div>
+                                    )}
 
                                     {/* Issue #24 — Edit button on the
                                         per-booking popover so a vendor
