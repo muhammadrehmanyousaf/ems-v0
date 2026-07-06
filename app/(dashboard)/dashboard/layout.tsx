@@ -18,6 +18,7 @@ import NextTopLoader from "nextjs-toploader"
 // component below can call useT() / useLocale(). Pure client-side;
 // SSR locale always falls back to English.
 import { LocaleProvider } from "@/lib/i18n/useT"
+import { MobileBottomNav } from "@/components/dashboard/layout/mobile-bottom-nav"
 
 export const metadata: Metadata = {
   title: "Wedding Wala — Dashboard",
@@ -74,6 +75,9 @@ const layout = ({ children }: { children: React.ReactNode }) => {
                   </div>
                   {children}
                 </div>
+                {/* Phase-1 mobile bottom-tab nav — renders only on mobile, only
+                    for vendors, only behind NEXT_PUBLIC_NAV_V2 (default OFF). */}
+                <MobileBottomNav />
               </SidebarInset>
             </SidebarProvider>
           </ReviewProfileGate>
