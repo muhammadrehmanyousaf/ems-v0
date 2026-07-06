@@ -207,6 +207,50 @@ export async function getBeo(bookingId: number): Promise<BeoSheets | null> {
   }
 }
 
+// ── Recovery reminders (Phase-2 EPIC 8) ────────────────────────────────────
+export interface DueReminder {
+  bookingId: number;
+  customerName: string | null;
+  customerPhone: string | null;
+  eventType: string | null;
+  eventDate: string | null;
+  daysUntil: number | null;
+  trigger: "baqaya_due" | "event_upcoming" | "pdc_due" | "promise_to_pay";
+  balance: number;
+  grand: number;
+  message: string;
+  waHref: string;
+  lastRemindedAt: string | null;
+}
+export interface DueReminders {
+  today: string;
+  count: number;
+  reminders: DueReminder[];
+}
+/** Returns null when the feature is disabled (404) so the surface can hide. */
+export async function getDueReminders(): Promise<DueReminders | null> {
+  try {
+    const { data } = await axiosInstance.get(`${v1}/reminders/due`);
+    return (data?.data as DueReminders) ?? null;
+  } catch (e: any) {
+    if (e?.response?.status === 404) return null;
+    throw e;
+  }
+}
+/** Persist that a wa.me reminder was raised (so "reminded on" survives refresh). */
+export async function logReminder(
+  bookingId: number,
+  payload: { trigger?: string; channel?: string; body?: string },
+): Promise<{ id: number; reminderType: string; sentAt: string } | null> {
+  try {
+    const { data } = await axiosInstance.post(`${v1}/${bookingId}/reminders/log`, payload);
+    return (data?.data as { id: number; reminderType: string; sentAt: string }) ?? null;
+  } catch (e: any) {
+    if (e?.response?.status === 404) return null;
+    throw e;
+  }
+}
+
 // ── Refund preview (Phase-2 EPIC 5) ────────────────────────────────────────
 export interface RefundTier { minDaysBefore: number; refundPct: number }
 export interface RefundPolicy {
