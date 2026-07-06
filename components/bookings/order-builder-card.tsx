@@ -27,6 +27,7 @@ import {
   type LineBasis,
   type OrderStage,
 } from "@/lib/api/bookingOrder";
+import { cn } from "@/lib/utils";
 
 const PKR = (n: number | null | undefined) =>
   "Rs " + Math.round(Number(n) || 0).toLocaleString("en-PK");
@@ -228,6 +229,20 @@ export function OrderBuilderCard({ bookingId }: { bookingId: number }) {
                     className="h-8 flex-1"
                   />
                   {costLine && <Badge variant="outline" className="text-[10px] shrink-0 text-rose-600 border-rose-300">my cost</Badge>}
+                  {costLine && (
+                    <button
+                      onClick={() => update(i, { meta: { ...((l.meta as Record<string, unknown>) || {}), paymentState: (l.meta as any)?.paymentState === "udhaar" ? "paid" : "udhaar" } })}
+                      className={cn(
+                        "text-[10px] shrink-0 px-2 py-0.5 rounded-full border",
+                        (l.meta as any)?.paymentState === "udhaar"
+                          ? "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300"
+                          : "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300",
+                      )}
+                      title="Cash diya ya udhaar? — tap to toggle"
+                    >
+                      {(l.meta as any)?.paymentState === "udhaar" ? "Udhaar" : "Paid"}
+                    </button>
+                  )}
                   <button
                     onClick={() => remove(i)}
                     className="text-muted-foreground hover:text-destructive p-1 shrink-0"
