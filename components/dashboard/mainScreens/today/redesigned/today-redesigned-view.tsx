@@ -46,8 +46,14 @@ interface TodayRow {
   bookingTime: string | null
   status: string
   totalAmount: number | string | null
+  orderStage: string | null
+  orderGrand: number | null
+  orderBalance: number | null
   tasks: TimelineTask[]
 }
+
+/** Prefer the vendor's real order total over the legacy sticker when present. */
+const amountOf = (e: TodayRow) => (e.orderGrand != null ? e.orderGrand : num(e.totalAmount))
 
 export function TodayRedesignedView() {
   const { data, isLoading, isError, refetch } = useQuery({
@@ -66,6 +72,9 @@ export function TodayRedesignedView() {
         bookingTime: e?.booking?.bookingTime ?? null,
         status: e?.booking?.status ?? "",
         totalAmount: e?.booking?.totalAmount ?? null,
+        orderStage: e?.booking?.orderStage ?? null,
+        orderGrand: e?.booking?.orderGrand ?? null,
+        orderBalance: e?.booking?.orderBalance ?? null,
         tasks: e?.tasks ?? [],
       })),
     [data],
@@ -77,12 +86,23 @@ export function TodayRedesignedView() {
     (s, e) => s + (e.tasks?.filter((t) => t?.status !== "done").length || 0),
     0,
   )
-  const revenueToday = rows.reduce((s, e) => s + num(e.totalAmount), 0)
+  const revenueToday = rows.reduce((s, e) => s + amountOf(e), 0)
+  const outstandingToday = rows.reduce((s, e) => s + num(e.orderBalance), 0)
 
   const columns: Column<TodayRow>[] = [
     { key: "customer", header: "Customer", render: (e) => <span className="font-medium">{e.customerName || "—"}</span> },
     { key: "time", header: "Time", cellClassName: "text-muted-foreground", render: (e) => e.bookingTime || "—" },
-    { key: "amount", header: "Amount", align: "right", render: (e) => <MoneyCell amount={num(e.totalAmount)} /> },
+    {
+      key: "amount", header: "Amount", align: "right",
+      render: (e) => (
+        <div className="flex flex-col items-end">
+          <MoneyCell amount={amountOf(e)} />
+          {e.orderBalance != null && e.orderBalance > 0 && (
+            <span className="text-[11px] text-amber-600 dark:text-amber-500">{formatPkr(e.orderBalance)} due</span>
+          )}
+        </div>
+      ),
+    },
     { key: "status", header: "Status", render: (e) => <StatusPill tone={bookingTone(e.status)}>{e.status || "—"}</StatusPill> },
     { key: "tasks", header: "Tasks", align: "right", cellClassName: "tabular-nums", render: (e) => num(e.tasks?.length) },
   ]
@@ -96,11 +116,12 @@ export function TodayRedesignedView() {
         actions={<Button asChild><Link href="/dashboard/calendar"><Icon name="Calendar" size={16} className="mr-1.5" /> View timeline</Link></Button>}
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard label="Events today" value={isLoading ? "…" : eventsToday} icon="Calendar" />
         <StatCard label="Total tasks" value={isLoading ? "…" : totalTasks} icon="CheckCircle2" />
         <StatCard label="Open tasks" value={isLoading ? "…" : openTasks} icon="Clock" delta="to complete" trend={openTasks > 0 ? "down" : "flat"} />
         <StatCard label="Revenue today" value={isLoading ? "…" : formatPkr(revenueToday)} icon="Wallet" />
+        <StatCard label="Outstanding today" value={isLoading ? "…" : formatPkr(outstandingToday)} icon="Clock" delta={outstandingToday > 0 ? "to collect" : undefined} />
       </div>
 
       <DataTable
@@ -124,7 +145,12 @@ export function TodayRedesignedView() {
               </div>
               <div className="mt-1"><StatusPill tone={bookingTone(e.status)}>{e.status || "—"}</StatusPill></div>
             </div>
-            <MoneyCell amount={num(e.totalAmount)} className="text-sm font-medium" />
+            <div className="flex flex-col items-end shrink-0">
+              <MoneyCell amount={amountOf(e)} className="text-sm font-medium" />
+              {e.orderBalance != null && e.orderBalance > 0 && (
+                <span className="text-[11px] text-amber-600 dark:text-amber-500">{formatPkr(e.orderBalance)} due</span>
+              )}
+            </div>
           </div>
         )}
       />
