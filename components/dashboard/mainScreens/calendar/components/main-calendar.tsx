@@ -132,6 +132,11 @@ export default function MainCalendar() {
                         paymentStatus: b.paymentStatus || '',
                         bookingSource: b.bookingSource,
                         specialRequests: b.specialRequests || b.additionalRequests || '',
+                        // Phase-1 SPINE — surface the order snapshot on the calendar
+                        // detail popover (present only once a vendor builds an order).
+                        orderStage: b.orderStage ?? null,
+                        orderGrand: b.orderTotalsJson?.grand ?? null,
+                        orderBalance: b.orderTotalsJson?.balance ?? null,
                     };
                 });
 
