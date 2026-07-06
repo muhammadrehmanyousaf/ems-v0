@@ -24,6 +24,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { QuickBookingSheet } from "./quick-booking-sheet";
 
 const WINDOW = 14; // two-week window per page (≤60d endpoint cap)
 
@@ -44,6 +45,7 @@ export function CalendarSlotGridView() {
   const businessId = active ?? business?.id ?? null;
   const [page, setPage] = useState(0);
   const [sel, setSel] = useState<{ row: string; day: string; state: CellState } | null>(null);
+  const [quickDate, setQuickDate] = useState<string | null>(null); // free-cell tap → quick-add
 
   const from = useMemo(() => format(addDays(new Date(), page * WINDOW), "yyyy-MM-dd"), [page]);
   const to = useMemo(() => format(addDays(new Date(), page * WINDOW + WINDOW - 1), "yyyy-MM-dd"), [page]);
@@ -179,7 +181,10 @@ export function CalendarSlotGridView() {
                     return (
                       <button
                         key={d}
-                        onClick={() => setSel({ row: r.key, day: d, state: st })}
+                        onClick={() => {
+                          setSel({ row: r.key, day: d, state: st });
+                          if (st === "free") setQuickDate(d); // tap a free date → log a booking fast
+                        }}
                         className={cn(
                           "w-9 h-9 shrink-0 mx-px rounded-md text-[10px] font-semibold flex items-center justify-center transition",
                           CELL[st],
@@ -208,6 +213,16 @@ export function CalendarSlotGridView() {
               {LABEL[sel.state]}
             </span>
           </div>
+        )}
+
+        {/* Tap a free date → register-fast quick-add (T6.3). */}
+        {quickDate && (
+          <QuickBookingSheet
+            open={!!quickDate}
+            onOpenChange={(o) => { if (!o) setQuickDate(null); }}
+            businessId={businessId}
+            date={quickDate}
+          />
         )}
       </CardContent>
     </Card>
