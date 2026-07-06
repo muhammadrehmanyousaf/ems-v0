@@ -21,6 +21,7 @@ import { MoneyCell, formatPkr } from "@/components/dashboard/primitives/money-ce
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { FamiliarityPrompt } from "@/components/dashboard/layout/familiarity-prompt"
+import { ActionOverviewView } from "@/components/dashboard/mainScreens/dashboard/v2/action-overview-view"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
@@ -108,6 +109,9 @@ export function OverviewRedesignedView() {
 
       {/* Phase-1 NAV — one-time "are you familiar?" register chooser (self-hides after answer / when NAV_V2 off). */}
       <FamiliarityPrompt />
+
+      {/* Phase-1 EPIC 5 — action-first "Ghar" panel above the KPI tiles (pilot; self-hides on 404). */}
+      {process.env.NEXT_PUBLIC_ORDER_BUILDER === '1' && <ActionOverviewView />}
 
       {/* KPI row */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">

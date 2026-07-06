@@ -137,3 +137,30 @@ export async function getBookingLedger(): Promise<BookingLedger | null> {
     throw e;
   }
 }
+
+// ── Ghar action summary (EPIC 5) ───────────────────────────────────────────
+export interface ActionEvent {
+  id: number; time: string | null; customerName: string | null;
+  eventType: string | null; status: string | null; grand: number; balance: number;
+}
+export interface ActionSummary {
+  today: string;
+  todaysEvents: { count: number; items: ActionEvent[] };
+  duesToChase: { total: number; count: number };
+  newEnquiries: number;
+  calendarStrip: { date: string; freeSlots: number; bookedSlots: number }[];
+  unreadWhatsApp: number;
+}
+
+/** Returns null when the feature is disabled (404) so the surface can hide. */
+export async function getActionSummary(businessId?: number): Promise<ActionSummary | null> {
+  try {
+    const { data } = await axiosInstance.get(`${v1}/action-summary`, {
+      params: businessId ? { businessId } : {},
+    });
+    return (data?.data as ActionSummary) ?? null;
+  } catch (e: any) {
+    if (e?.response?.status === 404) return null;
+    throw e;
+  }
+}
