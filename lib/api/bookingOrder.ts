@@ -207,6 +207,40 @@ export async function getBeo(bookingId: number): Promise<BeoSheets | null> {
   }
 }
 
+// ── Refund preview (Phase-2 EPIC 5) ────────────────────────────────────────
+export interface RefundTier { minDaysBefore: number; refundPct: number }
+export interface RefundPolicy {
+  key: string; labelUr: string; labelEn: string; depositPct: number; tiers: RefundTier[];
+}
+export interface RefundBreakdown {
+  overpayment: number; deposit: number; advance: number;
+  advanceRefund: number; advanceForfeit: number; securityRefund: number; damages: number;
+}
+export interface RefundPreview {
+  bookingId: number; eventDate: string | null; daysBefore: number;
+  grand: number; totalPaid: number;
+  policy: RefundPolicy;
+  preview: { refund: number; forfeit: number; breakdown: RefundBreakdown; tier: RefundTier; trace: unknown[] };
+  comparison: { key: string; labelUr: string; labelEn: string; refund: number; forfeit: number; refundPct: number }[];
+  presets: RefundPolicy[];
+}
+/** Returns null when the feature is disabled (404) so the surface can hide. */
+export async function getRefundPreview(
+  bookingId: number,
+  opts?: { policy?: string; days?: number },
+): Promise<RefundPreview | null> {
+  try {
+    const params: Record<string, string | number> = {};
+    if (opts?.policy) params.policy = opts.policy;
+    if (opts?.days != null) params.days = opts.days;
+    const { data } = await axiosInstance.get(`${v1}/${bookingId}/refund-preview`, { params });
+    return (data?.data as RefundPreview) ?? null;
+  } catch (e: any) {
+    if (e?.response?.status === 404) return null;
+    throw e;
+  }
+}
+
 /** Returns null when the feature is disabled (404) so the surface can hide. */
 export async function getActionSummary(businessId?: number): Promise<ActionSummary | null> {
   try {

@@ -65,6 +65,7 @@ import { InstallmentsCard } from '@/components/bookings/installments-card';
 import { OrderBuilderCard } from '@/components/bookings/order-builder-card';
 import { BeoSheetCard } from '@/components/bookings/beo-sheet-card';
 import { EventPnlCard } from '@/components/bookings/event-pnl-card';
+import { RefundPreviewCard } from '@/components/bookings/refund-preview-card';
 import { VendorChangeRequestsCard } from '@/components/bookings/vendor-change-requests-card';
 import { VendorNoShowDialog } from '@/components/bookings/vendor-no-show-dialog';
 import EventWeatherChip from '@/components/dashboard/mainScreens/bookings/event-weather-chip';
@@ -630,6 +631,11 @@ export default function BookingDetailView({
           {/* Phase-2 EPIC 2 — per-event P&L (Aya/Gaya/Bacha; self-hides until a cost is entered). */}
           {process.env.NEXT_PUBLIC_ORDER_BUILDER === '1' && (
             <EventPnlCard bookingId={booking.id} />
+          )}
+
+          {/* Phase-2 EPIC 5 — refund preview (self-hides when DISPUTE_ENGINE_ENABLED is off / 404). */}
+          {process.env.NEXT_PUBLIC_ORDER_BUILDER === '1' && (
+            <RefundPreviewCard bookingId={booking.id} />
           )}
 
           {/* Installments (BK-042) */}
