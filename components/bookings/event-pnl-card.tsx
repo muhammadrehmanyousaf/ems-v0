@@ -56,6 +56,14 @@ export function EventPnlCard({ bookingId }: { bookingId: number }) {
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [data]);
 
+  // Kharcha · cash-vs-udhaar (EPIC 3.3): cost still owed to suppliers/labour.
+  const udhaarOwed = useMemo(
+    () => (data?.lines ?? [])
+      .filter((l) => isCost(l) && (l.meta as any)?.paymentState === "udhaar")
+      .reduce((s, l) => s + effQty(l) * num(l.rate), 0),
+    [data],
+  );
+
   if (isLoading || !data?.profit) return null;
   const { revenue, cost, profit, margin } = data.profit;
   if (cost <= 0) return null; // nothing to talk about until a cost is entered
@@ -103,6 +111,13 @@ export function EventPnlCard({ bookingId }: { bookingId: number }) {
                 {cat} {PKR(amt)}
               </span>
             ))}
+          </div>
+        )}
+
+        {udhaarOwed > 0 && (
+          <div className="flex items-center justify-between rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-3 py-1.5 text-sm">
+            <span className="text-amber-800 dark:text-amber-300">Udhaar — aap ke zimma (suppliers/labour)</span>
+            <span className="font-semibold tabular-nums text-amber-700 dark:text-amber-400">{PKR(udhaarOwed)}</span>
           </div>
         )}
 
