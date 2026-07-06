@@ -207,6 +207,30 @@ export async function getBeo(bookingId: number): Promise<BeoSheets | null> {
   }
 }
 
+// ── Paisa reconciliation (Phase-2 EPIC 9) ──────────────────────────────────
+export interface PaisaReceipt {
+  id: number; amount: number; method: string; receivedDate: string | null;
+  transactionRef: string | null; hasProof: boolean;
+}
+export interface PaisaReconcile {
+  bookingId: number;
+  grand: number; displayedAdvance: number; receiptsTotal: number; receiptCount: number;
+  refundsTotal: number; lastReceiptDate: string | null;
+  trueBalance: number; displayedBalance: number; delta: number; overpaid: number;
+  reconciled: boolean;
+  receipts: PaisaReceipt[];
+}
+/** Returns null when the feature is disabled (404) so the surface can hide. */
+export async function getPaisaReconcile(bookingId: number): Promise<PaisaReconcile | null> {
+  try {
+    const { data } = await axiosInstance.get(`${v1}/${bookingId}/paisa-reconcile`);
+    return (data?.data as PaisaReconcile) ?? null;
+  } catch (e: any) {
+    if (e?.response?.status === 404) return null;
+    throw e;
+  }
+}
+
 // ── Recovery reminders (Phase-2 EPIC 8) ────────────────────────────────────
 export interface DueReminder {
   bookingId: number;
