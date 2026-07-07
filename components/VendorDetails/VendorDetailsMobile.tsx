@@ -61,6 +61,7 @@ import {
 import { useUser } from "@/context/UserContext";
 import { useFavorites } from "@/hooks/use-favorites";
 import { ChatDrawer } from "@/components/chat/chat-drawer";
+import VendorInquiryDialog from "@/components/VendorInquiryDialog";
 import { toast as sonnerToast } from "sonner";
 import { VendorAPI } from "@/lib/api/vendors";
 // BK-100.52 Layer 2 — customer-facing bundled-services display.
@@ -380,6 +381,12 @@ export default function VendorDetailsMobile({
     }
     setChatDrawerOpen(true);
   };
+
+  // F-7 — public "get in touch" for a prospect who hasn't booked yet. Opens the
+  // inquiry dialog (no login, no booking needed) instead of the booking-gated
+  // chat, and lands a tracked lead in the vendor's inbox.
+  const [isInquiryOpen, setIsInquiryOpen] = useState(false);
+  const handleContactVendor = () => setIsInquiryOpen(true);
 
   // Refs for scroll-spy sections
   const heroRef = useRef<HTMLDivElement>(null);
@@ -2471,11 +2478,11 @@ export default function VendorDetailsMobile({
                   </div>
                   <button
                     type="button"
-                    onClick={handleMessageVendor}
+                    onClick={handleContactVendor}
                     className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-[4px] border border-bridal-gold/45 bg-bridal-cream hover:bg-bridal-blush hover:border-bridal-mauve text-bridal-gold-dark hover:text-bridal-mauve font-bridal text-[12px] uppercase tracking-[0.22em] font-medium transition-colors"
                   >
                     <MessageCircle className="w-4 h-4" />
-                    Message vendor
+                    Send an inquiry
                   </button>
                   <button
                     type="button"
@@ -2522,7 +2529,8 @@ export default function VendorDetailsMobile({
           </button>
           <button
             type="button"
-            onClick={handleMessageVendor}
+            onClick={handleContactVendor}
+            aria-label="Send an inquiry"
             className="w-11 h-11 inline-flex items-center justify-center rounded-[4px] border border-bridal-gold/45 bg-bridal-cream hover:border-bridal-mauve transition-colors"
           >
             <MessageCircle className="w-5 h-5 text-bridal-gold" />
@@ -2636,6 +2644,13 @@ export default function VendorDetailsMobile({
           vendorImage={vendor.images?.[0]}
         />
       )}
+
+      <VendorInquiryDialog
+        businessId={vendor.id}
+        vendorName={vendor.name}
+        open={isInquiryOpen}
+        onOpenChange={setIsInquiryOpen}
+      />
     </div>
   );
 }
