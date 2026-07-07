@@ -138,6 +138,7 @@ import {
   Paperclip,
   Wifi,
   WifiOff,
+  Printer,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -231,6 +232,7 @@ const LUCIDE_MAP = {
   CheckCircle2,
   Wifi,
   WifiOff,
+  Printer,
   X,
   XCircle,
   MoreHorizontal,
