@@ -9,8 +9,9 @@
 import * as React from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { ReceiptsAPI, type PaymentReceipt } from "@/lib/api/paymentReceipts"
-import { ReceiptFormDialog } from "@/components/dashboard/mainScreens/receipts/redesigned/receipt-form-dialog"
+import { ReceiptFormDialog, type ReceiptPrefill } from "@/components/dashboard/mainScreens/receipts/redesigned/receipt-form-dialog"
 import { OutboxStatus } from "@/components/dashboard/shared/outbox-status"
+import { OutboxConflicts } from "@/components/dashboard/shared/outbox-conflicts"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
@@ -40,6 +41,7 @@ export function ReceiptsRedesignedView() {
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<PaymentReceipt | undefined>(undefined)
+  const [prefill, setPrefill] = React.useState<ReceiptPrefill | undefined>(undefined)
   const [deleting, setDeleting] = React.useState<PaymentReceipt | null>(null)
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -47,8 +49,10 @@ export function ReceiptsRedesignedView() {
     queryFn: () => ReceiptsAPI.list(),
   })
   const invalidate = () => qc.invalidateQueries({ queryKey: ["receipts-redesigned"] })
-  const openCreate = () => { setEditing(undefined); setDialogOpen(true) }
-  const openEdit = (r: PaymentReceipt) => { setEditing(r); setDialogOpen(true) }
+  const openCreate = () => { setEditing(undefined); setPrefill(undefined); setDialogOpen(true) }
+  const openEdit = (r: PaymentReceipt) => { setEditing(r); setPrefill(undefined); setDialogOpen(true) }
+  // PWA-03 — re-enter a conflicted offline receipt with its values seeded.
+  const openReenter = (p: ReceiptPrefill) => { setEditing(undefined); setPrefill(p); setDialogOpen(true) }
   const removeMut = useMutation({
     mutationFn: (id: number) => ReceiptsAPI.remove(id),
     onSuccess: () => { showSuccessToast("Receipt removed"); setDeleting(null); invalidate() },
@@ -96,6 +100,8 @@ export function ReceiptsRedesignedView() {
         description="Every payment received, with proof — redesigned, wired to live data."
         actions={<div className="flex items-center gap-2"><OutboxStatus /><Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Record receipt</Button></div>}
       />
+
+      <OutboxConflicts onReenter={openReenter} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Total received" value={formatPkr(total)} icon="Wallet" trend="up" />
@@ -153,7 +159,7 @@ export function ReceiptsRedesignedView() {
         )}
       />
 
-      <ReceiptFormDialog open={dialogOpen} onOpenChange={setDialogOpen} receipt={editing} onSaved={invalidate} />
+      <ReceiptFormDialog open={dialogOpen} onOpenChange={setDialogOpen} receipt={editing} prefill={prefill} onSaved={invalidate} />
 
       <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
         <AlertDialogContent>

@@ -24,6 +24,7 @@ export interface OutboxOp {
 
 const DB_NAME = "ww-outbox";
 const STORE = "ops";
+const CONFLICT_STORE = "conflicts";
 const DEVICE_KEY = "ww_device_serial";
 
 /** Pilot flag — dark unless explicitly enabled for this deployment. */
@@ -59,22 +60,25 @@ function newKey(): string {
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
+    const req = indexedDB.open(DB_NAME, 2);
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: "key" });
+      // v2 — persist ops the backend couldn't apply so they survive a reload
+      // and can be re-entered rather than silently lost (money data).
+      if (!db.objectStoreNames.contains(CONFLICT_STORE)) db.createObjectStore(CONFLICT_STORE, { keyPath: "key" });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
 }
 
-function tx<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBRequest): Promise<T> {
+function tx<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBRequest, storeName: string = STORE): Promise<T> {
   return openDb().then(
     (db) =>
       new Promise<T>((resolve, reject) => {
-        const t = db.transaction(STORE, mode);
-        const req = fn(t.objectStore(STORE));
+        const t = db.transaction(storeName, mode);
+        const req = fn(t.objectStore(storeName));
         req.onsuccess = () => resolve(req.result as T);
         req.onerror = () => reject(req.error);
         t.oncomplete = () => db.close();
@@ -108,6 +112,38 @@ export async function removeOp(key: string): Promise<void> {
 export async function countOps(): Promise<number> {
   try {
     return (await tx<number>("readonly", (s) => s.count())) ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+// ── conflicts (PWA-03) — ops the backend rejected, held for the vendor ───────
+export interface ConflictRecord extends OutboxOp {
+  status: "conflict" | "failed";
+  error?: string;
+  resolvedAt: number;
+}
+
+/** Move a rejected op into the conflict store (persists across reloads). */
+export async function recordConflict(op: OutboxOp, status: "conflict" | "failed", error?: string): Promise<void> {
+  const rec: ConflictRecord = { ...op, status, error, resolvedAt: Date.now() };
+  await tx("readwrite", (s) => s.put(rec), CONFLICT_STORE);
+  notifyChange();
+}
+
+export async function listConflicts(): Promise<ConflictRecord[]> {
+  const all = await tx<ConflictRecord[]>("readonly", (s) => s.getAll(), CONFLICT_STORE);
+  return (all ?? []).sort((a, b) => b.resolvedAt - a.resolvedAt);
+}
+
+export async function removeConflict(key: string): Promise<void> {
+  await tx("readwrite", (s) => s.delete(key), CONFLICT_STORE);
+  notifyChange();
+}
+
+export async function countConflicts(): Promise<number> {
+  try {
+    return (await tx<number>("readonly", (s) => s.count(), CONFLICT_STORE)) ?? 0;
   } catch {
     return 0;
   }
