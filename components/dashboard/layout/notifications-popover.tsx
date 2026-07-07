@@ -24,6 +24,7 @@ import {
   CheckCheck,
   Trash2,
   Loader2,
+  Inbox,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/context/NotificationContext";
@@ -47,6 +48,8 @@ const NOTIFICATION_ICONS: Record<string, { icon: React.ElementType; color: strin
   // `system` icon gracefully; this is the primary vendor bell).
   lead_followup_due: { icon: CalendarCheck, color: "text-indigo-600", bg: "bg-indigo-50" },
   lead_stale_48h: { icon: AlertCircle, color: "text-amber-600", bg: "bg-amber-50" },
+  // F-7 — a new inbound inquiry/WhatsApp lead just landed; respond fast.
+  new_lead: { icon: Inbox, color: "text-emerald-600", bg: "bg-emerald-50" },
 };
 
 function timeAgo(dateStr: string): string {
