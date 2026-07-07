@@ -66,6 +66,7 @@ import { OrderBuilderCard } from '@/components/bookings/order-builder-card';
 import { BeoSheetCard } from '@/components/bookings/beo-sheet-card';
 import { EventPnlCard } from '@/components/bookings/event-pnl-card';
 import { RefundPreviewCard } from '@/components/bookings/refund-preview-card';
+import { CancellationActionsCard } from '@/components/bookings/cancellation-actions-card';
 import { PaisaReconcileCard } from '@/components/bookings/paisa-reconcile-card';
 import { VendorChangeRequestsCard } from '@/components/bookings/vendor-change-requests-card';
 import { VendorNoShowDialog } from '@/components/bookings/vendor-no-show-dialog';
@@ -642,6 +643,11 @@ export default function BookingDetailView({
           {/* Phase-2 EPIC 5 — refund preview (self-hides when DISPUTE_ENGINE_ENABLED is off / 404). */}
           {process.env.NEXT_PUBLIC_ORDER_BUILDER === '1' && (
             <RefundPreviewCard bookingId={booking.id} />
+          )}
+
+          {/* EPIC 5 — cancellation/refund actions + court-exposure (self-hides on 404). */}
+          {process.env.NEXT_PUBLIC_ORDER_BUILDER === '1' && (
+            <CancellationActionsCard bookingId={booking.id} />
           )}
 
           {/* Installments (BK-042) */}

@@ -231,6 +231,64 @@ export async function getPaisaReconcile(bookingId: number): Promise<PaisaReconci
   }
 }
 
+// ── EPIC 5 — cancellation / refund engine ──────────────────────────────────
+export interface PolicyAcceptanceRow {
+  id: number; acceptedAt: string; acceptedName: string | null; acceptedPhone: string | null;
+  channel: string; policySnapshot: { name?: string; slabs?: RefundTier[] | null; forceMajeureRule?: string } | null;
+}
+export interface PolicyAcceptanceState { bookingId: number; accepted: boolean; acceptance: PolicyAcceptanceRow | null }
+
+export async function getPolicyAcceptance(bookingId: number): Promise<PolicyAcceptanceState | null> {
+  try {
+    const { data } = await axiosInstance.get(`${v1}/${bookingId}/policy-acceptance`);
+    return (data?.data as PolicyAcceptanceState) ?? null;
+  } catch (e: any) { if (e?.response?.status === 404) return null; throw e; }
+}
+export async function recordPolicyAcceptance(bookingId: number, body: { acceptedName?: string; acceptedPhone?: string; channel?: string } = {}) {
+  const { data } = await axiosInstance.post(`${v1}/${bookingId}/policy-acceptance`, body);
+  return data?.data as { bookingId: number; acceptanceId: number; policyName: string };
+}
+
+export type RefundState = "RAISED" | "APPROVED" | "APPLIED" | "REJECTED";
+export interface RefundRequestRow {
+  id: number; bookingId: number; reason: string; state: RefundState;
+  computed: { refund: number; forfeit: number; carryForward?: number };
+  resolvedVia: string | null; note: string | null;
+}
+export async function listRefundRequests(bookingId: number): Promise<{ bookingId: number; requests: RefundRequestRow[] } | null> {
+  try {
+    const { data } = await axiosInstance.get(`${v1}/${bookingId}/refund-requests`);
+    return (data?.data as { bookingId: number; requests: RefundRequestRow[] }) ?? null;
+  } catch (e: any) { if (e?.response?.status === 404) return null; throw e; }
+}
+export async function raiseRefundRequest(bookingId: number, body: { reason?: string; securityDeposit?: number; damages?: number } = {}) {
+  const { data } = await axiosInstance.post(`${v1}/${bookingId}/refund-requests`, body);
+  return (data?.data as { request: RefundRequestRow }).request;
+}
+export async function decideRefundRequest(bookingId: number, reqId: number, approve: boolean, note?: string) {
+  const { data } = await axiosInstance.patch(`${v1}/${bookingId}/refund-requests/${reqId}/decide`, { approve, note });
+  return (data?.data as { request: RefundRequestRow }).request;
+}
+export async function applyRefundRequest(bookingId: number, reqId: number) {
+  const { data } = await axiosInstance.patch(`${v1}/${bookingId}/refund-requests/${reqId}/apply`, {});
+  return (data?.data as { request: RefundRequestRow }).request;
+}
+
+export interface DisputeEvidence {
+  generatedFor: number;
+  booking: { customerName: string | null; eventDate: string | null; grand: number; receiptsTotal: number; balance: number };
+  policyAcceptance: { acceptedAt: string; acceptedName: string | null; channel: string; snapshot: { name?: string } } | null;
+  refundRequests: { id: number; reason: string; state: RefundState; refund: number; forfeit: number; carryForward: number; resolvedVia: string | null }[];
+  auditChain: { verified: boolean; checked: number; events: { seq: number; action: string; entityType: string; at: string }[] };
+  exposure: { policyAccepted: boolean; auditVerified: boolean; hasAppliedForfeit: boolean; flag: "OK" | "REVIEW" };
+}
+export async function getDisputeEvidence(bookingId: number): Promise<DisputeEvidence | null> {
+  try {
+    const { data } = await axiosInstance.get(`${v1}/${bookingId}/dispute-evidence`);
+    return (data?.data as DisputeEvidence) ?? null;
+  } catch (e: any) { if (e?.response?.status === 404) return null; throw e; }
+}
+
 // ── Recovery reminders (Phase-2 EPIC 8) ────────────────────────────────────
 export interface DueReminder {
   bookingId: number;
