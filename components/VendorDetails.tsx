@@ -13,6 +13,7 @@ import VendorPackages from "./VendorPackages"
 import VendorReviews from "./VendorReviews"
 import AddReview from "./AddReview"
 import { BookingModal } from "./booking-modal"
+import VendorInquiryDialog from "./VendorInquiryDialog"
 
 interface VendorDetailsProps {
   vendor: Vendor
@@ -23,6 +24,7 @@ export default function VendorDetails({ vendor, vendorType }: VendorDetailsProps
   const [reviews, setReviews] = useState<Review[]>(vendor.reviews)
   const [date, setDate] = useState<Date | undefined>(undefined)
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false)
+  const [isInquiryOpen, setIsInquiryOpen] = useState(false)
 
   const addReview = (newReview: Review) => {
     setReviews([...reviews, newReview])
@@ -53,7 +55,7 @@ export default function VendorDetails({ vendor, vendorType }: VendorDetailsProps
                 <Share2 className="w-4 h-4 mr-2" />
                 Share
               </Button>
-              <Button variant="outline" size="sm" className="w-full sm:w-auto">
+              <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => setIsInquiryOpen(true)}>
                 <Phone className="w-4 h-4 mr-2" />
                 Contact
               </Button>
@@ -222,6 +224,13 @@ export default function VendorDetails({ vendor, vendorType }: VendorDetailsProps
           </div>
         </div>
       </div>
+
+      <VendorInquiryDialog
+        businessId={vendor.id}
+        vendorName={vendor.name}
+        open={isInquiryOpen}
+        onOpenChange={setIsInquiryOpen}
+      />
 
       <BookingModal
         isOpen={isBookingModalOpen}
