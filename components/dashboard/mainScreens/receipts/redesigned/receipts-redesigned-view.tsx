@@ -10,6 +10,7 @@ import * as React from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { ReceiptsAPI, type PaymentReceipt } from "@/lib/api/paymentReceipts"
 import { ReceiptFormDialog } from "@/components/dashboard/mainScreens/receipts/redesigned/receipt-form-dialog"
+import { OutboxStatus } from "@/components/dashboard/shared/outbox-status"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
@@ -93,7 +94,7 @@ export function ReceiptsRedesignedView() {
         eyebrow="Money"
         title="Receipts"
         description="Every payment received, with proof — redesigned, wired to live data."
-        actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Record receipt</Button>}
+        actions={<div className="flex items-center gap-2"><OutboxStatus /><Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Record receipt</Button></div>}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

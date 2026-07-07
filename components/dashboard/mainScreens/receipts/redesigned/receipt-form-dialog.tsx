@@ -11,6 +11,7 @@ import * as React from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { ReceiptsAPI, RECEIPT_METHOD_LABELS, type PaymentReceipt, type ReceiptMethod } from "@/lib/api/paymentReceipts"
 import axiosInstance from "@/lib/axiosConfig"
+import { enqueue as outboxEnqueue, isOutboxEnabled, isOffline } from "@/lib/outbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
@@ -63,12 +64,28 @@ export function ReceiptFormDialog({
   })
 
   const saveMut = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const body: any = { method: form.method, amount: Number(form.amount) || 0, receivedDate: form.receivedDate, transactionRef: form.transactionRef.trim() || undefined, notes: form.notes.trim() || undefined }
       if (form.bookingId) body.bookingId = Number(form.bookingId)
+      // PWA-02 — creating a receipt while offline: queue it in the outbox instead
+      // of failing. It syncs idempotently on reconnect. Edits stay online-only.
+      if (!isEdit && isOutboxEnabled() && isOffline()) {
+        const ref = form.transactionRef.trim()
+        const note = [form.notes.trim(), ref ? `Ref: ${ref}` : ""].filter(Boolean).join(" · ") || undefined
+        await outboxEnqueue(
+          "record_receipt",
+          { bookingId: Number(form.bookingId), amount: Number(form.amount) || 0, method: form.method, receivedDate: form.receivedDate, note },
+          `Rs ${Number(form.amount) || 0} · ${RECEIPT_METHOD_LABELS[form.method]}`,
+        )
+        return { queuedOffline: true as const }
+      }
       return isEdit ? ReceiptsAPI.update(receipt!.id, body) : ReceiptsAPI.create(body)
     },
-    onSuccess: () => { showSuccessToast(isEdit ? "Receipt updated" : "Receipt logged"); onSaved?.(); onOpenChange(false) },
+    onSuccess: (r: any) => {
+      if (r?.queuedOffline) toast.success("Saved offline — will sync when you reconnect")
+      else showSuccessToast(isEdit ? "Receipt updated" : "Receipt logged")
+      onSaved?.(); onOpenChange(false)
+    },
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save receipt"),
   })
   const canSave = Number(form.amount) > 0 && form.receivedDate && (isEdit || !!form.bookingId)
