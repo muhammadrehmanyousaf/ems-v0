@@ -274,6 +274,23 @@ export async function applyRefundRequest(bookingId: number, reqId: number) {
   return (data?.data as { request: RefundRequestRow }).request;
 }
 
+// Cancellation-policy management (5.4)
+export interface PolicySlab { daysToEvent: number; pctForfeit: number }
+export interface PolicyTemplate { key: string; name: string; labelEn: string; forceMajeureRule: string; slabs: PolicySlab[] }
+export interface ActivePolicy { id: number; name: string; slabs: PolicySlab[]; forceMajeureRule: string; partialRefundPct: number | null; isDefault: boolean; effectiveFrom: string }
+export interface CancellationPolicyState { businessId: number | null; active: ActivePolicy | null; templates: PolicyTemplate[] }
+
+export async function getCancellationPolicy(): Promise<CancellationPolicyState | null> {
+  try {
+    const { data } = await axiosInstance.get(`${v1}/policy`);
+    return (data?.data as CancellationPolicyState) ?? null;
+  } catch (e: any) { if (e?.response?.status === 404) return null; throw e; }
+}
+export async function saveCancellationPolicy(body: { name?: string; slabs: PolicySlab[]; forceMajeureRule?: string; partialRefundPct?: number }) {
+  const { data } = await axiosInstance.post(`${v1}/policy`, body);
+  return data?.data as { id: number; name: string; slabs: PolicySlab[]; forceMajeureRule: string };
+}
+
 export interface DisputeEvidence {
   generatedFor: number;
   booking: { customerName: string | null; eventDate: string | null; grand: number; receiptsTotal: number; balance: number };
