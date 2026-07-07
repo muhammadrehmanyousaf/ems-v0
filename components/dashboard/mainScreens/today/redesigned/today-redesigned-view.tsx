@@ -11,7 +11,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { BookingTimelineAPI, type TimelineTask } from "@/lib/api/bookingTimeline"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
@@ -21,6 +21,7 @@ import { MoneyCell, formatPkr } from "@/components/dashboard/primitives/money-ce
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { RunSheetDialog } from "@/components/dashboard/mainScreens/today/run-sheet-dialog"
+import { TimelineManagerDialog } from "@/components/dashboard/mainScreens/today/timeline-manager-dialog"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
@@ -50,6 +51,7 @@ interface TodayRow {
   orderStage: string | null
   orderGrand: number | null
   orderBalance: number | null
+  businessId: number | null
   tasks: TimelineTask[]
 }
 
@@ -57,7 +59,9 @@ interface TodayRow {
 const amountOf = (e: TodayRow) => (e.orderGrand != null ? e.orderGrand : num(e.totalAmount))
 
 export function TodayRedesignedView() {
+  const qc = useQueryClient()
   const [runSheet, setRunSheet] = React.useState<TodayRow | null>(null)
+  const [manage, setManage] = React.useState<TodayRow | null>(null)
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["today-redesigned"],
     queryFn: () => BookingTimelineAPI.today(),
@@ -77,6 +81,7 @@ export function TodayRedesignedView() {
         orderStage: e?.booking?.orderStage ?? null,
         orderGrand: e?.booking?.orderGrand ?? null,
         orderBalance: e?.booking?.orderBalance ?? null,
+        businessId: e?.booking?.primaryBusiness?.id ?? null,
         tasks: e?.tasks ?? [],
       })),
     [data],
@@ -108,11 +113,16 @@ export function TodayRedesignedView() {
     { key: "status", header: "Status", render: (e) => <StatusPill tone={bookingTone(e.status)}>{e.status || "—"}</StatusPill> },
     { key: "tasks", header: "Tasks", align: "right", cellClassName: "tabular-nums", render: (e) => num(e.tasks?.length) },
     {
-      key: "runsheet", header: "", align: "right",
+      key: "actions", header: "", align: "right",
       render: (e) => (
-        <Button size="sm" variant="ghost" disabled={!e.tasks?.length} onClick={() => setRunSheet(e)} aria-label="Open run sheet">
-          <Icon name="Printer" size={14} className="mr-1" /> Run sheet
-        </Button>
+        <div className="flex items-center justify-end gap-0.5">
+          <Button size="sm" variant="ghost" onClick={() => setManage(e)} aria-label="Manage timeline">
+            <Icon name="ListChecks" size={14} className="mr-1" /> Timeline
+          </Button>
+          <Button size="sm" variant="ghost" disabled={!e.tasks?.length} onClick={() => setRunSheet(e)} aria-label="Open run sheet">
+            <Icon name="Printer" size={14} className="mr-1" /> Run sheet
+          </Button>
+        </div>
       ),
     },
   ]
@@ -160,11 +170,16 @@ export function TodayRedesignedView() {
               {e.orderBalance != null && e.orderBalance > 0 && (
                 <span className="text-[11px] text-amber-600 dark:text-amber-500">{formatPkr(e.orderBalance)} due</span>
               )}
-              {!!e.tasks?.length && (
-                <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setRunSheet(e)}>
-                  <Icon name="Printer" size={13} className="mr-1" /> Run sheet
+              <div className="flex items-center gap-1">
+                <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setManage(e)}>
+                  <Icon name="ListChecks" size={13} className="mr-1" /> Timeline
                 </Button>
-              )}
+                {!!e.tasks?.length && (
+                  <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setRunSheet(e)}>
+                    <Icon name="Printer" size={13} className="mr-1" /> Run sheet
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -176,6 +191,17 @@ export function TodayRedesignedView() {
         subject={{ customerName: runSheet?.customerName ?? null, bookingDate: runSheet?.bookingDate ?? null, bookingTime: runSheet?.bookingTime ?? null, status: runSheet?.status ?? null }}
         tasks={runSheet?.tasks ?? []}
       />
+
+      {manage && (
+        <TimelineManagerDialog
+          open={!!manage}
+          onOpenChange={(v) => !v && setManage(null)}
+          bookingId={manage.id}
+          businessId={manage.businessId ?? undefined}
+          anchorTime={manage.bookingTime}
+          onChanged={() => qc.invalidateQueries({ queryKey: ["today-redesigned"] })}
+        />
+      )}
     </div>
   )
 }
