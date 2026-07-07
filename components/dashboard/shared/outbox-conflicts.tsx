@@ -11,7 +11,7 @@
  */
 
 import * as React from "react"
-import { isOutboxEnabled, listConflicts, removeConflict, onOutboxChange, type ConflictRecord } from "@/lib/outbox"
+import { isOutboxEnabled, listConflicts, removeConflict, onOutboxChange, type ConflictRecord, type OutboxOpType } from "@/lib/outbox"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 
@@ -31,10 +31,24 @@ export interface ReenterPayload {
   amount?: number
   method?: string
   receivedDate?: string
+  // record_expense fields
+  category?: string
+  paymentMethod?: string
+  spentDate?: string
   note?: string
 }
 
-export function OutboxConflicts({ onReenter }: { onReenter?: (p: ReenterPayload) => void }) {
+/**
+ * @param reenterOps  op types this view can re-open in a form (default: receipts).
+ *                    A conflict of another type shows Discard only.
+ * @param onReenter   receives the rejected op's payload + its op type.
+ */
+export function OutboxConflicts({
+  onReenter, reenterOps = ["record_receipt"],
+}: {
+  onReenter?: (p: ReenterPayload, opType: OutboxOpType) => void
+  reenterOps?: OutboxOpType[]
+}) {
   const [items, setItems] = React.useState<ConflictRecord[]>([])
 
   React.useEffect(() => {
@@ -67,8 +81,8 @@ export function OutboxConflicts({ onReenter }: { onReenter?: (p: ReenterPayload)
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
-                {onReenter && c.opType === "record_receipt" && (
-                  <Button size="sm" variant="outline" className="h-7 border-amber-300 text-amber-900" onClick={() => { onReenter({ bookingId: p.bookingId, amount: p.amount, method: p.method, receivedDate: p.receivedDate, note: p.note }); void removeConflict(c.key) }}>
+                {onReenter && reenterOps.includes(c.opType) && (
+                  <Button size="sm" variant="outline" className="h-7 border-amber-300 text-amber-900" onClick={() => { onReenter({ bookingId: p.bookingId, amount: p.amount, method: p.method, receivedDate: p.receivedDate, category: p.category, paymentMethod: p.paymentMethod, spentDate: p.spentDate, note: p.note }, c.opType); void removeConflict(c.key) }}>
                     Re-enter
                   </Button>
                 )}

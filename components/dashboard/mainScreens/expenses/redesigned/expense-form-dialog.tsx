@@ -20,6 +20,7 @@ import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { enqueue as outboxEnqueue, isOutboxEnabled, isOffline } from "@/lib/outbox"
 
 const CATEGORIES = Object.keys(EXPENSE_CATEGORY_LABELS) as ExpenseCategory[]
 const METHODS: ExpensePaymentMethod[] = ["cash", "bank_transfer", "cheque", "jazzcash", "easypaisa", "raast", "ibft", "card", "other"]
@@ -30,13 +31,14 @@ const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 t
 const labelCls = "text-xs font-medium text-muted-foreground"
 
 interface FormState { amount: string; category: ExpenseCategory; vendorName: string; description: string; spentDate: string; paymentMethod: ExpensePaymentMethod; subcategory: string; subVenueId: string }
-const blank = (e?: VendorExpense): FormState => ({
-  amount: e?.amount != null ? String(e.amount) : "",
-  category: (e?.category as ExpenseCategory) ?? "supplies",
+export interface ExpensePrefill { amount?: number; category?: string; paymentMethod?: string; spentDate?: string; note?: string }
+const blank = (e?: VendorExpense, prefill?: ExpensePrefill): FormState => ({
+  amount: e?.amount != null ? String(e.amount) : prefill?.amount != null ? String(prefill.amount) : "",
+  category: (e?.category as ExpenseCategory) ?? (prefill?.category as ExpenseCategory) ?? "supplies",
   vendorName: e?.vendorName ?? "",
-  description: e?.description ?? "",
-  spentDate: (e?.spentDate ?? today()).slice(0, 10),
-  paymentMethod: (e?.paymentMethod as ExpensePaymentMethod) ?? "cash",
+  description: e?.description ?? prefill?.note ?? "",
+  spentDate: (e?.spentDate ?? prefill?.spentDate ?? today()).slice(0, 10),
+  paymentMethod: (e?.paymentMethod as ExpensePaymentMethod) ?? (prefill?.paymentMethod as ExpensePaymentMethod) ?? "cash",
   subcategory: e?.subcategory ?? "",
   subVenueId: e?.subVenueId != null ? String(e.subVenueId) : "",
 })
@@ -55,28 +57,29 @@ function Field({ label, children, className }: { label: string; children: React.
 }
 
 export function ExpenseFormDialog({
-  open, onOpenChange, expense, onSaved,
+  open, onOpenChange, expense, prefill, onSaved,
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
   expense?: VendorExpense
+  prefill?: ExpensePrefill
   onSaved?: () => void
 }) {
   const isEdit = !!expense
-  const [form, setForm] = React.useState<FormState>(blank(expense))
+  const [form, setForm] = React.useState<FormState>(blank(expense, prefill))
   const [cf, setCf] = React.useState<CustomFieldValues>({})
-  const loadedId = React.useRef<number | "new" | null>(null)
+  const loadedId = React.useRef<string | null>(null)
 
   React.useEffect(() => {
     if (open) {
-      const key = expense?.id ?? "new"
+      const key = expense?.id != null ? `e${expense.id}` : prefill ? `p${JSON.stringify(prefill)}` : "new"
       if (loadedId.current !== key) {
-        setForm(blank(expense))
+        setForm(blank(expense, prefill))
         setCf(((expense as any)?.customFields as CustomFieldValues) || {})
         loadedId.current = key
       }
     } else { loadedId.current = null }
-  }, [open, expense])
+  }, [open, expense, prefill])
 
   const set = (k: keyof FormState, v: string) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -92,6 +95,19 @@ export function ExpenseFormDialog({
 
   const saveMut = useMutation({
     mutationFn: async () => {
+      // PWA-02 — adding an expense while offline: queue it in the outbox instead
+      // of failing. It syncs idempotently on reconnect. Edits stay online-only.
+      // (The offline path records amount/category/method/date/note; space +
+      // custom-field tagging is an online-only refinement.)
+      if (!isEdit && isOutboxEnabled() && isOffline()) {
+        const note = [form.description.trim(), form.vendorName.trim() ? `Paid to: ${form.vendorName.trim()}` : ""].filter(Boolean).join(" · ") || undefined
+        await outboxEnqueue(
+          "record_expense",
+          { amount: Number(form.amount) || 0, category: form.category, paymentMethod: form.paymentMethod, spentDate: form.spentDate, note },
+          `Rs ${Number(form.amount) || 0} · ${EXPENSE_CATEGORY_LABELS[form.category]}`,
+        )
+        return { queuedOffline: true as const }
+      }
       const sv = form.subVenueId ? Number(form.subVenueId) : null
       const scopeType = sv != null ? scopeForDepth(spaces.find((s) => s.id === sv)?.depth ?? 2) : undefined
       const body = {
@@ -115,7 +131,11 @@ export function ExpenseFormDialog({
       }
       return saved
     },
-    onSuccess: () => { showSuccessToast(isEdit ? "Expense updated" : "Expense added"); onSaved?.(); onOpenChange(false) },
+    onSuccess: (r: any) => {
+      if (r?.queuedOffline) toast.success("Saved offline — will sync when you reconnect")
+      else showSuccessToast(isEdit ? "Expense updated" : "Expense added")
+      onSaved?.(); onOpenChange(false)
+    },
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save expense"),
   })
 
