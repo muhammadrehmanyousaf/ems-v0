@@ -30,7 +30,7 @@ const NAV_TIMEOUT_MS = 6000;
 // API freshness timeout when we ALREADY have a cached copy (stale-while-
 // revalidate): fall back to cache quickly if the network is slow.
 const API_STALE_TIMEOUT_MS = 6000;
-// API timeout when there is NO cache: wait long enough for a cold Neon
+// API timeout when there is NO cache: wait long enough for a cold DB
 // backend under concurrent dashboard load. The old 4s value aborted valid
 // in-flight requests and fabricated a fake "Offline" 503 for online users.
 // A genuinely offline fetch still rejects immediately, so this doesn't slow

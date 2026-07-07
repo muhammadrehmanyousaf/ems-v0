@@ -115,7 +115,7 @@ git add event-planner-api/.gitignore && git commit -m "chore(security): stop tra
 ```
 
 - [ ] **Step 6: USER ACTION (cannot be automated — surface clearly)**
-Print a notice: the exposed secrets — `JWT_SECRET` (weak: `HR-Backend-114422455-SECRET`), Neon `DATABASE_URL` (pw `npg_sAPoIl8chtk9`), `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` — remain in git history and are only neutralized by **rotation**: regenerate in Neon + Stripe dashboards and set a new strong `JWT_SECRET`, then update Railway env vars. Rotating `JWT_SECRET` logs out all active users (expected).
+Print a notice: the exposed secrets — `JWT_SECRET` (weak: `HR-Backend-114422455-SECRET`), Railway `DATABASE_URL` (pw `npg_sAPoIl8chtk9`), `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` — remain in git history and are only neutralized by **rotation**: regenerate in Railway + Stripe dashboards and set a new strong `JWT_SECRET`, then update Railway env vars. Rotating `JWT_SECRET` logs out all active users (expected).
 
 ### Task A2: RBAC activation (flag-gated; seed FIRST, enforce SECOND)
 **Files:** Create `event-planner-api/src/seeders/<ts>-rbac-permissions.js`; Modify `authMiddleware.js` (add `gate()`); Modify the main dashboard routers.
