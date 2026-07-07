@@ -13,6 +13,7 @@ import {
   getAvailabilitySetup, createCrewResource, createRentalSku, createProductionLine, deactivateResource,
 } from "@/lib/api/availabilitySetup";
 import { PRIMITIVE_LABEL } from "@/lib/availability-primitive";
+import { PrimitiveBookingPanel } from "@/components/settings/primitive-booking-panel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -45,6 +46,11 @@ export function AvailabilitySetup() {
       {p === "P1_VENUE_LOCK" && <Note text="Venue availability calendar se manage hoti hai — Calendar par jayein." />}
       {p === "P5_PIPELINE" && <Note text="Made-to-order kaam — fixed availability set karne ki zaroorat nahi; deadline par work-order chalta hai." />}
       {!p && <Note text="Aap ke vendor type ke liye availability primitive set nahi hai." />}
+
+      {/* The cutover in action — check + book against the configured availability. */}
+      {(p === "P2_PERSON_SLOT" || p === "P3_UNIT_POOL" || p === "P4_CAPACITY" || p === "P5_PIPELINE") && (
+        <PrimitiveBookingPanel setup={data} />
+      )}
     </div>
   );
 }
