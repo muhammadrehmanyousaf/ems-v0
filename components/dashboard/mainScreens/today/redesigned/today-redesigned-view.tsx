@@ -20,6 +20,7 @@ import { StatusPill, type StatusTone } from "@/components/dashboard/primitives/s
 import { MoneyCell, formatPkr } from "@/components/dashboard/primitives/money-cell"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
+import { RunSheetDialog } from "@/components/dashboard/mainScreens/today/run-sheet-dialog"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
@@ -56,6 +57,7 @@ interface TodayRow {
 const amountOf = (e: TodayRow) => (e.orderGrand != null ? e.orderGrand : num(e.totalAmount))
 
 export function TodayRedesignedView() {
+  const [runSheet, setRunSheet] = React.useState<TodayRow | null>(null)
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["today-redesigned"],
     queryFn: () => BookingTimelineAPI.today(),
@@ -105,6 +107,14 @@ export function TodayRedesignedView() {
     },
     { key: "status", header: "Status", render: (e) => <StatusPill tone={bookingTone(e.status)}>{e.status || "—"}</StatusPill> },
     { key: "tasks", header: "Tasks", align: "right", cellClassName: "tabular-nums", render: (e) => num(e.tasks?.length) },
+    {
+      key: "runsheet", header: "", align: "right",
+      render: (e) => (
+        <Button size="sm" variant="ghost" disabled={!e.tasks?.length} onClick={() => setRunSheet(e)} aria-label="Open run sheet">
+          <Icon name="Printer" size={14} className="mr-1" /> Run sheet
+        </Button>
+      ),
+    },
   ]
 
   return (
@@ -145,14 +155,26 @@ export function TodayRedesignedView() {
               </div>
               <div className="mt-1"><StatusPill tone={bookingTone(e.status)}>{e.status || "—"}</StatusPill></div>
             </div>
-            <div className="flex flex-col items-end shrink-0">
+            <div className="flex flex-col items-end shrink-0 gap-1">
               <MoneyCell amount={amountOf(e)} className="text-sm font-medium" />
               {e.orderBalance != null && e.orderBalance > 0 && (
                 <span className="text-[11px] text-amber-600 dark:text-amber-500">{formatPkr(e.orderBalance)} due</span>
               )}
+              {!!e.tasks?.length && (
+                <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setRunSheet(e)}>
+                  <Icon name="Printer" size={13} className="mr-1" /> Run sheet
+                </Button>
+              )}
             </div>
           </div>
         )}
+      />
+
+      <RunSheetDialog
+        open={!!runSheet}
+        onOpenChange={(v) => !v && setRunSheet(null)}
+        subject={{ customerName: runSheet?.customerName ?? null, bookingDate: runSheet?.bookingDate ?? null, bookingTime: runSheet?.bookingTime ?? null, status: runSheet?.status ?? null }}
+        tasks={runSheet?.tasks ?? []}
       />
     </div>
   )
