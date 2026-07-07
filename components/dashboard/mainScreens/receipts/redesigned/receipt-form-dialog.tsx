@@ -29,29 +29,33 @@ function Field({ label, children, className }: { label: string; children: React.
 
 interface BookingOption { id: number; customerName: string; bookingDate: string }
 interface FormState { method: ReceiptMethod; amount: string; receivedDate: string; transactionRef: string; bookingId: string; notes: string }
-const blank = (r?: PaymentReceipt): FormState => ({
-  method: (r?.method as ReceiptMethod) ?? "cash",
-  amount: r?.amount != null ? String(r.amount) : "",
-  receivedDate: (r?.receivedDate ?? today()).slice(0, 10),
+export interface ReceiptPrefill { bookingId?: number; amount?: number; method?: string; receivedDate?: string; note?: string }
+const blank = (r?: PaymentReceipt, prefill?: ReceiptPrefill): FormState => ({
+  method: (r?.method as ReceiptMethod) ?? (prefill?.method as ReceiptMethod) ?? "cash",
+  amount: r?.amount != null ? String(r.amount) : prefill?.amount != null ? String(prefill.amount) : "",
+  receivedDate: (r?.receivedDate ?? prefill?.receivedDate ?? today()).slice(0, 10),
   transactionRef: r?.transactionRef ?? "",
-  bookingId: r?.bookingId != null ? String(r.bookingId) : "",
-  notes: r?.notes ?? "",
+  bookingId: r?.bookingId != null ? String(r.bookingId) : prefill?.bookingId != null ? String(prefill.bookingId) : "",
+  notes: r?.notes ?? prefill?.note ?? "",
 })
 
 export function ReceiptFormDialog({
-  open, onOpenChange, receipt, onSaved,
+  open, onOpenChange, receipt, prefill, onSaved,
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
   receipt?: PaymentReceipt
+  prefill?: ReceiptPrefill
   onSaved?: () => void
 }) {
   const isEdit = !!receipt
-  const [form, setForm] = React.useState<FormState>(blank(receipt))
-  const loaded = React.useRef<number | "new" | null>(null)
+  const [form, setForm] = React.useState<FormState>(blank(receipt, prefill))
+  const loaded = React.useRef<string | null>(null)
   React.useEffect(() => {
-    if (open) { const k = receipt?.id ?? "new"; if (loaded.current !== k) { setForm(blank(receipt)); loaded.current = k } } else { loaded.current = null }
-  }, [open, receipt])
+    // Re-seed when a different record/prefill opens (prefill has no id, so key on it too).
+    const k = open ? (receipt?.id != null ? `r${receipt.id}` : prefill ? `p${JSON.stringify(prefill)}` : "new") : null
+    if (open) { if (loaded.current !== k) { setForm(blank(receipt, prefill)); loaded.current = k } } else { loaded.current = null }
+  }, [open, receipt, prefill])
   const set = (k: keyof FormState, v: string) => setForm((f) => ({ ...f, [k]: v }))
 
   const { data: bookings } = useQuery<BookingOption[]>({

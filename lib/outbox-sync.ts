@@ -14,7 +14,7 @@
  */
 
 import axiosInstance from "@/lib/axiosConfig";
-import { isOutboxEnabled, listOps, removeOp, countOps, notifyChange, type OutboxOp } from "@/lib/outbox";
+import { isOutboxEnabled, listOps, removeOp, countOps, recordConflict, notifyChange, type OutboxOp } from "@/lib/outbox";
 
 export interface SyncOpResult {
   key: string;
@@ -57,7 +57,9 @@ export async function flushOutbox(): Promise<{ synced: number; conflicts: number
         await removeOp(op.key);
         synced += 1;
       } else {
-        // conflict or deterministic failure — drop it and hand to the conflict UX.
+        // conflict or deterministic failure — persist it (survives a reload) and
+        // hand to the conflict UX, then clear it from the retry queue.
+        await recordConflict(op, r.status, r.error);
         await removeOp(op.key);
         conflicts.push({ op, status: r.status, error: r.error });
       }
