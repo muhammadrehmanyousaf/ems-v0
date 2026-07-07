@@ -42,3 +42,18 @@ export async function deactivateResource(kind: "crew-resources" | "rental-skus" 
   const { data } = await axiosInstance.delete(`${v1}/${kind}/${id}`);
   return data?.data as { id: number };
 }
+
+// The cutover endpoints — primitive-aware check + reserve.
+export interface AvailabilityVerdict {
+  primitive: AvailabilityPrimitive | null;
+  status: "AVAILABLE" | "PARTIAL" | "UNAVAILABLE" | "DELEGATE_LEGACY" | "NEEDS_INPUT";
+  detail?: Record<string, unknown>;
+}
+export async function checkAvailability(body: Record<string, unknown>): Promise<AvailabilityVerdict> {
+  const { data } = await axiosInstance.post(`${v1}/check`, body);
+  return data?.data as AvailabilityVerdict;
+}
+export async function reserveAvailability(body: Record<string, unknown>): Promise<{ primitive: string; reservation: any; status?: string }> {
+  const { data } = await axiosInstance.post(`${v1}/reserve`, body);
+  return data?.data as { primitive: string; reservation: any };
+}
