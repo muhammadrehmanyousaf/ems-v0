@@ -19,7 +19,9 @@ import { ImportButton } from "@/components/dashboard/shared/import-button"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
-import { ExpenseFormDialog } from "@/components/dashboard/mainScreens/expenses/redesigned/expense-form-dialog"
+import { ExpenseFormDialog, type ExpensePrefill } from "@/components/dashboard/mainScreens/expenses/redesigned/expense-form-dialog"
+import { OutboxStatus } from "@/components/dashboard/shared/outbox-status"
+import { OutboxConflicts } from "@/components/dashboard/shared/outbox-conflicts"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
@@ -53,6 +55,7 @@ export function ExpensesRedesignedView() {
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<VendorExpense | undefined>(undefined)
+  const [prefill, setPrefill] = React.useState<ExpensePrefill | undefined>(undefined)
   const [deleting, setDeleting] = React.useState<VendorExpense | null>(null)
   const [managerOpen, setManagerOpen] = React.useState(false)
 
@@ -71,8 +74,10 @@ export function ExpensesRedesignedView() {
   })
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["expenses-redesigned"] })
-  const openCreate = () => { setEditing(undefined); setDialogOpen(true) }
-  const openEdit = (e: VendorExpense) => { setEditing(e); setDialogOpen(true) }
+  const openCreate = () => { setEditing(undefined); setPrefill(undefined); setDialogOpen(true) }
+  const openEdit = (e: VendorExpense) => { setEditing(e); setPrefill(undefined); setDialogOpen(true) }
+  // PWA-03 — re-enter a conflicted offline expense with its values seeded.
+  const openReenter = (p: ExpensePrefill) => { setEditing(undefined); setPrefill(p); setDialogOpen(true) }
   const removeMut = useMutation({
     mutationFn: (id: number) => ExpensesAPI.remove(id),
     onSuccess: () => { showSuccessToast("Expense removed"); setDeleting(null); invalidate() },
@@ -128,8 +133,10 @@ export function ExpensesRedesignedView() {
         eyebrow="Money"
         title="Expenses"
         description="Every cost in one ledger — redesigned, wired to live data."
-        actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Add expense</Button>}
+        actions={<div className="flex items-center gap-2"><OutboxStatus /><Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Add expense</Button></div>}
       />
+
+      <OutboxConflicts reenterOps={["record_expense"]} onReenter={(p) => openReenter(p)} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Total spent" value={formatPkr(total)} icon="Wallet" />
@@ -194,7 +201,7 @@ export function ExpensesRedesignedView() {
         )}
       />
 
-      <ExpenseFormDialog open={dialogOpen} onOpenChange={setDialogOpen} expense={editing} onSaved={invalidate} />
+      <ExpenseFormDialog open={dialogOpen} onOpenChange={setDialogOpen} expense={editing} prefill={prefill} onSaved={invalidate} />
 
       {cfEnabled && (
         <CustomFieldsManager
