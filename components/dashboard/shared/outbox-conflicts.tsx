@@ -22,6 +22,8 @@ function reasonFor(c: ConflictRecord): string {
   if (e.includes("not your booking")) return "You're no longer linked to that booking."
   if (e.includes("booking not found")) return "That booking no longer exists."
   if (e.includes("no customer")) return "The booking has no registered customer to attribute it to."
+  if (e.includes("taken while you were offline") || e.includes("held by another")) return "That date was taken while you were offline."
+  if (e.includes("isn't yours") || e.includes("not yours")) return "That calendar isn't yours to hold."
   if (e.includes("positive amount") || e.includes("amount")) return "The amount was invalid."
   return c.error || "It couldn't be synced."
 }
