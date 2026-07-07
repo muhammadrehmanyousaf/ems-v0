@@ -32,6 +32,7 @@ import {
   Users,
   Wallet,
   AlertCircle,
+  Zap,
 } from "lucide-react"
 
 /**
@@ -83,6 +84,13 @@ export const data = {
   // i18nKey: falls back to `name` so there's no missing-translation key.
   vendorVenueOs: [
     { name: "Venue-OS", url: "/dashboard/venue-os", icon: Building2 },
+  ],
+
+  // PWA-02 — Field Capture hub (offline-first lead/payment/expense/hold capture).
+  // Injected flag-gated (NEXT_PUBLIC_FEAT_OFFLINE_OUTBOX) in app-sidebar so it
+  // stays hidden until the pilot enables offline mode.
+  vendorFieldCapture: [
+    { name: "Field capture", url: "/dashboard/field", icon: Zap, i18nKey: "nav.field_capture" },
   ],
 
   // ── Admin / Super-admin ────────────────────────────────────────

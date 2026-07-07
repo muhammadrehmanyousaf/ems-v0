@@ -103,6 +103,11 @@ function buildVendorSections(
       !MONEY_NAV_KEYS.has(i.name as NavItemKey) &&
       !extraSet.has(i.name as NavItemKey),
   )
+  // PWA-02 — Field Capture hub leads the Main nav when offline mode is enabled
+  // (pilot-dark by default). Injected here so it needs no allowlist plumbing.
+  if (process.env.NEXT_PUBLIC_FEAT_OFFLINE_OUTBOX === "true") {
+    main.unshift(...data.vendorFieldCapture)
+  }
   const money = allowed.filter((i) => MONEY_NAV_KEYS.has(i.name as NavItemKey))
   // Render extras in the order the config declares them (not nav-data
   // order) so the most craft-relevant tool leads.
