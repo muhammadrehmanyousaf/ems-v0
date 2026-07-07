@@ -136,6 +136,8 @@ import {
   ListChecks,
   Link,
   Paperclip,
+  Wifi,
+  WifiOff,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -227,6 +229,8 @@ const ICONLY_MAP = {
 const LUCIDE_MAP = {
   Check,
   CheckCircle2,
+  Wifi,
+  WifiOff,
   X,
   XCircle,
   MoreHorizontal,
