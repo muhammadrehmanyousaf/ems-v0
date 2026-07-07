@@ -62,7 +62,7 @@ export default function PrivacyPolicyPage() {
       <ul>
         <li><strong>Vendors you book</strong> — we share the minimum needed to fulfil the booking (name, contact, event date).</li>
         <li><strong>Payment processors</strong> — PayFast Pakistan, Stripe (legacy USD bookings) — to take payments and issue refunds.</li>
-        <li><strong>Infrastructure providers</strong> — Neon (database), Vercel / Cloudflare (hosting), AWS (file storage), email delivery (e.g. Postmark or AWS SES), SMS providers (e.g. JazzCash SMS gateway).</li>
+        <li><strong>Infrastructure providers</strong> — Railway (database & hosting), Vercel / Cloudflare (hosting), AWS (file storage), email delivery (e.g. Postmark or AWS SES), SMS providers (e.g. JazzCash SMS gateway).</li>
         <li><strong>Analytics providers</strong> — Google Analytics, Microsoft Clarity. We use anonymized / pseudonymized data where possible.</li>
         <li><strong>Law enforcement and regulators</strong> — when required by valid Pakistani legal process.</li>
       </ul>

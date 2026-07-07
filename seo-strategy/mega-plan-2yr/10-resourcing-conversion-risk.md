@@ -29,7 +29,7 @@ The traffic model implies a content + link machine. That machine has two honest 
 | Outreach/PR (part-time) | — | 50k–120k | Link-building is the #1 lever — see [05](05-authority-linkbuilding.md) |
 | Photography (first-party) | 20k–60k | 60k–150k | Replaces Pexels placeholders; E-E-A-T + image SEO ([03](03-content-engine.md) §4) |
 | Paid SEO tools (when needed) | 0–15k | 25k–70k | Ahrefs/Semrush/DataForSEO — only when free tier caps bite ([07](07-mcp-operating-manual.md) §4) |
-| Hosting/infra delta | minimal | minimal | Already on Vercel/Neon; programmatic pages are cheap |
+| Hosting/infra delta | minimal | minimal | Already on Vercel/Railway; programmatic pages are cheap |
 | **Indicative total/mo** | **~20k–135k** | **~215k–540k** | USD ≈ $75–480 (lean) / $770–1,940 (team) at ~280 PKR/USD |
 
 These are **planning ranges to size the decision, not quotes.** Replace with real numbers once you choose a path. The point: a 1M plan with zero cost line is fiction — fund Path B before committing to the Aggressive curve.
