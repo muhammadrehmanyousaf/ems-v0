@@ -11,7 +11,7 @@
  * is off. No IndexedDB access happens at import time.
  */
 
-export type OutboxOpType = "record_receipt" | "record_expense" | "hold_date";
+export type OutboxOpType = "record_receipt" | "record_expense" | "hold_date" | "capture_lead";
 
 export interface OutboxOp {
   key: string; // client-generated UUID — the idempotency key

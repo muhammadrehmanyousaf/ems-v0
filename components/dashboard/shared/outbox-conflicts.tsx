@@ -42,6 +42,17 @@ export interface ReenterPayload {
   businessId?: number
   holdDate?: string
   holdTime?: string
+  // capture_lead fields
+  contactName?: string
+  contactPhone?: string
+  contactWhatsapp?: string
+  contactEmail?: string
+  source?: string
+  eventType?: string
+  eventDate?: string
+  estimatedBudget?: number
+  estimatedGuests?: number
+  inquiry?: string
 }
 
 /**
@@ -88,7 +99,7 @@ export function OutboxConflicts({
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
                 {onReenter && reenterOps.includes(c.opType) && (
-                  <Button size="sm" variant="outline" className="h-7 border-amber-300 text-amber-900" onClick={() => { onReenter({ bookingId: p.bookingId, amount: p.amount, method: p.method, receivedDate: p.receivedDate, category: p.category, paymentMethod: p.paymentMethod, spentDate: p.spentDate, businessId: p.businessId, holdDate: p.holdDate, holdTime: p.holdTime, note: p.note }, c.opType); void removeConflict(c.key) }}>
+                  <Button size="sm" variant="outline" className="h-7 border-amber-300 text-amber-900" onClick={() => { onReenter({ bookingId: p.bookingId, amount: p.amount, method: p.method, receivedDate: p.receivedDate, category: p.category, paymentMethod: p.paymentMethod, spentDate: p.spentDate, businessId: p.businessId, holdDate: p.holdDate, holdTime: p.holdTime, contactName: p.contactName, contactPhone: p.contactPhone, contactWhatsapp: p.contactWhatsapp, contactEmail: p.contactEmail, source: p.source, eventType: p.eventType, eventDate: p.eventDate, estimatedBudget: p.estimatedBudget, estimatedGuests: p.estimatedGuests, inquiry: p.inquiry, note: p.note }, c.opType); void removeConflict(c.key) }}>
                     Re-enter
                   </Button>
                 )}

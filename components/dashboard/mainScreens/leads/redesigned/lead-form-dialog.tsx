@@ -15,6 +15,7 @@ import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { enqueue as outboxEnqueue, isOutboxEnabled, isOffline } from "@/lib/outbox"
 
 const STATUSES: LeadStatus[] = ["new", "contacted", "qualified", "quoted", "booked", "lost", "archived"]
 const SOURCES: LeadSource[] = ["manual_phone", "manual_walkin", "whatsapp", "instagram", "referral", "form_inquiry", "in_app_chat", "other"]
@@ -32,32 +33,35 @@ interface FormState {
   source: LeadSource; eventType: LeadEventType; eventDate: string; estimatedBudget: string; estimatedGuests: string
   status: LeadStatus; inquiry: string
 }
-const blank = (l?: Lead): FormState => ({
-  contactName: l?.contactName ?? "", contactPhone: l?.contactPhone ?? "", contactWhatsapp: l?.contactWhatsapp ?? "", contactEmail: l?.contactEmail ?? "",
-  source: (l?.source as LeadSource) ?? "manual_phone", eventType: (l?.eventType as LeadEventType) ?? "walima",
-  eventDate: (l?.eventDate ?? "").slice(0, 10), estimatedBudget: l?.estimatedBudget != null ? String(l.estimatedBudget) : "",
-  estimatedGuests: l?.estimatedGuests != null ? String(l.estimatedGuests) : "", status: (l?.status as LeadStatus) ?? "new", inquiry: l?.inquiry ?? "",
+export interface LeadPrefill { contactName?: string; contactPhone?: string; contactWhatsapp?: string; contactEmail?: string; source?: string; eventType?: string; eventDate?: string; estimatedBudget?: number; estimatedGuests?: number; inquiry?: string }
+const blank = (l?: Lead, p?: LeadPrefill): FormState => ({
+  contactName: l?.contactName ?? p?.contactName ?? "", contactPhone: l?.contactPhone ?? p?.contactPhone ?? "", contactWhatsapp: l?.contactWhatsapp ?? p?.contactWhatsapp ?? "", contactEmail: l?.contactEmail ?? p?.contactEmail ?? "",
+  source: (l?.source as LeadSource) ?? (p?.source as LeadSource) ?? "manual_phone", eventType: (l?.eventType as LeadEventType) ?? (p?.eventType as LeadEventType) ?? "walima",
+  eventDate: (l?.eventDate ?? p?.eventDate ?? "").slice(0, 10), estimatedBudget: l?.estimatedBudget != null ? String(l.estimatedBudget) : p?.estimatedBudget != null ? String(p.estimatedBudget) : "",
+  estimatedGuests: l?.estimatedGuests != null ? String(l.estimatedGuests) : p?.estimatedGuests != null ? String(p.estimatedGuests) : "", status: (l?.status as LeadStatus) ?? "new", inquiry: l?.inquiry ?? p?.inquiry ?? "",
 })
 
 export function LeadFormDialog({
-  open, onOpenChange, lead, businessId, onSaved,
+  open, onOpenChange, lead, prefill, businessId, onSaved,
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
   lead?: Lead
+  prefill?: LeadPrefill
   businessId?: number
   onSaved?: () => void
 }) {
   const isEdit = !!lead
-  const [form, setForm] = React.useState<FormState>(blank(lead))
-  const loaded = React.useRef<number | "new" | null>(null)
+  const [form, setForm] = React.useState<FormState>(blank(lead, prefill))
+  const loaded = React.useRef<string | null>(null)
   React.useEffect(() => {
-    if (open) { const k = lead?.id ?? "new"; if (loaded.current !== k) { setForm(blank(lead)); loaded.current = k } } else { loaded.current = null }
-  }, [open, lead])
+    const k = open ? (lead?.id != null ? `l${lead.id}` : prefill ? `p${JSON.stringify(prefill)}` : "new") : null
+    if (open) { if (loaded.current !== k) { setForm(blank(lead, prefill)); loaded.current = k } } else { loaded.current = null }
+  }, [open, lead, prefill])
   const set = (k: keyof FormState, v: string) => setForm((f) => ({ ...f, [k]: v }))
 
   const saveMut = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const body = {
         businessId: lead?.businessId ?? businessId!,
         contactName: form.contactName.trim() || undefined,
@@ -71,9 +75,24 @@ export function LeadFormDialog({
         status: form.status,
         inquiry: form.inquiry.trim() || undefined,
       }
+      // PWA-02 — a lead grabbed offline (bridal expo, dead signal) queues instead
+      // of failing, and syncs on reconnect. This is the killer field case: never
+      // lose a walk-in. Edits stay online-only.
+      if (!isEdit && isOutboxEnabled() && isOffline()) {
+        await outboxEnqueue(
+          "capture_lead",
+          { businessId: body.businessId, contactName: body.contactName, contactPhone: body.contactPhone, contactWhatsapp: body.contactWhatsapp, contactEmail: body.contactEmail, source: form.source, eventType: form.eventType, eventDate: body.eventDate, estimatedBudget: body.estimatedBudget, estimatedGuests: body.estimatedGuests, inquiry: body.inquiry },
+          `${form.contactName.trim() || form.contactPhone.trim()} · ${lbl(form.eventType)}`,
+        )
+        return { queuedOffline: true as const }
+      }
       return isEdit ? LeadAPI.update(lead!.id, body) : LeadAPI.create(body)
     },
-    onSuccess: () => { showSuccessToast(isEdit ? "Lead updated" : "Lead added"); onSaved?.(); onOpenChange(false) },
+    onSuccess: (r: any) => {
+      if (r?.queuedOffline) toast.success("Saved offline — will sync when you reconnect")
+      else showSuccessToast(isEdit ? "Lead updated" : "Lead added")
+      onSaved?.(); onOpenChange(false)
+    },
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save lead"),
   })
   const canSave = form.contactName.trim() && (isEdit || businessId != null)

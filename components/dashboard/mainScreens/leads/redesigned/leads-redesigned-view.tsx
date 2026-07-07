@@ -10,7 +10,9 @@ import * as React from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { LeadAPI, type Lead, type LeadStatus } from "@/lib/api/leads"
 import { BusinessesAPI } from "@/lib/api/dashboard"
-import { LeadFormDialog } from "@/components/dashboard/mainScreens/leads/redesigned/lead-form-dialog"
+import { LeadFormDialog, type LeadPrefill } from "@/components/dashboard/mainScreens/leads/redesigned/lead-form-dialog"
+import { OutboxStatus } from "@/components/dashboard/shared/outbox-status"
+import { OutboxConflicts } from "@/components/dashboard/shared/outbox-conflicts"
 // F-8 — convert-to-booking reuses the same offline-booking dialog the bookings
 // page uses, prefilled from the lead (parity with the legacy inbox view).
 import { OfflineBookingDialog } from "@/components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog"
@@ -53,6 +55,7 @@ export function LeadsRedesignedView() {
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<Lead | undefined>(undefined)
+  const [prefill, setPrefill] = React.useState<LeadPrefill | undefined>(undefined)
   const [deleting, setDeleting] = React.useState<Lead | null>(null)
   // F-8 — lead whose "Convert to booking" was clicked; drives the dialog.
   const [convertLead, setConvertLead] = React.useState<Lead | null>(null)
@@ -64,8 +67,10 @@ export function LeadsRedesignedView() {
   const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
   const businessId = businesses?.[0]?.id
   const invalidate = () => qc.invalidateQueries({ queryKey: ["leads-redesigned"] })
-  const openCreate = () => { setEditing(undefined); setDialogOpen(true) }
-  const openEdit = (l: Lead) => { setEditing(l); setDialogOpen(true) }
+  const openCreate = () => { setEditing(undefined); setPrefill(undefined); setDialogOpen(true) }
+  const openEdit = (l: Lead) => { setEditing(l); setPrefill(undefined); setDialogOpen(true) }
+  // PWA-03 — re-enter a conflicted offline lead with its values seeded.
+  const openReenter = (p: LeadPrefill) => { setEditing(undefined); setPrefill(p); setDialogOpen(true) }
   const removeMut = useMutation({
     mutationFn: (id: number) => LeadAPI.remove(id),
     onSuccess: () => { showSuccessToast("Lead removed"); setDeleting(null); invalidate() },
@@ -118,8 +123,10 @@ export function LeadsRedesignedView() {
         eyebrow="Operate"
         title="Leads"
         description="Every inquiry in one inbox — redesigned, wired to live data."
-        actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Log a lead</Button>}
+        actions={<div className="flex items-center gap-2"><OutboxStatus /><Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Log a lead</Button></div>}
       />
+
+      <OutboxConflicts reenterOps={["capture_lead"]} onReenter={(p) => openReenter(p)} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Total leads" value={all.length} icon="Inbox" />
@@ -188,7 +195,7 @@ export function LeadsRedesignedView() {
         )}
       />
 
-      <LeadFormDialog open={dialogOpen} onOpenChange={setDialogOpen} lead={editing} businessId={businessId} onSaved={invalidate} />
+      <LeadFormDialog open={dialogOpen} onOpenChange={setDialogOpen} lead={editing} prefill={prefill} businessId={businessId} onSaved={invalidate} />
 
       {/* F-8 — convert-to-booking. Prefills customer + event date from the
           lead; on success links the lead (sets bookingId + status='booked')
