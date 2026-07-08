@@ -21,6 +21,10 @@ import axiosInstance from '@/lib/axiosConfig'
 import SuccessStep from "./steps/success-step"
 import VendorSuccessStep from "./steps/vendor-success-step"
 import { VendorAPI } from "@/lib/api/vendors"
+// WW-PRICE0 — an unpriced vendor can't be booked (server 400s); offer the
+// inquiry instead of dead-ending the customer. This page is the choke point.
+import { isUnpricedVendor } from "@/lib/pricing/unpriced"
+import VendorInquiryDialog from "@/components/VendorInquiryDialog"
 import { useDateHold } from "@/hooks/use-date-hold"
 import { useBookingDraft } from "@/hooks/use-booking-draft"
 import PaymentSuccessScreen from "./steps/payment-success-screen"
@@ -67,6 +71,8 @@ export default function BookingForm() {
   const [paymentReturnBookingId, setPaymentReturnBookingId] = useState<number | null>(null)
   const [paymentReturnType, setPaymentReturnType] = useState<string>("down_payment")
   const [bankTransferData, setBankTransferData] = useState<{ bookingId: number; amount: number; paymentType: string; customerEmail?: string; bookingDate?: string } | null>(null)
+  // WW-PRICE0 — drives the price-on-request inquiry dialog on this page.
+  const [inquiryOpen, setInquiryOpen] = useState(false)
   const [paymentScreenData, setPaymentScreenData] = useState<{ bookingId: number; amount: number; customerEmail: string; customerName: string; vendorName: string; bookingDate?: string } | null>(null)
   const { timeRemaining, isHolding, holdFailed, holdFailedUntil, createHold, releaseHold } = useDateHold()
   const { user, loading: userLoading } = getUser();
@@ -931,6 +937,47 @@ export default function BookingForm() {
             }}
           />
         </div>
+      </div>
+    )
+  }
+
+  // WW-PRICE0 — the booking funnel's choke point.
+  //
+  // A vendor with no minimumPrice and nothing priced to select cannot be booked:
+  // the server refuses it (400 `vendor_not_priced`). There are FOUR ways into
+  // this page — VendorDetailsMobile, VendorDetails (desktop), VendorCard, and
+  // the SEO vendor-detail-page's "Check availability" link — plus anyone who
+  // pastes /{id}/booking directly. Guarding each CTA would leave the direct URL
+  // open and would rot the next time someone adds a fifth. Guard here instead:
+  // everything must pass through this component.
+  //
+  // Rather than dead-end the customer, offer the inquiry: the vendor replies
+  // with a real price and it lands in their Leads inbox.
+  if (!loading && venue && isUnpricedVendor(venue as any)) {
+    return (
+      <div className="w-full">
+        <div className="mx-auto max-w-xl rounded-md bg-bridal-cream border border-bridal-beige p-6 sm:p-8 text-center shadow-[0_18px_44px_-32px_rgba(176,125,84,0.4)]">
+          <h1 className="font-display italic text-[26px] sm:text-[30px] text-bridal-charcoal leading-tight">
+            {venue.name} hasn&apos;t published a price yet
+          </h1>
+          <p className="mt-3 text-[14px] text-bridal-charcoal/75 leading-relaxed">
+            Send them a quick inquiry with your date and guest count — they&apos;ll reply
+            with a quote, and you can book once you agree on the price.
+          </p>
+          <button
+            type="button"
+            onClick={() => setInquiryOpen(true)}
+            className="mt-6 inline-flex items-center justify-center gap-2 h-12 px-7 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium transition-colors"
+          >
+            Ask for a price
+          </button>
+        </div>
+        <VendorInquiryDialog
+          businessId={venue.id}
+          vendorName={venue.name}
+          open={inquiryOpen}
+          onOpenChange={setInquiryOpen}
+        />
       </div>
     )
   }
