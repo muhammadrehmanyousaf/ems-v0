@@ -1012,8 +1012,15 @@ export interface CreateBookingVendor {
   // specific hall / lawn for this line. Triggers PARTITION_CONFLICT
   // server-side if the hall is already booked on that date.
   resourceId?: number;
-  totalAmount: number;
-  downPayment: number;
+  // DRIFT-09 — optional because the SERVER computes both from packages / menu /
+  // minimumPrice / add-ons and overwrites whatever the client sends before it's
+  // read (bookingController overwrites vendors[].totalAmount/downPayment from
+  // the pricing service). They were declared required, so every caller had to
+  // fabricate a number the backend then ignored. Send them only if you already
+  // have the server's figure (e.g. echoing back a prior quote); leave them off
+  // otherwise.
+  totalAmount?: number;
+  downPayment?: number;
   specialRequests?: string | null;
 }
 
@@ -1037,6 +1044,20 @@ export interface CreateBookingPayload {
   // Groups this booking under a WeddingUmbrella (one logical shaadi over
   // several functions — mehndi/baraat/walima). The BE validates owner + links.
   umbrellaId?: number;
+  // DRIFT-04 — BK-069 travel surcharge. The city the event is held in; the BE
+  // looks up the vendor-city→eventCity pair and applies a per-km travel cost
+  // (see CreateBookingVendor.travelDistanceKm). Omit for same-city bookings.
+  // The BE reads this as a top-level field; without it declared here the
+  // city-pair surcharge could never be sent from a typed caller.
+  eventCity?: string;
+  // DRIFT-07 — BK-100.83 22:00 PKT wedding-hall closure hard-stop. In Punjab /
+  // KP / Balochistan / ICT a booking that would run past the cutoff is refused
+  // (400 CLOSURE_CUTOFF) unless the vendor explicitly acknowledges the legal
+  // risk. `estimatedDurationHours` is what the cutoff math projects the end
+  // time from; without both, a vendor can neither send the acknowledgement nor
+  // the duration the check needs.
+  estimatedDurationHours?: number;
+  closureOverride?: { ack: boolean; reason: string };
 }
 
 export type PaymentType = "down_payment" | "remaining" | "full_payment";

@@ -626,8 +626,8 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                         showResourcePicker && selectedResourceId
                             ? Number(selectedResourceId)
                             : undefined,
-                    totalAmount: 0,   // server overrides
-                    downPayment: 0,   // server overrides
+                    // totalAmount / downPayment intentionally omitted — the
+                    // server computes both and overwrites anything sent (DRIFT-09).
                     specialRequests: combinedRequests,
                 }],
                 isOfflineBooking: true,
