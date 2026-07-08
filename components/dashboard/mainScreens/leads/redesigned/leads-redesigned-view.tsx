@@ -16,6 +16,10 @@ import { OutboxConflicts } from "@/components/dashboard/shared/outbox-conflicts"
 // F-8 — convert-to-booking reuses the same offline-booking dialog the bookings
 // page uses, prefilled from the lead (parity with the legacy inbox view).
 import { OfflineBookingDialog } from "@/components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog"
+// Phase 5 — AI draft-reply. Gated on the deployment having ANTHROPIC_API_KEY;
+// useAiFeature is cached so the row action doesn't fire one /ai/status per row.
+import { LeadReplyDialog } from "@/components/dashboard/mainScreens/leads/redesigned/lead-reply-dialog"
+import { useAiFeature } from "@/hooks/use-ai-status"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
@@ -57,6 +61,9 @@ export function LeadsRedesignedView() {
   const [editing, setEditing] = React.useState<Lead | undefined>(undefined)
   const [prefill, setPrefill] = React.useState<LeadPrefill | undefined>(undefined)
   const [deleting, setDeleting] = React.useState<Lead | null>(null)
+  // Phase 5 — lead whose "Draft reply" was clicked. Null when AI is dark.
+  const [replyLead, setReplyLead] = React.useState<Lead | null>(null)
+  const aiReply = useAiFeature("leadReply")
   // F-8 — lead whose "Convert to booking" was clicked; drives the dialog.
   const [convertLead, setConvertLead] = React.useState<Lead | null>(null)
 
@@ -108,6 +115,11 @@ export function LeadsRedesignedView() {
           ) : (
             <Button size="sm" variant="ghost" onClick={() => setConvertLead(l)} aria-label="Convert to booking" title="Convert to booking">
               <Icon name="CalendarCheck" size={14} className="text-primary" />
+            </Button>
+          )}
+          {aiReply && !l.bookingId && (
+            <Button size="sm" variant="ghost" onClick={() => setReplyLead(l)} aria-label="Draft a reply" title="Draft a reply">
+              <Icon name="Sparkles" size={14} className="text-bridal-gold" />
             </Button>
           )}
           <Button size="sm" variant="ghost" onClick={() => openEdit(l)} aria-label="Edit lead"><Icon name="Pencil" size={14} /></Button>
@@ -196,6 +208,9 @@ export function LeadsRedesignedView() {
       />
 
       <LeadFormDialog open={dialogOpen} onOpenChange={setDialogOpen} lead={editing} prefill={prefill} businessId={businessId} onSaved={invalidate} />
+
+      {/* Phase 5 — only ever mounted once a lead's Sparkles action is clicked. */}
+      <LeadReplyDialog lead={replyLead} onOpenChange={(o) => !o && setReplyLead(null)} />
 
       {/* F-8 — convert-to-booking. Prefills customer + event date from the
           lead; on success links the lead (sets bookingId + status='booked')
