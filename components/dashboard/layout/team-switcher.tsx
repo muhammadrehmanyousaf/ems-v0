@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { Check, ChevronsUpDown, GalleryVerticalEnd, Layers } from "lucide-react"
+import { Check, ChevronsUpDown, GalleryVerticalEnd, Layers, Plus, Clock } from "lucide-react"
+import Link from "next/link"
 import { useQueryClient } from "@tanstack/react-query"
 
 import {
@@ -61,6 +62,12 @@ export function TeamSwitcher() {
   }, [user])
 
   const multi = businesses.length > 1
+  // WW-ADDBIZ — the dropdown used to render ONLY when a vendor already owned 2+
+  // businesses, so the 3,271 single-business vendors clicked the switcher and
+  // nothing opened. It now always opens: that is the only place a vendor looks
+  // for "add another venue". The "All venues" roll-up still needs 2+ to be
+  // meaningful, so it stays gated on `multi`.
+  const canAddBusiness = !!user?.isVendor || !!user?.isSuperAdmin
   const activeBusiness = businesses.find((b) => b.id === activeBusinessId) || null
   const displayName = activeBusiness
     ? activeBusiness.name
@@ -87,10 +94,10 @@ export function TeamSwitcher() {
                 <span className="truncate font-medium text-xs">{displayName}</span>
                 <span className="truncate text-[10px] opacity-60">{subtitle}</span>
               </div>
-              {multi && <ChevronsUpDown className="ml-auto size-3.5" />}
+              {(multi || canAddBusiness) && <ChevronsUpDown className="ml-auto size-3.5" />}
             </SidebarMenuButton>
           </DropdownMenuTrigger>
-          {multi && (
+          {(multi || canAddBusiness) && (
             <DropdownMenuContent
               className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
               align="start"
@@ -100,36 +107,67 @@ export function TeamSwitcher() {
               <DropdownMenuLabel className="text-muted-foreground text-xs">
                 Your Businesses
               </DropdownMenuLabel>
-              {/* Combined roll-up across every venue the vendor owns. */}
-              <DropdownMenuItem onClick={() => pickVenue(null)} className="gap-2 p-2">
-                <div className="flex size-6 items-center justify-center rounded-md border">
-                  <Layers className="size-3.5 shrink-0" />
-                </div>
-                <div className="grid flex-1 text-left leading-tight">
-                  <span className="text-sm">All venues</span>
-                  <span className="text-[10px] text-muted-foreground">Combined roll-up</span>
-                </div>
-                {activeBusinessId == null && <Check className="ml-auto size-3.5 text-primary" />}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              {businesses.map((biz) => (
-                <DropdownMenuItem
-                  key={biz.id}
-                  onClick={() => pickVenue(biz.id)}
-                  className="gap-2 p-2"
-                >
-                  <div className="flex size-6 items-center justify-center rounded-md border">
-                    <GalleryVerticalEnd className="size-3.5 shrink-0" />
-                  </div>
-                  <div className="grid flex-1 text-left leading-tight">
-                    <span className="text-sm">{biz.name}</span>
-                    {biz.city && (
-                      <span className="text-[10px] text-muted-foreground">{biz.city}{biz.subArea ? `, ${biz.subArea}` : ""}</span>
-                    )}
-                  </div>
-                  {activeBusinessId === biz.id && <Check className="ml-auto size-3.5 text-primary" />}
-                </DropdownMenuItem>
-              ))}
+              {/* Combined roll-up across every venue the vendor owns. Only
+                  meaningful with 2+, so it stays gated on `multi`. */}
+              {multi && (
+                <>
+                  <DropdownMenuItem onClick={() => pickVenue(null)} className="gap-2 p-2">
+                    <div className="flex size-6 items-center justify-center rounded-md border">
+                      <Layers className="size-3.5 shrink-0" />
+                    </div>
+                    <div className="grid flex-1 text-left leading-tight">
+                      <span className="text-sm">All venues</span>
+                      <span className="text-[10px] text-muted-foreground">Combined roll-up</span>
+                    </div>
+                    {activeBusinessId == null && <Check className="ml-auto size-3.5 text-primary" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              {businesses.map((biz) => {
+                // A self-served business is invisible to customers until an admin
+                // approves it. Say so here rather than let the vendor wonder why
+                // it isn't getting inquiries.
+                const pending = biz.status === "pending_review"
+                return (
+                  <DropdownMenuItem
+                    key={biz.id}
+                    onClick={() => pickVenue(biz.id)}
+                    className="gap-2 p-2"
+                  >
+                    <div className="flex size-6 items-center justify-center rounded-md border">
+                      {pending ? <Clock className="size-3.5 shrink-0 text-amber-600" /> : <GalleryVerticalEnd className="size-3.5 shrink-0" />}
+                    </div>
+                    <div className="grid flex-1 text-left leading-tight">
+                      <span className="truncate text-sm">{biz.name}</span>
+                      <span className="truncate text-[10px] text-muted-foreground">
+                        {pending
+                          ? "Pending review"
+                          : biz.city
+                            ? `${biz.city}${biz.subArea ? `, ${biz.subArea}` : ""}`
+                            : ""}
+                      </span>
+                    </div>
+                    {activeBusinessId === biz.id && <Check className="ml-auto size-3.5 text-primary" />}
+                  </DropdownMenuItem>
+                )
+              })}
+              {canAddBusiness && (
+                <>
+                  {businesses.length > 0 && <DropdownMenuSeparator />}
+                  <DropdownMenuItem asChild className="gap-2 p-2">
+                    <Link href="/dashboard/business/new">
+                      <div className="flex size-6 items-center justify-center rounded-md border border-dashed">
+                        <Plus className="size-3.5 shrink-0" />
+                      </div>
+                      <div className="grid flex-1 text-left leading-tight">
+                        <span className="text-sm font-medium">Add a business</span>
+                        <span className="text-[10px] text-muted-foreground">Another venue or service</span>
+                      </div>
+                    </Link>
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           )}
         </DropdownMenu>

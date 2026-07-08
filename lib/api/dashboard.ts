@@ -97,10 +97,31 @@ export class VendorsAPI {
 }
 
 // ─── Businesses ───────────────────────────────────────────────
+
+/** WW-ADDBIZ — a business the vendor self-served from the portal sits in
+ *  `pending_review`: hidden from the public catalog and unbookable until an
+ *  admin approves it. The legacy OSM catalog is almost entirely `submitted`,
+ *  which IS publicly visible — the two are not interchangeable. */
+export type BusinessStatus =
+  | "draft" | "submitted" | "approved" | "rejected" | "suspended" | "pending_review";
+
+/** Fields the "add a business" form collects. Everything else (userId, status,
+ *  slug, completeness…) is set server-side and ignored if sent. */
+export interface NewBusinessInput {
+  name: string;
+  city: string;
+  subArea?: string;
+  description?: string;
+  minimumPrice?: number;
+  maxCapacity?: number;
+  minCapacity?: number;
+}
+
 export interface ApiBusiness {
   id: number;
   userId: number;
   name: string;
+  status?: BusinessStatus;
   brandLogo: string | null;
   city: string | null;
   subArea: string | null;
@@ -194,6 +215,22 @@ export class BusinessesAPI {
   static async getUserBusinesses(): Promise<ApiBusiness[]> {
     const res = await axiosInstance.get("/api/v1/businesses/user-business");
     return res.data?.data ?? [];
+  }
+
+  /**
+   * WW-ADDBIZ — add another business to the signed-in vendor's account.
+   *
+   * Lands in `pending_review`: invisible to customers and unbookable until an
+   * admin approves it. NOT `/api/v1/businesses` (the legacy endpoint) — that one
+   * creates `submitted` rows, which are publicly listed immediately.
+   *
+   * Throws on 409 (duplicate name), 403 (not a vendor), 400 (missing fields),
+   * 429 (rate limit). Callers surface `error.response.data.message` verbatim —
+   * the backend writes those for humans.
+   */
+  static async addMyBusiness(input: NewBusinessInput): Promise<ApiBusiness> {
+    const res = await axiosInstance.post("/api/v1/businesses/mine", input);
+    return res.data?.data?.business;
   }
 
   static async getById(id: number): Promise<ApiBusiness> {

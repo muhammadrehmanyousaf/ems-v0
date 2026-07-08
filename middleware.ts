@@ -62,6 +62,23 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
+  // WW-ADDBIZ — /business-registration is a SIGNUP flow: it posts to
+  // create-business-with-vendor, which creates a User as well as a Business and
+  // answers "User already exists" to anyone who already has an account. A
+  // signed-in vendor wanting a second venue would fill the entire multi-step form
+  // and hit that wall. Send them to the add-business flow instead, which attaches
+  // the business to the account they are already in.
+  //
+  // `?continue=1` is an explicit escape hatch so this can never become a redirect
+  // loop with the add-business screen (whose own fallback links back here).
+  if (
+    pathname === '/business-registration' &&
+    isAuthenticated &&
+    request.nextUrl.searchParams.get('continue') !== '1'
+  ) {
+    return NextResponse.redirect(new URL('/dashboard/business/new', request.url));
+  }
+
   return NextResponse.next();
 }
 
