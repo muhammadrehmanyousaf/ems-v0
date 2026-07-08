@@ -3,7 +3,18 @@
 import axiosInstance from "../axiosConfig"
 import type { VendorDocument, VendorDocumentStatus } from "./vendorDocuments"
 
-export type BusinessStatus = "draft" | "submitted" | "approved" | "rejected" | "suspended"
+/**
+ * WW-ADDBIZ — the canonical business lifecycle. `pending_review` is a business a
+ * vendor self-served from the portal: hidden from the public catalog AND
+ * unbookable until an admin approves it (see businessStatusGate.js). The legacy
+ * OSM catalog sits in `submitted`, which IS publicly visible — the two are not
+ * interchangeable.
+ *
+ * This is the ONE definition. lib/api/dashboard.ts re-exports it; do not declare
+ * a second, or a Record<BusinessStatus, …> somewhere will silently lose a case.
+ */
+export type BusinessStatus =
+  | "draft" | "pending_review" | "submitted" | "approved" | "rejected" | "suspended"
 
 export interface QueueBusiness {
   id: number

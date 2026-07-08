@@ -98,12 +98,12 @@ export class VendorsAPI {
 
 // ─── Businesses ───────────────────────────────────────────────
 
-/** WW-ADDBIZ — a business the vendor self-served from the portal sits in
- *  `pending_review`: hidden from the public catalog and unbookable until an
- *  admin approves it. The legacy OSM catalog is almost entirely `submitted`,
- *  which IS publicly visible — the two are not interchangeable. */
-export type BusinessStatus =
-  | "draft" | "submitted" | "approved" | "rejected" | "suspended" | "pending_review";
+// WW-ADDBIZ — one definition, in adminQueue.ts. A second copy here meant the
+// admin queue's exhaustive Record<BusinessStatus, StatusTone> could silently lose
+// a case (next.config has typescript.ignoreBuildErrors: true, so tsc wouldn't
+// stop the build).
+import type { BusinessStatus } from "@/lib/api/adminQueue";
+export type { BusinessStatus };
 
 /** Fields the "add a business" form collects. Everything else (userId, status,
  *  slug, completeness…) is set server-side and ignored if sent. */

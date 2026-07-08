@@ -49,6 +49,10 @@ const initials = (name?: string | null) =>
 
 const STATUS_TONE: Record<BusinessStatus, StatusTone> = {
   draft: "neutral",
+  // WW-ADDBIZ — a business a vendor self-served from the portal. Hidden from the
+  // public catalog until an admin acts, so it needs a tab of its own or it is
+  // invisible to the only people who can unblock it.
+  pending_review: "warning",
   submitted: "info",
   approved: "success",
   rejected: "error",
@@ -59,6 +63,10 @@ const statusTone = (s?: string | null): StatusTone =>
 
 /** The status tabs, in lifecycle order (mirrors the original screen's tabs). */
 const STATUS_TABS: { value: BusinessStatus; label: string }[] = [
+  // First: these are vendors waiting on a human, and nothing else surfaces them.
+  // Bulk-approve deliberately still only sweeps `submitted` (the OSM import), so
+  // a self-served listing always gets an individual look.
+  { value: "pending_review", label: "New submissions" },
   { value: "submitted", label: "Awaiting review" },
   { value: "approved", label: "Approved" },
   { value: "rejected", label: "Rejected" },
