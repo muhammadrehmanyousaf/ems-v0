@@ -4,9 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/typecheck-ratchet.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc -p tsconfig.ratchet.json --noEmit",
+    "typecheck:ratchet": "node scripts/typecheck-ratchet.mjs",
+    "typecheck:baseline": "node scripts/typecheck-ratchet.mjs --update",
     "test:e2e": "playwright test",
     "test:e2e:public": "playwright test --project=public",
     "test:e2e:ui": "playwright test --ui",
