@@ -1,18 +1,22 @@
-# SEO + perf quality gates — runs on every PR touching the frontend.
+# SEO + perf quality gates for the frontend.
 # Reference: docs/seo/00-master-seo-playbook.md §32 cadence + §33 implementation.
 #
+# CURRENT TRIGGER: workflow_dispatch ONLY. The push/pull_request triggers are
+# commented out in the `on:` block below because GitHub Actions is blocked at
+# the account-billing level (see the NOTE there). Until that is resolved this
+# workflow does NOT gate any push or PR — it only runs when dispatched manually
+# from the Actions tab. (GATE-02/08.)
+#
 # Jobs:
-#   1. Build — `next build` must pass with zero errors.
+#   1. Build — `npm run build`, which runs the TypeScript ratchet as `prebuild`
+#      first (scripts/typecheck-ratchet.mjs), so a new type error fails the job.
+#      `next build` itself still ignores type errors (ignoreBuildErrors:true).
 #   2. Lighthouse — runs against representative routes; fails if perf
 #      regressions cross the threshold (LCP / INP / CLS / SEO score).
 #   3. Schema — validates structured data on representative routes
 #      using @lhci/cli + a custom schema validation step.
 #   4. Link check — crawls the built site and fails on any internal
 #      404 in the navigation/footer/legal pages.
-#
-# Triggered by:
-#   - PRs targeting main that touch ems-v0/**
-#   - Manual workflow_dispatch for ad-hoc audits
 
 name: SEO & Performance Quality Gates
 
