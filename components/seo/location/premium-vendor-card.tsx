@@ -9,6 +9,7 @@
  */
 
 import Link from "next/link"
+import type { ReactNode } from "react"
 import type { VendorListItem } from "@/lib/seo/fetch-vendors"
 
 const STOPWORDS = new Set(["the", "and", "of", "&", "co", "company"])
@@ -31,11 +32,24 @@ export function PremiumVendorCard({
 }) {
   const hasImage = Boolean(vendor.imageUrl)
 
+  // A card with no resolvable href must NOT render `href="#"` (a dead link that
+  // jumps to top and pollutes the tab order). fetch-vendors now yields an href
+  // for every card with an id + mapped type, so this fallback is belt-only —
+  // when it has no destination, render a non-interactive card, not a broken link.
+  const cardClass =
+    "group relative flex flex-col overflow-hidden rounded-2xl border border-bridal-beige bg-bridal-cream shadow-[0_1px_2px_rgba(176,125,84,0.06)] transition-all duration-300 hover:-translate-y-1 hover:border-bridal-gold/60 hover:shadow-[0_20px_44px_-22px_rgba(176,125,84,0.5)]"
+
+  const Wrapper = ({ children }: { children: ReactNode }) =>
+    vendor.href ? (
+      <Link href={vendor.href} className={cardClass}>
+        {children}
+      </Link>
+    ) : (
+      <div className={cardClass}>{children}</div>
+    )
+
   return (
-    <Link
-      href={vendor.href ?? "#"}
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-bridal-beige bg-bridal-cream shadow-[0_1px_2px_rgba(176,125,84,0.06)] transition-all duration-300 hover:-translate-y-1 hover:border-bridal-gold/60 hover:shadow-[0_20px_44px_-22px_rgba(176,125,84,0.5)]"
-    >
+    <Wrapper>
       <div className="relative aspect-[4/3] overflow-hidden">
         {hasImage ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -122,6 +136,6 @@ export function PremiumVendorCard({
           </span>
         </div>
       </div>
-    </Link>
+    </Wrapper>
   )
 }
