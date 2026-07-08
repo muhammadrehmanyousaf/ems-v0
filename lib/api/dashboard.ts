@@ -988,6 +988,16 @@ export interface CustomerTimelineResponse {
 // ─── Bookings ────────────────────────────────────────────────
 export interface CreateBookingVendor {
   businessId: number;
+  /**
+   * WW-PRICE0b — the price a VENDOR already agreed with a walk-in customer, for a
+   * business that has no published price and nothing priced to select.
+   *
+   * The server honours it only when the caller is a vendor who OWNS this business,
+   * and only when the business is unpriced with nothing priced selected — it can
+   * never override a package price, a menu price, or a minimumPrice floor. A
+   * customer's request must never send this; it would simply be ignored.
+   */
+  agreedAmount?: number;
   packageId?: number | null;
   menuId?: number | null;
   vehicleQuantity?: number;

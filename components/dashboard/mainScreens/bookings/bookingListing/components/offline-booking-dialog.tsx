@@ -26,6 +26,9 @@ import {
     type ApiBusiness, type ApiPackage, type ApiMenu,
 } from '@/lib/api/dashboard';
 import { BusinessResourcesAPI, type BusinessResource } from '@/lib/api/businessResources';
+// WW-PRICE0b — mirrors the server's unpriced-business rule so we ask for an
+// agreed amount in exactly the case the server would otherwise refuse.
+import { isUnpricedVendor } from '@/lib/pricing/unpriced';
 import { WeddingUmbrellasAPI, type WeddingUmbrella } from '@/lib/api/weddingUmbrellas';
 import { useBusiness } from '@/context/BusinessContext';
 import { PartyPopper, CheckCircle2 } from 'lucide-react';
@@ -313,6 +316,8 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
     // Service selection
     const [selectedBusinessId, setSelectedBusinessId] = useState('');
     const [selectedPackageId, setSelectedPackageId] = useState('');
+    // WW-PRICE0b — the price the vendor already agreed with this customer.
+    const [agreedAmount, setAgreedAmount] = useState('');
     const [selectedMenuId, setSelectedMenuId] = useState('');
     const [specialRequests, setSpecialRequests] = useState('');
     const [carMode, setCarMode] = useState<'package' | 'single'>('package');
@@ -356,7 +361,7 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
         if (!selectedBusinessId) { setPackages([]); setMenus([]); return; }
         const bizId = Number(selectedBusinessId);
         setLoadingOptions(true);
-        setSelectedPackageId('');
+        setSelectedPackageId(''); setAgreedAmount('');
         setSelectedMenuId('');
         setQuantity(1);
         setCarMode('package');
@@ -399,7 +404,7 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
         setNumberOfDays(1);
         setPickupAddress(''); setDropoffAddress(''); setTravelDistanceKm('');
         setSelectedResourceId(''); setVenueResources([]);
-        setSelectedBusinessId(''); setSelectedPackageId(''); setSelectedMenuId('');
+        setSelectedBusinessId(''); setSelectedPackageId(''); setSelectedMenuId(''); setAgreedAmount('');
         setSpecialRequests('');
         setCarMode('package');
         setAdvanceCollected(false); setAdvanceMethod('cash');
@@ -414,7 +419,7 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
     const resetFunctionFields = useCallback(() => {
         setBookingDate(undefined); setBookingTime('');
         setGuestCount(''); setSelectedResourceId('');
-        setSelectedPackageId(''); setSelectedMenuId('');
+        setSelectedPackageId(''); setSelectedMenuId(''); setAgreedAmount('');
         setSpecialRequests(''); setFunctionType('');
         setAdvanceCollected(false); setAdvanceMethod('cash');
         setQuantity(1); setNumberOfDays(1);
@@ -448,6 +453,18 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
             ? packages.filter(p => isCarFleetFeatures(p.features))
             : packages.filter(p => isCarPackageFeatures(p.features))
         : packages;
+
+    // WW-PRICE0b — this business never published a price and has nothing priced
+    // to select, so the server refuses to derive an amount (`vendor_not_priced`).
+    // The vendor is recording a deal they already struck, so let them state it.
+    // Mirrors the server's window exactly: unpriced business AND nothing priced
+    // selected. Sent as `agreedAmount`; the backend honours it only for a
+    // business this vendor actually owns, and never over a real package price.
+    const businessUnpriced = useMemo(
+        () => !!selectedBusiness && isUnpricedVendor({ ...(selectedBusiness as any), packages }),
+        [selectedBusiness, packages],
+    );
+    const needsAgreedAmount = businessUnpriced && !selectedPackageId && !selectedMenuId;
 
     // Selected package / menu objects for price display
     const selectedPackageObj = useMemo(
@@ -519,6 +536,13 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
             toast.error('Please select a date and time');
             return;
         }
+        // WW-PRICE0b — the server can't derive an amount for this business, so it
+        // would reject the booking. Catch it here with a message that says what
+        // to type, rather than letting the request round-trip and fail.
+        if (needsAgreedAmount && !(Number(agreedAmount) > 0)) {
+            toast.error('Enter the agreed amount — this business has no starting price or packages yet');
+            return;
+        }
         if (!selectedBusinessId) {
             toast.error('Please select a business');
             return;
@@ -575,6 +599,9 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                     : undefined,
                 vendors: [{
                     businessId: Number(selectedBusinessId),
+                    // WW-PRICE0b — only meaningful when the business is unpriced and
+                    // nothing priced is selected; the server ignores it otherwise.
+                    agreedAmount: needsAgreedAmount && agreedAmount ? Number(agreedAmount) : undefined,
                     packageId: selectedPackageId ? Number(selectedPackageId) : null,
                     menuId: selectedMenuId ? Number(selectedMenuId) : null,
                     vehicleQuantity: showQuantity ? quantity : undefined,
@@ -907,6 +934,33 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                                     >
                                         Single Car
                                     </button>
+                                </div>
+                            )}
+
+                            {/* WW-PRICE0b — this business has no published price and nothing
+                                priced to select, so the server can't derive an amount. The
+                                vendor already agreed a number with this customer: ask for it.
+                                Sending it is what lets the booking through at all. */}
+                            {needsAgreedAmount && (
+                                <div className="space-y-1.5 rounded-md border border-amber-300/70 bg-amber-50 p-3">
+                                    <Label htmlFor="agreedAmount" className="text-amber-900">
+                                        Agreed amount (Rs) *
+                                    </Label>
+                                    <Input
+                                        id="agreedAmount"
+                                        type="number"
+                                        min={1}
+                                        inputMode="numeric"
+                                        value={agreedAmount}
+                                        onChange={(e) => setAgreedAmount(e.target.value)}
+                                        placeholder="e.g. 350000"
+                                        className="bg-white tabular-nums"
+                                    />
+                                    <p className="text-[11px] text-amber-900/80">
+                                        This business has no starting price or packages yet, so enter the price you
+                                        agreed with the customer. Add a starting price in Business Settings to skip
+                                        this next time.
+                                    </p>
                                 </div>
                             )}
 

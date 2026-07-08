@@ -415,9 +415,11 @@ export default function VendorCard({
                       Starting from
                     </p>
                     <p className="font-display italic text-[22px] sm:text-[24px] text-bridal-gold-dark mt-0.5 leading-none">
+                      {/* WW-PRICE0 — consistent with the detail page and the
+                          booking funnel: no published price ⇒ price on request. */}
                       {formatPrice(price) ?? (
                         <span className="text-[15px] text-bridal-text-soft">
-                          Contact us
+                          Price on request
                         </span>
                       )}
                     </p>
@@ -472,7 +474,9 @@ export default function VendorCard({
                       "
                     >
                       <Calendar className="w-3.5 h-3.5" />
-                      Book Now
+                      {/* WW-PRICE0 — an unpriced vendor can't be booked; the booking
+                          funnel shows the price-on-request panel with the inquiry. */}
+                      {(price || price === 0) ? "Book Now" : "Ask for a price"}
                     </button>
                   )}
                 </CardFooter>

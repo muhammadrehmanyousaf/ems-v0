@@ -281,11 +281,17 @@ export async function VendorDetailPage(input: PageInput) {
               </p>
             )}
 
-            {vendor.priceMin && (
-              <p className="mt-2 font-bridal text-[14px] text-bridal-charcoal">
+            {/* WW-PRICE0 — say "Price on request" rather than nothing. This page
+                serves the canonical vendor URL, so it is what a customer arriving
+                from Google sees. `priceRange` is (correctly) omitted from the
+                JSON-LD in the same case, so we never claim a price we don't have. */}
+            <p className="mt-2 font-bridal text-[14px] text-bridal-charcoal">
+              {vendor.priceMin ? (
                 <strong>From PKR {vendor.priceMin.toLocaleString("en-PK")}</strong>
-              </p>
-            )}
+              ) : (
+                <span className="text-bridal-text">Price on request</span>
+              )}
+            </p>
 
             {vendor.description && (
               <p className="mt-4 font-bridal text-[14.5px] text-bridal-text leading-relaxed line-clamp-5">
@@ -294,11 +300,15 @@ export async function VendorDetailPage(input: PageInput) {
             )}
 
             <div className="mt-6 flex flex-wrap gap-3">
+              {/* WW-PRICE0 — an unpriced vendor cannot be booked (the server
+                  refuses it), so don't promise availability. The link still goes
+                  to the booking funnel, which renders the price-on-request panel
+                  with the inquiry — one funnel, one guard, no dead end. */}
               <Link
                 href={`/${vendor.id}/booking`}
                 className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-bridal-gold text-white font-bridal text-[13px] font-medium hover:bg-bridal-gold-dark transition-colors"
               >
-                Check availability
+                {vendor.priceMin ? "Check availability" : "Ask for a price"}
               </Link>
               <Link
                 href={`/contact?vendor=${encodeURIComponent(vendor.name)}`}

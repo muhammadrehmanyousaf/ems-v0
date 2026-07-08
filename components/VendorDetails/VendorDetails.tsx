@@ -59,6 +59,9 @@ import { useUser } from "@/context/UserContext";
 import { useFavorites } from "@/hooks/use-favorites";
 import { ChatDrawer } from "@/components/chat/chat-drawer";
 import { toast as sonnerToast } from "sonner";
+// WW-PRICE0 — an unpriced vendor cannot be booked; the booking funnel shows a
+// price-on-request panel with the inquiry, so the CTA must say so up front.
+import { priceLabelFor, ctaLabelFor } from "@/lib/pricing/unpriced";
 
 interface VendorDetailsProps {
   vendor: Vendor;
@@ -720,7 +723,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                 className="inline-flex items-center gap-2 h-12 px-7 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium shadow-[0_14px_30px_-12px_rgba(176,125,84,0.65)] hover:shadow-[0_18px_36px_-12px_rgba(176,125,84,0.8)] transition-all duration-300"
               >
                 <CalendarCheck className="w-4 h-4" />
-                Book this vendor
+                {ctaLabelFor(vendor as any, "Book this vendor")}
               </button>
               <button
                 type="button"
@@ -854,7 +857,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                       iconBg="bg-bridal-blush"
                       iconColor="text-bridal-mauve"
                       label="Price"
-                      value={startingPrice ? formatPrice(startingPrice) : "On request"}
+                      value={priceLabelFor(vendor as any, startingPrice, formatPrice)}
                     />
                     {vendor.downPayment ? (
                       <StatTile
@@ -903,7 +906,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                       className="inline-flex items-center justify-center gap-2 h-12 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] hover:shadow-[0_14px_30px_-12px_rgba(176,125,84,0.7)] transition-all duration-300"
                     >
                       <CalendarCheck className="w-4 h-4" />
-                      Book now
+                      {ctaLabelFor(vendor as any, "Book now")}
                     </button>
                   </div>
                 </div>
