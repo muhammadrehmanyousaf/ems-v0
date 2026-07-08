@@ -62,6 +62,7 @@ import { useUser } from "@/context/UserContext";
 import { useFavorites } from "@/hooks/use-favorites";
 import { ChatDrawer } from "@/components/chat/chat-drawer";
 import VendorInquiryDialog from "@/components/VendorInquiryDialog";
+import { isUnpricedVendor } from "@/lib/pricing/unpriced";
 import { toast as sonnerToast } from "sonner";
 import { VendorAPI } from "@/lib/api/vendors";
 // BK-100.52 Layer 2 — customer-facing bundled-services display.
@@ -745,6 +746,19 @@ export default function VendorDetailsMobile({
       : null;
   const startingPrice = vendor.minimumPrice || lowestPackagePrice || vendor.price || null;
 
+  // WW-PRICE0 — this vendor never declared a price and has nothing priced to
+  // select. The server now refuses such bookings (400 `vendor_not_priced`), so
+  // showing "Book now" would dead-end the customer. Route them to the inquiry
+  // dialog instead: the vendor answers with a real price and it lands in their
+  // Leads inbox. Covers ~3,268 of the scraped OSM listings. An explicit Rs 0
+  // ("0.00") is a real, typed price and stays bookable — see lib/pricing/unpriced.
+  const unpriced = isUnpricedVendor(vendor as any);
+  const priceLabel = startingPrice
+    ? formatPrice(startingPrice)
+    : unpriced
+      ? "Price on request"
+      : "See Packages";
+
   // Calendar functions
   const getDaysInMonth = (date: Date) =>
     new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
@@ -1063,16 +1077,18 @@ export default function VendorDetailsMobile({
                     Starting from
                   </span>
                   <p className="font-display italic text-[28px] sm:text-[32px] text-bridal-ivory leading-none mt-1">
-                    {startingPrice ? formatPrice(startingPrice) : "See Packages"}
+                    {priceLabel}
                   </p>
                 </div>
+                {/* WW-PRICE0 — an unpriced vendor cannot be booked (the server
+                    rejects it 400), so ask rather than dead-end the customer. */}
                 <button
                   type="button"
-                  onClick={handleBookNow}
+                  onClick={unpriced ? handleContactVendor : handleBookNow}
                   className="inline-flex items-center gap-2 h-12 px-7 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[12px] uppercase tracking-[0.22em] font-medium shadow-[0_14px_30px_-12px_rgba(176,125,84,0.65)] hover:shadow-[0_18px_36px_-12px_rgba(176,125,84,0.8)] transition-all duration-300"
                 >
-                  <CalendarCheck className="w-4 h-4" />
-                  Book this vendor
+                  {unpriced ? <MessageCircle className="w-4 h-4" /> : <CalendarCheck className="w-4 h-4" />}
+                  {unpriced ? "Ask for a price" : "Book this vendor"}
                 </button>
               </div>
             </motion.div>
@@ -1147,7 +1163,7 @@ export default function VendorDetailsMobile({
                       iconBg="bg-bridal-blush"
                       iconColor="text-bridal-mauve"
                       label="Starting"
-                      value={startingPrice ? formatPrice(startingPrice) : "See Packages"}
+                      value={priceLabel}
                     />
                     {["Wedding venue", "Catering", "Decorator"].includes(vendor.type ?? "") && (vendor.minCapacity || vendor.maxCapacity || vendor.capacity) && (
                       <BridalStatTile
@@ -2441,7 +2457,7 @@ export default function VendorDetailsMobile({
                       Starting from
                     </span>
                     <p className="font-display italic text-[34px] text-bridal-gold-dark leading-none mt-2">
-                      {startingPrice ? formatPrice(startingPrice) : "See Packages"}
+                      {priceLabel}
                     </p>
                   </div>
                   <button
@@ -2535,12 +2551,13 @@ export default function VendorDetailsMobile({
           >
             <MessageCircle className="w-5 h-5 text-bridal-gold" />
           </button>
+          {/* WW-PRICE0 — see the hero CTA. Unpriced ⇒ ask, don't book. */}
           <button
             type="button"
-            onClick={handleBookNow}
+            onClick={unpriced ? handleContactVendor : handleBookNow}
             className="inline-flex items-center justify-center h-11 px-6 rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal text-[11px] uppercase tracking-[0.22em] font-medium shadow-[0_8px_22px_-12px_rgba(176,125,84,0.55)] transition-all duration-300"
           >
-            Book now
+            {unpriced ? "Ask for a price" : "Book now"}
           </button>
         </div>
       </div>
