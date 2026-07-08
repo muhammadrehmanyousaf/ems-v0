@@ -52,7 +52,10 @@ export function KitchenPrepView() {
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't build the prep sheet"),
   })
 
-  const totalGuests = rows.reduce((s, r) => s + (Number(r.guests) || 0), 0)
+  // Total heads shown on the printed sheet is derived from the GENERATED sheet's
+  // matched dishes — not the live builder rows — so it stays consistent with the
+  // deghs on the page even if the user edits a row after generating.
+  const sheetGuests = sheet ? sheet.dishes.reduce((s, d) => s + (Number(d.guests) || 0), 0) : 0
 
   if (bomsQ.isError) {
     return (
@@ -98,9 +101,20 @@ export function KitchenPrepView() {
         </div>
       </div>
 
+      {/* Print isolation: hide the dashboard chrome + [data-print-hide] controls so
+          only the KOT sheet prints, black-on-white. Mirrors run-sheet-dialog. */}
+      <style>{`
+        @media print {
+          body * { visibility: hidden !important; }
+          [data-print-hide] { display: none !important; }
+          .kot-print, .kot-print * { visibility: visible !important; }
+          .kot-print { position: absolute !important; left: 0; top: 0; width: 100%; border: 0 !important; padding: 0 !important; }
+        }
+      `}</style>
+
       {/* Printable sheet */}
       {sheet && (
-        <div className="rounded-xl border bg-white p-6 text-[13px] text-neutral-900 print:border-0 print:p-0">
+        <div className="kot-print rounded-xl border bg-white p-6 text-[13px] text-neutral-900 print:border-0 print:p-0">
           <header className="mb-4 border-b border-neutral-300 pb-3">
             <div className="flex items-baseline justify-between gap-3">
               <h1 className="text-xl font-bold tracking-tight">Kitchen Prep Sheet</h1>
@@ -108,7 +122,7 @@ export function KitchenPrepView() {
             </div>
             <div className="mt-1 text-[13px]">
               {eventLabel && <span className="font-medium">{eventLabel} · </span>}
-              <span className="text-neutral-500">Total heads across dishes:</span> <span className="font-medium tabular-nums">{totalGuests}</span>
+              <span className="text-neutral-500">Total heads across dishes:</span> <span className="font-medium tabular-nums">{sheetGuests}</span>
             </div>
           </header>
 
@@ -122,8 +136,8 @@ export function KitchenPrepView() {
             <h2 className="mb-1 border-b border-neutral-200 pb-1 text-[11px] font-bold uppercase tracking-widest text-neutral-600">Cook (deghs per dish)</h2>
             <table className="w-full border-collapse">
               <tbody>
-                {sheet.dishes.map((d) => (
-                  <tr key={d.dishName} className="border-b border-neutral-100">
+                {sheet.dishes.map((d, i) => (
+                  <tr key={`${d.dishName}-${i}`} className="border-b border-neutral-100">
                     <td className="py-1 pr-2 font-medium">{d.dishName}{d.dishNameUr ? <span className="ml-1 text-neutral-400">· {d.dishNameUr}</span> : null}</td>
                     <td className="w-[70px] py-1 pr-2 text-right text-neutral-500 tabular-nums">{d.guests} heads</td>
                     <td className="w-[110px] py-1 text-right font-semibold tabular-nums">{d.deghs} × {d.batchLabel}</td>
@@ -139,7 +153,7 @@ export function KitchenPrepView() {
             <table className="w-full border-collapse">
               <tbody>
                 {sheet.ingredients.map((ing) => (
-                  <tr key={ing.itemId} className="border-b border-neutral-100">
+                  <tr key={`${ing.itemId}-${ing.unit}`} className="border-b border-neutral-100">
                     <td className="py-1 pr-2">{ing.name}{ing.nameUr ? <span className="ml-1 text-neutral-400">· {ing.nameUr}</span> : null}</td>
                     <td className="w-[90px] py-1 pr-2 text-neutral-400">{ing.category || ""}</td>
                     <td className="w-[110px] py-1 text-right font-semibold tabular-nums">{ing.totalQty} {ing.unit}</td>
