@@ -16,6 +16,7 @@ import { slugifyName } from "./fetch-vendor"
 import {
   VENDOR_TYPE_BACKEND_MAP,
   BACKEND_TYPE_ALIASES,
+  getCity,
   type VendorTypeSlug,
 } from "./constants"
 
@@ -128,13 +129,21 @@ function normalize(raw: any): VendorListItem {
   const city = raw?.city ?? raw?.location ?? vendor?.city ?? ""
   const name = raw?.name ?? raw?.businessName ?? "Unnamed business"
 
-  // Build the L6-canonical leaf URL when we can resolve city + type.
-  // Reference: docs/seo/03-url-conventions-LOCKED.md §L6.
+  // Build the L6-canonical leaf URL. Reference: docs/seo/03-url-conventions-LOCKED.md §L6.
+  // City is NOT required: a null/unmapped city routes under the "pakistan"
+  // national catch-all, which the detail route resolves by the trailing id (the
+  // same fallback the sitemap uses). Only id + a mapped type are load-bearing —
+  // without them the card would otherwise render a dead `href="#"`.
   let href: string | undefined
-  if (id && city && vendorType) {
+  if (id && vendorType) {
     const seoTypeSlug = BACKEND_TO_SEO[vendorType]
     if (seoTypeSlug) {
-      const citySlug = slugifyName(city)
+      // Mirror the sitemap exactly: an empty OR unlisted city routes under the
+      // "pakistan" national catch-all, which the detail route resolves via
+      // getCity(). Anything else would 404 (the page does notFound() on an
+      // unresolvable city), which is worse than the old dead "#".
+      const raw = slugifyName(city)
+      const citySlug = raw && getCity(raw) ? raw : "pakistan"
       const nameSlug = slugifyName(name)
       href = `/${seoTypeSlug}/${citySlug}/${nameSlug}-${id}`
     }
