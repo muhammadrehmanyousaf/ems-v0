@@ -32,6 +32,26 @@ export function toWaNumber(phone?: string | null): string | null {
   return d.length >= 11 ? d : null                              // 92 + 10 digits
 }
 
+/* ── Money / quantity sanity caps ─────────────────────────────────────────── */
+
+/**
+ * A single OCR'd receipt amount or a single BEO unit price above this (in PKR)
+ * is a model hallucination, not a real number. It ALSO matters for storage:
+ * the expense `amount` and function-sheet `subtotal/grandTotal` columns are
+ * `DECIMAL(12,2)` (max ≈ 9,999,999,999.99). A model that returns `1e15` would
+ * pass a bare `isFinite && > 0` check, land in the form, and then either throw
+ * a Postgres "numeric field overflow" 500 on save or silently poison the
+ * "Today money" / P&L totals. Cap at 1 billion PKR (= 100 crore) — absurdly
+ * generous for one receipt or one line, and a safe 10× below the column max.
+ */
+export const MONEY_MAX = 1_000_000_000
+/** A single BEO row quantity above this is noise (a 500,000-unit line is a typo,
+ *  and huge qty × price is another route to a DECIMAL overflow). */
+export const QTY_MAX = 100_000
+/** No wedding-vendor expense receipt predates this; an earlier date is OCR
+ *  garbage (e.g. a mis-read "2026" as "0206"), not a real spend date. */
+const DATE_FLOOR_MS = Date.UTC(2000, 0, 1)
+
 /* ── Receipt OCR ──────────────────────────────────────────────────────────── */
 
 /** Vision-capable types. A PK vendor's iPhone shoots HEIC by default, which is
@@ -73,8 +93,10 @@ export function coerceReceipt(
 ): ReceiptPatch {
   const out: ReceiptPatch = {}
 
+  // Money path: a stored expense total must never be poisoned by an unbounded
+  // model number. Require finite, strictly positive, and within a sane cap.
   const amt = Number(data?.amount)
-  if (Number.isFinite(amt) && amt > 0) out.amount = String(amt)
+  if (Number.isFinite(amt) && amt > 0 && amt <= MONEY_MAX) out.amount = String(amt)
 
   const cat = String(data?.category ?? "")
   if (allowedCategories.includes(cat)) out.category = cat
@@ -85,9 +107,11 @@ export function coerceReceipt(
   const d = String(data?.date ?? "")
   if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
     const parsed = new Date(`${d}T00:00:00Z`)
-    // Reject impossible dates ("2026-02-31" rolls over to Mar 3) and future receipts.
+    // Reject impossible dates ("2026-02-31" rolls over to Mar 3), future receipts
+    // (allow +1 day for TZ skew), and absurdly old dates from a mis-read year.
     const roundTrips = !isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === d
-    if (roundTrips && parsed.getTime() <= now + 864e5) out.spentDate = d
+    const t = parsed.getTime()
+    if (roundTrips && t <= now + 864e5 && t >= DATE_FLOOR_MS) out.spentDate = d
   }
   return out
 }
@@ -112,8 +136,11 @@ export function coerceBeoItems(raw: unknown): BeoRow[] {
     if (!label) continue // a row with no description is noise
     const qty = Number(r?.qty)
     const unitPrice = Number(r?.unitPrice)
-    if (!Number.isFinite(qty) || qty <= 0) continue
-    if (!Number.isFinite(unitPrice) || unitPrice < 0) continue
+    if (!Number.isFinite(qty) || qty <= 0 || qty > QTY_MAX) continue
+    if (!Number.isFinite(unitPrice) || unitPrice < 0 || unitPrice > MONEY_MAX) continue
+    // Even in-range qty × price can overflow the sheet's DECIMAL(12,2) total.
+    // Drop any single line whose value is beyond sane — never import a bomb.
+    if (qty * unitPrice > MONEY_MAX) continue
     out.push({
       label: label.slice(0, 200),
       qty,
