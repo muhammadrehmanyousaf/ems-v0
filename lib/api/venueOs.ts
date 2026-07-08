@@ -1140,6 +1140,10 @@ export interface RecipeBom {
   standardYieldPlates: number;
   ingredients: { itemId: number; stdQtyPerBatch: number; unit?: string }[];
 }
+// Phase-4 — Kitchen Prep Sheet (KOT)
+export interface KitchenPrepDish { dishName: string; dishNameUr: string | null; guests: number; deghs: number; batchLabel: string; standardYieldPlates: number }
+export interface KitchenPrepIngredient { itemId: number; name: string; nameUr: string | null; category: string | null; unit: string; totalQty: number }
+export interface KitchenPrepSheet { dishes: KitchenPrepDish[]; ingredients: KitchenPrepIngredient[]; unmatchedDishes: string[] }
 export interface ProductionRun {
   id: number;
   businessId: number;
@@ -1747,6 +1751,9 @@ export const venueOsApi = {
     unwrap<RecipeBom>(api.post(`${BASE}/recipe-boms`, body)),
   listRecipeBoms: (businessId: number): Promise<RecipeBom[]> =>
     unwrap<RecipeBom[]>(api.get(`${BASE}/business/${businessId}/recipe-boms`)),
+  // Phase-4 — explode an event's dishes into deghs + a consolidated shopping list.
+  kitchenPrep: (businessId: number, dishes: { dishName: string; guests: number }[]): Promise<KitchenPrepSheet> =>
+    unwrap<KitchenPrepSheet>(api.post(`${BASE}/business/${businessId}/kitchen-prep`, { dishes })),
   standardCost: (businessId: number, bomId: number, body?: { onDate?: string }): Promise<{ batchCost: number; costPerPlate: number; missingRates: number[] }> =>
     unwrap(api.post(`${BASE}/business/${businessId}/recipe-boms/${bomId}/standard-cost`, body || {})),
   recordProductionRun: (body: { businessId: number; recipeBomId: number; batchCount: number; actualPlates: number; actualIngredients?: { itemId: number; actualQty: number }[]; runDate?: string }): Promise<ProductionRun> =>
