@@ -66,3 +66,32 @@ export function isUnpricedVendor(vendor: PricedLike): boolean {
   if (legacy !== null && legacy > 0) return false;
   return !hasPricedPackage(vendor);
 }
+
+/** A vendor who explicitly typed 0 — genuinely free, not merely unpriced. */
+export function isFreeVendor(vendor: PricedLike): boolean {
+  return toAmount(vendor.minimumPrice) === 0 && !hasPricedPackage(vendor);
+}
+
+/**
+ * The single source of truth for what a vendor's price reads as, so the four
+ * surfaces that show it (detail page, SEO page, cards, booking funnel) cannot
+ * drift apart and tell a customer three different things.
+ *
+ * @param startingPrice the already-derived lowest number, or null
+ * @param formatPrice   the caller's own currency formatter
+ */
+export function priceLabelFor(
+  vendor: PricedLike,
+  startingPrice: number | null | undefined,
+  formatPrice: (n: number) => string,
+): string {
+  if (startingPrice) return formatPrice(startingPrice);
+  if (isFreeVendor(vendor)) return "Free";
+  if (isUnpricedVendor(vendor)) return "Price on request";
+  return "See Packages"; // has packages, but none priced above zero
+}
+
+/** What the primary call-to-action should say. Booking is impossible when unpriced. */
+export function ctaLabelFor(vendor: PricedLike, bookLabel: string): string {
+  return isUnpricedVendor(vendor) ? "Ask for a price" : bookLabel;
+}

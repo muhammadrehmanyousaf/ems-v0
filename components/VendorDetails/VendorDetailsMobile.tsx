@@ -62,7 +62,7 @@ import { useUser } from "@/context/UserContext";
 import { useFavorites } from "@/hooks/use-favorites";
 import { ChatDrawer } from "@/components/chat/chat-drawer";
 import VendorInquiryDialog from "@/components/VendorInquiryDialog";
-import { isUnpricedVendor } from "@/lib/pricing/unpriced";
+import { isUnpricedVendor, priceLabelFor } from "@/lib/pricing/unpriced";
 import { toast as sonnerToast } from "sonner";
 import { VendorAPI } from "@/lib/api/vendors";
 // BK-100.52 Layer 2 — customer-facing bundled-services display.
@@ -753,11 +753,9 @@ export default function VendorDetailsMobile({
   // Leads inbox. Covers ~3,268 of the scraped OSM listings. An explicit Rs 0
   // ("0.00") is a real, typed price and stays bookable — see lib/pricing/unpriced.
   const unpriced = isUnpricedVendor(vendor as any);
-  const priceLabel = startingPrice
-    ? formatPrice(startingPrice)
-    : unpriced
-      ? "Price on request"
-      : "See Packages";
+  // Shared with the SEO page, the cards and the booking funnel so the four
+  // surfaces can never tell a customer three different things.
+  const priceLabel = priceLabelFor(vendor as any, startingPrice, formatPrice);
 
   // Calendar functions
   const getDaysInMonth = (date: Date) =>
