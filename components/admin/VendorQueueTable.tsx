@@ -27,6 +27,10 @@ interface PendingAction {
 }
 
 const STATUS_TABS: { value: BusinessStatus; label: string }[] = [
+  // WW-ADDBIZ — vendor-self-served businesses land in `pending_review`; without
+  // this tab an admin using the legacy queue (redesign kill-switch) would never
+  // see them and could not approve them. First, so new submissions are obvious.
+  { value: "pending_review", label: "New submissions" },
   { value: "submitted", label: "Awaiting review" },
   { value: "approved", label: "Approved" },
   { value: "rejected", label: "Rejected" },
@@ -35,7 +39,7 @@ const STATUS_TABS: { value: BusinessStatus; label: string }[] = [
 ]
 
 export function VendorQueueTable() {
-  const [statusTab, setStatusTab] = useState<BusinessStatus>("submitted")
+  const [statusTab, setStatusTab] = useState<BusinessStatus>("pending_review")
   const [businesses, setBusinesses] = useState<QueueBusiness[]>([])
   const [count, setCount] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -138,13 +142,13 @@ export function VendorQueueTable() {
                       </td>
                       <td className="py-2 pl-3 text-right">
                         <div className="inline-flex flex-wrap gap-1.5 justify-end">
-                          {(statusTab === "submitted" || statusTab === "draft") && (
+                          {(statusTab === "submitted" || statusTab === "draft" || statusTab === "pending_review") && (
                             <Button size="sm" variant="default"
                               onClick={() => { setPendingAction({ kind: "approve", business: b }); setNotes("") }}>
                               <CheckCircle2 className="w-3.5 h-3.5 mr-1" />Approve
                             </Button>
                           )}
-                          {statusTab === "submitted" && (
+                          {(statusTab === "submitted" || statusTab === "pending_review") && (
                             <>
                               <Button size="sm" variant="outline"
                                 onClick={() => { setPendingAction({ kind: "request_changes", business: b }); setNotes("") }}>
