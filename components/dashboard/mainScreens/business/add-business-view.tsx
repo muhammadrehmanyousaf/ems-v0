@@ -60,6 +60,8 @@ export function toPayload(f: Form): NewBusinessInput {
   const out: NewBusinessInput = { name: f.name.trim(), city: f.city.trim() }
   if (f.subArea.trim()) out.subArea = f.subArea.trim()
   if (f.description.trim()) out.description = f.description.trim()
+  // WW-PRICE0 — required, and an explicit 0 must survive (`num` keeps it; a plain
+  // truthiness check would drop it and make a free vendor look unpriced).
   const min = num(f.minimumPrice); if (min !== undefined) out.minimumPrice = min
   const lo = num(f.minCapacity); if (lo !== undefined) out.minCapacity = lo
   const hi = num(f.maxCapacity); if (hi !== undefined) out.maxCapacity = hi
@@ -79,7 +81,14 @@ export function AddBusinessView() {
     form.minCapacity.trim() !== "" && form.maxCapacity.trim() !== "" &&
     Number(form.minCapacity) > Number(form.maxCapacity)
 
-  const canSave = form.name.trim().length > 1 && form.city.trim().length > 1 && !capacityInverted
+  // WW-PRICE0 — a listing with no starting price is "unpriced": the server refuses
+  // to price a booking against it, so approving it would just create another dead
+  // vendor. An explicit 0 is fine — that is a real, typed "this is free".
+  const priceValue = form.minimumPrice.trim() === "" ? NaN : Number(form.minimumPrice)
+  const priceOk = Number.isFinite(priceValue) && priceValue >= 0
+
+  const canSave =
+    form.name.trim().length > 1 && form.city.trim().length > 1 && priceOk && !capacityInverted
 
   const save = useMutation({
     mutationFn: () => BusinessesAPI.addMyBusiness(toPayload(form)),
@@ -130,7 +139,7 @@ export function AddBusinessView() {
           <p className="font-medium">Every new business is reviewed before it goes live.</p>
           <p className="mt-0.5 opacity-90">
             It won&apos;t appear in search or take bookings until our team approves it. You can
-            add photos, packages and pricing in Business Settings while you wait.
+            add photos, packages and amenities in Business Settings while you wait.
           </p>
         </div>
       </div>
@@ -156,7 +165,10 @@ export function AddBusinessView() {
           </Field>
         </div>
 
-        <Field label="Starting price, Rs (optional)">
+        <Field
+          label="Starting price (Rs)"
+          hint="Customers can't book a business with no price. Enter 0 if this service is free."
+        >
           <input
             className={cn(inputCls, "tabular-nums")}
             type="number"
