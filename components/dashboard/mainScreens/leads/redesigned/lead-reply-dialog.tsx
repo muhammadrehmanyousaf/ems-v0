@@ -27,23 +27,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
-
-/**
- * Pakistani mobile → wa.me digits. wa.me wants a bare international number:
- *   "0300-1122334" → 923001122334 ; "+92 300 1122334" → 923001122334
- * Returns null when there's nothing dialable, so we hide the WhatsApp action
- * rather than open a broken chat.
- */
-export function toWaNumber(phone?: string | null): string | null {
-  if (!phone) return null
-  let d = phone.replace(/\D/g, "")
-  if (!d) return null
-  if (d.startsWith("00")) d = d.slice(2)
-  if (d.startsWith("0")) d = `92${d.slice(1)}`        // local 03xx… → 923xx…
-  else if (!d.startsWith("92") && d.length <= 10) d = `92${d}` // bare 3xx…
-  // A PK mobile is 92 + 10 digits. Anything shorter isn't dialable.
-  return d.length >= 11 ? d : null
-}
+import { toWaNumber } from "@/lib/ai/coerce"
 
 interface Props {
   lead: Lead | null

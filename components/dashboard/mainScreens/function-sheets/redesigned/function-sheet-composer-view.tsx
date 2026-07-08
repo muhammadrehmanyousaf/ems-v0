@@ -25,6 +25,11 @@ import { Input } from "@/components/ui/input"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+// Phase 5 — BEO line-item suggestions. Self-hides unless the deployment has
+// ANTHROPIC_API_KEY; suggestions APPEND and nothing persists until Save.
+import { AiAPI } from "@/lib/api/ai"
+import { useAiFeature } from "@/hooks/use-ai-status"
+import { coerceBeoItems } from "@/lib/ai/coerce"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const STATE_ORDER: FunctionSheetState[] = ["draft", "quote_sent", "contract_pending", "signed", "beo_ready", "invoiced", "paid"]
@@ -36,6 +41,7 @@ const STATE_TONE: Record<FunctionSheetState, StatusTone> = {
 interface Item { label: string; qty: number | string; unitPrice: number | string; notes?: string | null; _rid: string }
 let _ridSeq = 0
 const newRid = () => `r${++_ridSeq}`
+
 
 const labelCls = "text-xs font-medium text-muted-foreground"
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
@@ -86,6 +92,28 @@ export function FunctionSheetComposerView() {
   const setItem = (idx: number, patch: Partial<Item>) => { setItems((it) => it.map((x, i) => (i === idx ? { ...x, ...patch } : x))); setDirty(true) }
   const addItem = () => { setItems((it) => [...it, { label: "", qty: 1, unitPrice: 0, notes: "", _rid: newRid() }]); setDirty(true) }
   const removeItem = (idx: number) => { setItems((it) => it.filter((_, i) => i !== idx)); setDirty(true) }
+
+  // Phase 5 — suggest BEO line items from the booking + this vendor's past sheets.
+  // Appends (never replaces) so a half-built sheet is never destroyed, and leaves
+  // the form dirty: the vendor still has to price-check and press Save.
+  const aiBeo = useAiFeature("beoLineItems")
+  const suggestMut = useMutation({
+    mutationFn: () => AiAPI.draftBeoLineItems(sheet!.id),
+    onSuccess: (r) => {
+      if (!r) { toast.error("AI isn't configured on this deployment yet."); return }
+      const rows = coerceBeoItems(r.lineItems)
+      if (rows.length === 0) {
+        toast.error(r.lineItems == null
+          ? "The suggestion came back unreadable. Add items by hand."
+          : "No usable items came back. Add them by hand.")
+        return
+      }
+      setItems((it) => [...it, ...rows.map((r2) => ({ ...r2, _rid: newRid() }))])
+      setDirty(true)
+      toast.success(`Added ${rows.length} suggested item${rows.length === 1 ? "" : "s"} — set your own prices before saving`)
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message || "Couldn't suggest line items"),
+  })
 
   const subtotal = items.reduce((s, i) => s + num(i.qty) * num(i.unitPrice), 0)
   const grandTotal = subtotal - num(form.discountAmount) + num(form.taxAmount)
@@ -159,7 +187,16 @@ export function FunctionSheetComposerView() {
           <div className="rounded-xl border border-border bg-card shadow-sm">
             <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
               <h2 className="text-sm font-semibold">Line items</h2>
-              <Button size="sm" variant="outline" onClick={addItem}><Icon name="Plus" size={14} className="mr-1" /> Add item</Button>
+              <div className="flex items-center gap-2">
+                {aiBeo && sheet && (
+                  <Button size="sm" variant="outline" disabled={suggestMut.isPending} onClick={() => suggestMut.mutate()}>
+                    {suggestMut.isPending
+                      ? <><Spinner size={14} className="mr-1" /> Suggesting…</>
+                      : <><Icon name="Sparkles" size={14} className="mr-1 text-bridal-gold" /> Suggest items</>}
+                  </Button>
+                )}
+                <Button size="sm" variant="outline" onClick={addItem}><Icon name="Plus" size={14} className="mr-1" /> Add item</Button>
+              </div>
             </div>
             <div className="space-y-2 p-3">
               {items.length === 0 && <p className="px-1 py-3 text-sm text-muted-foreground">No items yet — add the first.</p>}
