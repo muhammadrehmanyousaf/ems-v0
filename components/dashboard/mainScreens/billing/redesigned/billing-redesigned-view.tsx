@@ -127,7 +127,7 @@ export function BillingRedesignedView() {
                 </ul>
               )}
 
-              <div className="mt-5 pt-1">
+              <div className="mt-auto pt-5">
                 {isCurrent ? (
                   <Button variant="outline" className="w-full" disabled>Current plan</Button>
                 ) : isDowngrade ? (
