@@ -13,14 +13,10 @@ import { FloatingPetals } from "@/components/bridal/floating-petals"
 // Curated Pakistani-wedding photography per route. Each auth screen gets
 // its own cinematic frame so the suite never feels recycled.
 const ASIDE_PHOTOS = {
-  login:
-    "https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=1600",
-  register:
-    "https://images.pexels.com/photos/2253870/pexels-photo-2253870.jpeg?auto=compress&cs=tinysrgb&w=1600",
-  forgot:
-    "https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg?auto=compress&cs=tinysrgb&w=1600",
-  reset:
-    "https://images.pexels.com/photos/1456613/pexels-photo-1456613.jpeg?auto=compress&cs=tinysrgb&w=1600",
+  login: "/images/seo/hero.jpg",
+  register: "/images/home/lookbook/l3.jpg",
+  forgot: "/images/home/venues/v1.jpg",
+  reset: "/images/home/lookbook/l4.jpg",
 } as const
 
 export type AuthShellVariant = keyof typeof ASIDE_PHOTOS

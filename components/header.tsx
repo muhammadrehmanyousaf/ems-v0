@@ -394,7 +394,7 @@ export function Header() {
                       <div className="col-span-4 relative overflow-hidden">
                         <Link href="/vendors" className="block group/featured h-full">
                           <Image
-                            src="https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=800"
+                            src="/images/home/spotlight/spotlight.jpg"
                             alt=""
                             fill
                             sizes="(min-width: 1024px) 367px, 100vw"

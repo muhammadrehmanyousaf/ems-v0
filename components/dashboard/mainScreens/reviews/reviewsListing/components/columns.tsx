@@ -80,7 +80,7 @@ export const columns = (
         id: 'createdAt',
         header: "Date",
         cell: ({ row }) => (
-            <span>{formatDateTime(row.original.createdAt)}</span>
+            <span className="whitespace-nowrap">{formatDateTime(row.original.createdAt)}</span>
         )
     },
     {
