@@ -56,7 +56,14 @@ export const columns = (
         )
     },
     { accessorKey: "phone", header: "Phone Number" },
-    { accessorKey: "bookingId", header: "Booking Id" },
+    {
+        accessorKey: "bookingId",
+        header: "Booking Id",
+        cell: ({ row }) => {
+            const id = row.original.bookingId
+            return <span className="whitespace-nowrap">{id ? `#${id}` : "—"}</span>
+        },
+    },
     {
         id: "businessName",
         header: "Business",

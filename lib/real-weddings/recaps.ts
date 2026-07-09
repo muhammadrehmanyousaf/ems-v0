@@ -67,14 +67,14 @@ export const REAL_WEDDINGS: RealWedding[] = [
     region: "Punjab",
     eventDate: "2026-03-15",
     coverImage:
-      "https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=1600",
+      "/images/home/spotlight/spotlight.jpg",
     gallery: [
-      "https://images.pexels.com/photos/2253870/pexels-photo-2253870.jpeg?auto=compress&cs=tinysrgb&w=1200",
-      "https://images.pexels.com/photos/1456613/pexels-photo-1456613.jpeg?auto=compress&cs=tinysrgb&w=1200",
-      "https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg?auto=compress&cs=tinysrgb&w=1200",
-      "https://images.pexels.com/photos/1485469/pexels-photo-1485469.jpeg?auto=compress&cs=tinysrgb&w=1200",
-      "https://images.pexels.com/photos/2253839/pexels-photo-2253839.jpeg?auto=compress&cs=tinysrgb&w=1200",
-      "https://images.pexels.com/photos/1779487/pexels-photo-1779487.jpeg?auto=compress&cs=tinysrgb&w=1200",
+      "/images/home/venues/v1.jpg",
+      "/images/home/lookbook/l1.jpg",
+      "/images/home/lookbook/l2.jpg",
+      "/images/home/partners/decor.jpg",
+      "/images/home/partners/henna.jpg",
+      "/images/home/venues/v2.jpg",
     ],
     excerpt:
       "A three-function Lahore wedding that wove a 19th-century banquet hall into a contemporary fusion celebration — mehndi, baraat, and walima.",

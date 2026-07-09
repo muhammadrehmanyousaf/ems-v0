@@ -56,7 +56,7 @@ export default function ComplaintsPage() {
         <li>Reply to the resolution email asking for senior review. Our complaints lead reviews escalations within 7 working days.</li>
         <li>For payment / refund disputes, you may also raise a chargeback with your card issuer or contact <a href="https://gopayfast.com/faqs/" target="_blank" rel="noopener noreferrer">PayFast support</a> directly.</li>
         <li>For data-protection complaints, contact the relevant Pakistani data-protection authority (TBD as Pakistan&apos;s data-protection law comes into force).</li>
-        <li>For consumer-rights complaints, the relevant provincial Consumer Court may apply. <strong>[LEGAL REVIEW]</strong></li>
+        <li>For consumer-rights complaints, the relevant provincial Consumer Court may apply.{/* LEGAL REVIEW: confirm consumer-court reference */}</li>
       </ul>
 
       <h2>5. What we ask of you</h2>
@@ -68,8 +68,8 @@ export default function ComplaintsPage() {
 
       <h2>6. Public reporting</h2>
       <p>
-        We publish anonymised complaint statistics annually as part of our trust
-        commitments. <strong>[LEGAL REVIEW — confirm we will commit to this]</strong>
+        We aim to publish anonymised complaint statistics periodically as part of
+        our trust commitments.{/* LEGAL REVIEW: confirm whether we commit to annual publication */}
       </p>
 
       <h2>7. Contact</h2>

@@ -43,7 +43,7 @@ export default function AcceptableUsePage() {
         <li>List only services you are licensed and capable of providing.</li>
         <li>Do not advertise services in restricted categories (gambling, adult content, weapons, restricted pharma).</li>
         <li>Honour pricing and availability as published. Bait-and-switch is grounds for suspension.</li>
-        <li>Use only photos you own or have a licence to use. <strong>[LEGAL REVIEW]</strong></li>
+        <li>Use only photos you own or have a licence to use.{/* LEGAL REVIEW: confirm IP / licence wording */}</li>
       </ul>
 
       <h2>3. Customer-specific rules</h2>
