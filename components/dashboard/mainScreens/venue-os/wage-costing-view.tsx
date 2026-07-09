@@ -97,19 +97,19 @@ export function WageCostingView(): React.ReactElement | null {
           </label>
           <label className="text-sm">
             Worker
-            <input type="text" value={workerName} onChange={(e) => setWorkerName(e.target.value)} className="ml-2 w-36 rounded border px-2 py-1" />
+            <input type="text" value={workerName} onChange={(e) => setWorkerName(e.target.value)} className="ml-2 w-36 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             Shift date
-            <input type="date" value={shiftDate} onChange={(e) => setShiftDate(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+            <input type="date" value={shiftDate} onChange={(e) => setShiftDate(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             Rate
-            <input type="number" value={rate} onChange={(e) => setRate(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
+            <input type="number" value={rate} onChange={(e) => setRate(e.target.value)} className="ml-2 w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             Paid
-            <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
+            <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="ml-2 w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <Button size="sm" onClick={() => void record()} disabled={!ready || busy}>
             Record shift
@@ -149,11 +149,11 @@ export function WageCostingView(): React.ReactElement | null {
         <div className="flex flex-wrap items-end gap-3 border-t pt-3">
           <label className="text-sm">
             From
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             To
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <Button size="sm" variant="outline" onClick={() => void loadByEvent()} disabled={!businessId || busy}>
             Labour by event

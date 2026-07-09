@@ -99,7 +99,7 @@ export function VenueOsInsights(): React.ReactElement | null {
                 type="number"
                 value={baseAmount}
                 onChange={(e) => setBaseAmount(Number(e.target.value))}
-                className="ml-2 w-36 rounded border px-2 py-1"
+                className="ml-2 w-36 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </label>
             <div className="flex gap-1">

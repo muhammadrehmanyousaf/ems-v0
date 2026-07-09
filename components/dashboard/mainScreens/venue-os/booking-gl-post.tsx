@@ -84,7 +84,7 @@ export function BookingGlPost(): React.ReactElement | null {
           </label>
           <label className="text-sm">
             Event
-            <select value={eventType} onChange={(e) => setEventType(e.target.value)} className="ml-2 rounded border px-2 py-1">
+            <select value={eventType} onChange={(e) => setEventType(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
               {EVENT_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>
                   {t.label}
@@ -94,11 +94,11 @@ export function BookingGlPost(): React.ReactElement | null {
           </label>
           <label className="text-sm">
             Amount
-            <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="ml-2 w-32 rounded border px-2 py-1" />
+            <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="ml-2 w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm" title="If this deal is with another business in your group (ghar-ka-maal), enter its id so group consolidation can net it out.">
             Counterparty biz # <span className="text-muted-foreground">(optional)</span>
-            <input type="number" value={counterparty} onChange={(e) => setCounterparty(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
+            <input type="number" value={counterparty} onChange={(e) => setCounterparty(e.target.value)} className="ml-2 w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
         </div>
 

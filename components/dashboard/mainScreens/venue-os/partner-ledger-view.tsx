@@ -95,9 +95,9 @@ export function PartnerLedgerView(): React.ReactElement | null {
             </div>
 
             <div className="flex flex-wrap items-end gap-2 border-t pt-2">
-              <input type="number" placeholder="amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-28 rounded border px-2 py-1" />
+              <input type="number" placeholder="amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
               <Button size="sm" variant="outline" onClick={() => void guard(async () => { await venueOsApi.recordCapital(ledger.partnerEquityId, { amountPkr: Number(amount), mode: "INTRO" }); await loadLedger(ledger.partnerEquityId); })} disabled={!amount || busy}>+ Capital</Button>
-              <select value={drawType} onChange={(e) => setDrawType(e.target.value)} className="rounded border px-2 py-1">
+              <select value={drawType} onChange={(e) => setDrawType(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 {["PROFIT", "SALARY", "OVER_DRAW", "LOAN"].map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
               <Button size="sm" variant="outline" onClick={() => void guard(async () => { await venueOsApi.recordDrawing(ledger.partnerEquityId, { amountPkr: Number(amount), drawingType: drawType }); await loadLedger(ledger.partnerEquityId); })} disabled={!amount || busy}>− Drawing</Button>
@@ -108,8 +108,8 @@ export function PartnerLedgerView(): React.ReactElement | null {
 
         <div className="flex flex-wrap items-end gap-2 rounded-md border p-3 text-sm">
           <span className="font-medium">Appropriate profit</span>
-          <input type="text" placeholder="period e.g. 2026" value={period} onChange={(e) => setPeriod(e.target.value)} className="w-28 rounded border px-2 py-1" />
-          <input type="number" placeholder="net profit (optional)" value={netProfit} onChange={(e) => setNetProfit(e.target.value)} className="w-40 rounded border px-2 py-1" />
+          <input type="text" placeholder="period e.g. 2026" value={period} onChange={(e) => setPeriod(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <input type="number" placeholder="net profit (optional)" value={netProfit} onChange={(e) => setNetProfit(e.target.value)} className="w-40 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           <Button size="sm" onClick={() => void guard(async () => setRun(await venueOsApi.appropriateProfit(bid, { period, ...(netProfit ? { netProfitPkr: Number(netProfit) } : {}) })))} disabled={!businessId || !period || busy}>
             Run appropriation
           </Button>

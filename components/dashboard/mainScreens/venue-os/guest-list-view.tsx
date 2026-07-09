@@ -53,18 +53,18 @@ export function GuestListView(): React.ReactElement | null {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2 text-sm">
-          <label>Event night #<input type="number" value={nightId} onChange={(e) => setNightId(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" /></label>
+          <label>Event night #<input type="number" value={nightId} onChange={(e) => setNightId(e.target.value)} className="ml-2 w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
           <Button size="sm" variant="outline" onClick={() => void guard(async () => setSegs(await venueOsApi.listGuestSegments(nid)))} disabled={!nightId || busy}>Load</Button>
           <Button size="sm" onClick={() => void guard(async () => setRec(await venueOsApi.guestReconcile(nid)))} disabled={!nightId || busy}>Reconcile</Button>
         </div>
 
         <div className="flex flex-wrap items-end gap-2 rounded-md border p-3 text-sm">
-          <select value={side} onChange={(e) => setSide(e.target.value)} className="rounded border px-2 py-1">
+          <select value={side} onChange={(e) => setSide(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
             {["BRIDE", "GROOM", "COMMON", "FAMILY"].map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
-          <input type="number" placeholder="invited" value={invited} onChange={(e) => setInvited(e.target.value)} className="w-24 rounded border px-2 py-1" />
-          <input type="number" placeholder="RSVP yes" value={rsvp} onChange={(e) => setRsvp(e.target.value)} className="w-24 rounded border px-2 py-1" />
-          <input type="number" placeholder="per-head Rs" value={perHead} onChange={(e) => setPerHead(e.target.value)} className="w-28 rounded border px-2 py-1" />
+          <input type="number" placeholder="invited" value={invited} onChange={(e) => setInvited(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <input type="number" placeholder="RSVP yes" value={rsvp} onChange={(e) => setRsvp(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <input type="number" placeholder="per-head Rs" value={perHead} onChange={(e) => setPerHead(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           <Button size="sm" onClick={() => void guard(async () => { await venueOsApi.addGuestSegment(nid, { side, invitedCount: Number(invited), rsvpYesCount: rsvp ? Number(rsvp) : 0, perHeadCostPkr: perHead ? Number(perHead) : 0 }); setSegs(await venueOsApi.listGuestSegments(nid)); })} disabled={!nightId || !invited || busy}>Add segment</Button>
         </div>
 

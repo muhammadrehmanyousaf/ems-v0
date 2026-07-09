@@ -68,8 +68,8 @@ export function ForceMajeureBatchView(): React.ReactElement | null {
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2 text-sm">
           <BusinessScopeField value={businessId} onChange={setBusinessId} />
-          <input type="text" placeholder="govt order ref" value={govtOrderRef} onChange={(e) => setGovtOrderRef(e.target.value)} className="w-36 rounded border px-2 py-1" />
-          <select value={rule} onChange={(e) => setRule(e.target.value)} className="rounded border px-2 py-1">
+          <input type="text" placeholder="govt order ref" value={govtOrderRef} onChange={(e) => setGovtOrderRef(e.target.value)} className="w-36 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <select value={rule} onChange={(e) => setRule(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
             <option value="CARRY_FORWARD">CARRY_FORWARD</option>
             <option value="FULL_REFUND">FULL_REFUND</option>
             <option value="PARTIAL_REFUND">PARTIAL_REFUND</option>
@@ -77,7 +77,7 @@ export function ForceMajeureBatchView(): React.ReactElement | null {
         </div>
         <label className="block text-xs text-muted-foreground">
           Affected bookings (bookingId:advance, comma-separated)
-          <input type="text" placeholder="123:150000, 124:200000" value={itemsRaw} onChange={(e) => setItemsRaw(e.target.value)} className="mt-1 w-full rounded border px-2 py-1" />
+          <input type="text" placeholder="123:150000, 124:200000" value={itemsRaw} onChange={(e) => setItemsRaw(e.target.value)} className="mt-1 w-full rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
         </label>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={() => void guard(async () => setResult(await venueOsApi.previewForceMajeure(body())))} disabled={!businessId || busy}>

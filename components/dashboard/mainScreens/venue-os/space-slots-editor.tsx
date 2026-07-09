@@ -101,10 +101,10 @@ export function SpaceSlotsEditor(): React.ReactElement | null {
               </div>
             ))}
             <div className="flex flex-wrap items-end gap-2 border-t pt-2">
-              <input type="text" placeholder="label (e.g. Morning)" value={label} onChange={(e) => setLabel(e.target.value)} className="w-32 rounded border px-2 py-1" />
-              <input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="rounded border px-2 py-1" />
-              <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="rounded border px-2 py-1" />
-              <input type="number" placeholder="cap" value={cap} onChange={(e) => setCap(e.target.value)} className="w-16 rounded border px-2 py-1" />
+              <input type="text" placeholder="label (e.g. Morning)" value={label} onChange={(e) => setLabel(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+              <input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+              <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+              <input type="number" placeholder="cap" value={cap} onChange={(e) => setCap(e.target.value)} className="w-16 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
               <Button size="sm" onClick={() => void guard(async () => { await venueSpacesApi.createSlot(bid, { subVenueId: spaceId, label, startTime: start, endTime: end, capacity: Number(cap) || 1 }); setLabel(""); setStart(""); setEnd(""); await loadSlots(spaceId); })} disabled={!label || !start || !end || busy}>
                 Add slot
               </Button>

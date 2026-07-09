@@ -56,8 +56,8 @@ export function PdcStressOptimiserView(): React.ReactElement | null {
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2 text-sm">
           <BusinessScopeField value={businessId} onChange={setBusinessId} />
-          <label>From<input type="month" value={from} onChange={(e) => setFrom(e.target.value)} className="ml-1 rounded border px-2 py-1" /></label>
-          <label>To<input type="month" value={to} onChange={(e) => setTo(e.target.value)} className="ml-1 rounded border px-2 py-1" /></label>
+          <label>From<input type="month" value={from} onChange={(e) => setFrom(e.target.value)} className="ml-1 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
+          <label>To<input type="month" value={to} onChange={(e) => setTo(e.target.value)} className="ml-1 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
           <Button size="sm" variant="outline" onClick={() => void guard(async () => setSched(await venueOsApi.liabilityCalendarPdc(bid, { fromMonth: from, toMonth: to })))} disabled={!businessId || busy}>Bounce-stress</Button>
           <Button size="sm" onClick={() => void guard(async () => setOpt(await venueOsApi.committeePayoutOptimiser(bid, { fromMonth: from, toMonth: to })))} disabled={!businessId || busy}>Optimise payout</Button>
         </div>

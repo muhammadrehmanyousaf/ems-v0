@@ -59,19 +59,19 @@ export function SchedulingCheck(): React.ReactElement | null {
         <div className="flex flex-wrap items-end gap-3">
           <label className="text-sm">
             Sub-venue #
-            <input type="number" value={subVenueId} onChange={(e) => setSubVenueId(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
+            <input type="number" value={subVenueId} onChange={(e) => setSubVenueId(e.target.value)} className="ml-2 w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             Start
-            <input type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+            <input type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             End
-            <input type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+            <input type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             Turnaround (min)
-            <input type="number" value={turnaround} onChange={(e) => setTurnaround(e.target.value)} className="ml-2 w-20 rounded border px-2 py-1" />
+            <input type="number" value={turnaround} onChange={(e) => setTurnaround(e.target.value)} className="ml-2 w-20 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <Button size="sm" onClick={() => void check()} disabled={!ready || busy}>
             {busy ? "Checking…" : "Check"}

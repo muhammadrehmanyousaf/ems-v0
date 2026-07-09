@@ -78,10 +78,10 @@ export function ProcurementView(): React.ReactElement | null {
         <div className="space-y-2 rounded-md border p-3">
           <div className="flex flex-wrap items-end gap-2 text-sm">
             <span className="font-medium">1 · Raise PO</span>
-            <input type="text" placeholder="item" value={descr} onChange={(e) => setDescr(e.target.value)} className="w-28 rounded border px-2 py-1" />
-            <input type="number" placeholder="qty" value={qty} onChange={(e) => setQty(e.target.value)} className="w-20 rounded border px-2 py-1" />
-            <input type="text" placeholder="unit" value={unit} onChange={(e) => setUnit(e.target.value)} className="w-16 rounded border px-2 py-1" />
-            <input type="number" placeholder="rate" value={rate} onChange={(e) => setRate(e.target.value)} className="w-24 rounded border px-2 py-1" />
+            <input type="text" placeholder="item" value={descr} onChange={(e) => setDescr(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <input type="number" placeholder="qty" value={qty} onChange={(e) => setQty(e.target.value)} className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <input type="text" placeholder="unit" value={unit} onChange={(e) => setUnit(e.target.value)} className="w-16 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <input type="number" placeholder="rate" value={rate} onChange={(e) => setRate(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
             <Button
               size="sm"
               onClick={() =>
@@ -112,8 +112,8 @@ export function ProcurementView(): React.ReactElement | null {
           <div className="space-y-2 rounded-md border p-3">
             <div className="flex flex-wrap items-end gap-2 text-sm">
               <span className="font-medium">2 · Receive GRN</span>
-              <input type="number" placeholder="qty accepted" value={qtyAccepted} onChange={(e) => setQtyAccepted(e.target.value)} className="w-28 rounded border px-2 py-1" />
-              <input type="number" placeholder="actual rate" value={actualRate} onChange={(e) => setActualRate(e.target.value)} className="w-24 rounded border px-2 py-1" />
+              <input type="number" placeholder="qty accepted" value={qtyAccepted} onChange={(e) => setQtyAccepted(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+              <input type="number" placeholder="actual rate" value={actualRate} onChange={(e) => setActualRate(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
               <Button
                 size="sm"
                 onClick={() =>

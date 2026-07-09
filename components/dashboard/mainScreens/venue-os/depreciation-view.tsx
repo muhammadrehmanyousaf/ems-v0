@@ -96,11 +96,11 @@ export function DepreciationView(): React.ReactElement | null {
         <div className="flex flex-wrap items-end gap-2 rounded-md border bg-muted/40 p-3">
           <label className="text-sm">
             Name
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="ml-2 w-40 rounded border px-2 py-1" />
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="ml-2 w-40 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             Category
-            <select value={category} onChange={(e) => setCategory(e.target.value)} className="ml-2 rounded border px-2 py-1">
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>
                   {c.replace("_", " ").toLowerCase()}
@@ -110,15 +110,15 @@ export function DepreciationView(): React.ReactElement | null {
           </label>
           <label className="text-sm">
             Cost
-            <input type="number" value={cost} onChange={(e) => setCost(e.target.value)} className="ml-2 w-28 rounded border px-2 py-1" />
+            <input type="number" value={cost} onChange={(e) => setCost(e.target.value)} className="ml-2 w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             Life (months)
-            <input type="number" value={life} onChange={(e) => setLife(e.target.value)} className="ml-2 w-20 rounded border px-2 py-1" />
+            <input type="number" value={life} onChange={(e) => setLife(e.target.value)} className="ml-2 w-20 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             In service
-            <input type="date" value={inService} onChange={(e) => setInService(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+            <input type="date" value={inService} onChange={(e) => setInService(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <Button size="sm" onClick={() => void addAsset()} disabled={!businessId || !name || !cost || !inService || busy}>
             Add asset
@@ -157,7 +157,7 @@ export function DepreciationView(): React.ReactElement | null {
         <div className="flex flex-wrap items-end gap-3 border-t pt-3">
           <label className="text-sm">
             Period
-            <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+            <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <Button size="sm" variant="outline" onClick={() => void doRun(true)} disabled={!businessId || !period || busy}>
             Preview

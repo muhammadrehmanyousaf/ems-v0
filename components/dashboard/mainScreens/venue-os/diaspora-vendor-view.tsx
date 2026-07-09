@@ -61,11 +61,11 @@ export function DiasporaVendorView(): React.ReactElement | null {
         {fxOn && (
           <div className="space-y-2 rounded-md border p-3 text-sm">
             <div className="flex flex-wrap items-end gap-2">
-              <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="rounded border px-2 py-1">
+              <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 {["USD", "GBP", "AED", "EUR", "SAR"].map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
-              <input type="number" placeholder="amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-24 rounded border px-2 py-1" />
-              <input type="number" placeholder="rate" value={rate} onChange={(e) => setRate(e.target.value)} className="w-24 rounded border px-2 py-1" />
+              <input type="number" placeholder="amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+              <input type="number" placeholder="rate" value={rate} onChange={(e) => setRate(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
               <Button size="sm" onClick={() => void guard(async () => { await venueOsApi.captureFx({ businessId: bid, currency, amountForeign: Number(amount), fxRate: Number(rate) }); setSummary(await venueOsApi.fxSummary(bid)); })} disabled={!businessId || !amount || !rate || busy}>Capture FX</Button>
               <Button size="sm" variant="outline" onClick={() => void guard(async () => setSummary(await venueOsApi.fxSummary(bid)))} disabled={!businessId || busy}>Summary</Button>
             </div>

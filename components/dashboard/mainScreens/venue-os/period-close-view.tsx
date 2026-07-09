@@ -71,7 +71,7 @@ export function PeriodCloseView(): React.ReactElement | null {
           <BusinessScopeField value={businessId} onChange={setBusinessId} />
           <label className="text-sm">
             Period
-            <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+            <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <Button size="sm" variant="outline" onClick={() => void check()} disabled={!ready || busy}>
             Check status

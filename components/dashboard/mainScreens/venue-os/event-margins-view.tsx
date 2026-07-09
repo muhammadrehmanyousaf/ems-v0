@@ -61,11 +61,11 @@ export function EventMarginsView(): React.ReactElement | null {
           <BusinessScopeField value={businessId} onChange={setBusinessId} />
           <label className="text-sm">
             From
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             To
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <div className="flex gap-1">
             <Button size="sm" variant={driver === "REVENUE_SHARE" ? "default" : "outline"} onClick={() => setDriver("REVENUE_SHARE")}>

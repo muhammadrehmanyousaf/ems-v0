@@ -58,7 +58,7 @@ export function SuccessionView(): React.ReactElement | null {
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2 rounded-md border p-3 text-sm">
           <span className="font-medium">Faraid calculator</span>
-          <input type="number" placeholder="estate Rs" value={estate} onChange={(e) => setEstate(e.target.value)} className="w-32 rounded border px-2 py-1" />
+          <input type="number" placeholder="estate Rs" value={estate} onChange={(e) => setEstate(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           <label className="flex items-center gap-1"><input type="checkbox" checked={husband} onChange={(e) => setHusband(e.target.checked)} /> husband</label>
           <label>wives<input type="number" value={wives} onChange={(e) => setWives(e.target.value)} className="ml-1 w-14 rounded border px-1 py-1" /></label>
           <label>sons<input type="number" value={sons} onChange={(e) => setSons(e.target.value)} className="ml-1 w-14 rounded border px-1 py-1" /></label>
@@ -83,9 +83,9 @@ export function SuccessionView(): React.ReactElement | null {
 
         <div className="flex flex-wrap items-end gap-2 rounded-md border p-3 text-sm">
           <span className="font-medium">Partner exit</span>
-          <input type="number" placeholder="business #" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="w-24 rounded border px-2 py-1" />
-          <input type="number" placeholder="partner #" value={partnerId} onChange={(e) => setPartnerId(e.target.value)} className="w-24 rounded border px-2 py-1" />
-          <input type="number" placeholder="goodwill Rs" value={goodwill} onChange={(e) => setGoodwill(e.target.value)} className="w-32 rounded border px-2 py-1" />
+          <input type="number" placeholder="business #" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <input type="number" placeholder="partner #" value={partnerId} onChange={(e) => setPartnerId(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <input type="number" placeholder="goodwill Rs" value={goodwill} onChange={(e) => setGoodwill(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           <Button size="sm" variant="outline" onClick={() => void guard(async () => setExit(await venueOsApi.exitValuation(Number(businessId), { partnerEquityId: Number(partnerId), goodwillPkr: goodwill ? Number(goodwill) : 0 })))} disabled={!businessId || !partnerId || busy}>Value exit</Button>
         </div>
 

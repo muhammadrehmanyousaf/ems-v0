@@ -104,31 +104,31 @@ export function VenueLeaseView(): React.ReactElement | null {
         <div className="flex flex-wrap items-end gap-2 rounded-md border bg-muted/40 p-3">
           <label className="text-sm">
             Venue
-            <input type="text" value={venueName} onChange={(e) => setVenueName(e.target.value)} className="ml-2 w-36 rounded border px-2 py-1" />
+            <input type="text" value={venueName} onChange={(e) => setVenueName(e.target.value)} className="ml-2 w-36 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             Rent/mo
-            <input type="number" value={rent} onChange={(e) => setRent(e.target.value)} className="ml-2 w-28 rounded border px-2 py-1" />
+            <input type="number" value={rent} onChange={(e) => setRent(e.target.value)} className="ml-2 w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             Pagri
-            <input type="number" value={pagri} onChange={(e) => setPagri(e.target.value)} className="ml-2 w-28 rounded border px-2 py-1" />
+            <input type="number" value={pagri} onChange={(e) => setPagri(e.target.value)} className="ml-2 w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             Deposit
-            <input type="number" value={deposit} onChange={(e) => setDeposit(e.target.value)} className="ml-2 w-28 rounded border px-2 py-1" />
+            <input type="number" value={deposit} onChange={(e) => setDeposit(e.target.value)} className="ml-2 w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             Start
-            <input type="date" value={start} onChange={(e) => setStart(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+            <input type="date" value={start} onChange={(e) => setStart(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             Term (mo)
-            <input type="number" value={term} onChange={(e) => setTerm(e.target.value)} className="ml-2 w-20 rounded border px-2 py-1" />
+            <input type="number" value={term} onChange={(e) => setTerm(e.target.value)} className="ml-2 w-20 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             Esc %/yr
-            <input type="number" value={esc} onChange={(e) => setEsc(e.target.value)} className="ml-2 w-16 rounded border px-2 py-1" />
+            <input type="number" value={esc} onChange={(e) => setEsc(e.target.value)} className="ml-2 w-16 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <Button size="sm" onClick={() => void addLease()} disabled={!businessId || !venueName || !rent || !start || busy}>
             Add lease
@@ -172,7 +172,7 @@ export function VenueLeaseView(): React.ReactElement | null {
         <div className="flex flex-wrap items-end gap-3 border-t pt-3">
           <label className="text-sm">
             Period
-            <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+            <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <Button size="sm" variant="outline" onClick={() => void accrue(true)} disabled={!businessId || !period || busy}>
             Preview

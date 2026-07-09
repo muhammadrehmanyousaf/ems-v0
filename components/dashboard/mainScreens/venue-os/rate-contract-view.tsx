@@ -61,9 +61,9 @@ export function RateContractView(): React.ReactElement | null {
         </div>
 
         <div className="flex flex-wrap items-end gap-2 rounded-md border p-3 text-sm">
-          <input type="text" placeholder="item e.g. Chicken" value={item} onChange={(e) => setItem(e.target.value)} className="w-36 rounded border px-2 py-1" />
-          <input type="number" placeholder="rate/unit" value={rate} onChange={(e) => setRate(e.target.value)} className="w-24 rounded border px-2 py-1" />
-          <input type="number" placeholder="tol %" value={tol} onChange={(e) => setTol(e.target.value)} className="w-16 rounded border px-2 py-1" />
+          <input type="text" placeholder="item e.g. Chicken" value={item} onChange={(e) => setItem(e.target.value)} className="w-36 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <input type="number" placeholder="rate/unit" value={rate} onChange={(e) => setRate(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <input type="number" placeholder="tol %" value={tol} onChange={(e) => setTol(e.target.value)} className="w-16 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           <Button size="sm" onClick={() => void guard(async () => { await venueOsApi.createRateContract({ businessId: bid, itemNameSnapshot: item, contractedRatePkr: Number(rate), tolerancePct: Number(tol), effectiveFrom: new Date().toISOString().slice(0, 10) }); setContracts(await venueOsApi.listRateContracts(bid)); })} disabled={!businessId || !item || !rate || busy}>Add contract</Button>
         </div>
 
@@ -81,9 +81,9 @@ export function RateContractView(): React.ReactElement | null {
 
         <div className="flex flex-wrap items-end gap-2 rounded-md border p-3 text-sm">
           <span className="font-medium">Check a GRN line</span>
-          <input type="text" placeholder="item" value={item} onChange={(e) => setItem(e.target.value)} className="w-32 rounded border px-2 py-1" />
-          <input type="number" placeholder="billed rate" value={billRate} onChange={(e) => setBillRate(e.target.value)} className="w-24 rounded border px-2 py-1" />
-          <input type="number" placeholder="qty" value={qty} onChange={(e) => setQty(e.target.value)} className="w-20 rounded border px-2 py-1" />
+          <input type="text" placeholder="item" value={item} onChange={(e) => setItem(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <input type="number" placeholder="billed rate" value={billRate} onChange={(e) => setBillRate(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <input type="number" placeholder="qty" value={qty} onChange={(e) => setQty(e.target.value)} className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           <Button size="sm" variant="outline" onClick={() => void guard(async () => setCheck(await venueOsApi.checkGrnContracts(bid, { lines: [{ itemNameSnapshot: item, ratePkr: Number(billRate), qty: Number(qty) }] })))} disabled={!businessId || !item || !billRate || busy}>Check</Button>
         </div>
 

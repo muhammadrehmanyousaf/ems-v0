@@ -83,7 +83,7 @@ export function CashFloatClose(): React.ReactElement | null {
             <BusinessScopeField value={businessId} onChange={setBusinessId} />
             <label className="text-sm">
               Opening float
-              <input type="number" value={openingFloat} onChange={(e) => setOpeningFloat(e.target.value)} className="ml-2 w-28 rounded border px-2 py-1" />
+              <input type="number" value={openingFloat} onChange={(e) => setOpeningFloat(e.target.value)} className="ml-2 w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
             </label>
             <Button size="sm" onClick={() => void open()} disabled={!businessId || busy}>
               Open drawer
@@ -115,11 +115,11 @@ export function CashFloatClose(): React.ReactElement | null {
                 <div className="flex flex-wrap items-end gap-3">
                   <label className="text-sm">
                     + Collected
-                    <input type="number" value={collected} onChange={(e) => setCollected(e.target.value)} className="ml-2 w-28 rounded border px-2 py-1" />
+                    <input type="number" value={collected} onChange={(e) => setCollected(e.target.value)} className="ml-2 w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
                   </label>
                   <label className="text-sm">
                     + Deposited
-                    <input type="number" value={deposited} onChange={(e) => setDeposited(e.target.value)} className="ml-2 w-28 rounded border px-2 py-1" />
+                    <input type="number" value={deposited} onChange={(e) => setDeposited(e.target.value)} className="ml-2 w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
                   </label>
                   <Button size="sm" variant="outline" onClick={() => void record()} disabled={busy || (!collected && !deposited)}>
                     Record
@@ -128,7 +128,7 @@ export function CashFloatClose(): React.ReactElement | null {
                 <div className="flex flex-wrap items-end gap-3 border-t pt-3">
                   <label className="text-sm">
                     Counted at close
-                    <input type="number" value={counted} onChange={(e) => setCounted(e.target.value)} className="ml-2 w-32 rounded border px-2 py-1" />
+                    <input type="number" value={counted} onChange={(e) => setCounted(e.target.value)} className="ml-2 w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
                   </label>
                   <Button size="sm" onClick={() => void close()} disabled={busy || !counted}>
                     Close &amp; reconcile

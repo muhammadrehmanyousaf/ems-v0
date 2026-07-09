@@ -56,8 +56,8 @@ export function BiCockpitView(): React.ReactElement | null {
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2 text-sm">
           <BusinessScopeField value={businessId} onChange={setBusinessId} />
-          <label>From<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="ml-1 rounded border px-2 py-1" /></label>
-          <label>To<input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="ml-1 rounded border px-2 py-1" /></label>
+          <label>From<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="ml-1 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
+          <label>To<input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="ml-1 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
           <Button size="sm" onClick={() => void guard(async () => setK(await venueOsApi.businessKpis(bid, { from, to })))} disabled={!businessId || busy}>KPIs</Button>
         </div>
 
@@ -73,7 +73,7 @@ export function BiCockpitView(): React.ReactElement | null {
 
         <div className="flex flex-wrap items-end gap-2 rounded-md border p-3 text-sm">
           <span className="font-medium">Hijri YoY</span>
-          <select value={hMonth} onChange={(e) => setHMonth(e.target.value)} className="rounded border px-2 py-1">
+          <select value={hMonth} onChange={(e) => setHMonth(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
             {HIJRI_MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
           </select>
           <Button size="sm" variant="outline" onClick={() => void guard(async () => setYoy(await venueOsApi.hijriYoY(bid, { hijriMonth: Number(hMonth), hijriYears: [1445, 1446, 1447], kpi: "REVENUE" })))} disabled={!businessId || busy}>Compare seasons</Button>

@@ -120,12 +120,12 @@ export function VenueSpacesManagerView(): React.ReactElement | null {
         <div className="flex flex-wrap items-end gap-2 rounded-md border p-3 text-sm">
           <span className="font-medium">{parentId ? `Add under #${parentId}` : "Add hall/space"}</span>
           {parentId && <Button size="sm" variant="ghost" onClick={() => setParentId(null)}>↑ make root</Button>}
-          <input type="text" placeholder="name" value={name} onChange={(e) => setName(e.target.value)} className="w-36 rounded border px-2 py-1" />
-          <select value={kind} onChange={(e) => setKind(e.target.value)} className="rounded border px-2 py-1">
+          <input type="text" placeholder="name" value={name} onChange={(e) => setName(e.target.value)} className="w-36 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <select value={kind} onChange={(e) => setKind(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
             {KINDS.map((k) => <option key={k} value={k}>{k}</option>)}
           </select>
-          <input type="number" placeholder="capacity" value={cap} onChange={(e) => setCap(e.target.value)} className="w-24 rounded border px-2 py-1" />
-          <input type="number" placeholder="price" value={price} onChange={(e) => setPrice(e.target.value)} className="w-24 rounded border px-2 py-1" />
+          <input type="number" placeholder="capacity" value={cap} onChange={(e) => setCap(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <input type="number" placeholder="price" value={price} onChange={(e) => setPrice(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={wholeDay} onChange={(e) => setWholeDay(e.target.checked)} /> whole-day</label>
           <Button
             size="sm"
@@ -152,8 +152,8 @@ export function VenueSpacesManagerView(): React.ReactElement | null {
           ))}
           {flat.length >= 2 && (
             <div className="flex flex-wrap items-end gap-2 border-t pt-2">
-              <input type="text" placeholder="package name" value={mgName} onChange={(e) => setMgName(e.target.value)} className="w-40 rounded border px-2 py-1" />
-              <input type="number" placeholder="combined price" value={mgPrice} onChange={(e) => setMgPrice(e.target.value)} className="w-32 rounded border px-2 py-1" />
+              <input type="text" placeholder="package name" value={mgName} onChange={(e) => setMgName(e.target.value)} className="w-40 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+              <input type="number" placeholder="combined price" value={mgPrice} onChange={(e) => setMgPrice(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
               <div className="flex flex-wrap gap-1">
                 {flat.map((n) => (
                   <Button key={n.id} size="sm" variant={mgPicks.includes(n.id) ? "default" : "outline"} onClick={() => setMgPicks((p) => (p.includes(n.id) ? p.filter((x) => x !== n.id) : [...p, n.id]))}>

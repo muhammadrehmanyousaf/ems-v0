@@ -56,7 +56,7 @@ export function SpaceCalendarView(): React.ReactElement | null {
       <CardContent className="space-y-3 text-sm">
         <div className="flex flex-wrap items-end gap-2">
           <BusinessScopeField value={businessId} onChange={setBusinessId} />
-          <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="rounded border px-2 py-1" />
+          <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           <Button size="sm" variant="outline" onClick={() => void load()} disabled={!businessId || !month || busy}>
             Show
           </Button>

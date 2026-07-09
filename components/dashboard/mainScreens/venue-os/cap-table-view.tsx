@@ -62,13 +62,13 @@ export function CapTableView(): React.ReactElement | null {
         </div>
 
         <div className="flex flex-wrap items-end gap-2 rounded-md border p-3 text-sm">
-          <input type="text" placeholder="partner name" value={name} onChange={(e) => setName(e.target.value)} className="w-36 rounded border px-2 py-1" />
-          <select value={ptype} onChange={(e) => setPtype(e.target.value)} className="rounded border px-2 py-1">
+          <input type="text" placeholder="partner name" value={name} onChange={(e) => setName(e.target.value)} className="w-36 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <select value={ptype} onChange={(e) => setPtype(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
             {["WORKING", "SILENT", "INVESTOR"].map((t) => (
               <option key={t} value={t}>{t}</option>
             ))}
           </select>
-          <input type="number" placeholder="share %" value={share} onChange={(e) => setShare(e.target.value)} className="w-20 rounded border px-2 py-1" />
+          <input type="number" placeholder="share %" value={share} onChange={(e) => setShare(e.target.value)} className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           <Button size="sm" onClick={() => void guard(async () => { await venueOsApi.addPartner({ businessId: bid, partnerName: name, partnerType: ptype, sharePercent: Number(share) }); setTable(await venueOsApi.getCapTable(bid)); })} disabled={!businessId || !name || !share || busy}>
             Add partner
           </Button>
@@ -93,7 +93,7 @@ export function CapTableView(): React.ReactElement | null {
 
         <div className="flex flex-wrap items-end gap-2 rounded-md border p-3 text-sm">
           <span className="font-medium">Distribute</span>
-          <input type="number" placeholder="net profit" value={netProfit} onChange={(e) => setNetProfit(e.target.value)} className="w-32 rounded border px-2 py-1" />
+          <input type="number" placeholder="net profit" value={netProfit} onChange={(e) => setNetProfit(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           <Button size="sm" onClick={() => void guard(async () => setDist(await venueOsApi.distributeProfit(bid, netProfit ? { netProfitPkr: Number(netProfit) } : {})))} disabled={!businessId || busy}>
             Distribute
           </Button>

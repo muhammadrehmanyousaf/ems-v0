@@ -72,7 +72,7 @@ export function EventNightConsoleView(): React.ReactElement | null {
         <div className="flex flex-wrap items-end gap-2 text-sm">
           <label>
             Event night #
-            <input type="number" value={nightId} onChange={(e) => setNightId(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
+            <input type="number" value={nightId} onChange={(e) => setNightId(e.target.value)} className="ml-2 w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <Button size="sm" variant="outline" onClick={() => void guard(async () => setScore(await venueOsApi.cleanNightScore(nid)))} disabled={!nightId || busy}>
             Clean night score
@@ -84,8 +84,8 @@ export function EventNightConsoleView(): React.ReactElement | null {
         <div className="space-y-2 rounded-md border p-3">
           <div className="flex flex-wrap items-end gap-2 text-sm">
             <span className="font-medium">Valet</span>
-            <input type="text" placeholder="tag #" value={tag} onChange={(e) => setTag(e.target.value)} className="w-20 rounded border px-2 py-1" />
-            <input type="text" placeholder="plate" value={plate} onChange={(e) => setPlate(e.target.value)} className="w-28 rounded border px-2 py-1" />
+            <input type="text" placeholder="tag #" value={tag} onChange={(e) => setTag(e.target.value)} className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <input type="text" placeholder="plate" value={plate} onChange={(e) => setPlate(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
             <Button size="sm" onClick={() => void guard(async () => { await venueOsApi.valetIn(nid, { tagNumber: tag, vehiclePlate: plate, inPhotoUrl: "in.jpg", inSignatureRef: "sig" }); setTickets(await venueOsApi.listValet(nid)); })} disabled={!nightId || !tag || busy}>
               Park
             </Button>
@@ -110,14 +110,14 @@ export function EventNightConsoleView(): React.ReactElement | null {
         <div className="space-y-2 rounded-md border p-3">
           <div className="flex flex-wrap items-end gap-2 text-sm">
             <span className="font-medium">Lost &amp; found</span>
-            <select value={lfCategory} onChange={(e) => setLfCategory(e.target.value)} className="rounded border px-2 py-1">
+            <select value={lfCategory} onChange={(e) => setLfCategory(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
               {["GENERAL", "PHONE", "GOLD", "CASH", "DOCUMENT"].map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
-            <input type="number" placeholder="value" value={lfValue} onChange={(e) => setLfValue(e.target.value)} className="w-24 rounded border px-2 py-1" />
-            <input type="number" placeholder="found by user#" value={lfFound} onChange={(e) => setLfFound(e.target.value)} className="w-28 rounded border px-2 py-1" />
-            {highValue && <input type="number" placeholder="witness user#" value={lfWitness} onChange={(e) => setLfWitness(e.target.value)} className="w-28 rounded border px-2 py-1" />}
+            <input type="number" placeholder="value" value={lfValue} onChange={(e) => setLfValue(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <input type="number" placeholder="found by user#" value={lfFound} onChange={(e) => setLfFound(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            {highValue && <input type="number" placeholder="witness user#" value={lfWitness} onChange={(e) => setLfWitness(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />}
             <Button size="sm" onClick={() => void guard(async () => { await venueOsApi.recordLostFound(nid, { category: lfCategory, declaredValuePkr: lfValue ? Number(lfValue) : undefined, photoUrl: highValue ? "item.jpg" : undefined, foundByUserId: Number(lfFound) || undefined, custodyWitnessUserId: lfWitness ? Number(lfWitness) : undefined }); })} disabled={!nightId || busy}>
               Hold
             </Button>
@@ -129,12 +129,12 @@ export function EventNightConsoleView(): React.ReactElement | null {
         <div className="space-y-2 rounded-md border p-3">
           <div className="flex flex-wrap items-end gap-2 text-sm">
             <span className="font-medium">Incident</span>
-            <select value={incType} onChange={(e) => setIncType(e.target.value)} className="rounded border px-2 py-1">
+            <select value={incType} onChange={(e) => setIncType(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
               {["INJURY", "FIGHT", "FIRE", "THEFT", "PROPERTY_DAMAGE", "MEDICAL"].map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
-            <input type="number" placeholder="est. loss" value={incLoss} onChange={(e) => setIncLoss(e.target.value)} className="w-24 rounded border px-2 py-1" />
+            <input type="number" placeholder="est. loss" value={incLoss} onChange={(e) => setIncLoss(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
             <Button size="sm" onClick={() => void guard(async () => { const r = await venueOsApi.recordIncident(nid, { type: incType, severity: "HIGH", estimatedLossPkr: incLoss ? Number(incLoss) : undefined, policeCalled: true }); setIncident(r); setChain(null); })} disabled={!nightId || busy}>
               Log incident
             </Button>

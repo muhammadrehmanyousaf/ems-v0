@@ -83,11 +83,11 @@ export function AccountingDepthView(): React.ReactElement | null {
           <BusinessScopeField value={businessId} onChange={setBusinessId} />
           <label className="text-sm">
             From
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             To
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <div className="flex gap-1">
             <Button size="sm" variant={view === "DECLARED" ? "default" : "outline"} onClick={() => setView("DECLARED")}>
@@ -164,7 +164,7 @@ export function AccountingDepthView(): React.ReactElement | null {
           <span className="text-sm font-medium">Month-end close ritual</span>
           <label className="text-sm">
             Period
-            <input type="month" value={ritualPeriod} onChange={(e) => setRitualPeriod(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+            <input type="month" value={ritualPeriod} onChange={(e) => setRitualPeriod(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <Button size="sm" variant="outline" onClick={() => void runRitual("preview")} disabled={!businessId || !ritualPeriod || busy}>
             Preview accruals

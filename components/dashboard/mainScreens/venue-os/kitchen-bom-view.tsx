@@ -70,7 +70,7 @@ export function KitchenBomView(): React.ReactElement | null {
 
         <div className="flex flex-wrap items-end gap-2 rounded-md border p-3 text-sm">
           <span className="font-medium">Yield check</span>
-          <input type="number" placeholder="production run #" value={runId} onChange={(e) => setRunId(e.target.value)} className="w-36 rounded border px-2 py-1" />
+          <input type="number" placeholder="production run #" value={runId} onChange={(e) => setRunId(e.target.value)} className="w-36 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           <Button size="sm" onClick={() => void guard(async () => setVariance(await venueOsApi.yieldVariance(Number(runId))))} disabled={!runId || busy}>Check variance</Button>
         </div>
 

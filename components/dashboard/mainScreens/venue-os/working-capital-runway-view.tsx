@@ -54,8 +54,8 @@ export function WorkingCapitalRunwayView(): React.ReactElement | null {
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2 text-sm">
           <BusinessScopeField value={businessId} onChange={setBusinessId} />
-          <input type="number" placeholder="season year" value={seasonYear} onChange={(e) => setSeasonYear(e.target.value)} className="w-28 rounded border px-2 py-1" />
-          <input type="number" placeholder="opening cash" value={openingCash} onChange={(e) => setOpeningCash(e.target.value)} className="w-32 rounded border px-2 py-1" />
+          <input type="number" placeholder="season year" value={seasonYear} onChange={(e) => setSeasonYear(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <input type="number" placeholder="opening cash" value={openingCash} onChange={(e) => setOpeningCash(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           <Button size="sm" onClick={() => void guard(async () => setPlan(await venueOsApi.computeRunway(Number(businessId), { seasonYear: Number(seasonYear), openingCashPkr: Number(openingCash) })))} disabled={!businessId || !seasonYear || busy}>
             Compute runway
           </Button>
