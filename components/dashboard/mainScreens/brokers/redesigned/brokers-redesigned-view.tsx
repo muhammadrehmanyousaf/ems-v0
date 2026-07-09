@@ -179,7 +179,7 @@ export function BrokersRedesignedView() {
       <PageHeader
         eyebrow="Money"
         title="Brokers"
-        description="Broker commission ledger — accruals, payments and outstanding, wired to live data."
+        description="Broker commission ledger — accruals, payments and outstanding."
         actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Add commission</Button>}
       />
 

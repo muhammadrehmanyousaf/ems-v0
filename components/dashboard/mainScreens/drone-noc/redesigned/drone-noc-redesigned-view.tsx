@@ -163,7 +163,7 @@ export function DroneNocRedesignedView({ adminCapable = true }: { adminCapable?:
       <PageHeader
         eyebrow="Compliance"
         title="Drone NOC permits"
-        description="Aerial-shoot No-Objection Certificates, authorities and validity — redesigned, wired to live data."
+        description="Aerial-shoot No-Objection Certificates, authorities and validity."
         actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Add permit</Button>}
       />
 

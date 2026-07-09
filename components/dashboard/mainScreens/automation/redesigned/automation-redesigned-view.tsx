@@ -119,7 +119,7 @@ export function AutomationRedesignedView() {
       <PageHeader
         eyebrow="Grow"
         title="Automation"
-        description="Built-in reminders that fire around every event, plus your own no-code rules — wired to live data."
+        description="Built-in reminders that fire around every event, plus your own no-code rules."
         actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> New rule</Button>}
       />
 

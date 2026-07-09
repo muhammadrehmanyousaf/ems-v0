@@ -43,6 +43,7 @@ import {
   FreeTools,
   FinalNewsletterCTA,
 } from "@/components/homepage/monetization-sections"
+import { HOMEPAGE_DEMO_CONTENT } from "@/lib/homepage-demo-flag"
 
 /**
  * Homepage — 20 sections of bridal-grade flow.
@@ -70,8 +71,8 @@ export default function Home() {
       {/* 2 · Featured Categories — single-line carousel, 9 categories */}
       <FeaturedCategories />
 
-      {/* 3 · Premium Partners — paid placement carousel ($$) */}
-      <PremiumPartnersStrip />
+      {/* 3 · Premium Partners — paid placement carousel ($$) — demo data, hidden until wired */}
+      {HOMEPAGE_DEMO_CONTENT && <PremiumPartnersStrip />}
 
       {/* 4 · How It Works — 3 steps with Playfair italic gold numbers */}
       <HowItWorks />
@@ -84,8 +85,8 @@ export default function Home() {
         description="Pakistan's most beloved wedding photographers, hand-picked for their craft."
       />
 
-      {/* 6 · Sponsored Spotlight — full-bleed paid takeover ($$) */}
-      <SponsoredSpotlight />
+      {/* 6 · Sponsored Spotlight — full-bleed paid takeover ($$) — demo data, hidden until wired */}
+      {HOMEPAGE_DEMO_CONTENT && <SponsoredSpotlight />}
 
       {/* 7 · Editorial Gallery — venues + makeup artists strip (existing) */}
       <EditorialGallerySection
@@ -98,11 +99,11 @@ export default function Home() {
         ]}
       />
 
-      {/* 8 · City Spotlights — paid sponsor per city ($) */}
-      <CitySpotlights />
+      {/* 8 · City Spotlights — paid sponsor per city ($) — demo data, hidden until wired */}
+      {HOMEPAGE_DEMO_CONTENT && <CitySpotlights />}
 
-      {/* 9 · Couple testimonials (existing) */}
-      <TestimonialBand />
+      {/* 9 · Couple testimonials — demo data (fake couples + stats), hidden until real */}
+      {HOMEPAGE_DEMO_CONTENT && <TestimonialBand />}
 
       {/* 10 · Bento masonry — decorators + henna + bridal wear (existing) */}
       <BentoGridSection
@@ -116,11 +117,11 @@ export default function Home() {
         ]}
       />
 
-      {/* 11 · Featured Venue Showcase — paid premium venue feature ($$) */}
-      <FeaturedVenueShowcase />
+      {/* 11 · Featured Venue Showcase — paid premium venue feature ($$) — demo data, hidden until wired */}
+      {HOMEPAGE_DEMO_CONTENT && <FeaturedVenueShowcase />}
 
-      {/* 12 · Promoted Deals — flash deals carousel ($) */}
-      <PromotedDeals />
+      {/* 12 · Promoted Deals — flash deals carousel ($) — demo data, hidden until wired */}
+      {HOMEPAGE_DEMO_CONTENT && <PromotedDeals />}
 
       {/* 13 · Editorial alternating rows — catering, car-rental, stationery (existing) */}
       <EditorialAlternatingSection
@@ -133,17 +134,17 @@ export default function Home() {
         ]}
       />
 
-      {/* 14 · Bridal Lookbook — paid bridal-wear placement ($) */}
-      <BridalLookbook />
+      {/* 14 · Bridal Lookbook — paid bridal-wear placement ($) — demo data, hidden until wired */}
+      {HOMEPAGE_DEMO_CONTENT && <BridalLookbook />}
 
       {/* 15 · Trust strip — verified vendors, secure payments */}
       <TrustStrip />
 
-      {/* 16 · Vendor Awards — annual paid Hall of Fame ($$$) */}
-      <VendorAwards />
+      {/* 16 · Vendor Awards — annual paid Hall of Fame ($$$) — demo data, hidden until wired */}
+      {HOMEPAGE_DEMO_CONTENT && <VendorAwards />}
 
-      {/* 17 · Real Weddings — masonry photo gallery (existing) */}
-      <RealWeddings />
+      {/* 17 · Real Weddings — masonry photo gallery — demo data (fake couples), hidden until real */}
+      {HOMEPAGE_DEMO_CONTENT && <RealWeddings />}
 
       {/* 18 · Free Planning Tools — checklist, budget, etc. */}
       <FreeTools />

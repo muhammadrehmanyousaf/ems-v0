@@ -25,7 +25,8 @@ const TONE: Record<NonNullable<MoneyCellProps["tone"]>, string> = {
 }
 
 export function formatPkr(amount: number, prefix = true): string {
-  return (prefix ? "Rs " : "") + amount.toLocaleString("en-PK")
+  // Non-breaking space so "Rs" never wraps away from the number in narrow cells.
+  return (prefix ? "Rs " : "") + amount.toLocaleString("en-PK")
 }
 
 export function MoneyCell({

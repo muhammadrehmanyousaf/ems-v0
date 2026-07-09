@@ -133,7 +133,7 @@ export function BusinessSettingsHubView() {
       <PageHeader
         eyebrow="Settings · Business"
         title={biz.name || "Business settings"}
-        description="Your public profile, pricing and services — redesigned, wired to live data."
+        description="Your public profile, pricing and services."
         actions={biz.vendor?.vendorType ? <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">{biz.vendor.vendorType}</span> : undefined}
       />
 

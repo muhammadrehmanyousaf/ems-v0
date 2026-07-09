@@ -50,7 +50,7 @@ export function TaxRedesignedView() {
       <PageHeader
         eyebrow="Money"
         title="Tax & P&L"
-        description="Your annual revenue, expenses and net position — redesigned, wired to live data."
+        description="Your annual revenue, expenses and net position."
         actions={<Button><Icon name="Download" size={16} className="mr-1.5" /> Export PDF</Button>}
       />
 

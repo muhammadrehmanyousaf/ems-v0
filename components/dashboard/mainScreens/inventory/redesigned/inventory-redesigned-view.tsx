@@ -96,7 +96,7 @@ export function InventoryRedesignedView() {
       <PageHeader
         eyebrow="Operate"
         title="Inventory"
-        description="Gear, props and consumables — redesigned, wired to live data."
+        description="Gear, props and consumables."
         actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Add item</Button>}
       />
 

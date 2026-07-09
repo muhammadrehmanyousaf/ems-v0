@@ -122,7 +122,7 @@ export function PromoteRedesignedView() {
       <PageHeader
         eyebrow="Grow"
         title="Promote"
-        description="Your featured-placement requests — redesigned, wired to live data."
+        description="Your featured-placement requests."
         actions={<Button onClick={() => setDialogOpen(true)}><Icon name="Plus" size={16} className="mr-1.5" /> Request placement</Button>}
       />
 

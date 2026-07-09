@@ -55,7 +55,7 @@ export function RevenueRedesignedView() {
       <PageHeader
         eyebrow="Money"
         title="Revenue"
-        description="Your earnings over time — redesigned, wired to live revenue analytics."
+        description="Your earnings over time."
         actions={<Button><Icon name="Download" size={16} className="mr-1.5" /> Export</Button>}
       />
 

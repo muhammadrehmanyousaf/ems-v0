@@ -109,7 +109,7 @@ export function UsersAdminRedesignedView() {
       <PageHeader
         eyebrow="Admin"
         title="Users"
-        description="All registered vendors and customers — redesigned, wired to live data."
+        description="All registered vendors and customers."
         actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Add user</Button>}
       />
 

@@ -202,7 +202,7 @@ export function CollaborationsRedesignedView() {
       <PageHeader
         eyebrow="Grow"
         title="Collaborations"
-        description="Invites to team up with other Wedding Wala vendors on events — incoming and outgoing, wired to live data."
+        description="Invites to team up with other Wedding Wala vendors on events — incoming and outgoing."
         actions={<Button onClick={() => setDialogOpen(true)}><Icon name="Plus" size={16} className="mr-1.5" /> Invite vendor</Button>}
       />
 

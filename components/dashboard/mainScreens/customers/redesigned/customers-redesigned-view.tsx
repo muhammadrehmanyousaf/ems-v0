@@ -104,7 +104,7 @@ export function CustomersRedesignedView() {
       <PageHeader
         eyebrow="Operate"
         title="Customers"
-        description="Your client book — redesigned, wired to live data."
+        description="Your client book."
         actions={<Button onClick={() => setDialogOpen(true)}><Icon name="Plus" size={16} className="mr-1.5" /> Add customer</Button>}
       />
 

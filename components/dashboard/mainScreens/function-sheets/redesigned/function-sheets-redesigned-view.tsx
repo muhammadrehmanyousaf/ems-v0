@@ -124,9 +124,9 @@ export function FunctionSheetsRedesignedView() {
       key: "customer",
       header: "Customer",
       cellClassName: "text-muted-foreground",
-      render: (f) => f.customerName || f.customer?.fullName || "—",
+      render: (f) => f.customerName || f.customer?.fullName || f.booking?.customerName || "—",
     },
-    { key: "event", header: "Event date", cellClassName: "text-muted-foreground", render: (f) => fmtDate(f.eventDate) },
+    { key: "event", header: "Event date", cellClassName: "text-muted-foreground", render: (f) => fmtDate(f.eventDate || f.booking?.bookingDate) },
     {
       key: "total",
       header: "Grand total",
@@ -155,7 +155,7 @@ export function FunctionSheetsRedesignedView() {
       <PageHeader
         eyebrow="Operate"
         title="Function sheets"
-        description="Quotes, contracts, BEOs and invoices — redesigned, wired to live data."
+        description="Quotes, contracts, BEOs and invoices."
         actions={<Button onClick={() => setDialogOpen(true)}><Icon name="Plus" size={16} className="mr-1.5" /> New function sheet</Button>}
       />
 

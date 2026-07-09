@@ -68,15 +68,19 @@ export interface SocialProfile {
 }
 
 export function getSocialProfiles(): SocialProfile[] {
-  const env = (key: string) => (process.env[key] || "").trim();
+  const clean = (v?: string) => (v || "").trim();
+  // Must be STATIC process.env.NEXT_PUBLIC_* reads: Next.js only inlines
+  // NEXT_PUBLIC_* into the client bundle for static member access. Dynamic
+  // process.env[key] resolves on the server but is undefined in the browser,
+  // so the footer social row rendered server-only -> hydration mismatch (#418).
   const candidates: SocialProfile[] = [
-    { key: "instagram", label: "Instagram", url: env("NEXT_PUBLIC_SOCIAL_INSTAGRAM") },
-    { key: "facebook",  label: "Facebook",  url: env("NEXT_PUBLIC_SOCIAL_FACEBOOK") },
-    { key: "twitter",   label: "X / Twitter", url: env("NEXT_PUBLIC_SOCIAL_TWITTER") },
-    { key: "linkedin",  label: "LinkedIn",  url: env("NEXT_PUBLIC_SOCIAL_LINKEDIN") },
-    { key: "youtube",   label: "YouTube",   url: env("NEXT_PUBLIC_SOCIAL_YOUTUBE") },
-    { key: "tiktok",    label: "TikTok",    url: env("NEXT_PUBLIC_SOCIAL_TIKTOK") },
-    { key: "pinterest", label: "Pinterest", url: env("NEXT_PUBLIC_SOCIAL_PINTEREST") },
+    { key: "instagram", label: "Instagram", url: clean(process.env.NEXT_PUBLIC_SOCIAL_INSTAGRAM) },
+    { key: "facebook",  label: "Facebook",  url: clean(process.env.NEXT_PUBLIC_SOCIAL_FACEBOOK) },
+    { key: "twitter",   label: "X / Twitter", url: clean(process.env.NEXT_PUBLIC_SOCIAL_TWITTER) },
+    { key: "linkedin",  label: "LinkedIn",  url: clean(process.env.NEXT_PUBLIC_SOCIAL_LINKEDIN) },
+    { key: "youtube",   label: "YouTube",   url: clean(process.env.NEXT_PUBLIC_SOCIAL_YOUTUBE) },
+    { key: "tiktok",    label: "TikTok",    url: clean(process.env.NEXT_PUBLIC_SOCIAL_TIKTOK) },
+    { key: "pinterest", label: "Pinterest", url: clean(process.env.NEXT_PUBLIC_SOCIAL_PINTEREST) },
   ];
   return candidates.filter((s) => s.url.length > 0);
 }
