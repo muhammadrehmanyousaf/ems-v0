@@ -3,6 +3,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Trophy, Star, TrendingUp, Users, ArrowRight, Quote } from "lucide-react"
 import Link from "next/link"
+import { HOMEPAGE_DEMO_CONTENT } from "@/lib/homepage-demo-flag"
+import { buildPageMetadata } from "@/lib/seo/metadata"
+
+export const metadata = buildPageMetadata({
+  title: "Vendor Success Stories",
+  description: "How wedding vendors across Pakistan grow their business with Wedding Wala.",
+  path: "/vendor-success",
+})
 
 const stories = [
   {
@@ -55,6 +63,17 @@ export default function VendorSuccessPage() {
         </div>
       </section>
 
+      {!HOMEPAGE_DEMO_CONTENT && (
+        <section className="py-12 px-4 bg-neutral-50">
+          <div className="max-w-2xl mx-auto text-center">
+            <p className="text-neutral-600">
+              We&apos;re just getting started — real vendor success stories will appear here as our community grows.
+            </p>
+          </div>
+        </section>
+      )}
+
+      {HOMEPAGE_DEMO_CONTENT && (
       <section className="py-12 px-4 bg-neutral-50">
         <div className="max-w-5xl mx-auto">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
@@ -97,6 +116,7 @@ export default function VendorSuccessPage() {
           </div>
         </div>
       </section>
+      )}
 
       <section className="py-12 px-4 bg-white border-t">
         <div className="max-w-2xl mx-auto text-center">

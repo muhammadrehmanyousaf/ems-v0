@@ -61,18 +61,10 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/api/', '/dashboard/', '/user/', '/login', '/register'],
       })),
     ],
-    // Pointing at the sitemap index AND every shard explicitly.
-    // Google + Bing follow the index just fine, but smaller crawlers
-    // (Yandex, Naver, Seznam, IndexNow consumers, AI bots) sometimes
-    // skip the index and look for direct sitemap URLs in robots.txt.
-    // Reference: https://www.sitemaps.org/protocol.html#sitemapXMLExample
-    sitemap: [
-      `${SITE_URL}/sitemap.xml`,
-      `${SITE_URL}/sitemap/0.xml`, // core
-      `${SITE_URL}/sitemap/1.xml`, // programmatic (city × vendor-type)
-      `${SITE_URL}/sitemap/2.xml`, // vendors (dynamic)
-      `${SITE_URL}/sitemap/3.xml`, // images
-    ],
+    // Only /sitemap.xml exists (a flat sitemap). The sharded /sitemap/N.xml
+    // URLs were planned but never generated, so advertising them made crawlers
+    // fetch 4 dead URLs. Re-add shards here only once they actually resolve.
+    sitemap: `${SITE_URL}/sitemap.xml`,
     host: SITE_URL,
   }
 }
