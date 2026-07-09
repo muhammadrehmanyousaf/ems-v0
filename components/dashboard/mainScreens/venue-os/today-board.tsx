@@ -48,7 +48,7 @@ const CHIP_CLS: Record<ReturnType<typeof dayChip>["tone"], string> = {
 const fmtDate = (s?: string | null) =>
   s ? new Date(s).toLocaleDateString("en-PK", { weekday: "short", day: "2-digit", month: "short" }) : "—";
 
-export function TodayBoard(): React.ReactElement {
+export function TodayBoard({ hideKpis = false }: { hideKpis?: boolean } = {}): React.ReactElement {
   const { data, isLoading } = useVendorBookings();
 
   const rows: Row[] = React.useMemo(() => {
@@ -86,12 +86,14 @@ export function TodayBoard(): React.ReactElement {
         <p className="text-sm text-muted-foreground">Your events coming up and the payments to chase — straight off your bookings.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Events today" value={todayEvents.length} icon="CalendarCheck" />
-        <StatCard label="Next 7 days" value={next7.length} icon="Clock" delta="events" />
-        <StatCard label="To collect" value={formatPkr(totalOutstanding)} icon="Wallet" delta="across open bookings" />
-        <StatCard label="Overdue payments" value={overdue} icon="AlertTriangle" trend={overdue > 0 ? "down" : "flat"} delta={overdue > 0 ? "event passed, unpaid" : "all clear"} />
-      </div>
+      {!hideKpis && (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard label="Events today" value={todayEvents.length} icon="CalendarCheck" />
+          <StatCard label="Next 7 days" value={next7.length} icon="Clock" delta="events" />
+          <StatCard label="To collect" value={formatPkr(totalOutstanding)} icon="Wallet" delta="across open bookings" />
+          <StatCard label="Overdue payments" value={overdue} icon="AlertTriangle" trend={overdue > 0 ? "down" : "flat"} delta={overdue > 0 ? "event passed, unpaid" : "all clear"} />
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Upcoming events */}
