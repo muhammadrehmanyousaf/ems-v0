@@ -67,6 +67,7 @@ import { BookingGlPost } from "./booking-gl-post";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { ExpenseCockpit } from "@/components/dashboard/mainScreens/expenses/expense-cockpit";
+import { EventProfitBoard } from "./event-profit-board";
 import { Icon, type IconName } from "@/components/dashboard/shared/icon";
 
 // Everyday tabs a normal hall owner needs; the accountant/CFO tools live under
@@ -172,6 +173,7 @@ export function VenueOsHubView(): React.ReactElement {
 
         <TabsContent value="profit" className="mt-5">
           <Section title="Bookings & profit" hint="Did this shaadi make money — and what tax do you owe on it?">
+            <EventProfitBoard />
             <EventPnlView />
             <CateringRecost />
             <VenueOsInsights />

@@ -9,6 +9,7 @@ export interface VendorBookingLite {
   customerName: string | null;
   bookingDate: string | null;
   totalAmount?: number | string | null;
+  downPayment?: number | string | null;
   status?: string | null;
 }
 
