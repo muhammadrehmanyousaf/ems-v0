@@ -68,6 +68,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { ExpenseCockpit } from "@/components/dashboard/mainScreens/expenses/expense-cockpit";
 import { EventProfitBoard } from "./event-profit-board";
+import { TodayBoard } from "./today-board";
 import { Icon, type IconName } from "@/components/dashboard/shared/icon";
 
 // Everyday tabs a normal hall owner needs; the accountant/CFO tools live under
@@ -164,6 +165,7 @@ export function VenueOsHubView(): React.ReactElement {
 
         <TabsContent value="today" className="mt-5">
           <Section title="Tonight" hint="What's happening at your hall right now — headcount vs safe capacity, valet & incidents, RSVPs, and is-this-slot-free.">
+            <TodayBoard />
             <EventNightGauge />
             <EventNightConsoleView />
             <GuestListView />
