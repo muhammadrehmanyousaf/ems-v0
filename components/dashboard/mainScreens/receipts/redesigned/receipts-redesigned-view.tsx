@@ -74,11 +74,14 @@ export function ReceiptsRedesignedView() {
   })
   const thisMonthTotal = thisMonth.reduce((s, r) => s + num(r.amount), 0)
   const cashTotal = all.filter((r) => r.method === "cash").reduce((s, r) => s + num(r.amount), 0)
+  // Drop the Txn-ref column entirely when every row is cash (no reference), so
+  // the table doesn't carry an all-dashes dead column.
+  const hasRef = all.some((r) => (r.transactionRef ?? "").trim().length > 0)
 
   const columns: Column<PaymentReceipt>[] = [
     { key: "customer", header: "Customer", render: (r) => <span className="font-medium">{r.customer?.fullName || "—"}</span> },
     { key: "method", header: "Method", render: (r) => <StatusPill tone={methodTone(r.method)} variant="icon">{methodLabel(r.method)}</StatusPill> },
-    { key: "ref", header: "Txn ref", cellClassName: "text-muted-foreground", render: (r) => r.transactionRef || "—" },
+    ...(hasRef ? [{ key: "ref", header: "Txn ref", cellClassName: "text-muted-foreground", render: (r: PaymentReceipt) => r.transactionRef || "—" }] as Column<PaymentReceipt>[] : []),
     { key: "date", header: "Received", cellClassName: "text-muted-foreground", render: (r) => fmtDate(r.receivedDate) },
     { key: "amount", header: "Amount", align: "right", render: (r) => <MoneyCell amount={num(r.amount)} tone="success" /> },
     {
