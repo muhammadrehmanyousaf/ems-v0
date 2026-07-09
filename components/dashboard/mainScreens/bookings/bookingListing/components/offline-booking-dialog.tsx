@@ -28,7 +28,7 @@ import {
 import { BusinessResourcesAPI, type BusinessResource } from '@/lib/api/businessResources';
 // WW-PRICE0b — mirrors the server's unpriced-business rule so we ask for an
 // agreed amount in exactly the case the server would otherwise refuse.
-import { isUnpricedVendor } from '@/lib/pricing/unpriced';
+import { isUnpricedVendor, isMoneyUnset } from '@/lib/pricing/unpriced';
 import { WeddingUmbrellasAPI, type WeddingUmbrella } from '@/lib/api/weddingUmbrellas';
 import { useBusiness } from '@/context/BusinessContext';
 import { PartyPopper, CheckCircle2 } from 'lucide-react';
@@ -465,6 +465,13 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
         [selectedBusiness, packages],
     );
     const needsAgreedAmount = businessUnpriced && !selectedPackageId && !selectedMenuId;
+    // A package or menu is what gives an offline booking its price. When the
+    // business has no starting price (raw NULL — an explicit 0 is a real "free"
+    // price and MUST stay allowed, hence isMoneyUnset not truthiness) and we are
+    // not taking an agreed amount, the server's pricingService rejects a priceless
+    // line with `vendor_not_priced` (400). Require a package/menu up front.
+    const priceInputRequired =
+        !!selectedBusiness && !needsAgreedAmount && isMoneyUnset((selectedBusiness as any).minimumPrice);
 
     // Selected package / menu objects for price display
     const selectedPackageObj = useMemo(
@@ -545,6 +552,13 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
         }
         if (!selectedBusinessId) {
             toast.error('Please select a business');
+            return;
+        }
+        // Mirror the server's pricing guard: no package, no menu, and no starting
+        // price to fall back on would 400 (`vendor_not_priced`). Catch it here so
+        // the failure is never a bare console 400.
+        if (priceInputRequired && !selectedPackageId && !selectedMenuId) {
+            toast.error('Select a package or menu for this booking');
             return;
         }
         if (weddingMode && !functionType) {
