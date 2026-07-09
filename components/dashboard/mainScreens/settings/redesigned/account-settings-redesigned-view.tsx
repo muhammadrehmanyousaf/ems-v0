@@ -331,7 +331,7 @@ export function AccountSettingsRedesignedView() {
       <PageHeader
         eyebrow="Settings"
         title="Account settings"
-        description="Your profile, contact details and account — redesigned, wired to live data."
+        description="Your profile, contact details and account."
       />
 
       {/* Profile header */}

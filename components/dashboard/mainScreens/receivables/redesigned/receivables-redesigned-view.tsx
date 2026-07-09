@@ -100,7 +100,7 @@ export function ReceivablesRedesignedView() {
       <PageHeader
         eyebrow="Money"
         title="Receivables"
-        description="Who owes you, and how overdue — redesigned, wired to live data."
+        description="Who owes you, and how overdue."
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

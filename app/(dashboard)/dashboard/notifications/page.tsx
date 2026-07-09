@@ -206,6 +206,7 @@ function NotificationRow({
 export default function NotificationsPage() {
   const {
     notifications,
+    totalCount,
     unreadCount,
     isLoading,
     hasMore,
@@ -228,7 +229,7 @@ export default function NotificationsPage() {
   });
 
   const filters: { key: FilterType; label: string; count?: number }[] = [
-    { key: "all", label: "All", count: notifications.length },
+    { key: "all", label: "All", count: totalCount },
     { key: "unread", label: "Unread", count: unreadCount },
     {
       key: "booking",

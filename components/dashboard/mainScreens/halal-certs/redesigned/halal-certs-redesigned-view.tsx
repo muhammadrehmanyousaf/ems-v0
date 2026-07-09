@@ -184,7 +184,7 @@ export function HalalCertsRedesignedView() {
       <PageHeader
         eyebrow="Compliance"
         title="Halal certificates"
-        description="Supplier halal certificates, authorities and expiry tracking — redesigned, wired to live data."
+        description="Supplier halal certificates, authorities and expiry tracking."
         actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Add certificate</Button>}
       />
 

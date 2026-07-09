@@ -235,7 +235,9 @@ export function CountUp({
 }: CountUpProps) {
   const ref = useRef<HTMLSpanElement>(null)
   const isInView = useInView(ref, { once, margin: "0px 0px -40px 0px" })
-  const [count, setCount] = useState(0)
+  // Seed with the target so SSR + a JS-less/animation-skipped client both show
+  // the real number instead of a "0" (was the source of the "0+" stat flash).
+  const [count, setCount] = useState(end)
 
   useEffect(() => {
     if (!isInView) return

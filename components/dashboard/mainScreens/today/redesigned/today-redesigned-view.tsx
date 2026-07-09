@@ -13,6 +13,7 @@ import * as React from "react"
 import Link from "next/link"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { BookingTimelineAPI, type TimelineTask } from "@/lib/api/bookingTimeline"
+import { AnalyticsAPI } from "@/lib/api/analytics"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
@@ -66,6 +67,12 @@ export function TodayRedesignedView() {
     queryKey: ["today-redesigned"],
     queryFn: () => BookingTimelineAPI.today(),
   })
+  // Outstanding is a running book-wide A/R balance, not a today figure — source
+  // it from the receivables endpoint (same as the Receivables screen).
+  const { data: receivables } = useQuery({
+    queryKey: ["today-outstanding"],
+    queryFn: () => AnalyticsAPI.getReceivables(),
+  })
 
   // Normalise the live { booking, tasks } events into flat rows.
   const rows: TodayRow[] = React.useMemo(
@@ -94,7 +101,7 @@ export function TodayRedesignedView() {
     0,
   )
   const revenueToday = rows.reduce((s, e) => s + amountOf(e), 0)
-  const outstandingToday = rows.reduce((s, e) => s + num(e.orderBalance), 0)
+  const outstandingBalance = num(receivables?.totals?.grandOutstanding)
 
   const columns: Column<TodayRow>[] = [
     { key: "customer", header: "Customer", render: (e) => <span className="font-medium">{e.customerName || "—"}</span> },
@@ -141,7 +148,7 @@ export function TodayRedesignedView() {
         <StatCard label="Total tasks" value={isLoading ? "…" : totalTasks} icon="CheckCircle2" />
         <StatCard label="Open tasks" value={isLoading ? "…" : openTasks} icon="Clock" delta="to complete" trend={openTasks > 0 ? "down" : "flat"} />
         <StatCard label="Revenue today" value={isLoading ? "…" : formatPkr(revenueToday)} icon="Wallet" />
-        <StatCard label="Outstanding today" value={isLoading ? "…" : formatPkr(outstandingToday)} icon="Clock" delta={outstandingToday > 0 ? "to collect" : undefined} />
+        <StatCard label="Outstanding" value={isLoading ? "…" : formatPkr(outstandingBalance)} icon="Clock" delta={outstandingBalance > 0 ? "to collect" : undefined} />
       </div>
 
       <DataTable

@@ -440,6 +440,8 @@ export interface FunctionSheet {
     id: number;
     bookingDate: string | null;
     status: string | null;
+    customerName?: string | null;
+    totalAmount?: number | string | null;
   } | null;
   customer?: {
     id: number;

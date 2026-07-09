@@ -79,7 +79,7 @@ export function PaymentsRedesignedView() {
       <PageHeader
         eyebrow="Money"
         title="Payments"
-        description="Revenue collected and outstanding per booking — redesigned, wired to live data."
+        description="Revenue collected and outstanding per booking."
         actions={<Button onClick={() => setDialogOpen(true)}><Icon name="Plus" size={16} className="mr-1.5" /> Record payment</Button>}
       />
 

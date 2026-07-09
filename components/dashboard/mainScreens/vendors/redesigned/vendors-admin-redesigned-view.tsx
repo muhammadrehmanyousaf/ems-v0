@@ -113,7 +113,7 @@ export function VendorsAdminRedesignedView() {
       <PageHeader
         eyebrow="Admin"
         title="Vendors"
-        description="Every vendor on the platform — approval status, type and city, wired to live data."
+        description="Every vendor on the platform — approval status, type and city."
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

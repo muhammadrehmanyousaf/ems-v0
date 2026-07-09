@@ -104,7 +104,7 @@ export function RolesAdminRedesignedView() {
       <PageHeader
         eyebrow="Admin"
         title="Roles & permissions"
-        description="Access roles and the members assigned to them — redesigned, wired to live data."
+        description="Access roles and the members assigned to them."
         actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> New role</Button>}
       />
 

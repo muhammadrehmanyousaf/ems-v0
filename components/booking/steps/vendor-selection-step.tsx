@@ -172,7 +172,7 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
                   {filteredVendors.map((vendor) => (
                     <SelectItem key={vendor.id} value={String(vendor.id)}>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="truncate">{vendor.name} (Rs. {vendor.minimumPrice || vendor.price || 0})</span>
+                        <span className="truncate">{vendor.name} (Rs. {(vendor.minimumPrice || vendor.price || 0).toLocaleString()})</span>
                         <Button
                           type="button"
                           variant="ghost"
@@ -248,7 +248,7 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
                       <Badge variant="outline" className="bg-bridal-cream text-bridal-gold-dark border-bridal-gold/45 text-[10px] uppercase tracking-[0.18em] font-bridal font-medium px-2 py-0.5">
                         {vendor.type}
                       </Badge>
-                      <span className="font-bridal text-[12px] text-bridal-gold-dark">Rs. {vendor.minimumPrice || vendor.price || 0}</span>
+                      <span className="font-bridal text-[12px] text-bridal-gold-dark">Rs. {(vendor.minimumPrice || vendor.price || 0).toLocaleString()}</span>
                     </div>
                   </div>
                   <Button

@@ -94,7 +94,7 @@ export function BookingsRedesignedView() {
       <PageHeader
         eyebrow="Operate"
         title="Bookings"
-        description="Every event with its payment status — redesigned, wired to live data."
+        description="Every event with its payment status."
         actions={
           <Button onClick={() => setCreateOpen(true)}>
             <Icon name="Plus" size={16} className="mr-1.5" /> Add booking

@@ -132,7 +132,7 @@ export function ExpensesRedesignedView() {
       <PageHeader
         eyebrow="Money"
         title="Expenses"
-        description="Every cost in one ledger — redesigned, wired to live data."
+        description="Every cost in one ledger."
         actions={<div className="flex items-center gap-2"><OutboxStatus /><Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Add expense</Button></div>}
       />
 

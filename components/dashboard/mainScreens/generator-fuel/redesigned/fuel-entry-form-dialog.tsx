@@ -79,7 +79,12 @@ export function FuelEntryFormDialog({
     onSuccess: () => { showSuccessToast(isEdit ? "Entry updated" : "Entry logged"); onSaved?.(); onOpenChange(false) },
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save entry"),
   })
-  const canSave = Number(form.litres) > 0 && (isEdit || businessId != null)
+  // Require a cost/litre on delivery entries so a delivery can't be saved with
+  // no cost (which silently produces a Rs 0 fuel-spend dashboard).
+  const canSave =
+    Number(form.litres) > 0 &&
+    (isEdit || businessId != null) &&
+    (form.type !== "delivery" || Number(form.costPerLitre) > 0)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -101,7 +106,7 @@ export function FuelEntryFormDialog({
               </select>
             </Field>
             <Field label="Litres"><input type="number" className={cn(inputCls, "tabular-nums")} value={form.litres} onChange={(e) => set("litres", e.target.value)} placeholder="0" autoFocus /></Field>
-            <Field label="Cost / litre (Rs)"><input type="number" className={cn(inputCls, "tabular-nums")} value={form.costPerLitre} onChange={(e) => set("costPerLitre", e.target.value)} /></Field>
+            <Field label={form.type === "delivery" ? "Cost / litre (Rs) *" : "Cost / litre (Rs)"}><input type="number" className={cn(inputCls, "tabular-nums")} value={form.costPerLitre} onChange={(e) => set("costPerLitre", e.target.value)} /></Field>
             <Field label="Generator"><input className={inputCls} value={form.generatorIdentifier} onChange={(e) => set("generatorIdentifier", e.target.value)} placeholder="e.g. 25 KVA #1" /></Field>
             <Field label="Date"><input type="date" className={inputCls} value={form.occurredAt} onChange={(e) => set("occurredAt", e.target.value)} /></Field>
             <Field label="Supplier"><input className={inputCls} value={form.supplierName} onChange={(e) => set("supplierName", e.target.value)} /></Field>

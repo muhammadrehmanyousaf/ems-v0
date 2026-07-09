@@ -93,7 +93,7 @@ export function CalendarRedesignedView() {
       <PageHeader
         eyebrow="Operate"
         title="Calendar"
-        description="Every event on one grid — redesigned, wired to live bookings."
+        description="Every event on one grid."
         actions={<Button onClick={() => setCreateOpen(true)}><Icon name="Plus" size={16} className="mr-1.5" /> Add booking</Button>}
       />
 

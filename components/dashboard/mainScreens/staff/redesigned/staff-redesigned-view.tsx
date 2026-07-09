@@ -119,7 +119,7 @@ export function StaffRedesignedView() {
       <PageHeader
         eyebrow="Operate"
         title="Team & Shooters"
-        description="Your crew, roles and pay rates — redesigned, wired to live data."
+        description="Your crew, roles and pay rates."
         actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Add staff</Button>}
       />
 

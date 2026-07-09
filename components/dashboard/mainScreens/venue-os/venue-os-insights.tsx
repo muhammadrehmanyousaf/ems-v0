@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { venueOsApi, type TaxBreakdown } from "@/lib/api/venueOs";
 import { isOrgMembershipOn } from "@/lib/org-membership-flag";
 import { useActiveBusinessId } from "@/lib/store/active-business-store";
+import { useUser } from "@/context/UserContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ type Jurisdiction = (typeof JURISDICTIONS)[number];
 
 export function VenueOsInsights(): React.ReactElement | null {
   const enabled = isOrgMembershipOn();
+  const { user } = useUser();
   // Scope status + tax to the ACTIVE venue — the flags are per-business overrides,
   // so a global health() call would report the env defaults (all off) and the tax
   // gate would 404 even for a pilot venue.
@@ -61,6 +63,8 @@ export function VenueOsInsights(): React.ReactElement | null {
 
   return (
     <div className="space-y-4">
+      {/* Raw feature-flag status is a debug surface — admins only, not vendors. */}
+      {user?.isSuperAdmin && (
       <Card>
         <CardHeader>
           <CardTitle>Venue-OS status</CardTitle>
@@ -81,6 +85,7 @@ export function VenueOsInsights(): React.ReactElement | null {
           )}
         </CardContent>
       </Card>
+      )}
 
       <Card>
         <CardHeader>

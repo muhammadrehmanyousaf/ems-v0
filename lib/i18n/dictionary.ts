@@ -57,6 +57,7 @@ const EN: Dictionary = {
   "nav.drone_noc": "Drone NOC",
   "nav.notifications": "Notifications",
   "nav.business_settings": "Business Settings",
+  "nav.field_capture": "Field capture",
   "nav.onboarding": "Onboarding",
 
   // Common verbs
@@ -157,6 +158,7 @@ const UR: Dictionary = {
   "nav.drone_noc": "ڈرون این او سی",
   "nav.notifications": "اطلاعات",
   "nav.business_settings": "کاروبار کی ترتیبات",
+  "nav.field_capture": "میدانی کیپچر",
   "nav.onboarding": "آن بورڈنگ",
 
   // Common verbs

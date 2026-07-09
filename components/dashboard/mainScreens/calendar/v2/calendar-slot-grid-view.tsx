@@ -181,7 +181,12 @@ export function CalendarSlotGridView() {
                 <div key={r.key} className="flex items-center py-0.5">
                   <div className="w-28 shrink-0 pr-2 truncate text-xs font-medium" title={r.name}>{r.name}</div>
                   {days.map((d) => {
-                    const st: CellState = blockedSet.has(d) || data.days[d]?.isBlocked ? "blocked" : r.cellFor(d);
+                    const base: CellState = blockedSet.has(d) || data.days[d]?.isBlocked ? "blocked" : r.cellFor(d);
+                    // A plain (offline/quick-add/migrated) booking isn't tied to a
+                    // specific hall/slot, so it arrives only as a per-day count.
+                    // Paint otherwise-free cells booked so a booked day is never
+                    // shown as Free (never HIDE a booking).
+                    const st: CellState = base === "free" && (data.days[d]?.bookedCount ?? 0) > 0 ? "booked" : base;
                     const isSel = sel && sel.row === r.key && sel.day === d;
                     return (
                       <button
