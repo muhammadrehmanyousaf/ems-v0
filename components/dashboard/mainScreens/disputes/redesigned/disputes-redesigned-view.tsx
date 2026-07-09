@@ -108,7 +108,7 @@ export function DisputesRedesignedView() {
       <PageHeader
         eyebrow="Admin"
         title="Disputes"
-        description="Open and resolved booking disputes across the marketplace — redesigned, wired to live data."
+        description="Open and resolved booking disputes across the marketplace."
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

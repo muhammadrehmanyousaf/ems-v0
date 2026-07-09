@@ -8,7 +8,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Dashboard : Plan & Billing',
-  description: 'Your Wedding Wala plan — Free, Business, or Growth.',
+  description: 'Your Wedding Wala plan — Khata Lite, Business, or Growth.',
 };
 
 export default function Page() {

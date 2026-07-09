@@ -54,7 +54,7 @@ export function BillingRedesignedView() {
       <PageHeader
         eyebrow="Money"
         title="Billing & plan"
-        description="Your subscription and what each tier unlocks — redesigned, wired to live data."
+        description="Your subscription and what each tier unlocks."
       />
 
       {/* Current plan summary */}
@@ -62,7 +62,7 @@ export function BillingRedesignedView() {
         <div>
           <div className="text-xs font-medium text-muted-foreground">Current plan</div>
           <div className="mt-0.5 flex items-center gap-2 text-lg font-semibold capitalize">
-            {isLoading ? "…" : (current ?? "Free")}
+            {isLoading ? "…" : (plans.find((p: any) => p.tier === current)?.name ?? cap(current))}
             {pending && <StatusPill tone="warning">{cap(pending)} requested</StatusPill>}
           </div>
         </div>

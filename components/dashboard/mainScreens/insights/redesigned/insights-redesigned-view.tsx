@@ -53,7 +53,7 @@ export function InsightsRedesignedView() {
       <PageHeader
         eyebrow="Grow"
         title="Insights"
-        description="Where your bookings come from, and how leads convert — redesigned, wired to live analytics."
+        description="Where your bookings come from, and how leads convert."
         actions={<Button><Icon name="Download" size={16} className="mr-1.5" /> Export report</Button>}
       />
 

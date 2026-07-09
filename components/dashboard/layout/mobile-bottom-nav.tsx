@@ -51,11 +51,11 @@ const TABS: Tab[] = [
 const MORE: { href: string; icon: React.ComponentType<{ className?: string }>; simple: string; pro: string }[] = [
   { href: "/dashboard/calendar", icon: CalendarDays, simple: "Khali Tareekhein", pro: "Calendar" },
   { href: "/dashboard/customers", icon: Users, simple: "Grahak", pro: "Customers" },
-  { href: "/dashboard/chat", icon: MessageSquareText, simple: "Messages", pro: "Messages" },
+  { href: "/dashboard/chat", icon: MessageSquareText, simple: "Baat Cheet", pro: "Messages" },
   { href: "/dashboard/expenses", icon: Wallet, simple: "Kharcha", pro: "Expenses" },
   { href: "/dashboard/staff", icon: HandCoins, simple: "Staff", pro: "Staff & Payroll" },
   { href: "/dashboard/inventory", icon: Boxes, simple: "Saman", pro: "Inventory" },
-  { href: "/dashboard/reviews", icon: Star, simple: "Reviews", pro: "Reviews" },
+  { href: "/dashboard/reviews", icon: Star, simple: "Raaye", pro: "Reviews" },
   { href: "/dashboard/venue-os", icon: Building2, simple: "Meri Venues", pro: "Venues" },
   { href: "/dashboard/settings", icon: Settings, simple: "Settings", pro: "Settings" },
 ]

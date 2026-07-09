@@ -607,11 +607,11 @@ export function HeroSection() {
   // subjects only (mehndi, decor, jewellery, solo bride). See
   // public/images/home/credits.md for Pexels provenance (free commercial use).
   const heroImages = [
-    "/images/home/hero/h1.jpg", // gold floral stage
+    "/images/home/spotlight/spotlight.jpg", // grand floral stage (modest, no religious iconography)
     "/images/home/hero/h2.jpg", // mehndi hands + bangles
     "/images/home/hero/h3.jpg", // floral stage decor
     "/images/home/hero/h4.jpg", // henna + jewellery hands
-    "/images/home/hero/h5.jpg", // ornate gold & red stage
+    "/images/home/partners/venue.jpg", // modest bride at decorated venue
     "/images/home/hero/h6.jpg", // modest bride, gold veil
     "/images/home/hero/h7.jpg", // draped stage, red & gold flowers
   ]

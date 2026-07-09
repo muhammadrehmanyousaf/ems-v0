@@ -97,7 +97,7 @@ export function ReceiptsRedesignedView() {
       <PageHeader
         eyebrow="Money"
         title="Receipts"
-        description="Every payment received, with proof — redesigned, wired to live data."
+        description="Every payment received, with proof."
         actions={<div className="flex items-center gap-2"><OutboxStatus /><Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Record receipt</Button></div>}
       />
 

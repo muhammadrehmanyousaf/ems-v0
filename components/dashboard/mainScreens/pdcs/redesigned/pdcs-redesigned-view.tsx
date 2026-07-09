@@ -95,7 +95,7 @@ export function PdcsRedesignedView() {
       <PageHeader
         eyebrow="Money"
         title="Cheque ledger"
-        description="Post-dated cheques from held to cleared — redesigned, wired to live data."
+        description="Post-dated cheques from held to cleared."
         actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Log a cheque</Button>}
       />
 

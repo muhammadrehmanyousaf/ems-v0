@@ -134,7 +134,7 @@ export function LeadsRedesignedView() {
       <PageHeader
         eyebrow="Operate"
         title="Leads"
-        description="Every inquiry in one inbox — redesigned, wired to live data."
+        description="Every inquiry in one inbox."
         actions={<div className="flex items-center gap-2"><OutboxStatus /><Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Log a lead</Button></div>}
       />
 

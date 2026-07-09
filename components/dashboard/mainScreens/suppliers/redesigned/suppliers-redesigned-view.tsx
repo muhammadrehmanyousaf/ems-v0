@@ -96,7 +96,7 @@ export function SuppliersRedesignedView() {
       <PageHeader
         eyebrow="Operate"
         title="Suppliers"
-        description="Your A/P ledger and vendor network — redesigned, wired to live data."
+        description="Your A/P ledger and vendor network."
       />
       <Tabs defaultValue="invoices" className="space-y-6">
         <TabsList>
@@ -214,7 +214,7 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
         return (
           <div className="flex flex-col items-end gap-1">
             <div className="tabular-nums">
-              <MoneyCell amount={paid} tone={paid > 0 ? "success" : "muted"} prefix={false} />
+              <MoneyCell amount={paid} tone={paid > 0 ? "success" : "muted"} />
               <span className="px-1 text-muted-foreground">/</span>
               <MoneyCell amount={total} />
             </div>

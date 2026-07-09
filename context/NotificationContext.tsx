@@ -21,6 +21,7 @@ const BACKEND_WS_URL =
 
 interface NotificationContextType {
   notifications: Notification[];
+  totalCount: number;
   unreadCount: number;
   isConnected: boolean;
   isLoading: boolean;
@@ -39,6 +40,7 @@ const NotificationContext = createContext<NotificationContextType | undefined>(
 export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   const { user, isAuthenticated } = useUser();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -56,6 +58,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         setIsConnected(false);
       }
       setNotifications([]);
+      setTotalCount(0);
       setUnreadCount(0);
       return;
     }
@@ -98,6 +101,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     // Handle new notification from server
     socket.on("notification:new", (notification: Notification) => {
       setNotifications((prev) => [notification, ...prev]);
+      setTotalCount((c) => c + 1);
       // Play notification sound
       playNotificationSound();
     });
@@ -132,6 +136,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     try {
       const result = await NotificationAPI.getNotifications(1, 20);
       setNotifications(result.notifications);
+      setTotalCount(result.total);
       setHasMore(result.hasMore);
       setPage(1);
 
@@ -151,6 +156,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       const nextPage = page + 1;
       const result = await NotificationAPI.getNotifications(nextPage, 20);
       setNotifications((prev) => [...prev, ...result.notifications]);
+      setTotalCount(result.total);
       setHasMore(result.hasMore);
       setPage(nextPage);
     } catch (err) {
@@ -211,6 +217,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     setNotifications((curr) => curr.filter((n) => n.id !== id));
     try {
       await NotificationAPI.deleteNotification(id);
+      setTotalCount((c) => Math.max(0, c - 1));
       const count = await NotificationAPI.getUnreadCount();
       setUnreadCount(count);
     } catch {
@@ -227,6 +234,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     <NotificationContext.Provider
       value={{
         notifications,
+        totalCount,
         unreadCount,
         isConnected,
         isLoading,

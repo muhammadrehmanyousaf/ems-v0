@@ -131,7 +131,7 @@ export function GeneratorFuelRedesignedView() {
       <PageHeader
         eyebrow="Compliance"
         title="Generator fuel log"
-        description="Deliveries, consumption and tank readings — redesigned, wired to live data."
+        description="Deliveries, consumption and tank readings."
         actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Log entry</Button>}
       />
 

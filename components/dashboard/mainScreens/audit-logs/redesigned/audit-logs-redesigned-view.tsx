@@ -90,7 +90,7 @@ export function AuditLogsRedesignedView() {
       <PageHeader
         eyebrow="Admin"
         title="Audit logs"
-        description="Every admin and system action — who did what, to which record, and when. Read-only, wired to live data."
+        description="Every admin and system action — who did what, to which record, and when. Read-only."
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

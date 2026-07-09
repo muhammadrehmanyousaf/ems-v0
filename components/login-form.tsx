@@ -17,10 +17,7 @@ import { BridalButton } from "@/components/bridal/bridal-button"
 import { BridalField, BridalInput } from "@/components/bridal/bridal-input"
 import { BridalCrown, BridalTitle } from "@/components/bridal/bridal-card"
 import { FloralDivider } from "@/components/bridal/floral-divider"
-import {
-  AuthShell,
-  AuthAsideTestimonial,
-} from "@/components/bridal/auth-shell"
+import { AuthShell } from "@/components/bridal/auth-shell"
 
 // ── Validation (unchanged) ─────────────────────────────────────────────────
 const formSchema = z.object({
@@ -132,14 +129,6 @@ export function LoginForm() {
         </>
       }
       asideSubtitle="Trusted by families across Pakistan to plan their most precious day — from mehndi to walima."
-      asideExtra={
-        <AuthAsideTestimonial
-          quote="We found our photographer, our venue, and our caterer in one evening. Truly the dream platform."
-          name="Sarah & Ahmed"
-          meta="Lahore · 2025"
-          initial="S"
-        />
-      }
       mobileCrestIcon={<img src="/icon-mark.png" alt="Wedding Wala" className="w-7 h-7" />}
     >
       <BridalCrown className="mb-3">Welcome Back</BridalCrown>
