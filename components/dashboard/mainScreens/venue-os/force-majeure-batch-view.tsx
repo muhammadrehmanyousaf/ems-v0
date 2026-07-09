@@ -15,6 +15,7 @@ import { isForceMajeureBatchOn } from "@/lib/force-majeure-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 
 const PKR = (n: number | string): string => "Rs " + Math.round(Number(n)).toLocaleString("en-PK");
 
@@ -66,10 +67,7 @@ export function ForceMajeureBatchView(): React.ReactElement | null {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2 text-sm">
-          <label>
-            Business #
-            <input type="number" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
-          </label>
+          <BusinessScopeField value={businessId} onChange={setBusinessId} />
           <input type="text" placeholder="govt order ref" value={govtOrderRef} onChange={(e) => setGovtOrderRef(e.target.value)} className="w-36 rounded border px-2 py-1" />
           <select value={rule} onChange={(e) => setRule(e.target.value)} className="rounded border px-2 py-1">
             <option value="CARRY_FORWARD">CARRY_FORWARD</option>

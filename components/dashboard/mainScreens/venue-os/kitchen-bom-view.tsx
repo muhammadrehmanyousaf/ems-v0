@@ -14,6 +14,7 @@ import { isKitchenBomOn } from "@/lib/kitchen-bom-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 
 const PKR = (n: number | string | null | undefined): string => "Rs " + Math.round(Number(n || 0)).toLocaleString("en-PK");
 function readErr(e: unknown, fallback: string): string {
@@ -51,7 +52,7 @@ export function KitchenBomView(): React.ReactElement | null {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2 text-sm">
-          <label>Business #<input type="number" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" /></label>
+          <BusinessScopeField value={businessId} onChange={setBusinessId} />
           <Button size="sm" variant="outline" onClick={() => void guard(async () => setBoms(await venueOsApi.listRecipeBoms(bid)))} disabled={!businessId || busy}>Load recipes</Button>
         </div>
 

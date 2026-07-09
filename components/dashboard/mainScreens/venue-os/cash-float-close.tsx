@@ -15,6 +15,7 @@ import { isPaymentLedgerOn } from "@/lib/payment-ledger-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 
 const PKR = (n: string | number): string => "Rs " + Math.round(Number(n) || 0).toLocaleString("en-PK");
 
@@ -79,10 +80,7 @@ export function CashFloatClose(): React.ReactElement | null {
       <CardContent className="space-y-4">
         {!float ? (
           <div className="flex flex-wrap items-end gap-3">
-            <label className="text-sm">
-              Business #
-              <input type="number" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
-            </label>
+            <BusinessScopeField value={businessId} onChange={setBusinessId} />
             <label className="text-sm">
               Opening float
               <input type="number" value={openingFloat} onChange={(e) => setOpeningFloat(e.target.value)} className="ml-2 w-28 rounded border px-2 py-1" />

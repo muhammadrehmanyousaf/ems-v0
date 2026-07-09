@@ -15,6 +15,7 @@ import { isWorkingCapitalOn } from "@/lib/working-capital-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 
 const PKR = (n: number | string): string => "Rs " + Math.round(Number(n)).toLocaleString("en-PK");
 
@@ -69,10 +70,7 @@ export function WorkingCapitalInstrumentsView(): React.ReactElement | null {
         <CardTitle>Working-capital instruments</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <label className="text-sm">
-          Business #
-          <input type="number" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
-        </label>
+        <BusinessScopeField value={businessId} onChange={setBusinessId} />
 
         {/* committee / BC */}
         <div className="space-y-2 rounded-md border p-3">

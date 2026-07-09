@@ -14,6 +14,7 @@ import { isGlEngineOn } from "@/lib/gl-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BookingPicker } from "@/components/dashboard/shared/booking-picker";
 
 const PKR = (n: number): string => "Rs " + Math.round(n).toLocaleString("en-PK");
 
@@ -78,8 +79,8 @@ export function BookingGlPost(): React.ReactElement | null {
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-end gap-3">
           <label className="text-sm">
-            Booking #
-            <input type="number" value={bookingId} onChange={(e) => setBookingId(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
+            <div className="mb-1">Function</div>
+            <BookingPicker value={bookingId ? Number(bookingId) : null} onChange={(id) => setBookingId(id ? String(id) : "")} className="w-56" placeholder="which function?" />
           </label>
           <label className="text-sm">
             Event

@@ -14,6 +14,7 @@ import { isBulkImportOn } from "@/lib/bulk-import-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 
 function readErr(e: unknown, fallback: string): string {
   return (e as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
@@ -57,10 +58,7 @@ export function BulkImportView(): React.ReactElement | null {
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         <div className="flex flex-wrap items-end gap-2">
-          <label>
-            Business #
-            <input type="number" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
-          </label>
+          <BusinessScopeField value={businessId} onChange={setBusinessId} />
           <select value={target} onChange={(e) => { setTarget(e.target.value); setPreview(null); setCommitted(null); }} className="rounded border px-2 py-1">
             {(targets.length ? targets : [{ target: "leads", label: "Leads" }, { target: "expenses", label: "Expenses" }, { target: "staff", label: "Staff" }]).map((t) => (
               <option key={t.target} value={t.target}>{t.label}</option>

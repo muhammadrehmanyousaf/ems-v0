@@ -14,6 +14,7 @@ import { isLegalOn, isEsgOn } from "@/lib/legal-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 
 function readErr(e: unknown, fallback: string): string {
   return (e as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
@@ -54,7 +55,7 @@ export function LegalEsgView(): React.ReactElement | null {
         {legalOn && (
           <div className="space-y-2 rounded-md border p-3 text-sm">
             <div className="flex flex-wrap items-end gap-2">
-              <label>Business #<input type="number" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="ml-1 w-24 rounded border px-2 py-1" /></label>
+              <BusinessScopeField value={businessId} onChange={setBusinessId} />
               <input type="number" placeholder="cheque Rs" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-28 rounded border px-2 py-1" />
               <Button size="sm" onClick={() => void guard(async () => { const c = await venueOsApi.build489f(Number(businessId), { counterpartyName: "Defaulter", amountPkr: Number(amount) }); setCaseMsg(`489-F drafted — file by ${c.statutoryDeadline}`); })} disabled={!businessId || !amount || busy}>Draft 489-F</Button>
               <Button size="sm" variant="outline" onClick={() => void guard(async () => { const r = await venueOsApi.reviewResponse({ requestedIntent: "resolve", concessionOffer: "10% off next booking" }); setReply(r.publicReply); })} disabled={busy}>Draft review reply</Button>

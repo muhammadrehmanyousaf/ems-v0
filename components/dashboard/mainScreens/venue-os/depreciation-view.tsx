@@ -15,6 +15,7 @@ import { isDepreciationOn } from "@/lib/depreciation-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 
 const PKR = (n: string | number): string => "Rs " + Math.round(Number(n) || 0).toLocaleString("en-PK");
 const CATEGORIES = ["GENERATOR", "CROCKERY", "FURNITURE", "SOUND_LIGHT", "VEHICLE", "LEASEHOLD", "OTHER"];
@@ -85,10 +86,7 @@ export function DepreciationView(): React.ReactElement | null {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-3">
-          <label className="text-sm">
-            Business #
-            <input type="number" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
-          </label>
+          <BusinessScopeField value={businessId} onChange={setBusinessId} />
           <Button size="sm" variant="outline" onClick={() => void loadAssets()} disabled={!businessId || busy}>
             Load assets
           </Button>

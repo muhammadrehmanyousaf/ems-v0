@@ -15,6 +15,7 @@ import { isWageRegisterOn } from "@/lib/wage-register-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BookingPicker } from "@/components/dashboard/shared/booking-picker";
+import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 import { Badge } from "@/components/ui/badge";
 
 const PKR = (n: string | number): string => "Rs " + Math.round(Number(n) || 0).toLocaleString("en-PK");
@@ -89,10 +90,7 @@ export function WageCostingView(): React.ReactElement | null {
       <CardContent className="space-y-4">
         {/* record a shift */}
         <div className="flex flex-wrap items-end gap-2 rounded-md border bg-muted/40 p-3">
-          <label className="text-sm">
-            Business #
-            <input type="number" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="ml-2 w-20 rounded border px-2 py-1" />
-          </label>
+          <BusinessScopeField value={businessId} onChange={setBusinessId} />
           <label className="text-sm">
             <div className="mb-1">Function</div>
             <BookingPicker value={eventId ? Number(eventId) : null} onChange={(id) => setEventId(id ? String(id) : "")} className="w-56" placeholder="which function?" />

@@ -15,6 +15,7 @@ import { isAmlCockpitOn } from "@/lib/aml-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 
 const PKR = (n: number): string => "Rs " + Math.round(n).toLocaleString("en-PK");
 
@@ -59,10 +60,7 @@ export function AmlCockpitView(): React.ReactElement | null {
         <CardTitle>AML cockpit (§21 meter · structuring · benami)</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <label className="text-sm">
-          Business #
-          <input type="number" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
-        </label>
+        <BusinessScopeField value={businessId} onChange={setBusinessId} />
 
         {/* §21 meter */}
         <div className="space-y-2 rounded-md border p-3">
