@@ -75,6 +75,24 @@ const nextConfig = {
       },
     ]
   },
+
+  // Security headers on every HTML response. helmet only wraps the Express API,
+  // so the Next.js/Vercel pages shipped none of these. A strict CSP is
+  // deliberately NOT set here — it needs careful testing against Stripe /
+  // Cloudinary / analytics / socket.io and is a separate change.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=()" },
+        ],
+      },
+    ]
+  },
 }
 
 mergeConfig(nextConfig, userConfig)
