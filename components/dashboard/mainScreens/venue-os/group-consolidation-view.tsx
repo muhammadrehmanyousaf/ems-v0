@@ -67,7 +67,7 @@ export function GroupConsolidationView(): React.ReactElement | null {
         <div className="flex flex-wrap items-end gap-3">
           <label className="text-sm">
             Org #
-            <input type="number" value={orgInput} onChange={(e) => setOrgInput(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
+            <input type="number" value={orgInput} onChange={(e) => setOrgInput(e.target.value)} className="ml-2 w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <Button size="sm" onClick={() => setOrgId(orgInput ? Number(orgInput) : null)} disabled={!orgInput}>
             Load

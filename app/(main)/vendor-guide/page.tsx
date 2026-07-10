@@ -2,6 +2,14 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { BookOpen, UserPlus, Store, Package, Star, CreditCard, TrendingUp, ArrowRight, CheckCircle } from "lucide-react"
 import Link from "next/link"
+import type { Metadata } from "next"
+import { buildPageMetadata, SITE_NAME } from "@/lib/seo"
+
+export const metadata: Metadata = buildPageMetadata({
+  title: `Vendor Guide — Grow Your Wedding Business on ${SITE_NAME}`,
+  description: `How to list, price and grow your wedding business on ${SITE_NAME} (weddingwala.pk) — from creating your account to winning more bookings across Pakistan.`,
+  path: "/vendor-guide",
+})
 
 const steps = [
   {

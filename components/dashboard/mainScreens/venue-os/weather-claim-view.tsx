@@ -56,9 +56,9 @@ export function WeatherClaimView(): React.ReactElement | null {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2 text-sm">
-          <label>Weather event #<input type="number" value={weatherId} onChange={(e) => setWeatherId(e.target.value)} className="ml-2 w-28 rounded border px-2 py-1" /></label>
-          <label>Wind kph<input type="number" value={windKph} onChange={(e) => setWindKph(e.target.value)} className="ml-1 w-20 rounded border px-2 py-1" /></label>
-          <label>Rain mm<input type="number" value={rainMm} onChange={(e) => setRainMm(e.target.value)} className="ml-1 w-20 rounded border px-2 py-1" /></label>
+          <label>Weather event #<input type="number" value={weatherId} onChange={(e) => setWeatherId(e.target.value)} className="ml-2 w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
+          <label>Wind kph<input type="number" value={windKph} onChange={(e) => setWindKph(e.target.value)} className="ml-1 w-20 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
+          <label>Rain mm<input type="number" value={rainMm} onChange={(e) => setRainMm(e.target.value)} className="ml-1 w-20 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
           <Button size="sm" onClick={() => void guard(async () => setRes(await venueOsApi.evaluateWeatherClaims(Number(weatherId), { measurement: measurement() })))} disabled={!weatherId || busy}>Evaluate triggers</Button>
         </div>
 

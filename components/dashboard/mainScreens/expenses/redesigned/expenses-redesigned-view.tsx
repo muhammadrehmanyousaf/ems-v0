@@ -10,7 +10,6 @@ import * as React from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { ExpensesAPI, type VendorExpense } from "@/lib/api/vendorExpenses"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
-import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
 import { StatusPill } from "@/components/dashboard/primitives/status-pill"
 import { MoneyCell, formatPkr } from "@/components/dashboard/primitives/money-cell"
@@ -20,6 +19,7 @@ import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { ExpenseFormDialog, type ExpensePrefill } from "@/components/dashboard/mainScreens/expenses/redesigned/expense-form-dialog"
+import { ExpenseCockpit } from "@/components/dashboard/mainScreens/expenses/expense-cockpit"
 import { OutboxStatus } from "@/components/dashboard/shared/outbox-status"
 import { OutboxConflicts } from "@/components/dashboard/shared/outbox-conflicts"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
@@ -91,14 +91,6 @@ export function ExpensesRedesignedView() {
     return all.filter((e) => [e.vendorName, e.description, e.category].some((v) => (v ?? "").toLowerCase().includes(q)))
   }, [all, search])
 
-  const total = all.reduce((s, e) => s + num(e.amount), 0)
-  const now = new Date()
-  const thisMonthTotal = all.filter((e) => {
-    const d = new Date(e.spentDate)
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
-  }).reduce((s, e) => s + num(e.amount), 0)
-  const categories = new Set(all.map((e) => e.category)).size
-
   const columns: Column<VendorExpense>[] = [
     { key: "category", header: "Category", render: (e) => <span className="font-medium">{cap(e.category)}</span> },
     { key: "space", header: "Space", cellClassName: "text-muted-foreground", render: (e) => e.subVenue?.name || "—" },
@@ -138,11 +130,14 @@ export function ExpensesRedesignedView() {
 
       <OutboxConflicts reenterOps={["record_expense"]} onReenter={(p) => openReenter(p)} />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total spent" value={formatPkr(total)} icon="Wallet" />
-        <StatCard label="This month" value={formatPkr(thisMonthTotal)} icon="Calendar" trend="down" delta="outflow" />
-        <StatCard label="Entries" value={all.length} icon="FileText" />
-        <StatCard label="Categories" value={categories} icon="LayoutGrid" />
+      {/* Command-centre: day/month/year spend, category split (incl. hall rent
+          & overheads), and per-function profit. The detailed ledger follows. */}
+      <ExpenseCockpit />
+
+      <div className="flex items-center gap-2 pt-1">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Full ledger</span>
+        <div className="h-px flex-1 bg-border" />
       </div>
 
       <DataTable

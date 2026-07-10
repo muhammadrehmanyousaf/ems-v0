@@ -179,7 +179,7 @@ export function CalendarSlotGridView() {
               {/* Rows */}
               {rows.map((r) => (
                 <div key={r.key} className="flex items-center py-0.5">
-                  <div className="w-28 shrink-0 pr-2 truncate text-xs font-medium" title={r.name}>{r.name}</div>
+                  <div className="w-40 shrink-0 pr-2 truncate text-xs font-medium" title={r.name}>{r.name}</div>
                   {days.map((d) => {
                     const base: CellState = blockedSet.has(d) || data.days[d]?.isBlocked ? "blocked" : r.cellFor(d);
                     // A plain (offline/quick-add/migrated) booking isn't tied to a

@@ -14,6 +14,7 @@ import { isGlEngineOn } from "@/lib/gl-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BookingPicker } from "@/components/dashboard/shared/booking-picker";
 
 const PKR = (n: number): string => "Rs " + Math.round(n).toLocaleString("en-PK");
 
@@ -78,12 +79,12 @@ export function BookingGlPost(): React.ReactElement | null {
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-end gap-3">
           <label className="text-sm">
-            Booking #
-            <input type="number" value={bookingId} onChange={(e) => setBookingId(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
+            <div className="mb-1">Function</div>
+            <BookingPicker value={bookingId ? Number(bookingId) : null} onChange={(id) => setBookingId(id ? String(id) : "")} className="w-56" placeholder="which function?" />
           </label>
           <label className="text-sm">
             Event
-            <select value={eventType} onChange={(e) => setEventType(e.target.value)} className="ml-2 rounded border px-2 py-1">
+            <select value={eventType} onChange={(e) => setEventType(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
               {EVENT_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>
                   {t.label}
@@ -93,11 +94,11 @@ export function BookingGlPost(): React.ReactElement | null {
           </label>
           <label className="text-sm">
             Amount
-            <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="ml-2 w-32 rounded border px-2 py-1" />
+            <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="ml-2 w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm" title="If this deal is with another business in your group (ghar-ka-maal), enter its id so group consolidation can net it out.">
             Counterparty biz # <span className="text-muted-foreground">(optional)</span>
-            <input type="number" value={counterparty} onChange={(e) => setCounterparty(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
+            <input type="number" value={counterparty} onChange={(e) => setCounterparty(e.target.value)} className="ml-2 w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
         </div>
 

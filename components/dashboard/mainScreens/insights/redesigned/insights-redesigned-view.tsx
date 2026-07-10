@@ -9,6 +9,7 @@
 import * as React from "react"
 import { useQuery } from "@tanstack/react-query"
 import { InsightsAPI, type InsightsAdvanced, type FunnelRow } from "@/lib/api/insights"
+import { LEAD_SOURCE_LABELS } from "@/lib/api/leads"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
@@ -40,7 +41,7 @@ export function InsightsRedesignedView() {
   const rows = (d?.funnel ?? []) as FunnelRow[]
 
   const columns: Column<FunnelRow>[] = [
-    { key: "source", header: "Source", render: (r) => <span className="font-medium">{cap(r.source)}</span> },
+    { key: "source", header: "Source", render: (r) => <span className="font-medium">{(LEAD_SOURCE_LABELS as Record<string, string>)[r.source] ?? cap(r.source)}</span> },
     { key: "total", header: "Leads", align: "right", cellClassName: "tabular-nums", render: (r) => num(r.total) },
     { key: "contacted", header: "Contacted", align: "right", cellClassName: "tabular-nums", render: (r) => num(r.contacted) },
     { key: "quoted", header: "Quoted", align: "right", cellClassName: "tabular-nums", render: (r) => num(r.quoted) },

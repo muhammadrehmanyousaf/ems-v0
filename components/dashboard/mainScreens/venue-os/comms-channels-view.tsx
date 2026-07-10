@@ -14,6 +14,7 @@ import { isBspCommsOn } from "@/lib/comms-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 
 function readErr(e: unknown, fallback: string): string {
   return (e as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
@@ -49,7 +50,7 @@ export function CommsChannelsView(): React.ReactElement | null {
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2 text-sm">
           <Button size="sm" variant="outline" onClick={() => void guard(async () => setChannels((await venueOsApi.commsChannels()).channels))} disabled={busy}>Channel status</Button>
-          <label>Business #<input type="number" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" /></label>
+          <BusinessScopeField value={businessId} onChange={setBusinessId} />
           <Button size="sm" onClick={() => void guard(async () => setRun(await venueOsApi.dispatchQueued(Number(businessId))))} disabled={!businessId || busy}>Dispatch queued</Button>
         </div>
 

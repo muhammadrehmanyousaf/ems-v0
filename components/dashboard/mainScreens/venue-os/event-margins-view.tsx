@@ -14,6 +14,7 @@ import { venueOsApi, type EventMargins } from "@/lib/api/venueOs";
 import { isEventCostingOn } from "@/lib/event-costing-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 
 const PKR = (n: number): string => "Rs " + Math.round(n).toLocaleString("en-PK");
 const netClass = (n: number): string => (n >= 0 ? "text-emerald-600" : "text-red-600");
@@ -57,17 +58,14 @@ export function EventMarginsView(): React.ReactElement | null {
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-end gap-3">
-          <label className="text-sm">
-            Business #
-            <input type="number" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
-          </label>
+          <BusinessScopeField value={businessId} onChange={setBusinessId} />
           <label className="text-sm">
             From
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             To
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <div className="flex gap-1">
             <Button size="sm" variant={driver === "REVENUE_SHARE" ? "default" : "outline"} onClick={() => setDriver("REVENUE_SHARE")}>

@@ -14,6 +14,8 @@ import { venueOsApi, type WageRecordResult, type WagePostResult, type LabourByEv
 import { isWageRegisterOn } from "@/lib/wage-register-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { BookingPicker } from "@/components/dashboard/shared/booking-picker";
+import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 import { Badge } from "@/components/ui/badge";
 
 const PKR = (n: string | number): string => "Rs " + Math.round(Number(n) || 0).toLocaleString("en-PK");
@@ -88,29 +90,26 @@ export function WageCostingView(): React.ReactElement | null {
       <CardContent className="space-y-4">
         {/* record a shift */}
         <div className="flex flex-wrap items-end gap-2 rounded-md border bg-muted/40 p-3">
+          <BusinessScopeField value={businessId} onChange={setBusinessId} />
           <label className="text-sm">
-            Business #
-            <input type="number" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="ml-2 w-20 rounded border px-2 py-1" />
-          </label>
-          <label className="text-sm">
-            Booking #
-            <input type="number" value={eventId} onChange={(e) => setEventId(e.target.value)} className="ml-2 w-20 rounded border px-2 py-1" />
+            <div className="mb-1">Function</div>
+            <BookingPicker value={eventId ? Number(eventId) : null} onChange={(id) => setEventId(id ? String(id) : "")} className="w-56" placeholder="which function?" />
           </label>
           <label className="text-sm">
             Worker
-            <input type="text" value={workerName} onChange={(e) => setWorkerName(e.target.value)} className="ml-2 w-36 rounded border px-2 py-1" />
+            <input type="text" value={workerName} onChange={(e) => setWorkerName(e.target.value)} className="ml-2 w-36 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             Shift date
-            <input type="date" value={shiftDate} onChange={(e) => setShiftDate(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+            <input type="date" value={shiftDate} onChange={(e) => setShiftDate(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             Rate
-            <input type="number" value={rate} onChange={(e) => setRate(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
+            <input type="number" value={rate} onChange={(e) => setRate(e.target.value)} className="ml-2 w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             Paid
-            <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
+            <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="ml-2 w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <Button size="sm" onClick={() => void record()} disabled={!ready || busy}>
             Record shift
@@ -150,11 +149,11 @@ export function WageCostingView(): React.ReactElement | null {
         <div className="flex flex-wrap items-end gap-3 border-t pt-3">
           <label className="text-sm">
             From
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <label className="text-sm">
             To
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <Button size="sm" variant="outline" onClick={() => void loadByEvent()} disabled={!businessId || busy}>
             Labour by event

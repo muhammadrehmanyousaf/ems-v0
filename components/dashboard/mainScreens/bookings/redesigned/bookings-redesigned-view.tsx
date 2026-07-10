@@ -78,7 +78,7 @@ export function BookingsRedesignedView() {
     { key: "service", header: "Booking", render: (b) => <span className="font-medium">{serviceLabel(b)}</span> },
     { key: "space", header: "Space", cellClassName: "text-muted-foreground", render: (b) => b.bookingDetails?.[0]?.resource?.label || "—" },
     { key: "customer", header: "Customer", cellClassName: "text-muted-foreground", render: (b) => b.customerName || "—" },
-    { key: "date", header: "Date", cellClassName: "text-muted-foreground", render: (b) => fmtDate(b.bookingDate) },
+    { key: "date", header: "Date", cellClassName: "text-muted-foreground whitespace-nowrap", render: (b) => fmtDate(b.bookingDate) },
     { key: "amount", header: "Amount", align: "right", render: (b) => <MoneyCell amount={Number(b.totalAmount) || 0} /> },
     { key: "paid", header: "Paid", align: "right", render: (b) => <MoneyCell amount={Number(b.downPayment) || 0} tone="muted" /> },
     { key: "status", header: "Status", render: (b) => <StatusPill tone={statusTone(b.status)}>{b.status}</StatusPill> },

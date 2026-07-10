@@ -199,6 +199,28 @@ export class VendorAPI {
     }
   }
 
+  /**
+   * GET /businesses/:id/related — other PUBLIC businesses owned by the same
+   * vendor, for the detail-page "other branches / more from this vendor"
+   * surfaces. `branches` = same vendor-type (other locations); `otherServices` =
+   * different type. Empty arrays for a single-business vendor (FE self-hides).
+   */
+  static async getRelatedBusinesses(id: string | number): Promise<{
+    self: { id: number; vendorType: string | null; city: string | null; slug: string | null } | null
+    branches: Vendor[]
+    otherServices: Vendor[]
+  }> {
+    try {
+      const response = await axiosInstance.get(`${BASE}/${id}/related`)
+      const d = response.data?.data || {}
+      const norm = (arr: unknown): Vendor[] =>
+        Array.isArray(arr) ? (arr.map(normalizeBusiness).filter(Boolean) as Vendor[]) : []
+      return { self: d.self ?? null, branches: norm(d.branches), otherServices: norm(d.otherServices) }
+    } catch {
+      return { self: null, branches: [], otherServices: [] }
+    }
+  }
+
   // Search businesses
   static async searchBusinesses(query: string, vendorType?: string): Promise<Vendor[]> {
     try {

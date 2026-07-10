@@ -49,7 +49,7 @@ export default function RefundPolicyPage() {
       <p>
         For cancellations within the eligible window, {SITE_NAME}&apos;s platform
         fee is refunded along with the booking amount. For cancellations outside
-        the eligible window, the platform fee is non-refundable. <strong>[LEGAL REVIEW]</strong>
+        the eligible window, the platform fee is non-refundable.{/* LEGAL REVIEW: confirm platform-fee refundability terms */}
       </p>
 
       <h2>4. How to request a refund</h2>

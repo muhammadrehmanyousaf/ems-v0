@@ -29,7 +29,7 @@ export function AvailabilitySetup() {
     return <div className="flex items-center justify-center gap-2 text-muted-foreground py-16"><Loader2 className="size-4 animate-spin" /> Loading…</div>;
   }
   if (!data) {
-    return <div className="p-6 text-center text-sm text-muted-foreground">Availability engine abhi enabled nahi hai.</div>;
+    return <div className="p-6 text-center text-sm text-muted-foreground">The availability engine isn&apos;t enabled yet.</div>;
   }
 
   const p = data.primitive;
@@ -37,15 +37,15 @@ export function AvailabilitySetup() {
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-5">
       <div>
         <h1 className="text-lg font-semibold">Availability Setup</h1>
-        <p className="text-sm text-muted-foreground">{p ? PRIMITIVE_LABEL[p] : "—"} — apni bookable capacity set karein.</p>
+        <p className="text-sm text-muted-foreground">{p ? PRIMITIVE_LABEL[p] : "—"} — set your bookable capacity.</p>
       </div>
 
       {p === "P2_PERSON_SLOT" && <CrewSetup crews={data.crewResources} onChange={invalidate} />}
       {p === "P3_UNIT_POOL" && <SkuSetup skus={data.rentalSkus} onChange={invalidate} />}
       {p === "P4_CAPACITY" && <LineSetup lines={data.productionLines} onChange={invalidate} />}
-      {p === "P1_VENUE_LOCK" && <Note text="Venue availability calendar se manage hoti hai — Calendar par jayein." />}
-      {p === "P5_PIPELINE" && <Note text="Made-to-order kaam — fixed availability set karne ki zaroorat nahi; deadline par work-order chalta hai." />}
-      {!p && <Note text="Aap ke vendor type ke liye availability primitive set nahi hai." />}
+      {p === "P1_VENUE_LOCK" && <Note text="Venue availability is managed from the Calendar — open the Calendar to block or free dates." />}
+      {p === "P5_PIPELINE" && <Note text="Made-to-order work — no fixed availability to set; each order runs to its deadline." />}
+      {!p && <Note text="No availability type is set for your vendor category yet." />}
 
       {/* The cutover in action — check + book against the configured availability. */}
       {(p === "P2_PERSON_SLOT" || p === "P3_UNIT_POOL" || p === "P4_CAPACITY" || p === "P5_PIPELINE") && (
@@ -68,9 +68,9 @@ function CrewSetup({ crews, onChange }: { crews: any[]; onChange: () => void }) 
   return (
     <Card><CardContent className="p-5 space-y-4">
       <h3 className="text-sm font-semibold flex items-center gap-2"><Users className="size-4" /> Crew lanes</h3>
-      <p className="text-xs text-muted-foreground">Ek studio jis ke 3 crew hain wo raat ko 3 shadiyan le sakta hai (lanes = 3). Buffer = ek gig se doosre tak safar ka waqt.</p>
+      <p className="text-xs text-muted-foreground">A studio with 3 crews can cover 3 weddings in one night (lanes = 3). Buffer = travel time between one gig and the next.</p>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
-        <div className="md:col-span-2"><label className="text-xs text-muted-foreground">Naam</label><input className={inputCls} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Ali Studio Crew" /></div>
+        <div className="md:col-span-2"><label className="text-xs text-muted-foreground">Name</label><input className={inputCls} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Ali Studio Crew" /></div>
         <div><label className="text-xs text-muted-foreground">Lanes</label><input type="number" min={1} className={inputCls} value={laneCount} onChange={(e) => setLaneCount(Math.max(1, Number(e.target.value) || 1))} /></div>
         <div><label className="text-xs text-muted-foreground">Buffer (min)</label><input type="number" min={0} className={inputCls} value={buffer} onChange={(e) => setBuffer(Math.max(0, Number(e.target.value) || 0))} /></div>
       </div>
@@ -89,7 +89,7 @@ function SkuSetup({ skus, onChange }: { skus: any[]; onChange: () => void }) {
   return (
     <Card><CardContent className="p-5 space-y-4">
       <h3 className="text-sm font-semibold flex items-center gap-2"><Package className="size-4" /> Rental stock</h3>
-      <p className="text-xs text-muted-foreground">Har item ka pool + per-unit security deposit. Availability = total − jo diye hue hain overlapping dates par.</p>
+      <p className="text-xs text-muted-foreground">Each item&apos;s pool + per-unit security deposit. Availability = total − units already out on overlapping dates.</p>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
         <div className="md:col-span-2"><label className="text-xs text-muted-foreground">Item</label><input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Chiavari chairs" /></div>
         <div><label className="text-xs text-muted-foreground">Total units</label><input type="number" min={0} className={inputCls} value={totalUnits} onChange={(e) => setTotal(Math.max(0, Number(e.target.value) || 0))} /></div>
@@ -109,7 +109,7 @@ function LineSetup({ lines, onChange }: { lines: any[]; onChange: () => void }) 
   return (
     <Card><CardContent className="p-5 space-y-4">
       <h3 className="text-sm font-semibold flex items-center gap-2"><ChefHat className="size-4" /> Daily capacity</h3>
-      <p className="text-xs text-muted-foreground">Ek din mein kitna bana sakte hain (heads/kg/boxes). Us din ke saare orders is capacity mein aane chahiye.</p>
+      <p className="text-xs text-muted-foreground">How much you can produce in a day (heads/kg/boxes). All of that day&apos;s orders must fit within this capacity.</p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
         <div className="md:col-span-2"><label className="text-xs text-muted-foreground">Line</label><input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Degh kitchen" /></div>
         <div><label className="text-xs text-muted-foreground">Per day</label><input type="number" min={0} className={inputCls} value={cap} onChange={(e) => setCap(Math.max(0, Number(e.target.value) || 0))} /></div>
@@ -121,7 +121,7 @@ function LineSetup({ lines, onChange }: { lines: any[]; onChange: () => void }) 
 }
 
 function ResourceList({ items, render, onDelete, busy }: { items: any[]; render: (x: any) => string; onDelete: (id: number) => void; busy: boolean }) {
-  if (!items.length) return <p className="text-xs text-muted-foreground">Abhi kuch nahi — upar se add karein.</p>;
+  if (!items.length) return <p className="text-xs text-muted-foreground">Nothing yet — add one above.</p>;
   return (
     <div className="rounded-lg border divide-y">
       {items.map((it) => (

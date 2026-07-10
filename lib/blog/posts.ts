@@ -112,7 +112,7 @@ export const POSTS: BlogPost[] = [
     excerpt:
       "A city-by-city breakdown of typical Pakistani wedding budgets — from intimate 100-guest mehndis in Lahore to 1000-guest walimas in Karachi.",
     imageUrl:
-      "https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=1600",
+      "/images/seo/hero.jpg",
     author: AUTHORS["wedding-wala-editorial"],
     publishedAt: "2026-04-12T09:00:00.000Z",
     updatedAt: "2026-05-01T14:00:00.000Z",
@@ -200,7 +200,7 @@ export const POSTS: BlogPost[] = [
     excerpt:
       "Beyond the portfolio: the questions that separate a photographer who'll show up reliably from one whose final delivery slips for months.",
     imageUrl:
-      "https://images.pexels.com/photos/2253870/pexels-photo-2253870.jpeg?auto=compress&cs=tinysrgb&w=1600",
+      "/images/home/partners/photography.jpg",
     author: AUTHORS["wedding-wala-editorial"],
     publishedAt: "2026-03-28T10:00:00.000Z",
     readingMinutes: 7,
@@ -265,7 +265,7 @@ export const POSTS: BlogPost[] = [
     excerpt:
       "Lawn weddings look stunning in photos but bring weather, mosquito, and acoustic risks. Banquet halls control all three but cost more per guest. Here's how to choose.",
     imageUrl:
-      "https://images.pexels.com/photos/265947/pexels-photo-265947.jpeg?auto=compress&cs=tinysrgb&w=1600",
+      "/images/home/venues/v1.jpg",
     author: AUTHORS["wedding-wala-editorial"],
     publishedAt: "2026-02-15T08:00:00.000Z",
     readingMinutes: 8,
@@ -318,7 +318,7 @@ export const POSTS: BlogPost[] = [
     excerpt:
       "What's actually getting booked this season — minimalist florals, Mughal-revival arches, and the quiet retreat from oversized chandeliers.",
     imageUrl:
-      "https://images.pexels.com/photos/169198/pexels-photo-169198.jpeg?auto=compress&cs=tinysrgb&w=1600",
+      "/images/home/partners/decor.jpg",
     author: AUTHORS["wedding-wala-editorial"],
     publishedAt: "2026-04-25T08:00:00.000Z",
     readingMinutes: 7,
@@ -382,7 +382,7 @@ export const POSTS: BlogPost[] = [
     excerpt:
       "Less heavy, more layered: a clear-eyed look at what designers are actually shipping this bridal season — Sana Safinaz, Élan, Zara Shahjahan, Bunto Kazmi.",
     imageUrl:
-      "https://images.pexels.com/photos/1844012/pexels-photo-1844012.jpeg?auto=compress&cs=tinysrgb&w=1600",
+      "/images/home/lookbook/l1.jpg",
     author: AUTHORS["wedding-wala-editorial"],
     publishedAt: "2026-04-30T08:00:00.000Z",
     readingMinutes: 7,

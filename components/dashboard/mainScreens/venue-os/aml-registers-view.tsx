@@ -15,6 +15,7 @@ import { isAmlCockpitOn } from "@/lib/aml-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 
 const PKR = (n: number | string | null | undefined): string => "Rs " + Math.round(Number(n || 0)).toLocaleString("en-PK");
 function readErr(e: unknown, fallback: string): string {
@@ -59,13 +60,13 @@ export function AmlRegistersView(): React.ReactElement | null {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2 text-sm">
-          <label>Business #<input type="number" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" /></label>
-          <label>Month<input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="ml-1 rounded border px-2 py-1" /></label>
+          <BusinessScopeField value={businessId} onChange={setBusinessId} />
+          <label>Month<input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="ml-1 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
         </div>
 
         <div className="flex flex-wrap items-end gap-2 rounded-md border p-3 text-sm">
           <span className="font-medium">Bank a deposit</span>
-          <input type="number" placeholder="amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-32 rounded border px-2 py-1" />
+          <input type="number" placeholder="amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           <Button size="sm" variant="outline" onClick={() => void guard(async () => setVerdict((await venueOsApi.preDepositCheck(bid, { proposedDepositPkr: Number(amount) }))))} disabled={!businessId || !amount || busy}>Check</Button>
           <Button size="sm" onClick={() => void guard(async () => { const r = await venueOsApi.recordBankDeposit({ businessId: bid, amountPkr: Number(amount) }); setVerdict(r.structuring); })} disabled={!businessId || !amount || busy}>Record</Button>
         </div>
