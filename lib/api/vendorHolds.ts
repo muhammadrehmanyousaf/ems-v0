@@ -26,8 +26,11 @@ export interface PlaceHoldInput {
 }
 
 export class VendorHoldsAPI {
-  static async list(): Promise<VendorHold[]> {
-    const res = await axiosInstance.get(`/api/v1/vendor-holds`);
+  /** A multi-business vendor scopes to their ACTIVE business (matches place()). */
+  static async list(businessId?: number): Promise<VendorHold[]> {
+    const res = await axiosInstance.get(`/api/v1/vendor-holds`, {
+      params: businessId != null ? { businessId } : undefined,
+    });
     return res.data?.data?.holds ?? [];
   }
 

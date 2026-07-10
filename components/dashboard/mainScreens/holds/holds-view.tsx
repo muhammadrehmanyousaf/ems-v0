@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { OutboxStatus } from "@/components/dashboard/shared/outbox-status"
 import { OutboxConflicts, type ReenterPayload } from "@/components/dashboard/shared/outbox-conflicts"
 import { HoldDateDialog, type HoldPrefill } from "@/components/dashboard/mainScreens/holds/hold-date-dialog"
+import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { Button } from "@/components/ui/button"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { showSuccessToast } from "@/lib/toast/undo"
@@ -30,12 +31,14 @@ const fmtWhen = (s: string) => { const d = new Date(s); return isNaN(d.getTime()
 
 export function HoldsView() {
   const qc = useQueryClient()
+  const activeBusinessId = useActiveBusinessId()
   const [open, setOpen] = React.useState(false)
   const [prefill, setPrefill] = React.useState<HoldPrefill | undefined>(undefined)
 
   const { data: holds, isLoading, isError, refetch } = useQuery<VendorHold[]>({
-    queryKey: ["vendor-holds"],
-    queryFn: () => VendorHoldsAPI.list(),
+    // key on the active business so switching venues refetches that venue's holds
+    queryKey: ["vendor-holds", activeBusinessId],
+    queryFn: () => VendorHoldsAPI.list(activeBusinessId ?? undefined),
     retry: false, // 404 when the feature is dark — don't hammer
   })
   const invalidate = () => qc.invalidateQueries({ queryKey: ["vendor-holds"] })
