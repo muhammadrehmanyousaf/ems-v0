@@ -14,6 +14,8 @@ import { venueOsApi, type GensetReconResult, type GensetSkimSummary } from "@/li
 import { isGensetSkimOn } from "@/lib/genset-skim-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { BookingPicker } from "@/components/dashboard/shared/booking-picker";
+import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 import { Badge } from "@/components/ui/badge";
 
 const PCT = (n: number): string => (Number(n) * 100).toFixed(1) + "%";
@@ -78,13 +80,10 @@ export function GensetSkimView(): React.ReactElement | null {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2 text-sm">
-          <label>
-            Business #
-            <input type="number" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
-          </label>
-          <input type="text" placeholder="generator" value={generator} onChange={(e) => setGenerator(e.target.value)} className="w-28 rounded border px-2 py-1" />
-          <input type="number" placeholder="booking #" value={bookingId} onChange={(e) => setBookingId(e.target.value)} className="w-28 rounded border px-2 py-1" />
-          <input type="number" placeholder="kVA" value={kva} onChange={(e) => setKva(e.target.value)} className="w-20 rounded border px-2 py-1" />
+          <BusinessScopeField value={businessId} onChange={setBusinessId} />
+          <input type="text" placeholder="generator" value={generator} onChange={(e) => setGenerator(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <BookingPicker value={bookingId ? Number(bookingId) : null} onChange={(id) => setBookingId(id ? String(id) : "")} className="w-56" placeholder="which function?" />
+          <input type="number" placeholder="kVA" value={kva} onChange={(e) => setKva(e.target.value)} className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           <Button
             size="sm"
             onClick={() => void guard(async () => setRecon(await venueOsApi.reconcileGenset({ businessId: Number(businessId), generatorIdentifier: generator, bookingId: Number(bookingId), kva: kva ? Number(kva) : undefined })))}

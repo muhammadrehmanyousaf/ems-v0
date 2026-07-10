@@ -3,6 +3,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Globe, Palette, Share2, Heart, Clock, Gift, MapPin, Camera, Bell, ArrowRight, Sparkles } from "lucide-react"
 import Link from "next/link"
+import type { Metadata } from "next"
+import { buildPageMetadata, SITE_NAME } from "@/lib/seo"
+
+export const metadata: Metadata = buildPageMetadata({
+  title: `Free Wedding Website Builder — ${SITE_NAME}`,
+  description: `Build a beautiful wedding website with ${SITE_NAME} (weddingwala.pk) — elegant templates, your love story, RSVP, gift registry and a live countdown, shareable on WhatsApp.`,
+  path: "/wedding-website",
+})
 
 const features = [
   { icon: Palette, title: "Beautiful Templates", desc: "Choose from elegant, modern designs that match your wedding theme and colors." },

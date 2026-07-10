@@ -131,7 +131,7 @@ export function FunctionSheetsRedesignedView() {
       key: "total",
       header: "Grand total",
       align: "right",
-      render: (f) => <MoneyCell amount={num(f.grandTotal)} />,
+      render: (f) => <MoneyCell amount={num(f.grandTotal) || num(f.booking?.totalAmount)} />,
     },
     {
       key: "state",

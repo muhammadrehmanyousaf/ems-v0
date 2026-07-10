@@ -14,6 +14,7 @@ import { useActiveBusinessId } from "@/lib/store/active-business-store";
 import { isGlEngineOn } from "@/lib/gl-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { BookingPicker } from "@/components/dashboard/shared/booking-picker";
 
 const PKR = (n: number): string => "Rs " + Math.round(n).toLocaleString("en-PK");
 
@@ -30,7 +31,6 @@ function Stat({ label, value, tone = "neutral" }: { label: string; value: number
 export function EventPnlView(): React.ReactElement | null {
   const enabled = isGlEngineOn();
   const activeBusinessId = useActiveBusinessId();
-  const [bookingInput, setBookingInput] = React.useState<string>("");
   const [bookingId, setBookingId] = React.useState<number | null>(null);
   const [view, setView] = React.useState<IsDeclared>("MANAGEMENT_ONLY");
 
@@ -52,18 +52,7 @@ export function EventPnlView(): React.ReactElement | null {
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-end gap-3">
-          <label className="text-sm">
-            Booking #
-            <input
-              type="number"
-              value={bookingInput}
-              onChange={(e) => setBookingInput(e.target.value)}
-              className="ml-2 w-28 rounded border px-2 py-1"
-            />
-          </label>
-          <Button size="sm" onClick={() => setBookingId(bookingInput ? Number(bookingInput) : null)} disabled={!bookingInput}>
-            Load
-          </Button>
+          <BookingPicker value={bookingId} onChange={setBookingId} className="w-64" placeholder="Which function?" />
           <div className="flex gap-1">
             <Button size="sm" variant={view === "MANAGEMENT_ONLY" ? "default" : "outline"} onClick={() => setView("MANAGEMENT_ONLY")}>
               Management

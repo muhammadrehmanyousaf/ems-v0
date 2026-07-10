@@ -22,6 +22,17 @@ const routeMapping: Record<string, BreadcrumbItem[]> = {
   // Add more custom mappings as needed
 };
 
+// Human labels for route slugs that don't read well when naively title-cased
+// (e.g. "billing-new" -> "Billing New", "pdcs" -> "Pdcs"). Keys are the raw
+// path segment; values are the display label (already in the desired case).
+const segmentLabels: Record<string, string> = {
+  'billing-new': 'Billing',
+  'pdcs': 'Cheque ledger',
+  'generator-fuel': 'Generator fuel',
+  'function-sheets': 'Function sheets',
+  'venue-os': 'Venue OS',
+};
+
 export function useBreadcrumbs() {
   const pathname = usePathname();
 
@@ -36,7 +47,9 @@ export function useBreadcrumbs() {
     return segments?.map((segment, index) => {
       const path = `/${segments.slice(0, index + 1).join('/')}`;
       return {
-        title: segment.charAt(0).toUpperCase() + segment.slice(1),
+        title:
+          segmentLabels[segment] ??
+          segment.charAt(0).toUpperCase() + segment.slice(1),
         link: path
       };
     });

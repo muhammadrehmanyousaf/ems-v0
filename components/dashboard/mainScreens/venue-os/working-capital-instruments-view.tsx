@@ -15,6 +15,7 @@ import { isWorkingCapitalOn } from "@/lib/working-capital-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 
 const PKR = (n: number | string): string => "Rs " + Math.round(Number(n)).toLocaleString("en-PK");
 
@@ -69,19 +70,16 @@ export function WorkingCapitalInstrumentsView(): React.ReactElement | null {
         <CardTitle>Working-capital instruments</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <label className="text-sm">
-          Business #
-          <input type="number" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
-        </label>
+        <BusinessScopeField value={businessId} onChange={setBusinessId} />
 
         {/* committee / BC */}
         <div className="space-y-2 rounded-md border p-3">
           <div className="flex flex-wrap items-end gap-2 text-sm">
             <span className="font-medium">Committee / BC</span>
-            <input type="text" placeholder="name" value={cName} onChange={(e) => setCName(e.target.value)} className="w-32 rounded border px-2 py-1" />
-            <input type="number" placeholder="monthly" value={cMonthly} onChange={(e) => setCMonthly(e.target.value)} className="w-24 rounded border px-2 py-1" />
-            <input type="number" placeholder="cycle" value={cCycle} onChange={(e) => setCCycle(e.target.value)} className="w-16 rounded border px-2 py-1" />
-            <input type="text" placeholder="start YYYY-MM" value={cStart} onChange={(e) => setCStart(e.target.value)} className="w-32 rounded border px-2 py-1" />
+            <input type="text" placeholder="name" value={cName} onChange={(e) => setCName(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <input type="number" placeholder="monthly" value={cMonthly} onChange={(e) => setCMonthly(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <input type="number" placeholder="cycle" value={cCycle} onChange={(e) => setCCycle(e.target.value)} className="w-16 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <input type="text" placeholder="start YYYY-MM" value={cStart} onChange={(e) => setCStart(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
             <Button size="sm" onClick={() => void guard(async () => { const months = Number(cCycle); await venueOsApi.createCommittee({ businessId: bid, name: cName, monthlyContributionPkr: Number(cMonthly), cycleMonths: months, potPkr: Number(cMonthly) * months, startMonth: cStart }); setCommittees(await venueOsApi.listCommittees(bid)); })} disabled={!businessId || !cStart || busy}>
               Create
             </Button>
@@ -103,9 +101,9 @@ export function WorkingCapitalInstrumentsView(): React.ReactElement | null {
         <div className="space-y-2 rounded-md border p-3">
           <div className="flex flex-wrap items-end gap-2 text-sm">
             <span className="font-medium">Ijarah lease</span>
-            <input type="number" placeholder="monthly rental" value={iRental} onChange={(e) => setIRental(e.target.value)} className="w-28 rounded border px-2 py-1" />
-            <input type="number" placeholder="term mo" value={iTerm} onChange={(e) => setITerm(e.target.value)} className="w-20 rounded border px-2 py-1" />
-            <input type="text" placeholder="start YYYY-MM-DD" value={iStart} onChange={(e) => setIStart(e.target.value)} className="w-36 rounded border px-2 py-1" />
+            <input type="number" placeholder="monthly rental" value={iRental} onChange={(e) => setIRental(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <input type="number" placeholder="term mo" value={iTerm} onChange={(e) => setITerm(e.target.value)} className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <input type="text" placeholder="start YYYY-MM-DD" value={iStart} onChange={(e) => setIStart(e.target.value)} className="w-36 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
             <Button size="sm" onClick={() => void guard(async () => { await venueOsApi.createIjarahLease({ businessId: bid, monthlyRentalPkr: Number(iRental), termMonths: Number(iTerm), rentalStartDate: iStart }); setLeases(await venueOsApi.listIjarahLeases(bid)); })} disabled={!businessId || !iStart || busy}>
               Create
             </Button>
@@ -124,9 +122,9 @@ export function WorkingCapitalInstrumentsView(): React.ReactElement | null {
         <div className="space-y-2 rounded-md border p-3">
           <div className="flex flex-wrap items-end gap-2 text-sm">
             <span className="font-medium">Supplier udhaar</span>
-            <input type="number" placeholder="cash price" value={uCash} onChange={(e) => setUCash(e.target.value)} className="w-24 rounded border px-2 py-1" />
-            <input type="number" placeholder="udhaar price" value={uUdhaar} onChange={(e) => setUUdhaar(e.target.value)} className="w-24 rounded border px-2 py-1" />
-            <input type="text" placeholder="due YYYY-MM-DD" value={uDue} onChange={(e) => setUDue(e.target.value)} className="w-36 rounded border px-2 py-1" />
+            <input type="number" placeholder="cash price" value={uCash} onChange={(e) => setUCash(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <input type="number" placeholder="udhaar price" value={uUdhaar} onChange={(e) => setUUdhaar(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <input type="text" placeholder="due YYYY-MM-DD" value={uDue} onChange={(e) => setUDue(e.target.value)} className="w-36 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
             <Button size="sm" onClick={() => void guard(async () => setUdhaar(await venueOsApi.recordSupplierUdhaar({ businessId: bid, cashPricePkr: Number(uCash), udhaarPricePkr: Number(uUdhaar), dueDate: uDue || undefined })))} disabled={!businessId || !uUdhaar || busy}>
               Record
             </Button>

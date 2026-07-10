@@ -15,6 +15,7 @@ import { isUtilityAllocationOn } from "@/lib/utility-allocation-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 
 const PKR = (n: number | string | null | undefined): string => "Rs " + Math.round(Number(n || 0)).toLocaleString("en-PK");
 function readErr(e: unknown, fallback: string): string {
@@ -52,9 +53,9 @@ export function TariffEstimatorView(): React.ReactElement | null {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2 text-sm">
-          <label>Business #<input type="number" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" /></label>
-          <label>Units (kWh)<input type="number" value={units} onChange={(e) => setUnits(e.target.value)} className="ml-1 w-24 rounded border px-2 py-1" /></label>
-          <label>kVA<input type="number" value={kva} onChange={(e) => setKva(e.target.value)} className="ml-1 w-20 rounded border px-2 py-1" /></label>
+          <BusinessScopeField value={businessId} onChange={setBusinessId} />
+          <label>Units (kWh)<input type="number" value={units} onChange={(e) => setUnits(e.target.value)} className="ml-1 w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
+          <label>kVA<input type="number" value={kva} onChange={(e) => setKva(e.target.value)} className="ml-1 w-20 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
           <Button size="sm" onClick={() => void guard(async () => setEst(await venueOsApi.estimateBill(bid, { utility: "GRID", consumption: { totalUnitsKwh: Number(units), sanctionedKva: kva ? Number(kva) : 0 } })))} disabled={!businessId || !units || busy}>Estimate</Button>
         </div>
 

@@ -67,12 +67,12 @@ export function CateringRecost(): React.ReactElement | null {
               placeholder="e.g. 12, 14, 19"
               value={cardIds}
               onChange={(e) => setCardIds(e.target.value)}
-              className="ml-2 w-40 rounded border px-2 py-1"
+              className="ml-2 w-40 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </label>
           <label className="text-sm">
             Quoted / head
-            <input type="number" value={quoted} onChange={(e) => setQuoted(e.target.value)} className="ml-2 w-28 rounded border px-2 py-1" />
+            <input type="number" value={quoted} onChange={(e) => setQuoted(e.target.value)} className="ml-2 w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <Button size="sm" onClick={() => void recost()} disabled={!cardIds || busy}>
             {busy ? "Costing…" : "Re-cost"}

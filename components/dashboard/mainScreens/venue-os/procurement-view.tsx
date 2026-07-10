@@ -15,6 +15,7 @@ import { isProcurementGrnOn } from "@/lib/procurement-grn-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 
 const PKR = (n: number | string): string => "Rs " + Math.round(Number(n)).toLocaleString("en-PK");
 
@@ -71,19 +72,16 @@ export function ProcurementView(): React.ReactElement | null {
         <CardTitle>Procurement (PO → GRN three-way-match)</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <label className="text-sm">
-          Business #
-          <input type="number" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
-        </label>
+        <BusinessScopeField value={businessId} onChange={setBusinessId} />
 
         {/* 1 · raise PO */}
         <div className="space-y-2 rounded-md border p-3">
           <div className="flex flex-wrap items-end gap-2 text-sm">
             <span className="font-medium">1 · Raise PO</span>
-            <input type="text" placeholder="item" value={descr} onChange={(e) => setDescr(e.target.value)} className="w-28 rounded border px-2 py-1" />
-            <input type="number" placeholder="qty" value={qty} onChange={(e) => setQty(e.target.value)} className="w-20 rounded border px-2 py-1" />
-            <input type="text" placeholder="unit" value={unit} onChange={(e) => setUnit(e.target.value)} className="w-16 rounded border px-2 py-1" />
-            <input type="number" placeholder="rate" value={rate} onChange={(e) => setRate(e.target.value)} className="w-24 rounded border px-2 py-1" />
+            <input type="text" placeholder="item" value={descr} onChange={(e) => setDescr(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <input type="number" placeholder="qty" value={qty} onChange={(e) => setQty(e.target.value)} className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <input type="text" placeholder="unit" value={unit} onChange={(e) => setUnit(e.target.value)} className="w-16 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <input type="number" placeholder="rate" value={rate} onChange={(e) => setRate(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
             <Button
               size="sm"
               onClick={() =>
@@ -114,8 +112,8 @@ export function ProcurementView(): React.ReactElement | null {
           <div className="space-y-2 rounded-md border p-3">
             <div className="flex flex-wrap items-end gap-2 text-sm">
               <span className="font-medium">2 · Receive GRN</span>
-              <input type="number" placeholder="qty accepted" value={qtyAccepted} onChange={(e) => setQtyAccepted(e.target.value)} className="w-28 rounded border px-2 py-1" />
-              <input type="number" placeholder="actual rate" value={actualRate} onChange={(e) => setActualRate(e.target.value)} className="w-24 rounded border px-2 py-1" />
+              <input type="number" placeholder="qty accepted" value={qtyAccepted} onChange={(e) => setQtyAccepted(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+              <input type="number" placeholder="actual rate" value={actualRate} onChange={(e) => setActualRate(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
               <Button
                 size="sm"
                 onClick={() =>

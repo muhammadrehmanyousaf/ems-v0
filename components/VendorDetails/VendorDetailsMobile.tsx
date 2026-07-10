@@ -67,6 +67,7 @@ import { toast as sonnerToast } from "sonner";
 import { VendorAPI } from "@/lib/api/vendors";
 // BK-100.52 Layer 2 — customer-facing bundled-services display.
 import { BundledServicesDisplay } from "@/components/vendors/bundled-services-display";
+import { VendorBranches } from "@/components/VendorDetails/vendor-branches";
 
 interface VendorDetailsMobileProps {
   vendor: Vendor;
@@ -2067,6 +2068,14 @@ export default function VendorDetailsMobile({
                 </StaggerContainer>
               </section>
             )}
+
+            {/* ===== OTHER BRANCHES / MORE FROM THIS VENDOR ===== */}
+            {/* Self-hides for single-business vendors. Location switcher (same
+                service, other branches) routes booking to the picked branch. */}
+            <VendorBranches
+              businessId={vendor.id}
+              current={{ id: vendor.id, type: vendor.type, city: vendor.city, name: vendor.name }}
+            />
 
             {/* ===== REVIEWS SECTION ===== */}
             <section ref={reviewsRef} id="reviews">

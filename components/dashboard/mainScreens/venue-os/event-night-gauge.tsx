@@ -13,6 +13,7 @@ import { isOrgMembershipOn } from "@/lib/org-membership-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BookingPicker } from "@/components/dashboard/shared/booking-picker";
 
 function readErr(e: unknown, fallback: string): string {
   return (e as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
@@ -72,13 +73,18 @@ export function EventNightGauge(): React.ReactElement | null {
       <CardContent className="space-y-4">
         {!night ? (
           <div className="flex flex-wrap items-end gap-3">
+            <div className="text-sm">
+              <div className="mb-1 text-muted-foreground">Tonight&apos;s function</div>
+              <BookingPicker
+                value={bookingId ? Number(bookingId) : null}
+                onChange={(id) => setBookingId(id ? String(id) : "")}
+                className="w-64"
+                placeholder="Pick tonight's function"
+              />
+            </div>
             <label className="text-sm">
-              Booking #
-              <input type="number" value={bookingId} onChange={(e) => setBookingId(e.target.value)} className="ml-2 w-28 rounded border px-2 py-1" />
-            </label>
-            <label className="text-sm">
-              Fire-rated capacity
-              <input type="number" value={safeCap} onChange={(e) => setSafeCap(e.target.value)} className="ml-2 w-28 rounded border px-2 py-1" />
+              <div className="mb-1 text-muted-foreground">Fire-rated capacity</div>
+              <input type="number" value={safeCap} onChange={(e) => setSafeCap(e.target.value)} className="h-9 w-28 rounded-md border border-input bg-background px-2" />
             </label>
             <Button size="sm" onClick={() => void open()} disabled={!bookingId || busy}>
               Open night

@@ -36,8 +36,7 @@ export default function AmlPolicyPage() {
       <p>
         Customers verify their phone and email at sign-up. For bookings above a
         threshold defined by Pakistani regulation we may request additional
-        identity verification (CNIC, address proof). <strong>[LEGAL REVIEW —
-        confirm threshold value]</strong>
+        identity verification (CNIC, address proof).{/* LEGAL REVIEW: confirm threshold value */}
       </p>
 
       <h2>3. Transaction monitoring</h2>

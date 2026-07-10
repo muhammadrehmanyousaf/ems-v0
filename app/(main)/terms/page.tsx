@@ -55,7 +55,7 @@ export default function TermsPage() {
         <li>Vendor pricing on the platform is set by the Vendor, in PKR.</li>
         <li>To confirm a booking you pay a deposit (typically the down-payment); the balance is due as set out in your booking.</li>
         <li>Payments are processed by our licensed payment processor. {SITE_NAME} does not store your full card details.</li>
-        <li>The customer-facing card-statement descriptor is &quot;WEDDINGWALA&quot; (or our registered DBA). <strong>[LEGAL REVIEW]</strong></li>
+        <li>The customer-facing card-statement descriptor is &quot;WEDDINGWALA&quot; (or our registered DBA).{/* LEGAL REVIEW: confirm final DBA / card-statement descriptor */}</li>
         <li>Once you make a booking you enter into a contract <em>with the Vendor</em>, mediated by {SITE_NAME}.</li>
       </ul>
 
@@ -114,7 +114,7 @@ export default function TermsPage() {
         To the maximum extent permitted by Pakistani law, our aggregate liability
         for any claim arising out of or relating to the platform is limited to
         the amount you paid through {SITE_NAME} in the 12 months preceding the
-        claim. <strong>[LEGAL REVIEW]</strong>
+        claim.{/* LEGAL REVIEW: confirm liability-cap wording */}
       </p>
       <p>
         We are not liable for force-majeure events (natural disasters, civil
@@ -148,8 +148,8 @@ export default function TermsPage() {
       <h2>13. Governing law and disputes</h2>
       <p>
         These Terms are governed by the laws of the Islamic Republic of Pakistan.
-        Disputes are subject to the exclusive jurisdiction of the courts of{" "}
-        <strong>[LEGAL REVIEW — confirm city: Lahore / Karachi / Islamabad]</strong>.
+        Disputes are subject to the exclusive jurisdiction of the competent courts
+        of Pakistan.{/* LEGAL REVIEW: confirm exclusive-jurisdiction city — Lahore / Karachi / Islamabad */}
         Before filing court action, both parties agree to attempt resolution
         through our <Link href="/complaints">Complaints process</Link>.
       </p>

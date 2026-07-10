@@ -22,6 +22,8 @@ import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { FamiliarityPrompt } from "@/components/dashboard/layout/familiarity-prompt"
 import { ActionOverviewView } from "@/components/dashboard/mainScreens/dashboard/v2/action-overview-view"
+import { TodayBoard } from "@/components/dashboard/mainScreens/venue-os/today-board"
+import { EventProfitBoard } from "@/components/dashboard/mainScreens/venue-os/event-profit-board"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
@@ -122,6 +124,10 @@ export function OverviewRedesignedView() {
         <StatCard label="Upcoming (7d)" value={kpisQ.isLoading ? "…" : kpisQ.isError ? "—" :num(k?.upcomingBookings?.value)} icon="TrendingUp" />
       </div>
 
+      {/* What needs you today — upcoming events + who to chase (flag-free, off
+          the booking list). KPI row hidden here; the tiles above already cover it. */}
+      <TodayBoard hideKpis />
+
       {/* Per-hall performance — the owner's "which hall wins?" league table.
           Only shown for multi-venue owners; single-hall vendors don't need it. */}
       {showHallLeague && (
@@ -202,6 +208,10 @@ export function OverviewRedesignedView() {
           )}
         />
       </div>
+
+      {/* Per-shaadi profit — revenue vs received vs spent vs net. Keeps its KPIs;
+          they add profit + margin that the tiles above don't show. */}
+      <EventProfitBoard />
     </div>
   )
 }

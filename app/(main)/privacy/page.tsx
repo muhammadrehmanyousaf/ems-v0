@@ -68,7 +68,7 @@ export default function PrivacyPolicyPage() {
       </ul>
       <p>
         Each processor is bound by a data-processing agreement. We do not transfer
-        data to processors outside the categories above. <strong>[LEGAL REVIEW]</strong>
+        data to processors outside the categories above.{/* LEGAL REVIEW: confirm data-transfer wording */}
       </p>
 
       <h2>5. Cookies and tracking</h2>

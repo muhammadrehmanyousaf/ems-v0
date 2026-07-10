@@ -375,12 +375,12 @@ export default function VendorCard({
                       </svg>
                       <div className="absolute inset-0 flex items-center justify-center">
                         <span className="font-display italic text-[14px] text-bridal-charcoal">
-                          {rating.toFixed(1)}
+                          {reviews > 0 ? rating.toFixed(1) : "—"}
                         </span>
                       </div>
                     </div>
                     <span className="font-bridal text-[9.5px] uppercase tracking-[0.2em] font-medium text-bridal-gold mt-1">
-                      {getRatingLabel(rating)}
+                      {reviews > 0 ? getRatingLabel(rating) : "New"}
                     </span>
                   </div>
                 </div>

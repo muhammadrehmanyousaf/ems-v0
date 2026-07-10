@@ -14,6 +14,7 @@ import { isPeriodCloseOn } from "@/lib/period-close-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 
 const PKR = (n: string | number | null | undefined): string => "Rs " + Math.round(Number(n) || 0).toLocaleString("en-PK");
 
@@ -67,13 +68,10 @@ export function PeriodCloseView(): React.ReactElement | null {
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-end gap-3">
-          <label className="text-sm">
-            Business #
-            <input type="number" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
-          </label>
+          <BusinessScopeField value={businessId} onChange={setBusinessId} />
           <label className="text-sm">
             Period
-            <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="ml-2 rounded border px-2 py-1" />
+            <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           </label>
           <Button size="sm" variant="outline" onClick={() => void check()} disabled={!ready || busy}>
             Check status

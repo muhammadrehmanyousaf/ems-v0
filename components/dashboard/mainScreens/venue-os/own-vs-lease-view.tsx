@@ -25,7 +25,7 @@ function Num({ label, value, set, width = "w-28" }: { label: string; value: stri
   return (
     <label className="text-sm">
       {label}
-      <input type="number" value={value} onChange={(e) => set(e.target.value)} className={`ml-2 ${width} rounded border px-2 py-1`} />
+      <input type="number" value={value} onChange={(e) => set(e.target.value)} className={`ml-2 ${width} rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring`} />
     </label>
   );
 }

@@ -14,6 +14,7 @@ import { isDiasporaFxOn, isMultivendorTypesOn } from "@/lib/diaspora-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 
 const PKR = (n: number | string | null | undefined): string => "Rs " + Math.round(Number(n || 0)).toLocaleString("en-PK");
 function readErr(e: unknown, fallback: string): string {
@@ -54,17 +55,17 @@ export function DiasporaVendorView(): React.ReactElement | null {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2 text-sm">
-          <label>Business #<input type="number" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="ml-1 w-24 rounded border px-2 py-1" /></label>
+          <BusinessScopeField value={businessId} onChange={setBusinessId} />
         </div>
 
         {fxOn && (
           <div className="space-y-2 rounded-md border p-3 text-sm">
             <div className="flex flex-wrap items-end gap-2">
-              <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="rounded border px-2 py-1">
+              <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 {["USD", "GBP", "AED", "EUR", "SAR"].map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
-              <input type="number" placeholder="amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-24 rounded border px-2 py-1" />
-              <input type="number" placeholder="rate" value={rate} onChange={(e) => setRate(e.target.value)} className="w-24 rounded border px-2 py-1" />
+              <input type="number" placeholder="amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+              <input type="number" placeholder="rate" value={rate} onChange={(e) => setRate(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
               <Button size="sm" onClick={() => void guard(async () => { await venueOsApi.captureFx({ businessId: bid, currency, amountForeign: Number(amount), fxRate: Number(rate) }); setSummary(await venueOsApi.fxSummary(bid)); })} disabled={!businessId || !amount || !rate || busy}>Capture FX</Button>
               <Button size="sm" variant="outline" onClick={() => void guard(async () => setSummary(await venueOsApi.fxSummary(bid)))} disabled={!businessId || busy}>Summary</Button>
             </div>

@@ -14,6 +14,7 @@ import { venueSpacesApi, type AvailabilityGrid } from "@/lib/api/venueSpaces";
 import { isVenueHierarchyOn } from "@/lib/venue-hierarchy-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 
 const CELL: Record<string, string> = { AVAILABLE: "bg-white", PARTIAL: "bg-amber-300", UNAVAILABLE: "bg-rose-500" };
 
@@ -54,11 +55,8 @@ export function SpaceCalendarView(): React.ReactElement | null {
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         <div className="flex flex-wrap items-end gap-2">
-          <label>
-            Business #
-            <input type="number" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="ml-2 w-24 rounded border px-2 py-1" />
-          </label>
-          <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="rounded border px-2 py-1" />
+          <BusinessScopeField value={businessId} onChange={setBusinessId} />
+          <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           <Button size="sm" variant="outline" onClick={() => void load()} disabled={!businessId || !month || busy}>
             Show
           </Button>

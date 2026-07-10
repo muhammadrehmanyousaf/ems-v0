@@ -3,6 +3,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tag, Percent, Clock, Sparkles, ArrowRight, Bell } from "lucide-react"
 import Link from "next/link"
+import { HOMEPAGE_DEMO_CONTENT } from "@/lib/homepage-demo-flag"
+import { buildPageMetadata } from "@/lib/seo/metadata"
+
+export const metadata = buildPageMetadata({
+  title: "Wedding Deals & Offers",
+  description: "Current deals and seasonal offers from Wedding Wala vendors across Pakistan.",
+  path: "/deals",
+})
 
 const deals = [
   {
@@ -70,6 +78,12 @@ export default function DealsPage() {
 
       <section className="py-12 px-4 bg-neutral-50">
         <div className="max-w-5xl mx-auto">
+          {!HOMEPAGE_DEMO_CONTENT && (
+            <div className="text-center text-neutral-600 mb-4">
+              No active deals right now — browse the vendor catalog below for current pricing and offers.
+            </div>
+          )}
+          {HOMEPAGE_DEMO_CONTENT && (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {deals.map((deal) => (
               <Card key={deal.vendor} className="border-0 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
@@ -93,6 +107,7 @@ export default function DealsPage() {
               </Card>
             ))}
           </div>
+          )}
 
           <div className="text-center mt-12 bg-white rounded-2xl p-8 shadow-sm border">
             <Bell className="w-10 h-10 text-bridal-gold-dark mx-auto mb-4" />

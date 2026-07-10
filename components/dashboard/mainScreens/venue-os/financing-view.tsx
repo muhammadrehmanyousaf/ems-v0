@@ -52,7 +52,7 @@ export function FinancingView(): React.ReactElement | null {
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2 text-sm">
           <Button size="sm" variant="outline" onClick={() => void guard(async () => setIjarah(await venueOsApi.modelIjarah({ assetPricePkr: 1000000, termMonths: 12, monthlyRentalPkr: 95000, comparatorAnnualPct: 20 })))} disabled={busy}>Ijarah sample</Button>
-          <input type="number" placeholder="booking Rs" value={booking} onChange={(e) => setBooking(e.target.value)} className="w-32 rounded border px-2 py-1" />
+          <input type="number" placeholder="booking Rs" value={booking} onChange={(e) => setBooking(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           <Button size="sm" onClick={() => void guard(async () => setBnpl(await venueOsApi.bnplPreview({ bookingTotalPkr: Number(booking), downPct: 20, instalmentCount: 4 })))} disabled={!booking || busy}>Shaadi-Qist</Button>
         </div>
 
@@ -73,7 +73,7 @@ export function FinancingView(): React.ReactElement | null {
 
         <div className="flex flex-wrap items-end gap-2 rounded-md border p-3 text-sm">
           <span className="font-medium">Bank referral pack</span>
-          <input type="number" placeholder="business #" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="w-24 rounded border px-2 py-1" />
+          <input type="number" placeholder="business #" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
           <Button size="sm" variant="outline" onClick={() => void guard(async () => setPack(await venueOsApi.referralPack(Number(businessId), { seasonYear: new Date().getFullYear() })))} disabled={!businessId || busy}>Build one-pager</Button>
         </div>
 
