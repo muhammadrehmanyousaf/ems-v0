@@ -108,6 +108,11 @@ function buildVendorSections(
   if (process.env.NEXT_PUBLIC_FEAT_OFFLINE_OUTBOX === "true") {
     main.unshift(...data.vendorFieldCapture)
   }
+  // FEAT_QUOTE_NEGOTIATION — customer quote/haggle requests in the Main nav.
+  // Flag-dark by default; injected here so it needs no allowlist plumbing.
+  if (process.env.NEXT_PUBLIC_FEAT_QUOTE_NEGOTIATION === "true") {
+    main.push(...data.vendorQuotes)
+  }
   const money = allowed.filter((i) => MONEY_NAV_KEYS.has(i.name as NavItemKey))
   // Render extras in the order the config declares them (not nav-data
   // order) so the most craft-relevant tool leads.
