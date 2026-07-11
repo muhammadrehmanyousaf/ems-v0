@@ -37,7 +37,9 @@ export default function ReputationPanel() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    AnalyticsAPI.getReputation().then(setData).finally(() => setLoading(false));
+    // .catch so a failed/slow fetch (429/500 under load) resolves to the
+    // "no data → return null" path instead of leaving an unhandled rejection.
+    AnalyticsAPI.getReputation().then(setData).catch(() => setData(null)).finally(() => setLoading(false));
   }, []);
 
   const maxDist = useMemo(
@@ -185,7 +187,7 @@ export default function ReputationPanel() {
           <div className="rounded-md border p-3">
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1.5">Distribution</p>
             <div className="space-y-1">
-              {data.distribution.map((d) => (
+              {(data.distribution ?? []).map((d) => (
                 <div key={d.stars} className="flex items-center gap-2 text-[11px]">
                   <span className="w-3 tabular-nums text-muted-foreground">{d.stars}</span>
                   <Star className="h-3 w-3 fill-bridal-gold-dark/50 text-bridal-gold-dark/50" />
@@ -204,7 +206,7 @@ export default function ReputationPanel() {
               <TrendingUp className="h-3 w-3" /> 6-month trend
             </p>
             <div className="flex items-end justify-between gap-1 h-20">
-              {data.trend.map((t) => (
+              {(data.trend ?? []).map((t) => (
                 <div key={t.key} className="flex flex-col items-center gap-1 flex-1" title={t.average != null ? `${t.label}: ${t.average} (${t.count})` : `${t.label}: no reviews`}>
                   <div className="w-full flex items-end justify-center" style={{ height: 56 }}>
                     <div
