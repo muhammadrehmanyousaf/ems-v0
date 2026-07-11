@@ -100,6 +100,45 @@ export interface BookingDispute {
   createdAt: string;
 }
 
+// BK-038 — reschedule result (backend `rescheduleService.reschedule`).
+export interface RescheduleResult {
+  ok: true;
+  before: {
+    bookingDate?: string;
+    bookingTime?: string;
+    totalAmount?: number | string;
+    guestCount?: number;
+  };
+  after: {
+    bookingDate: string;
+    bookingTime: string;
+    totalAmount: number | string;
+    downPayment: number | string;
+    guestCount: number;
+  };
+  diff: number;
+  totalRefunded: number;
+  refundResults?: unknown[];
+}
+
+// EPIC 5 · §3 — refund request (persisted by refundRequestService).
+export type RefundReason =
+  | "customer_cancel"
+  | "vendor_cancel"
+  | "force_majeure"
+  | "dispute_resolution";
+
+export interface RefundRequest {
+  id: number;
+  bookingId: number;
+  businessId: number | null;
+  reason: RefundReason | string;
+  status: "pending" | "approved" | "declined" | "applied" | string;
+  refundAmount?: number | string | null;
+  createdAt?: string;
+  [key: string]: unknown;
+}
+
 export class BookingAPI {
   // BK-042 — read down_payment + remaining installment schedule
   static async getInstallments(
@@ -273,5 +312,50 @@ export class BookingAPI {
       `${v1}/${bookingId}/with-availability`,
     );
     return res.data?.data ?? null;
+  }
+
+  // BK-038 — Customer-initiated reschedule (set a new event date/time).
+  // Authz: customer-by-email or admin (no feature flag). Money paths:
+  //   new total == old  → just moves the date
+  //   new total <  old  → partial Stripe refund of the diff
+  //   new total >  old  → 422 `requires_top_up` (rejected; needs a top-up)
+  // Slot clashes → 409 `slot_unavailable` / `SLOT_CONFLICT`. The dialog maps
+  // each structured code to friendly copy.
+  static async reschedule(
+    bookingId: number,
+    body: { newBookingDate: string; newBookingTime?: string },
+  ): Promise<RescheduleResult> {
+    const res = await axiosInstance.post(`${v1}/${bookingId}/reschedule`, body);
+    return res.data?.data;
+  }
+
+  // EPIC 5 · §3 — raise a refund request against a booking.
+  // POST /:id/refund-requests. NOTE: this endpoint is currently
+  // vendor/admin-scoped (loadOwnedBooking requires the caller in
+  // booking.vendorIds; the cancellation policy resolves from the vendor's
+  // business), so a customer caller gets 403/404 today. The customer UI is
+  // flag-gated OFF (see lib/customer-refund-request-flag.ts) and degrades
+  // gracefully until the backend authz is extended.
+  static async raiseRefundRequest(
+    bookingId: number,
+    body?: {
+      reason?: RefundReason;
+      securityDeposit?: number;
+      damages?: number;
+    },
+  ): Promise<{ request: RefundRequest }> {
+    const res = await axiosInstance.post(
+      `${v1}/${bookingId}/refund-requests`,
+      body ?? {},
+    );
+    return res.data?.data;
+  }
+
+  // EPIC 5 · §3 — list this booking's refund requests (same vendor/admin gate).
+  static async listRefundRequests(
+    bookingId: number,
+  ): Promise<{ bookingId: number; requests: RefundRequest[] }> {
+    const res = await axiosInstance.get(`${v1}/${bookingId}/refund-requests`);
+    return res.data?.data;
   }
 }

@@ -58,6 +58,12 @@ import { DisputeCard } from "@/components/bookings/dispute-card";
 import { ReviewPromptCard } from "@/components/bookings/review-prompt-card";
 // BK-100.9 — postpone-without-cancel (Pakistani Islamic mourning custom).
 import { PostponeBookingDialog } from "@/components/bookings/postpone-booking-dialog";
+// BK-038 — customer "Change date" reschedule (flag-gated, default OFF).
+import { RescheduleBookingDialog } from "@/components/bookings/reschedule-booking-dialog";
+import { isCustomerRescheduleOn } from "@/lib/customer-reschedule-flag";
+// EPIC 5 · §3 — customer "Request a refund" (flag-gated, default OFF).
+import { RefundRequestCard } from "@/components/bookings/refund-request-card";
+import { isCustomerRefundRequestOn } from "@/lib/customer-refund-request-flag";
 
 interface BookingDetail {
   id: number;
@@ -432,6 +438,19 @@ export default function BookingDetailPage() {
             onPostponed={fetchBooking}
             triggerVariant="button"
           />
+          {/* BK-038 — customer "Change date" reschedule. Flag-gated OFF by
+              default (money can move on a reprice), so dark on prod until a
+              pilot enables NEXT_PUBLIC_CUSTOMER_RESCHEDULE_ON. */}
+          {isCustomerRescheduleOn() ? (
+            <RescheduleBookingDialog
+              bookingId={booking.id}
+              bookingStatus={booking.status}
+              currentDate={booking.bookingDate}
+              currentTime={booking.bookingTime}
+              onRescheduled={fetchBooking}
+              triggerVariant="button"
+            />
+          ) : null}
           <Button
             onClick={() => setCancelDialogOpen(true)}
             size="sm"
@@ -531,6 +550,21 @@ export default function BookingDetailPage() {
                   Set a new date by {fmtShort(booking.postponedUntilAt)} via reschedule. Your deposit stays safe in the meantime.
                 </p>
               )}
+              {/* BK-038 — the actual "set a new date" control the banner
+                  references. Flag-gated OFF by default. */}
+              {isCustomerRescheduleOn() && !["cancelled", "completed"].includes(statusKey) ? (
+                <div className="pt-1">
+                  <RescheduleBookingDialog
+                    bookingId={booking.id}
+                    bookingStatus={booking.status}
+                    currentDate={booking.bookingDate}
+                    currentTime={booking.bookingTime}
+                    onRescheduled={fetchBooking}
+                    triggerLabel="Set a new date"
+                    triggerVariant="link"
+                  />
+                </div>
+              ) : null}
               {booking.postponeReason && (
                 <p className="text-xs text-amber-700 italic mt-1 leading-relaxed">
                   &ldquo;{booking.postponeReason}&rdquo;
@@ -827,6 +861,20 @@ export default function BookingDetailPage() {
             bookingId={booking.id}
             isCompleted={statusKey === "completed"}
           />
+
+          {/* EPIC 5 · §3 — customer refund request. Flag-gated OFF by default
+              (the backend endpoint is vendor/admin-scoped today; the card
+              degrades gracefully on a 403/404). Shown only where sensible:
+              an active booking with money paid. */}
+          {isCustomerRefundRequestOn() ? (
+            <RefundRequestCard
+              bookingId={booking.id}
+              canRequest={
+                !["cancelled", "completed"].includes(statusKey) &&
+                ["paid", "partial"].includes(paymentKey)
+              }
+            />
+          ) : null}
 
           {/* BK-100.7 — inline review prompt. Renders only when the
               booking is Completed. Backend re-enforces the gate so

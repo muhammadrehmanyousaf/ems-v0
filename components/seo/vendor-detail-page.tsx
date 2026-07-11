@@ -23,6 +23,8 @@ import { notFound, redirect, permanentRedirect } from "next/navigation"
 import { VenueSpaceSelector } from "@/components/booking/venue-space-selector"
 import { fetchVendorHasMultiSpace } from "@/lib/seo/fetch-vendor"
 import { isVenueHierarchyOn } from "@/lib/venue-hierarchy-flag"
+import { isSeoInquiryDialogOn } from "@/lib/seo-inquiry-dialog-flag"
+import VendorInquiryCta from "@/components/seo/vendor-inquiry-cta"
 import {
   CITIES,
   VENDOR_TYPES,
@@ -310,12 +312,21 @@ export async function VendorDetailPage(input: PageInput) {
               >
                 {vendor.priceMin ? "Check availability" : "Ask for a price"}
               </Link>
-              <Link
-                href={`/contact?vendor=${encodeURIComponent(vendor.name)}`}
-                className="inline-flex items-center justify-center px-5 py-2.5 rounded-full border border-bridal-beige hover:border-bridal-gold font-bridal text-[13px] text-bridal-charcoal transition-colors"
-              >
-                Ask a question
-              </Link>
+              {/* Anonymous inquiry — a first-time visitor from Google can ask
+                  a question / ask for a price without logging in (the dialog
+                  drops a form_inquiry Lead in the vendor's inbox). Flag-gated
+                  OFF by default; when off we keep the /contact link so prod
+                  behaviour is unchanged. */}
+              {isSeoInquiryDialogOn() ? (
+                <VendorInquiryCta businessId={vendor.id} vendorName={vendor.name} />
+              ) : (
+                <Link
+                  href={`/contact?vendor=${encodeURIComponent(vendor.name)}`}
+                  className="inline-flex items-center justify-center px-5 py-2.5 rounded-full border border-bridal-beige hover:border-bridal-gold font-bridal text-[13px] text-bridal-charcoal transition-colors"
+                >
+                  Ask a question
+                </Link>
+              )}
             </div>
           </div>
         </header>
