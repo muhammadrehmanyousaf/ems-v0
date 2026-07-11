@@ -41,6 +41,7 @@ export function middleware(request: NextRequest) {
     '/user/bookings',
     '/user/favorites',
     '/user/notifications',
+    '/user/quotes',
     '/user/settings',
     // Shaadi Plan — the whole multi-event cart surface is customer-scoped.
     // Route-level auth here is additive; the surface is still hidden behind
