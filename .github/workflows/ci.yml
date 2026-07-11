@@ -1,0 +1,31 @@
+name: CI
+
+# Runs on every push and every PR to main, so each commit gets a green check.
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Skip the Playwright browser download during `npm ci` — the typecheck gate
+  # doesn't need browsers, and it keeps the install fast and network-robust.
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+jobs:
+  typecheck:
+    name: Typecheck (ratchet)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # 0-new-errors ratchet: passes at the 125-error baseline, fails only when a
+      # change introduces a NEW type error. Same gate used during development.
+      - run: npm run typecheck:ratchet
