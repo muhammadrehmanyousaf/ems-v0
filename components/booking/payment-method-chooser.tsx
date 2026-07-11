@@ -23,6 +23,13 @@ import BookingPaymentScreen from "@/components/booking/steps-v2/booking-payment-
 
 type Method = "card" | "cash" | "jazzcash" | "easypaisa"
 
+// The outcome tells the parent WHAT actually happened so it can message
+// honestly. "paid" = real money captured (the Stripe card path); "cash_reserved"
+// = booking reserved with NO money moved (the customer will pay in cash and the
+// vendor confirms on receipt). The card screen calls onSuccess() with no
+// argument, which is treated as "paid" — so its behaviour is unchanged.
+export type PaymentOutcome = "paid" | "cash_reserved"
+
 interface Props {
   bookingId: number
   amount: number
@@ -31,7 +38,7 @@ interface Props {
   customerName?: string
   vendorName?: string
   bookingDate?: string
-  onSuccess: () => void
+  onSuccess: (outcome?: PaymentOutcome) => void
   onCancel?: () => void
 }
 
@@ -62,11 +69,11 @@ export default function PaymentMethodChooser(props: Props) {
     setBusy(true)
     try {
       await axiosInstance.post(`${BACKEND_URL}api/v1/bookings/${bookingId}/confirm-cash`, {})
-      toast({
-        title: "Booking reserved",
-        description: "You've chosen to pay in cash. The vendor will collect payment.",
-      })
-      onSuccess()
+      // NO money moved — the booking is only RESERVED (stays Pending / Awaiting
+      // cash). Hand the honest outcome to the parent so it never claims a
+      // payment was received. (We don't toast here: the single-slot toast queue
+      // would evict the parent's honest message, which is the bug we're fixing.)
+      onSuccess("cash_reserved")
     } catch (e: any) {
       toast({
         title: "Couldn't confirm",

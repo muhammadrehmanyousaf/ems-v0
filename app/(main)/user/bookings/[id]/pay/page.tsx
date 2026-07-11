@@ -13,7 +13,7 @@ import BookingPaymentScreen from "@/components/booking/steps-v2/booking-payment-
 // FEAT_CASH_BOOKING / FEAT_PK_PAYMENTS — when either is on, offer a method
 // chooser (card + cash + JazzCash/Easypaisa). When both are off the card-only
 // screen renders exactly as before.
-import PaymentMethodChooser from "@/components/booking/payment-method-chooser";
+import PaymentMethodChooser, { type PaymentOutcome } from "@/components/booking/payment-method-chooser";
 import { CASH_BOOKING_ENABLED, PK_PAYMENTS_ENABLED } from "@/lib/payment-flags";
 
 interface Booking {
@@ -154,11 +154,24 @@ export default function PayBookingPage() {
               customerName: booking.customerName,
               vendorName,
               bookingDate: booking.bookingDate,
-              onSuccess: () => {
-                toast({
-                  title: "Payment received",
-                  description: `Your ${paymentInfo!.label} has been recorded.`,
-                });
+              onSuccess: (outcome?: PaymentOutcome) => {
+                // Message HONESTLY per outcome. The cash path moved NO money —
+                // the booking is only reserved and stays pending until the
+                // vendor records the cash — so we must never say "payment
+                // received" there. Card/gateway success (outcome undefined or
+                // "paid") keeps the original confirmation, byte-identical.
+                if (outcome === "cash_reserved") {
+                  toast({
+                    title: "Booking reserved",
+                    description:
+                      "Pay in cash at the venue — your vendor will confirm the booking once they receive payment.",
+                  });
+                } else {
+                  toast({
+                    title: "Payment received",
+                    description: `Your ${paymentInfo!.label} has been recorded.`,
+                  });
+                }
                 router.push(`/user/bookings/${booking.id}`);
               },
               onCancel: () => router.push(`/user/bookings/${bookingId}`),
