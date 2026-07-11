@@ -10,6 +10,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { useUser } from "@/context/UserContext";
 import BookingPaymentScreen from "@/components/booking/steps-v2/booking-payment-screen";
+// FEAT_CASH_BOOKING / FEAT_PK_PAYMENTS — when either is on, offer a method
+// chooser (card + cash + JazzCash/Easypaisa). When both are off the card-only
+// screen renders exactly as before.
+import PaymentMethodChooser from "@/components/booking/payment-method-chooser";
+import { CASH_BOOKING_ENABLED, PK_PAYMENTS_ENABLED } from "@/lib/payment-flags";
 
 interface Booking {
   id: number;
@@ -140,23 +145,31 @@ export default function PayBookingPage() {
         </Button>
 
         <div className="rounded-md bg-bridal-cream border border-bridal-beige overflow-hidden p-5 sm:p-6 lg:p-8 shadow-[0_18px_44px_-32px_rgba(176,125,84,0.4)]">
-          <BookingPaymentScreen
-            bookingId={booking.id}
-            amount={paymentInfo!.amount}
-            paymentType={paymentInfo!.type}
-            customerEmail={booking.customerEmail}
-            customerName={booking.customerName}
-            vendorName={vendorName}
-            bookingDate={booking.bookingDate}
-            onSuccess={() => {
-              toast({
-                title: "Payment received",
-                description: `Your ${paymentInfo!.label} has been recorded.`,
-              });
-              router.push(`/user/bookings/${booking.id}`);
-            }}
-            onCancel={() => router.push(`/user/bookings/${bookingId}`)}
-          />
+          {(() => {
+            const paymentProps = {
+              bookingId: booking.id,
+              amount: paymentInfo!.amount,
+              paymentType: paymentInfo!.type,
+              customerEmail: booking.customerEmail,
+              customerName: booking.customerName,
+              vendorName,
+              bookingDate: booking.bookingDate,
+              onSuccess: () => {
+                toast({
+                  title: "Payment received",
+                  description: `Your ${paymentInfo!.label} has been recorded.`,
+                });
+                router.push(`/user/bookings/${booking.id}`);
+              },
+              onCancel: () => router.push(`/user/bookings/${bookingId}`),
+            };
+            // Flags off → the card-only screen renders exactly as before.
+            return CASH_BOOKING_ENABLED || PK_PAYMENTS_ENABLED ? (
+              <PaymentMethodChooser {...paymentProps} />
+            ) : (
+              <BookingPaymentScreen {...paymentProps} />
+            );
+          })()}
         </div>
       </div>
     </main>
