@@ -87,7 +87,10 @@ function humaniseError(code?: string, extra?: { diff?: number }): string {
         ? `The new date costs ${fmtMoney(extra.diff)} more. A higher-priced date can't be set here yet — please coordinate with your vendor.`
         : "The new date costs more than the current one. Please coordinate with your vendor for a top-up.";
     default:
-      return code || "Couldn't reschedule this booking. Please try again.";
+      // Any UNRECOGNIZED code (incl. a raw backend/Sequelize error string echoed
+      // by a 500) must fall back to the generic copy — never surface internal
+      // error text to the customer in a destructive toast.
+      return "Couldn't reschedule this booking. Please try again.";
   }
 }
 
