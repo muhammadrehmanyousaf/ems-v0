@@ -68,6 +68,9 @@ import { VendorAPI } from "@/lib/api/vendors";
 // BK-100.52 Layer 2 — customer-facing bundled-services display.
 import { BundledServicesDisplay } from "@/components/vendors/bundled-services-display";
 import { VendorBranches } from "@/components/VendorDetails/vendor-branches";
+// Shaadi Plan — additive, flag-gated "Add to my wedding plan" action. Renders
+// null while the flag is off, so this vendor page stays byte-identical.
+import { AddToPlanButton } from "@/components/wedding-plan/add-to-plan-button";
 
 interface VendorDetailsMobileProps {
   vendor: Vendor;
@@ -1089,6 +1092,16 @@ export default function VendorDetailsMobile({
                   {unpriced ? <MessageCircle className="w-4 h-4" /> : <CalendarCheck className="w-4 h-4" />}
                   {unpriced ? "Ask for a price" : "Book this vendor"}
                 </button>
+                {/* Shaadi Plan — mobile-visible entry point (the desktop
+                    version lives in the sticky sidebar). Additive + flag-gated,
+                    so it renders nothing while the flag is off. */}
+                <AddToPlanButton
+                  businessId={vendor.id}
+                  businessName={vendor.name}
+                  vendorType={(vendor as { vendorType?: string }).vendorType || vendor.type}
+                  variant="card"
+                  className="lg:hidden"
+                />
               </div>
             </motion.div>
           </div>
@@ -2483,6 +2496,16 @@ export default function VendorDetailsMobile({
                     <Heart className={`w-4 h-4 ${isFavorite ? "fill-bridal-coral text-bridal-coral" : ""}`} />
                     {isFavorite ? "Saved" : "Save to favorites"}
                   </button>
+
+                  {/* Shaadi Plan — additive; hidden unless the wedding-plan
+                      flag is on. Never touches Book / Save above. */}
+                  <AddToPlanButton
+                    businessId={vendor.id}
+                    businessName={vendor.name}
+                    vendorType={(vendor as { vendorType?: string }).vendorType || vendor.type}
+                    variant="detail"
+                    className="w-full mt-3 h-11"
+                  />
                 </CardContent>
               </Card>
 

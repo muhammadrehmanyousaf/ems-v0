@@ -42,6 +42,10 @@ export function middleware(request: NextRequest) {
     '/user/favorites',
     '/user/notifications',
     '/user/settings',
+    // Shaadi Plan — the whole multi-event cart surface is customer-scoped.
+    // Route-level auth here is additive; the surface is still hidden behind
+    // NEXT_PUBLIC_FEAT_WEDDING_PLAN client-side and 404s on the BE when off.
+    '/user/plan',
     '/dashboard',
     '/booking',
   ];
