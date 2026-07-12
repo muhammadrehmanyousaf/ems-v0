@@ -98,17 +98,36 @@ export function UserSidebar() {
   // causes a hydration mismatch; planEnabled (Shaadi Plan) resolves the same way.
   const [quoteEnabled, setQuoteEnabled] = React.useState(false)
   React.useEffect(() => { setQuoteEnabled(isQuoteNegotiationEnabled()) }, [])
-  // Additively inject "My wedding plan" (planEnabled) and "My quotes" (quoteEnabled)
-  // into Overview. Both flags are false until mount, so the first render is
-  // byte-identical to the legacy sidebar (no hydration mismatch).
+
+  // The Overview nav is reshaped by two independent, mount-resolved flags — both
+  // false until mount, so the first client render is byte-identical to the legacy
+  // sidebar (no hydration mismatch), and users with neither flag get NAV_GROUPS
+  // untouched:
+  //   • planEnabled (Shaadi Plan): the umbrella ("My Wedding") and the plan are the
+  //     SAME wedding shown two ways — make the plan the primary hub and demote the
+  //     legacy umbrella page to an adjacent "Wedding overview" companion, so they
+  //     read as one wedding, not two.
+  //   • quoteEnabled (FEAT_QUOTE_NEGOTIATION): append "My quotes".
   const navGroups = React.useMemo(() => {
-    const extra: NavItem[] = []
-    if (planEnabled) extra.push({ href: "/user/plan", label: "My wedding plan", icon: HeartHandshake })
-    if (quoteEnabled) extra.push({ href: "/user/quotes", label: "My quotes", icon: Handshake })
-    if (extra.length === 0) return NAV_GROUPS
-    return NAV_GROUPS.map((g) =>
-      g.label === "Overview" ? { ...g, items: [...g.items, ...extra] } : g,
-    )
+    if (!planEnabled && !quoteEnabled) return NAV_GROUPS
+    return NAV_GROUPS.map((group) => {
+      if (group.label !== "Overview") return group
+      const items: NavItem[] = []
+      for (const item of group.items) {
+        if (planEnabled && item.href === "/user/umbrellas") {
+          // Plan first (primary hub), overview immediately after — adjacent so
+          // they read as one wedding, not two.
+          items.push({ href: "/user/plan", label: "My wedding plan", icon: HeartHandshake })
+          items.push({ href: "/user/umbrellas", label: "Wedding overview", icon: Sparkles })
+        } else {
+          items.push(item)
+        }
+      }
+      if (quoteEnabled) {
+        items.push({ href: "/user/quotes", label: "My quotes", icon: Handshake })
+      }
+      return { ...group, items }
+    })
   }, [planEnabled, quoteEnabled])
 
   return (

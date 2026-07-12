@@ -220,6 +220,53 @@ export interface CheckoutOutcome {
 }
 
 // ---------------------------------------------------------------------------
+// Unified "pay for my whole wedding" (GET /:id/payment-summary)
+// ---------------------------------------------------------------------------
+
+export type PlanPaymentType = "down_payment" | "remaining_payment";
+
+/** One Booking child in the plan's pay manifest. */
+export interface PlanPayableBooking {
+  bookingId: number;
+  status: string;
+  paymentStatus: string;
+  eventType: string | null;
+  bookingDate: string | null;
+  bookingTime: string | null;
+  vendorName: string | null;
+  customerName: string | null;
+  customerEmail: string | null;
+  totalAmount: number;
+  downPayment: number;
+  /** True when money is still owed AND the per-booking endpoint will accept it. */
+  payable: boolean;
+  /** Which payment the FE hands to the existing pay component. */
+  paymentType: PlanPaymentType | null;
+  /** The amount the SERVER will charge for that paymentType. */
+  dueNow: number;
+  /** Why it isn't payable (settled|cancelled|not_ready|zero), else null. */
+  reason: string | null;
+}
+
+export interface PlanPaymentAggregate {
+  totalCount: number;
+  payableCount: number;
+  settledCount: number;
+  totalDueNow: number;
+  totalBooked: number;
+}
+
+/** GET /wedding-plans/:id/payment-summary — the unified pay manifest. */
+export interface PlanPaymentSummary {
+  umbrellaId: number;
+  planTitle: string | null;
+  weddingDate: string | null;
+  currency: string;
+  bookings: PlanPayableBooking[];
+  aggregate: PlanPaymentAggregate;
+}
+
+// ---------------------------------------------------------------------------
 // Inputs
 // ---------------------------------------------------------------------------
 
@@ -430,6 +477,35 @@ export class WeddingPlansAPI {
       failed: Array.isArray(d.failed) ? d.failed : [],
       discountPercent: d.discountPercent,
       totals: d.totals,
+    };
+  }
+
+  // --- Unified "pay for my whole wedding" --------------------------------
+
+  /**
+   * GET /wedding-plans/:id/payment-summary — every payable Booking child
+   * (each with its due-now amount + paymentType) plus the aggregate total
+   * owed. Drives the "Pay for my wedding" flow, which then reuses the
+   * existing per-booking pay component once per booking (each settling via
+   * the unchanged webhook). Returns null while the BE flag is off (404).
+   */
+  static async paymentSummary(planId: number): Promise<PlanPaymentSummary | null> {
+    const res = await axiosInstance.get(`${BASE}/${planId}/payment-summary`);
+    const d = res.data?.data;
+    if (!d) return null;
+    return {
+      umbrellaId: d.umbrellaId ?? planId,
+      planTitle: d.planTitle ?? null,
+      weddingDate: d.weddingDate ?? null,
+      currency: d.currency ?? "pkr",
+      bookings: Array.isArray(d.bookings) ? d.bookings : [],
+      aggregate: d.aggregate ?? {
+        totalCount: 0,
+        payableCount: 0,
+        settledCount: 0,
+        totalDueNow: 0,
+        totalBooked: 0,
+      },
     };
   }
 }
