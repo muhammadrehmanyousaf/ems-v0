@@ -91,20 +91,28 @@ export function UserSidebar() {
   const isActive = (href: string) =>
     pathname === href || pathname?.startsWith(`${href}/`)
 
-  // Additively inject "My wedding plan" into Overview when the flag is on.
+  // When the plan flag is on, the umbrella ("My Wedding") and the plan are
+  // the SAME wedding shown two ways — don't present them as two unrelated
+  // entries. Make the plan the primary hub and demote the legacy umbrella
+  // page to an adjacent "Wedding overview" companion, so they read as one.
   // useWeddingPlanFlag() returns false until mount, so the first render is
-  // byte-identical to the legacy sidebar (no hydration mismatch).
-  const navGroups: { label: string; items: NavItem[] }[] = NAV_GROUPS.map((group) =>
-    group.label === "Overview" && planEnabled
-      ? {
-          ...group,
-          items: [
-            ...group.items,
-            { href: "/user/plan", label: "My wedding plan", icon: HeartHandshake },
-          ],
-        }
-      : group,
-  )
+  // byte-identical to the legacy sidebar (no hydration mismatch), and the
+  // legacy "My Wedding" entry is untouched for users without the flag.
+  const navGroups: { label: string; items: NavItem[] }[] = NAV_GROUPS.map((group) => {
+    if (group.label !== "Overview" || !planEnabled) return group
+    const items: NavItem[] = []
+    for (const item of group.items) {
+      if (item.href === "/user/umbrellas") {
+        // Plan first (primary hub), overview immediately after — adjacent so
+        // they read as one wedding, not two.
+        items.push({ href: "/user/plan", label: "My wedding plan", icon: HeartHandshake })
+        items.push({ href: "/user/umbrellas", label: "Wedding overview", icon: Sparkles })
+      } else {
+        items.push(item)
+      }
+    }
+    return { ...group, items }
+  })
 
   return (
     <Sidebar collapsible="icon" variant="inset" className="border-r border-bridal-beige/70">
