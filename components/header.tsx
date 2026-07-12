@@ -357,7 +357,7 @@ export function Header() {
             </Sheet>
 
             {/* Logo — crest + Playfair wordmark */}
-            <Link href="/" className="flex items-center gap-2 sm:gap-2.5">
+            <Link href="/" aria-label="Wedding Wala — home" className="flex items-center gap-2 sm:gap-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/icon-mark.png"
