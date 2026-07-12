@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -12,10 +13,12 @@ import {
   Sparkles,
   User,
   Settings,
+  Handshake,
   Heart as HeartLogo,
   HeartHandshake,
   LogOut,
 } from "lucide-react"
+import { isQuoteNegotiationEnabled } from "@/lib/quote-negotiation"
 import {
   Sidebar,
   SidebarContent,
@@ -91,28 +94,41 @@ export function UserSidebar() {
   const isActive = (href: string) =>
     pathname === href || pathname?.startsWith(`${href}/`)
 
-  // When the plan flag is on, the umbrella ("My Wedding") and the plan are
-  // the SAME wedding shown two ways — don't present them as two unrelated
-  // entries. Make the plan the primary hub and demote the legacy umbrella
-  // page to an adjacent "Wedding overview" companion, so they read as one.
-  // useWeddingPlanFlag() returns false until mount, so the first render is
-  // byte-identical to the legacy sidebar (no hydration mismatch), and the
-  // legacy "My Wedding" entry is untouched for users without the flag.
-  const navGroups: { label: string; items: NavItem[] }[] = NAV_GROUPS.map((group) => {
-    if (group.label !== "Overview" || !planEnabled) return group
-    const items: NavItem[] = []
-    for (const item of group.items) {
-      if (item.href === "/user/umbrellas") {
-        // Plan first (primary hub), overview immediately after — adjacent so
-        // they read as one wedding, not two.
-        items.push({ href: "/user/plan", label: "My wedding plan", icon: HeartHandshake })
-        items.push({ href: "/user/umbrellas", label: "Wedding overview", icon: Sparkles })
-      } else {
-        items.push(item)
+  // FEAT_QUOTE_NEGOTIATION — resolved after mount (localStorage/env) so it never
+  // causes a hydration mismatch; planEnabled (Shaadi Plan) resolves the same way.
+  const [quoteEnabled, setQuoteEnabled] = React.useState(false)
+  React.useEffect(() => { setQuoteEnabled(isQuoteNegotiationEnabled()) }, [])
+
+  // The Overview nav is reshaped by two independent, mount-resolved flags — both
+  // false until mount, so the first client render is byte-identical to the legacy
+  // sidebar (no hydration mismatch), and users with neither flag get NAV_GROUPS
+  // untouched:
+  //   • planEnabled (Shaadi Plan): the umbrella ("My Wedding") and the plan are the
+  //     SAME wedding shown two ways — make the plan the primary hub and demote the
+  //     legacy umbrella page to an adjacent "Wedding overview" companion, so they
+  //     read as one wedding, not two.
+  //   • quoteEnabled (FEAT_QUOTE_NEGOTIATION): append "My quotes".
+  const navGroups = React.useMemo(() => {
+    if (!planEnabled && !quoteEnabled) return NAV_GROUPS
+    return NAV_GROUPS.map((group) => {
+      if (group.label !== "Overview") return group
+      const items: NavItem[] = []
+      for (const item of group.items) {
+        if (planEnabled && item.href === "/user/umbrellas") {
+          // Plan first (primary hub), overview immediately after — adjacent so
+          // they read as one wedding, not two.
+          items.push({ href: "/user/plan", label: "My wedding plan", icon: HeartHandshake })
+          items.push({ href: "/user/umbrellas", label: "Wedding overview", icon: Sparkles })
+        } else {
+          items.push(item)
+        }
       }
-    }
-    return { ...group, items }
-  })
+      if (quoteEnabled) {
+        items.push({ href: "/user/quotes", label: "My quotes", icon: Handshake })
+      }
+      return { ...group, items }
+    })
+  }, [planEnabled, quoteEnabled])
 
   return (
     <Sidebar collapsible="icon" variant="inset" className="border-r border-bridal-beige/70">

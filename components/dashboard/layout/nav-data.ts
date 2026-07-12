@@ -93,6 +93,12 @@ export const data = {
     { name: "Field capture", url: "/dashboard/field", icon: Zap, i18nKey: "nav.field_capture" },
   ],
 
+  // FEAT_QUOTE_NEGOTIATION — customer quote/haggle requests. Injected flag-gated
+  // (NEXT_PUBLIC_FEAT_QUOTE_NEGOTIATION) in app-sidebar; dark until pilot-enabled.
+  vendorQuotes: [
+    { name: "Quote requests", url: "/dashboard/quotes", icon: Handshake, i18nKey: "nav.quotes" },
+  ],
+
   // ── Admin / Super-admin ────────────────────────────────────────
   // Cleaned, platform-relevant set.
 

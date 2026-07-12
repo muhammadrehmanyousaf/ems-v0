@@ -20,6 +20,7 @@ import {
 import { data } from "./nav-data"
 import { useUser } from "@/context/UserContext"
 import { isOrgMembershipOn } from "@/lib/org-membership-flag"
+import { isQuoteNegotiationEnabled } from "@/lib/quote-negotiation"
 import { useVenueOsFlags } from "@/lib/venue-os-runtime-flags"
 import { useBusiness } from "@/context/BusinessContext"
 import {
@@ -67,6 +68,12 @@ function buildVendorSections(
   // artist but my sidebar says Shoots" bug. Falls back to the user's
   // vendorType when the business object hasn't loaded yet.
   businessVendorType: string | null | undefined,
+  // FEAT_QUOTE_NEGOTIATION — resolved in AppSidebar after mount (env OR the
+  // localStorage pilot override), so the vendor "Quote requests" entry lights up
+  // on the SAME signal as the customer CTA/sidebar (isQuoteNegotiationEnabled),
+  // not env-only. Passed in (not read here) to keep this a pure builder + avoid a
+  // hydration mismatch.
+  quoteEnabled: boolean,
 ): NavSection[] {
   const vendorType = businessVendorType ?? user?.vendorType
   const vendorConfig = getVendorTypeConfig(vendorType)
@@ -107,6 +114,11 @@ function buildVendorSections(
   // (pilot-dark by default). Injected here so it needs no allowlist plumbing.
   if (process.env.NEXT_PUBLIC_FEAT_OFFLINE_OUTBOX === "true") {
     main.unshift(...data.vendorFieldCapture)
+  }
+  // FEAT_QUOTE_NEGOTIATION — customer quote/haggle requests in the Main nav.
+  // Flag-dark by default; injected here so it needs no allowlist plumbing.
+  if (quoteEnabled) {
+    main.push(...data.vendorQuotes)
   }
   const money = allowed.filter((i) => MONEY_NAV_KEYS.has(i.name as NavItemKey))
   // Render extras in the order the config declares them (not nav-data
@@ -216,9 +228,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { business } = useBusiness()
   const businessVendorType = business?.vendor?.vendorType
 
+  // FEAT_QUOTE_NEGOTIATION — resolve after mount (env OR localStorage pilot
+  // override) so the vendor "Quote requests" entry uses the SAME signal as the
+  // customer CTA/sidebar. Default false on first render → no hydration mismatch.
+  const [quoteEnabled, setQuoteEnabled] = React.useState(false)
+  React.useEffect(() => { setQuoteEnabled(isQuoteNegotiationEnabled()) }, [])
+
   const sections: NavSection[] = isAdminLike(role)
     ? buildAdminSections(role)
-    : buildVendorSections(user, businessVendorType)
+    : buildVendorSections(user, businessVendorType, quoteEnabled)
 
   // Phase-1: when NAV_V2 is on, relabel group headings + items through the
   // bilingual persona dictionary (Aasaan Roman-Urdu vs Professional English).
