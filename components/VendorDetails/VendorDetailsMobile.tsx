@@ -2540,7 +2540,10 @@ export default function VendorDetailsMobile({
               From
             </span>
             <p className="font-display italic text-[20px] text-bridal-gold-dark leading-tight">
-              {formatPrice(vendor.minimumPrice || vendor.price)}
+              {/* WW-PRICE0 — use the shared price-label helper so unpriced
+                  vendors read "Price on request" here too, never "Rs. 0" /
+                  "NaN". Matches the hero + desktop sidebar (both use priceLabel). */}
+              {priceLabel}
             </p>
           </div>
           <button
