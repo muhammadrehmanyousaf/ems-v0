@@ -87,6 +87,11 @@ export interface PlanItem {
   status: PlanItemStatus;
   quotedAmount: number | string | null;
   agreedAmount: number | string | null;
+  /** Package / menu selection — the customer picked WHICH package; the server
+   * prices it. Lets a package-only vendor (NULL minimumPrice) be cart-booked. */
+  packageId: number | null;
+  menuId: number | null;
+  vehicleQuantity: number | null;
   bookingId: number | null;
   leadId: number | null;
   customOrderId: number | null;
@@ -305,12 +310,19 @@ export interface AddItemInput {
   vendorType?: string;
   agreedAmount?: number;
   notes?: string;
+  packageId?: number | null;
+  menuId?: number | null;
+  vehicleQuantity?: number | null;
 }
 
 export interface UpdateItemInput {
   agreedAmount?: number | null;
   notes?: string;
   status?: PlanItemStatus;
+  /** Package/menu selection (a price is never sent — the server prices it). */
+  packageId?: number | null;
+  menuId?: number | null;
+  vehicleQuantity?: number | null;
 }
 
 // ---------------------------------------------------------------------------

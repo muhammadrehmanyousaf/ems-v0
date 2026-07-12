@@ -21,6 +21,7 @@ import {
   Pencil,
   Building2,
   ExternalLink,
+  Package as PackageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +31,14 @@ import {
   WeddingPlansAPI,
   type PlanItem,
 } from "@/lib/api/weddingPlans";
+import { VendorAPI } from "@/lib/api/vendors";
 import { statusMeta, fmtPKR, toNum } from "@/lib/wedding-plan-events";
+
+interface PkgOption {
+  id: number;
+  name: string;
+  price: number;
+}
 
 interface PlanItemRowProps {
   planId: number;
@@ -48,9 +56,69 @@ export function PlanItemRow({ planId, eventId, item, onChanged }: PlanItemRowPro
   const [inquiring, setInquiring] = React.useState(false);
   const [removing, setRemoving] = React.useState(false);
 
+  // Package selection — for a vendor whose price lives in packages (a
+  // package-only vendor has NULL minimumPrice, so the cart can only price it
+  // once the couple picks a package). Loaded lazily from the vendor's catalogue.
+  const [pkgs, setPkgs] = React.useState<PkgOption[] | null>(null);
+  const [loadingPkgs, setLoadingPkgs] = React.useState(false);
+  const [pickerOpen, setPickerOpen] = React.useState(false);
+  const [choosingPkg, setChoosingPkg] = React.useState(false);
+
   React.useEffect(() => {
     setAmount(item.agreedAmount != null ? String(toNum(item.agreedAmount)) : "");
   }, [item.agreedAmount]);
+
+  const loadPkgs = React.useCallback(async () => {
+    if (pkgs != null || loadingPkgs) return pkgs;
+    setLoadingPkgs(true);
+    try {
+      const biz = await VendorAPI.getBusinessById(item.businessId);
+      const list: PkgOption[] = Array.isArray(biz?.packages)
+        ? biz!.packages
+            .map((p) => ({ id: Number((p as { id?: unknown }).id), name: String((p as { name?: unknown }).name ?? "Package"), price: Number((p as { price?: unknown }).price) || 0 }))
+            .filter((p) => Number.isFinite(p.id) && p.id > 0)
+        : [];
+      setPkgs(list);
+      return list;
+    } catch {
+      setPkgs([]);
+      return [];
+    } finally {
+      setLoadingPkgs(false);
+    }
+  }, [item.businessId, pkgs, loadingPkgs]);
+
+  // Resolve the selected package's name/price for display when one is set.
+  React.useEffect(() => {
+    if (item.packageId != null && pkgs == null && !loadingPkgs) void loadPkgs();
+  }, [item.packageId, pkgs, loadingPkgs, loadPkgs]);
+
+  const selectedPkg = React.useMemo(
+    () => (item.packageId != null && pkgs ? pkgs.find((p) => p.id === Number(item.packageId)) ?? null : null),
+    [item.packageId, pkgs],
+  );
+
+  const choosePackage = async (packageId: number | null) => {
+    setChoosingPkg(true);
+    try {
+      await WeddingPlansAPI.updateItem(planId, eventId, item.id, { packageId });
+      setPickerOpen(false);
+      onChanged?.();
+    } catch (e) {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        (e as Error)?.message ||
+        "Couldn't set the package";
+      toast({ title: "Couldn't set package", description: msg, variant: "destructive" });
+    } finally {
+      setChoosingPkg(false);
+    }
+  };
+
+  const openPicker = async () => {
+    setPickerOpen(true);
+    await loadPkgs();
+  };
 
   const meta = statusMeta(item.status);
   const booked = item.status === "booked";
@@ -208,6 +276,70 @@ export function PlanItemRow({ planId, eventId, item, onChanged }: PlanItemRowPro
               </span>
             )}
           </div>
+
+          {/* Package selection — for a vendor whose price lives in packages (a
+              package-only vendor can't be cart-priced by an agreed amount alone).
+              The couple picks WHICH package; the server prices it at checkout. */}
+          {!booked && (
+            <div className="mt-2 flex items-center gap-2 flex-wrap">
+              {selectedPkg ? (
+                <span className="inline-flex items-center gap-1.5 text-xs text-bridal-charcoal">
+                  <PackageIcon className="h-3.5 w-3.5 text-bridal-gold-dark" />
+                  <span className="font-medium">{selectedPkg.name}</span>
+                  <span className="tabular-nums text-bridal-gold-dark">{fmtPKR(selectedPkg.price)}</span>
+                </span>
+              ) : item.packageId != null ? (
+                <span className="inline-flex items-center gap-1.5 text-xs text-bridal-text-soft">
+                  <PackageIcon className="h-3.5 w-3.5" /> Package selected
+                </span>
+              ) : null}
+
+              {pickerOpen ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <select
+                    autoFocus
+                    aria-label="Choose a package"
+                    className="h-8 rounded-md border border-bridal-beige bg-white px-2 text-xs text-bridal-charcoal max-w-[220px]"
+                    defaultValue={item.packageId != null ? String(item.packageId) : ""}
+                    disabled={choosingPkg || loadingPkgs}
+                    onChange={(e) =>
+                      choosePackage(e.target.value === "" ? null : Number(e.target.value))
+                    }
+                  >
+                    <option value="">
+                      {loadingPkgs ? "Loading packages…" : "No package"}
+                    </option>
+                    {(pkgs ?? []).map((p) => (
+                      <option key={p.id} value={String(p.id)}>
+                        {p.name} — {fmtPKR(p.price)}
+                      </option>
+                    ))}
+                  </select>
+                  {(loadingPkgs || choosingPkg) && (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-bridal-text-soft" />
+                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0 text-bridal-text-soft"
+                    onClick={() => setPickerOpen(false)}
+                    aria-label="Close package picker"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={openPicker}
+                  className="inline-flex items-center gap-1 text-[11px] text-bridal-gold-dark hover:text-bridal-charcoal"
+                >
+                  <PackageIcon className="h-3 w-3" />
+                  {item.packageId != null ? "Change package" : "Choose a package"}
+                </button>
+              )}
+            </div>
+          )}
 
           {booked && item.bookingId && (
             <Link
