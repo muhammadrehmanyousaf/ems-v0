@@ -57,6 +57,38 @@ export async function verifyPhone(code: string): Promise<{ phoneE164: string }> 
   return unwrap<{ phoneE164: string }>(res) ?? { phoneE164: "" }
 }
 
+// ---------- Phone-OTP login / signup (FEAT_PHONE_OTP) ----------
+// Additional, opt-in path. Email+password login is unaffected. Endpoints 404
+// when the backend flag is off. `devCode` is ONLY returned in non-production.
+
+export interface PhoneOtpRequestResult {
+  expiresInSec: number
+  devCode?: string
+  requiredCredentials?: string[]
+}
+
+export interface PhoneOtpVerifyResult {
+  user: any
+  token: string
+  jti?: string
+  sessionId?: number
+  flags?: LoginFlags
+  created?: boolean
+}
+
+export async function requestPhoneOtp(phoneNumber: string): Promise<PhoneOtpRequestResult> {
+  const res = await axiosInstance.post("/api/v1/auth/phone-otp/request", { phoneNumber })
+  return unwrap<PhoneOtpRequestResult>(res) ?? { expiresInSec: 0 }
+}
+
+export async function verifyPhoneOtp(
+  phoneNumber: string,
+  code: string,
+): Promise<PhoneOtpVerifyResult> {
+  const res = await axiosInstance.post("/api/v1/auth/phone-otp/verify", { phoneNumber, code })
+  return unwrap<PhoneOtpVerifyResult>(res) as PhoneOtpVerifyResult
+}
+
 // ---------- Sessions ----------
 
 export interface ActiveSession {

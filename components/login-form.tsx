@@ -8,10 +8,14 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Heart, Mail, Lock, Eye, EyeOff, ShieldCheck } from "lucide-react"
 
+import { Phone, KeyRound } from "lucide-react"
+
 import axiosInstance from "@/lib/axiosConfig"
 import { toast } from "./ui/use-toast"
 import { useUser } from "@/context/UserContext"
-import { loginErrorMessage, loginErrorCode } from "@/lib/api/auth"
+import { loginErrorMessage, loginErrorCode, requestPhoneOtp, verifyPhoneOtp } from "@/lib/api/auth"
+// FEAT_PHONE_OTP — additional phone+OTP sign-in path (email/password unchanged).
+import { PHONE_OTP_ENABLED } from "@/lib/payment-flags"
 
 import { BridalButton } from "@/components/bridal/bridal-button"
 import { BridalField, BridalInput } from "@/components/bridal/bridal-input"
@@ -34,8 +38,71 @@ export function LoginForm() {
   // (TWO_FACTOR_REQUIRED), so password-only accounts see no change.
   const [twoFactorRequired, setTwoFactorRequired] = useState(false)
   const [totp, setTotp] = useState("")
+  // FEAT_PHONE_OTP — phone sign-in sub-flow. Off by default; only reachable
+  // when NEXT_PUBLIC_FEAT_PHONE_OTP is on, so the email form is unaffected.
+  const [phoneMode, setPhoneMode] = useState(false)
+  const [phone, setPhone] = useState("")
+  const [otp, setOtp] = useState("")
+  const [otpSent, setOtpSent] = useState(false)
+  const [phoneBusy, setPhoneBusy] = useState(false)
   const { login } = useUser()
   const router = useRouter()
+
+  // Shared post-login routing (used by both email + phone flows).
+  const routeAfterLogin = (user: any) => {
+    const isAdmin = user?.roles?.some(
+      (role: any) =>
+        role.id === 1 ||
+        role.name?.toLowerCase() === "super admin" ||
+        role.name?.toLowerCase() === "admin"
+    )
+    const isVendor =
+      user?.isVendor === true ||
+      user?.roles?.some(
+        (role: any) => role.id === 2 || role.name?.toLowerCase() === "vendor"
+      )
+    router.push(isAdmin || isVendor ? "/dashboard" : "/")
+  }
+
+  const sendPhoneOtp = async () => {
+    if (!phone.trim()) {
+      toast({ title: "Enter your phone number", description: "e.g. 0300 1234567" })
+      return
+    }
+    try {
+      setPhoneBusy(true)
+      const r = await requestPhoneOtp(phone.trim())
+      setOtpSent(true)
+      toast({
+        title: "Code sent",
+        description: r.devCode
+          ? `Dev mode: your code is ${r.devCode}`
+          : "Enter the 6-digit code we texted you.",
+      })
+    } catch (error: any) {
+      toast({ title: "Couldn't send code", description: loginErrorMessage(error) })
+    } finally {
+      setPhoneBusy(false)
+    }
+  }
+
+  const submitPhoneOtp = async () => {
+    if (otp.trim().length !== 6) {
+      toast({ title: "Enter the 6-digit code" })
+      return
+    }
+    try {
+      setPhoneBusy(true)
+      const r = await verifyPhoneOtp(phone.trim(), otp.trim())
+      login(r.user, r.token, { jti: r.jti, flags: r.flags })
+      toast({ title: r.created ? "Welcome" : "Welcome back", description: "You're signed in." })
+      routeAfterLogin(r.user)
+    } catch (error: any) {
+      toast({ title: "Sign-in failed", description: loginErrorMessage(error) })
+    } finally {
+      setPhoneBusy(false)
+    }
+  }
 
   const {
     register,
@@ -140,6 +207,7 @@ export function LoginForm() {
         Enter your credentials to access your saved vendors, bookings, and more.
       </p>
 
+      {!phoneMode && (
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <BridalField
           id="email"
@@ -240,6 +308,89 @@ export function LoginForm() {
           {isLoading ? "Signing in…" : "Sign In"}
         </BridalButton>
       </form>
+      )}
+
+      {/* FEAT_PHONE_OTP — phone + OTP sign-in (additional path) */}
+      {phoneMode && (
+        <div className="space-y-5">
+          <BridalField id="phone" label="Mobile Number" required>
+            <BridalInput
+              id="phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              placeholder="0300 1234567"
+              leadingIcon={<Phone className="w-4 h-4" />}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              disabled={otpSent}
+            />
+          </BridalField>
+
+          {otpSent && (
+            <BridalField id="otp" label="Verification code" required>
+              <BridalInput
+                id="otp"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                placeholder="6-digit code"
+                leadingIcon={<KeyRound className="w-4 h-4" />}
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
+                autoFocus
+              />
+              <button
+                type="button"
+                onClick={sendPhoneOtp}
+                disabled={phoneBusy}
+                className="mt-1.5 font-bridal text-[12px] text-bridal-mauve hover:text-bridal-gold transition-colors"
+              >
+                Didn&apos;t get it? Resend code
+              </button>
+            </BridalField>
+          )}
+
+          <BridalButton
+            type="button"
+            variant="primary"
+            size="lg"
+            block
+            loading={phoneBusy}
+            onClick={otpSent ? submitPhoneOtp : sendPhoneOtp}
+            className="mt-2"
+          >
+            {otpSent ? "Verify & sign in" : "Send code"}
+          </BridalButton>
+        </div>
+      )}
+
+      {PHONE_OTP_ENABLED && (
+        <div className="mt-5 text-center">
+          <button
+            type="button"
+            onClick={() => {
+              setPhoneMode((p) => !p)
+              setOtpSent(false)
+              setOtp("")
+            }}
+            className="inline-flex items-center gap-1.5 font-bridal text-[13px] text-bridal-gold hover:text-bridal-gold-dark font-medium transition-colors"
+          >
+            {phoneMode ? (
+              <>
+                <Mail className="w-3.5 h-3.5" />
+                Sign in with email instead
+              </>
+            ) : (
+              <>
+                <Phone className="w-3.5 h-3.5" />
+                Sign in with phone number
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       <div className="my-8">
         <FloralDivider />
