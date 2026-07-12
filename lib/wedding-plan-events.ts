@@ -106,7 +106,17 @@ export function fmtPKR(v: number | string | null | undefined): string {
 export function fmtPlanDate(s: string | null | undefined): string {
   if (!s) return "Date TBD";
   try {
-    return new Date(s).toLocaleDateString("en-PK", {
+    // These are DATEONLY ("YYYY-MM-DD") values. `new Date("YYYY-MM-DD")`
+    // parses as UTC midnight, so sub-UTC (Americas/diaspora) viewers would
+    // see the previous calendar day. Parse the date parts as LOCAL so every
+    // viewer sees the Pakistan-correct day; fall back to native parsing for
+    // any non date-only string.
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
+    const d = m
+      ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+      : new Date(s);
+    if (Number.isNaN(d.getTime())) return s;
+    return d.toLocaleDateString("en-PK", {
       year: "numeric",
       month: "short",
       day: "numeric",

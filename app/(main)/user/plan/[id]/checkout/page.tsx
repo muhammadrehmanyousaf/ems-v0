@@ -94,7 +94,15 @@ export default function PlanCheckoutPage() {
   }, [isAuthenticated, isLoading, router, planId]);
 
   const load = React.useCallback(async () => {
-    if (!user || !enabled || !Number.isFinite(planId)) return;
+    if (!user || !enabled) return;
+    // A non-numeric [id] (e.g. /user/plan/abc/checkout) can never resolve to
+    // a plan. Stop loading and leave `full` null so the page falls through to
+    // the clean "Plan not found" state instead of hanging on the skeleton.
+    if (!Number.isFinite(planId)) {
+      setFull(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const detail = await WeddingPlansAPI.getFull(planId);
