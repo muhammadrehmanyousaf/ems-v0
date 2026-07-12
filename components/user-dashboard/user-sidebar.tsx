@@ -14,11 +14,13 @@ import {
   User,
   Settings,
   Handshake,
+  Activity as ActivityIcon,
   Heart as HeartLogo,
   HeartHandshake,
   LogOut,
 } from "lucide-react"
 import { isQuoteNegotiationEnabled } from "@/lib/quote-negotiation"
+import { useActivityFlag } from "@/lib/activity-flag"
 import {
   Sidebar,
   SidebarContent,
@@ -98,6 +100,9 @@ export function UserSidebar() {
   // causes a hydration mismatch; planEnabled (Shaadi Plan) resolves the same way.
   const [quoteEnabled, setQuoteEnabled] = React.useState(false)
   React.useEffect(() => { setQuoteEnabled(isQuoteNegotiationEnabled()) }, [])
+  // FEAT_ACTIVITY_ENGINE — mount-resolved too; appends "Activity" (the account
+  // activity feed) into the Activity group when on.
+  const activityEnabled = useActivityFlag()
 
   // The Overview nav is reshaped by two independent, mount-resolved flags — both
   // false until mount, so the first client render is byte-identical to the legacy
@@ -109,26 +114,33 @@ export function UserSidebar() {
   //     read as one wedding, not two.
   //   • quoteEnabled (FEAT_QUOTE_NEGOTIATION): append "My quotes".
   const navGroups = React.useMemo(() => {
-    if (!planEnabled && !quoteEnabled) return NAV_GROUPS
+    if (!planEnabled && !quoteEnabled && !activityEnabled) return NAV_GROUPS
     return NAV_GROUPS.map((group) => {
-      if (group.label !== "Overview") return group
-      const items: NavItem[] = []
-      for (const item of group.items) {
-        if (planEnabled && item.href === "/user/umbrellas") {
-          // Plan first (primary hub), overview immediately after — adjacent so
-          // they read as one wedding, not two.
-          items.push({ href: "/user/plan", label: "My wedding plan", icon: HeartHandshake })
-          items.push({ href: "/user/umbrellas", label: "Wedding overview", icon: Sparkles })
-        } else {
-          items.push(item)
+      if (group.label === "Overview") {
+        const items: NavItem[] = []
+        for (const item of group.items) {
+          if (planEnabled && item.href === "/user/umbrellas") {
+            // Plan first (primary hub), overview immediately after — adjacent so
+            // they read as one wedding, not two.
+            items.push({ href: "/user/plan", label: "My wedding plan", icon: HeartHandshake })
+            items.push({ href: "/user/umbrellas", label: "Wedding overview", icon: Sparkles })
+          } else {
+            items.push(item)
+          }
         }
+        if (quoteEnabled) {
+          items.push({ href: "/user/quotes", label: "My quotes", icon: Handshake })
+        }
+        return { ...group, items }
       }
-      if (quoteEnabled) {
-        items.push({ href: "/user/quotes", label: "My quotes", icon: Handshake })
+      // FEAT_ACTIVITY_ENGINE — the account activity feed lives in the Activity group.
+      if (group.label === "Activity" && activityEnabled) {
+        const items: NavItem[] = [...group.items, { href: "/user/activity", label: "Activity", icon: ActivityIcon }]
+        return { ...group, items }
       }
-      return { ...group, items }
+      return group
     })
-  }, [planEnabled, quoteEnabled])
+  }, [planEnabled, quoteEnabled, activityEnabled])
 
   return (
     <Sidebar collapsible="icon" variant="inset" className="border-r border-bridal-beige/70">
