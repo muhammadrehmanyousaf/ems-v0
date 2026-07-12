@@ -13,6 +13,7 @@ import {
   User,
   Settings,
   Heart as HeartLogo,
+  HeartHandshake,
   LogOut,
 } from "lucide-react"
 import {
@@ -31,6 +32,10 @@ import {
 import { useUser } from "@/context/UserContext"
 import { useChat } from "@/context/ChatContext"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+// Shaadi Plan — flag-gated nav entry, resolved in a mount effect so the
+// server render (flag false) matches the first client render, then the
+// "My wedding plan" item appears only for pilot-enabled devices.
+import { useWeddingPlanFlag } from "@/lib/wedding-plan"
 
 interface NavItem {
   href: string
@@ -81,9 +86,25 @@ export function UserSidebar() {
   const pathname = usePathname()
   const { user, logout } = useUser()
   const { totalUnread } = useChat()
+  const planEnabled = useWeddingPlanFlag()
 
   const isActive = (href: string) =>
     pathname === href || pathname?.startsWith(`${href}/`)
+
+  // Additively inject "My wedding plan" into Overview when the flag is on.
+  // useWeddingPlanFlag() returns false until mount, so the first render is
+  // byte-identical to the legacy sidebar (no hydration mismatch).
+  const navGroups: { label: string; items: NavItem[] }[] = NAV_GROUPS.map((group) =>
+    group.label === "Overview" && planEnabled
+      ? {
+          ...group,
+          items: [
+            ...group.items,
+            { href: "/user/plan", label: "My wedding plan", icon: HeartHandshake },
+          ],
+        }
+      : group,
+  )
 
   return (
     <Sidebar collapsible="icon" variant="inset" className="border-r border-bridal-beige/70">
@@ -108,7 +129,7 @@ export function UserSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="gap-0 px-1.5 pt-3">
-        {NAV_GROUPS.map((group, gi) => (
+        {navGroups.map((group, gi) => (
           <SidebarGroup
             key={group.label}
             className={gi === 0 ? "" : "border-t border-bridal-beige/45 mt-2 pt-3"}

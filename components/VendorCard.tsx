@@ -28,6 +28,9 @@ import {
 } from "@/components/listings/listing-badges"
 // BK-100.6 — vendor trust badges (Top Vendor / ID Verified / etc.)
 import { VendorTrustBadges } from "@/components/vendors/vendor-trust-badges"
+// Shaadi Plan — additive, flag-gated "Add to plan" pill. Renders null while
+// the flag is off, so listing cards stay byte-identical to today.
+import { AddToPlanButton } from "@/components/wedding-plan/add-to-plan-button"
 
 interface VendorCardProps {
   id: string | number
@@ -429,6 +432,17 @@ export default function VendorCard({
                     Available
                   </div>
                 </div>
+
+                {/* Shaadi Plan — additive; hidden unless the wedding-plan flag
+                    is on. Carries data-no-navigate so a tap never triggers the
+                    card's navigate-to-vendor handler. */}
+                <AddToPlanButton
+                  businessId={id}
+                  businessName={name}
+                  vendorType={vendorType || type}
+                  variant="card"
+                  className="self-start"
+                />
               </CardContent>
 
               {/* Book Now CTA — replaced by a disabled "Back on …" button while

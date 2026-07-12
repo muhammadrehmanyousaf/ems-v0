@@ -62,6 +62,9 @@ import { toast as sonnerToast } from "sonner";
 // WW-PRICE0 — an unpriced vendor cannot be booked; the booking funnel shows a
 // price-on-request panel with the inquiry, so the CTA must say so up front.
 import { priceLabelFor, ctaLabelFor } from "@/lib/pricing/unpriced";
+// Shaadi Plan — additive, flag-gated "Add to my wedding plan" action. Renders
+// null while the flag is off, so this vendor surface stays byte-identical.
+import { AddToPlanButton } from "@/components/wedding-plan/add-to-plan-button";
 
 interface VendorDetailsProps {
   vendor: Vendor;
@@ -909,6 +912,17 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                       {ctaLabelFor(vendor as any, "Book now")}
                     </button>
                   </div>
+
+                  {/* Shaadi Plan — additive row; hidden unless the wedding-plan
+                      flag is on. Never disturbs the Book / Share / Availability
+                      CTAs above. */}
+                  <AddToPlanButton
+                    businessId={vendor.id}
+                    businessName={vendor.name}
+                    vendorType={(vendor as { vendorType?: string }).vendorType || vendor.type}
+                    variant="detail"
+                    className="w-full"
+                  />
                 </div>
               </CardContent>
             </BridalSectionCard>
