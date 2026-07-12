@@ -218,6 +218,47 @@ export class WeddingUmbrellasAPI {
     );
     return res.data?.data;
   }
+
+  /**
+   * POST /api/v1/wedding-umbrellas/:id/portal-token — issue (or rotate)
+   * the couple portal share token. Rotating instantly invalidates the
+   * previous link. `expiresInDays` clamps server-side to 1..365 (default
+   * 180).
+   */
+  static async issuePortalToken(
+    umbrellaId: number,
+    body: { expiresInDays?: number } = {},
+  ): Promise<PortalTokenResult> {
+    const res = await axiosInstance.post(
+      `/api/v1/wedding-umbrellas/${umbrellaId}/portal-token`,
+      body,
+    );
+    return res.data?.data;
+  }
+
+  /** DELETE /api/v1/wedding-umbrellas/:id/portal-token — revoke the link. */
+  static async revokePortalToken(umbrellaId: number): Promise<void> {
+    await axiosInstance.delete(
+      `/api/v1/wedding-umbrellas/${umbrellaId}/portal-token`,
+    );
+  }
+}
+
+/**
+ * Phase 4 #10.1 — couple portal (branded read-only wedding page the
+ * couple/family open from a WhatsApp link). The token IS the credential;
+ * the public page lives at `/wedding/:token`. Issuing rotates any prior
+ * token, so the previous link stops working immediately.
+ *
+ * Backend: POST/DELETE /api/v1/wedding-umbrellas/:id/portal-token
+ * (owner-or-admin). A customer-created plan/umbrella is owned by the
+ * customer, so they can issue their own share link.
+ */
+export interface PortalTokenResult {
+  token: string;
+  issuedAt: string;
+  expiresAt: string;
+  expiresInDays: number;
 }
 
 export interface UmbrellaCancelOutcome {

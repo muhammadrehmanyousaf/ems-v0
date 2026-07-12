@@ -25,6 +25,8 @@ import {
   Sparkles,
   Building2,
   Ban,
+  HeartHandshake,
+  ArrowRight,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -56,6 +58,12 @@ import {
 } from "@/lib/api/weddingUmbrellas";
 import { Textarea } from "@/components/ui/textarea";
 import { LinkBookingDialog } from "@/components/umbrellas/link-booking-dialog";
+// Shaadi Plan polish — an umbrella IS a wedding plan under the hood (same
+// id). When the plan feature is on, offer a cross-link into the richer
+// plan builder so the customer is never stranded on the thinner view.
+// Resolved in a mount effect (returns false until mount) so the flag-off
+// render stays byte-identical to the legacy umbrella page.
+import { useWeddingPlanFlag } from "@/lib/wedding-plan";
 
 function fmtDate(s: string | null | undefined): string {
   if (!s) return "—";
@@ -80,6 +88,7 @@ export default function UmbrellaDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user, isAuthenticated, isLoading } = useUser();
+  const planEnabled = useWeddingPlanFlag();
   const umbrellaId = Number(params?.id);
   const [umbrella, setUmbrella] = React.useState<WeddingUmbrella | null>(null);
   const [stats, setStats] = React.useState<UmbrellaStats | null>(null);
@@ -302,6 +311,31 @@ export default function UmbrellaDetailPage() {
           </>
         }
       />
+
+      {/* Shaadi Plan polish — cross-link into the full plan builder. Same
+          wedding, richer view (functions, per-vendor lines, one checkout,
+          bundle discount). Flag-gated + resolved post-mount, so the legacy
+          umbrella page is byte-identical when the flag is off. */}
+      {planEnabled && (
+        <Link
+          href={`/user/plan/${umbrella.id}`}
+          className="group flex items-center gap-4 rounded-lg border border-bridal-gold/45 bg-gradient-to-br from-bridal-gold/12 via-bridal-cream to-bridal-cream p-4 hover:border-bridal-gold/70 transition-colors"
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-bridal-cream border border-bridal-gold/55 text-bridal-gold-dark shadow-[0_2px_8px_-4px_rgba(176,125,84,0.4)]">
+            <HeartHandshake className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-bridal-charcoal">
+              Open the full wedding plan
+            </p>
+            <p className="text-xs text-bridal-text-soft mt-0.5 leading-relaxed">
+              Build every function with its own vendors, track your budget
+              and bundle discount, and book the whole shaadi in one step.
+            </p>
+          </div>
+          <ArrowRight className="h-4 w-4 shrink-0 text-bridal-gold-dark group-hover:translate-x-0.5 transition-transform" />
+        </Link>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Main column */}
