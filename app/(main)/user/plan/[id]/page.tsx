@@ -23,6 +23,9 @@ import {
   CalendarHeart,
   ShoppingBag,
   Trash2,
+  Wallet,
+  Umbrella,
+  ArrowRight,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -36,10 +39,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@/context/UserContext";
 import { useWeddingPlanFlag } from "@/lib/wedding-plan";
 import { WeddingPlansAPI, type PlanFull, type PlanItem } from "@/lib/api/weddingPlans";
-import { eventTypeOrder, fmtPlanDate } from "@/lib/wedding-plan-events";
+// A plan IS a WeddingUmbrella (same id). Reuse the umbrella API to surface
+// what the legacy umbrella page uniquely offers — actual booked spend and
+// the cascade-cancel / link-existing flows — so the plan reads as a
+// SUPERSET of the umbrella view, not a sibling.
+import {
+  WeddingUmbrellasAPI,
+  type UmbrellaStats,
+} from "@/lib/api/weddingUmbrellas";
+import { eventTypeOrder, fmtPlanDate, fmtPKR } from "@/lib/wedding-plan-events";
 import { AddEventDialog } from "@/components/wedding-plan/add-event-dialog";
 import { DiscountBar } from "@/components/wedding-plan/discount-bar";
 import { PlanEventSection } from "@/components/wedding-plan/plan-event-section";
+import { CouplePortalCard } from "@/components/wedding-plan/couple-portal-card";
 
 /** A line the checkout can attempt to book (spec §6 default set). */
 function isBookableItem(it: PlanItem): boolean {
@@ -67,6 +79,9 @@ export default function PlanBuilderPage() {
   const planId = Number(params?.id);
 
   const [full, setFull] = React.useState<PlanFull | null>(null);
+  // Actual booked-spend from the umbrella side of the same row (best-effort;
+  // a failure here never blocks the plan from rendering).
+  const [umbrellaStats, setUmbrellaStats] = React.useState<UmbrellaStats | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [addEventOpen, setAddEventOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
@@ -91,8 +106,21 @@ export default function PlanBuilderPage() {
     }
     setLoading(true);
     try {
-      const detail = await WeddingPlansAPI.getFull(planId);
-      setFull(detail);
+      // Fetch the plan (primary) and the umbrella-side stats (best-effort)
+      // for the SAME row in parallel. The umbrella detail is optional
+      // enrichment — its rejection must not fail the plan.
+      const [planRes, umbRes] = await Promise.allSettled([
+        WeddingPlansAPI.getFull(planId),
+        WeddingUmbrellasAPI.getDetail(planId),
+      ]);
+      if (planRes.status === "fulfilled") {
+        setFull(planRes.value);
+      } else {
+        throw planRes.reason;
+      }
+      setUmbrellaStats(
+        umbRes.status === "fulfilled" ? umbRes.value?.stats ?? null : null,
+      );
     } catch (e) {
       const msg =
         (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
@@ -100,6 +128,7 @@ export default function PlanBuilderPage() {
         "Couldn't load this plan";
       toast({ title: "Couldn't load", description: msg, variant: "destructive" });
       setFull(null);
+      setUmbrellaStats(null);
     } finally {
       setLoading(false);
     }
@@ -287,6 +316,56 @@ export default function PlanBuilderPage() {
         <div className="space-y-4">
           <DiscountBar budget={full.budget} discount={full.discount} tiers={full.tiers} />
 
+          {/* Actual booked spend — surfaced from the umbrella side of the
+              same row. The DiscountBar above previews the PLANNED budget;
+              this shows what's really been booked & paid once vendors are
+              checked out. Hidden until at least one line materialises. */}
+          {umbrellaStats && umbrellaStats.totalBookings > 0 && (
+            <SectionCard
+              title="Booked so far"
+              description="Real money across the functions you've already booked."
+            >
+              <dl className="space-y-2.5 text-sm">
+                <div className="flex justify-between gap-2">
+                  <dt className="text-bridal-text-soft inline-flex items-center gap-1.5">
+                    <Wallet className="h-3.5 w-3.5" />
+                    Total booked
+                  </dt>
+                  <dd className="font-medium text-bridal-charcoal tabular-nums">
+                    {fmtPKR(umbrellaStats.totalAmount)}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-bridal-text-soft">Paid so far</dt>
+                  <dd className="font-medium text-[#3F6B43] tabular-nums">
+                    {fmtPKR(umbrellaStats.totalPaid)}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-bridal-text-soft">Outstanding</dt>
+                  <dd className="font-medium text-amber-700 tabular-nums">
+                    {fmtPKR(umbrellaStats.outstanding)}
+                  </dd>
+                </div>
+                <div className="pt-2 border-t border-bridal-beige/70 flex justify-between gap-2 text-xs">
+                  <dt className="text-bridal-text-soft">
+                    Booked events ({umbrellaStats.activeBookings} active
+                    {umbrellaStats.completedBookings
+                      ? ` · ${umbrellaStats.completedBookings} done`
+                      : ""}
+                    {umbrellaStats.cancelledBookings
+                      ? ` · ${umbrellaStats.cancelledBookings} cancelled`
+                      : ""}
+                    )
+                  </dt>
+                  <dd className="font-medium text-bridal-charcoal tabular-nums">
+                    {umbrellaStats.totalBookings}
+                  </dd>
+                </div>
+              </dl>
+            </SectionCard>
+          )}
+
           <SectionCard title="Ready to book?">
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
@@ -320,6 +399,34 @@ export default function PlanBuilderPage() {
                 <ShoppingBag className="h-4 w-4" />
                 Book my wedding
               </Button>
+            </div>
+          </SectionCard>
+
+          {/* Couple portal share — surfaced from the umbrella feature set so
+              the plan is a superset. Reuses WeddingUmbrellasAPI against the
+              same id. */}
+          <CouplePortalCard umbrellaId={planId} />
+
+          {/* Cross-link to the umbrella view for the destructive / linking
+              flows that live there (cascade-cancel every booked vendor;
+              fold in a booking made outside the plan). Same wedding, same
+              id — we surface the actions here rather than duplicate the
+              well-tested cascade-cancel dialog. */}
+          <SectionCard title="Manage the whole wedding">
+            <div className="space-y-3">
+              <p className="text-xs text-bridal-text-soft leading-relaxed">
+                Need to cancel every booked vendor at once, or roll in a
+                booking you made outside this plan? Those live on your
+                wedding overview — it&apos;s the same wedding.
+              </p>
+              <Link
+                href={`/user/umbrellas/${planId}`}
+                className="group inline-flex items-center gap-1.5 text-sm font-medium text-bridal-gold-dark hover:text-bridal-charcoal transition-colors"
+              >
+                <Umbrella className="h-4 w-4" />
+                Open wedding overview
+                <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
             </div>
           </SectionCard>
 
