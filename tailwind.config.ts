@@ -21,7 +21,7 @@ const config: Config = {
   				blush: '#FFF0F3',
   				rose: '#F2B5C0',
   				gold: '#C9956A',
-  				'gold-dark': '#B07D54',
+  				'gold-dark': '#916539',
   				mauve: '#8B5A72',
   				sage: '#A8C4A2',
   				coral: '#E8917A',
@@ -30,7 +30,7 @@ const config: Config = {
   				sand: '#F5E6D3',
   				text: '#5C3D2E',
   				'text-soft': '#7A5040',
-  				'text-label': '#A0694A',
+  				'text-label': '#955E39',
   			},
   			gold: {
   				50: '#FFFDF5',

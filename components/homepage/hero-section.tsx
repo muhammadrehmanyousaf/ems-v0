@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover"
 import { useRouter } from "next/navigation"
 import type { Vendor } from "@/lib/types"
 import { VENDOR_TYPES, VENDOR_TYPE_DISPLAY_NAMES, VENDOR_TYPE_DESCRIPTIONS, getAllVendorPaths, VENDOR_TYPE_PATHS } from "@/lib/vendor-types"
@@ -620,6 +620,19 @@ export function HeroSection() {
     <section className="relative min-h-[760px] h-[100vh] max-h-[980px] flex flex-col justify-center overflow-hidden bridal-surface">
       {/* ── Background: cinematic Pakistani wedding photography ── */}
       <div className="absolute inset-0">
+        {/* Static SSR LCP paint — the first hero image rendered OUTSIDE the
+            client Swiper, so the page's largest paint isn't gated by carousel
+            JS hydration (the single biggest CWV lever here). The Swiper's
+            matching first slide covers it seamlessly once mounted. */}
+        <Image
+          src={heroImages[0]}
+          alt=""
+          fill
+          priority
+          fetchPriority="high"
+          sizes="100vw"
+          className="object-cover"
+        />
         <Swiper
           modules={[Autoplay, EffectFade]}
           effect="fade"
@@ -631,15 +644,15 @@ export function HeroSection() {
           {heroImages.map((src, i) => (
             <SwiperSlide key={i}>
               <div className="w-full h-full overflow-hidden relative">
-                {/* LCP image — first slide is the page's largest paint;
-                    priority + high fetch priority is the single biggest CWV
-                    lever. Reference: docs/seo/05-T5-image-migration-runbook.md. */}
+                {/* Carousel slides layer over the static SSR paint above. The
+                    first slide's image is already cached from that priority
+                    paint, so it swaps in without a flash; the rest lazy-load
+                    as the fade advances. */}
                 <Image
                   src={src}
                   alt=""
                   fill
-                  priority={i === 0}
-                  fetchPriority={i === 0 ? "high" : "auto"}
+                  loading={i === 0 ? "eager" : "lazy"}
                   sizes="100vw"
                   className="object-cover animate-ken-burns"
                   style={{ animationDelay: `${i * 5}s` }}
@@ -804,7 +817,7 @@ export function HeroSection() {
                 <TabsContent value="vendors" className="space-y-2.5 mt-0">
                   <div className="flex flex-col sm:flex-row gap-2">
                     <Select value={selectedCategory} onValueChange={handleCategorySelect}>
-                      <SelectTrigger className="w-full sm:w-[180px] h-11 border-bridal-beige bg-bridal-cream rounded-[4px] text-sm font-bridal text-bridal-charcoal hover:border-bridal-gold/55 focus:ring-2 focus:ring-bridal-gold/25 focus:border-bridal-gold transition-all">
+                      <SelectTrigger aria-label="Vendor category" className="w-full sm:w-[180px] h-11 border-bridal-beige bg-bridal-cream rounded-[4px] text-sm font-bridal text-bridal-charcoal hover:border-bridal-gold/55 focus:ring-2 focus:ring-bridal-gold/25 focus:border-bridal-gold transition-all">
                         <SelectValue placeholder="Category" />
                       </SelectTrigger>
                       <SelectContent className="rounded-[4px] bg-bridal-cream border-bridal-beige">
@@ -828,7 +841,7 @@ export function HeroSection() {
                     {/* Location Input */}
                     <div className="relative flex-1">
                       <Popover open={showLocationDropdown} onOpenChange={setShowLocationDropdown}>
-                        <PopoverTrigger asChild>
+                        <PopoverAnchor asChild>
                           <div className="relative">
                             <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-bridal-gold w-4 h-4 pointer-events-none" />
                             <Input
@@ -836,6 +849,7 @@ export function HeroSection() {
                               placeholder="Which city?"
                               value={location}
                               onChange={(e) => setLocation(e.target.value)}
+                              onFocus={() => setShowLocationDropdown(true)}
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") {
                                   e.preventDefault()
@@ -845,7 +859,7 @@ export function HeroSection() {
                               className="pl-9 h-11 border-bridal-beige bg-bridal-cream rounded-[4px] text-sm font-bridal text-bridal-charcoal placeholder:text-bridal-text-label/70 hover:border-bridal-gold/55 focus:ring-2 focus:ring-bridal-gold/25 focus:border-bridal-gold transition-all"
                             />
                           </div>
-                        </PopoverTrigger>
+                        </PopoverAnchor>
                         <PopoverContent className="w-[280px] p-0 rounded-[4px] bg-bridal-cream border-bridal-beige" align="start">
                           <Command className="bg-transparent">
                             <CommandInput placeholder="Search cities..." className="font-bridal" />
@@ -897,7 +911,7 @@ export function HeroSection() {
                   {/* Vendor Autocomplete — bridal styled */}
                   <div className="relative" ref={searchRef}>
                     <Popover open={showVendorDropdown} onOpenChange={setShowVendorDropdown}>
-                      <PopoverTrigger asChild>
+                      <PopoverAnchor asChild>
                         <div className="relative">
                           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-bridal-gold w-4 h-4 pointer-events-none" />
                           <Input
@@ -936,7 +950,7 @@ export function HeroSection() {
                             </button>
                           )}
                         </div>
-                      </PopoverTrigger>
+                      </PopoverAnchor>
                       <PopoverContent
                         className="w-[calc(100vw-2rem)] sm:w-[500px] max-w-[500px] p-0 rounded-[4px] bg-bridal-cream border-bridal-beige"
                         align="start"
@@ -1063,7 +1077,7 @@ export function HeroSection() {
                 <TabsContent value="venues" className="space-y-2.5 mt-0">
                   <div className="flex flex-col sm:flex-row gap-2">
                     <Select value={selectedVenueType} onValueChange={handleVenueTypeSelect}>
-                      <SelectTrigger className="w-full sm:w-[180px] h-11 border-bridal-beige bg-bridal-cream rounded-[4px] text-sm font-bridal text-bridal-charcoal hover:border-bridal-gold/55 focus:ring-2 focus:ring-bridal-gold/25 focus:border-bridal-gold transition-all">
+                      <SelectTrigger aria-label="Venue type" className="w-full sm:w-[180px] h-11 border-bridal-beige bg-bridal-cream rounded-[4px] text-sm font-bridal text-bridal-charcoal hover:border-bridal-gold/55 focus:ring-2 focus:ring-bridal-gold/25 focus:border-bridal-gold transition-all">
                         <SelectValue placeholder="Venue type" />
                       </SelectTrigger>
                       <SelectContent className="rounded-[4px] bg-bridal-cream border-bridal-beige">
@@ -1080,7 +1094,7 @@ export function HeroSection() {
 
                     <div className="relative flex-1">
                       <Popover open={showVenueLocationDropdown} onOpenChange={setShowVenueLocationDropdown}>
-                        <PopoverTrigger asChild>
+                        <PopoverAnchor asChild>
                           <div className="relative">
                             <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-bridal-gold w-4 h-4 pointer-events-none" />
                             <Input
@@ -1088,6 +1102,7 @@ export function HeroSection() {
                               placeholder="Which city?"
                               value={venueLocation}
                               onChange={(e) => setVenueLocation(e.target.value)}
+                              onFocus={() => setShowVenueLocationDropdown(true)}
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") {
                                   e.preventDefault()
@@ -1097,7 +1112,7 @@ export function HeroSection() {
                               className="pl-9 h-11 border-bridal-beige bg-bridal-cream rounded-[4px] text-sm font-bridal text-bridal-charcoal placeholder:text-bridal-text-label/70 hover:border-bridal-gold/55 focus:ring-2 focus:ring-bridal-gold/25 focus:border-bridal-gold transition-all"
                             />
                           </div>
-                        </PopoverTrigger>
+                        </PopoverAnchor>
                         <PopoverContent className="w-[280px] p-0 rounded-[4px] bg-bridal-cream border-bridal-beige" align="start">
                           <Command className="bg-transparent">
                             <CommandInput placeholder="Search cities..." className="font-bridal" />
