@@ -330,8 +330,14 @@ export interface UpdateItemInput {
 // ---------------------------------------------------------------------------
 
 /** Nested item path — see PATH ASSUMPTION in the file header. */
-function itemPath(planId: number, eventId: number, itemId: number): string {
-  return `${BASE}/${planId}/events/${eventId}/items/${itemId}`;
+// The BE mutation routes for a single item are NON-nested — PATCH/DELETE
+// `/wedding-plans/:id/items/:itemId` and POST `.../:itemId/inquire` (only ADD
+// is nested under the event: POST `/:id/events/:eventId/items`). Building the
+// nested path here made update / remove / inquire hit the API catch-all (a
+// silent 200 that changes nothing — no price save, no remove, no inquiry).
+// `eventId` stays in the signature (callers pass it) but isn't part of the URL.
+function itemPath(planId: number, _eventId: number, itemId: number): string {
+  return `${BASE}/${planId}/items/${itemId}`;
 }
 
 export class WeddingPlansAPI {
