@@ -58,6 +58,7 @@ const EN: Dictionary = {
   "nav.notifications": "Notifications",
   "nav.business_settings": "Business Settings",
   "nav.field_capture": "Field capture",
+  "nav.quotes": "Quote requests",
   "nav.onboarding": "Onboarding",
 
   // Common verbs
@@ -159,6 +160,7 @@ const UR: Dictionary = {
   "nav.notifications": "اطلاعات",
   "nav.business_settings": "کاروبار کی ترتیبات",
   "nav.field_capture": "میدانی کیپچر",
+  "nav.quotes": "قیمت کی درخواستیں",
   "nav.onboarding": "آن بورڈنگ",
 
   // Common verbs

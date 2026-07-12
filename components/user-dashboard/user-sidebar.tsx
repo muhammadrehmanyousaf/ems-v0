@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -12,10 +13,12 @@ import {
   Sparkles,
   User,
   Settings,
+  Handshake,
   Heart as HeartLogo,
   HeartHandshake,
   LogOut,
 } from "lucide-react"
+import { isQuoteNegotiationEnabled } from "@/lib/quote-negotiation"
 import {
   Sidebar,
   SidebarContent,
@@ -91,20 +94,22 @@ export function UserSidebar() {
   const isActive = (href: string) =>
     pathname === href || pathname?.startsWith(`${href}/`)
 
-  // Additively inject "My wedding plan" into Overview when the flag is on.
-  // useWeddingPlanFlag() returns false until mount, so the first render is
+  // FEAT_QUOTE_NEGOTIATION — resolved after mount (localStorage/env) so it never
+  // causes a hydration mismatch; planEnabled (Shaadi Plan) resolves the same way.
+  const [quoteEnabled, setQuoteEnabled] = React.useState(false)
+  React.useEffect(() => { setQuoteEnabled(isQuoteNegotiationEnabled()) }, [])
+  // Additively inject "My wedding plan" (planEnabled) and "My quotes" (quoteEnabled)
+  // into Overview. Both flags are false until mount, so the first render is
   // byte-identical to the legacy sidebar (no hydration mismatch).
-  const navGroups: { label: string; items: NavItem[] }[] = NAV_GROUPS.map((group) =>
-    group.label === "Overview" && planEnabled
-      ? {
-          ...group,
-          items: [
-            ...group.items,
-            { href: "/user/plan", label: "My wedding plan", icon: HeartHandshake },
-          ],
-        }
-      : group,
-  )
+  const navGroups = React.useMemo(() => {
+    const extra: NavItem[] = []
+    if (planEnabled) extra.push({ href: "/user/plan", label: "My wedding plan", icon: HeartHandshake })
+    if (quoteEnabled) extra.push({ href: "/user/quotes", label: "My quotes", icon: Handshake })
+    if (extra.length === 0) return NAV_GROUPS
+    return NAV_GROUPS.map((g) =>
+      g.label === "Overview" ? { ...g, items: [...g.items, ...extra] } : g,
+    )
+  }, [planEnabled, quoteEnabled])
 
   return (
     <Sidebar collapsible="icon" variant="inset" className="border-r border-bridal-beige/70">
