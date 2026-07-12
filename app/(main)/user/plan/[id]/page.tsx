@@ -26,6 +26,7 @@ import {
   Wallet,
   Umbrella,
   ArrowRight,
+  CreditCard,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -38,7 +39,12 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@/context/UserContext";
 import { useWeddingPlanFlag } from "@/lib/wedding-plan";
-import { WeddingPlansAPI, type PlanFull, type PlanItem } from "@/lib/api/weddingPlans";
+import {
+  WeddingPlansAPI,
+  type PlanFull,
+  type PlanItem,
+  type PlanPaymentSummary,
+} from "@/lib/api/weddingPlans";
 // A plan IS a WeddingUmbrella (same id). Reuse the umbrella API to surface
 // what the legacy umbrella page uniquely offers — actual booked spend and
 // the cascade-cancel / link-existing flows — so the plan reads as a
@@ -82,6 +88,9 @@ export default function PlanBuilderPage() {
   // Actual booked-spend from the umbrella side of the same row (best-effort;
   // a failure here never blocks the plan from rendering).
   const [umbrellaStats, setUmbrellaStats] = React.useState<UmbrellaStats | null>(null);
+  // Unified "pay for my wedding" manifest (best-effort). Drives the pay CTA:
+  // shown only when at least one booked function is still owed money.
+  const [paySummary, setPaySummary] = React.useState<PlanPaymentSummary | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [addEventOpen, setAddEventOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
@@ -106,12 +115,13 @@ export default function PlanBuilderPage() {
     }
     setLoading(true);
     try {
-      // Fetch the plan (primary) and the umbrella-side stats (best-effort)
-      // for the SAME row in parallel. The umbrella detail is optional
-      // enrichment — its rejection must not fail the plan.
-      const [planRes, umbRes] = await Promise.allSettled([
+      // Fetch the plan (primary), the umbrella-side stats, and the unified
+      // pay manifest (both best-effort) for the SAME row in parallel. Only the
+      // plan is required — the enrichments' rejection must not fail the page.
+      const [planRes, umbRes, payRes] = await Promise.allSettled([
         WeddingPlansAPI.getFull(planId),
         WeddingUmbrellasAPI.getDetail(planId),
+        WeddingPlansAPI.paymentSummary(planId),
       ]);
       if (planRes.status === "fulfilled") {
         setFull(planRes.value);
@@ -121,6 +131,7 @@ export default function PlanBuilderPage() {
       setUmbrellaStats(
         umbRes.status === "fulfilled" ? umbRes.value?.stats ?? null : null,
       );
+      setPaySummary(payRes.status === "fulfilled" ? payRes.value : null);
     } catch (e) {
       const msg =
         (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
@@ -129,6 +140,7 @@ export default function PlanBuilderPage() {
       toast({ title: "Couldn't load", description: msg, variant: "destructive" });
       setFull(null);
       setUmbrellaStats(null);
+      setPaySummary(null);
     } finally {
       setLoading(false);
     }
@@ -218,6 +230,11 @@ export default function PlanBuilderPage() {
     (it) => it.status !== "removed" && it.status !== "declined",
   ).length;
 
+  // Unified pay: how many booked functions still owe money, and how much.
+  const payableCount = paySummary?.aggregate.payableCount ?? 0;
+  const totalDueNow = paySummary?.aggregate.totalDueNow ?? 0;
+  const canPayWedding = payableCount > 0;
+
   return (
     <PageContainer>
       <PageHeader
@@ -258,6 +275,16 @@ export default function PlanBuilderPage() {
               <ShoppingBag className="h-3.5 w-3.5" />
               Book my wedding
             </Button>
+            {canPayWedding && (
+              <Button
+                size="sm"
+                className="gap-1.5"
+                onClick={() => router.push(`/user/plan/${planId}/pay`)}
+              >
+                <CreditCard className="h-3.5 w-3.5" />
+                Pay for my wedding
+              </Button>
+            )}
             <Button
               size="sm"
               variant="ghost"
@@ -315,6 +342,45 @@ export default function PlanBuilderPage() {
         {/* Budget + discount + book */}
         <div className="space-y-4">
           <DiscountBar budget={full.budget} discount={full.discount} tiers={full.tiers} />
+
+          {/* Pay for my whole wedding — appears once functions are booked but
+              still owe money. One flow settles every function's payment. */}
+          {canPayWedding && (
+            <SectionCard
+              title="Pay for my wedding"
+              description="Some booked functions still need payment. Settle them all in one flow."
+            >
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-bridal-text-soft inline-flex items-center gap-1.5">
+                    <Wallet className="h-3.5 w-3.5" />
+                    Due now
+                  </span>
+                  <span className="font-display italic text-[18px] text-bridal-charcoal tabular-nums">
+                    {fmtPKR(totalDueNow)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-bridal-text-soft">Functions to pay</span>
+                  <span className="font-medium text-bridal-charcoal tabular-nums">
+                    {payableCount}
+                  </span>
+                </div>
+                <Button
+                  className="w-full gap-1.5"
+                  onClick={() => router.push(`/user/plan/${planId}/pay`)}
+                >
+                  <CreditCard className="h-4 w-4" />
+                  Pay for my wedding
+                </Button>
+                <p className="text-[10.5px] text-bridal-text-soft italic leading-relaxed">
+                  Each function is charged on the same secure rail as a single
+                  booking — the whole-wedding discount was already applied when you
+                  booked.
+                </p>
+              </div>
+            </SectionCard>
+          )}
 
           {/* Actual booked spend — surfaced from the umbrella side of the
               same row. The DiscountBar above previews the PLANNED budget;
