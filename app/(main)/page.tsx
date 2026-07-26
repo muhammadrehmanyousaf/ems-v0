@@ -19,6 +19,9 @@ export const metadata: Metadata = {
     url: SITE_URL,
     siteName: SITE_NAME,
     type: "website",
+    // This page-level openGraph SHADOWS the root layout's images, so the home
+    // had no og:image (verified on prod → broken social previews). Set it here.
+    images: [{ url: `${SITE_URL}/og-default.jpg`, width: 1200, height: 630, alt: SITE_NAME }],
   },
 }
 
