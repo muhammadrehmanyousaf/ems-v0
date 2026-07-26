@@ -27,6 +27,7 @@ import { MenusManager } from "@/components/dashboard/mainScreens/businessSetting
 import { AvailabilityManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/availability-manager"
 import { ImagesManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/images-manager"
 import { TypeSpecificManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/type-specific-manager"
+import { ProfileContentManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/profile-content-manager"
 import { getVendorTypeConfig } from "@/lib/vendor-type-config"
 import { PersonaPreference } from "@/components/dashboard/layout/persona-preference"
 import { showSuccessToast } from "@/lib/toast/undo"
@@ -38,12 +39,15 @@ const numOrNull = (v: string) => (v.trim() === "" ? null : Number(v) || 0)
 const labelCls = "text-xs font-medium text-muted-foreground"
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 
-type TabKey = "profile" | "pricing" | "amenities" | "type-specific" | "images" | "packages" | "menus" | "bank" | "team" | "availability"
+type TabKey = "profile" | "pricing" | "amenities" | "listing" | "type-specific" | "images" | "packages" | "menus" | "bank" | "team" | "availability"
 interface TabDef { key: TabKey; label: string; icon: IconName; wired: boolean; href?: string; hint?: string }
 const TABS: TabDef[] = [
   { key: "profile", label: "Profile", icon: "Building2", wired: true },
   { key: "pricing", label: "Capacity & pricing", icon: "DollarSign", wired: true },
   { key: "amenities", label: "Amenities & services", icon: "SlidersHorizontal", wired: true },
+  // Self-contained save (its own button) — NOT hub-wired, and no href, so the
+  // hub renders it directly without the sticky save bar or the "dedicated screen" card.
+  { key: "listing", label: "Listing content", icon: "ShieldCheck", wired: false },
   { key: "type-specific", label: "Type-specific", icon: "Settings2", wired: false, hint: "Settings unique to your vendor category." },
   { key: "images", label: "Images", icon: "Image", wired: false, hint: "Upload & reorder gallery photos." },
   { key: "packages", label: "Packages", icon: "Package", wired: false, hint: "Pricing packages & bundles." },
@@ -69,6 +73,7 @@ const PARAM_TO_TAB: Record<string, TabKey> = {
   profile: "profile",
   pricing: "pricing",
   amenities: "amenities",
+  listing: "listing",
   bank: "bank",
   team: "team",
   availability: "availability",
@@ -249,6 +254,9 @@ export function BusinessSettingsHubView() {
               config={getVendorTypeConfig(biz.vendor?.vendorType) ?? { displayName: biz.vendor?.vendorType || "This", typeSpecificFields: [] }}
               onSaved={() => qc.invalidateQueries({ queryKey: ["biz-settings-hub"] })}
             />
+          )}
+          {active === "listing" && (
+            <ProfileContentManager business={biz} onSaved={() => qc.invalidateQueries({ queryKey: ["biz-settings-hub"] })} />
           )}
           {active === "bank" && <BankAccountsManager />}
           {active === "packages" && <PackagesManager businessId={biz.id} />}
