@@ -1,10 +1,14 @@
-import VendorDetailPage from "@/components/VendorDetailPage"
+import type { Metadata } from "next"
 
-// Bridal-wear vendor detail by numeric id. Lives under the `bridal-wearing`
-// slug (not `bridal-wear`) because the SEO listing route
-// app/(main)/bridal-wear/[city] already owns `/bridal-wear/*`; a second
-// dynamic segment there (`[id]` vs `[city]`) is a Next.js route collision.
-// VendorCard's typeMap routes "Bridal wearing" here.
-export default function Page() {
-  return <VendorDetailPage categoryLabel="bridal wear" />
+import { generateVendorMetadata, VendorDetailServer } from "@/lib/seo/vendor-detail-server"
+
+// ISR: server-render + revalidate hourly (docs/seo/SEO-RESCUE-2026-07.md).
+export const revalidate = 3600
+
+export function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  return generateVendorMetadata("bridal-wearing", params.id)
+}
+
+export default function Page({ params }: { params: { id: string } }) {
+  return <VendorDetailServer typeSlug="bridal-wearing" param={params.id} />
 }

@@ -1,5 +1,14 @@
-import VendorDetailPage from "@/components/VendorDetailPage"
+import type { Metadata } from "next"
 
-export default function Page() {
-  return <VendorDetailPage categoryLabel="furniture rental service" />
+import { generateVendorMetadata, VendorDetailServer } from "@/lib/seo/vendor-detail-server"
+
+// ISR: server-render + revalidate hourly (docs/seo/SEO-RESCUE-2026-07.md).
+export const revalidate = 3600
+
+export function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  return generateVendorMetadata("furniture-rental", params.id)
+}
+
+export default function Page({ params }: { params: { id: string } }) {
+  return <VendorDetailServer typeSlug="furniture-rental" param={params.id} />
 }

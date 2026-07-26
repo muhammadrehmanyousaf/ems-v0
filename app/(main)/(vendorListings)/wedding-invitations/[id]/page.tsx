@@ -1,11 +1,14 @@
-import VendorDetailPage from "@/components/VendorDetailPage"
+import type { Metadata } from "next"
 
-// Wedding Invitations & Stationery vendor detail by numeric id. Lives under
-// the `wedding-invitations` slug (not `wedding-stationery`) because the SEO
-// listing route app/(main)/wedding-stationery/[city] already owns
-// `/wedding-stationery/*`; a second dynamic segment there (`[id]` vs
-// `[city]`) is a Next.js route collision. VendorCard's typeMap routes
-// "Wedding Invitations and Stationery" here.
-export default function Page() {
-  return <VendorDetailPage categoryLabel="wedding stationery" />
+import { generateVendorMetadata, VendorDetailServer } from "@/lib/seo/vendor-detail-server"
+
+// ISR: server-render + revalidate hourly (docs/seo/SEO-RESCUE-2026-07.md).
+export const revalidate = 3600
+
+export function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  return generateVendorMetadata("wedding-invitations", params.id)
+}
+
+export default function Page({ params }: { params: { id: string } }) {
+  return <VendorDetailServer typeSlug="wedding-invitations" param={params.id} />
 }
