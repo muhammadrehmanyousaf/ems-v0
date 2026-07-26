@@ -41,12 +41,20 @@ import {
  * via the fetch `revalidate`, so the three shards share one set of requests.
  */
 async function fetchAllBusinesses(): Promise<any[]> {
-  const PAGE = 500
-  const MAX_PAGES = 15 // hard ceiling: 7,500 vendors
+  // The backend CAPS `limit` at 200 (verified: ?limit=500 returns 200,
+  // pagination.totalPages reflects the capped size). The old code requested
+  // limit=500 and then `break`ed on `rows.length < PAGE` — so page 1 came back
+  // with 200 rows, 200 < 500 tripped the break, and only the FIRST 200 of 3,272
+  // vendors ever reached the sitemap. Every other vendor page was invisible to
+  // Google. Fix: request the real cap and walk `pagination.totalPages`.
+  const PAGE = 200
+  const MAX_PAGES = 100 // safety ceiling: 20,000 vendors
   const seen = new Set<string>()
   const all: any[] = []
+  let totalPages = 1
   for (let page = 1; page <= MAX_PAGES; page++) {
     let rows: any[] = []
+    let pagination: { totalPages?: number } | undefined
     try {
       const res = await fetch(
         `${BACKEND_URL}api/v1/businesses?page=${page}&limit=${PAGE}`,
@@ -56,6 +64,7 @@ async function fetchAllBusinesses(): Promise<any[]> {
       const json = (await res.json()) as { data?: any }
       const result = json?.data
       rows = Array.isArray(result) ? result : result?.data ?? []
+      pagination = Array.isArray(result) ? undefined : result?.pagination
     } catch {
       break
     }
@@ -69,8 +78,11 @@ async function fetchAllBusinesses(): Promise<any[]> {
         added++
       }
     }
+    if (typeof pagination?.totalPages === "number" && pagination.totalPages > 0) {
+      totalPages = pagination.totalPages
+    }
     if (added === 0) break // endpoint ignored `page`, or no new rows
-    if (rows.length < PAGE) break // last page
+    if (page >= totalPages) break // walked every page the backend reports
   }
   return all
 }
