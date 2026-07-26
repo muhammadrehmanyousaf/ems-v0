@@ -1241,6 +1241,138 @@ export default function VendorDetailsMobile({
                     </div>
                   ) : null}
 
+                  {/* ─── Vendor credibility ─── The VR-050 profile content the owner
+                      fills in (owner story, experience, languages, hours, payments,
+                      awards, press). Fully additive + self-hiding: renders only the
+                      pieces that are present, so a thin/unclaimed listing shows nothing
+                      new. Reads off the raw row (fields aren't on the Vendor type). */}
+                  {(() => {
+                    const pc = vendor as any;
+                    const years = pc.yearsInBusiness;
+                    const weddings = pc.weddingsCompleted;
+                    const languages: string[] = Array.isArray(pc.languagesSpoken) ? pc.languagesSpoken : [];
+                    const awardsList: { title: string; year?: number | null }[] = Array.isArray(pc.awards) ? pc.awards : [];
+                    const pressList: { title: string; url?: string }[] = Array.isArray(pc.press) ? pc.press : [];
+                    const wh = pc.workingHours && typeof pc.workingHours === "object" && !Array.isArray(pc.workingHours) ? pc.workingHours : null;
+                    const pays = [pc.acceptsCash ? "Cash" : null, pc.acceptsBankTransfer ? "Bank transfer" : null, pc.providesTaxInvoice ? "Tax invoice available" : null].filter(Boolean) as string[];
+                    const dietary: string[] = Array.isArray(pc.dietaryOptions) ? pc.dietaryOptions : [];
+                    const hasOwner = Boolean(pc.ownerName || pc.ownerBio);
+                    const hasTrust = years != null || weddings != null || Boolean(pc.hasInsurance);
+                    const days: [string, string][] = [["mon", "Mon"], ["tue", "Tue"], ["wed", "Wed"], ["thu", "Thu"], ["fri", "Fri"], ["sat", "Sat"], ["sun", "Sun"]];
+                    const whRows = wh ? days.filter(([k]) => wh[k]) : [];
+                    if (!(hasOwner || hasTrust || languages.length || awardsList.length || pressList.length || whRows.length || pays.length || dietary.length)) return null;
+                    return (
+                      <div className="bg-bridal-cream rounded-md border border-bridal-beige shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)] p-5 space-y-5">
+                        {hasTrust && (
+                          <div className="grid grid-cols-3 gap-2.5">
+                            {years != null && (
+                              <div className="text-center rounded-md border border-bridal-beige bg-bridal-ivory py-3">
+                                <p className="font-display italic text-[24px] text-bridal-gold-dark leading-none">{years}</p>
+                                <p className="font-bridal text-[10px] uppercase tracking-[0.18em] text-bridal-text-soft mt-1">Years</p>
+                              </div>
+                            )}
+                            {weddings != null && (
+                              <div className="text-center rounded-md border border-bridal-beige bg-bridal-ivory py-3">
+                                <p className="font-display italic text-[24px] text-bridal-gold-dark leading-none">{weddings}+</p>
+                                <p className="font-bridal text-[10px] uppercase tracking-[0.18em] text-bridal-text-soft mt-1">Weddings</p>
+                              </div>
+                            )}
+                            {pc.hasInsurance && (
+                              <div className="text-center rounded-md border border-bridal-beige bg-bridal-ivory py-3 flex flex-col items-center justify-center">
+                                <Shield className="w-5 h-5 text-bridal-sage" />
+                                <p className="font-bridal text-[10px] uppercase tracking-[0.18em] text-bridal-text-soft mt-1">Insured</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {hasOwner && (
+                          <div>
+                            <h3 className="font-display italic text-[20px] text-bridal-charcoal mb-2">
+                              {pc.ownerName ? `Meet ${pc.ownerName}` : "About the owner"}
+                            </h3>
+                            {pc.ownerBio && <p className="text-sm text-bridal-charcoal/85 leading-relaxed break-words">{pc.ownerBio}</p>}
+                          </div>
+                        )}
+                        {languages.length > 0 && (
+                          <div>
+                            <p className="font-bridal text-[11px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark mb-2.5">Languages</p>
+                            <div className="flex flex-wrap gap-2">
+                              {languages.map((l, i) => (
+                                <Badge key={i} variant="outline" className="text-sm px-3 py-1 border-bridal-gold/45 text-bridal-gold-dark">{l}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {whRows.length > 0 && (
+                          <div>
+                            <p className="font-bridal text-[11px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark mb-2.5">Working hours</p>
+                            <div className="space-y-1">
+                              {whRows.map(([k, label]) => {
+                                const d = wh[k] || {};
+                                return (
+                                  <div key={k} className="flex items-center justify-between text-sm text-bridal-charcoal/85">
+                                    <span className="font-medium">{label}</span>
+                                    <span>{d.closed ? "Closed" : d.open && d.close ? `${d.open} – ${d.close}` : "—"}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        {(pays.length > 0 || dietary.length > 0) && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            {pays.length > 0 && (
+                              <div>
+                                <p className="font-bridal text-[11px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark mb-2.5">Payment accepted</p>
+                                <ul className="space-y-1.5">
+                                  {pays.map((p, i) => (
+                                    <li key={i} className="flex items-center gap-2 text-sm text-bridal-charcoal/85"><CheckCircle className="w-4 h-4 text-bridal-gold shrink-0" />{p}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {dietary.length > 0 && (
+                              <div>
+                                <p className="font-bridal text-[11px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark mb-2.5">Dietary options</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {dietary.map((dt, i) => (
+                                    <Badge key={i} variant="secondary" className="text-sm px-3 py-1 bg-bridal-blush text-bridal-mauve border-bridal-rose/45 capitalize">{dt.replace(/-/g, " ")}</Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {(awardsList.length > 0 || pressList.length > 0) && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            {awardsList.length > 0 && (
+                              <div>
+                                <p className="font-bridal text-[11px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark mb-2.5">Awards</p>
+                                <ul className="space-y-1.5">
+                                  {awardsList.map((a, i) => (
+                                    <li key={i} className="flex items-start gap-2 text-sm text-bridal-charcoal/85"><Crown className="w-4 h-4 text-bridal-gold shrink-0 mt-0.5" /><span>{a.title}{a.year ? ` · ${a.year}` : ""}</span></li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {pressList.length > 0 && (
+                              <div>
+                                <p className="font-bridal text-[11px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark mb-2.5">Press & features</p>
+                                <ul className="space-y-1.5">
+                                  {pressList.map((p, i) => (
+                                    <li key={i} className="text-sm text-bridal-charcoal/85">
+                                      {p.url ? <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-bridal-gold-dark underline underline-offset-2 hover:text-bridal-mauve break-words">{p.title}</a> : p.title}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   {/* Category guidance + FAQ — true, helpful, rankable (no fabrication). Shown on every page. */}
                   {guidance && (
                     <div className="bg-bridal-cream rounded-md border border-bridal-beige shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)] p-5 space-y-5">

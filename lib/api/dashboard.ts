@@ -57,7 +57,9 @@ export class UsersAPI {
   // website, officeAddress) via the dedicated profile endpoint. Distinct
   // from updateProfile (PATCH /api/v1/users) which only touches the core
   // identity triplet. Does NOT edit email here (parity with original).
-  static async updateMyProfile(data: Record<string, string>): Promise<void> {
+  // `unknown` (not string) so socialLinks (a JSON object) rides alongside the
+  // string contact fields — updateMyProfile now accepts both.
+  static async updateMyProfile(data: Record<string, unknown>): Promise<void> {
     await axiosInstance.patch("/api/v1/users/profile", data);
   }
 
@@ -156,6 +158,38 @@ export interface ApiBusiness {
   cancelationPolicy: string | null;
   downPaymentType: "Percentage" | "Fixed Amount" | null;
   downPayment: number | null;
+  // ── Rich profile-content (VR-050 + venue + logistics). All optional; the
+  // update endpoint (updateBusiness) now accepts every one of these. ──
+  yearsInBusiness?: number | null;
+  weddingsCompleted?: number | null;
+  ownerName?: string | null;
+  ownerBio?: string | null;
+  backupArrangement?: string | null;
+  hasInsurance?: boolean | null;
+  languagesSpoken?: string[] | null;
+  awards?: { title: string; year?: number | null }[] | null;
+  press?: { title: string; url?: string; publishedAt?: string | null }[] | null;
+  acceptsCash?: boolean | null;
+  acceptsBankTransfer?: boolean | null;
+  providesTaxInvoice?: boolean | null;
+  whatsappNumber?: string | null;
+  workingHours?: Record<string, { open?: string; close?: string; closed?: boolean }> | null;
+  guestCountLabel?: string | null;
+  dietaryOptions?: string[] | null;
+  venueType?: string | null;
+  amenitiesJson?: string[] | null;
+  comfortCapacity?: number | null;
+  seatedCapacity?: number | null;
+  standingCapacity?: number | null;
+  indoorCapacity?: number | null;
+  outdoorCapacity?: number | null;
+  legalGuestCap?: number | null;
+  eventClosingTime?: string | null;
+  oneDishPolicy?: boolean | null;
+  outsideVendorsAllowed?: boolean | null;
+  outsideVendorFee?: number | null;
+  requiresPermit?: boolean | null;
+  permitChecklistUrl?: string | null;
   createdAt: string;
   updatedAt: string;
   vendor?: {
