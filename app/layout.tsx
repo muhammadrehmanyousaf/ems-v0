@@ -78,13 +78,20 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
+    // Fallback OG image. `app/opengraph-image.tsx` only covers `app/page.tsx`,
+    // but the home + most pages live under the `(main)` route group, so they
+    // inherited NO og:image (verified: home HTML had none → broken social
+    // previews). This static default guarantees every route has one; per-route
+    // opengraph-image.tsx (vendor leaf, city, blog) still override it.
+    images: [{ url: `${SITE_URL}/og-default.jpg`, width: 1200, height: 630, alt: SITE_NAME }],
   },
   twitter: {
     card: "summary_large_image",
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    site: "@weddingwalapk",
-    creator: "@weddingwalapk",
+    site: "@weddingwala786",
+    creator: "@weddingwala786",
+    images: [`${SITE_URL}/og-default.jpg`],
   },
   robots: {
     index: true,
