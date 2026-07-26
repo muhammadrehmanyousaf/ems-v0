@@ -1,5 +1,7 @@
 import type { Metadata } from "next"
+import dynamic from "next/dynamic"
 import { SITE_NAME, SITE_TITLE, SITE_DESCRIPTION, SITE_URL } from "@/lib/seo"
+// Hero stays EAGER — it holds the LCP element (above the fold).
 import { HeroSection } from "@/components/homepage/hero-section"
 
 export const metadata: Metadata = {
@@ -20,29 +22,31 @@ export const metadata: Metadata = {
   },
 }
 
-import { FeaturedCategories } from "@/components/homepage/featured-categories"
-import { FeaturedVendorsShowcase } from "@/components/homepage/FeaturedVendorsShowcase"
-import { EditorialGallerySection } from "@/components/homepage/EditorialGallerySection"
-import { TestimonialBand } from "@/components/homepage/TestimonialBand"
-import { BentoGridSection } from "@/components/homepage/BentoGridSection"
-import { EditorialAlternatingSection } from "@/components/homepage/EditorialAlternatingSection"
-import { PlanningTools } from "@/components/homepage/planning-tools"
-import { RealWeddings } from "@/components/homepage/real-weddings"
-import { WeddingTips } from "@/components/homepage/wedding-tips"
-import {
-  HowItWorks,
-  PremiumPartnersStrip,
-  SponsoredSpotlight,
-  CitySpotlights,
-  FeaturedVenueShowcase,
-  BridalLookbook,
-  VendorAwards,
-  PromotedDeals,
-  TrustStrip,
-  VendorCTABanner,
-  FreeTools,
-  FinalNewsletterCTA,
-} from "@/components/homepage/monetization-sections"
+// ── Below-the-fold sections are CODE-SPLIT (next/dynamic) ─────────────────
+// The whole homepage is client components; eagerly hydrating all 20 at once
+// saturated the main thread and delayed the hero LCP paint by ~3.6s (verified
+// via a Chrome perf trace: 56% of LCP was "render delay"). ssr stays ON (the
+// default) so every section still server-renders — content + SEO + no CLS are
+// preserved; only the client JS is deferred off the hero's critical path.
+const FeaturedCategories = dynamic(() => import("@/components/homepage/featured-categories").then((m) => m.FeaturedCategories))
+const FeaturedVendorsShowcase = dynamic(() => import("@/components/homepage/FeaturedVendorsShowcase").then((m) => m.FeaturedVendorsShowcase))
+const EditorialGallerySection = dynamic(() => import("@/components/homepage/EditorialGallerySection").then((m) => m.EditorialGallerySection))
+const TestimonialBand = dynamic(() => import("@/components/homepage/TestimonialBand").then((m) => m.TestimonialBand))
+const BentoGridSection = dynamic(() => import("@/components/homepage/BentoGridSection").then((m) => m.BentoGridSection))
+const EditorialAlternatingSection = dynamic(() => import("@/components/homepage/EditorialAlternatingSection").then((m) => m.EditorialAlternatingSection))
+const RealWeddings = dynamic(() => import("@/components/homepage/real-weddings").then((m) => m.RealWeddings))
+const HowItWorks = dynamic(() => import("@/components/homepage/monetization-sections").then((m) => m.HowItWorks))
+const PremiumPartnersStrip = dynamic(() => import("@/components/homepage/monetization-sections").then((m) => m.PremiumPartnersStrip))
+const SponsoredSpotlight = dynamic(() => import("@/components/homepage/monetization-sections").then((m) => m.SponsoredSpotlight))
+const CitySpotlights = dynamic(() => import("@/components/homepage/monetization-sections").then((m) => m.CitySpotlights))
+const FeaturedVenueShowcase = dynamic(() => import("@/components/homepage/monetization-sections").then((m) => m.FeaturedVenueShowcase))
+const BridalLookbook = dynamic(() => import("@/components/homepage/monetization-sections").then((m) => m.BridalLookbook))
+const VendorAwards = dynamic(() => import("@/components/homepage/monetization-sections").then((m) => m.VendorAwards))
+const PromotedDeals = dynamic(() => import("@/components/homepage/monetization-sections").then((m) => m.PromotedDeals))
+const TrustStrip = dynamic(() => import("@/components/homepage/monetization-sections").then((m) => m.TrustStrip))
+const VendorCTABanner = dynamic(() => import("@/components/homepage/monetization-sections").then((m) => m.VendorCTABanner))
+const FreeTools = dynamic(() => import("@/components/homepage/monetization-sections").then((m) => m.FreeTools))
+const FinalNewsletterCTA = dynamic(() => import("@/components/homepage/monetization-sections").then((m) => m.FinalNewsletterCTA))
 import { HOMEPAGE_DEMO_CONTENT } from "@/lib/homepage-demo-flag"
 
 /**
