@@ -12,6 +12,7 @@
  */
 
 import * as React from "react"
+import { useSearchParams } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { BusinessesAPI, type ApiBusiness } from "@/lib/api/dashboard"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
@@ -26,7 +27,9 @@ import { MenusManager } from "@/components/dashboard/mainScreens/businessSetting
 import { AvailabilityManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/availability-manager"
 import { ImagesManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/images-manager"
 import { TypeSpecificManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/type-specific-manager"
+import { ProfileContentManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/profile-content-manager"
 import { getVendorTypeConfig } from "@/lib/vendor-type-config"
+import { PersonaPreference } from "@/components/dashboard/layout/persona-preference"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -36,12 +39,15 @@ const numOrNull = (v: string) => (v.trim() === "" ? null : Number(v) || 0)
 const labelCls = "text-xs font-medium text-muted-foreground"
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 
-type TabKey = "profile" | "pricing" | "amenities" | "type-specific" | "images" | "packages" | "menus" | "bank" | "team" | "availability"
+type TabKey = "profile" | "pricing" | "amenities" | "listing" | "type-specific" | "images" | "packages" | "menus" | "bank" | "team" | "availability"
 interface TabDef { key: TabKey; label: string; icon: IconName; wired: boolean; href?: string; hint?: string }
 const TABS: TabDef[] = [
   { key: "profile", label: "Profile", icon: "Building2", wired: true },
   { key: "pricing", label: "Capacity & pricing", icon: "DollarSign", wired: true },
   { key: "amenities", label: "Amenities & services", icon: "SlidersHorizontal", wired: true },
+  // Self-contained save (its own button) — NOT hub-wired, and no href, so the
+  // hub renders it directly without the sticky save bar or the "dedicated screen" card.
+  { key: "listing", label: "Listing content", icon: "ShieldCheck", wired: false },
   { key: "type-specific", label: "Type-specific", icon: "Settings2", wired: false, hint: "Settings unique to your vendor category." },
   { key: "images", label: "Images", icon: "Image", wired: false, hint: "Upload & reorder gallery photos." },
   { key: "packages", label: "Packages", icon: "Package", wired: false, hint: "Pricing packages & bundles." },
@@ -50,6 +56,28 @@ const TABS: TabDef[] = [
   { key: "team", label: "Team members", icon: "Users2", wired: false, href: "/dashboard/staff", hint: "Staff & roles." },
   { key: "availability", label: "Availability", icon: "CalendarCheck", wired: false, hint: "Blocked dates & lead time." },
 ]
+
+// The sidebar sub-items link to /dashboard/settings?tab=<id> using the vendor
+// config's settingsTabs ids (overview, basic, images, fleet, packages, menus,
+// type-specific). Map each — plus the hub's own tab keys — to the tab this hub
+// should open, so deep-links land on the right section instead of Profile.
+const PARAM_TO_TAB: Record<string, TabKey> = {
+  overview: "profile",
+  basic: "profile",
+  images: "images",
+  fleet: "type-specific",
+  packages: "packages",
+  menus: "menus",
+  "type-specific": "type-specific",
+  // hub-native keys (so ?tab=pricing etc. also work directly)
+  profile: "profile",
+  pricing: "pricing",
+  amenities: "amenities",
+  listing: "listing",
+  bank: "bank",
+  team: "team",
+  availability: "availability",
+}
 
 // The editable scalar/boolean fields we own (the rest are separate APIs/dialogs).
 const BOOLS: { key: keyof ApiBusiness; label: string; hint: string }[] = [
@@ -73,7 +101,16 @@ export function BusinessSettingsHubView() {
   })
   const biz = businesses?.[0]
 
-  const [active, setActive] = React.useState<TabKey>("profile")
+  // Deep-link: sidebar sub-items navigate to /dashboard/settings?tab=<id>.
+  // Resolve that id → the matching hub tab so each link opens its own section
+  // (previously the param was ignored and everything opened on Profile).
+  const searchParams = useSearchParams()
+  const tabParam = searchParams?.get("tab") ?? null
+  const [active, setActive] = React.useState<TabKey>(() => (tabParam && PARAM_TO_TAB[tabParam]) || "profile")
+  React.useEffect(() => {
+    const mapped = tabParam ? PARAM_TO_TAB[tabParam] : undefined
+    if (mapped) setActive(mapped)
+  }, [tabParam])
   const [dirty, setDirty] = React.useState(false)
   const loadedId = React.useRef<number | null>(null)
   const [form, setForm] = React.useState<Record<string, any>>({})
@@ -136,6 +173,10 @@ export function BusinessSettingsHubView() {
         description="Your public profile, pricing and services."
         actions={biz.vendor?.vendorType ? <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">{biz.vendor.vendorType}</span> : undefined}
       />
+
+      {/* Label-style switch (Aasaan Roman-Urdu ⇄ Professional English). Renders
+          only behind NEXT_PUBLIC_NAV_V2; sits at the top so it's easy to find. */}
+      <PersonaPreference />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">
         {/* Tab rail */}
@@ -213,6 +254,9 @@ export function BusinessSettingsHubView() {
               config={getVendorTypeConfig(biz.vendor?.vendorType) ?? { displayName: biz.vendor?.vendorType || "This", typeSpecificFields: [] }}
               onSaved={() => qc.invalidateQueries({ queryKey: ["biz-settings-hub"] })}
             />
+          )}
+          {active === "listing" && (
+            <ProfileContentManager business={biz} onSaved={() => qc.invalidateQueries({ queryKey: ["biz-settings-hub"] })} />
           )}
           {active === "bank" && <BankAccountsManager />}
           {active === "packages" && <PackagesManager businessId={biz.id} />}
