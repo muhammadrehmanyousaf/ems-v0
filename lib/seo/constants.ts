@@ -20,9 +20,13 @@
 export const SITE_URL = "https://www.weddingwala.pk" as const;
 export const SITE_NAME = "Wedding Wala" as const;
 export const SITE_TAGLINE = "Pakistan's Wedding & Event Planning Marketplace" as const;
-export const SITE_TITLE = `${SITE_NAME} — ${SITE_TAGLINE}` as const;
+// SITE_TITLE is decoupled from the (longer) tagline and kept UNDER 60 chars so
+// the homepage <title> isn't truncated in the SERP (audit: was 62). Keeps the
+// core keywords: Wedding · Event · Pakistan · Marketplace.
+export const SITE_TITLE = "Wedding Wala — Pakistan's Wedding & Event Marketplace" as const;
+// ≤160 chars so it isn't truncated in the SERP (audit: was 174).
 export const SITE_DESCRIPTION =
-  "Find, compare, and book the best wedding vendors and event services across Pakistan. Venues, photographers, caterers, decorators, mehndi artists, planners — all in one place." as const;
+  "Find, compare & book the best wedding vendors across Pakistan — venues, photographers, caterers, decorators, mehndi artists & planners, all in one place." as const;
 
 export const SUPPORT_EMAIL = "info@weddingwala.pk" as const;
 export const ONBOARDING_EMAIL = "onboarding@weddingwala.pk" as const;
@@ -68,21 +72,20 @@ export interface SocialProfile {
 }
 
 export function getSocialProfiles(): SocialProfile[] {
-  const clean = (v?: string) => (v || "").trim();
-  // Must be STATIC process.env.NEXT_PUBLIC_* reads: Next.js only inlines
-  // NEXT_PUBLIC_* into the client bundle for static member access. Dynamic
-  // process.env[key] resolves on the server but is undefined in the browser,
-  // so the footer social row rendered server-only -> hydration mismatch (#418).
-  const candidates: SocialProfile[] = [
-    { key: "instagram", label: "Instagram", url: clean(process.env.NEXT_PUBLIC_SOCIAL_INSTAGRAM) },
-    { key: "facebook",  label: "Facebook",  url: clean(process.env.NEXT_PUBLIC_SOCIAL_FACEBOOK) },
-    { key: "twitter",   label: "X / Twitter", url: clean(process.env.NEXT_PUBLIC_SOCIAL_TWITTER) },
-    { key: "linkedin",  label: "LinkedIn",  url: clean(process.env.NEXT_PUBLIC_SOCIAL_LINKEDIN) },
-    { key: "youtube",   label: "YouTube",   url: clean(process.env.NEXT_PUBLIC_SOCIAL_YOUTUBE) },
-    { key: "tiktok",    label: "TikTok",    url: clean(process.env.NEXT_PUBLIC_SOCIAL_TIKTOK) },
-    { key: "pinterest", label: "Pinterest", url: clean(process.env.NEXT_PUBLIC_SOCIAL_PINTEREST) },
+  // The REAL, verified Wedding Wala profiles (2026-07). Hardcoded as the single
+  // source of truth so the footer AND the Organization JSON-LD `sameAs` always
+  // emit live handles — the previous version read NEXT_PUBLIC_SOCIAL_* env vars,
+  // which were set to dead `weddingwalapk` handles (LinkedIn + YouTube 404'd,
+  // flagged by the live link audit). LinkedIn intentionally omitted (no page).
+  // Static string literals: no dynamic process.env → no hydration mismatch.
+  return [
+    { key: "instagram", label: "Instagram", url: "https://www.instagram.com/weddingwalaofficial/" },
+    { key: "facebook",  label: "Facebook",  url: "https://www.facebook.com/profile.php?id=61590623439349" },
+    { key: "twitter",   label: "X / Twitter", url: "https://x.com/weddingwala786" },
+    { key: "youtube",   label: "YouTube",   url: "https://www.youtube.com/@WeddingWalaofficial" },
+    { key: "tiktok",    label: "TikTok",    url: "https://www.tiktok.com/@weddingwala" },
+    { key: "pinterest", label: "Pinterest", url: "https://www.pinterest.com/weddingwalaofficial" },
   ];
-  return candidates.filter((s) => s.url.length > 0);
 }
 
 export const DEFAULT_LOCALE = "en-PK" as const;
