@@ -33,7 +33,11 @@ const UserTable = ({ openCreate, onCreateClose }: UserTableProps) => {
                     email: u.email,
                     phoneNumber: u.phoneNumber,
                     active: u.active,
-                    isVendor: u.isVendor,
+                    // isVendor is nullable on the wire (BOOLEAN, no default);
+                    // this local User type wants a strict boolean. Coerce
+                    // explicitly — null means "not a vendor", which is how this
+                    // screen already renders it.
+                    isVendor: !!u.isVendor,
                     roles: u.roles || [],
                     createdAt: u.createdAt,
                     updatedAt: u.updatedAt,

@@ -49,22 +49,41 @@ export function UsersAdminRedesignedView() {
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove user"),
   })
 
+  // Server-side paging. The endpoint defaults to limit=10, so reading the
+  // unpaged response and printing `rows.length` reported "Total users 9"
+  // against a real total of 3,304 — and left pages 2..N unreachable.
+  const PAGE_SIZE = 25
+  const [page, setPage] = React.useState(1)
+
+  // Search runs server-side (see UsersAPI.getPage). Debounced so typing doesn't
+  // fire a request per keystroke, and any change resets to page 1 — otherwise a
+  // narrower result set can leave you stranded past its last page.
+  const [debouncedSearch, setDebouncedSearch] = React.useState("")
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300)
+    return () => clearTimeout(t)
+  }, [search])
+  React.useEffect(() => { setPage(1) }, [debouncedSearch])
+
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["users-admin-redesigned"],
-    queryFn: () => UsersAPI.getAll(),
+    queryKey: ["users-admin-redesigned", page, debouncedSearch],
+    queryFn: () => UsersAPI.getPage(page, PAGE_SIZE, debouncedSearch),
+    placeholderData: (prev) => prev,
   })
 
-  const rows = data ?? []
-  const users = React.useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return rows
-    return rows.filter((u) =>
-      [u.fullName, u.email, u.phoneNumber, u.city].some((v) => (v ?? "").toLowerCase().includes(q)),
-    )
-  }, [rows, search])
+  const rows = data?.results ?? []
+  const total = data?.meta?.total ?? 0
+  const totalPages = Math.max(data?.meta?.totalPages ?? 1, 1)
+  // The server already applied `search`; filtering again here would only ever
+  // narrow the current page.
+  const users = rows
 
-  const vendors = rows.filter((u) => u.isVendor === true).length
-  const customers = rows.filter((u) => u.isVendor === false).length
+  // Page-scoped counts. `customers` uses `!u.isVendor`, NOT `=== false`:
+  // isVendor is nullable, so customers stored as null were counted by neither
+  // branch — the tile read "Customers 0" while the very same rows rendered a
+  // "Customer" badge from the truthy test in the Type column below.
+  const vendors = rows.filter((u) => !!u.isVendor).length
+  const customers = rows.filter((u) => !u.isVendor).length
   const active = rows.filter((u) => u.active).length
 
   const columns: Column<ApiUser>[] = [
@@ -113,11 +132,18 @@ export function UsersAdminRedesignedView() {
         actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Add user</Button>}
       />
 
+      {/*
+        "Total users" is the platform-wide figure from meta.total. The other
+        three are counted from the loaded page and are labelled as such — the
+        endpoint supports only paginate/sort/search (no isVendor or active
+        filter), so a truthful platform-wide breakdown isn't available without a
+        backend change. Better a scoped label than a confident wrong number.
+      */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total users" value={rows.length} icon="Users" />
-        <StatCard label="Vendors" value={vendors} icon="Building2" />
-        <StatCard label="Customers" value={customers} icon="Users" />
-        <StatCard label="Active" value={active} icon="ShieldCheck" trend="up" />
+        <StatCard label="Total users" value={total} icon="Users" />
+        <StatCard label="Vendors (this page)" value={vendors} icon="Building2" />
+        <StatCard label="Customers (this page)" value={customers} icon="Users" />
+        <StatCard label="Active (this page)" value={active} icon="ShieldCheck" />
       </div>
 
       <DataTable
@@ -172,6 +198,38 @@ export function UsersAdminRedesignedView() {
           </div>
         )}
       />
+
+      {/* Pagination — without this the screen showed page 1 of 3,304 users and
+          offered no way to reach the rest. Hidden when everything fits. */}
+      {totalPages > 1 && (
+        <nav
+          aria-label="Users pagination"
+          className="flex flex-wrap items-center justify-between gap-3 text-sm"
+        >
+          <p className="text-muted-foreground">
+            Page {page} of {totalPages}
+            <span className="hidden sm:inline"> · {total.toLocaleString()} users</span>
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1 || isLoading}
+            >
+              <Icon name="ChevronLeft" size={14} className="mr-1" /> Previous
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages || isLoading}
+            >
+              Next <Icon name="ChevronRight" size={14} className="ml-1" />
+            </Button>
+          </div>
+        </nav>
+      )}
 
       <UserFormDialog open={dialogOpen} onOpenChange={setDialogOpen} user={editing} onSaved={invalidate} />
 
