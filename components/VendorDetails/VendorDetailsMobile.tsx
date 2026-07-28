@@ -71,6 +71,7 @@ import { VendorBranches } from "@/components/VendorDetails/vendor-branches";
 // Shaadi Plan — additive, flag-gated "Add to my wedding plan" action. Renders
 // null while the flag is off, so this vendor page stays byte-identical.
 import { AddToPlanButton } from "@/components/wedding-plan/add-to-plan-button";
+import { featureMap } from "@/lib/packages/features";
 
 interface VendorDetailsMobileProps {
   vendor: Vendor;
@@ -1881,11 +1882,11 @@ export default function VendorDetailsMobile({
               {vendor.type === "Car rental" && (() => {
                 const allPkgs = vendor.packages || [];
                 const carPkgs = allPkgs.filter((pkg: any) => {
-                  const f = !Array.isArray(pkg.features) ? (pkg.features as Record<string, string[]>) : {};
+                  const f = featureMap(pkg.features);
                   return !!f.vehicleType?.[0];
                 });
                 const servicePkgs = allPkgs.filter((pkg: any) => {
-                  const f = !Array.isArray(pkg.features) ? (pkg.features as Record<string, string[]>) : {};
+                  const f = featureMap(pkg.features);
                   return !f.vehicleType?.[0];
                 });
                 return (
@@ -1898,9 +1899,7 @@ export default function VendorDetailsMobile({
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {carPkgs.length > 0 ? carPkgs.map((pkg: any, index: number) => {
                           const imgs = (pkg.images ?? []).map(resolveImg);
-                          const features = !Array.isArray(pkg.features)
-                            ? (pkg.features as Record<string, string[]>)
-                            : {};
+                          const features = featureMap(pkg.features);
                           const vehicleType = features.vehicleType?.[0];
                           const year = features.year?.[0];
                           const color = features.color?.[0];
@@ -2029,7 +2028,7 @@ export default function VendorDetailsMobile({
                   {(vendor.packages || []).length > 0 ? (
                     (vendor.packages || []).map((pkg, index) => {
                       const imgs = (pkg.images ?? []).map(resolveImg);
-                      const features = !Array.isArray(pkg.features) ? (pkg.features as Record<string, string[]>) : {};
+                      const features = featureMap(pkg.features);
                       const productTypes: string[] = Array.isArray(features.productType) ? features.productType : [];
                       const events: string[] = Array.isArray(features.event) ? features.event : [];
                       return (

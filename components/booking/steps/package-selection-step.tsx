@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Check, Package, Clock, ChevronDown, ChevronUp, Car } from "lucide-react"
 import type { BookingFormData, EventVenue, Vendor } from "@/lib/types"
 import { motion, AnimatePresence } from "framer-motion"
+import { featureMap } from "@/lib/packages/features"
 
 const BACKEND_STATIC = process.env.NEXT_PUBLIC_BACKEND_URL || ""
 function resolveImg(src: string) {
@@ -175,11 +176,11 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
       {/* Car Rental — split into Vehicles + Service Packages */}
       {isCarRental && (() => {
         const carPkgs = venuePackages.filter(pkg => {
-          const f = !Array.isArray(pkg.features) ? (pkg.features as Record<string, string[]>) : {}
+          const f = featureMap(pkg.features)
           return !!f.vehicleType?.[0]
         })
         const servicePkgs = venuePackages.filter(pkg => {
-          const f = !Array.isArray(pkg.features) ? (pkg.features as Record<string, string[]>) : {}
+          const f = featureMap(pkg.features)
           return !f.vehicleType?.[0]
         })
         return (
@@ -193,7 +194,7 @@ export default function PackageSelectionStep({ formData, updateFormData, venue, 
                 {carPkgs.length > 0 ? carPkgs.map((pkg) => {
                   const isSelected = selectedPackageId === String(pkg.id)
                   const imgs = (pkg.images ?? []).map(resolveImg)
-                  const f = !Array.isArray(pkg.features) ? (pkg.features as Record<string, string[]>) : {}
+                  const f = featureMap(pkg.features)
                   const vehicleType = f.vehicleType?.[0]
                   const year = f.year?.[0]
                   const color = f.color?.[0]
