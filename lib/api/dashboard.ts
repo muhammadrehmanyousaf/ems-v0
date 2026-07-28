@@ -6,7 +6,10 @@ export interface ApiUser {
   fullName: string;
   email: string;
   phoneNumber: string;
-  isVendor: boolean;
+  // Nullable in the DB (BOOLEAN, no default) — customers created without an
+  // explicit flag come back as null, NOT false. Anything testing `=== false`
+  // silently misses them.
+  isVendor: boolean | null;
   active: boolean;
   vendorType: string | null;
   reviewProfile: boolean;
@@ -19,6 +22,18 @@ export interface ApiUser {
   roles: { id: number; name: string }[];
 }
 
+export interface ApiListMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface ApiUsersPage {
+  results: ApiUser[];
+  meta: ApiListMeta;
+}
+
 export class UsersAPI {
   static async getAll(): Promise<ApiUser[]> {
     const res = await axiosInstance.get("/api/v1/users");
@@ -26,6 +41,35 @@ export class UsersAPI {
     // alone handed callers the wrapper object, so `users.map(...)` threw and
     // the table rendered empty with a "Failed to load users" toast.
     return res.data?.data?.results ?? res.data?.data ?? [];
+  }
+
+  /**
+   * Paginated read that KEEPS `meta`. `getAll()` throws it away, so callers
+   * could only ever report `rows.length` — which read "Total users 9" against a
+   * real platform total of 3,304, with pages 2..N unreachable.
+   *
+   * Additive on purpose: `getAll()` is left alone so the legacy users table is
+   * untouched. `search` is passed server-side (getUsers searchLike's fullName /
+   * email / phoneNumber) — filtering one page client-side would silently search
+   * 10 rows out of thousands.
+   */
+  static async getPage(
+    page: number,
+    limit: number,
+    search?: string,
+  ): Promise<ApiUsersPage> {
+    const res = await axiosInstance.get("/api/v1/users", {
+      params: { page, limit, ...(search ? { search } : {}) },
+    });
+    const body = res.data?.data;
+    const results: ApiUser[] = body?.results ?? (Array.isArray(body) ? body : []);
+    const meta: ApiListMeta = body?.meta ?? {
+      total: results.length,
+      page,
+      limit,
+      totalPages: 1,
+    };
+    return { results, meta };
   }
 
   static async getById(id: number): Promise<ApiUser> {

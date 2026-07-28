@@ -24,6 +24,15 @@ import { FamiliarityPrompt } from "@/components/dashboard/layout/familiarity-pro
 import { ActionOverviewView } from "@/components/dashboard/mainScreens/dashboard/v2/action-overview-view"
 import { TodayBoard } from "@/components/dashboard/mainScreens/venue-os/today-board"
 import { EventProfitBoard } from "@/components/dashboard/mainScreens/venue-os/event-profit-board"
+import dynamic from "next/dynamic"
+import { getDashboardRole, isAdminLike } from "@/lib/dashboard-role"
+
+// Admin overview is vendor-console-free and only ever renders for admin-like
+// roles, so keep it out of the vendor bundle. Mirrors dashboard-view.tsx.
+const AdminDashboardView = dynamic(
+  () => import("@/components/dashboard/mainScreens/dashboard/admin-dashboard-view"),
+  { ssr: false },
+)
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
@@ -58,7 +67,26 @@ interface RecentRow {
   paymentStatus: string
 }
 
+/**
+ * Dashboard home. Super admins and admins get the platform overview; everyone
+ * else gets the vendor console below.
+ *
+ * The redesign originally rendered the vendor console for EVERY role, so an
+ * admin — who owns no business — saw a "Vendor console" breadcrumb, an "Add
+ * booking" CTA, and vendor-scoped widgets reading 0 next to platform-wide
+ * totals reading Rs 18.8M. This restores the fork the legacy path has always
+ * had (dashboard-view.tsx). Kept as a thin wrapper on purpose: the vendor view
+ * below calls many hooks, so forking inside it would change hook count between
+ * renders once `isLoading` flips.
+ */
 export function OverviewRedesignedView() {
+  const { user, isLoading } = useUser()
+  if (isLoading) return null
+  if (isAdminLike(getDashboardRole(user))) return <AdminDashboardView />
+  return <VendorOverviewRedesignedView />
+}
+
+function VendorOverviewRedesignedView() {
   const { user } = useUser()
   const firstName = (user?.fullName || "there").split(/\s+/)[0]
   const today = new Date().toLocaleDateString("en-PK", { weekday: "long", day: "numeric", month: "long" })

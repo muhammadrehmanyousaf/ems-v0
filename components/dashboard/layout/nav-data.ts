@@ -114,8 +114,12 @@ export const data = {
     { name: "Disputes",       url: "/dashboard/admin/disputes",     icon: Gavel },
     { name: "Promotions",     url: "/dashboard/admin/promotions",   icon: Megaphone },
     { name: "Plan upgrades",  url: "/dashboard/admin/subscriptions", icon: CreditCard },
-    { name: "Bookings",       url: "/dashboard/bookings",           icon: ClipboardList },
-    { name: "Payments",       url: "/dashboard/payments",           icon: Wallet },
+    // NO Bookings / Payments here. Both routes render VENDOR-scoped screens
+    // (/dashboard/payments calls PaymentsAPI.getVendorRevenue()), so an admin
+    // — who owns no business — got empty tables and Rs 0 tiles. The
+    // platform-level equivalents are already in the nav: Revenue for money,
+    // Disputes for booking problems. Vendors keep their own entries in
+    // `vendorMainNav` above; this array is admin-only.
   ],
 
   // Read-mostly directories of every entity on the platform.
