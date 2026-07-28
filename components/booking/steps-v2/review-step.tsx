@@ -98,7 +98,14 @@ export default function ReviewStep({
   // into the package price aren't pickable). Anonymous flows also see
   // this — the picker doesn't need auth, only the API call. The
   // venue's businessId is the picker key.
-  const venueBusinessId = venue?.vendor?.id || venue?.id
+  // WW-BUNDLED-WRONGID — `venue` is the Business row from GET /businesses/:id,
+  // so `venue.vendor` is the OWNING USER, not a business: `venue.vendor.id` is a
+  // User id. Asking for /businesses/<userId>/bundled-services 404s, and because
+  // that wrong value is truthy the `|| venue.id` fallback never ran — the add-on
+  // picker silently stayed empty for every vendor whose businessId != ownerId
+  // (i.e. effectively all of them). The businessId is `venue.id`, as the comment
+  // above always said.
+  const venueBusinessId = venue?.id
   const [bundledServices, setBundledServices] = React.useState<BundledService[]>([])
   const [loadingBundled, setLoadingBundled] = React.useState(false)
   const showBundledPicker = !!updateFormData && !!venueBusinessId

@@ -65,6 +65,7 @@ import { priceLabelFor, ctaLabelFor } from "@/lib/pricing/unpriced";
 // Shaadi Plan — additive, flag-gated "Add to my wedding plan" action. Renders
 // null while the flag is off, so this vendor surface stays byte-identical.
 import { AddToPlanButton } from "@/components/wedding-plan/add-to-plan-button";
+import { featureMap } from "@/lib/packages/features";
 
 interface VendorDetailsProps {
   vendor: Vendor;
@@ -1225,11 +1226,11 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                       {vendor.type === "Car rental" && (() => {
                         const allPkgs = vendor.packages || [];
                         const carPkgs = allPkgs.filter(pkg => {
-                          const f = !Array.isArray(pkg.features) ? (pkg.features as Record<string, string[]>) : {};
+                          const f = featureMap(pkg.features);
                           return !!f.vehicleType?.[0];
                         });
                         const servicePkgs = allPkgs.filter(pkg => {
-                          const f = !Array.isArray(pkg.features) ? (pkg.features as Record<string, string[]>) : {};
+                          const f = featureMap(pkg.features);
                           return !f.vehicleType?.[0];
                         });
                         return (
@@ -1243,7 +1244,7 @@ export default function VendorDetails({ vendor }: VendorDetailsProps) {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                   {carPkgs.map((pkg, index) => {
                                     const imgs = (pkg.images ?? []).map(resolveImg);
-                                    const f = !Array.isArray(pkg.features) ? (pkg.features as Record<string, string[]>) : {};
+                                    const f = featureMap(pkg.features);
                                     const vehicleType = f.vehicleType?.[0];
                                     const year = f.year?.[0];
                                     const color = f.color?.[0];

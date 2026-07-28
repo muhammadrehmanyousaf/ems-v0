@@ -652,12 +652,14 @@ export default function BookingForm() {
         return !!currentForm.bookingDate && currentForm.timeSlot !== "" && (isCarRental || currentForm.guestCount > 0)
       case 'packages': {
         if (!hasPackages) return true
-        // Car rental: require a vehicle to be selected (selectedPackage), service packages are optional
-        const carPkgs = (venue?.packages || []).filter((p: any) => {
-          const f = !Array.isArray(p.features) ? p.features as Record<string, string[]> : {}
-          return !!f.vehicleType?.[0]
-        })
-        if (isCarRental && carPkgs.length > 0) return currentForm.selectedPackage !== ""
+        // WW-PKGFEAT-NULL — a `carPkgs` scan used to run here to decide whether a
+        // car rental required a vehicle to be picked. Both of its branches returned
+        // the same expression, so it never changed the answer — but it dereferenced
+        // `pkg.features` unguarded (`!Array.isArray(null)` is true) and threw
+        // "Cannot read properties of null" on any package stored with
+        // `features: null`. This runs during render, so it took the entire booking
+        // page down at the package step for EVERY vendor type, not just car rentals.
+        // The rule is the same for all of them: a package must be selected.
         return currentForm.selectedPackage !== ""
       }
       case 'vendors':
