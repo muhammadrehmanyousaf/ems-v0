@@ -9,8 +9,15 @@
  * is the piece that makes the persona nav system actually adapt — until now
  * setFromFamiliarity was never called, so everyone silently got the default.
  *
- * Shows once (persisted `asked` flag), only behind NEXT_PUBLIC_NAV_V2, and only
- * after the persisted store has hydrated (so it never flashes then vanishes).
+ * DORMANT as of 2026-07-29. The nav store now defaults to professional + full
+ * with `asked: true` (see lib/nav/nav-persona.ts), on the assumption that
+ * vendors reaching the dashboard already know the product — so this card no
+ * longer renders for anyone. It is kept, not deleted, because the register is
+ * still switchable in Settings and re-enabling the question is a one-line
+ * change to that default.
+ *
+ * Gated on the persisted `asked` flag, on NEXT_PUBLIC_NAV_V2, and on the store
+ * having hydrated (so it never flashes then vanishes).
  */
 import { useEffect, useState } from "react";
 import { Sparkles, X } from "lucide-react";

@@ -105,22 +105,48 @@ interface NavPersonaState {
 }
 
 /**
- * Persisted vendor preference. Default = Aasaan + Simple (the safe default for a
- * non-technical owner). Persona is independent of the app language (اردو-script
- * is a separate flip within Aasaan, handled by i18n).
+ * Persisted vendor preference. Default = Professional + Full.
+ *
+ * This used to default to Aasaan + Simple and ask every user "have you used
+ * software like this before?" on the dashboard. The assumption is now the
+ * opposite: vendors arriving here know the product, so they get the
+ * professional register (Dashboard · Receivables · Expenses · Leads) and the
+ * full menu immediately, with no onboarding card in the way. `asked: true`
+ * keeps the prompt from ever rendering.
+ *
+ * Aasaan is NOT gone — it is still a first-class choice in Settings
+ * (persona-preference.tsx). Only the default flipped.
+ *
+ * Persona is independent of the app language (اردو-script is a separate flip
+ * within Aasaan, handled by i18n).
  */
 export const useNavPersona = create<NavPersonaState>()(
   persist(
     (set) => ({
-      persona: "aasaan",
-      full: false,
-      asked: false,
+      persona: "professional",
+      full: true,
+      asked: true,
       setPersona: (persona) => set({ persona }),
       setFull: (full) => set({ full }),
       setFromFamiliarity: (familiar) =>
         set({ persona: familiar ? "professional" : "aasaan", full: familiar, asked: true }),
       dismissAsk: () => set({ asked: true }),
     }),
-    { name: "ww-nav-persona" },
+    {
+      name: "ww-nav-persona",
+      // v0 shipped with the Aasaan default, and the choice is persisted in
+      // localStorage — so without a migration every existing user would stay on
+      // Ghar/Baqaya/Grahak forever and never see the new default. Bumping the
+      // version resets them ONCE to the professional register. Anyone who wants
+      // the simple names back sets it in Settings, and that choice (written at
+      // v1) is then respected permanently.
+      version: 1,
+      migrate: (persisted, fromVersion) => {
+        if (fromVersion < 1) {
+          return { ...(persisted as object), persona: "professional", full: true, asked: true }
+        }
+        return persisted
+      },
+    },
   ),
 )

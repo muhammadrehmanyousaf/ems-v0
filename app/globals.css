@@ -20,6 +20,38 @@ body {
   overflow-x: clip;
 }
 
+/* Reserve the vertical scrollbar's track permanently.
+
+   Radix overlays (dropdown menu, dialog, sheet, popover) lock scrolling by
+   setting `overflow: hidden` on <body> while open. That removes the ~15px
+   scrollbar, the viewport gets 15px wider, and every centred element jumps
+   sideways — visible on the dashboard as the whole page shifting left the
+   moment you open the profile menu. Measured on live: scrollbar 15px -> 0px,
+   body padding-right stayed 0, so nothing compensated for it.
+
+   `scrollbar-gutter: stable` keeps the track reserved whether or not the
+   scrollbar is painted, so locking scroll no longer changes the layout width.
+   One rule fixes every overlay at once rather than patching them one by one.
+
+   Applied to <html> only — putting it on both html and body reserves the
+   gutter twice and leaves a doubled dead strip on the right. */
+html {
+  scrollbar-gutter: stable;
+}
+
+/* Fallback for Safari < 18.2, which has no scrollbar-gutter. Radix's
+   react-remove-scroll already publishes the exact width it removed as
+   --removed-body-scroll-bar-size on <body> (measured 15px on live) and marks
+   the body [data-scroll-locked] — it just never applies the compensating
+   padding. Use its own number rather than hardcoding 15px, since scrollbar
+   width varies by OS and zoom level. Scoped to the locked state, so no gutter
+   is reserved during normal browsing. */
+@supports not (scrollbar-gutter: stable) {
+  body[data-scroll-locked] {
+    padding-right: var(--removed-body-scroll-bar-size, 0px);
+  }
+}
+
 /* Phase 3 #9.4 — When the locale toggle flips to Urdu, the dashboard
    subtree inherits the Nastaliq font stack so translated strings
    render in proper Urdu typography. data-locale="ur" is set on the
