@@ -51,19 +51,33 @@ export function VendorsAdminRedesignedView() {
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove vendor"),
   })
 
+  // Server-side paging. The endpoint defaults to limit=10, so the unpaged read
+  // reported "Total vendors 10" while the Roles screen showed the true 3,278
+  // for the same role, two clicks away.
+  const PAGE_SIZE = 25
+  const [page, setPage] = React.useState(1)
+
+  // Search runs server-side; filtering one page would have searched 25 rows out
+  // of 3,278. Debounced, and any change resets to page 1 so a narrower result
+  // set can't strand you past its last page.
+  const [debouncedSearch, setDebouncedSearch] = React.useState("")
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300)
+    return () => clearTimeout(t)
+  }, [search])
+  React.useEffect(() => { setPage(1) }, [debouncedSearch])
+
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["vendors-admin-redesigned"],
-    queryFn: () => VendorsAPI.getAll(),
+    queryKey: ["vendors-admin-redesigned", page, debouncedSearch],
+    queryFn: () => VendorsAPI.getPage(page, PAGE_SIZE, debouncedSearch),
+    placeholderData: (prev) => prev,
   })
 
-  const all = data ?? []
-  const rows = React.useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return all
-    return all.filter((r) =>
-      [r.fullName, r.email, r.phoneNumber, r.vendorType, r.city].some((v) => (v ?? "").toLowerCase().includes(q)),
-    )
-  }, [all, search])
+  const all = data?.results ?? []
+  const total = data?.meta?.total ?? 0
+  const totalPages = Math.max(data?.meta?.totalPages ?? 1, 1)
+  // Server already applied `search`; re-filtering here would only narrow the page.
+  const rows = all
 
   const approved = all.filter((r) => r.reviewProfile === true).length
   const pending = all.filter((r) => r.reviewProfile === false).length
@@ -117,10 +131,14 @@ export function VendorsAdminRedesignedView() {
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total vendors" value={all.length} icon="Building2" />
-        <StatCard label="Approved" value={approved} icon="CheckCircle2" trend="up" />
-        <StatCard label="Pending review" value={pending} icon="Clock" />
-        <StatCard label="Active" value={active} icon="ShieldCheck" />
+        {/* "Total vendors" is platform-wide from meta.total. The other three are
+            counted from the loaded page and labelled as such — the endpoint has
+            no reviewProfile/active filter, so a truthful platform-wide breakdown
+            isn't available without a backend change. */}
+        <StatCard label="Total vendors" value={total} icon="Building2" />
+        <StatCard label="Approved (this page)" value={approved} icon="CheckCircle2" />
+        <StatCard label="Pending review (this page)" value={pending} icon="Clock" />
+        <StatCard label="Active (this page)" value={active} icon="ShieldCheck" />
       </div>
 
       <DataTable
@@ -176,6 +194,24 @@ export function VendorsAdminRedesignedView() {
           </div>
         )}
       />
+
+      {/* Without this, only the first 25 of 3,278 vendors were reachable. */}
+      {totalPages > 1 && (
+        <nav aria-label="Vendors pagination" className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <p className="text-muted-foreground">
+            Page {page} of {totalPages}
+            <span className="hidden sm:inline"> · {total.toLocaleString()} vendors</span>
+          </p>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1 || isLoading}>
+              <Icon name="ChevronLeft" size={14} className="mr-1" /> Previous
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages || isLoading}>
+              Next <Icon name="ChevronRight" size={14} className="ml-1" />
+            </Button>
+          </div>
+        </nav>
+      )}
 
       <VendorEditDialog open={!!editing} onOpenChange={(v) => !v && setEditing(undefined)} vendor={editing} onSaved={invalidate} />
 
