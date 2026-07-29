@@ -18,7 +18,12 @@
  * old shell HTML loading after a routing change.
  */
 
-const CACHE_VERSION = "ww-v2-2026-05-28";
+// Bumped 2026-07-29. The previous value sat at 2026-05-28 through every release
+// since, so `/dashboard` shell HTML precached back in May could still be served
+// to a returning vendor whenever the network was slow enough to hit the
+// navigation fallback — carrying stale CSS bundle references with it. Bump this
+// with any release that changes layout, routing, or the app shell.
+const CACHE_VERSION = "ww-v3-2026-07-29";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
