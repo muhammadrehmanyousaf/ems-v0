@@ -121,10 +121,45 @@ export class UsersAPI {
 }
 
 // ─── Vendors ──────────────────────────────────────────────────
+export interface ApiVendorsPage {
+  results: ApiUser[];
+  meta: ApiListMeta;
+}
+
 export class VendorsAPI {
   static async getAll(): Promise<ApiUser[]> {
     const res = await axiosInstance.get("/api/v1/vendors");
     return res.data?.data.data ?? [];
+  }
+
+  /**
+   * Paginated read that keeps the pagination block. `getAll()` sends no params,
+   * so the endpoint applied its default limit of 10 and the admin Vendors screen
+   * reported "Total vendors 10" against a real 3,278 — the Roles screen showed
+   * the true 3,278 right next to it, which is how the mismatch surfaced.
+   *
+   * The vendors endpoint returns `{ data: [...], pagination: {...} }` (note:
+   * `pagination`, not `meta` like /users), so normalise it to the same shape the
+   * users screen consumes. Additive — `getAll()` is untouched for its callers.
+   */
+  static async getPage(
+    page: number,
+    limit: number,
+    search?: string,
+  ): Promise<ApiVendorsPage> {
+    const res = await axiosInstance.get("/api/v1/vendors", {
+      params: { page, limit, ...(search ? { search } : {}) },
+    });
+    const body = res.data?.data;
+    const results: ApiUser[] = body?.data ?? (Array.isArray(body) ? body : []);
+    const p = body?.pagination;
+    const meta: ApiListMeta = {
+      total: p?.total ?? results.length,
+      page: p?.page ?? page,
+      limit: p?.limit ?? limit,
+      totalPages: p?.totalPages ?? 1,
+    };
+    return { results, meta };
   }
 
   static async getById(id: number): Promise<ApiUser> {

@@ -23,7 +23,32 @@ import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
-const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
+
+/**
+ * Coerce a display label out of a field that is NOT reliably a string.
+ *
+ * `subBusinessType` comes back from the API as `string | string[] | null`
+ * depending on the vendor type — on live it is an array for venue businesses
+ * (`["Marquee"]`) and `[]` for others. An empty array is TRUTHY in JS, so it
+ * sailed straight through a `b.subBusinessType ? …` guard into cap(), where
+ * `s[0]` was undefined and `.toUpperCase()` threw — taking the whole
+ * /dashboard/businesses page down with "We hit an unexpected error". One row
+ * (id 3273, "Ali shadi hall") was enough to kill the screen for all 3,272.
+ *
+ * Same family as the booking `features:null` crash: a falsy-looking value that
+ * isn't actually falsy. Normalise first, then decide whether to render.
+ */
+const label = (v: unknown): string => {
+  if (Array.isArray(v)) return v.filter((x) => typeof x === "string" && x.trim()).join(", ")
+  if (typeof v === "string") return v
+  if (typeof v === "number") return String(v)
+  return ""
+}
+
+const cap = (s?: unknown) => {
+  const t = label(s).trim()
+  return t ? t[0].toUpperCase() + t.slice(1).replace(/_/g, " ") : "—"
+}
 const fmtDate = (d?: string | null) => {
   if (!d) return "—"
   const t = new Date(d)
@@ -65,7 +90,9 @@ export function BusinessesAdminRedesignedView() {
     const q = search.trim().toLowerCase()
     if (!q) return all
     return all.filter((b) =>
-      [b.name, b.city, b.subArea, b.subBusinessType].some((v) => (v ?? "").toLowerCase().includes(q)),
+      // label() not `?? ""` — subBusinessType can be an array, which has no
+      // .toLowerCase() and would throw the moment anyone typed in the search box.
+      [b.name, b.city, b.subArea, b.subBusinessType].some((v) => label(v).toLowerCase().includes(q)),
     )
   }, [all, search])
 
@@ -96,7 +123,7 @@ export function BusinessesAdminRedesignedView() {
       key: "type",
       header: "Type",
       render: (b) =>
-        b.subBusinessType ? <StatusPill tone={PILL_TONE}>{cap(b.subBusinessType)}</StatusPill> : <span className="text-muted-foreground">—</span>,
+        label(b.subBusinessType) ? <StatusPill tone={PILL_TONE}>{cap(b.subBusinessType)}</StatusPill> : <span className="text-muted-foreground">—</span>,
     },
     {
       key: "capacity",
@@ -164,7 +191,7 @@ export function BusinessesAdminRedesignedView() {
                 { header: "Business", value: (b) => b.name ?? "" },
                 { header: "City", value: (b) => b.city ?? "" },
                 { header: "Sub area", value: (b) => b.subArea ?? "" },
-                { header: "Type", value: (b) => b.subBusinessType ?? "" },
+                { header: "Type", value: (b) => label(b.subBusinessType) },
                 { header: "Max capacity", value: (b) => num(b.maxCapacity) },
                 { header: "Min capacity", value: (b) => num(b.minCapacity) },
                 { header: "Min price", value: (b) => num(b.minimumPrice) },
@@ -185,7 +212,7 @@ export function BusinessesAdminRedesignedView() {
                 </div>
               </div>
             </div>
-            {b.subBusinessType ? <StatusPill tone={PILL_TONE}>{cap(b.subBusinessType)}</StatusPill> : null}
+            {label(b.subBusinessType) ? <StatusPill tone={PILL_TONE}>{cap(b.subBusinessType)}</StatusPill> : null}
           </div>
         )}
       />
