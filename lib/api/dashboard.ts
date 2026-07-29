@@ -305,6 +305,10 @@ export class BusinessesAPI {
   static async getAll(
     page = 1,
     limit = 20,
+    // Free-text search — the endpoint exposes it as ?q= (business name / city /
+    // area). Passed through so the admin screen can search all 3,272 rather than
+    // filtering whichever page happens to be loaded.
+    q?: string,
   ): Promise<{
     data: ApiBusiness[];
     pagination: {
@@ -314,9 +318,9 @@ export class BusinessesAPI {
       totalPages: number;
     };
   }> {
-    const res = await axiosInstance.get(
-      `/api/v1/businesses?page=${page}&limit=${limit}`,
-    );
+    const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (q) qs.set("q", q);
+    const res = await axiosInstance.get(`/api/v1/businesses?${qs.toString()}`);
     return (
       res.data?.data ?? {
         data: [],

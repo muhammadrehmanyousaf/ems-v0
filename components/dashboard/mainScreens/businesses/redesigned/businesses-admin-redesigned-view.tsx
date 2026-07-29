@@ -74,9 +74,23 @@ export function BusinessesAdminRedesignedView() {
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove business"),
   })
 
+  // Server-side paging. Fetching a flat 100 and printing rows.length reported
+  // "Total businesses 100" against a real 3,272 — same page-1 bug as the Users
+  // and Vendors screens — and left everything past the 100th unreachable.
+  const PAGE_SIZE = 25
+  const [page, setPage] = React.useState(1)
+
+  const [debouncedSearch, setDebouncedSearch] = React.useState("")
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300)
+    return () => clearTimeout(t)
+  }, [search])
+  React.useEffect(() => { setPage(1) }, [debouncedSearch])
+
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["businesses-admin-redesigned"],
-    queryFn: () => BusinessesAPI.getAll(1, 100),
+    queryKey: ["businesses-admin-redesigned", page, debouncedSearch],
+    queryFn: () => BusinessesAPI.getAll(page, PAGE_SIZE, debouncedSearch),
+    placeholderData: (prev) => prev,
   })
 
   // BusinessesAPI.getAll resolves to an object wrapping the rows. Be defensive
@@ -85,16 +99,20 @@ export function BusinessesAdminRedesignedView() {
     (data as { businesses?: ApiBusiness[] } | undefined)?.businesses ??
     (data as { data?: ApiBusiness[] } | undefined)?.data ??
     []
+  const total = data?.pagination?.total ?? 0
+  const totalPages = Math.max(data?.pagination?.totalPages ?? 1, 1)
 
+  // The server already applied `q`; keep the local filter only as a no-op guard
+  // so a stale page never shows rows that don't match what was typed.
   const businesses = React.useMemo(() => {
-    const q = search.trim().toLowerCase()
+    const q = debouncedSearch.toLowerCase()
     if (!q) return all
     return all.filter((b) =>
       // label() not `?? ""` — subBusinessType can be an array, which has no
       // .toLowerCase() and would throw the moment anyone typed in the search box.
       [b.name, b.city, b.subArea, b.subBusinessType].some((v) => label(v).toLowerCase().includes(q)),
     )
-  }, [all, search])
+  }, [all, debouncedSearch])
 
   const cities = new Set(all.map((b) => (b.city ?? "").trim().toLowerCase()).filter(Boolean)).size
   const withPricing = all.filter((b) => num(b.minimumPrice) > 0).length
@@ -155,10 +173,13 @@ export function BusinessesAdminRedesignedView() {
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total businesses" value={all.length} icon="Building2" />
-        <StatCard label="Cities" value={cities} icon="MapPin" />
-        <StatCard label="With pricing" value={withPricing} icon="Wallet" />
-        <StatCard label="Avg capacity" value={avgCapacity} icon="Users" />
+        {/* "Total businesses" is platform-wide from pagination.total. The rest
+            are derived from the loaded page and labelled as such — the endpoint
+            has no aggregate for them. */}
+        <StatCard label="Total businesses" value={total} icon="Building2" />
+        <StatCard label="Cities (this page)" value={cities} icon="MapPin" />
+        <StatCard label="With pricing (this page)" value={withPricing} icon="Wallet" />
+        <StatCard label="Avg capacity (this page)" value={avgCapacity} icon="Users" />
       </div>
 
       <DataTable
@@ -216,6 +237,24 @@ export function BusinessesAdminRedesignedView() {
           </div>
         )}
       />
+
+      {/* Without this, only the first page of 3,272 businesses was reachable. */}
+      {totalPages > 1 && (
+        <nav aria-label="Businesses pagination" className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <p className="text-muted-foreground">
+            Page {page} of {totalPages}
+            <span className="hidden sm:inline"> · {total.toLocaleString()} businesses</span>
+          </p>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1 || isLoading}>
+              <Icon name="ChevronLeft" size={14} className="mr-1" /> Previous
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages || isLoading}>
+              Next <Icon name="ChevronRight" size={14} className="ml-1" />
+            </Button>
+          </div>
+        </nav>
+      )}
 
       <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
         <AlertDialogContent>
