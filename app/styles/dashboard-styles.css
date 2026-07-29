@@ -2,6 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Reserve the vertical scrollbar's track permanently.
+
+   Without this, layout width changes whenever the scrollbar appears or
+   disappears, and everything right-anchored jumps 15px sideways. Measured on
+   live at 1920px: /dashboard/roles is short (no scrollbar) and reports
+   clientWidth 1920, while /dashboard/profile scrolls and reports 1905 — so
+   clicking Profile in the avatar menu shifted the whole header left by 15px.
+   Radix overlays cause the same jump from the other direction, since they lock
+   scrolling with `overflow: hidden` on <body> and never add compensating
+   padding.
+
+   `scrollbar-gutter: stable` keeps the track reserved whether or not the
+   scrollbar is painted, so width is constant across pages AND while any
+   dropdown, dialog, sheet or popover is open. One rule, every case.
+
+   `overflow-y: scroll` is required alongside it: Chrome only honours
+   scrollbar-gutter on an actual scroll container, and <html> defaults to
+   `overflow: visible`. With gutter alone the property computed to `stable` and
+   still reserved nothing (roles 1920 vs profile 1905, unchanged).
+
+   This makes <html> a scroll container, which globals.css warns can break
+   `position: sticky` for descendants — which is why it is scoped to the
+   dashboard tree here rather than added globally, and why the dashboard's
+   sticky header was re-tested after this change. */
+html {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
+/* Fallback for Safari < 18.2, which has no scrollbar-gutter. Radix's
+   react-remove-scroll publishes the width it removed as
+   --removed-body-scroll-bar-size on <body> (measured 15px on live) and marks
+   the body [data-scroll-locked]; it just never applies the padding. Use its
+   own number rather than hardcoding, since scrollbar width varies by OS and
+   zoom. Only covers the overlay case — cross-page drift is unavoidable there. */
+@supports not (scrollbar-gutter: stable) {
+  body[data-scroll-locked] {
+    padding-right: var(--removed-body-scroll-bar-size, 0px);
+  }
+}
+
 /*
  * Dashboard / CRM theme — neutral, professional, zero wedding-magazine vibe.
  *
