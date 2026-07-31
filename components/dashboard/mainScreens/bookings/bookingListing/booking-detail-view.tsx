@@ -42,6 +42,7 @@ import {
   Package,
   Phone,
   Mail,
+  Wallet,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -299,6 +300,17 @@ export default function BookingDetailView({
           >
             {booking.paymentStatus || 'Pending'}
           </Badge>
+          {/* Event financials — costing, expenses and P&L for THIS event.
+              Without an entry point here a vendor has to leave the booking,
+              open the Venue-OS hub and type the booking number in again, three
+              separate times, to answer three questions about the event already
+              on their screen. */}
+          <Button asChild size="sm" variant="outline" className="h-7 gap-1.5 text-xs">
+            <Link href={`/dashboard/bookings/${booking.id}/financials`}>
+              <Wallet className="h-3.5 w-3.5" />
+              Event financials
+            </Link>
+          </Button>
         </div>
       </div>
 

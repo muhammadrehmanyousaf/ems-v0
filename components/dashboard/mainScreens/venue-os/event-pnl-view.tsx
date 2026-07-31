@@ -29,9 +29,18 @@ function Stat({ label, value, tone = "neutral" }: { label: string; value: number
   );
 }
 
-export function EventPnlView(): React.ReactElement | null {
+/**
+ * `lockedBookingId` — when this view is rendered inside a booking's own
+ * financials module the booking is already known, so the picker is a redundant
+ * question. Passing the id locks it and hides the picker. Standalone use
+ * (the Venue-OS hub) passes nothing and keeps the picker.
+ */
+export function EventPnlView({
+  lockedBookingId,
+}: { lockedBookingId?: number } = {}): React.ReactElement | null {
   const activeBusinessId = useActiveBusinessId();
-  const [bookingId, setBookingId] = React.useState<number | null>(null);
+  const [pickedBookingId, setBookingId] = React.useState<number | null>(null);
+  const bookingId = lockedBookingId ?? pickedBookingId;
   const [view, setView] = React.useState<IsDeclared>("MANAGEMENT_ONLY");
 
   const pnl = useQuery({
@@ -51,7 +60,9 @@ export function EventPnlView(): React.ReactElement | null {
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-end gap-3">
-          <BookingPicker value={bookingId} onChange={setBookingId} className="w-64" placeholder="Which function?" />
+          {lockedBookingId == null && (
+            <BookingPicker value={bookingId} onChange={setBookingId} className="w-64" placeholder="Which function?" />
+          )}
           <div className="flex gap-1">
             <Button size="sm" variant={view === "MANAGEMENT_ONLY" ? "default" : "outline"} onClick={() => setView("MANAGEMENT_ONLY")}>
               Management
