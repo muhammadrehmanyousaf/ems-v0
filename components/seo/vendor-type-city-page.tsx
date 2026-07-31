@@ -38,7 +38,6 @@ import {
 import { getVendorTypeRelatedGuides } from "@/lib/seo/related-guides"
 import { getVendorTypeChecklist } from "@/lib/seo/things-to-check"
 import { getVendorTypeEventNotes } from "@/lib/seo/event-notes"
-import { getPreviewVendors } from "@/lib/seo/preview-vendors"
 import { getLocationImagery } from "@/lib/seo/location-imagery"
 import { PremiumVendorCard } from "@/components/seo/location/premium-vendor-card"
 
@@ -185,14 +184,11 @@ export async function VendorTypeCityPage({
     vendorType: backendType,
     limit: 24,
   })
-  // Strip seed/demo vendors so production never shows test data. In local
-  // UI-preview mode (NEXT_PUBLIC_UI_PREVIEW=1) — where the dev box can't reach
-  // the backend — fall back to curated sample vendors so the card grid can be
-  // designed/screenshotted. Production has the flag OFF, so it only ever
-  // renders real vendors.
-  const realVendors = filterRealVendors(fetched)
-  const vendors =
-    realVendors.length > 0 ? realVendors : getPreviewVendors(vt.slug, city.slug)
+  // Strip seed/demo vendors so a live page never shows test data. This used to
+  // fall back to curated sample vendors behind NEXT_PUBLIC_UI_PREVIEW for local
+  // design work; the flag was off in production, so real vendors are the only
+  // thing this has ever rendered live. Flag and sample data both removed.
+  const vendors = filterRealVendors(fetched)
 
   // For pages with zero real listings, we render the page but mark it
   // `noindex,follow` so Google still crawls outbound internal links but
