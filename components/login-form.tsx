@@ -38,6 +38,14 @@ export function LoginForm() {
   // (TWO_FACTOR_REQUIRED), so password-only accounts see no change.
   const [twoFactorRequired, setTwoFactorRequired] = useState(false)
   const [totp, setTotp] = useState("")
+  // WW-LOGINOTP — email sign-in code. Same shape as the 2FA step-up above:
+  // revealed only once the backend asks (EMAIL_OTP_REQUIRED), so nothing changes
+  // for an account that isn't challenged. `emailOtpSentTo` is the masked address
+  // the API returns — showing it prevents the "which inbox?" dead end when a
+  // vendor has three.
+  const [emailOtpRequired, setEmailOtpRequired] = useState(false)
+  const [emailOtp, setEmailOtp] = useState("")
+  const [emailOtpSentTo, setEmailOtpSentTo] = useState<string | null>(null)
   // FEAT_PHONE_OTP — phone sign-in sub-flow. Off by default; only reachable
   // when NEXT_PUBLIC_FEAT_PHONE_OTP is on, so the email form is unaffected.
   const [phoneMode, setPhoneMode] = useState(false)
@@ -122,6 +130,7 @@ export function LoginForm() {
       }
       // Only attach the code once the 2FA step is showing and the user typed one.
       if (twoFactorRequired && totp.trim()) payload.totp = totp.trim()
+      if (emailOtpRequired && emailOtp.trim()) payload.emailOtp = emailOtp.trim()
 
       const response = await axiosInstance.post("/api/v1/auth/login", payload)
 
@@ -161,7 +170,19 @@ export function LoginForm() {
       }
     } catch (error: any) {
       const code = loginErrorCode(error)
-      if (code === "TWO_FACTOR_REQUIRED" || code === "TWO_FACTOR_INVALID") {
+      if (code === "EMAIL_OTP_REQUIRED" || code === "EMAIL_OTP_INVALID") {
+        // Password was accepted; the account just needs the emailed code.
+        // Never a hard "login failed" — that reads as a wrong password and
+        // sends people to the reset flow they don't need.
+        setEmailOtpRequired(true)
+        const sentTo = error?.response?.data?.data?.sentTo
+        if (sentTo) setEmailOtpSentTo(sentTo)
+        if (code === "EMAIL_OTP_INVALID") setEmailOtp("")
+        toast({
+          title: code === "EMAIL_OTP_INVALID" ? "That code isn't right" : "Check your email",
+          description: loginErrorMessage(error),
+        })
+      } else if (code === "TWO_FACTOR_REQUIRED" || code === "TWO_FACTOR_INVALID") {
         // Password was accepted — reveal (or keep) the 2FA step and let them
         // enter the authenticator code. Don't surface it as a hard failure.
         setTwoFactorRequired(true)
@@ -260,6 +281,33 @@ export function LoginForm() {
             {...register("password")}
           />
         </BridalField>
+
+        {emailOtpRequired && (
+          <BridalField id="emailOtp" label="Code from your email" required>
+            <BridalInput
+              id="emailOtp"
+              type="text"
+              inputMode="numeric"
+              // `one-time-code` lets iOS and Android offer the code straight
+              // from the notification — on a phone, which is how most vendors
+              // sign in, it turns this step into a single tap.
+              autoComplete="one-time-code"
+              maxLength={6}
+              placeholder="6-digit code"
+              leadingIcon={<Mail className="w-4 h-4" />}
+              value={emailOtp}
+              onChange={(e) =>
+                setEmailOtp(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))
+              }
+              autoFocus
+            />
+            <p className="font-bridal text-[12px] text-bridal-text-soft mt-1.5">
+              {emailOtpSentTo
+                ? `We sent a 6-digit code to ${emailOtpSentTo}. It expires in 10 minutes.`
+                : "We emailed you a 6-digit code. It expires in 10 minutes."}
+            </p>
+          </BridalField>
+        )}
 
         {twoFactorRequired && (
           <BridalField
