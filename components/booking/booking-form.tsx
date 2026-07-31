@@ -68,6 +68,16 @@ export default function BookingForm() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false)
+  // CJ-010 — the double-booking guard returns a 400 carrying the conflicting
+  // venues AND the slots that ARE free that day. Previously the whole response
+  // was reduced to a transient toast, so a customer who lost the race for a slot
+  // was left on the review step with nothing to act on. Held in state so the
+  // conflict renders inline, persistently, next to the button they just pressed.
+  const [slotConflict, setSlotConflict] = useState<{
+    message: string
+    available: string[]
+    booked: string[]
+  } | null>(null)
   const [paymentReturnBookingId, setPaymentReturnBookingId] = useState<number | null>(null)
   const [paymentReturnType, setPaymentReturnType] = useState<string>("down_payment")
   const [bankTransferData, setBankTransferData] = useState<{ bookingId: number; amount: number; paymentType: string; customerEmail?: string; bookingDate?: string } | null>(null)
@@ -508,6 +518,7 @@ export default function BookingForm() {
 
     try {
       setIsSubmitting(true)
+      setSlotConflict(null)
       const response = await axiosInstance.post(`${BACKEND_URL}api/v1/bookings`, payload)
 
       if (response.status === 201 || response.status === 200) {
@@ -561,11 +572,24 @@ export default function BookingForm() {
         throw new Error("Unexpected response")
       }
     } catch (error: any) {
-      toast({
-        title: "Submission Failed",
-        description: error?.response?.data?.message || "Something went wrong while submitting your booking.",
-        variant: "destructive",
-      })
+      const body = error?.response?.data
+      const alt = body?.data?.alternativeSlots
+      // CJ-010 — a slot conflict is not a generic failure. The backend already
+      // computed which times are still free that day, so surface them inline
+      // instead of discarding them behind a toast the customer cannot act on.
+      if (Array.isArray(alt?.availableSlots) || Array.isArray(alt?.bookedSlots)) {
+        setSlotConflict({
+          message: body?.message || "That time was just taken.",
+          available: Array.isArray(alt?.availableSlots) ? alt.availableSlots : [],
+          booked: Array.isArray(alt?.bookedSlots) ? alt.bookedSlots : [],
+        })
+      } else {
+        toast({
+          title: "Submission Failed",
+          description: body?.message || "Something went wrong while submitting your booking.",
+          variant: "destructive",
+        })
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -869,6 +893,10 @@ export default function BookingForm() {
 
   const handleBack = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
+    // CJ-010 — a conflict is about the slot that was submitted. Once the
+    // customer steps away it is stale; leaving it up would warn about a time
+    // they may have already changed.
+    setSlotConflict(null)
     if (globalStep >= 2) {
       const eventStep = events[activeEventIndex]?.currentStep ?? 0
       if (eventStep > 0) {
@@ -1142,6 +1170,66 @@ export default function BookingForm() {
               >
                 {stepContent}
               </div>
+
+              {/* CJ-010 — slot conflict. Rendered inline, directly above the
+                  action the customer just pressed, and persistent: losing a slot
+                  is a blocking problem, not a transient notification. Lists the
+                  times the backend confirmed are still free so the next step is
+                  obvious rather than a dead end. */}
+              {slotConflict && !isSuccessStep && (
+                <div
+                  role="alert"
+                  aria-live="assertive"
+                  className="border-t border-rose-200 bg-rose-50 px-5 sm:px-7 py-4"
+                >
+                  <p className="text-sm font-semibold text-rose-900">
+                    That time was just booked
+                  </p>
+                  <p className="mt-1 text-sm text-rose-800">{slotConflict.message}</p>
+
+                  {slotConflict.available.length > 0 ? (
+                    <>
+                      <p className="mt-3 text-sm font-medium text-rose-900">
+                        Still free on this date:
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {slotConflict.available.map((slot) => (
+                          <span
+                            key={slot}
+                            className="rounded-full border border-rose-300 bg-white px-3 py-1 text-sm font-medium text-rose-900"
+                          >
+                            {slot}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="mt-3 text-sm text-rose-800">
+                      No other times are free on this date — please choose another day.
+                    </p>
+                  )}
+
+                  <BridalButton
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    className="mt-4"
+                    onClick={() => {
+                      setSlotConflict(null)
+                      const dateStepIndex = eventStepOrder.findIndex((s) => s.key === "datetime")
+                      if (dateStepIndex >= 0) {
+                        setEvents((prev) =>
+                          prev.map((e, idx) =>
+                            idx === activeEventIndex ? { ...e, currentStep: dateStepIndex } : e,
+                          ),
+                        )
+                      }
+                    }}
+                  >
+                    Change date or time
+                  </BridalButton>
+                </div>
+              )}
 
               {/* Footer — Back · Continue, homepage BridalButton language */}
               {!isSuccessStep && (
