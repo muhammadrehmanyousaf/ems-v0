@@ -34,6 +34,10 @@ const fmtDate = (s?: string | null) => {
 const methodLabel = (m: string) =>
   ({ cash: "Cash", jazzcash: "JazzCash", easypaisa: "Easypaisa", raast: "Raast", ibft: "IBFT", bank_transfer: "Bank transfer", other: "Other" } as Record<string, string>)[m] ?? m
 const methodTone = (m: string): StatusTone => (m === "cash" ? "success" : m === "other" ? "neutral" : "info")
+// WW-CUID — who actually paid. A walk-in booking has no registered User, so the
+// receipt's customerUserId is null; the payer's name lives on the booking. Prefer
+// the linked account, fall back to the booking, never show the vendor.
+const payerName = (r: PaymentReceipt) => r.customer?.fullName || r.booking?.customerName || ""
 
 export function ReceiptsRedesignedView() {
   const qc = useQueryClient()
@@ -63,7 +67,7 @@ export function ReceiptsRedesignedView() {
   const receipts = React.useMemo(() => {
     const q = search.trim().toLowerCase()
     if (!q) return all
-    return all.filter((r) => [r.customer?.fullName, r.transactionRef, r.method, r.notes].some((v) => (v ?? "").toLowerCase().includes(q)))
+    return all.filter((r) => [payerName(r), r.transactionRef, r.method, r.notes].some((v) => (v ?? "").toLowerCase().includes(q)))
   }, [all, search])
 
   const total = all.reduce((s, r) => s + num(r.amount), 0)
@@ -79,7 +83,7 @@ export function ReceiptsRedesignedView() {
   const hasRef = all.some((r) => (r.transactionRef ?? "").trim().length > 0)
 
   const columns: Column<PaymentReceipt>[] = [
-    { key: "customer", header: "Customer", render: (r) => <span className="font-medium">{r.customer?.fullName || "—"}</span> },
+    { key: "customer", header: "Customer", render: (r) => <span className="font-medium">{payerName(r) || "—"}</span> },
     { key: "method", header: "Method", render: (r) => <StatusPill tone={methodTone(r.method)} variant="icon">{methodLabel(r.method)}</StatusPill> },
     ...(hasRef ? [{ key: "ref", header: "Txn ref", cellClassName: "text-muted-foreground", render: (r: PaymentReceipt) => r.transactionRef || "—" }] as Column<PaymentReceipt>[] : []),
     { key: "date", header: "Received", cellClassName: "text-muted-foreground", render: (r) => fmtDate(r.receivedDate) },
@@ -141,7 +145,7 @@ export function ReceiptsRedesignedView() {
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
               <ExportMenu selectedIds={selected} getRowId={(r) => String(r.id)} rows={receipts} filename="receipts" columns={[
-                { header: "Customer", value: (r) => r.customer?.fullName ?? "" },
+                { header: "Customer", value: (r) => payerName(r) },
                 { header: "Method", value: (r) => methodLabel(r.method) },
                 { header: "Txn ref", value: (r) => r.transactionRef ?? "" },
                 { header: "Received", value: (r) => fmtDate(r.receivedDate) },
@@ -153,7 +157,7 @@ export function ReceiptsRedesignedView() {
         renderCard={(r) => (
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="truncate font-medium">{r.customer?.fullName || "—"}</div>
+              <div className="truncate font-medium">{payerName(r) || "—"}</div>
               <div className="text-xs text-muted-foreground">{fmtDate(r.receivedDate)} · {r.transactionRef || "no ref"}</div>
               <div className="mt-1"><StatusPill tone={methodTone(r.method)} variant="icon">{methodLabel(r.method)}</StatusPill></div>
             </div>
