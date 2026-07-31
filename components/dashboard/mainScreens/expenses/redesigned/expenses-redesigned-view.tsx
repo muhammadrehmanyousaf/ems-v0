@@ -48,7 +48,14 @@ const fmtDate = (s?: string | null) => {
   return isNaN(d.getTime()) ? s : d.toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })
 }
 
-export function ExpensesRedesignedView() {
+/**
+ * `bookingId` — when this grid is embedded in a booking's Event Financials
+ * module the event is already known, so the list is filtered to that booking
+ * (the backend has always supported `?bookingId=`; nothing here was passing it)
+ * and a newly-recorded expense is pre-tagged to it. Standalone use passes
+ * nothing and shows every expense, exactly as before.
+ */
+export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {}) {
   const qc = useQueryClient()
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
@@ -68,12 +75,20 @@ export function ExpensesRedesignedView() {
   const cfEnabled = activeBusinessId != null
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["expenses-redesigned", activeBusinessId],
-    queryFn: () => ExpensesAPI.list(),
+    // bookingId is part of the key: without it, opening two bookings' financials
+    // in one session would serve the first booking's expenses for the second.
+    queryKey: ["expenses-redesigned", activeBusinessId, bookingId ?? null],
+    queryFn: () => ExpensesAPI.list(bookingId != null ? { bookingId } : {}),
   })
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["expenses-redesigned"] })
-  const openCreate = () => { setEditing(undefined); setPrefill(undefined); setDialogOpen(true) }
+  // Recording an expense from inside an event pre-tags it to that event, so the
+  // vendor never has to remember to attach it — and the Costing tab reflects it.
+  const openCreate = () => {
+    setEditing(undefined)
+    setPrefill(bookingId != null ? ({ bookingId } as ExpensePrefill) : undefined)
+    setDialogOpen(true)
+  }
   const openEdit = (e: VendorExpense) => { setEditing(e); setPrefill(undefined); setDialogOpen(true) }
   // PWA-03 — re-enter a conflicted offline expense with its values seeded.
   const openReenter = (p: ExpensePrefill) => { setEditing(undefined); setPrefill(p); setDialogOpen(true) }

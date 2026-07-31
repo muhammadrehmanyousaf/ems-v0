@@ -31,9 +31,9 @@ import Link from "next/link"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { EventPnlView } from "@/components/dashboard/mainScreens/venue-os/event-pnl-view"
 import { EventCostedPnlView } from "@/components/dashboard/mainScreens/venue-os/event-costed-pnl-view"
+import { ExpensesRedesignedView } from "@/components/dashboard/mainScreens/expenses/redesigned/expenses-redesigned-view"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { Icon } from "@/components/dashboard/shared/icon"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 type TabKey = "pnl" | "costing" | "expenses"
@@ -112,21 +112,7 @@ export function BookingFinancialsView({ bookingId }: { bookingId: number }) {
           event this is, and never triggers a full page load. */}
       {active === "pnl" && <EventPnlView lockedBookingId={bookingId} />}
       {active === "costing" && <EventCostedPnlView lockedBookingId={bookingId} />}
-      {active === "expenses" && (
-        <div className="rounded-lg border border-border p-6">
-          <p className="text-sm font-medium">Expenses for this event</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Every expense tagged to booking #{bookingId}. Record one against this event and it
-            lands in the Costing tab immediately.
-          </p>
-          <Button asChild size="sm" className="mt-4">
-            <Link href={`/dashboard/expenses?bookingId=${bookingId}`}>
-              <Icon name="Plus" size={14} className="mr-1.5" />
-              Open expenses for this event
-            </Link>
-          </Button>
-        </div>
-      )}
+      {active === "expenses" && <ExpensesRedesignedView bookingId={bookingId} />}
     </div>
   )
 }
