@@ -9,12 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { useUser } from "@/context/UserContext";
-import BookingPaymentScreen from "@/components/booking/steps-v2/booking-payment-screen";
 // FEAT_CASH_BOOKING / FEAT_PK_PAYMENTS — when either is on, offer a method
 // chooser (card + cash + JazzCash/Easypaisa). When both are off the card-only
 // screen renders exactly as before.
 import PaymentMethodChooser, { type PaymentOutcome } from "@/components/booking/payment-method-chooser";
-import { CASH_BOOKING_ENABLED, PK_PAYMENTS_ENABLED } from "@/lib/payment-flags";
 
 interface Booking {
   id: number;
@@ -176,12 +174,9 @@ export default function PayBookingPage() {
               },
               onCancel: () => router.push(`/user/bookings/${bookingId}`),
             };
-            // Flags off → the card-only screen renders exactly as before.
-            return CASH_BOOKING_ENABLED || PK_PAYMENTS_ENABLED ? (
-              <PaymentMethodChooser {...paymentProps} />
-            ) : (
-              <BookingPaymentScreen {...paymentProps} />
-            );
+            // Cash is always offered now (FEAT_CASH_BOOKING is on and needs no
+            // third-party credentials), so the chooser always renders.
+            return <PaymentMethodChooser {...paymentProps} />;
           })()}
         </div>
       </div>

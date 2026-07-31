@@ -5,12 +5,12 @@
  * FX payment (PKR from the snapshot rate) and see the by-currency summary; and run a
  * type-discriminated service line (photographer / salon / sound-light …) through its
  * deliverable status — the whole marketplace on the one venue-OS core. The FX section
- * renders on isDiasporaFxOn(), the service-line section on isMultivendorTypesOn().
+ * Both sections always render — ENABLE_DIASPORA_FX and ENABLE_MULTIVENDOR_TYPES
+ * are globally enabled in production.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type FxSummary, type ServiceLine } from "@/lib/api/venueOs";
-import { isDiasporaFxOn, isMultivendorTypesOn } from "@/lib/diaspora-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,8 +22,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function DiasporaVendorView(): React.ReactElement | null {
-  const fxOn = isDiasporaFxOn();
-  const mvOn = isMultivendorTypesOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [currency, setCurrency] = React.useState<string>("USD");
   const [amount, setAmount] = React.useState<string>("");
@@ -45,7 +43,6 @@ export function DiasporaVendorView(): React.ReactElement | null {
     }
   }
 
-  if (!fxOn && !mvOn) return null;
   const bid = Number(businessId);
 
   return (
@@ -58,7 +55,7 @@ export function DiasporaVendorView(): React.ReactElement | null {
           <BusinessScopeField value={businessId} onChange={setBusinessId} />
         </div>
 
-        {fxOn && (
+        {(
           <div className="space-y-2 rounded-md border p-3 text-sm">
             <div className="flex flex-wrap items-end gap-2">
               <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
@@ -80,7 +77,7 @@ export function DiasporaVendorView(): React.ReactElement | null {
           </div>
         )}
 
-        {mvOn && (
+        {(
           <div className="space-y-2 rounded-md border p-3 text-sm">
             <div className="flex flex-wrap items-end gap-2">
               <span className="font-medium">Service lines</span>
