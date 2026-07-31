@@ -4,14 +4,14 @@
  * Venue-OS — Org roll-up table (P1 FE). Consolidates per-business P&L across a
  * workspace/Org off the double-entry GL via /api/v1/venue-os/org/:id/rollup,
  * with the management-vs-tax (is_declared) toggle — the "how is the whole group
- * doing this month" view a single-business dashboard can't give. Gated on
- * isGlEngineOn(); the backend 404s until GL_ENGINE_ON. Additive — no existing
- * screen touched.
+ * doing this month" view a single-business dashboard can't give.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { venueOsApi, type IsDeclared, type OrgRollup, type OrgBusinessPnl } from "@/lib/api/venueOs";
-import { isGlEngineOn } from "@/lib/gl-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -22,7 +22,6 @@ function netClass(n: number): string {
 }
 
 export function OrgRollupView(): React.ReactElement | null {
-  const enabled = isGlEngineOn();
   const [orgInput, setOrgInput] = React.useState<string>("");
   const [orgId, setOrgId] = React.useState<number | null>(null);
   const [view, setView] = React.useState<IsDeclared>("MANAGEMENT_ONLY");
@@ -30,11 +29,10 @@ export function OrgRollupView(): React.ReactElement | null {
   const rollup = useQuery({
     queryKey: ["venueOs", "orgRollup", orgId, view],
     queryFn: () => venueOsApi.orgRollup(orgId as number, view),
-    enabled: enabled && orgId != null,
+    enabled: orgId != null,
     retry: false,
   });
 
-  if (!enabled) return null;
   const d: OrgRollup | undefined = rollup.data;
 
   return (

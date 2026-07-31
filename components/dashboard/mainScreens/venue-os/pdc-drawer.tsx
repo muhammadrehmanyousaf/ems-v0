@@ -3,14 +3,15 @@
 /**
  * Venue-OS — Post-dated cheque (PDC) clearing drawer (P1 FE). Lists cheques due
  * to clear within N days off /api/v1/venue-os/pdc/alerts, flagging overdue ones
- * — the "cheque bounced last week and nobody chased it" gap. Gated on
- * isPaymentLedgerOn(); the backend 404s until PAYMENT_LEDGER_ON. Additive — no
+ * — the "cheque bounced last week and nobody chased it" gap.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  * existing screen touched.
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { venueOsApi, type PdcAlert } from "@/lib/api/venueOs";
-import { isPaymentLedgerOn } from "@/lib/payment-ledger-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,17 +19,14 @@ import { Button } from "@/components/ui/button";
 const PKR = (n: string | number): string => "Rs " + Math.round(Number(n) || 0).toLocaleString("en-PK");
 
 export function PdcDrawer(): React.ReactElement | null {
-  const enabled = isPaymentLedgerOn();
   const [withinDays, setWithinDays] = React.useState<number>(5);
 
   const alerts = useQuery({
     queryKey: ["venueOs", "pdcAlerts", withinDays],
     queryFn: () => venueOsApi.pdcAlerts(undefined, withinDays),
-    enabled,
     retry: false,
   });
 
-  if (!enabled) return null;
   const rows: PdcAlert[] = alerts.data ?? [];
 
   return (

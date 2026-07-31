@@ -5,13 +5,15 @@
  * ranks a venue's bookings by net AFTER each one carries its share of the venue's
  * untagged overhead — the owner's "which weddings actually made money, and which
  * quietly lost it once rent/utilities were counted?" view. Period window is
- * required (overhead is a period concept). Gated on isEventCostingOn(); the
- * backend 404s until EVENT_COSTING_DEPTH_ON. Additive — no existing screen touched.
+ * required (overhead is a period concept). Always rendered — the gating flag was removed once the backend feature
+ * was confirmed GA (global FeatureFlagOverride, owner-authorized 2026-07-11). Additive — no existing screen touched.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type EventMargins } from "@/lib/api/venueOs";
-import { isEventCostingOn } from "@/lib/event-costing-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
@@ -26,7 +28,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function EventMarginsView(): React.ReactElement | null {
-  const enabled = isEventCostingOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [from, setFrom] = React.useState<string>("");
   const [to, setTo] = React.useState<string>("");
@@ -48,7 +49,6 @@ export function EventMarginsView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
   const ready = businessId && from && to;
 
   return (

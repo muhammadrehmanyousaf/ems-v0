@@ -6,13 +6,14 @@
  * Annex-B P&L on real codes with a tax-vs-management toggle (differ only by
  * is_declared), a balanced trial balance, and the §21 cash-disallowance preview
  * (per clause, in rupees, from effective-dated rules — NOT_READY when a rule is
- * unverified, never a guess). Gated on isAccountingDepthOn(); the backend 404s
- * until ACCOUNTING_DEPTH_ON. Additive.
+ * unverified, never a guess).
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type AnnexBReport, type TrialBalance, type Section21Report, type CloseRitualResult } from "@/lib/api/venueOs";
-import { isAccountingDepthOn } from "@/lib/accounting-depth-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +26,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function AccountingDepthView(): React.ReactElement | null {
-  const enabled = isAccountingDepthOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [from, setFrom] = React.useState<string>("");
   const [to, setTo] = React.useState<string>("");
@@ -70,7 +70,6 @@ export function AccountingDepthView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
   const ready = businessId && from && to;
 
   return (
