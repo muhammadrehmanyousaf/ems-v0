@@ -5,13 +5,14 @@
  * booking set (booking# + advance) + a rule (CARRY_FORWARD default / FULL / PARTIAL),
  * Preview (dry-run) shows the planned credits/refunds, then Run issues them. A
  * REFUNDED credit note reverses 236CB/PST; a forfeiture leaves tax standing. The
- * tool NEVER auto-cancels a booking — status stays an owner action. Gated on
- * isForceMajeureBatchOn(); the backend 404s until ENABLE_FORCE_MAJEURE_BATCH.
+ * tool NEVER auto-cancels a booking — status stays an owner action.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type ForceMajeureBatchResult, type ForceMajeureItem } from "@/lib/api/venueOs";
-import { isForceMajeureBatchOn } from "@/lib/force-majeure-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +25,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function ForceMajeureBatchView(): React.ReactElement | null {
-  const enabled = isForceMajeureBatchOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [govtOrderRef, setGovtOrderRef] = React.useState<string>("");
   const [rule, setRule] = React.useState<string>("CARRY_FORWARD");
@@ -57,7 +57,6 @@ export function ForceMajeureBatchView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
   const body = () => ({ businessId: Number(businessId), govtOrderRef: govtOrderRef || undefined, rule, items: parseItems(), reason: govtOrderRef || "force majeure" });
 
   return (

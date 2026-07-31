@@ -18,7 +18,7 @@ import { BACKEND_URL } from "@/lib/backend-url"
 import { toast } from "@/hooks/use-toast"
 import { BridalButton } from "@/components/bridal/bridal-button"
 import { CreditCard, Banknote, Smartphone, Info, Loader2, CheckCircle2 } from "lucide-react"
-import { CASH_BOOKING_ENABLED, PK_PAYMENTS_ENABLED } from "@/lib/payment-flags"
+import { PK_PAYMENTS_ENABLED } from "@/lib/payment-flags"
 import BookingPaymentScreen from "@/components/booking/steps-v2/booking-payment-screen"
 
 type Method = "card" | "cash" | "jazzcash" | "easypaisa"
@@ -54,9 +54,7 @@ export default function PaymentMethodChooser(props: Props) {
 
   const options: Array<{ id: Method; label: string; icon: React.ReactNode }> = [
     { id: "card", label: "Card", icon: <CreditCard className="w-4 h-4" /> },
-    ...(CASH_BOOKING_ENABLED
-      ? [{ id: "cash" as Method, label: "Pay cash / later", icon: <Banknote className="w-4 h-4" /> }]
-      : []),
+    { id: "cash" as Method, label: "Pay cash / later", icon: <Banknote className="w-4 h-4" /> },
     ...(PK_PAYMENTS_ENABLED
       ? [
           { id: "jazzcash" as Method, label: "JazzCash", icon: <Smartphone className="w-4 h-4" /> },

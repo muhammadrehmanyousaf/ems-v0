@@ -7,11 +7,13 @@
  * month bounces). Then the optimiser names the financing-gap month and recommends
  * timing a committee's ROSCA payout into it — the halal, net-to-zero plug. Gated
  * on isWorkingCapitalOn() — the backend 404s until ENABLE_WORKING_CAPITAL.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type PdcSchedule, type PayoutOptimiser } from "@/lib/api/venueOs";
-import { isWorkingCapitalOn } from "@/lib/working-capital-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +25,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function PdcStressOptimiserView(): React.ReactElement | null {
-  const enabled = isWorkingCapitalOn();
   const yr = new Date().getFullYear();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [from, setFrom] = React.useState<string>(`${yr}-10`);
@@ -45,7 +46,6 @@ export function PdcStressOptimiserView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
   const bid = Number(businessId);
 
   return (

@@ -4,13 +4,12 @@
  * Venue-OS P3-G — legal cockpit + ESG. Draft a 489-F case from a bounced cheque,
  * draft a DE-ESCALATING reply to a bad review (a retaliatory/defamatory reply is
  * hard-refused by the backend — ETH-4, no flag), and check a district's ESG rules
- * / banned single-use inputs. The legal section renders on isLegalOn(), the ESG
- * section on isEsgOn(); the backend 404s until ENABLE_LEGAL / ENABLE_ESG.
+ * / banned single-use inputs. Both sections always render — ENABLE_LEGAL and
+ * ENABLE_ESG are globally enabled in production.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi } from "@/lib/api/venueOs";
-import { isLegalOn, isEsgOn } from "@/lib/legal-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,8 +20,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function LegalEsgView(): React.ReactElement | null {
-  const legalOn = isLegalOn();
-  const esgOn = isEsgOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [amount, setAmount] = React.useState<string>("");
   const [reply, setReply] = React.useState<string | null>(null);
@@ -44,7 +41,6 @@ export function LegalEsgView(): React.ReactElement | null {
     }
   }
 
-  if (!legalOn && !esgOn) return null;
 
   return (
     <Card>
@@ -52,7 +48,7 @@ export function LegalEsgView(): React.ReactElement | null {
         <CardTitle>Legal cockpit &amp; ESG</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {legalOn && (
+        {(
           <div className="space-y-2 rounded-md border p-3 text-sm">
             <div className="flex flex-wrap items-end gap-2">
               <BusinessScopeField value={businessId} onChange={setBusinessId} />
@@ -66,7 +62,7 @@ export function LegalEsgView(): React.ReactElement | null {
           </div>
         )}
 
-        {esgOn && (
+        {(
           <div className="space-y-2 rounded-md border p-3 text-sm">
             <div className="flex flex-wrap items-end gap-2">
               <span className="font-medium">ESG check (Punjab)</span>

@@ -6,13 +6,14 @@
  * (SUBMETER→LOAD_HOURS→GUESTS→REVENUE→MANUAL — shown per run), each event's share
  * posts TAGGED to its booking's P&L, and the unallocatable remainder lands in
  * UTIL_GRID_COMMON (untagged overhead). Dry-run previews before posting; a re-run
- * reverses the prior posted run. Gated on isUtilityAllocationOn(); the backend
- * 404s until ENABLE_UTILITY_ALLOCATION. Additive — money posts only via the GL.
+ * reverses the prior posted run.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type UtilityMeter, type AllocationResult } from "@/lib/api/venueOs";
-import { isUtilityAllocationOn } from "@/lib/utility-allocation-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
@@ -25,7 +26,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function UtilityAllocationView(): React.ReactElement | null {
-  const enabled = isUtilityAllocationOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [busy, setBusy] = React.useState<boolean>(false);
   const [err, setErr] = React.useState<string | null>(null);
@@ -54,7 +54,6 @@ export function UtilityAllocationView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
 
   return (
     <Card>

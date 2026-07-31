@@ -4,13 +4,14 @@
  * Venue-OS P3-F — DNFBP AML/CFT readiness card. The AML shield (deposit trail,
  * turnover recon, structuring guard-rail, beneficial ownership) ships in WS4-B/C;
  * this card scores FBR AML readiness (registration, designated officer, CDD
- * threshold, beneficial-ownership register, STR/CTR) and lists the gaps. Gated on
- * isAmlShieldOn() — the backend 404s until ENABLE_AML_SHIELD.
+ * threshold, beneficial-ownership register, STR/CTR) and lists the gaps.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type DnfbpCard } from "@/lib/api/venueOs";
-import { isAmlShieldOn } from "@/lib/aml-shield-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +22,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function DnfbpCardView(): React.ReactElement | null {
-  const enabled = isAmlShieldOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [card, setCard] = React.useState<DnfbpCard | null>(null);
   const [busy, setBusy] = React.useState<boolean>(false);
@@ -39,7 +39,6 @@ export function DnfbpCardView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
   const bid = Number(businessId);
 
   return (

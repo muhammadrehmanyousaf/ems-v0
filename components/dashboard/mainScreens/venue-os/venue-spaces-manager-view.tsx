@@ -4,13 +4,14 @@
  * Venue-OS venue-hierarchy — vendor space tree-manager (Step-12A "Space management"
  * + the registration space-builder share this). Build a Hall → Floor → Partition
  * tree (add child under any node, edit, delete-with-guard), see live capacity
- * warnings, and define sellable merge packages. Gated on isVenueHierarchyOn();
- * the backend 404s until ENABLE_VENUE_HIERARCHY.
+ * warnings, and define sellable merge packages.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueSpacesApi, type SubVenueNode, type MergeGroup, type CapacityWarning } from "@/lib/api/venueSpaces";
-import { isVenueHierarchyOn } from "@/lib/venue-hierarchy-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +32,6 @@ function flatten(nodes: SubVenueNode[] | undefined, acc: SubVenueNode[] = []): S
 }
 
 export function VenueSpacesManagerView(): React.ReactElement | null {
-  const enabled = isVenueHierarchyOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [tree, setTree] = React.useState<SubVenueNode[]>([]);
   const [warnings, setWarnings] = React.useState<CapacityWarning[]>([]);
@@ -73,7 +73,6 @@ export function VenueSpacesManagerView(): React.ReactElement | null {
     setGroups(g.groups);
   }
 
-  if (!enabled) return null;
   const flat = flatten(tree);
 
   return (

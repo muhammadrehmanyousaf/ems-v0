@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dialog"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { bulkImportApi, type ImportPreview } from "@/lib/api/bulkImport"
-import { isBulkImportOn } from "@/lib/bulk-import-flag"
 import { useActiveBusinessStore } from "@/lib/store/active-business-store"
 import { BusinessesAPI } from "@/lib/api/dashboard"
 
@@ -27,7 +26,6 @@ export function ImportButton({
   label?: string
   onDone?: () => void
 }) {
-  const enabled = isBulkImportOn()
   const [open, setOpen] = React.useState(false)
   const [content, setContent] = React.useState("")
   const [preview, setPreview] = React.useState<ImportPreview | null>(null)
@@ -67,7 +65,6 @@ export function ImportButton({
     finally { setBusy(false) }
   }
 
-  if (!enabled) return null
   const title = label || target
 
   return (

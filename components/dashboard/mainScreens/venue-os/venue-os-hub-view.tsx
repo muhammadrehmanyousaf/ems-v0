@@ -4,13 +4,13 @@
  * Venue-OS hub — the single page that surfaces the whole P1 vendor-OS pilot:
  * status + tax calculator, group roll-up, per-event P&L, the live EventNight
  * gauge, the PDC clearing drawer, and the cash-float close. The page is gated by
- * isOrgMembershipOn() (the umbrella flag); each sub-panel additionally self-gates
+ * Always available — the ORG_MEMBERSHIP_ON backend gate is globally enabled in
+ * production. Each sub-panel additionally self-gates
  * on its own feature flag (GL / payment-ledger) and renders nothing until that
  * flag is on, so a partial pilot simply shows fewer panels. Additive — composes
  * existing components, touches no other screen.
  */
 import * as React from "react";
-import { isOrgMembershipOn } from "@/lib/org-membership-flag";
 import { useVenueOsFlags } from "@/lib/venue-os-runtime-flags";
 import { VenueOsInsights } from "./venue-os-insights";
 import { BiCockpitView } from "./bi-cockpit-view";
@@ -116,18 +116,6 @@ export function VenueOsHubView(): React.ReactElement {
     return (
       <div className="rounded-lg border border-dashed p-8 text-center">
         <p className="text-sm text-muted-foreground">Loading your venue-OS workspace…</p>
-      </div>
-    );
-  }
-
-  if (!isOrgMembershipOn()) {
-    return (
-      <div className="rounded-lg border border-dashed p-8 text-center">
-        <p className="text-sm font-medium">Venue-OS is not enabled for this account.</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          The multi-venue workspace, per-event P&amp;L, tax engine and cash controls are part of a pilot. Ask your
-          account manager to switch it on.
-        </p>
       </div>
     );
   }

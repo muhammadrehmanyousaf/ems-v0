@@ -11,7 +11,6 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { venueOsApi, type TaxBreakdown } from "@/lib/api/venueOs";
-import { isOrgMembershipOn } from "@/lib/org-membership-flag";
 import { useActiveBusinessId } from "@/lib/store/active-business-store";
 import { useUser } from "@/context/UserContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +22,6 @@ const JURISDICTIONS = ["PRA", "SRB", "KPRA", "BRA", "ICT"] as const;
 type Jurisdiction = (typeof JURISDICTIONS)[number];
 
 export function VenueOsInsights(): React.ReactElement | null {
-  const enabled = isOrgMembershipOn();
   const { user } = useUser();
   // Scope status + tax to the ACTIVE venue — the flags are per-business overrides,
   // so a global health() call would report the env defaults (all off) and the tax
@@ -32,7 +30,6 @@ export function VenueOsInsights(): React.ReactElement | null {
   const health = useQuery({
     queryKey: ["venueOs", "health", activeBusinessId],
     queryFn: () => venueOsApi.health(activeBusinessId),
-    enabled,
     retry: false,
   });
 
@@ -59,7 +56,6 @@ export function VenueOsInsights(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
 
   return (
     <div className="space-y-4">

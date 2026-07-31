@@ -4,12 +4,14 @@
  * Venue-OS P2 · WS2 — partner cap-table. Add partners (working/silent/investor +
  * share %), see the share total + retained %, and distribute a net profit by share
  * (penny-true). Read-only over the GL — distribution is a report; an actual drawing
- * posts separately. Gated on isCapTableOn(); the backend 404s until ENABLE_CAP_TABLE.
+ * posts separately.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type CapTable, type ProfitDistribution } from "@/lib/api/venueOs";
-import { isCapTableOn } from "@/lib/cap-table-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +24,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function CapTableView(): React.ReactElement | null {
-  const enabled = isCapTableOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [name, setName] = React.useState<string>("");
   const [ptype, setPtype] = React.useState<string>("WORKING");
@@ -45,7 +46,6 @@ export function CapTableView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
   const bid = Number(businessId);
 
   return (

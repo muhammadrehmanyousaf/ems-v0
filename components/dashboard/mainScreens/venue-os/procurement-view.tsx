@@ -5,13 +5,14 @@
  * agreed rate), receive a GRN (accepted qty + actual rate) → the exact rupee
  * shortfall (short-delivery + over-rate) is flagged in Urdu-ready plain numbers,
  * then "accept" posts the accepted NET value to the GL as a SUPPLIER_INVOICE
- * (supplier udhaar) and "settle" pays it down. Gated on isProcurementGrnOn();
- * the backend 404s until PROCUREMENT_GRN_ON. Additive — zero impact when OFF.
+ * (supplier udhaar) and "settle" pays it down.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type PurchaseOrder, type GoodsReceivedNote, type AcceptGrnResult } from "@/lib/api/venueOs";
-import { isProcurementGrnOn } from "@/lib/procurement-grn-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +30,6 @@ function matchBadge(status: string): React.ReactElement {
 }
 
 export function ProcurementView(): React.ReactElement | null {
-  const enabled = isProcurementGrnOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [busy, setBusy] = React.useState<boolean>(false);
   const [err, setErr] = React.useState<string | null>(null);
@@ -62,7 +62,6 @@ export function ProcurementView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
 
   const poLineId = po?.lines?.[0]?.id;
 

@@ -4,13 +4,14 @@
  * Venue-OS P3-D — succession & equity. A Faraid (Islamic inheritance) calculator
  * (spouse / sons / daughters / parents, with Aul + residuary split) and a partner
  * exit valuation off the WS2-depth cap-table (capital + current + goodwill share).
- * The document a family relies on when the malik passes. Gated on isOwnershipOn() —
- * the backend 404s until ENABLE_OWNERSHIP.
+ * The document a family relies on when the malik passes.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type FaraidResult, type ExitValuation } from "@/lib/api/venueOs";
-import { isOwnershipOn } from "@/lib/ownership-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -20,7 +21,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function SuccessionView(): React.ReactElement | null {
-  const enabled = isOwnershipOn();
   const [estate, setEstate] = React.useState<string>("");
   const [husband, setHusband] = React.useState<boolean>(false);
   const [wives, setWives] = React.useState<string>("0");
@@ -48,7 +48,6 @@ export function SuccessionView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
 
   return (
     <Card>

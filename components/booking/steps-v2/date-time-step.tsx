@@ -15,7 +15,6 @@ import { BusinessAvailabilityAPI, type SlotAvailabilityRow } from "@/lib/api/bus
 import { ServiceLocationPicker } from "@/components/booking/service-location-picker"
 // F-2 — canonical sub-venue (venue-hierarchy) picker for the customer flow.
 import { venueSpacesApi, type SubVenueNode } from "@/lib/api/venueSpaces"
-import { isVenueHierarchyOn } from "@/lib/venue-hierarchy-flag"
 
 interface Props {
   formData: BookingFormData
@@ -156,7 +155,7 @@ export default function DateTimeStep({
   // real multi-space tree; otherwise the BusinessResource picker above stands.
   const [subVenueSpaces, setSubVenueSpaces] = useState<Array<{ id: number; name: string; kind: string; depth: number }>>([])
   useEffect(() => {
-    if (!venue?.id || !isVenueHierarchyOn()) return
+    if (!venue?.id) return
     let cancelled = false
     venueSpacesApi.publicTree(Number(venue.id))
       .then((t) => {

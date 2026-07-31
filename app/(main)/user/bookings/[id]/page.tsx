@@ -63,7 +63,6 @@ import { RescheduleBookingDialog } from "@/components/bookings/reschedule-bookin
 import { isCustomerRescheduleOn } from "@/lib/customer-reschedule-flag";
 // EPIC 5 · §3 — customer "Request a refund" (flag-gated, default OFF).
 import { RefundRequestCard } from "@/components/bookings/refund-request-card";
-import { isCustomerRefundRequestOn } from "@/lib/customer-refund-request-flag";
 
 interface BookingDetail {
   id: number;
@@ -862,19 +861,21 @@ export default function BookingDetailPage() {
             isCompleted={statusKey === "completed"}
           />
 
-          {/* EPIC 5 · §3 — customer refund request. Flag-gated OFF by default
-              (the backend endpoint is vendor/admin-scoped today; the card
-              degrades gracefully on a 403/404). Shown only where sensible:
-              an active booking with money paid. */}
-          {isCustomerRefundRequestOn() ? (
-            <RefundRequestCard
-              bookingId={booking.id}
-              canRequest={
-                !["cancelled", "completed"].includes(statusKey) &&
-                ["paid", "partial"].includes(paymentKey)
-              }
-            />
-          ) : null}
+          {/* EPIC 5 · §3 — customer refund request. The old comment here said the
+              endpoint was vendor/admin-scoped; that is out of date. raiseRefundRequest
+              routes a genuine customer on their OWN booking to
+              raiseRefundRequestAsCustomer BEFORE the vendor gate, and
+              DISPUTE_ENGINE_ENABLED is globally enabled in production — so the
+              build-time flag that hid this card has been removed. Raising a request
+              moves NO money: it freezes the calculation for the vendor to decide.
+              Shown only where sensible: an active booking with money paid. */}
+          <RefundRequestCard
+            bookingId={booking.id}
+            canRequest={
+              !["cancelled", "completed"].includes(statusKey) &&
+              ["paid", "partial"].includes(paymentKey)
+            }
+          />
 
           {/* BK-100.7 — inline review prompt. Renders only when the
               booking is Completed. Backend re-enforces the gate so

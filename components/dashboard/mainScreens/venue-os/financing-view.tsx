@@ -4,13 +4,14 @@
  * Venue-OS P3-C — the financing modeller (the referral surface to banks / Meezan /
  * Oraan / Qist Bazaar). Model a committee bridge (0 markup), an Ijarah lease vs a
  * conventional comparator, a Shaadi-Qist BNPL schedule for a customer, and pull the
- * bankable one-pager (season gap + which partner fits). Gated on isFinancingOn() —
- * the backend 404s until ENABLE_FINANCING.
+ * bankable one-pager (season gap + which partner fits).
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type IjarahModel, type BnplPreview, type ReferralPack } from "@/lib/api/venueOs";
-import { isFinancingOn } from "@/lib/financing-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +22,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function FinancingView(): React.ReactElement | null {
-  const enabled = isFinancingOn();
   const [ijarah, setIjarah] = React.useState<IjarahModel | null>(null);
   const [bnpl, setBnpl] = React.useState<BnplPreview | null>(null);
   const [booking, setBooking] = React.useState<string>("");
@@ -42,7 +42,6 @@ export function FinancingView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
 
   return (
     <Card>
