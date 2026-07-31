@@ -63,6 +63,14 @@ interface FetchOptions {
  * (network, 500, schema mismatch) — pages render the editorial shell + an
  * "no vendors yet" placeholder, never a 500.
  */
+/**
+ * Hard ceiling on one listings call. Generous enough for a cold Railway
+ * container to answer, short enough that ~90 city pages cannot serialise into a
+ * build timeout. A page that gives up renders its editorial shell and refreshes
+ * on the next ISR pass an hour later — a far better outcome than a failed deploy.
+ */
+const FETCH_TIMEOUT_MS = 8000
+
 export async function fetchCityVendors(opts: FetchOptions): Promise<VendorListItem[]> {
   if (!opts.vendorType) return [] // no backend mapping (e.g. wedding-planners, wedding-djs)
 
@@ -74,6 +82,20 @@ export async function fetchCityVendors(opts: FetchOptions): Promise<VendorListIt
 
   const url = `${BACKEND_URL}api/v1/businesses?${params.toString()}`
 
+  // A bare fetch() has NO timeout. If the backend is merely slow rather than
+  // down — Railway restarting mid-deploy, a cold container, a hung connection —
+  // this call waits forever, static generation for the page never finishes, and
+  // the whole Vercel build fails with "Static page generation is still timing
+  // out after 3 attempts". One unreachable page takes down a deploy carrying
+  // unrelated work. Observed exactly that on a local build with the backend
+  // stopped (/wedding-venues/farooqabad).
+  //
+  // The catch below already treats "no backend" as "render the editorial shell
+  // with no listings", which is the right answer for a slow backend too — it
+  // just never got the chance to run. An abort signal gives it that chance.
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+
   try {
     const res = await fetch(url, {
       // ISR: refresh from backend at most once per hour. Tweak if vendor
@@ -81,6 +103,7 @@ export async function fetchCityVendors(opts: FetchOptions): Promise<VendorListIt
       // to avoid hammering the backend on busy SEO traffic days.
       next: { revalidate: 3600 },
       headers: { Accept: "application/json" },
+      signal: controller.signal,
     })
     if (!res.ok) return []
     const json = (await res.json()) as { data?: any }
@@ -88,10 +111,12 @@ export async function fetchCityVendors(opts: FetchOptions): Promise<VendorListIt
     const list: any[] = Array.isArray(result) ? result : result?.data ?? []
     return list.map(normalize)
   } catch {
-    // Backend unreachable at build time (e.g. Vercel build can't see local
-    // dev API). Render the editorial shell with no listings — sitemap and
-    // schema still pre-render correctly.
+    // Backend unreachable, too slow, or aborted by the timeout above. Render
+    // the editorial shell with no listings — sitemap and schema still
+    // pre-render correctly, and the build completes.
     return []
+  } finally {
+    clearTimeout(timer)
   }
 }
 
