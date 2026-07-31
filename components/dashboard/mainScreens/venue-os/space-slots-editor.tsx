@@ -4,12 +4,14 @@
  * Venue-OS venue-hierarchy — per-space slot editor (onboarding + portal). Pick a
  * space from the tree, see/define its bookable slots (label + start/end + capacity)
  * or fall back to the business-level slots. This is where a vendor sets "how many
- * slots this hall/partition has". Gated on isVenueHierarchyOn().
+ * slots this hall/partition has".
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueSpacesApi, type SubVenueNode, type SlotTemplate } from "@/lib/api/venueSpaces";
-import { isVenueHierarchyOn } from "@/lib/venue-hierarchy-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +29,6 @@ function flatten(nodes: SubVenueNode[] | undefined, acc: SubVenueNode[] = []): S
 }
 
 export function SpaceSlotsEditor(): React.ReactElement | null {
-  const enabled = isVenueHierarchyOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [nodes, setNodes] = React.useState<SubVenueNode[]>([]);
   const [spaceId, setSpaceId] = React.useState<number | null>(null);
@@ -60,7 +61,6 @@ export function SpaceSlotsEditor(): React.ReactElement | null {
     setSlots(r.slots);
   }
 
-  if (!enabled) return null;
 
   return (
     <Card>

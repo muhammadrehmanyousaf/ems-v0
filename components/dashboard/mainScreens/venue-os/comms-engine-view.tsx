@@ -5,13 +5,15 @@
  * roll-up (answers "no idea what messaging costs"), the venue messaging config
  * (tier, quality chip, budget, sender mask, default language, IVR toggle — IVR
  * gated by COMMS_IVR_ON), and the read-only MessageEvent catalog with each event's
- * channel ladder. Gated on isBspCommsOn(); the backend 404s until ENABLE_BSP_COMMS.
+ * channel ladder.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  * Comms never posts to the GL — cost rides the prepaid wallet. Additive.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type CommsConfig, type CommsCostRollup, type MessageEventRow } from "@/lib/api/venueOs";
-import { isBspCommsOn, isCommsIvrOn } from "@/lib/comms-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,8 +32,6 @@ function QualityChip({ rating }: { rating: string | null }): React.ReactElement 
 }
 
 export function CommsEngineView(): React.ReactElement | null {
-  const enabled = isBspCommsOn();
-  const ivrUi = isCommsIvrOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [busy, setBusy] = React.useState<boolean>(false);
   const [err, setErr] = React.useState<string | null>(null);
@@ -51,7 +51,6 @@ export function CommsEngineView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
   const bid = Number(businessId);
 
   return (
@@ -75,7 +74,7 @@ export function CommsEngineView(): React.ReactElement | null {
             {cfg.messagingTier && <span className="text-muted-foreground">tier {cfg.messagingTier}</span>}
             {cfg.monthlyBudgetPkr && <span className="text-muted-foreground">budget {PKR(cfg.monthlyBudgetPkr)}</span>}
             <span className="text-muted-foreground">lang {cfg.defaultLanguage}</span>
-            {ivrUi && (
+            {(
               <Button size="sm" variant="outline" className="h-7" onClick={() => void guard(async () => setCfg(await venueOsApi.putCommsConfig(bid, { ivrEnabled: !cfg.ivrEnabled })))} disabled={busy}>
                 IVR {cfg.ivrEnabled ? "on" : "off"}
               </Button>

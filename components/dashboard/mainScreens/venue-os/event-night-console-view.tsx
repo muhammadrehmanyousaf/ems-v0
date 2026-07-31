@@ -5,12 +5,13 @@
  * + signature), gold/cash two-person custody intake (the UI surfaces the
  * second-witness requirement), incident logging with a tamper-evident hash-chain
  * (verify button), same-night complaint apology that pre-empts the review, and the
- * 0–100 Clean Night Score. Gated on isEventNightConsoleOn(); the backend 404s until
- * ENABLE_EVENTNIGHT_CONSOLE. The existing P1 headcount gauge is unchanged.
+ * 0–100 Clean Night Score.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { venueOsApi, type ValetTicket, type IncidentResult, type ComplaintResult, type CleanNightScore, type ChainVerification } from "@/lib/api/venueOs";
-import { isEventNightConsoleOn } from "@/lib/eventnight-console-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +21,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function EventNightConsoleView(): React.ReactElement | null {
-  const enabled = isEventNightConsoleOn();
   const [nightId, setNightId] = React.useState<string>("");
   const [busy, setBusy] = React.useState<boolean>(false);
   const [err, setErr] = React.useState<string | null>(null);
@@ -61,7 +61,6 @@ export function EventNightConsoleView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
 
   return (
     <Card>

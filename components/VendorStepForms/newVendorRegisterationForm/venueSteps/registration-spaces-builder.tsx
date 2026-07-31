@@ -10,7 +10,6 @@
  * payload) until enabled, so signup is byte-identical by default.
  */
 import * as React from "react";
-import { isVenueHierarchyOn } from "@/lib/venue-hierarchy-flag";
 
 export const REG_SPACES_KEY = "ww_reg_spaces_tree";
 export interface RegSpaceNode {
@@ -23,7 +22,6 @@ export interface RegSpaceNode {
 }
 
 export function RegistrationSpacesBuilder(): React.ReactElement | null {
-  const enabled = isVenueHierarchyOn();
   const [nodes, setNodes] = React.useState<RegSpaceNode[]>(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -43,7 +41,6 @@ export function RegistrationSpacesBuilder(): React.ReactElement | null {
     if (typeof window !== "undefined") localStorage.setItem(REG_SPACES_KEY, JSON.stringify(nodes));
   }, [nodes]);
 
-  if (!enabled) return null;
 
   const parentOf = (id: number | null): RegSpaceNode | undefined => nodes.find((n) => n.tmpId === id);
   const kindFor = (pid: number | null): string => (pid == null ? "HALL" : parentOf(pid)?.kind === "HALL" ? "FLOOR" : "SECTION");

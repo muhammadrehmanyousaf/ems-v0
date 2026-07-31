@@ -13,7 +13,6 @@
  */
 import * as React from "react";
 import { venueSpacesApi, type DateAvailability } from "@/lib/api/venueSpaces";
-import { isVenueHierarchyOn } from "@/lib/venue-hierarchy-flag";
 
 const PKR = (n: number | string | null | undefined): string => (n == null || n === "" ? "" : "PKR " + Math.round(Number(n)).toLocaleString("en-PK"));
 
@@ -26,7 +25,6 @@ const DOT: Record<string, string> = { AVAILABLE: "bg-emerald-500", PARTIAL: "bg-
 const LABEL: Record<string, string> = { AVAILABLE: "Available", PARTIAL: "Partly available", UNAVAILABLE: "Booked" };
 
 export function VenueSpaceSelector({ businessId, hasMultiSpace }: { businessId: number; hasMultiSpace?: boolean }): React.ReactElement | null {
-  const enabled = isVenueHierarchyOn();
   const [date, setDate] = React.useState<string>("");
   const [avail, setAvail] = React.useState<DateAvailability | null>(null);
   const [picked, setPicked] = React.useState<number[]>([]);
@@ -40,7 +38,7 @@ export function VenueSpaceSelector({ businessId, hasMultiSpace }: { businessId: 
   const [multiSpace, setMultiSpace] = React.useState<boolean | null>(hasMultiSpace ?? null);
 
   React.useEffect(() => {
-    if (!enabled || hasMultiSpace !== undefined) return; // server already decided → skip the call
+    if (hasMultiSpace !== undefined) return; // server already decided → skip the call
     let cancelled = false;
     venueSpacesApi
       .publicTree(businessId)
@@ -55,10 +53,10 @@ export function VenueSpaceSelector({ businessId, hasMultiSpace }: { businessId: 
     return () => {
       cancelled = true;
     };
-  }, [enabled, businessId, hasMultiSpace]);
+  }, [businessId, hasMultiSpace]);
 
   React.useEffect(() => {
-    if (!enabled || !date) return;
+    if (!date) return;
     let cancelled = false;
     setBusy(true);
     venueSpacesApi
@@ -76,9 +74,9 @@ export function VenueSpaceSelector({ businessId, hasMultiSpace }: { businessId: 
     return () => {
       cancelled = true;
     };
-  }, [enabled, businessId, date]);
+  }, [businessId, date]);
 
-  if (!enabled || multiSpace !== true) return null; // hidden until the venue has >1 space
+  if (multiSpace !== true) return null; // hidden until the venue has >1 space
 
   const spaces = avail?.spaces || [];
   const byId = new Map(spaces.map((s) => [s.subVenueId, s]));

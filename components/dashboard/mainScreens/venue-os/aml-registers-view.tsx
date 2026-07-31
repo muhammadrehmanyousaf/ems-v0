@@ -6,12 +6,13 @@
  * entry and only ever says "bank in full"), reconcile a month's declared turnover
  * against what was banked, maintain the beneficial-ownership register (the benami
  * counter), and stamp an immutable Compliance-Shield for the raid-defence pack.
- * Gated on isAmlCockpitOn() — the backend 404s until ENABLE_AML_COCKPIT.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type TurnoverRecon, type BeneficialOwner, type ComplianceShield, type StructuringVerdict } from "@/lib/api/venueOs";
-import { isAmlCockpitOn } from "@/lib/aml-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +24,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function AmlRegistersView(): React.ReactElement | null {
-  const enabled = isAmlCockpitOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [period, setPeriod] = React.useState<string>(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`);
   const [amount, setAmount] = React.useState<string>("");
@@ -46,7 +46,6 @@ export function AmlRegistersView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
   const bid = Number(businessId);
   const monthRange = (): { from: string; to: string } => {
     const [y, m] = period.split("-").map(Number);

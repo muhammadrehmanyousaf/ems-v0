@@ -4,13 +4,14 @@
  * Bulk import panel — paste a CSV/TSV (from Excel "Save as CSV", Google Sheets
  * "Download as CSV", or a copy-paste of a Sheet/Word table), pick the target table,
  * PREVIEW (dry-run: see the detected column mapping + how many rows are OK vs have
- * errors, nothing is written), then COMMIT the valid rows. Gated on isBulkImportOn();
- * the backend 404s until ENABLE_BULK_IMPORT.
+ * errors, nothing is written), then COMMIT the valid rows.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { bulkImportApi, type ImportTarget, type ImportPreview } from "@/lib/api/bulkImport";
-import { isBulkImportOn } from "@/lib/bulk-import-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +22,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function BulkImportView(): React.ReactElement | null {
-  const enabled = isBulkImportOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [targets, setTargets] = React.useState<ImportTarget[]>([]);
   const [target, setTarget] = React.useState<string>("leads");
@@ -33,9 +33,8 @@ export function BulkImportView(): React.ReactElement | null {
   const bid = Number(businessId);
 
   React.useEffect(() => {
-    if (!enabled) return;
     bulkImportApi.targets().then((t) => setTargets(t.targets)).catch(() => undefined);
-  }, [enabled]);
+  }, []);
 
   async function guard(fn: () => Promise<void>): Promise<void> {
     setBusy(true);
@@ -49,7 +48,6 @@ export function BulkImportView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
 
   return (
     <Card>

@@ -10,7 +10,6 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { venueSpacesApi, type SpacePnl } from "@/lib/api/venueSpaces";
 import { useActiveBusinessId } from "@/lib/store/active-business-store";
-import { isVenueHierarchyOn } from "@/lib/venue-hierarchy-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const PKR = (n: number): string => "Rs " + Math.round(Number(n) || 0).toLocaleString("en-PK");
@@ -25,15 +24,14 @@ function Stat({ label, value }: { label: string; value: string }): React.ReactEl
 }
 
 export function SpacePnlView(): React.ReactElement | null {
-  const enabled = isVenueHierarchyOn();
   const businessId = useActiveBusinessId();
   const q = useQuery({
     queryKey: ["spacePnl", businessId],
     queryFn: () => venueSpacesApi.spacePnl(businessId as number),
-    enabled: enabled && businessId != null,
+    enabled: businessId != null,
     retry: false,
   });
-  if (!enabled || businessId == null) return null;
+  if (businessId == null) return null;
   const d: SpacePnl | undefined = q.data;
 
   return (
