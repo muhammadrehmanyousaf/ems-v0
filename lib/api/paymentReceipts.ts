@@ -40,7 +40,9 @@ export interface PaymentReceipt {
   transactionRef: string | null;
   photoUrl: string | null;
   notes: string | null;
-  customerUserId: number;
+  // WW-CUID — null for a walk-in (offline) booking, which has no registered
+  // User behind it. Fall back to `booking.customerName` for display.
+  customerUserId: number | null;
   bookingId: number | null;
   createdByUserId: number;
   createdAt: string;
