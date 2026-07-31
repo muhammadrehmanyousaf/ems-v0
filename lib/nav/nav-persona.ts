@@ -53,6 +53,8 @@ export const NAV_LABELS: Record<string, DualLabel> = {
   Customers: L("Grahak", "Customers"),
   Calendar: L("Khali Tareekhein", "Calendar"),
   Conversations: L("Baat Cheet", "Messages"),
+  // The merged money hub — five old rail entries behind one door.
+  Money: L("Paisa", "Money"),
   Payments: L("Aya Paisa", "Payments"),
   Receivables: L("Baqaya", "Receivables"),
   Receipts: L("Raseed", "Receipts"),

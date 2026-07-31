@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Suspense } from "react"
 import Link from "next/link"
+import { Wallet } from "lucide-react"
 
 import { NavSections, type SettingsSubItem, type NavSection } from "./nav-projects"
 import { NavUser } from "./nav-user"
@@ -138,8 +139,16 @@ function buildVendorSections(
   }))
 
   const sections: NavSection[] = [{ label: "Main", items: main }]
+  // Money — ONE entry, not five. Payments / Receivables / Receipts / Cheque
+  // ledger / Expenses are not five jobs; they are five views of "where is my
+  // money". They are now tabs inside /dashboard/money. Every original route
+  // still exists and still works, so no bookmark or deep link breaks — this
+  // collapses the rail, not the app.
   if (money.length > 0) {
-    sections.push({ label: "Khata", items: money })
+    sections.push({
+      label: "Khata",
+      items: [{ name: "Money", url: "/dashboard/money", icon: Wallet, i18nKey: "nav.money" }],
+    })
   }
   if (operations.length > 0) {
     sections.push({ label: "Operations", items: operations })
