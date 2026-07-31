@@ -5,7 +5,7 @@
  * Quote → Contract → BEO → Invoice → Receipt document, with a lifecycle stepper
  * as the hero. Wired to FunctionSheetAPI (list -> newest -> get for full detail),
  * or a specific id via ?id=. Read-only presentation; original detail view
- * untouched. Route /dashboard/function-sheet-detail-new. Token-only (themes).
+ * untouched. Route /dashboard/function-sheets/[id]. Token-only (themes).
  */
 
 import * as React from "react"
@@ -345,7 +345,7 @@ export function FunctionSheetDetailRedesignedView({ id }: { id?: number } = {}) 
           <Section title="Lifecycle">
             <div className="space-y-2">
               {currentIdx >= 0 && currentIdx < STATE_ORDER.length - 1 ? (
-                <a href={`/dashboard/function-sheet-composer-new?id=${sheet.id}`} className="block">
+                <a href={`/dashboard/function-sheet-composer?id=${sheet.id}`} className="block">
                   <Button className="w-full justify-between">
                     Move to {STATE_LABELS[STATE_ORDER[currentIdx + 1]]} <Icon name="ChevronRight" size={15} />
                   </Button>
@@ -353,7 +353,7 @@ export function FunctionSheetDetailRedesignedView({ id }: { id?: number } = {}) 
               ) : (
                 <div className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">This sheet is {STATE_LABELS[sheet.state].toLowerCase()}.</div>
               )}
-              <a href={`/dashboard/function-sheet-composer-new?id=${sheet.id}`} className="block">
+              <a href={`/dashboard/function-sheet-composer?id=${sheet.id}`} className="block">
                 <Button variant="outline" className="w-full justify-between">Edit sheet <Icon name="Pencil" size={14} /></Button>
               </a>
             </div>

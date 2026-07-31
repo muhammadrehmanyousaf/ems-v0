@@ -28,8 +28,15 @@ function readErr(e: unknown, fallback: string): string {
   return (e as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
 }
 
-export function EventCostedPnlView(): React.ReactElement | null {
-  const [bookingId, setBookingId] = React.useState<string>("");
+/**
+ * `lockedBookingId` — see EventPnlView. Inside a booking's own financials
+ * module the booking is already known, so the picker is a redundant question.
+ */
+export function EventCostedPnlView({
+  lockedBookingId,
+}: { lockedBookingId?: number } = {}): React.ReactElement | null {
+  const [pickedBookingId, setBookingId] = React.useState<string>("");
+  const bookingId = lockedBookingId != null ? String(lockedBookingId) : pickedBookingId;
   // Pre-fill the active venue so the operator only needs to enter a booking #.
   const [businessId, setBusinessId] = useBusinessIdField();
   const [driver, setDriver] = React.useState<Driver>("REVENUE_SHARE");
@@ -62,7 +69,9 @@ export function EventCostedPnlView(): React.ReactElement | null {
         <div className="flex flex-wrap items-end gap-3">
           <label className="text-sm">
             <div className="mb-1">Function</div>
-            <BookingPicker value={bookingId ? Number(bookingId) : null} onChange={(id) => setBookingId(id ? String(id) : "")} className="w-56" placeholder="which function?" />
+            {lockedBookingId == null && (
+              <BookingPicker value={bookingId ? Number(bookingId) : null} onChange={(id) => setBookingId(id ? String(id) : "")} className="w-56" placeholder="which function?" />
+            )}
           </label>
           <BusinessScopeField value={businessId} onChange={setBusinessId} />
           <div className="flex gap-1">

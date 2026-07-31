@@ -75,8 +75,8 @@ const layout = ({ children }: { children: React.ReactNode }) => {
                   </div>
                   {children}
                 </div>
-                {/* Phase-1 mobile bottom-tab nav — renders only on mobile, only
-                    for vendors, only behind NEXT_PUBLIC_NAV_V2 (default OFF). */}
+                {/* Mobile bottom-tab nav — renders on mobile only, vendors only.
+                    Thumb-reach tabs beat a hamburger for a phone-first owner. */}
                 <MobileBottomNav />
               </SidebarInset>
             </SidebarProvider>

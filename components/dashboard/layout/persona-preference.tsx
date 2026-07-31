@@ -4,7 +4,7 @@
  * Phase-1 nav — the persona switch (Aasaan ⇄ Professional).
  *
  * Lets a vendor change the label vocabulary the onboarding "familiarity"
- * question set. Renders only behind NEXT_PUBLIC_NAV_V2 (the new nav), so it
+ * question set. Always rendered, so it
  * doesn't appear until the redesigned navigation is active. Writes to the same
  * persisted store the sidebar / bottom-tabs read (useNavPersona).
  */
@@ -13,7 +13,6 @@ import * as React from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { useNavPersona, type NavPersona } from "@/lib/nav/nav-persona"
 
-const NAV_V2 = process.env.NEXT_PUBLIC_NAV_V2 === "1"
 
 const OPTIONS: { value: NavPersona; title: string; sub: string }[] = [
   { value: "aasaan", title: "Aasaan · آسان", sub: "Roman-Urdu, sirf zaroori cheezein" },
@@ -22,7 +21,6 @@ const OPTIONS: { value: NavPersona; title: string; sub: string }[] = [
 
 export function PersonaPreference() {
   const { persona, setPersona } = useNavPersona()
-  if (!NAV_V2) return null
 
   return (
     <Card>

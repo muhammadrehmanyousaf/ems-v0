@@ -78,10 +78,10 @@ export function useCommands(): AppCommand[] {
       nav("Promote", "/dashboard/promote", "Megaphone", "Grow", "ads boost"),
 
       // Redesigned (batch) — reachable via ⌘K
-      nav("Compose function sheet — editor", "/dashboard/function-sheet-composer-new", "Pencil", "Operate", "edit function sheet line items composer quote invoice"),
-      nav("Trade operations — editor", "/dashboard/function-sheet-operations-new", "ClipboardList", "Operate", "shot list crew deliverables photography operations per-trade BEO"),
-      nav("Trade operations hub — all trades", "/dashboard/trade-ops-new", "ClipboardList", "Operate", "run sheet beo kitchen bridal decor fleet mehndi henna stationery makeup subcontracts operations editor"),
-      nav("Sign contract — e-signature", "/dashboard/function-sheet-sign-new", "Pencil", "Operate", "sign signature contract vendor customer e-sign share link"),
+      nav("Compose function sheet — editor", "/dashboard/function-sheet-composer", "Pencil", "Operate", "edit function sheet line items composer quote invoice"),
+      nav("Trade operations — editor", "/dashboard/function-sheet-operations", "ClipboardList", "Operate", "shot list crew deliverables photography operations per-trade BEO"),
+      nav("Trade operations hub — all trades", "/dashboard/trade-ops", "ClipboardList", "Operate", "run sheet beo kitchen bridal decor fleet mehndi henna stationery makeup subcontracts operations editor"),
+      nav("Sign contract — e-signature", "/dashboard/function-sheet-sign", "Pencil", "Operate", "sign signature contract vendor customer e-sign share link"),
 
       // Admin — redesigned (reachable via ⌘K; need admin role)
 

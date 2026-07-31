@@ -36,7 +36,10 @@ const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 t
 const labelCls = "text-xs font-medium text-muted-foreground"
 
 interface FormState { amount: string; category: ExpenseCategory; vendorName: string; description: string; spentDate: string; paymentMethod: ExpensePaymentMethod; subcategory: string; subVenueId: string; bookingId: string }
-export interface ExpensePrefill { amount?: number; category?: string; paymentMethod?: string; spentDate?: string; note?: string }
+// `bookingId` lets a caller pre-tag the expense to an event — used when this
+// dialog is opened from inside a booking's Event Financials module, so the
+// vendor never has to remember to attach the cost to the event they are in.
+export interface ExpensePrefill { amount?: number; category?: string; paymentMethod?: string; spentDate?: string; note?: string; bookingId?: number }
 const blank = (e?: VendorExpense, prefill?: ExpensePrefill): FormState => ({
   amount: e?.amount != null ? String(e.amount) : prefill?.amount != null ? String(prefill.amount) : "",
   category: (e?.category as ExpenseCategory) ?? (prefill?.category as ExpenseCategory) ?? "supplies",
@@ -46,7 +49,7 @@ const blank = (e?: VendorExpense, prefill?: ExpensePrefill): FormState => ({
   paymentMethod: (e?.paymentMethod as ExpensePaymentMethod) ?? (prefill?.paymentMethod as ExpensePaymentMethod) ?? "cash",
   subcategory: e?.subcategory ?? "",
   subVenueId: e?.subVenueId != null ? String(e.subVenueId) : "",
-  bookingId: e?.bookingId != null ? String(e.bookingId) : "",
+  bookingId: e?.bookingId != null ? String(e.bookingId) : prefill?.bookingId != null ? String(prefill.bookingId) : "",
 })
 
 // Flatten the Hall→Floor→Partition tree into an indented option list.

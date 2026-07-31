@@ -7,7 +7,7 @@
  * the lifecycle via FunctionSheetAPI.transition. Wired to the latest sheet (or
  * ?id=). The server recomputes subtotal/grandTotal from lineItemsJson + discount
  * + tax, so we send those and preview totals locally. Route
- * /dashboard/function-sheet-composer-new. Mutations hit the (dev) API.
+ * /dashboard/function-sheet-composer. Mutations hit the (dev) API.
  */
 
 import * as React from "react"

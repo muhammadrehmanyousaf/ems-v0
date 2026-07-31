@@ -137,7 +137,9 @@ function VendorOverviewRedesignedView() {
         actions={<Button asChild><Link href="/dashboard/bookings"><Icon name="Plus" size={16} className="mr-1.5" /> Add booking</Link></Button>}
       />
 
-      {/* Phase-1 NAV — one-time "are you familiar?" register chooser (self-hides after answer / when NAV_V2 off). */}
+      {/* One-time "are you familiar with software like this?" register chooser.
+          Self-hides once answered; default is Professional, so most vendors
+          never see it. */}
       <FamiliarityPrompt />
 
       {/* Phase-1 EPIC 5 — action-first "Ghar" panel above the KPI tiles (pilot; self-hides on 404). */}

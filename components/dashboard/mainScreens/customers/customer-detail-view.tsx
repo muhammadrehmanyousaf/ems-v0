@@ -22,6 +22,8 @@ import * as React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { ReceiptsAPI, type PaymentReceipt } from '@/lib/api/paymentReceipts';
+import { listMyDisputes, type AdminDisputeRow } from '@/lib/api/disputes';
 import {
   ArrowLeft,
   Loader2,
@@ -38,6 +40,7 @@ import {
   CheckCircle2,
   XCircle,
   Sparkles,
+  Wallet,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -140,6 +143,58 @@ export default function CustomerDetailView({
 
   const params = useMemo(() => parseIdentifier(identifier), [identifier]);
 
+  // Payments received. There is no customer-scoped receipts endpoint — receipts
+  // are keyed by booking or by a registered user id, and a Customer here is
+  // identified by email/phone (many are walk-ins with no account at all). So we
+  // pull the vendor's own receipts once and match them to this customer's
+  // bookings. That is a single request, and a vendor's receipt count is small
+  // (68 across all of production today), so this is cheaper than one call per
+  // booking and needs no backend change.
+  const [receipts, setReceipts] = useState<PaymentReceipt[]>([]);
+  const [receiptsLoading, setReceiptsLoading] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await ReceiptsAPI.list();
+        if (!cancelled) setReceipts(res.receipts ?? []);
+      } catch {
+        // Non-fatal: the rest of the profile must still render.
+        if (!cancelled) setReceipts([]);
+      } finally {
+        if (!cancelled) setReceiptsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Disputes on this vendor's own bookings, scoped server-side. Fetched by
+  // email where we have one; where we don't (walk-in with a phone only) we pull
+  // the vendor's disputes and match on booking below, same as receipts.
+  const [disputes, setDisputes] = useState<AdminDisputeRow[]>([]);
+  const [disputesLoading, setDisputesLoading] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await listMyDisputes(
+          params.email ? { customerEmail: params.email } : {},
+        );
+        if (!cancelled) setDisputes(res.rows ?? []);
+      } catch {
+        // Non-fatal — a customer page must never blank because of a side panel.
+        if (!cancelled) setDisputes([]);
+      } finally {
+        if (!cancelled) setDisputesLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [params.email]);
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -221,6 +276,32 @@ export default function CustomerDetailView({
 
   const { profile, stats, bookings, functionSheets, leads } = data;
   const displayName = profile.name || profile.email || profile.phone || 'Customer';
+
+  // Match receipts to this customer: by one of their bookings, or — for a
+  // receipt logged without a booking — by the linked account's email. Email is
+  // compared case-insensitively because the same person books as Ali@… and
+  // ali@… (WW-077 fixed the same thing in the booking authz path).
+  const bookingIds = new Set(bookings.map((b) => b.id));
+  const profileEmail = (profile.email || '').trim().toLowerCase();
+  const customerReceipts = receipts.filter((r) => {
+    if (r.bookingId != null && bookingIds.has(r.bookingId)) return true;
+    const linked = (r.customer?.email || '').trim().toLowerCase();
+    return !!profileEmail && linked === profileEmail;
+  });
+  const receiptsTotal = customerReceipts.reduce(
+    (sum, r) => sum + (Number(r.amount) || 0),
+    0,
+  );
+
+  // Same matching rule as receipts: this customer's bookings, or the booking's
+  // own email case-insensitively. The server already scoped these to the
+  // vendor, so this only narrows to the customer being viewed.
+  const customerDisputes = disputes.filter((d) => {
+    if (d.bookingId != null && bookingIds.has(d.bookingId)) return true;
+    const bEmail = (d.booking?.customerEmail || '').trim().toLowerCase();
+    return !!profileEmail && bEmail === profileEmail;
+  });
+  const openDisputes = customerDisputes.filter((d) => d.status === 'open').length;
 
   return (
     <div className="space-y-6">
@@ -436,6 +517,150 @@ export default function CustomerDetailView({
 
       {/* ─── Communication timeline ─────────────────────────────── */}
       <CustomerTimeline params={params} />
+
+      {/* ─── Payments received ───────────────────────────────────────
+          The customer page showed bookings, sheets and leads but never the
+          money that actually arrived — a vendor asking "has this family paid
+          me?" had to leave, open Receipts, and search by name. Every row here
+          drills to the booking the payment belongs to. */}
+      <Card>
+        <CardContent className="p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Wallet className="h-4 w-4 text-bridal-gold" />
+              <span className="text-sm font-semibold text-neutral-700">
+                Payments received
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {customerReceipts.length > 0 && (
+                <span className="text-xs font-medium text-neutral-600">
+                  {fmtPKR(receiptsTotal)}
+                </span>
+              )}
+              <Badge variant="outline" className="text-xs">
+                {customerReceipts.length}
+              </Badge>
+            </div>
+          </div>
+          {receiptsLoading ? (
+            <p className="text-xs text-neutral-400">Loading payments…</p>
+          ) : customerReceipts.length === 0 ? (
+            <p className="text-xs text-neutral-400">
+              No payments recorded against this customer&apos;s bookings yet.
+            </p>
+          ) : (
+            <ul className="space-y-1.5">
+              {customerReceipts.map((r) => {
+                const row = (
+                  <>
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-neutral-800 truncate">
+                        {fmtPKR(r.amount)}
+                        <span className="ml-2 text-[11px] font-normal capitalize text-neutral-500">
+                          {String(r.method).replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-neutral-500 mt-0.5">
+                        {fmtDate(r.receivedDate)}
+                        {r.transactionRef ? ` · ${r.transactionRef}` : ''}
+                        {r.bookingId ? ` · Booking #${r.bookingId}` : ''}
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] py-0 shrink-0">
+                      Receipt #{r.id}
+                    </Badge>
+                  </>
+                );
+                // A receipt with no booking has nowhere to drill to — render it
+                // as a plain row rather than a link that goes nowhere.
+                return (
+                  <li key={r.id}>
+                    {r.bookingId ? (
+                      <Link
+                        href={`/dashboard/bookings/${r.bookingId}`}
+                        className="flex items-center justify-between gap-2 rounded-md border border-neutral-100 px-2.5 py-2 hover:bg-neutral-50"
+                      >
+                        {row}
+                      </Link>
+                    ) : (
+                      <div className="flex items-center justify-between gap-2 rounded-md border border-neutral-100 px-2.5 py-2">
+                        {row}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ─── Disputes ────────────────────────────────────────────────
+          Only rendered when there are any. A permanently-empty "Disputes (0)"
+          card on every customer teaches vendors to ignore the section, so the
+          one time it matters they will not see it. */}
+      {!disputesLoading && customerDisputes.length > 0 && (
+        <Card className={cn(openDisputes > 0 && 'border-red-200')}>
+          <CardContent className="p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle
+                  className={cn(
+                    'h-4 w-4',
+                    openDisputes > 0 ? 'text-red-600' : 'text-bridal-gold',
+                  )}
+                />
+                <span className="text-sm font-semibold text-neutral-700">
+                  Disputes
+                </span>
+              </div>
+              <Badge
+                variant="outline"
+                className={cn(
+                  'text-xs',
+                  openDisputes > 0 && 'bg-red-50 text-red-700 border-red-200',
+                )}
+              >
+                {openDisputes > 0
+                  ? `${openDisputes} open`
+                  : `${customerDisputes.length} settled`}
+              </Badge>
+            </div>
+            <ul className="space-y-1.5">
+              {customerDisputes.map((d) => (
+                <li key={d.id}>
+                  <Link
+                    href={`/dashboard/bookings/${d.bookingId}`}
+                    className="flex items-center justify-between gap-2 rounded-md border border-neutral-100 px-2.5 py-2 hover:bg-neutral-50"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-neutral-800 truncate">
+                        {d.reason || `Dispute #${d.id}`}
+                      </div>
+                      <div className="text-[11px] text-neutral-500 mt-0.5">
+                        {fmtDate(d.openedAt)}
+                        {d.bookingId ? ` · Booking #${d.bookingId}` : ''}
+                      </div>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'text-[10px] py-0 capitalize shrink-0',
+                        d.status === 'open'
+                          ? 'bg-red-50 text-red-700 border-red-200'
+                          : 'bg-neutral-100 text-neutral-600 border-neutral-300',
+                      )}
+                    >
+                      {String(d.status).replace(/_/g, ' ')}
+                    </Badge>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ─── Two-column: Function sheets + Leads ─────────────────── */}
       <div className="grid gap-6 lg:grid-cols-2">

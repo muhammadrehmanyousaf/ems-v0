@@ -174,8 +174,8 @@ export function BusinessSettingsHubView() {
         actions={biz.vendor?.vendorType ? <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">{biz.vendor.vendorType}</span> : undefined}
       />
 
-      {/* Label-style switch (Aasaan Roman-Urdu ⇄ Professional English). Renders
-          only behind NEXT_PUBLIC_NAV_V2; sits at the top so it's easy to find. */}
+      {/* Label-style switch (Aasaan Roman-Urdu ⇄ Professional English). Sits at
+          the top so a vendor who wants plainer words can find it immediately. */}
       <PersonaPreference />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">

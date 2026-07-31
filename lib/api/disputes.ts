@@ -50,6 +50,31 @@ export async function listAdminDisputes(params: {
   );
 }
 
+/**
+ * Disputes across the CALLER's own bookings.
+ *
+ * Distinct from listAdminDisputes, which hits the superAdmin-gated platform
+ * queue and returns 403 for a vendor. Scope is enforced server-side by an inner
+ * join on `booking.vendorIds @> [caller]`, so no scoping argument is accepted
+ * or needed here — passing a bookingId narrows within your own bookings, it
+ * cannot reach someone else's.
+ *
+ * No default status filter: a vendor looking at a customer wants the whole
+ * history, settled disputes included.
+ */
+export async function listMyDisputes(params: {
+  status?: "open" | "resolved";
+  bookingId?: number;
+  customerEmail?: string;
+  page?: number;
+  limit?: number;
+} = {}): Promise<AdminDisputeList> {
+  const res = await axiosInstance.get(`/api/v1/bookings/my-disputes`, { params });
+  return (
+    unwrap<AdminDisputeList>(res) ?? { rows: [], count: 0, page: 1, limit: 50 }
+  );
+}
+
 export async function resolveDispute(
   disputeId: number,
   body: { resolution: DisputeResolution; notes?: string },

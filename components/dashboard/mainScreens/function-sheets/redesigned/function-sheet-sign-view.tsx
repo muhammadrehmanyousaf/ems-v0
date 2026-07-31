@@ -9,7 +9,7 @@
  * (issueShareToken → {origin}/sign/{token}). When both sides are signed and the
  * sheet is at contract_pending, "Advance to Signed" runs the transition (the
  * state machine enforces both-signatures-required). Route
- * /dashboard/function-sheet-sign-new. Loads the latest sheet (or ?id=).
+ * /dashboard/function-sheet-sign. Loads the latest sheet (or ?id=).
  */
 
 import * as React from "react"

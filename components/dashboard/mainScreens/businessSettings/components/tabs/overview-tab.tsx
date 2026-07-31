@@ -34,7 +34,7 @@ const OverviewTab = ({ business }: OverviewTabProps) => {
 
     return (
         <div className='space-y-5'>
-            {/* Phase-1 nav — label style switch (only shows behind NAV_V2). */}
+            {/* Label-style switch — Aasaan Roman-Urdu vs Professional English. */}
             <PersonaPreference />
             {/* Status bar */}
             <div className='flex items-center gap-2 flex-wrap'>
