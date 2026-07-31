@@ -6,12 +6,13 @@
  * it was worked for, then post it to the GL as EXPENSE_DIHARI — so the labour
  * becomes a DIRECT cost in that event's P&L (the counterpart to depreciation's
  * indirect overhead). The labour-by-event view sums committed labour per booking.
- * Gated on isWageRegisterOn(); the backend 404s until WAGE_REGISTER_ON. Additive.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type WageRecordResult, type WagePostResult, type LabourByEvent } from "@/lib/api/venueOs";
-import { isWageRegisterOn } from "@/lib/wage-register-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BookingPicker } from "@/components/dashboard/shared/booking-picker";
@@ -25,7 +26,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function WageCostingView(): React.ReactElement | null {
-  const enabled = isWageRegisterOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [eventId, setEventId] = React.useState<string>("");
   const [workerName, setWorkerName] = React.useState<string>("");
@@ -79,7 +79,6 @@ export function WageCostingView(): React.ReactElement | null {
       setByEvent(await venueOsApi.labourByEvent(Number(businessId), { from: from || undefined, to: to || undefined }));
     }, "Could not load labour by event.");
 
-  if (!enabled) return null;
   const ready = businessId && workerName && shiftDate && rate && amount;
 
   return (

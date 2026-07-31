@@ -5,13 +5,14 @@
  * and the slab engine computes the DISCO bill from the effective-dated tariff —
  * block slabs + fixed-per-kVA + surcharge + electricity duty + GST — so the bill
  * the allocation engine apportions is computed, not hand-typed. An unverified
- * tariff is clearly flagged as an estimate (rate-as-data). Gated on
- * isUtilityAllocationOn() — the backend 404s until ENABLE_UTILITY_ALLOCATION.
+ * tariff is clearly flagged as an estimate (rate-as-data).
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type TariffEstimate } from "@/lib/api/venueOs";
-import { isUtilityAllocationOn } from "@/lib/utility-allocation-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +24,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function TariffEstimatorView(): React.ReactElement | null {
-  const enabled = isUtilityAllocationOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [units, setUnits] = React.useState<string>("");
   const [kva, setKva] = React.useState<string>("");
@@ -43,7 +43,6 @@ export function TariffEstimatorView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
   const bid = Number(businessId);
 
   return (

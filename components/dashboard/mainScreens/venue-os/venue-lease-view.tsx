@@ -6,12 +6,14 @@
  * Register the lease, see the remaining commitment, and run the monthly
  * rent + pagri-amortisation accrual — which posts to "Rent & Pagri" and feeds the
  * costing-depth overhead pool (so rent flows into every event's fully-costed
- * P&L). Gated on isVenueLeaseOn(); the backend 404s until VENUE_LEASE_ON. Additive.
+ * P&L).
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type VenueLease, type LeaseScheduleItem, type RentAccrualRun } from "@/lib/api/venueOs";
-import { isVenueLeaseOn } from "@/lib/venue-lease-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +26,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function VenueLeaseView(): React.ReactElement | null {
-  const enabled = isVenueLeaseOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [leases, setLeases] = React.useState<VenueLease[] | null>(null);
   const [schedule, setSchedule] = React.useState<LeaseScheduleItem[] | null>(null);
@@ -84,7 +85,6 @@ export function VenueLeaseView(): React.ReactElement | null {
       setRun(await venueOsApi.runRentAccrual(Number(businessId), { period, dryRun }));
     }, "Could not run the rent accrual.");
 
-  if (!enabled) return null;
   const schedById = new Map((schedule ?? []).map((s) => [s.leaseId, s]));
 
   return (

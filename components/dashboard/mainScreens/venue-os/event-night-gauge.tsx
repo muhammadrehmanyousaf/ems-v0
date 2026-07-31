@@ -4,12 +4,13 @@
  * Venue-OS — EventNight live headcount gauge (P1 FE, SCO-5). Opens a night
  * against a booking's fire-rated safe capacity and updates a live heads-in count
  * via gate ticks; the bar goes green → amber → red and trips an OVER CAPACITY
- * badge past the cap. Gated on isOrgMembershipOn() (the umbrella); the backend
- * 404s until EVENTNIGHT_GAUGE_ON. Additive — no existing screen touched.
+ * badge past the cap.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { venueOsApi, type EventNight, type HeadcountResult } from "@/lib/api/venueOs";
-import { isOrgMembershipOn } from "@/lib/org-membership-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +21,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function EventNightGauge(): React.ReactElement | null {
-  const enabled = isOrgMembershipOn();
   const [bookingId, setBookingId] = React.useState<string>("");
   const [safeCap, setSafeCap] = React.useState<string>("400");
   const [night, setNight] = React.useState<EventNight | null>(null);
@@ -55,7 +55,6 @@ export function EventNightGauge(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
 
   const cap = live?.safeCapacity ?? null;
   const head = live?.liveHeadcount ?? 0;

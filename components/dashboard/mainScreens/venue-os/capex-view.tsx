@@ -4,11 +4,13 @@
  * Venue-OS P3-B — capex / asset-ROI. Enter an asset price + the option costs and get
  * buy-vs-rent-vs-lease over a horizon, the payback clock, the ROI, and the monthly
  * replacement (sinking-fund) reserve — a genset/marquee buy as a decision with
- * numbers. Gated on isCapexOn() — the backend 404s until ENABLE_CAPEX.
+ * numbers.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { venueOsApi, type CapexCompare } from "@/lib/api/venueOs";
-import { isCapexOn } from "@/lib/capex-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +21,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function CapexView(): React.ReactElement | null {
-  const enabled = isCapexOn();
   const [price, setPrice] = React.useState<string>("");
   const [rental, setRental] = React.useState<string>("");
   const [earnings, setEarnings] = React.useState<string>("");
@@ -39,7 +40,6 @@ export function CapexView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
 
   return (
     <Card>

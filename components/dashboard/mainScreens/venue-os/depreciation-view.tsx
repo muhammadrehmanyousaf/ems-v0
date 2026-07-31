@@ -5,13 +5,14 @@
  * assets (generators, crockery, sound gear), then run straight-line monthly
  * depreciation for a period — which posts to the GL and feeds the costing-depth
  * overhead pool so every event carries its share of wear-and-tear. "Preview" is a
- * dry-run; "Post" writes (idempotent per asset+period). Gated on
- * isDepreciationOn(); the backend 404s until DEPRECIATION_ON. Additive.
+ * dry-run; "Post" writes (idempotent per asset+period).
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type FixedAsset, type DepreciationRun } from "@/lib/api/venueOs";
-import { isDepreciationOn } from "@/lib/depreciation-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +26,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function DepreciationView(): React.ReactElement | null {
-  const enabled = isDepreciationOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [assets, setAssets] = React.useState<FixedAsset[] | null>(null);
   const [run, setRun] = React.useState<DepreciationRun | null>(null);
@@ -77,7 +77,6 @@ export function DepreciationView(): React.ReactElement | null {
       setRun(await venueOsApi.runDepreciation(Number(businessId), { period, dryRun }));
     }, "Could not run depreciation.");
 
-  if (!enabled) return null;
 
   return (
     <Card>

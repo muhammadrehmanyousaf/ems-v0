@@ -5,12 +5,14 @@
  * pull a recipe's standard cost/plate (from the BOM × latest ingredient rates), and
  * run a yield-variance check on a production run — fewer plates than the degh should
  * give + ghee over the standard bill get flagged in rupees ("prove your cook is
- * honest"). Gated on isKitchenBomOn() — the backend 404s until ENABLE_KITCHEN_BOM.
+ * honest").
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type RecipeBom, type YieldVariance } from "@/lib/api/venueOs";
-import { isKitchenBomOn } from "@/lib/kitchen-bom-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +24,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function KitchenBomView(): React.ReactElement | null {
-  const enabled = isKitchenBomOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [boms, setBoms] = React.useState<RecipeBom[] | null>(null);
   const [runId, setRunId] = React.useState<string>("");
@@ -42,7 +43,6 @@ export function KitchenBomView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
   const bid = Number(businessId);
 
   return (

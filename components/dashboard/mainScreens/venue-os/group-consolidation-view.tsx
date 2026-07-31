@@ -5,13 +5,14 @@
  * sum (which double-counts internal trade) next to the CONSOLIDATED view that
  * eliminates inter-business revenue against the matching cost — so the owner sees
  * true external revenue/cost and how much of the "group revenue" was really just
- * selling to themselves. Gated on isGroupConsolidationOn(); the backend 404s
- * until GROUP_CONSOLIDATION_ON. Additive — no existing screen touched.
+ * selling to themselves.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { venueOsApi, type IsDeclared, type ConsolidatedRollup } from "@/lib/api/venueOs";
-import { isGroupConsolidationOn } from "@/lib/group-consolidation-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +44,6 @@ function Row({ label, value }: { label: string; value: number }): React.ReactEle
 }
 
 export function GroupConsolidationView(): React.ReactElement | null {
-  const enabled = isGroupConsolidationOn();
   const [orgInput, setOrgInput] = React.useState<string>("");
   const [orgId, setOrgId] = React.useState<number | null>(null);
   const [view, setView] = React.useState<IsDeclared>("MANAGEMENT_ONLY");
@@ -51,11 +51,10 @@ export function GroupConsolidationView(): React.ReactElement | null {
   const q = useQuery({
     queryKey: ["venueOs", "consolidated", orgId, view],
     queryFn: () => venueOsApi.orgConsolidated(orgId as number, view),
-    enabled: enabled && orgId != null,
+    enabled: orgId != null,
     retry: false,
   });
 
-  if (!enabled) return null;
   const d: ConsolidatedRollup | undefined = q.data;
 
   return (

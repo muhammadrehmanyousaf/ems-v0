@@ -4,13 +4,14 @@
  * Venue-OS P3-A — the cross-venue BI cockpit. Per-venue KPIs off the balanced GL
  * (revenue / cost / margin / events / avg value), a same-store league table, a
  * Hijri-aligned YoY (the wedding season drifts ~11 days/year against the Gregorian),
- * and a drilldown into the GL accounts. Gated on isBiCockpitOn() — the backend 404s
- * until ENABLE_BI_COCKPIT.
+ * and a drilldown into the GL accounts.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type KpiBundle, type HijriYoY } from "@/lib/api/venueOs";
-import { isBiCockpitOn } from "@/lib/bi-cockpit-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
@@ -22,7 +23,6 @@ function readErr(e: unknown, fallback: string): string {
 const HIJRI_MONTHS = ["Muharram", "Safar", "Rabi-ul-Awwal", "Rabi-us-Sani", "Jumada-al-Awwal", "Jumada-as-Sani", "Rajab", "Shaban", "Ramadan", "Shawwal", "Zul-Qadah", "Zul-Hijjah"];
 
 export function BiCockpitView(): React.ReactElement | null {
-  const enabled = isBiCockpitOn();
   const yr = new Date().getFullYear();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [from, setFrom] = React.useState<string>(`${yr}-01-01`);
@@ -45,7 +45,6 @@ export function BiCockpitView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
   const bid = Number(businessId);
 
   return (
