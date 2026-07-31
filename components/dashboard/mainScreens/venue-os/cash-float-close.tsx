@@ -4,14 +4,15 @@
  * Venue-OS — Cash-float (galla) close (P1 FE, WS-5). Opens a drawer against a
  * business with an opening float, records collections/deposits through the
  * night, then closes with a counted amount — surfacing the over/short the
- * register hides (expected = opening + collected − deposited). Gated on
- * isPaymentLedgerOn(); the backend 404s until PAYMENT_LEDGER_ON. Additive — no
+ * register hides (expected = opening + collected − deposited).
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  * existing screen touched.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type CashFloat, type CloseFloatResult } from "@/lib/api/venueOs";
-import { isPaymentLedgerOn } from "@/lib/payment-ledger-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +25,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function CashFloatClose(): React.ReactElement | null {
-  const enabled = isPaymentLedgerOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [openingFloat, setOpeningFloat] = React.useState<string>("0");
   const [collected, setCollected] = React.useState<string>("");
@@ -68,7 +68,6 @@ export function CashFloatClose(): React.ReactElement | null {
       setFloat({ ...float, status: "CLOSED" });
     }, "Could not close the drawer.");
 
-  if (!enabled) return null;
 
   const expectedNow = float ? Number(float.openingFloat) + Number(float.collected) - Number(float.deposited) : 0;
 

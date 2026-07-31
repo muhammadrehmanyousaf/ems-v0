@@ -5,13 +5,14 @@
  * Pick a business + period: the §165 view groups every tax collected by section
  * with a deposited/pending split (nil-still-required note); the CA export shows a
  * balanced daybook and downloads the CSV your accountant imports. "File" records
- * an immutable, hash-stamped log for the raid-defence pack. Gated on
- * isAccountingDepthOn() — the backend 404s until ACCOUNTING_DEPTH_ON.
+ * an immutable, hash-stamped log for the raid-defence pack.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type Section165, type CaExport } from "@/lib/api/venueOs";
-import { isAccountingDepthOn } from "@/lib/accounting-depth-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +24,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function ComplianceExportView(): React.ReactElement | null {
-  const enabled = isAccountingDepthOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [from, setFrom] = React.useState<string>(`${new Date().getFullYear()}-07-01`);
   const [to, setTo] = React.useState<string>(`${new Date().getFullYear()}-09-30`);
@@ -45,7 +45,6 @@ export function ComplianceExportView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
   const bid = Number(businessId);
 
   function downloadCsv(): void {

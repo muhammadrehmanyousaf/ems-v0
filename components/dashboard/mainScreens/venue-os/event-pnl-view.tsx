@@ -3,15 +3,16 @@
 /**
  * Venue-OS — Per-event P&L view (P1 FE). Reads the per-event P&L straight off
  * the double-entry GL via /api/v1/venue-os/bookings/:id/pnl, with the
- * management-vs-tax (is_declared) toggle. Gated on isGlEngineOn(); the backend
- * 404s until a pilot Org enables GL_ENGINE_ON. Additive — no existing screen
+ * management-vs-tax (is_declared) toggle.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  * touched.
  */
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { venueOsApi, type IsDeclared, type PerEventPnl } from "@/lib/api/venueOs";
 import { useActiveBusinessId } from "@/lib/store/active-business-store";
-import { isGlEngineOn } from "@/lib/gl-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BookingPicker } from "@/components/dashboard/shared/booking-picker";
@@ -29,7 +30,6 @@ function Stat({ label, value, tone = "neutral" }: { label: string; value: number
 }
 
 export function EventPnlView(): React.ReactElement | null {
-  const enabled = isGlEngineOn();
   const activeBusinessId = useActiveBusinessId();
   const [bookingId, setBookingId] = React.useState<number | null>(null);
   const [view, setView] = React.useState<IsDeclared>("MANAGEMENT_ONLY");
@@ -38,11 +38,10 @@ export function EventPnlView(): React.ReactElement | null {
     queryKey: ["venueOs", "eventPnl", bookingId, view, activeBusinessId],
     // Pass the active venue so the GL_ENGINE_ON gate resolves per-business (else null → 404).
     queryFn: () => venueOsApi.eventPnl(bookingId as number, activeBusinessId ?? undefined, view),
-    enabled: enabled && bookingId != null,
+    enabled: bookingId != null,
     retry: false,
   });
 
-  if (!enabled) return null;
   const d: PerEventPnl | undefined = pnl.data;
 
   return (
