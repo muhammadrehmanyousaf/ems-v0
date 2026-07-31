@@ -8,7 +8,7 @@
  * + deliverablesJson via FunctionSheetAPI.update (both are accepted update
  * fields). The same shape (repeating editable rows → a JSON column → one save)
  * is the template every other trade card (BEO/kitchen/decor/henna/makeup/…)
- * follows. Route /dashboard/function-sheet-operations-new. Loads the latest
+ * follows. Route /dashboard/function-sheet-operations. Loads the latest
  * sheet (or ?id=). Original screens untouched.
  */
 

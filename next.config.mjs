@@ -73,6 +73,39 @@ const nextConfig = {
         destination: "/wedding-stationery",
         permanent: true,
       },
+
+      // The last four "-new" dashboard routes, renamed to real paths.
+      //
+      // 37 others were deleted outright because the canonical route already
+      // rendered the same screen. These four were the ONLY door to a working
+      // screen, so they could not be deleted — but shipping a permanent URL
+      // called "-new" is how a temporary preview name becomes forever.
+      //
+      // Redirected rather than dropped: these are live URLs. Vendors bookmark
+      // the composer, and the sign link gets sent to customers over WhatsApp —
+      // a signature link that 404s costs a signed contract. Query strings are
+      // preserved automatically by Next, which matters because every one of
+      // these is opened as `?id=<sheet>`.
+      {
+        source: "/dashboard/function-sheet-composer-new",
+        destination: "/dashboard/function-sheet-composer",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/function-sheet-operations-new",
+        destination: "/dashboard/function-sheet-operations",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/function-sheet-sign-new",
+        destination: "/dashboard/function-sheet-sign",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/trade-ops-new",
+        destination: "/dashboard/trade-ops",
+        permanent: true,
+      },
     ]
   },
 

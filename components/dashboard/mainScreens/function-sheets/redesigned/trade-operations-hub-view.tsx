@@ -7,7 +7,7 @@
  * function-sheet JSON column = { [section.key]: Row[] }. A trade switcher lets
  * a multi-service vendor edit any trade; the active trade's whole jsonField is
  * saved via FunctionSheetAPI.update (the same proven path as the bespoke
- * Photography editor). Per-trade dirty tracking. Route /dashboard/trade-ops-new
+ * Photography editor). Per-trade dirty tracking. Route /dashboard/trade-ops
  * (optionally ?trade=kitchen&id=6). Loads the latest sheet (or ?id=).
  */
 

@@ -3,7 +3,7 @@
 /**
  * Function sheets — redesigned (Track C). Wired to FunctionSheetAPI.list();
  * rendered through the primitives. Read-only; original screen untouched.
- * Route /dashboard/function-sheets-new.
+ * Route /dashboard/function-sheets.
  */
 
 import * as React from "react"
@@ -111,7 +111,7 @@ export function FunctionSheetsRedesignedView() {
   })
   const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
   const businessId = businesses?.[0]?.id
-  const toComposer = (id: number) => router.push(`/dashboard/function-sheet-composer-new?id=${id}`)
+  const toComposer = (id: number) => router.push(`/dashboard/function-sheet-composer?id=${id}`)
   const removeMut = useMutation({
     mutationFn: (id: number) => FunctionSheetAPI.remove(id),
     onSuccess: () => { showSuccessToast("Function sheet removed"); setDeleting(null); qc.invalidateQueries({ queryKey: ["function-sheets-redesigned"] }) },
