@@ -8,7 +8,7 @@
  * its down-payment separately. This screen gives them ONE experience: the whole
  * wedding's total due + a per-function breakdown, then it walks them through
  * paying each function in sequence by REUSING the exact same Stripe Elements pay
- * component a single booking uses (BookingPaymentScreen / PaymentMethodChooser).
+ * component a single booking uses (PaymentMethodChooser).
  *
  * Correctness note — there is NO combined charge. Each function is paid through
  * its own PaymentIntent and settles via the UNCHANGED per-booking webhook (keyed
@@ -55,11 +55,9 @@ import { eventTypeLabel, fmtPlanDate, fmtPKR } from "@/lib/wedding-plan-events";
 // Reuse the EXACT per-booking pay machinery — the Stripe Elements card screen,
 // plus the cash / JazzCash chooser when those flags are on (same selection the
 // single-booking pay page makes). Never fakes success.
-import BookingPaymentScreen from "@/components/booking/steps-v2/booking-payment-screen";
 import PaymentMethodChooser, {
   type PaymentOutcome,
 } from "@/components/booking/payment-method-chooser";
-import { CASH_BOOKING_ENABLED, PK_PAYMENTS_ENABLED } from "@/lib/payment-flags";
 
 type Resolved = "paid" | "reserved";
 
@@ -337,11 +335,8 @@ export default function PlanPayPage() {
                         ? () => advance(activeBooking.bookingId)
                         : () => router.push(planHref),
                   };
-                  return CASH_BOOKING_ENABLED || PK_PAYMENTS_ENABLED ? (
-                    <PaymentMethodChooser key={activeBooking.bookingId} {...paymentProps} />
-                  ) : (
-                    <BookingPaymentScreen key={activeBooking.bookingId} {...paymentProps} />
-                  );
+                  // Cash is always offered now, so the chooser always renders.
+                  return <PaymentMethodChooser key={activeBooking.bookingId} {...paymentProps} />;
                 })()}
               </SectionCard>
             ) : (

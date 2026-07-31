@@ -4,13 +4,14 @@
  * Venue-OS P2 — Month-end period close. Closing a month locks that business's
  * journal entries and freezes the reported P&L; the engine then rejects any new
  * posting into the closed month (so the books can't be quietly changed after the
- * fact). Reopening unlocks. Gated on isPeriodCloseOn(); the backend 404s until
- * PERIOD_CLOSE_ON. Additive — no existing screen touched.
+ * fact). Reopening unlocks.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type PeriodStatus } from "@/lib/api/venueOs";
-import { isPeriodCloseOn } from "@/lib/period-close-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +24,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function PeriodCloseView(): React.ReactElement | null {
-  const enabled = isPeriodCloseOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [period, setPeriod] = React.useState<string>("");
   const [status, setStatus] = React.useState<PeriodStatus | null>(null);
@@ -57,7 +57,6 @@ export function PeriodCloseView(): React.ReactElement | null {
       setStatus(await venueOsApi.reopenPeriod(Number(businessId), period));
     }, "Could not reopen the period.");
 
-  if (!enabled) return null;
   const ready = businessId && period;
   const closed = status?.status === "CLOSED";
 

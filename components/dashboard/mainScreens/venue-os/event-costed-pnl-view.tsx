@@ -5,12 +5,13 @@
  * costs tagged to the event; this adds the booking's fair share of the venue's
  * untagged period overhead (rent/utilities/admin), spread by a driver
  * (revenue-share / equal). A booking that looks profitable on direct cost can go
- * negative once it carries overhead — that's the number this surfaces. Gated on
- * isEventCostingOn(); the backend 404s until EVENT_COSTING_DEPTH_ON. Additive.
+ * negative once it carries overhead — that's the number this surfaces.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { venueOsApi, type FullyCostedEventPnl } from "@/lib/api/venueOs";
-import { isEventCostingOn } from "@/lib/event-costing-flag";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function EventCostedPnlView(): React.ReactElement | null {
-  const enabled = isEventCostingOn();
   const [bookingId, setBookingId] = React.useState<string>("");
   // Pre-fill the active venue so the operator only needs to enter a booking #.
   const [businessId, setBusinessId] = useBusinessIdField();
@@ -50,7 +50,6 @@ export function EventCostedPnlView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
   const ready = bookingId && businessId;
   const flippedNegative = data != null && data.direct.netProfit >= 0 && data.fullyCostedNet < 0;
 

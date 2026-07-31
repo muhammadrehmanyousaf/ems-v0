@@ -6,13 +6,14 @@
  * projected cash, flagging any month where total due > projected cash in red. The
  * advance-float meter (negative-WC: customer cash funding ops + the refundable
  * portion the owner must NOT spend, read live from MON-6 deposit accounts) sits
- * alongside. Gated on isWorkingCapitalOn(); the backend 404s until
- * ENABLE_WORKING_CAPITAL. Additive — a pure read over the GL + instruments.
+ * alongside.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type LiabilityCalendar, type AdvanceFloat } from "@/lib/api/venueOs";
-import { isWorkingCapitalOn } from "@/lib/working-capital-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +26,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function LiabilityCalendarView(): React.ReactElement | null {
-  const enabled = isWorkingCapitalOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [from, setFrom] = React.useState<string>("");
   const [to, setTo] = React.useState<string>("");
@@ -46,7 +46,6 @@ export function LiabilityCalendarView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
 
   return (
     <Card>

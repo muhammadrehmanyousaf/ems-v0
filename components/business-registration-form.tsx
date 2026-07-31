@@ -7,7 +7,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { formSchema } from "@/lib/formSchema/vendor-schema";
-import { isVenueHierarchyOn } from "@/lib/venue-hierarchy-flag";
 
 import { Checkbox } from "./ui/checkbox";
 import { Label } from "./ui/label";
@@ -821,7 +820,7 @@ export function BusinessRegistrationForm() {
           : {}),
         // venue-hierarchy — the onboarding space tree (only when the flag is on and
         // the vendor built one). Inert for legacy signups (nothing appended).
-        ...(typeof window !== "undefined" && isVenueHierarchyOn()
+        ...(typeof window !== "undefined"
           ? (() => {
               try {
                 const t = JSON.parse(localStorage.getItem("ww_reg_spaces_tree") || "[]");

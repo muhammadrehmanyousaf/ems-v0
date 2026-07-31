@@ -5,12 +5,13 @@
  * which channel (WhatsApp/SMS/IVR) is LIVE vs SANDBOX (a provider swap is an env
  * change, not a code change), and dispatches the QUEUED outbox — flipping messages
  * to SENT through the resolved adapter (sandbox-safe until credentials are wired).
- * Gated on isBspCommsOn() — the backend 404s until ENABLE_BSP_COMMS.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi } from "@/lib/api/venueOs";
-import { isBspCommsOn } from "@/lib/comms-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +22,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function CommsChannelsView(): React.ReactElement | null {
-  const enabled = isBspCommsOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [channels, setChannels] = React.useState<{ channel: string; provider: string; mode: string }[] | null>(null);
   const [run, setRun] = React.useState<{ dispatched: number; sent: number; failed: number } | null>(null);
@@ -40,7 +40,6 @@ export function CommsChannelsView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
 
   return (
     <Card>

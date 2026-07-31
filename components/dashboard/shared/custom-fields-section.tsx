@@ -9,20 +9,18 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CustomFieldsAPI, type CustomFieldDef, type CustomFieldValues } from "@/lib/api/customFields";
-import { useIsCustomFieldsOn } from "@/lib/custom-fields-flag";
 import { cn } from "@/lib/utils";
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2";
 const labelCls = "text-xs font-medium text-muted-foreground";
 
 export function useCustomFieldDefs(entityType: string, businessId: number | null | undefined) {
-  const enabled = useIsCustomFieldsOn();
   return useQuery({
     // includeInactive=false in the key so this active-only read never collides with
     // the field-manager's include-inactive read (same prefix → shared invalidation).
     queryKey: ["customFieldDefs", entityType, businessId, false],
     queryFn: () => CustomFieldsAPI.list(entityType, businessId as number),
-    enabled: enabled && businessId != null,
+    enabled: businessId != null,
     staleTime: 5 * 60_000,
   });
 }
@@ -37,10 +35,9 @@ export function CustomFieldsSection({
   className?: string;
   heading?: string | null;
 }): React.ReactElement | null {
-  const on = useIsCustomFieldsOn();
   const q = useCustomFieldDefs(entityType, businessId);
   const defs = (q.data ?? []).filter((d) => d.isActive).sort((a, b) => a.displayOrder - b.displayOrder);
-  if (!on || businessId == null || defs.length === 0) return null;
+  if (businessId == null || defs.length === 0) return null;
 
   const set = (key: string, v: unknown) => onChange({ ...values, [key]: v });
 

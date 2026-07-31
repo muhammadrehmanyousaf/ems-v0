@@ -5,12 +5,13 @@
  * contracted rate for an item; check GRN lines against it (over-billing is flagged
  * with the exact rupee shortfall); and sweep the deg-rate-card cost of open
  * bookings to catch the ones that went underwater when an ingredient rate moved.
- * Gated on isProcurementGrnOn() — the backend 404s until PROCUREMENT_GRN_ON.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type RateContract, type GrnContractCheck } from "@/lib/api/venueOs";
-import { isProcurementGrnOn } from "@/lib/procurement-grn-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +23,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function RateContractView(): React.ReactElement | null {
-  const enabled = isProcurementGrnOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [item, setItem] = React.useState<string>("");
   const [rate, setRate] = React.useState<string>("");
@@ -46,7 +46,6 @@ export function RateContractView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
   const bid = Number(businessId);
 
   return (

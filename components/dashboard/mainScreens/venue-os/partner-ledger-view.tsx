@@ -7,11 +7,13 @@
  * over-draw flag), record a capital intro / drawing / loan, run the year's profit
  * appropriation, and generate the tamper-evident statement. Read/posts via the
  * GL; gated on isCapTableOn() — the backend 404s until ENABLE_CAP_TABLE.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type CapTable, type PartnerLedger, type PartnerStatement, type ProfitAppropriationRun } from "@/lib/api/venueOs";
-import { isCapTableOn } from "@/lib/cap-table-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +25,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function PartnerLedgerView(): React.ReactElement | null {
-  const enabled = isCapTableOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [table, setTable] = React.useState<CapTable | null>(null);
   const [partnerId, setPartnerId] = React.useState<number | null>(null);
@@ -49,7 +50,6 @@ export function PartnerLedgerView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
   const bid = Number(businessId);
 
   async function loadLedger(pid: number): Promise<void> {

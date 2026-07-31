@@ -4,12 +4,13 @@
  * Venue-OS P2 · WS10-depth — GuestList reconciliation. Add RSVP segments per side,
  * then reconcile against the live gauge: invited vs RSVP vs actual (gauge peak) vs
  * the fire-rated safe cap, with no-show / walk-in counts and the planned-vs-actual
- * catering headcount (the degh-billing truth). Gated on isEventNightConsoleOn() —
- * the backend 404s until ENABLE_EVENTNIGHT_CONSOLE.
+ * catering headcount (the degh-billing truth).
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { venueOsApi, type GuestSegment, type GuestReconcile } from "@/lib/api/venueOs";
-import { isEventNightConsoleOn } from "@/lib/eventnight-console-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +21,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function GuestListView(): React.ReactElement | null {
-  const enabled = isEventNightConsoleOn();
   const [nightId, setNightId] = React.useState<string>("");
   const [side, setSide] = React.useState<string>("BRIDE");
   const [invited, setInvited] = React.useState<string>("");
@@ -43,7 +43,6 @@ export function GuestListView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
   const nid = Number(nightId);
 
   return (

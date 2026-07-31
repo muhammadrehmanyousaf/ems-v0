@@ -5,12 +5,13 @@
  * (rent + pagri + deposit, with escalation) or buy the venue (price +
  * maintenance, less salvage)? Walks both paths over a horizon, shows the
  * break-even month, the discounted (NPV) cost of each, and which is cheaper.
- * Pure analysis — nothing is posted. Gated on isVenueLeaseOn(); the backend 404s
- * until VENUE_LEASE_ON. Additive — no existing screen touched.
+ * Pure analysis — nothing is posted.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { venueOsApi, type OwnVsLeaseResult } from "@/lib/api/venueOs";
-import { isVenueLeaseOn } from "@/lib/venue-lease-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +32,6 @@ function Num({ label, value, set, width = "w-28" }: { label: string; value: stri
 }
 
 export function OwnVsLeaseView(): React.ReactElement | null {
-  const enabled = isVenueLeaseOn();
   const [horizon, setHorizon] = React.useState<string>("120");
   const [discount, setDiscount] = React.useState<string>("12");
   // lease
@@ -68,7 +68,6 @@ export function OwnVsLeaseView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
   const own = result?.recommendation === "OWN";
 
   return (

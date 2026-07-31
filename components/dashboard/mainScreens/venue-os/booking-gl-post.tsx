@@ -5,12 +5,13 @@
  * for a booking-money event off the seeded LedgerMapping templates, with a
  * management-vs-tax (is_declared) flag and a cash/accrual basis. "Preview" is a
  * dry-run (nothing written) that shows the DR/CR lines; "Post" writes and is
- * idempotent per (event, booking) so a double-click is a safe no-op. Gated on
- * isGlEngineOn(); the backend 404s until GL_ENGINE_ON. Additive.
+ * idempotent per (event, booking) so a double-click is a safe no-op.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { venueOsApi, type IsDeclared, type GlPostResult } from "@/lib/api/venueOs";
-import { isGlEngineOn } from "@/lib/gl-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +35,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function BookingGlPost(): React.ReactElement | null {
-  const enabled = isGlEngineOn();
   const [bookingId, setBookingId] = React.useState<string>("");
   const [eventType, setEventType] = React.useState<string>(EVENT_TYPES[0].value);
   const [amount, setAmount] = React.useState<string>("");
@@ -66,7 +66,6 @@ export function BookingGlPost(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
   const ready = bookingId && amount && Number(amount) > 0;
   const lines = result?.journalEntry?.lines ?? [];
   const totalDr = lines.reduce((s, l) => s + Number(l.debit || 0), 0);

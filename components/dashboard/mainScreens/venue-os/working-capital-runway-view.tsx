@@ -7,11 +7,13 @@
  * (BC + Ijarah + customer-advance + udhaar; conventional bank RF shown only as a
  * flagged comparator). Self-gates on isWorkingCapitalRunwayOn() (the runway needs
  * ≥1 season of history); the backend 404s until WORKING_CAPITAL_RUNWAY_ON.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type RunwayPlan } from "@/lib/api/venueOs";
-import { isWorkingCapitalRunwayOn } from "@/lib/working-capital-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +26,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function WorkingCapitalRunwayView(): React.ReactElement | null {
-  const enabled = isWorkingCapitalRunwayOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [seasonYear, setSeasonYear] = React.useState<string>("");
   const [openingCash, setOpeningCash] = React.useState<string>("0");
@@ -44,7 +45,6 @@ export function WorkingCapitalRunwayView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
 
   return (
     <Card>

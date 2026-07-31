@@ -6,12 +6,14 @@
  * colour-coded from the tree-aware engine: booked (solid), partly-available (a
  * descendant is booked so the whole node can't be sold), free (empty). Booking a
  * parent shows every space under it as unavailable that day — the nested-calendar
- * correctness the doc calls out. Gated on isVenueHierarchyOn().
+ * correctness the doc calls out.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueSpacesApi, type AvailabilityGrid } from "@/lib/api/venueSpaces";
-import { isVenueHierarchyOn } from "@/lib/venue-hierarchy-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
@@ -26,7 +28,6 @@ function monthBounds(ym: string): { from: string; to: string } {
 }
 
 export function SpaceCalendarView(): React.ReactElement | null {
-  const enabled = isVenueHierarchyOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [month, setMonth] = React.useState<string>("");
   const [grid, setGrid] = React.useState<AvailabilityGrid | null>(null);
@@ -46,7 +47,6 @@ export function SpaceCalendarView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
 
   return (
     <Card>

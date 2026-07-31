@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/sidebar"
 import { data } from "./nav-data"
 import { useUser } from "@/context/UserContext"
-import { isOrgMembershipOn } from "@/lib/org-membership-flag"
 import { isQuoteNegotiationEnabled } from "@/lib/quote-negotiation"
 import { useVenueOsFlags } from "@/lib/venue-os-runtime-flags"
 import { useBusiness } from "@/context/BusinessContext"
@@ -166,13 +165,11 @@ function buildVendorSections(
   if (growItems.length > 0) {
     sections.push({ label: "Grow", items: growItems })
   }
-  // Venue-OS (multi-venue vendor-OS spine) — pilot surface. Shows when the global
-  // flag is on OR the active venue has a per-business override (runtime store,
-  // populated by useVenueOsFlags in AppSidebar). Byte-for-byte unchanged for
-  // vendors without the override.
-  if (isOrgMembershipOn()) {
-    sections.push({ label: "Venue-OS", items: data.vendorVenueOs })
-  }
+  // Venue-OS (multi-venue vendor-OS spine). Always in the sidebar: the backend
+  // ORG_MEMBERSHIP_ON gate is globally enabled in production (FeatureFlagOverride,
+  // owner-authorized 2026-07-11), and hiding the section was the reason none of
+  // the venue finance surfaces were reachable from the navigation.
+  sections.push({ label: "Venue-OS", items: data.vendorVenueOs })
   sections.push({
     label: "My Business",
     items: data.vendorMyBusiness,

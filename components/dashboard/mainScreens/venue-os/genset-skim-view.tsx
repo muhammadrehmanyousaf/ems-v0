@@ -5,13 +5,14 @@
  * (tank-dip consumption vs hour-meter run-hours × rated L/hr) → a skim_percent +
  * 3 flags. The calibration banner shows the seed band with a bold "Estimate, not
  * measured" chip until N≥5 clean events, then flips to "Now measured from YOUR
- * logs". Skim is MEASUREMENT — it never posts a journal entry. Gated on
- * isGensetSkimOn(); the backend 404s until ENABLE_GENSET_SKIM. Additive.
+ * logs". Skim is MEASUREMENT — it never posts a journal entry.
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type GensetReconResult, type GensetSkimSummary } from "@/lib/api/venueOs";
-import { isGensetSkimOn } from "@/lib/genset-skim-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BookingPicker } from "@/components/dashboard/shared/booking-picker";
@@ -49,7 +50,6 @@ function FlagChips({ flags }: { flags?: Partial<{ skimOverBand: boolean; runHour
 }
 
 export function GensetSkimView(): React.ReactElement | null {
-  const enabled = isGensetSkimOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [generator, setGenerator] = React.useState<string>("Main");
   const [bookingId, setBookingId] = React.useState<string>("");
@@ -71,7 +71,6 @@ export function GensetSkimView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
 
   return (
     <Card>

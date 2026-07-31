@@ -22,7 +22,6 @@ import type { Metadata } from "next"
 import { notFound, redirect, permanentRedirect } from "next/navigation"
 import { VenueSpaceSelector } from "@/components/booking/venue-space-selector"
 import { fetchVendorHasMultiSpace } from "@/lib/seo/fetch-vendor"
-import { isVenueHierarchyOn } from "@/lib/venue-hierarchy-flag"
 import { isSeoInquiryDialogOn } from "@/lib/seo-inquiry-dialog-flag"
 import VendorInquiryCta from "@/components/seo/vendor-inquiry-cta"
 import {
@@ -224,7 +223,7 @@ export async function VendorDetailPage(input: PageInput) {
 
   // Decide server-side (ISR-cached 1h) whether to surface the space selector, and
   // only make the call at all when the feature is on — zero per-visitor cost.
-  const hasMultiSpace = isVenueHierarchyOn() ? await fetchVendorHasMultiSpace(Number(vendor.id)) : false
+  const hasMultiSpace = await fetchVendorHasMultiSpace(Number(vendor.id))
 
   return (
     <>

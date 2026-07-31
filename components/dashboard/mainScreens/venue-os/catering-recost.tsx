@@ -4,12 +4,13 @@
  * Venue-OS — Catering deg-rate-card re-cost (P1 FE, WS-3). Computes a defensible
  * per-head food cost from the selected deg-rate-cards at the LATEST ingredient
  * rates, and — given a quoted price/head — flags an underwater booking ("chicken
- * +Rs90/kg, this booking now loses money"). Gated on isCateringDegcardOn(); the
- * backend 404s until CATERING_DEGCARD_ON. Additive — no existing screen touched.
+ * +Rs90/kg, this booking now loses money").
+ * Renders unconditionally. The NEXT_PUBLIC_* gate was removed once the backend
+ * feature was confirmed GA in production — a global FeatureFlagOverride row,
+ * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
 import { venueOsApi, type MenuRecost } from "@/lib/api/venueOs";
-import { isCateringDegcardOn } from "@/lib/catering-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +22,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function CateringRecost(): React.ReactElement | null {
-  const enabled = isCateringDegcardOn();
   const [cardIds, setCardIds] = React.useState<string>("");
   const [quoted, setQuoted] = React.useState<string>("");
   const [result, setResult] = React.useState<MenuRecost | null>(null);
@@ -50,7 +50,6 @@ export function CateringRecost(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
   const alert = result?.alert ?? null;
 
   return (
