@@ -16,7 +16,7 @@
  * still switchable in Settings and re-enabling the question is a one-line
  * change to that default.
  *
- * Gated on the persisted `asked` flag, on NEXT_PUBLIC_NAV_V2, and on the store
+ * Gated on the persisted `asked` flag and on the store
  * having hydrated (so it never flashes then vanishes).
  */
 import { useEffect, useState } from "react";
@@ -25,7 +25,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavPersona } from "@/lib/nav/nav-persona";
 
-const NAV_V2 = process.env.NEXT_PUBLIC_NAV_V2 === "1";
 
 export function FamiliarityPrompt() {
   const { asked, setFromFamiliarity, dismissAsk } = useNavPersona();
@@ -38,7 +37,7 @@ export function FamiliarityPrompt() {
     setHydrated(true);
   }, []);
 
-  if (!NAV_V2 || !hydrated || asked) return null;
+  if (!hydrated || asked) return null;
 
   return (
     <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">

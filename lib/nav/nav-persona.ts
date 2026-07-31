@@ -9,10 +9,9 @@
  * Switchable anytime in Settings.
  *
  * This module is the single source of truth for that choice and for the
- * bilingual label of every nav destination. It is ADDITIVE and imports nothing
- * from the render tree — the live sidebar keeps its current labels until a
- * screen opts in (behind NEXT_PUBLIC_NAV_V2). Nothing here changes production
- * behaviour on its own.
+ * bilingual label of every nav destination. It imports nothing from the render
+ * tree, and it never renames a route — only the words a vendor reads. An item
+ * with no entry in NAV_LABELS simply keeps the label it already had.
  */
 
 import { create } from "zustand"
@@ -74,7 +73,7 @@ export const NAV_LABELS: Record<string, DualLabel> = {
   "Business Settings": L("Business Settings", "Business Settings"),
   "Venue-OS": L("Meri Venues", "Venues"),
 
-  // ── Existing sidebar group headings (so NAV_V2 can restyle them too) ────
+  // ── Existing sidebar group headings ─────────────────────────────────────
   Main: L("Aaj", "Overview"),
   Khata: L("Paisa", "Money"),
   Operations: L("Kaam", "Operations"),

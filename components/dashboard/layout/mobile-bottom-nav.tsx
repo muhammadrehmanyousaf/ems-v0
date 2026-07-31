@@ -8,9 +8,8 @@
  * winning shape is a 4–5 item thumb-reach BOTTOM TAB BAR + a "More" drawer — not
  * a hamburger sidebar. "If you can use WhatsApp, you can use this."
  *
- * Shown only on mobile (`md:hidden`), only for vendors, and only behind
- * NEXT_PUBLIC_NAV_V2 (default OFF ⇒ production is completely unaffected). Labels
- * follow the Aasaan/Professional persona.
+ * Shown on mobile only (`md:hidden`), and only for vendors. Labels follow the
+ * Aasaan/Professional persona.
  */
 
 import * as React from "react"
@@ -28,7 +27,6 @@ import { useUser } from "@/context/UserContext"
 import { getDashboardRole } from "@/lib/dashboard-role"
 import { useNavPersona, type NavPersona } from "@/lib/nav/nav-persona"
 
-const NAV_V2 = process.env.NEXT_PUBLIC_NAV_V2 === "1"
 
 type Tab = {
   key: string
@@ -68,7 +66,6 @@ export function MobileBottomNav() {
   const { persona } = useNavPersona()
   const [open, setOpen] = React.useState(false)
 
-  if (!NAV_V2) return null
   if (getDashboardRole(user) !== "vendor") return null
 
   const isActive = (href: string) =>
