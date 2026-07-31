@@ -54,6 +54,7 @@ import WhatsAppQuickSend from '@/components/dashboard/shared/whatsapp-quick-send
 import { cn } from '@/lib/utils';
 
 import { BookingAPI } from '@/lib/api/bookings';
+import { PaymentAPI } from '@/lib/api/payments';
 import { FunctionSheetAPI, type FunctionSheet } from '@/lib/api/functionSheets';
 import {
   LeadAPI,
@@ -67,6 +68,7 @@ import { OrderBuilderCard } from '@/components/bookings/order-builder-card';
 import { BeoSheetCard } from '@/components/bookings/beo-sheet-card';
 import { EventPnlCard } from '@/components/bookings/event-pnl-card';
 import { RefundPreviewCard } from '@/components/bookings/refund-preview-card';
+import { CashRefundOwedCard, type CashRefundOwed } from '@/components/bookings/cash-refund-owed-card';
 import { CancellationActionsCard } from '@/components/bookings/cancellation-actions-card';
 import { PaisaReconcileCard } from '@/components/bookings/paisa-reconcile-card';
 import { VendorChangeRequestsCard } from '@/components/bookings/vendor-change-requests-card';
@@ -132,6 +134,20 @@ export default function BookingDetailView({
 }) {
   const router = useRouter();
   const [booking, setBooking] = useState<BookingData | null>(null);
+
+  // WW-CASHREFUND — outstanding refunds this vendor owes on THIS booking.
+  // Kept separate from the main load so a backend that predates the endpoint
+  // (or any failure here) can never stop the booking itself from rendering.
+  const [cashRefundsOwed, setCashRefundsOwed] = useState<CashRefundOwed[]>([]);
+  const refreshCashRefunds = React.useCallback(() => {
+    if (!Number.isFinite(bookingId)) return;
+    PaymentAPI.getBookingPaymentStatus(bookingId)
+      .then((s) => setCashRefundsOwed(s?.cashRefundsOwed ?? []))
+      .catch(() => setCashRefundsOwed([]));
+  }, [bookingId]);
+  useEffect(() => {
+    refreshCashRefunds();
+  }, [refreshCashRefunds]);
   const [sheets, setSheets] = useState<FunctionSheet[]>([]);
   const [sourceLead, setSourceLead] = useState<Lead | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -660,6 +676,18 @@ export default function BookingDetailView({
           {/* EPIC 5 — cancellation/refund actions + court-exposure (self-hides on 404). */}
           {process.env.NEXT_PUBLIC_ORDER_BUILDER === '1' && (
             <CancellationActionsCard bookingId={booking.id} />
+          )}
+
+          {/* WW-CASHREFUND — money the vendor owes this customer back and has
+              not yet handed over. Deliberately NOT behind ORDER_BUILDER like the
+              cards above: this is an outstanding debt, not an optional analysis
+              surface, and it self-hides when nothing is owed. Sits above
+              Installments so a debt outranks a schedule. */}
+          {cashRefundsOwed.length > 0 && (
+            <CashRefundOwedCard
+              refunds={cashRefundsOwed}
+              onSettled={refreshCashRefunds}
+            />
           )}
 
           {/* Installments (BK-042) */}

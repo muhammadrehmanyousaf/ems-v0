@@ -132,6 +132,15 @@ export class PaymentAPI {
     totalAmount: number;
     paidAmount: number;
     remainingAmount: number;
+    // WW-CASHREFUND — money the VENDOR owes the customer back and has not yet
+    // handed over. Absent on an older backend, hence optional.
+    cashRefundOwedTotal?: number;
+    cashRefundsOwed?: Array<{
+      id: number;
+      amount: number;
+      reason: string | null;
+      owedSince: string;
+    }>;
   }> {
     try {
       const response = await axiosInstance.get(`${BACKEND_URL}api/v1/payments/booking-status/${bookingId}`);
@@ -139,6 +148,18 @@ export class PaymentAPI {
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to fetch booking payment status');
     }
+  }
+
+  /**
+   * WW-CASHREFUND — mark a cash refund the vendor owed as handed over.
+   * Idempotent server-side, so a double-tap is safe.
+   */
+  static async settleCashRefund(refundId: number): Promise<{ id: number; amount: number; settledAt: string }> {
+    const response = await axiosInstance.post(
+      `${BACKEND_URL}api/v1/payments/cash-refund/${refundId}/settle`,
+      {},
+    );
+    return response.data.data;
   }
 
   // Cancel incomplete payment intents for a booking
