@@ -23,6 +23,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ReceiptsAPI, type PaymentReceipt } from '@/lib/api/paymentReceipts';
+import { listMyDisputes, type AdminDisputeRow } from '@/lib/api/disputes';
 import {
   ArrowLeft,
   Loader2,
@@ -169,6 +170,31 @@ export default function CustomerDetailView({
     };
   }, []);
 
+  // Disputes on this vendor's own bookings, scoped server-side. Fetched by
+  // email where we have one; where we don't (walk-in with a phone only) we pull
+  // the vendor's disputes and match on booking below, same as receipts.
+  const [disputes, setDisputes] = useState<AdminDisputeRow[]>([]);
+  const [disputesLoading, setDisputesLoading] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await listMyDisputes(
+          params.email ? { customerEmail: params.email } : {},
+        );
+        if (!cancelled) setDisputes(res.rows ?? []);
+      } catch {
+        // Non-fatal — a customer page must never blank because of a side panel.
+        if (!cancelled) setDisputes([]);
+      } finally {
+        if (!cancelled) setDisputesLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [params.email]);
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -266,6 +292,16 @@ export default function CustomerDetailView({
     (sum, r) => sum + (Number(r.amount) || 0),
     0,
   );
+
+  // Same matching rule as receipts: this customer's bookings, or the booking's
+  // own email case-insensitively. The server already scoped these to the
+  // vendor, so this only narrows to the customer being viewed.
+  const customerDisputes = disputes.filter((d) => {
+    if (d.bookingId != null && bookingIds.has(d.bookingId)) return true;
+    const bEmail = (d.booking?.customerEmail || '').trim().toLowerCase();
+    return !!profileEmail && bEmail === profileEmail;
+  });
+  const openDisputes = customerDisputes.filter((d) => d.status === 'open').length;
 
   return (
     <div className="space-y-6">
@@ -559,6 +595,72 @@ export default function CustomerDetailView({
           )}
         </CardContent>
       </Card>
+
+      {/* ─── Disputes ────────────────────────────────────────────────
+          Only rendered when there are any. A permanently-empty "Disputes (0)"
+          card on every customer teaches vendors to ignore the section, so the
+          one time it matters they will not see it. */}
+      {!disputesLoading && customerDisputes.length > 0 && (
+        <Card className={cn(openDisputes > 0 && 'border-red-200')}>
+          <CardContent className="p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle
+                  className={cn(
+                    'h-4 w-4',
+                    openDisputes > 0 ? 'text-red-600' : 'text-bridal-gold',
+                  )}
+                />
+                <span className="text-sm font-semibold text-neutral-700">
+                  Disputes
+                </span>
+              </div>
+              <Badge
+                variant="outline"
+                className={cn(
+                  'text-xs',
+                  openDisputes > 0 && 'bg-red-50 text-red-700 border-red-200',
+                )}
+              >
+                {openDisputes > 0
+                  ? `${openDisputes} open`
+                  : `${customerDisputes.length} settled`}
+              </Badge>
+            </div>
+            <ul className="space-y-1.5">
+              {customerDisputes.map((d) => (
+                <li key={d.id}>
+                  <Link
+                    href={`/dashboard/bookings/${d.bookingId}`}
+                    className="flex items-center justify-between gap-2 rounded-md border border-neutral-100 px-2.5 py-2 hover:bg-neutral-50"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-neutral-800 truncate">
+                        {d.reason || `Dispute #${d.id}`}
+                      </div>
+                      <div className="text-[11px] text-neutral-500 mt-0.5">
+                        {fmtDate(d.openedAt)}
+                        {d.bookingId ? ` · Booking #${d.bookingId}` : ''}
+                      </div>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'text-[10px] py-0 capitalize shrink-0',
+                        d.status === 'open'
+                          ? 'bg-red-50 text-red-700 border-red-200'
+                          : 'bg-neutral-100 text-neutral-600 border-neutral-300',
+                      )}
+                    >
+                      {String(d.status).replace(/_/g, ' ')}
+                    </Badge>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ─── Two-column: Function sheets + Leads ─────────────────── */}
       <div className="grid gap-6 lg:grid-cols-2">
