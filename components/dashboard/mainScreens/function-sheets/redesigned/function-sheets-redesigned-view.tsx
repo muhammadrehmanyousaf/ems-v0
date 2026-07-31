@@ -30,6 +30,30 @@ import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
+
+/**
+ * VC-008 — the single value function for a function sheet.
+ *
+ * A sheet carries its own `grandTotal` only once someone has priced its line
+ * items. Until then it is null (or 0 on a fresh draft) while the underlying
+ * booking already holds a real agreed amount, so the honest figure to show is
+ * the booking's.
+ *
+ * This screen previously answered the same question four different ways: the
+ * "Total value" KPI and the CSV export and the mobile card summed `grandTotal`
+ * alone, while the desktop table cell they were meant to summarise fell back
+ * to the booking. On live data that is Rs 2,705,000 in the KPI against
+ * Rs 8,785,000 in the column above it — 12 of 16 sheets are unpriced against
+ * bookings worth Rs 350,000–620,000 each. A vendor reading the card sees a
+ * third of their book.
+ *
+ * Every surface now goes through `sheetValue`. Where the number came from a
+ * booking rather than the sheet, `isUnpriced` lets us say so instead of
+ * quietly blending the two.
+ */
+const sheetValue = (f: FunctionSheet) => num(f.grandTotal) || num(f.booking?.totalAmount)
+const isUnpriced = (f: FunctionSheet) => num(f.grandTotal) <= 0
+
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
 const fmtDate = (v?: string | null) => {
   if (!v) return "—"
@@ -103,7 +127,15 @@ export function FunctionSheetsRedesignedView() {
     )
   }, [all, search])
 
-  const totalValue = all.reduce((s, f) => s + num(f.grandTotal), 0)
+  // The server already computes this with the same fallback rule
+  // (functionSheetController.listFunctionSheets → summary.totalGrand); this
+  // screen was simply throwing that field away. Prefer it — it stays right if
+  // the list is ever paginated — and keep the local sum as the fallback.
+  const totalValue =
+    typeof data?.summary?.totalGrand === "number"
+      ? data.summary.totalGrand
+      : all.reduce((s, f) => s + sheetValue(f), 0)
+  const unpricedCount = all.filter(isUnpriced).length
   const paidCount = all.filter((f) => f.state === "paid").length
   const openCount = all.filter(
     (f) => f.state !== "paid" && f.state !== "archived" && f.state !== "cancelled",
@@ -131,7 +163,14 @@ export function FunctionSheetsRedesignedView() {
       key: "total",
       header: "Grand total",
       align: "right",
-      render: (f) => <MoneyCell amount={num(f.grandTotal) || num(f.booking?.totalAmount)} />,
+      render: (f) => (
+        <div className="flex flex-col items-end">
+          <MoneyCell amount={sheetValue(f)} />
+          {isUnpriced(f) && sheetValue(f) > 0 && (
+            <span className="text-[11px] text-muted-foreground">from booking</span>
+          )}
+        </div>
+      ),
     },
     {
       key: "state",
@@ -163,7 +202,19 @@ export function FunctionSheetsRedesignedView() {
         <StatCard label="Total sheets" value={all.length} icon="FileText" />
         <StatCard label="Open" value={openCount} icon="Clock" />
         <StatCard label="Paid" value={paidCount} icon="CheckCircle2" trend="up" />
-        <StatCard label="Total value" value={formatPkr(totalValue)} icon="Wallet" />
+        <StatCard
+          label="Total value"
+          value={formatPkr(totalValue)}
+          icon="Wallet"
+          // Say what the number is made of rather than silently blending
+          // quoted sheets with un-quoted bookings.
+          delta={
+            unpricedCount > 0
+              ? `${unpricedCount} of ${all.length} not yet priced — booking total used`
+              : undefined
+          }
+          trend={unpricedCount > 0 ? "flat" : undefined}
+        />
       </div>
 
       <DataTable
@@ -199,7 +250,10 @@ export function FunctionSheetsRedesignedView() {
                 { header: "Customer", value: (f) => f.customerName ?? f.customer?.fullName ?? "" },
                 { header: "Phone", value: (f) => f.customerPhone ?? "" },
                 { header: "Event date", value: (f) => f.eventDate ?? "" },
-                { header: "Grand total", value: (f) => num(f.grandTotal) },
+                { header: "Grand total", value: (f) => sheetValue(f) },
+                // Keep the export auditable: whoever opens the CSV can see
+                // which rows are quoted and which fell back to the booking.
+                { header: "Priced on sheet", value: (f) => (isUnpriced(f) ? "no — booking total" : "yes") },
                 { header: "Status", value: (f) => stateLabel(f.state) },
               ]} />
             </div>
@@ -210,7 +264,8 @@ export function FunctionSheetsRedesignedView() {
             <div className="min-w-0">
               <div className="truncate font-medium">{f.title || "Untitled sheet"}</div>
               <div className="text-xs text-muted-foreground">
-                {(f.customerName || f.customer?.fullName || "—")} · {formatPkr(num(f.grandTotal))}
+                {(f.customerName || f.customer?.fullName || "—")} · {formatPkr(sheetValue(f))}
+                {isUnpriced(f) && sheetValue(f) > 0 && " (from booking)"}
               </div>
             </div>
             <StatusPill tone={stateTone(f.state)}>{stateLabel(f.state)}</StatusPill>
