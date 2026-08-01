@@ -23,6 +23,7 @@ import { notFound, redirect, permanentRedirect } from "next/navigation"
 import { VenueSpaceSelector } from "@/components/booking/venue-space-selector"
 import { fetchVendorHasMultiSpace } from "@/lib/seo/fetch-vendor"
 import VendorInquiryCta from "@/components/seo/vendor-inquiry-cta"
+import { SeoVendorSecondaryCtas } from "@/components/seo/seo-vendor-secondary-ctas"
 import {
   CITIES,
   VENDOR_TYPES,
@@ -317,6 +318,20 @@ export async function VendorDetailPage(input: PageInput) {
                   was sent to a generic /contact page instead — a lead the vendor
                   never saw. POST /leads/inquiry verified live (201). */}
               <VendorInquiryCta businessId={vendor.id} vendorName={vendor.name} />
+              {/* Request a quote + Add to plan existed only on the legacy
+                  /{type}/{id} pages, never here — and THIS is the page Google
+                  sends organic traffic to. Both backends are live
+                  (/quotes/mine and /wedding-plans/mine each 401 against a 200
+                  catch-all), and both surfaces were un-flagged earlier, so the
+                  only thing missing was the door on the page that matters most.
+                  Haggling is how this market actually buys; sending a search
+                  visitor to a fixed price with no way to negotiate loses the
+                  conversation before it starts. */}
+              <SeoVendorSecondaryCtas
+                businessId={vendor.id}
+                vendorName={vendor.name}
+                vendorType={vendor.vendorType}
+              />
             </div>
           </div>
         </header>
