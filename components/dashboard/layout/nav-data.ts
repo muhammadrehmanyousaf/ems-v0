@@ -82,8 +82,24 @@ export const data = {
   // Venue-OS (multi-venue vendor-OS spine) — pilot surface, gated in
   // buildVendorSections by NEXT_PUBLIC_ORG_MEMBERSHIP_ON (default OFF). No
   // i18nKey: falls back to `name` so there's no missing-translation key.
+  // WW-VENUEOS — seven doors, not one.
+  //
+  // This was a single "Venue-OS" entry leading to a tabbed hub holding 46 views
+  // over 179 endpoints. Everything a venue owner actually runs their business
+  // with — tonight's event, whether each shaadi made money, cheques, halls,
+  // kitchen — sat behind one word that told them none of it was there.
+  //
+  // Each tab is now its own rail entry pointing at its own URL. Same hub
+  // renders; the difference is that a vendor can SEE what exists, bookmark the
+  // one they use daily, and send a hall manager a link to Spaces.
   vendorVenueOs: [
-    { name: "Venue-OS", url: "/dashboard/venue-os", icon: Building2 },
+    { name: "Tonight", url: "/dashboard/venue-os?tab=today", icon: CalendarDays },
+    { name: "Event profit", url: "/dashboard/venue-os?tab=profit", icon: CircleDollarSign },
+    { name: "Venue money", url: "/dashboard/venue-os?tab=money", icon: Wallet },
+    { name: "Halls & spaces", url: "/dashboard/venue-os?tab=spaces", icon: Building2 },
+    { name: "Cash & cheques", url: "/dashboard/venue-os?tab=cash", icon: CreditCard },
+    { name: "Kitchen", url: "/dashboard/venue-os?tab=kitchen", icon: Boxes },
+    { name: "Accounting", url: "/dashboard/venue-os?tab=advanced", icon: Settings2 },
   ],
 
   // PWA-02 — Field Capture hub (offline-first lead/payment/expense/hold capture).
