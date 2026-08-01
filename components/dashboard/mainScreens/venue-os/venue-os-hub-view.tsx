@@ -98,7 +98,11 @@ function Section({ title, hint, children }: { title: string; hint: string; child
 
 function AdvGroup({ value, title, icon, children }: { value: string; title: string; icon: IconName; children: React.ReactNode }): React.ReactElement {
   return (
-    <AccordionItem value={value} className="rounded-lg border border-border px-3">
+    // `id` makes the group a scroll target, so a link that opens it also lands
+    // on it — otherwise a vendor following "Compliance" from the sidebar arrives
+    // at the top of the Advanced tab with the right section expanded far below
+    // the fold, which reads as "the link did nothing".
+    <AccordionItem id={`venue-os-${value}`} value={value} className="scroll-mt-24 rounded-lg border border-border px-3">
       <AccordionTrigger className="py-3 text-sm hover:no-underline">
         <span className="flex items-center gap-2"><Icon name={icon} size={16} className="text-muted-foreground" /> {title}</span>
       </AccordionTrigger>
@@ -106,6 +110,17 @@ function AdvGroup({ value, title, icon, children }: { value: string; title: stri
     </AccordionItem>
   );
 }
+
+/** Every Advanced group, in render order. Exported so the nav can link each one. */
+export const VENUE_OS_ADVANCED_GROUPS = [
+  "costing",
+  "accounting",
+  "group",
+  "working-capital",
+  "compliance",
+  "legal",
+  "setup",
+] as const;
 
 export function VenueOsHubView(): React.ReactElement {
   // Resolve per-venue flags for the active business (populates the runtime store
@@ -132,8 +147,28 @@ export function VenueOsHubView(): React.ReactElement {
   const setTab = (value: string) => {
     const params = new URLSearchParams(search?.toString() ?? "");
     params.set("tab", value);
+    // Leaving Advanced should not keep a stale group in the URL.
+    if (value !== "advanced") params.delete("group");
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
+
+  // `?tab=advanced` alone still left 28 views — more than half of Venue-OS —
+  // behind "click Advanced, then find and expand the right accordion". The
+  // seven groups now carry their own address too, so the sidebar can point at
+  // Compliance or Working capital directly, and a vendor can bookmark the one
+  // section they use monthly instead of re-navigating to it every time.
+  const rawGroup = search?.get("group");
+  const activeGroup = VENUE_OS_ADVANCED_GROUPS.includes(rawGroup as never) ? (rawGroup as string) : null;
+  const [openGroups, setOpenGroups] = React.useState<string[]>(activeGroup ? [activeGroup] : []);
+
+  // Follow the URL when it changes (sidebar click while already on the hub),
+  // and bring the group into view once it has expanded.
+  React.useEffect(() => {
+    if (!activeGroup) return;
+    setOpenGroups((prev) => (prev.includes(activeGroup) ? prev : [...prev, activeGroup]));
+    const el = document.getElementById(`venue-os-${activeGroup}`);
+    if (el) requestAnimationFrame(() => el.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }, [activeGroup]);
 
   if (loading) {
     return (
@@ -239,7 +274,7 @@ export function VenueOsHubView(): React.ReactElement {
           <p className="mb-3 text-sm text-muted-foreground">
             Accountant &amp; multi-venue tools. Open a section only when you need it — a plain hall owner can ignore this whole tab.
           </p>
-          <Accordion type="multiple" className="space-y-2">
+          <Accordion type="multiple" value={openGroups} onValueChange={setOpenGroups} className="space-y-2">
             <AdvGroup value="costing" title="Full costing & margins" icon="TrendingUp">
               <EventCostedPnlView />
               <EventMarginsView />

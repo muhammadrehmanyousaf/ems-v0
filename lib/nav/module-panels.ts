@@ -29,6 +29,10 @@ import {
   Sparkles,
   Inbox,
   ClipboardList,
+  CalendarCheck,
+  Utensils,
+  TrendingUp,
+  Settings2,
   CalendarDays,
   MessageSquareText,
   Wallet,
@@ -343,11 +347,37 @@ export const NAV_MODULES: NavModule[] = [
         // which is what most of it is.
         label: "Venue",
         items: [
+          // Tonight and Kitchen had NO nav entry at all — two of the hub's
+          // seven tabs were reachable only by landing on the hub and noticing
+          // the tab strip. Tonight is the live event console: headcount against
+          // safe capacity, valet, incidents. For a hall owner that is the most
+          // used screen in the product, and nothing in the sidebar named it.
+          // The hub renders Tonight when no ?tab is present, so Tonight is what
+          // should be lit on a bare /dashboard/venue-os — otherwise the panel
+          // highlights nothing while the page clearly shows a section.
+          { label: "Tonight", href: "/dashboard/venue-os?tab=today", icon: CalendarCheck, isDefaultView: true },
           { label: "Halls & spaces", href: "/dashboard/venue-os?tab=spaces", icon: Building2 },
           { label: "Venue money", href: "/dashboard/venue-os?tab=money", icon: Wallet },
           { label: "Event profit", href: "/dashboard/venue-os?tab=profit", icon: CircleDollarSign },
           { label: "Cash & cheques", href: "/dashboard/venue-os?tab=cash", icon: CreditCard },
-          { label: "Accounting", href: "/dashboard/venue-os?tab=advanced", icon: Receipt },
+          { label: "Kitchen & suppliers", href: "/dashboard/venue-os?tab=kitchen", icon: Utensils },
+        ],
+      },
+      {
+        // The Advanced tab held 28 views behind a single "Accounting" link and
+        // seven un-addressable accordions. Each group now has its own address
+        // (`?tab=advanced&group=`), so the accountant tools are navigable
+        // instead of discoverable-by-accident. Kept as a separate group so a
+        // plain hall owner reads it as "not for me" and skips the whole block.
+        label: "Venue accounting",
+        items: [
+          { label: "Costing & margins", href: "/dashboard/venue-os?tab=advanced&group=costing", icon: TrendingUp },
+          { label: "Accounting & tax", href: "/dashboard/venue-os?tab=advanced&group=accounting", icon: Receipt },
+          { label: "Group & partners", href: "/dashboard/venue-os?tab=advanced&group=group", icon: Building2 },
+          { label: "Working capital", href: "/dashboard/venue-os?tab=advanced&group=working-capital", icon: CircleDollarSign },
+          { label: "AML & KYC", href: "/dashboard/venue-os?tab=advanced&group=compliance", icon: ShieldCheck },
+          { label: "Legal & insurance", href: "/dashboard/venue-os?tab=advanced&group=legal", icon: ClipboardList },
+          { label: "Venue setup & tools", href: "/dashboard/venue-os?tab=advanced&group=setup", icon: Settings2 },
         ],
       },
       {
