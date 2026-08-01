@@ -132,7 +132,40 @@ function buildVendorSections(
         : TAB_LABELS[tabKey],
   }))
 
-  const sections: NavSection[] = [{ label: "Main", items: main }]
+  // ── The daily loop ────────────────────────────────────────────────────
+  //
+  // Everything that had been hidden behind flags is now visible, and the rail
+  // reached 36 entries — which is its own way of losing a vendor. Tripleseat
+  // runs ~8 top-level items across 20,000 venues; Shopify puts the scannable
+  // limit at 10-12.
+  //
+  // These eight are the whole job of running a wedding business on a normal
+  // day. A vendor should never need "More" to get through one. Everything else
+  // is occasional — set up once, read monthly — and moves behind the
+  // disclosure, still one click away, nothing removed.
+  const PRIMARY: NavItemKey[] = [
+    "Dashboard",
+    "Today",
+    "Lead inbox",
+    "Bookings",
+    "Calendar",
+    "Conversations",
+    "Function sheets",
+    "Customers",
+  ]
+  const primaryOrder = new Map(PRIMARY.map((k, i) => [k, i]))
+  const isPrimary = (n: string) => primaryOrder.has(n as NavItemKey)
+
+  const dailyItems = main
+    .filter((i) => isPrimary(i.name))
+    .sort((a, b) => primaryOrder.get(a.name as NavItemKey)! - primaryOrder.get(b.name as NavItemKey)!)
+
+  // Whatever Main held that is not part of the daily loop — Field capture,
+  // Quote requests, Date holds, Reports, Reviews, Notifications and the niche
+  // craft tools — becomes the "Sell & serve" drawer rather than disappearing.
+  const restOfMain = main.filter((i) => !isPrimary(i.name))
+
+  const sections: NavSection[] = [{ label: "Main", items: dailyItems }]
   // Money — ONE entry, not five. Payments / Receivables / Receipts / Cheque
   // ledger / Expenses are not five jobs; they are five views of "where is my
   // money". They are now tabs inside /dashboard/money. Every original route
@@ -149,8 +182,13 @@ function buildVendorSections(
     if (tax) khata.push(tax)
     sections.push({ label: "Khata", items: khata })
   }
+
+  // ── Everything below here lives behind "More" ─────────────────────────
+  if (restOfMain.length > 0) {
+    sections.push({ label: "Sell & serve", items: restOfMain, secondary: true })
+  }
   if (operations.length > 0) {
-    sections.push({ label: "Operations", items: operations })
+    sections.push({ label: "Operations", items: operations, secondary: true })
   }
   // Growth — Promote (§5) + Plan & billing (§17.1), each flag-gated
   // (default OFF). Grouped together so the monetization surfaces live
@@ -162,16 +200,24 @@ function buildVendorSections(
     .map((name) => data.vendorMainNav.find((i) => i.name === name))
     .filter((i): i is NonNullable<typeof i> => Boolean(i))
   if (growItems.length > 0) {
-    sections.push({ label: "Grow", items: growItems })
+    sections.push({ label: "Grow", items: growItems, secondary: true })
   }
   // Venue-OS (multi-venue vendor-OS spine). Always in the sidebar: the backend
   // ORG_MEMBERSHIP_ON gate is globally enabled in production (FeatureFlagOverride,
   // owner-authorized 2026-07-11), and hiding the section was the reason none of
   // the venue finance surfaces were reachable from the navigation.
-  sections.push({ label: "Venue-OS", items: data.vendorVenueOs })
+  //
+  // Venue-OS also speaks a SECOND vocabulary for jobs the main rail already
+  // names — Tonight vs Today, Venue money vs Money, Kitchen vs Kitchen prep,
+  // Event profit vs Reports. Two names for one job is its own way of getting
+  // someone lost. Moving the section behind "More" stops it competing with the
+  // daily rail; actually merging the duplicate concepts is a content change to
+  // those screens, tracked separately rather than half-done here.
+  sections.push({ label: "Venue-OS", items: data.vendorVenueOs, secondary: true })
   sections.push({
     label: "My Business",
     items: data.vendorMyBusiness,
+    secondary: true,
     collapsibleSettings: {
       triggerId: "Business Settings",
       subItems: settingsSubItems,
