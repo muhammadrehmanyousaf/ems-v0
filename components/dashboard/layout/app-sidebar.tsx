@@ -163,7 +163,12 @@ function buildVendorSections(
   // Whatever Main held that is not part of the daily loop — Field capture,
   // Quote requests, Date holds, Reports, Reviews, Notifications and the niche
   // craft tools — becomes the "Sell & serve" drawer rather than disappearing.
-  const restOfMain = main.filter((i) => !isPrimary(i.name))
+  //
+  // Tax report is excluded because it is promoted into Khata below. Without
+  // this it rendered TWICE: once in the visible rail and again inside the
+  // drawer. Caught on production — the duplicate is invisible until you open
+  // "More", which is exactly where nobody looks when reviewing a nav change.
+  const restOfMain = main.filter((i) => !isPrimary(i.name) && i.name !== "Tax report")
 
   const sections: NavSection[] = [{ label: "Main", items: dailyItems }]
   // Money — ONE entry, not five. Payments / Receivables / Receipts / Cheque
