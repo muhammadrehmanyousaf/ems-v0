@@ -294,8 +294,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     })),
   }))
 
+  // The panel must start where the rail ends.
+  //
+  // shadcn's Sidebar renders its real column as `position: fixed; left: 0;
+  // z-index: 10`, so it ignored the rail entirely and sat ON TOP of it — a
+  // vendor saw a 256px panel and no rail at all, even though the rail was in
+  // the DOM with correct active state. Measured on production: rail at x=0..68,
+  // panel rows also starting at x=12.
+  //
+  // `!` because `left-0` is already on that element; without it the two `left`
+  // utilities race and the winner depends on stylesheet order.
+  // Admins get no rail, so no offset.
+  const railOffset = isAdminLike(role) ? undefined : "md:!left-[68px]"
+
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar collapsible="icon" className={railOffset} {...props}>
       {/* Brand block — flat dark monogram + clean wordmark + role label. */}
       <SidebarHeader className="border-b border-sidebar-border h-14 px-2">
         <SidebarMenu>
