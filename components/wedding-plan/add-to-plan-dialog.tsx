@@ -14,7 +14,6 @@
  *      vendor line via `WeddingPlansAPI.addItem` and close.
  *
  * Flag-gated by the wrapping button — this dialog is never mounted while
- * `useWeddingPlanFlag()` is false.
  */
 
 import * as React from "react";

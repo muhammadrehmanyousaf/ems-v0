@@ -51,7 +51,7 @@ import { BACKEND_URL } from "@/lib/backend-url";
 // Honours `NEXT_PUBLIC_IMAGE_UPLOADS_ENABLED=1` on Vercel so ops can
 // re-enable without a redeploy once storage is ready.
 const IMAGE_UPLOADS_ENABLED =
-  process.env.NEXT_PUBLIC_IMAGE_UPLOADS_ENABLED === "1";
+  true;
 import { TERMS_VERSION } from "@/lib/seo";
 import { vanueValidations } from "./VendorStepForms/newVendorRegisterationForm/venueSteps/vanueComponents/vanueValidations";
 import SuccessModal from "./VendorStepForms/components/SuccessModal";

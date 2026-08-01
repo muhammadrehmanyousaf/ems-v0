@@ -34,7 +34,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@/context/UserContext";
-import { useWeddingPlanFlag } from "@/lib/wedding-plan";
 import {
   WeddingPlansAPI,
   type PlanFull,
@@ -72,9 +71,7 @@ function planTitle(p: PlanFull["plan"]): string {
 export default function PlanCheckoutPage() {
   const params = useParams();
   const router = useRouter();
-  const { user, isAuthenticated, isLoading } = useUser();
-  const enabled = useWeddingPlanFlag();
-  const [mounted, setMounted] = React.useState(false);
+  const { user, isAuthenticated, isLoading } = useUser();  const [mounted, setMounted] = React.useState(false);
   const planId = Number(params?.id);
 
   const [full, setFull] = React.useState<PlanFull | null>(null);
@@ -94,7 +91,7 @@ export default function PlanCheckoutPage() {
   }, [isAuthenticated, isLoading, router, planId]);
 
   const load = React.useCallback(async () => {
-    if (!user || !enabled) return;
+    if (!user) return;
     // A non-numeric [id] (e.g. /user/plan/abc/checkout) can never resolve to
     // a plan. Stop loading and leave `full` null so the page falls through to
     // the clean "Plan not found" state instead of hanging on the skeleton.
@@ -125,11 +122,11 @@ export default function PlanCheckoutPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, enabled, planId]);
+  }, [user, planId]);
 
   React.useEffect(() => {
-    if (user && enabled) load();
-  }, [user, enabled, load]);
+    if (user) load();
+  }, [user, load]);
 
   // --- Derived ------------------------------------------------------------
   const events: WeddingEvent[] = React.useMemo(
@@ -251,18 +248,6 @@ export default function PlanCheckoutPage() {
       <PageContainer>
         <Skeleton className="h-24 w-full mb-4" />
         <Skeleton className="h-64 w-full" />
-      </PageContainer>
-    );
-  }
-
-  if (!enabled) {
-    return (
-      <PageContainer>
-        <PageHeader title="Not available" />
-        <Button variant="outline" onClick={() => router.push("/user/plan")}>
-          <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
-          Back
-        </Button>
       </PageContainer>
     );
   }

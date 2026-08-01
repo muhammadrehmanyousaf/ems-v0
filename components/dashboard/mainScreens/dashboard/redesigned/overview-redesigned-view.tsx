@@ -143,7 +143,7 @@ function VendorOverviewRedesignedView() {
       <FamiliarityPrompt />
 
       {/* Phase-1 EPIC 5 — action-first "Ghar" panel above the KPI tiles (pilot; self-hides on 404). */}
-      {process.env.NEXT_PUBLIC_ORDER_BUILDER === '1' && <ActionOverviewView />}
+      {<ActionOverviewView />}
 
       {/* KPI row */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">

@@ -216,7 +216,7 @@ const VendorDashboardView = () => {
       {/* Command-center action hub — prioritised, one-tap "needs attention".
           Flag-gated (NEXT_PUBLIC_ACTION_CENTER); reads the existing
           operations-summary endpoint, no new backend. */}
-      {process.env.NEXT_PUBLIC_ACTION_CENTER === '1' && <NeedsAttentionStrip />}
+      {<NeedsAttentionStrip />}
 
       {/* PWA-02 — offline field-capture launcher; self-hides unless offline mode is on. */}
       <QuickCaptureWidget />

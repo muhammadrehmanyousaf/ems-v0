@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { StaffAPI, type StaffLeaveRequest } from "@/lib/api/staff";
 
-const FLAG_ON = process.env.NEXT_PUBLIC_STAFF_LOGINS_ENABLED === "true";
+const FLAG_ON = true;
 
 export function StaffLeaveQueue() {
   const [rows, setRows] = useState<StaffLeaveRequest[]>([]);

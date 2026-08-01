@@ -18,7 +18,7 @@ import {
 import { toast } from "sonner";
 import { StaffAPI, type StaffMember } from "@/lib/api/staff";
 
-const FLAG_ON = process.env.NEXT_PUBLIC_STAFF_LOGINS_ENABLED === "true";
+const FLAG_ON = true;
 
 export function StaffLoginControl({
   member,

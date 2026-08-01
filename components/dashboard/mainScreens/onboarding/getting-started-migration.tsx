@@ -61,7 +61,7 @@ export default function GettingStartedMigration() {
 
   const actions: MigrationAction[] = [
     {
-      enabled: process.env.NEXT_PUBLIC_IMPORT === "1",
+      enabled: true,
       icon: <Users className="h-4 w-4 text-blue-600" />,
       title: "Import your customer list",
       desc: "Paste or upload your Excel/CSV — we map the columns and dedupe by phone. No more re-typing names one by one.",
@@ -69,7 +69,7 @@ export default function GettingStartedMigration() {
       cta: "Go to Customers → Import",
     },
     {
-      enabled: process.env.NEXT_PUBLIC_BOOKING_IMPORT === "1",
+      enabled: true,
       icon: <CalendarClock className="h-4 w-4 text-emerald-600" />,
       title: "Backfill your booking history",
       desc: "Load past events so your revenue, repeat-customer, and A/R reports show the full picture from day one — not a blank slate.",

@@ -110,7 +110,7 @@ export function BookingsRedesignedView() {
       </div>
 
       {/* Phase-1 SPINE — owner money ledger (self-hides when backend feature is dark). */}
-      {process.env.NEXT_PUBLIC_ORDER_BUILDER === '1' && <OwnerLedgerCard />}
+      {<OwnerLedgerCard />}
 
       <DataTable
         columns={columns}

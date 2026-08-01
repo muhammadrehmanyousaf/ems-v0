@@ -4,12 +4,11 @@
  * Venue-OS — Sub-venue availability check (P1 FE, WS-1). Asks the parallel-slot
  * engine whether a sub-venue is free for a slot given the turnaround gap, before
  * a booking is confirmed — surfacing the conflicting CONFIRMED bookings when not.
- * Read-only probe (no write). Gated on isSchedulingMultiResourceOn(); the backend
+ * Read-only probe (no write). The backend
  * 404s until SCHEDULING_MULTI_RESOURCE. Additive — no existing screen touched.
  */
 import * as React from "react";
 import { venueOsApi, type AvailabilityResult } from "@/lib/api/venueOs";
-import { isSchedulingMultiResourceOn } from "@/lib/scheduling-flags";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +18,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function SchedulingCheck(): React.ReactElement | null {
-  const enabled = isSchedulingMultiResourceOn();
   const [subVenueId, setSubVenueId] = React.useState<string>("");
   const [start, setStart] = React.useState<string>("");
   const [end, setEnd] = React.useState<string>("");
@@ -47,7 +45,6 @@ export function SchedulingCheck(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
   const ready = subVenueId && start && end;
 
   return (

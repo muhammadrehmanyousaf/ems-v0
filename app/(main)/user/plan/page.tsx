@@ -8,9 +8,6 @@
  * here the customer opens the builder to add functions, shortlist vendors,
  * and book the whole shaadi together.
  *
- * The entire surface is flag-gated (`NEXT_PUBLIC_FEAT_WEDDING_PLAN` env OR
- * localStorage override), resolved in a mount effect so SSR + the flag-off
- * client render are identical and never leak the surface.
  */
 
 import * as React from "react";
@@ -39,7 +36,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@/context/UserContext";
-import { useWeddingPlanFlag } from "@/lib/wedding-plan";
 import { WeddingPlansAPI, type WeddingPlan } from "@/lib/api/weddingPlans";
 import { fmtPlanDate, fmtPKR } from "@/lib/wedding-plan-events";
 import { CreatePlanDialog } from "@/components/wedding-plan/create-plan-dialog";
@@ -61,9 +57,7 @@ function planDisplayTitle(p: WeddingPlan): string {
 
 export default function PlanHubPage() {
   const { user, isAuthenticated, isLoading } = useUser();
-  const router = useRouter();
-  const enabled = useWeddingPlanFlag();
-  const [mounted, setMounted] = React.useState(false);
+  const router = useRouter();  const [mounted, setMounted] = React.useState(false);
   const [plans, setPlans] = React.useState<WeddingPlan[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [createOpen, setCreateOpen] = React.useState(false);
@@ -77,7 +71,7 @@ export default function PlanHubPage() {
   }, [isAuthenticated, isLoading, router]);
 
   const load = React.useCallback(async () => {
-    if (!user || !enabled) return;
+    if (!user) return;
     setLoading(true);
     try {
       const rows = await WeddingPlansAPI.listMine();
@@ -91,11 +85,11 @@ export default function PlanHubPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, enabled]);
+  }, [user]);
 
   React.useEffect(() => {
-    if (user && enabled) load();
-  }, [user, enabled, load]);
+    if (user) load();
+  }, [user, load]);
 
   // Pre-mount (and SSR): render the neutral skeleton so nothing leaks and
   // hydration matches.
@@ -104,20 +98,6 @@ export default function PlanHubPage() {
       <PageContainer>
         <Skeleton className="h-24 w-full mb-4" />
         <Skeleton className="h-40 w-full" />
-      </PageContainer>
-    );
-  }
-
-  // Flag resolved false — the surface stays hidden.
-  if (!enabled) {
-    return (
-      <PageContainer>
-        <PageHeader title="Not available" />
-        <SectionCard>
-          <p className="text-sm text-bridal-text-soft">
-            The Shaadi Plan is not enabled for your account yet.
-          </p>
-        </SectionCard>
       </PageContainer>
     );
   }

@@ -63,7 +63,6 @@ import { LinkBookingDialog } from "@/components/umbrellas/link-booking-dialog";
 // plan builder so the customer is never stranded on the thinner view.
 // Resolved in a mount effect (returns false until mount) so the flag-off
 // render stays byte-identical to the legacy umbrella page.
-import { useWeddingPlanFlag } from "@/lib/wedding-plan";
 
 function fmtDate(s: string | null | undefined): string {
   if (!s) return "—";
@@ -88,7 +87,6 @@ export default function UmbrellaDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user, isAuthenticated, isLoading } = useUser();
-  const planEnabled = useWeddingPlanFlag();
   const umbrellaId = Number(params?.id);
   const [umbrella, setUmbrella] = React.useState<WeddingUmbrella | null>(null);
   const [stats, setStats] = React.useState<UmbrellaStats | null>(null);
@@ -312,12 +310,9 @@ export default function UmbrellaDetailPage() {
         }
       />
 
-      {/* Shaadi Plan polish — cross-link into the full plan builder. Same
-          wedding, richer view (functions, per-vendor lines, one checkout,
-          bundle discount). Flag-gated + resolved post-mount, so the legacy
-          umbrella page is byte-identical when the flag is off. */}
-      {planEnabled && (
-        <Link
+      {/* Cross-link into the full plan builder: same wedding, richer view
+          (functions, per-vendor lines, one checkout, bundle discount). */}
+      <Link
           href={`/user/plan/${umbrella.id}`}
           className="group flex items-center gap-4 rounded-lg border border-bridal-gold/45 bg-gradient-to-br from-bridal-gold/12 via-bridal-cream to-bridal-cream p-4 hover:border-bridal-gold/70 transition-colors"
         >
@@ -335,7 +330,6 @@ export default function UmbrellaDetailPage() {
           </div>
           <ArrowRight className="h-4 w-4 shrink-0 text-bridal-gold-dark group-hover:translate-x-0.5 transition-transform" />
         </Link>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Main column */}
