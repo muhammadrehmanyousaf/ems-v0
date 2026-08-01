@@ -14,11 +14,23 @@ import { usePathname } from "next/navigation"
 import { Plus } from "lucide-react"
 import { NAV_MODULES, moduleForPath } from "@/lib/nav/module-panels"
 import { useT } from "@/lib/i18n/useT"
+import { useUser } from "@/context/UserContext"
+import { getDashboardRole, isAdminLike } from "@/lib/dashboard-role"
 
 export function ModuleRail() {
   const pathname = usePathname()
   const active = moduleForPath(pathname)
   const t = useT()
+  const { user } = useUser()
+
+  // Admins do not get the rail.
+  //
+  // Caught on production while signed in as a super-admin: the rail rendered
+  // the VENDOR modules — Enquiries, Bookings, Khata — beside the admin console
+  // nav, offering an admin a set of doors that are not theirs. The panel was
+  // already role-aware; the rail was not, because it lives in the layout rather
+  // than inside AppSidebar where the role check already existed.
+  if (isAdminLike(getDashboardRole(user))) return null
 
   return (
     <nav
