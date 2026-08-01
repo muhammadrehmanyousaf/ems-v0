@@ -1,8 +1,3 @@
-import PageContainer from '@/components/dashboard/layout/page-container';
-import ReceivablesView from '@/components/dashboard/mainScreens/receivables/receivables-view';
-import { Heading } from '@/components/heading';
-import { Separator } from '@/components/ui/separator';
-import { isRedesignOn } from '@/lib/dashboard-redesign-flag';
 import { ReceivablesRedesignedView } from '@/components/dashboard/mainScreens/receivables/redesigned/receivables-redesigned-view';
 import type { Metadata } from 'next';
 
@@ -13,19 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  if (isRedesignOn()) return <ReceivablesRedesignedView />;
-  return (
-    <div>
-      <PageContainer>
-        <div className="space-y-4">
-          <Heading
-            title="Receivables"
-            description="Who owes you money. Aged 0-30, 31-60, 61-90, 90+ — chase the oldest first."
-          />
-          <Separator />
-          <ReceivablesView />
-        </div>
-      </PageContainer>
-    </div>
-  );
+  return <ReceivablesRedesignedView />
 }

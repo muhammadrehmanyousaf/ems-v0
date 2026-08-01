@@ -1,7 +1,5 @@
-import RevenueView from '@/components/dashboard/mainScreens/revenue/revenue-view';
 import { Metadata } from 'next';
-import React from 'react'
-import { isRedesignOn } from "@/lib/dashboard-redesign-flag";
+import { AdminGuard } from "@/components/admin/AdminGuard";
 import { RevenueRedesignedView } from "@/components/dashboard/mainScreens/revenue/redesigned/revenue-redesigned-view";
 
 export const metadata: Metadata = {
@@ -10,8 +8,11 @@ export const metadata: Metadata = {
 };
 
 function page() {
-    if (isRedesignOn()) return <RevenueRedesignedView />;
-    return <RevenueView />
+  return (
+    <AdminGuard>
+      <RevenueRedesignedView />
+    </AdminGuard>
+  );
 }
 
 export default page

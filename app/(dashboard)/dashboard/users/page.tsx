@@ -1,16 +1,20 @@
-import UserListingView from '@/components/dashboard/mainScreens/users/usersListing/user-listing-view';
 import { Metadata } from 'next';
-import { isRedesignOn } from "@/lib/dashboard-redesign-flag";
+import { AdminGuard } from "@/components/admin/AdminGuard";
 import { UsersAdminRedesignedView } from "@/components/dashboard/mainScreens/users/redesigned/users-admin-redesigned-view";
 
 export const metadata: Metadata = {
     title: 'Dashboard : Users',
-    description: 'Basic dashboard with Next.js and Shadcn'
+    description: 'Every account on the platform — roles, status and access.'
 };
 
+// Super-admin only: this screen assigns roles, so it is the same trust tier as
+// /dashboard/roles.
 const page = () => {
-  if (isRedesignOn()) return <UsersAdminRedesignedView />;
-  return <UserListingView/>
+  return (
+    <AdminGuard requireSuperAdmin>
+      <UsersAdminRedesignedView />
+    </AdminGuard>
+  );
 }
 
 export default page
