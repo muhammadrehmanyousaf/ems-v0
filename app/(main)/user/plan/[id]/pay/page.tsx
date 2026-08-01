@@ -45,7 +45,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@/context/UserContext";
-import { useWeddingPlanFlag } from "@/lib/wedding-plan";
 import {
   WeddingPlansAPI,
   type PlanPaymentSummary,
@@ -70,9 +69,7 @@ function bookingLabel(b: PlanPayableBooking): string {
 export default function PlanPayPage() {
   const params = useParams();
   const router = useRouter();
-  const { user, isAuthenticated, isLoading } = useUser();
-  const enabled = useWeddingPlanFlag();
-  const [mounted, setMounted] = React.useState(false);
+  const { user, isAuthenticated, isLoading } = useUser();  const [mounted, setMounted] = React.useState(false);
   const planId = Number(params?.id);
 
   const [summary, setSummary] = React.useState<PlanPaymentSummary | null>(null);
@@ -89,7 +86,7 @@ export default function PlanPayPage() {
   }, [isAuthenticated, isLoading, router, planId]);
 
   const load = React.useCallback(async () => {
-    if (!user || !enabled) return;
+    if (!user) return;
     if (!Number.isFinite(planId)) {
       setSummary(null);
       setLoading(false);
@@ -112,11 +109,11 @@ export default function PlanPayPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, enabled, planId]);
+  }, [user, planId]);
 
   React.useEffect(() => {
-    if (user && enabled) load();
-  }, [user, enabled, load]);
+    if (user) load();
+  }, [user, load]);
 
   // --- Derived ------------------------------------------------------------
   const payables = React.useMemo(
@@ -176,18 +173,6 @@ export default function PlanPayPage() {
       <PageContainer>
         <Skeleton className="h-24 w-full mb-4" />
         <Skeleton className="h-64 w-full" />
-      </PageContainer>
-    );
-  }
-
-  if (!enabled) {
-    return (
-      <PageContainer>
-        <PageHeader title="Not available" />
-        <Button variant="outline" onClick={() => router.push("/user/plan")}>
-          <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
-          Back
-        </Button>
       </PageContainer>
     );
   }

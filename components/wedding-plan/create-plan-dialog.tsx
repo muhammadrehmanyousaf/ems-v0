@@ -10,7 +10,7 @@
  * and adds the budget + cultural-prefs the plan cart needs.
  *
  * The whole surface is flag-gated upstream — this dialog is only ever
- * mounted behind `useWeddingPlanFlag()`.
+ * mounted on the plan builder.
  */
 
 import * as React from "react";

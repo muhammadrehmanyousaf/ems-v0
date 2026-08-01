@@ -20,8 +20,6 @@ import {
   HeartHandshake,
   LogOut,
 } from "lucide-react"
-import { isQuoteNegotiationEnabled } from "@/lib/quote-negotiation"
-import { useActivityFlag } from "@/lib/activity-flag"
 import {
   Sidebar,
   SidebarContent,
@@ -38,10 +36,6 @@ import {
 import { useUser } from "@/context/UserContext"
 import { useChat } from "@/context/ChatContext"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-// Shaadi Plan — flag-gated nav entry, resolved in a mount effect so the
-// server render (flag false) matches the first client render, then the
-// "My wedding plan" item appears only for pilot-enabled devices.
-import { useWeddingPlanFlag } from "@/lib/wedding-plan"
 
 interface NavItem {
   href: string
@@ -56,8 +50,13 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/user/profile", label: "Profile", icon: User },
       { href: "/user/bookings", label: "Bookings", icon: Calendar },
-      { href: "/user/umbrellas", label: "My Wedding", icon: Sparkles },
+      // The plan and the umbrella are the SAME wedding shown two ways, so the
+      // plan leads and the overview sits immediately after it — adjacent, so
+      // they read as one wedding rather than two competing ones.
+      { href: "/user/plan", label: "My wedding plan", icon: HeartHandshake },
+      { href: "/user/umbrellas", label: "Wedding overview", icon: Sparkles },
       { href: "/user/favorites", label: "Favourites", icon: Heart },
+      { href: "/user/quotes", label: "My quotes", icon: Handshake },
     ],
   },
   {
@@ -71,6 +70,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       },
       { href: "/user/notifications", label: "Notifications", icon: Bell },
       { href: "/user/reviews", label: "Reviews", icon: Star },
+      { href: "/user/activity", label: "Activity", icon: ActivityIcon },
     ],
   },
   {
@@ -93,56 +93,16 @@ export function UserSidebar() {
   const pathname = usePathname()
   const { user, logout } = useUser()
   const { totalUnread } = useChat()
-  const planEnabled = useWeddingPlanFlag()
 
   const isActive = (href: string) =>
     pathname === href || pathname?.startsWith(`${href}/`)
 
-  // FEAT_QUOTE_NEGOTIATION — resolved after mount (localStorage/env) so it never
-  // causes a hydration mismatch; planEnabled (Shaadi Plan) resolves the same way.
-  const [quoteEnabled, setQuoteEnabled] = React.useState(false)
-  React.useEffect(() => { setQuoteEnabled(isQuoteNegotiationEnabled()) }, [])
-  // FEAT_ACTIVITY_ENGINE — mount-resolved too; appends "Activity" (the account
-  // activity feed) into the Activity group when on.
-  const activityEnabled = useActivityFlag()
-
-  // The Overview nav is reshaped by two independent, mount-resolved flags — both
-  // false until mount, so the first client render is byte-identical to the legacy
-  // sidebar (no hydration mismatch), and users with neither flag get NAV_GROUPS
-  // untouched:
-  //   • planEnabled (Shaadi Plan): the umbrella ("My Wedding") and the plan are the
-  //     SAME wedding shown two ways — make the plan the primary hub and demote the
-  //     legacy umbrella page to an adjacent "Wedding overview" companion, so they
-  //     read as one wedding, not two.
-  //   • quoteEnabled (FEAT_QUOTE_NEGOTIATION): append "My quotes".
-  const navGroups = React.useMemo(() => {
-    if (!planEnabled && !quoteEnabled && !activityEnabled) return NAV_GROUPS
-    return NAV_GROUPS.map((group) => {
-      if (group.label === "Overview") {
-        const items: NavItem[] = []
-        for (const item of group.items) {
-          if (planEnabled && item.href === "/user/umbrellas") {
-            // Plan first (primary hub), overview immediately after — adjacent so
-            // they read as one wedding, not two.
-            items.push({ href: "/user/plan", label: "My wedding plan", icon: HeartHandshake })
-            items.push({ href: "/user/umbrellas", label: "Wedding overview", icon: Sparkles })
-          } else {
-            items.push(item)
-          }
-        }
-        if (quoteEnabled) {
-          items.push({ href: "/user/quotes", label: "My quotes", icon: Handshake })
-        }
-        return { ...group, items }
-      }
-      // FEAT_ACTIVITY_ENGINE — the account activity feed lives in the Activity group.
-      if (group.label === "Activity" && activityEnabled) {
-        const items: NavItem[] = [...group.items, { href: "/user/activity", label: "Activity", icon: ActivityIcon }]
-        return { ...group, items }
-      }
-      return group
-    })
-  }, [planEnabled, quoteEnabled, activityEnabled])
+  // The plan, quotes and activity entries used to be spliced in here by three
+  // mount-resolved flags. All three backends are live in production, so the
+  // reshaping is gone and the final shape is simply NAV_GROUPS. That also
+  // removes the flash where the sidebar rendered one shape on the server and a
+  // different one a tick after mount.
+  const navGroups = NAV_GROUPS
 
   return (
     <Sidebar collapsible="icon" variant="inset" className="border-r border-bridal-beige/70">
