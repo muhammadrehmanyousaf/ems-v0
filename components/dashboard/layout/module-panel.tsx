@@ -45,7 +45,15 @@ export function ModulePanel() {
     // Without this, all the Khata rows would light up together on
     // /dashboard/money.
     if (params.length > 0) {
-      return params.every(([k, v]) => searchParams?.get(k) === v)
+      if (params.every(([k, v]) => searchParams?.get(k) === v)) return true
+      // A row flagged as the screen's default also matches when its param is
+      // absent — /dashboard/money renders Receivables, so Receivables is what
+      // should be lit. Without this the rail says Khata, the page shows
+      // Receivables, and the panel highlights nothing.
+      if (item.isDefaultView) {
+        return params.every(([k]) => !searchParams?.get(k))
+      }
+      return false
     }
     // A bare row (no params) is the module root — active only when no sibling
     // row's param is present, so "Active bookings" dims once you are on

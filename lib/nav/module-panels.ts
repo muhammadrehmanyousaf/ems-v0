@@ -72,6 +72,15 @@ export type PanelItem = {
    * always reads 0 would be the same defect as a link that goes nowhere.
    */
   badge?: "chatUnread" | "notifications";
+  /**
+   * This row is what the screen shows when its param is ABSENT.
+   *
+   * /dashboard/money with no ?tab= renders Receivables (the hub defaults to it),
+   * so without this the vendor sits on Receivables while the panel highlights
+   * nothing at all — the rail says Khata, the page says Receivables, and the
+   * panel says nowhere.
+   */
+  isDefaultView?: boolean;
   /** Roman-Urdu / Professional label override resolved by the persona layer. */
   i18nKey?: string;
 };
@@ -94,6 +103,15 @@ export type NavModule = {
   owns?: string[];
   /** Panel title. Defaults to `label`. */
   panelTitle?: string;
+  /**
+   * Render the rail ALONE for this module — no panel.
+   *
+   * The dashboard is the first thing a vendor sees, and it is a place to read,
+   * not a place to navigate from. A second column of links beside it competes
+   * with the numbers it exists to show, and every one of those links is already
+   * a rail icon away. Home gets the full width.
+   */
+  railOnly?: boolean;
   groups: PanelGroup[];
 };
 
@@ -110,6 +128,7 @@ export const NAV_MODULES: NavModule[] = [
     icon: LayoutDashboard,
     href: "/dashboard",
     panelTitle: "Home",
+    railOnly: true,
     groups: [
       {
         label: "Quick actions",
@@ -248,7 +267,7 @@ export const NAV_MODULES: NavModule[] = [
         items: [
           { label: "Payments", href: "/dashboard/money?tab=payments", icon: CircleDollarSign, i18nKey: "nav.payments" },
           { label: "Receipts", href: "/dashboard/money?tab=receipts", icon: Receipt, i18nKey: "nav.receipts" },
-          { label: "Receivables", href: "/dashboard/money?tab=receivables", icon: AlertCircle, i18nKey: "nav.receivables" },
+          { label: "Receivables", href: "/dashboard/money?tab=receivables", icon: AlertCircle, i18nKey: "nav.receivables", isDefaultView: true },
         ],
       },
       {
