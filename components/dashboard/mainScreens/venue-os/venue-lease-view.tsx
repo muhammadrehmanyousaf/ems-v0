@@ -60,7 +60,7 @@ export function VenueLeaseView(): React.ReactElement | null {
       const [l, s] = await Promise.all([venueOsApi.listVenueLeases(Number(businessId)), venueOsApi.leaseSchedule(Number(businessId))]);
       setLeases(l);
       setSchedule(s);
-    }, "Lease economics is not enabled for your account yet.");
+    }, "Couldn't load lease economics.");
 
   const addLease = (): Promise<void> =>
     guard(async () => {

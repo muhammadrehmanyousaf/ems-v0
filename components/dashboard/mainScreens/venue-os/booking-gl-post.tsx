@@ -60,7 +60,7 @@ export function BookingGlPost(): React.ReactElement | null {
         }),
       );
     } catch (e: unknown) {
-      setErr(readErr(e, "GL posting is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load gL posting."));
     } finally {
       setBusy(false);
     }

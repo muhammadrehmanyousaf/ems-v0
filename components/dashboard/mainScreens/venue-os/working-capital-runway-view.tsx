@@ -39,7 +39,7 @@ export function WorkingCapitalRunwayView(): React.ReactElement | null {
     try {
       await fn();
     } catch (e: unknown) {
-      setErr(readErr(e, "Runway projection is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load runway projection."));
     } finally {
       setBusy(false);
     }

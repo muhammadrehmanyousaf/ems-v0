@@ -44,7 +44,7 @@ export function CateringRecost(): React.ReactElement | null {
         }),
       );
     } catch (e: unknown) {
-      setErr(readErr(e, "Catering re-cost is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load catering re-cost."));
     } finally {
       setBusy(false);
     }

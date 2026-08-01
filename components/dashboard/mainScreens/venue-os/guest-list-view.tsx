@@ -37,7 +37,7 @@ export function GuestListView(): React.ReactElement | null {
     try {
       await fn();
     } catch (e: unknown) {
-      setErr(readErr(e, "EventNight console is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load eventNight console."));
     } finally {
       setBusy(false);
     }

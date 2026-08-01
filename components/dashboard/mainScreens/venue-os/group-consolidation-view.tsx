@@ -81,7 +81,7 @@ export function GroupConsolidationView(): React.ReactElement | null {
           </div>
         </div>
 
-        {q.isError && <p className="text-sm text-muted-foreground">Group consolidation is not enabled for your account yet.</p>}
+        {q.isError && <p className="text-sm text-muted-foreground">Couldn't load group consolidation.</p>}
         {orgId != null && q.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
 
         {d && (

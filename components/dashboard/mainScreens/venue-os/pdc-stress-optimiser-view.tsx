@@ -40,7 +40,7 @@ export function PdcStressOptimiserView(): React.ReactElement | null {
     try {
       await fn();
     } catch (e: unknown) {
-      setErr(readErr(e, "Working capital is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load working capital."));
     } finally {
       setBusy(false);
     }

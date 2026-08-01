@@ -36,7 +36,7 @@ export function EventNightGauge(): React.ReactElement | null {
       setNight(n);
       setLive({ liveHeadcount: n.liveHeadcount, peakHeadcount: n.peakHeadcount, safeCapacity: n.safeCapacity, overCapFlag: n.overCapFlag });
     } catch (e: unknown) {
-      setErr(readErr(e, "EventNight gauge is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load eventNight gauge."));
     } finally {
       setBusy(false);
     }

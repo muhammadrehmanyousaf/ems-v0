@@ -42,7 +42,7 @@ export function SuccessionView(): React.ReactElement | null {
     try {
       await fn();
     } catch (e: unknown) {
-      setErr(readErr(e, "Succession is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load succession."));
     } finally {
       setBusy(false);
     }

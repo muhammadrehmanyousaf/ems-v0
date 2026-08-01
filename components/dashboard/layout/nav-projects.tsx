@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
-import { type LucideIcon, ChevronRight } from "lucide-react"
+import { type LucideIcon, ChevronRight, MoreHorizontal } from "lucide-react"
 import {
   Collapsible,
   CollapsibleContent,
@@ -41,6 +41,21 @@ export type NavSection = {
     triggerId: string
     subItems: SettingsSubItem[]
   }
+  /**
+   * Render this section behind the "More" disclosure instead of in the rail.
+   *
+   * The rail had grown to 36 entries once everything that had been hidden was
+   * un-hidden. Tripleseat — 20,000 venues — runs about eight top-level items,
+   * and Shopify's own guidance puts the limit for a scannable menu at 10–12.
+   *
+   * The reason this is a disclosure and NOT a second permanent rail: when
+   * Shopify shipped a global rail in 2026, merchants running a single simple
+   * storefront reported it added two or three clicks to work they used to reach
+   * from a top-level shortcut. A single-hall owner is exactly that merchant, and
+   * they are most of this platform. So the daily loop stays one click away and
+   * only the occasional work moves.
+   */
+  secondary?: boolean
 }
 
 function normalizePath(p?: string | null) {
@@ -95,9 +110,15 @@ export function NavSections({ sections }: { sections: NavSection[] }) {
   const label = (item: NavItem) =>
     item.labelOverride ? item.labelOverride : item.i18nKey ? t(item.i18nKey) : item.name
 
-  return (
-    <>
-      {sections.map((section, i) => (
+  const primary = sections.filter((s) => !s.secondary)
+  const secondary = sections.filter((s) => s.secondary)
+  // Open automatically when the current page lives in a hidden section, so a
+  // deep link or a bookmark never lands somewhere the rail can't explain.
+  const onSecondaryPage = secondary.some((s) =>
+    s.items.some((i) => isActiveForNav(pathname, i.url)),
+  )
+
+  const renderSection = (section: NavSection, i: number) => (
         <SidebarGroup
           key={`${section.label}-${i}`}
           className="px-2 py-2"
@@ -184,7 +205,32 @@ export function NavSections({ sections }: { sections: NavSection[] }) {
             })}
           </SidebarMenu>
         </SidebarGroup>
-      ))}
+  )
+
+  return (
+    <>
+      {primary.map((s, i) => renderSection(s, i))}
+
+      {secondary.length > 0 && (
+        <Collapsible defaultOpen={onSecondaryPage} className="group/more">
+          <SidebarGroup className="px-2 py-1">
+            <SidebarMenu className="gap-0.5">
+              <SidebarMenuItem>
+                <CollapsibleTrigger asChild>
+                  <SidebarMenuButton className={`${ITEM_BASE} ${ICON_BASE}`}>
+                    <MoreHorizontal />
+                    <span>{t("nav.more")}</span>
+                    <ChevronRight className="ml-auto size-3.5 transition-transform group-data-[state=open]/more:rotate-90" />
+                  </SidebarMenuButton>
+                </CollapsibleTrigger>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+          <CollapsibleContent>
+            {secondary.map((s, i) => renderSection(s, primary.length + i))}
+          </CollapsibleContent>
+        </Collapsible>
+      )}
     </>
   )
 }

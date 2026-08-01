@@ -51,7 +51,7 @@ export function CashFloatClose(): React.ReactElement | null {
     run(async () => {
       setFloat(await venueOsApi.openCashFloat({ businessId: Number(businessId), openingFloat: Number(openingFloat) || 0 }));
       setResult(null);
-    }, "Cash-float is not enabled for your account yet.");
+    }, "Couldn't load cash-float.");
 
   const record = (): Promise<void> =>
     run(async () => {

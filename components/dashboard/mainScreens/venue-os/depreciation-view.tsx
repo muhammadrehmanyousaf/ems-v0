@@ -55,7 +55,7 @@ export function DepreciationView(): React.ReactElement | null {
   const loadAssets = (): Promise<void> =>
     guard(async () => {
       setAssets(await venueOsApi.listFixedAssets(Number(businessId)));
-    }, "Depreciation is not enabled for your account yet.");
+    }, "Couldn't load depreciation.");
 
   const addAsset = (): Promise<void> =>
     guard(async () => {

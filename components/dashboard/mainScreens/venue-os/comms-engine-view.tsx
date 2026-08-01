@@ -45,7 +45,7 @@ export function CommsEngineView(): React.ReactElement | null {
     try {
       await fn();
     } catch (e: unknown) {
-      setErr(readErr(e, "Multi-channel comms is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load multi-channel comms."));
     } finally {
       setBusy(false);
     }

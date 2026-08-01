@@ -50,7 +50,7 @@ export function EventCostedPnlView({
     try {
       setData(await venueOsApi.costedEventPnl(Number(bookingId), Number(businessId), driver));
     } catch (e: unknown) {
-      setErr(readErr(e, "Fully-costed P&L is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load fully-costed P&L."));
       setData(null);
     } finally {
       setBusy(false);

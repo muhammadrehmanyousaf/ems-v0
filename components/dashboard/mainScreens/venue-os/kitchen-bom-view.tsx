@@ -37,7 +37,7 @@ export function KitchenBomView(): React.ReactElement | null {
     try {
       await fn();
     } catch (e: unknown) {
-      setErr(readErr(e, "Kitchen BOM is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load kitchen BOM."));
     } finally {
       setBusy(false);
     }

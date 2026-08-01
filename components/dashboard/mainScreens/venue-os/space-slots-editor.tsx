@@ -48,7 +48,7 @@ export function SpaceSlotsEditor(): React.ReactElement | null {
     try {
       await fn();
     } catch (e: unknown) {
-      setErr(readErr(e, "Hierarchical spaces are not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load hierarchical spaces."));
     } finally {
       setBusy(false);
     }

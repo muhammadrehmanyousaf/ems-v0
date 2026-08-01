@@ -44,7 +44,7 @@ export function AccountingDepthView(): React.ReactElement | null {
     try {
       setRitual(await venueOsApi.closeRitual(Number(businessId), ritualPeriod, { dryRun: mode === "preview", lock: mode === "lock" }));
     } catch (e: unknown) {
-      setErr(readErr(e, "Close ritual is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load close ritual."));
     } finally {
       setBusy(false);
     }
@@ -64,7 +64,7 @@ export function AccountingDepthView(): React.ReactElement | null {
       setTb(t);
       setS21(s);
     } catch (e: unknown) {
-      setErr(readErr(e, "Accounting depth is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load accounting depth."));
     } finally {
       setBusy(false);
     }
