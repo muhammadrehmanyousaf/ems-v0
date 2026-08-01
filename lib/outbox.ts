@@ -31,7 +31,7 @@ const DEVICE_KEY = "ww_device_serial";
 export function isOutboxEnabled(): boolean {
   if (typeof window === "undefined") return false;
   return (
-    process.env.NEXT_PUBLIC_FEAT_OFFLINE_OUTBOX === "true" ||
+    true ||
     window.localStorage?.getItem("FEAT_OFFLINE_OUTBOX") === "true"
   );
 }

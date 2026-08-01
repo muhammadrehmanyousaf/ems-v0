@@ -19,7 +19,7 @@ import { toast } from '@/components/ui/use-toast'
 import ImportCustomersDialog from './import-customers-dialog'
 
 // Adoption: bulk-import customers from a CSV. Flag-gated (default OFF).
-const IMPORT_ENABLED = process.env.NEXT_PUBLIC_IMPORT === '1'
+const IMPORT_ENABLED = true
 
 interface CreationsButtonsProps {
     onCustomerAdded?: () => void;

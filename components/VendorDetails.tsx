@@ -10,7 +10,6 @@ import { Calendar } from "@/components/ui/calendar"
 import { Star, MapPin, Users, Car, Clock, ThumbsUp, Phone, Share2, CalendarCheck, Handshake } from "lucide-react"
 import type { Vendor, Review } from "@/lib/types"
 import { useUser } from "@/context/UserContext"
-import { isQuoteNegotiationEnabled } from "@/lib/quote-negotiation"
 import VendorGallery from "./VendorGallery"
 import VendorPackages from "./VendorPackages"
 import VendorReviews from "./VendorReviews"
@@ -31,13 +30,8 @@ export default function VendorDetails({ vendor, vendorType }: VendorDetailsProps
   const [isInquiryOpen, setIsInquiryOpen] = useState(false)
   const [isQuoteOpen, setIsQuoteOpen] = useState(false)
 
-  // FEAT_QUOTE_NEGOTIATION — the "Request a quote" CTA is flag-gated + hidden
-  // when dark. Resolved after mount so an env/localStorage flag can't cause a
-  // hydration mismatch.
   const router = useRouter()
   const { isAuthenticated } = useUser()
-  const [quoteEnabled, setQuoteEnabled] = useState(false)
-  useEffect(() => { setQuoteEnabled(isQuoteNegotiationEnabled()) }, [])
 
   const onRequestQuote = () => {
     if (!isAuthenticated) {
@@ -80,12 +74,10 @@ export default function VendorDetails({ vendor, vendorType }: VendorDetailsProps
                 <Phone className="w-4 h-4 mr-2" />
                 Contact
               </Button>
-              {quoteEnabled && (
-                <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={onRequestQuote}>
-                  <Handshake className="w-4 h-4 mr-2" />
-                  Request a quote
-                </Button>
-              )}
+              <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={onRequestQuote}>
+                <Handshake className="w-4 h-4 mr-2" />
+                Request a quote
+              </Button>
               <Button size="sm" className="w-full sm:w-auto" onClick={() => setIsBookingModalOpen(true)}>
                 Book Now
               </Button>
@@ -259,14 +251,12 @@ export default function VendorDetails({ vendor, vendorType }: VendorDetailsProps
         onOpenChange={setIsInquiryOpen}
       />
 
-      {quoteEnabled && (
-        <RequestQuoteDialog
-          businessId={vendor.id}
-          vendorName={vendor.name}
-          open={isQuoteOpen}
-          onOpenChange={setIsQuoteOpen}
-        />
-      )}
+      <RequestQuoteDialog
+        businessId={vendor.id}
+        vendorName={vendor.name}
+        open={isQuoteOpen}
+        onOpenChange={setIsQuoteOpen}
+      />
 
       <BookingModal
         isOpen={isBookingModalOpen}

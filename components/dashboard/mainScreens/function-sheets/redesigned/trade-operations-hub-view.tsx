@@ -125,6 +125,24 @@ export function TradeOperationsHubView() {
         }
       />
 
+      {/* The night-of run sheet and the contract signature screen were both
+          built and reachable from nowhere — not from the nav, and not from
+          here, which is the one page they belong to. */}
+      <div className="flex flex-wrap gap-2">
+        <a
+          href="/dashboard/function-sheet-operations"
+          className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+        >
+          <Icon name="ClipboardList" size={14} /> Night-of operations
+        </a>
+        <a
+          href="/dashboard/function-sheet-sign"
+          className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+        >
+          <Icon name="FileText" size={14} /> Sign contract
+        </a>
+      </div>
+
       {/* Trade switcher */}
       <nav className="flex gap-1.5 overflow-x-auto pb-1" aria-label="Trades">
         {TRADE_OPS.map((t) => (

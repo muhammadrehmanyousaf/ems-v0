@@ -6,6 +6,7 @@
  */
 
 import * as React from "react"
+import Link from "next/link"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { StaffAPI, type StaffMember } from "@/lib/api/staff"
 import { BusinessesAPI } from "@/lib/api/dashboard"
@@ -75,11 +76,13 @@ export function StaffRedesignedView() {
     {
       key: "name",
       header: "Name",
+      // The name opens the member's own page — what they are still owed and
+      // every shift they worked. Without this the route is unreachable.
       render: (m) => (
-        <div className="flex items-center gap-2.5">
+        <Link href={`/dashboard/staff/${m.id}`} className="flex items-center gap-2.5 group">
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{initials(m.fullName)}</span>
-          <span className="font-medium">{m.fullName}</span>
-        </div>
+          <span className="font-medium group-hover:text-primary group-hover:underline">{m.fullName}</span>
+        </Link>
       ),
     },
     { key: "role", header: "Role", cellClassName: "text-muted-foreground", render: (m) => cap(m.role) },

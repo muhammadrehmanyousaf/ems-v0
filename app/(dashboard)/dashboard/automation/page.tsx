@@ -21,9 +21,9 @@ export default function Page() {
         <div className="space-y-4">
           <Heading title="Automation" />
           <Separator />
-          {/* §M10 builder — vendor-defined rules (flag-gated). Above the
-              built-in automation status surface. */}
-          {process.env.NEXT_PUBLIC_AUTOMATION_BUILDER === '1' && <AutomationBuilderCard />}
+          {/* §M10 builder — vendor-defined rules, above the built-in
+              automation status surface. /api/v1/automation/rules is live. */}
+          <AutomationBuilderCard />
           <AutomationStatusView />
         </div>
       </PageContainer>

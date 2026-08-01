@@ -3,20 +3,17 @@
 import * as React from "react";
 import { ActivityAPI, type ActivityEvent } from "@/lib/api/activity";
 import { ActivityFeed } from "@/components/activity/activity-feed";
-import { useActivityFlag } from "@/lib/activity-flag";
 
 /**
  * Customer "Your activity" feed (Activity & Audit Engine, Phase 2) — the trust
- * layer: a humanized, browsable record of what happened on your account. Dark
- * until FEAT_ACTIVITY_ENGINE; the BE 404s when off, so this shows an empty state
- * rather than erroring.
+ * layer: a humanized, browsable record of what happened on your account.
  */
 export default function UserActivityPage() {
-  const enabled = useActivityFlag();
   const [events, setEvents] = React.useState<ActivityEvent[]>([]);
   const [page, setPage] = React.useState(1);
   const [total, setTotal] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
+  const [errored, setErrored] = React.useState(false);
 
   const load = React.useCallback(async (p: number) => {
     setLoading(true);
@@ -24,8 +21,14 @@ export default function UserActivityPage() {
       const res = await ActivityAPI.feed(p, 30);
       setEvents((prev) => (p === 1 ? res.events : [...prev, ...res.events]));
       setTotal(res.total);
+      setErrored(false);
     } catch {
-      // BE dark / not enabled → empty state.
+      // This used to swallow into an empty state, because the backend was dark
+      // and "no activity" was the honest answer. It is live now, so a failure
+      // here is a real failure — and on a page whose whole purpose is "if
+      // anything looks unfamiliar, contact us", showing an empty list when we
+      // could not load the list is the one wrong answer.
+      setErrored(true);
       setTotal(0);
     } finally {
       setLoading(false);
@@ -49,8 +52,19 @@ export default function UserActivityPage() {
         </p>
       </div>
 
-      {!enabled && !loading && events.length === 0 ? (
-        <p className="text-[13px] text-bridal-text-soft py-6">Activity history is not available yet.</p>
+      {errored && !loading && events.length === 0 ? (
+        <div className="py-6">
+          <p className="text-[13px] text-bridal-text-soft">
+            We couldn&apos;t load your activity just now.
+          </p>
+          <button
+            type="button"
+            onClick={() => load(1)}
+            className="mt-2 text-[13px] underline text-bridal-charcoal"
+          >
+            Try again
+          </button>
+        </div>
       ) : (
         <ActivityFeed
           events={events}

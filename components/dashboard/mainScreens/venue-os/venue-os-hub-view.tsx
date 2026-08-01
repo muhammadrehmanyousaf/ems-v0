@@ -11,6 +11,7 @@
  * existing components, touches no other screen.
  */
 import * as React from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useVenueOsFlags } from "@/lib/venue-os-runtime-flags";
 import { VenueOsInsights } from "./venue-os-insights";
 import { BiCockpitView } from "./bi-cockpit-view";
@@ -112,6 +113,28 @@ export function VenueOsHubView(): React.ReactElement {
   // override even when the global env flag is off.
   const { loading } = useVenueOsFlags();
 
+  // WW-VENUEOS — the tab lives in the URL, not in component state.
+  //
+  // This hub is the door to 179 endpoints across 46 views. With
+  // `defaultValue="today"` there was exactly ONE address for all of it: a
+  // vendor could not bookmark "Money & Expenses", could not send a hall manager
+  // a link to Spaces, and lost their place on every refresh. The sidebar could
+  // only ever point at the hub, which is why 179 endpoints looked like one menu
+  // item.
+  //
+  // Same pattern as the Money hub and Event Financials, deliberately — three
+  // tabbed surfaces behaving three different ways is its own kind of confusing.
+  const search = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const raw = search?.get("tab");
+  const active = PRIMARY_TABS.some((t) => t.value === raw) ? (raw as string) : "today";
+  const setTab = (value: string) => {
+    const params = new URLSearchParams(search?.toString() ?? "");
+    params.set("tab", value);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
   if (loading) {
     return (
       <div className="rounded-lg border border-dashed p-8 text-center">
@@ -139,7 +162,7 @@ export function VenueOsHubView(): React.ReactElement {
         </div>
       </div>
 
-      <Tabs defaultValue="today" className="w-full">
+      <Tabs value={active} onValueChange={setTab} className="w-full">
         <div className="overflow-x-auto pb-1">
           <TabsList className="inline-flex w-auto">
             {PRIMARY_TABS.map((t) => (

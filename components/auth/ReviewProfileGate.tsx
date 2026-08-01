@@ -69,7 +69,7 @@ export function ReviewProfileGate({ children }: ReviewProfileGateProps) {
   // builder, ledger). Where it's enabled, a pending vendor should be able to run
   // their business (log bookings, manage the calendar) while only their PUBLIC
   // profile waits for review — so the full-screen block becomes a slim banner.
-  if (process.env.NEXT_PUBLIC_ORDER_BUILDER === "1") {
+  if (true) {
     return (
       <>
         <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-900/50 px-4 py-2 text-xs text-amber-800 dark:text-amber-300">

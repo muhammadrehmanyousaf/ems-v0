@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import Link from "next/link"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { VendorsAPI, UsersAPI, type ApiUser } from "@/lib/api/dashboard"
 import { VendorEditDialog } from "@/components/dashboard/mainScreens/vendors/redesigned/vendor-edit-dialog"
@@ -87,11 +88,13 @@ export function VendorsAdminRedesignedView() {
     {
       key: "vendor",
       header: "Vendor",
+      // The name opens the vendor's own page. Without this the detail route
+      // exists and is unreachable — the exact shape of the 37 dead routes.
       render: (r) => (
-        <div className="flex items-center gap-2.5">
+        <Link href={`/dashboard/vendors/${r.id}`} className="flex items-center gap-2.5 group">
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{initials(r.fullName)}</span>
-          <span className="font-medium">{r.fullName || "—"}</span>
-        </div>
+          <span className="font-medium group-hover:text-primary group-hover:underline">{r.fullName || "—"}</span>
+        </Link>
       ),
     },
     { key: "type", header: "Type", render: (r) => <StatusPill tone="neutral">{cap(r.vendorType)}</StatusPill> },

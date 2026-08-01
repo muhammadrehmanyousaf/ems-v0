@@ -17,6 +17,7 @@
  */
 
 import * as React from "react"
+import Link from "next/link"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   SupplierAPI,
@@ -450,11 +451,13 @@ function SuppliersDirectoryTab({ businessId }: { businessId?: number }) {
     {
       key: "name",
       header: "Supplier",
+      // Opens the supplier's own page — what is outstanding, what is overdue,
+      // every invoice. Without this the route exists and is unreachable.
       render: (s) => (
-        <div className="flex items-center gap-2.5">
+        <Link href={`/dashboard/suppliers/${s.id}`} className="flex items-center gap-2.5 group">
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{initials(s.name)}</span>
-          <span className="font-medium">{s.name}</span>
-        </div>
+          <span className="font-medium group-hover:text-primary group-hover:underline">{s.name}</span>
+        </Link>
       ),
     },
     { key: "category", header: "Category", cellClassName: "text-muted-foreground", render: (s) => cap(s.category) },

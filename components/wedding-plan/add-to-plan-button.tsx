@@ -1,13 +1,11 @@
 "use client";
 
 /**
- * Shaadi Plan — flag-gated "Add to my wedding plan" trigger.
+ * Shaadi Plan — "Add to my wedding plan" trigger.
  *
  * Self-contained entry point dropped onto the vendor detail page and
- * search-result cards (spec §9). It renders NOTHING until the wedding-plan
- * flag resolves true in a mount effect (`useWeddingPlanFlag`) — so the
- * server render and the flag-off client render are byte-identical to the
- * legacy UI, and the existing Book / Request-quote CTAs are untouched.
+ * search-result cards (spec §9). Sits alongside the existing Book /
+ * Request-quote CTAs rather than replacing either.
  *
  * Two visual variants so it blends into either surface:
  *   - `detail` — a full-width bridal outline button for the action row.
@@ -20,7 +18,6 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { HeartHandshake, Loader2 } from "lucide-react";
-import { useWeddingPlanFlag } from "@/lib/wedding-plan";
 import { AddToPlanDialog } from "@/components/wedding-plan/add-to-plan-dialog";
 
 interface AddToPlanButtonProps {
@@ -46,14 +43,11 @@ export function AddToPlanButton({
   className = "",
   label,
 }: AddToPlanButtonProps) {
-  const enabled = useWeddingPlanFlag();
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const id = Number(businessId);
 
-  // Flag-off (and SSR / pre-mount): render nothing. This is what keeps the
-  // legacy vendor surfaces byte-identical.
-  if (!enabled || !Number.isFinite(id)) return null;
+  if (!Number.isFinite(id)) return null;
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();

@@ -54,7 +54,7 @@ const BookingListingView = () => {
   };
 
   const [importOpen, setImportOpen] = useState(false);
-  const showImport = process.env.NEXT_PUBLIC_BOOKING_IMPORT === '1';
+  const showImport = true;
 
   // Issue #8 — match the sidebar's craft label so a photographer who
   // sees "Shoots" in the nav also sees "Shoots" as the page heading.
@@ -143,7 +143,7 @@ const BookingListingView = () => {
             </div>
           )}
           {/* Phase-1 SPINE — owner money ledger (self-hides when backend feature is dark). */}
-          {process.env.NEXT_PUBLIC_ORDER_BUILDER === '1' && <OwnerLedgerCard />}
+          {<OwnerLedgerCard />}
           {view === 'pipeline' ? <PipelineView /> : <BookingTable search={search} bucket={bucket} />}
           {showImport && (
             <ImportBookingsDialog
