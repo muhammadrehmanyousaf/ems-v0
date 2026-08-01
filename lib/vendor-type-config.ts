@@ -33,7 +33,9 @@ export type NavItemKey =
   | "Today"
   | "Lead inbox"
   | "Bookings"
+  | "Date holds"
   | "Function sheets"
+  | "Trade operations"
   | "Customers"
   | "Calendar"
   | "Conversations"
@@ -45,8 +47,13 @@ export type NavItemKey =
   | "Receipts"
   | "Cheque ledger"
   | "Expenses"
+  | "Tax report"
+  // Insight
+  | "Reports"
   // Operations group — type-conditional (only shown to vendor types
   // that actually need them, per §19.4).
+  | "Automation"
+  | "Kitchen prep"
   | "Inventory"
   | "Staff & payroll"
   | "Suppliers"
@@ -138,6 +145,10 @@ const COMMON_MAIN_NAV: NavItemKey[] = [
   "Today",
   "Lead inbox",
   "Bookings",
+  // Tentatively holding a date for a lead is the step BETWEEN an enquiry and a
+  // booking, and in this market it is most of the job. The screen existed with
+  // no way to reach it.
+  "Date holds",
   "Function sheets",
   "Customers",
   "Calendar",
@@ -150,6 +161,9 @@ const COMMON_MAIN_NAV: NavItemKey[] = [
   "Receipts",
   "Cheque ledger",
   "Expenses",
+  "Tax report",
+  // Insight
+  "Reports",
 ];
 
 // Keys that render under the "Khata" (money) section rather than "Main".
@@ -159,6 +173,7 @@ export const MONEY_NAV_KEYS: ReadonlySet<NavItemKey> = new Set<NavItemKey>([
   "Receipts",
   "Cheque ledger",
   "Expenses",
+  "Tax report",
 ]);
 
 // Regular vendors only see Business Settings in controls
@@ -180,7 +195,7 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
       Bookings: "Events / Functions", Customers: "Clients", Calendar: "Event Calendar",
       "Staff & payroll": "Staff & Crew",
     },
-    extraNavItems: ["Staff & payroll", "Suppliers", "Brokers", "Generator fuel"],
+    extraNavItems: ["Staff & payroll", "Suppliers", "Brokers", "Generator fuel", "Kitchen prep"],
     typeSpecificFields: [
       { key: "subBusinessType", label: "Venue Type", type: "select", options: ["Marquee", "Hall", "Outdoor", "Others"] },
       { key: "expertise", label: "Expertise", type: "multi-select", options: ["Engagement", "Wedding", "Parties", "Fashion Show", "Dinner"] },
@@ -209,7 +224,7 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
       Bookings: "Orders", Customers: "Clients", Calendar: "Event Calendar",
       Inventory: "Kitchen & Stock", "Staff & payroll": "Kitchen & Waiters",
     },
-    extraNavItems: ["Inventory", "Staff & payroll", "Suppliers", "Generator fuel", "Halal certs"],
+    extraNavItems: ["Inventory", "Staff & payroll", "Suppliers", "Generator fuel", "Halal certs", "Kitchen prep"],
     typeSpecificFields: [
       { key: "maxCapacity", label: "Maximum Guests", type: "number", placeholder: "2000" },
       { key: "minCapacity", label: "Minimum Guests", type: "number", placeholder: "50" },
@@ -605,7 +620,7 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     hasMenus: false,
     pricingLabel: "per event",
     navLabels: { Bookings: "Setups", Customers: "Clients", Calendar: "Setup Calendar", Inventory: "Tents & Stock", "Staff & payroll": "Setup Crew" },
-    extraNavItems: ["Inventory", "Staff & payroll", "Suppliers"],
+    extraNavItems: ["Inventory", "Staff & payroll", "Suppliers", "Kitchen prep"],
     typeSpecificFields: [
       { key: "maxGuestCapacity", label: "Max Guest Capacity", type: "number", placeholder: "500" },
       { key: "fabricColors", label: "Fabric Colors", type: "multi-select", options: ["White", "Ivory", "Gold", "Maroon", "Red", "Pastels"] },
@@ -706,7 +721,7 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     hasMenus: false,
     pricingLabel: "per kg",
     navLabels: { Bookings: "Orders", Customers: "Clients", Calendar: "Delivery Calendar", Inventory: "Stock" },
-    extraNavItems: ["Inventory", "Suppliers"],
+    extraNavItems: ["Inventory", "Suppliers", "Kitchen prep"],
     typeSpecificFields: [
       { key: "traditionalRange", label: "Sweets Range", type: "multi-select", options: ["Laddoo", "Gulab Jaman", "Barfi", "Jalebi", "Gajar Halwa", "Rasgulla", "Patisa", "Kalakand"] },
       { key: "customPackaging", label: "Custom Packaging", type: "boolean" },
@@ -729,7 +744,7 @@ export const VENDOR_TYPE_CONFIGS: Record<string, VendorTypeConfig> = {
     hasMenus: false,
     pricingLabel: "per event",
     navLabels: { Bookings: "Events", Customers: "Clients", Calendar: "Event Calendar", Inventory: "Stock", "Staff & payroll": "Chefs & Crew" },
-    extraNavItems: ["Inventory", "Staff & payroll", "Suppliers", "Halal certs"],
+    extraNavItems: ["Inventory", "Staff & payroll", "Suppliers", "Halal certs", "Kitchen prep"],
     typeSpecificFields: [
       { key: "stationsOffered", label: "Stations", type: "multi-select", options: ["Chaat", "Paan", "Tandoor", "Juice", "Ice Cream", "BBQ", "Fries"] },
       { key: "kgPerHour", label: "Output (kg / hour)", type: "number", placeholder: "20" },
@@ -824,3 +839,17 @@ export const DEFAULT_VENDOR_CONFIG = {
   typeSpecificFields: [] as TypeSpecificFieldDef[],
   extraNavItems: ["Staff & payroll", "Inventory"] as NavItemKey[],
 };
+
+/**
+ * Operations tools every vendor type gets, regardless of craft.
+ *
+ * A per-type `extraNavItems` REPLACES the default rather than extending it, so
+ * anything added to DEFAULT_VENDOR_CONFIG above reaches only the types with no
+ * explicit config. These are appended on top of whichever list wins, which is
+ * why they live in their own constant.
+ *
+ * Both are craft-neutral: every vendor has contracts to run and reminders to
+ * send. "Kitchen prep" is deliberately NOT here — a photographer does not cook
+ * deghs, so it is added only to the types that feed people.
+ */
+export const UNIVERSAL_EXTRA_NAV: NavItemKey[] = ["Trade operations", "Automation"];

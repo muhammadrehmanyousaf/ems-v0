@@ -23,7 +23,7 @@ export default function EventWeatherChip({ bookingId }: { bookingId: number }) {
   const [fc, setFc] = useState<Forecast | null>(null);
 
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_WEATHER !== "1") return;
+    if (false) return;
     let alive = true;
     axiosInstance
       .get(`/api/v1/bookings/${bookingId}/weather`)

@@ -18,6 +18,13 @@ import {
   Gauge,
   Gavel,
   MessageSquareWarning,
+  CalendarClock,
+  Receipt,
+  BarChart3,
+  Workflow,
+  ChefHat,
+  ListChecks,
+  Activity,
   Inbox,
   LayoutDashboard,
   Megaphone,
@@ -52,6 +59,7 @@ export const data = {
     { name: "Today",         url: "/dashboard/today",          icon: Sparkles,        i18nKey: "nav.today" },
     { name: "Lead inbox",    url: "/dashboard/leads",          icon: Inbox,           i18nKey: "nav.leads" },
     { name: "Bookings",      url: "/dashboard/bookings",       icon: ClipboardList,   i18nKey: "nav.bookings" },
+    { name: "Date holds",    url: "/dashboard/holds",          icon: CalendarClock,   i18nKey: "nav.holds" },
     { name: "Function sheets", url: "/dashboard/function-sheets", icon: FileText,     i18nKey: "nav.function_sheets" },
     { name: "Customers",     url: "/dashboard/customers",      icon: SquareUser,      i18nKey: "nav.customers" },
     { name: "Calendar",      url: "/dashboard/calendar",       icon: CalendarDays,    i18nKey: "nav.calendar" },
@@ -61,6 +69,11 @@ export const data = {
     { name: "Receipts",      url: "/dashboard/receipts",       icon: CircleDollarSign, i18nKey: "nav.receipts" },
     { name: "Cheque ledger", url: "/dashboard/pdcs",           icon: Wallet,          i18nKey: "nav.cheque_ledger" },
     { name: "Expenses",      url: "/dashboard/expenses",       icon: Wallet,          i18nKey: "nav.expenses" },
+    { name: "Tax report",    url: "/dashboard/tax",            icon: Receipt,         i18nKey: "nav.tax" },
+    { name: "Reports",       url: "/dashboard/reports",        icon: BarChart3,       i18nKey: "nav.reports" },
+    { name: "Trade operations", url: "/dashboard/trade-ops",   icon: Workflow,        i18nKey: "nav.trade_ops" },
+    { name: "Automation",    url: "/dashboard/automation",     icon: Zap,             i18nKey: "nav.automation" },
+    { name: "Kitchen prep",  url: "/dashboard/kitchen-prep",   icon: ChefHat,         i18nKey: "nav.kitchen_prep" },
     { name: "Inventory",     url: "/dashboard/inventory",      icon: Boxes,           i18nKey: "nav.inventory" },
     { name: "Staff & payroll", url: "/dashboard/staff",        icon: HandCoins,       i18nKey: "nav.staff" },
     { name: "Suppliers",     url: "/dashboard/suppliers",      icon: Truck,           i18nKey: "nav.suppliers" },
@@ -70,7 +83,7 @@ export const data = {
     { name: "Drone NOC",     url: "/dashboard/drone-noc",      icon: Plane,           i18nKey: "nav.drone_noc" },
     { name: "Reviews",       url: "/dashboard/reviews",        icon: Smile,           i18nKey: "nav.reviews" },
     { name: "Notifications", url: "/dashboard/notifications",  icon: Bell,            i18nKey: "nav.notifications" },
-    // Growth — gated by feature flags in buildVendorSections.
+    // Growth — rendered as the "Grow" section in buildVendorSections.
     { name: "Promote",       url: "/dashboard/promote",        icon: Megaphone,       i18nKey: "nav.promote" },
     { name: "Plan & billing", url: "/dashboard/billing",       icon: CreditCard,      i18nKey: "nav.billing" },
     { name: "Collaborations", url: "/dashboard/collaborations", icon: Handshake,      i18nKey: "nav.collaborations" },
@@ -78,11 +91,16 @@ export const data = {
 
   vendorMyBusiness: [
     { name: "Business Settings", url: "/dashboard/settings", icon: Settings, i18nKey: "nav.business_settings" },
+    // Both screens were built and unreachable. A vendor could not say when they
+    // are bookable, or what happens when a customer cancels — the two questions
+    // every enquiry starts with.
+    { name: "Availability", url: "/dashboard/availability", icon: CalendarClock, i18nKey: "nav.availability" },
+    { name: "Cancellation policy", url: "/dashboard/cancellation-policy", icon: FileText, i18nKey: "nav.cancellation_policy" },
+    { name: "Setup checklist", url: "/dashboard/onboarding", icon: ListChecks, i18nKey: "nav.onboarding" },
   ],
 
-  // Venue-OS (multi-venue vendor-OS spine) — pilot surface, gated in
-  // buildVendorSections by NEXT_PUBLIC_ORG_MEMBERSHIP_ON (default OFF). No
-  // i18nKey: falls back to `name` so there's no missing-translation key.
+  // Venue-OS (multi-venue vendor-OS spine). No i18nKey: falls back to `name`
+  // so there is no missing-translation key.
   // WW-VENUEOS — seven doors, not one.
   //
   // This was a single "Venue-OS" entry leading to a tabbed hub holding 46 views
@@ -104,14 +122,11 @@ export const data = {
   ],
 
   // PWA-02 — Field Capture hub (offline-first lead/payment/expense/hold capture).
-  // Injected flag-gated (NEXT_PUBLIC_FEAT_OFFLINE_OUTBOX) in app-sidebar so it
-  // stays hidden until the pilot enables offline mode.
   vendorFieldCapture: [
     { name: "Field capture", url: "/dashboard/field", icon: Zap, i18nKey: "nav.field_capture" },
   ],
 
-  // FEAT_QUOTE_NEGOTIATION — customer quote/haggle requests. Injected flag-gated
-  // (NEXT_PUBLIC_FEAT_QUOTE_NEGOTIATION) in app-sidebar; dark until pilot-enabled.
+  // Customer quote/haggle requests.
   vendorQuotes: [
     { name: "Quote requests", url: "/dashboard/quotes", icon: Handshake, i18nKey: "nav.quotes" },
   ],
@@ -121,6 +136,7 @@ export const data = {
 
   adminOverview: [
     { name: "Dashboard", url: "/dashboard", icon: Gauge },
+    { name: "Platform pulse", url: "/dashboard/admin/platform-pulse", icon: Activity },
   ],
 
   // Day-to-day platform operations — review queues + monitoring.
@@ -132,6 +148,7 @@ export const data = {
     // Disputes are customer↔vendor about one booking. Complaints are about
     // US — often with no booking at all. Different queue, different remedy.
     { name: "Complaints",     url: "/dashboard/admin/complaints",   icon: MessageSquareWarning },
+    { name: "Activity & audit", url: "/dashboard/admin/activity",   icon: Activity },
     { name: "Promotions",     url: "/dashboard/admin/promotions",   icon: Megaphone },
     { name: "Plan upgrades",  url: "/dashboard/admin/subscriptions", icon: CreditCard },
     // NO Bookings / Payments here. Both routes render VENDOR-scoped screens
@@ -146,6 +163,7 @@ export const data = {
   adminDirectory: [
     { name: "Vendors",    url: "/dashboard/vendors",    icon: UserCheck },
     { name: "Businesses", url: "/dashboard/businesses", icon: BriefcaseBusiness },
+    { name: "Businesses overview", url: "/dashboard/businesses-overview", icon: BarChart3 },
     { name: "Customers",  url: "/dashboard/customers",  icon: SquareUser },
   ],
 

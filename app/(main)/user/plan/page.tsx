@@ -8,9 +8,6 @@
  * here the customer opens the builder to add functions, shortlist vendors,
  * and book the whole shaadi together.
  *
- * The entire surface is flag-gated (`NEXT_PUBLIC_FEAT_WEDDING_PLAN` env OR
- * localStorage override), resolved in a mount effect so SSR + the flag-off
- * client render are identical and never leak the surface.
  */
 
 import * as React from "react";
@@ -105,7 +102,6 @@ export default function PlanHubPage() {
     );
   }
 
-  // Flag resolved false — the surface stays hidden.
   return (
     <PageContainer>
       <PageHeader

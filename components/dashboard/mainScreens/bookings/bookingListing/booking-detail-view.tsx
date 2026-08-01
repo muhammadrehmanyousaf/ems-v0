@@ -376,7 +376,7 @@ export default function BookingDetailView({
                     </a>
                   </div>
                 )}
-                {process.env.NEXT_PUBLIC_WA_TEMPLATES === '1' && booking.customerPhone && (
+                {booking.customerPhone && (
                   <div className="pt-1">
                     <WhatsAppQuickSend
                       phone={booking.customerPhone}
@@ -650,32 +650,32 @@ export default function BookingDetailView({
 
           {/* Phase-1 SPINE — editable order builder (flag-gated; the card self-hides
               when the backend feature ORDER_BUILDER_ON is off / returns 404). */}
-          {process.env.NEXT_PUBLIC_ORDER_BUILDER === '1' && (
+          {(
             <OrderBuilderCard bookingId={booking.id} />
           )}
 
           {/* Phase-2 EPIC 1 — BEO event sheet (self-hides when BEO_SHEET_ENABLED is off / 404). */}
-          {process.env.NEXT_PUBLIC_ORDER_BUILDER === '1' && (
+          {(
             <BeoSheetCard bookingId={booking.id} />
           )}
 
           {/* Phase-2 EPIC 9 — money-truth reconciliation (self-hides when PAISA_HUB_ENABLED is off / 404). */}
-          {process.env.NEXT_PUBLIC_ORDER_BUILDER === '1' && (
+          {(
             <PaisaReconcileCard bookingId={booking.id} />
           )}
 
           {/* Phase-2 EPIC 2 — per-event P&L (Aya/Gaya/Bacha; self-hides until a cost is entered). */}
-          {process.env.NEXT_PUBLIC_ORDER_BUILDER === '1' && (
+          {(
             <EventPnlCard bookingId={booking.id} />
           )}
 
           {/* Phase-2 EPIC 5 — refund preview (self-hides when DISPUTE_ENGINE_ENABLED is off / 404). */}
-          {process.env.NEXT_PUBLIC_ORDER_BUILDER === '1' && (
+          {(
             <RefundPreviewCard bookingId={booking.id} />
           )}
 
           {/* EPIC 5 — cancellation/refund actions + court-exposure (self-hides on 404). */}
-          {process.env.NEXT_PUBLIC_ORDER_BUILDER === '1' && (
+          {(
             <CancellationActionsCard bookingId={booking.id} />
           )}
 

@@ -47,9 +47,9 @@ const PERIODS = [
 
 // Flag-gated rollout of the vendor-configured slot engine. Default OFF =
 // the fixed Morning/Afternoon/Evening behaviour below, byte-for-byte unchanged.
-const SLOT_TEMPLATES_ENABLED = process.env.NEXT_PUBLIC_SLOT_TEMPLATES === "1"
+const SLOT_TEMPLATES_ENABLED = true
 // Venue compliance soft-warnings (one-dish / guest-cap / closing-time). Default OFF.
-const VENUE_COMPLIANCE_ENABLED = process.env.NEXT_PUBLIC_VENUE_COMPLIANCE === "1"
+const VENUE_COMPLIANCE_ENABLED = true
 
 const WEEKDAY_SHORT = ["S", "M", "T", "W", "T", "F", "S"]
 const WEEKDAY_FULL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]

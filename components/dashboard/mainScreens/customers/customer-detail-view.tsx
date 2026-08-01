@@ -366,7 +366,7 @@ export default function CustomerDetailView({
                   <MapPin className="h-3.5 w-3.5" /> {profile.address}
                 </span>
               )}
-              {process.env.NEXT_PUBLIC_WA_TEMPLATES === '1' && profile.phone && (
+              {profile.phone && (
                 <WhatsAppQuickSend
                   phone={profile.phone}
                   customerName={profile.name}
@@ -430,7 +430,7 @@ export default function CustomerDetailView({
       </div>
 
       {/* ─── Trust & risk (offline customers only, §26.4) ───────── */}
-      {process.env.NEXT_PUBLIC_CUSTOMER_TRUST === '1' && profile.offlineCustomerId && (
+      {profile.offlineCustomerId && (
         <CustomerTrustCard
           offlineCustomerId={profile.offlineCustomerId}
           customerName={displayName}
@@ -438,7 +438,7 @@ export default function CustomerDetailView({
       )}
 
       {/* ─── Community trust (cross-vendor aggregate) ───────────── */}
-      {process.env.NEXT_PUBLIC_COMMUNITY_TRUST === '1' && (profile.phone || profile.email) && (
+      {(profile.phone || profile.email) && (
         <CommunityTrustPanel phone={profile.phone} email={profile.email} />
       )}
 

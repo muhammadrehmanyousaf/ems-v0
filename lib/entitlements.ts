@@ -72,7 +72,7 @@ export function useEntitlement(feature: EntitlementFeature): {
   showNudge: boolean;
 } {
   const { user } = useUser();
-  const billingOn = process.env.NEXT_PUBLIC_BILLING === "1";
+  const billingOn = true;
   const currentTier = ((user as { subscriptionTier?: SubscriptionTier } | null)?.subscriptionTier
     || "free") as SubscriptionTier;
   const allowed = tierSatisfies(currentTier, feature);

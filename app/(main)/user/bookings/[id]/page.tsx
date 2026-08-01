@@ -58,10 +58,9 @@ import { DisputeCard } from "@/components/bookings/dispute-card";
 import { ReviewPromptCard } from "@/components/bookings/review-prompt-card";
 // BK-100.9 — postpone-without-cancel (Pakistani Islamic mourning custom).
 import { PostponeBookingDialog } from "@/components/bookings/postpone-booking-dialog";
-// BK-038 — customer "Change date" reschedule (flag-gated, default OFF).
+// BK-038 — customer "Change date" reschedule.
 import { RescheduleBookingDialog } from "@/components/bookings/reschedule-booking-dialog";
-import { isCustomerRescheduleOn } from "@/lib/customer-reschedule-flag";
-// EPIC 5 · §3 — customer "Request a refund" (flag-gated, default OFF).
+// EPIC 5 · §3 — customer "Request a refund".
 import { RefundRequestCard } from "@/components/bookings/refund-request-card";
 
 interface BookingDetail {
@@ -437,19 +436,16 @@ export default function BookingDetailPage() {
             onPostponed={fetchBooking}
             triggerVariant="button"
           />
-          {/* BK-038 — customer "Change date" reschedule. Flag-gated OFF by
-              default (money can move on a reprice), so dark on prod until a
-              pilot enables NEXT_PUBLIC_CUSTOMER_RESCHEDULE_ON. */}
-          {isCustomerRescheduleOn() ? (
-            <RescheduleBookingDialog
-              bookingId={booking.id}
-              bookingStatus={booking.status}
-              currentDate={booking.bookingDate}
-              currentTime={booking.bookingTime}
-              onRescheduled={fetchBooking}
-              triggerVariant="button"
-            />
-          ) : null}
+          {/* BK-038 — customer "Change date" reschedule. A reprice can move money,
+              so the backend re-validates and re-quotes on every request. */}
+          <RescheduleBookingDialog
+            bookingId={booking.id}
+            bookingStatus={booking.status}
+            currentDate={booking.bookingDate}
+            currentTime={booking.bookingTime}
+            onRescheduled={fetchBooking}
+            triggerVariant="button"
+          />
           <Button
             onClick={() => setCancelDialogOpen(true)}
             size="sm"
@@ -549,9 +545,8 @@ export default function BookingDetailPage() {
                   Set a new date by {fmtShort(booking.postponedUntilAt)} via reschedule. Your deposit stays safe in the meantime.
                 </p>
               )}
-              {/* BK-038 — the actual "set a new date" control the banner
-                  references. Flag-gated OFF by default. */}
-              {isCustomerRescheduleOn() && !["cancelled", "completed"].includes(statusKey) ? (
+              {/* BK-038 — the actual "set a new date" control the banner references. */}
+              {!["cancelled", "completed"].includes(statusKey) ? (
                 <div className="pt-1">
                   <RescheduleBookingDialog
                     bookingId={booking.id}

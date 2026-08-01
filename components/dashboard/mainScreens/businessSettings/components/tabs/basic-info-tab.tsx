@@ -398,7 +398,7 @@ const BasicInfoTab = ({ business, onSuccess }: BasicInfoTabProps) => {
                 Flag-gated (NEXT_PUBLIC_PRICING_RULES); the backend engine is
                 separately gated by env PRICING_RULES_ENGINE, so configuring
                 here never changes prices until both are on. */}
-            {process.env.NEXT_PUBLIC_PRICING_RULES === '1' && (
+            {(
                 <div className="pt-6">
                     <PricingRulesCard businessId={business.id} />
                 </div>

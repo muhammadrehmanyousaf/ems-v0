@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Function Sheet detail view — the full working surface for a single
@@ -21,12 +21,12 @@
  * Zero backend changes; reuses GET /:id endpoint already shipped.
  */
 
-import * as React from 'react';
-import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { toast } from 'sonner';
-import axiosInstance from '@/lib/axiosConfig';
+import * as React from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { toast } from "sonner";
+import axiosInstance from "@/lib/axiosConfig";
 import {
   Loader2,
   ArrowLeft,
@@ -57,12 +57,12 @@ import {
   Boxes,
   TrendingUp,
   TrendingDown,
-} from 'lucide-react';
+} from "lucide-react";
 
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,7 +72,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -80,7 +80,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 
 import {
   FunctionSheetAPI,
@@ -93,68 +93,68 @@ import {
   type PdfVariant,
   type AuditEvent,
   type LinkedFinancials,
-} from '@/lib/api/functionSheets';
-import { FunctionSheetComposer } from './function-sheet-composer';
-import BeoRunSheetCard from './beo-run-sheet-card';
-import DeliverablesCard from './deliverables-card';
-import KitchenSheetCard from './kitchen-sheet-card';
-import BridalFittingCard from './bridal-fitting-card';
-import DecoratorSetupCard from './decorator-setup-card';
-import CarRentalCard from './car-rental-card';
-import HennaScheduleCard from './henna-schedule-card';
-import StationeryCard from './stationery-card';
-import MakeupCard from './makeup-card';
-import SubcontractCard from './subcontract-card';
-import PhotographyCard from './photography-card';
-import { useUser } from '@/context/UserContext';
-import { SignDialog, type SignSide } from './sign-dialog';
-import { SendWhatsappDialog } from './send-whatsapp-dialog';
-import { ShareLinkDialog } from './share-link-dialog';
-import { FbrSubmitDialog } from './fbr-submit-dialog';
+} from "@/lib/api/functionSheets";
+import { FunctionSheetComposer } from "./function-sheet-composer";
+import BeoRunSheetCard from "./beo-run-sheet-card";
+import DeliverablesCard from "./deliverables-card";
+import KitchenSheetCard from "./kitchen-sheet-card";
+import BridalFittingCard from "./bridal-fitting-card";
+import DecoratorSetupCard from "./decorator-setup-card";
+import CarRentalCard from "./car-rental-card";
+import HennaScheduleCard from "./henna-schedule-card";
+import StationeryCard from "./stationery-card";
+import MakeupCard from "./makeup-card";
+import SubcontractCard from "./subcontract-card";
+import PhotographyCard from "./photography-card";
+import { useUser } from "@/context/UserContext";
+import { SignDialog, type SignSide } from "./sign-dialog";
+import { SendWhatsappDialog } from "./send-whatsapp-dialog";
+import { ShareLinkDialog } from "./share-link-dialog";
+import { FbrSubmitDialog } from "./fbr-submit-dialog";
 
 // Forward-only happy path mirroring the list view.
 const NEXT_STATES: Record<FunctionSheetState, FunctionSheetState[]> = {
-  draft: ['quote_sent'],
-  quote_sent: ['contract_pending'],
-  contract_pending: ['signed'],
-  signed: ['beo_ready'],
-  beo_ready: ['invoiced'],
-  invoiced: ['paid'],
-  paid: ['archived'],
+  draft: ["quote_sent"],
+  quote_sent: ["contract_pending"],
+  contract_pending: ["signed"],
+  signed: ["beo_ready"],
+  beo_ready: ["invoiced"],
+  invoiced: ["paid"],
+  paid: ["archived"],
   archived: [],
   cancelled: [],
 };
 
 function fmtPKR(n: number | string | null | undefined): string {
   const x = Number(n);
-  if (!Number.isFinite(x)) return '—';
-  return `Rs. ${Math.round(x).toLocaleString('en-PK')}`;
+  if (!Number.isFinite(x)) return "—";
+  return `Rs. ${Math.round(x).toLocaleString("en-PK")}`;
 }
 function fmtDate(iso: string | null | undefined): string {
-  if (!iso) return '—';
+  if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString('en-PK', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    return new Date(iso).toLocaleDateString("en-PK", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   } catch {
     return iso;
   }
 }
 function fmtDateTime(iso: string | null | undefined): string {
-  if (!iso) return '—';
+  if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleString('en-PK');
+    return new Date(iso).toLocaleString("en-PK");
   } catch {
     return iso;
   }
 }
 function termsToList(termsJson: any): string[] | null {
   if (!termsJson) return null;
-  if (typeof termsJson === 'string') return [termsJson];
+  if (typeof termsJson === "string") return [termsJson];
   if (Array.isArray(termsJson?.lines)) return termsJson.lines;
-  if (typeof termsJson?.text === 'string') return [termsJson.text];
+  if (typeof termsJson?.text === "string") return [termsJson.text];
   return null;
 }
 
@@ -200,7 +200,7 @@ export default function FunctionSheetDetailView({
         FunctionSheetAPI.linkedFinancials(sheetId).catch(() => null),
       ]);
       if (!row) {
-        setError('Function sheet not found');
+        setError("Function sheet not found");
         setSheet(null);
       } else {
         setSheet(row);
@@ -208,7 +208,7 @@ export default function FunctionSheetDetailView({
         setFinancials(fin);
       }
     } catch (e: any) {
-      setError(e?.response?.data?.message || 'Failed to load function sheet');
+      setError(e?.response?.data?.message || "Failed to load function sheet");
     } finally {
       setLoading(false);
     }
@@ -221,7 +221,7 @@ export default function FunctionSheetDetailView({
 
   useEffect(() => {
     axiosInstance
-      .get('/api/v1/businesses/user-business')
+      .get("/api/v1/businesses/user-business")
       .then((res) => {
         const list = res.data?.data;
         const arr = Array.isArray(list) ? list : list?.data || [];
@@ -243,7 +243,7 @@ export default function FunctionSheetDetailView({
       toast.success(`Moved to ${STATE_LABELS[to]}`);
       await loadAll();
     } catch (e: any) {
-      toast.error(e?.response?.data?.message || 'Transition refused');
+      toast.error(e?.response?.data?.message || "Transition refused");
     } finally {
       setBusy(false);
     }
@@ -253,12 +253,12 @@ export default function FunctionSheetDetailView({
     if (!sheet) return;
     setBusy(true);
     try {
-      await FunctionSheetAPI.transition(sheet.id, { to: 'cancelled' });
-      toast.success('Sheet cancelled');
+      await FunctionSheetAPI.transition(sheet.id, { to: "cancelled" });
+      toast.success("Sheet cancelled");
       setCancelConfirmOpen(false);
       await loadAll();
     } catch (e: any) {
-      toast.error(e?.response?.data?.message || 'Could not cancel');
+      toast.error(e?.response?.data?.message || "Could not cancel");
     } finally {
       setBusy(false);
     }
@@ -269,10 +269,10 @@ export default function FunctionSheetDetailView({
     setBusy(true);
     try {
       await FunctionSheetAPI.remove(sheet.id);
-      toast.success('Sheet removed');
-      router.push('/dashboard/function-sheets');
+      toast.success("Sheet removed");
+      router.push("/dashboard/function-sheets");
     } catch (e: any) {
-      toast.error(e?.response?.data?.message || 'Could not remove');
+      toast.error(e?.response?.data?.message || "Could not remove");
     } finally {
       setBusy(false);
     }
@@ -280,21 +280,21 @@ export default function FunctionSheetDetailView({
 
   const handlePdf = async (
     variant: PdfVariant,
-    mode: 'preview' | 'download',
+    mode: "preview" | "download",
   ) => {
     if (!sheet) return;
     setBusy(true);
     try {
       const blob = await FunctionSheetAPI.pdfBlob(sheet.id, variant);
       const url = window.URL.createObjectURL(blob);
-      if (mode === 'preview') {
-        window.open(url, '_blank');
+      if (mode === "preview") {
+        window.open(url, "_blank");
         setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
       } else {
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
         a.download = `${PDF_VARIANT_LABELS[variant]
-          .replace(/[^a-z0-9-]+/gi, '-')
+          .replace(/[^a-z0-9-]+/gi, "-")
           .toLowerCase()}-${sheet.id}.pdf`;
         document.body.appendChild(a);
         a.click();
@@ -302,7 +302,7 @@ export default function FunctionSheetDetailView({
         window.URL.revokeObjectURL(url);
       }
     } catch (e: any) {
-      toast.error(e?.response?.data?.message || 'Could not generate PDF');
+      toast.error(e?.response?.data?.message || "Could not generate PDF");
     } finally {
       setBusy(false);
     }
@@ -338,7 +338,7 @@ export default function FunctionSheetDetailView({
           <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
             <AlertTriangle className="h-10 w-10 text-amber-600" />
             <p className="text-sm text-muted-foreground">
-              {error || 'Function sheet not found.'}
+              {error || "Function sheet not found."}
             </p>
           </CardContent>
         </Card>
@@ -349,8 +349,7 @@ export default function FunctionSheetDetailView({
   const tone = STATE_TONES[sheet.state];
   const nextOptions = NEXT_STATES[sheet.state] || [];
   const variants = variantsAvailable(sheet.state);
-  const isTerminal =
-    sheet.state === 'archived' || sheet.state === 'cancelled';
+  const isTerminal = sheet.state === "archived" || sheet.state === "cancelled";
 
   const sigs = (sheet.signaturesJson || {}) as any;
   const vendorSig = sigs.vendor || null;
@@ -366,11 +365,11 @@ export default function FunctionSheetDetailView({
     (!sheet.shareTokenExpiresAt ||
       new Date(sheet.shareTokenExpiresAt) > new Date());
 
-  const fbrEligible = sheet.state === 'invoiced' || sheet.state === 'paid';
+  const fbrEligible = sheet.state === "invoiced" || sheet.state === "paid";
   const canSign =
-    !isTerminal && sheet.state !== 'paid' && sheet.state !== 'archived';
+    !isTerminal && sheet.state !== "paid" && sheet.state !== "archived";
   const canShare = canSign;
-  const canEdit = !isTerminal && sheet.state !== 'paid';
+  const canEdit = !isTerminal && sheet.state !== "paid";
 
   return (
     <div className="space-y-4">
@@ -395,7 +394,7 @@ export default function FunctionSheetDetailView({
                 disabled={busy}
                 className={`${t.border} ${t.text}`}
               >
-                {to === 'paid' || to === 'archived' ? (
+                {to === "paid" || to === "archived" ? (
                   <CheckCircle2 className="mr-1 h-3 w-3" />
                 ) : (
                   <ArrowRight className="mr-1 h-3 w-3" />
@@ -431,7 +430,7 @@ export default function FunctionSheetDetailView({
             size="sm"
             variant="ghost"
             onClick={() => setDeleteConfirmOpen(true)}
-            disabled={busy || sheet.state === 'paid'}
+            disabled={busy || sheet.state === "paid"}
             className="text-rose-700 hover:text-rose-900"
           >
             <Trash2 className="mr-1 h-3 w-3" />
@@ -468,7 +467,9 @@ export default function FunctionSheetDetailView({
               )}
             </div>
             <div className="text-right">
-              <div className="text-3xl font-bold">{fmtPKR(sheet.grandTotal)}</div>
+              <div className="text-3xl font-bold">
+                {fmtPKR(sheet.grandTotal)}
+              </div>
               <div className="text-xs text-muted-foreground">Grand total</div>
               {Number(sheet.taxAmount) > 0 && (
                 <div className="text-xs text-muted-foreground">
@@ -513,7 +514,7 @@ export default function FunctionSheetDetailView({
                 Share link live · expires {fmtDate(sheet.shareTokenExpiresAt)}
               </span>
             )}
-            {sheet.fbrSubmissionStatus === 'accepted' &&
+            {sheet.fbrSubmissionStatus === "accepted" &&
               sheet.fbrInvoiceNumber && (
                 <span className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 font-mono text-emerald-900">
                   <ShieldCheck className="h-3 w-3" />
@@ -527,77 +528,98 @@ export default function FunctionSheetDetailView({
       {/* Two-column body */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
-          {/* BEO / run-sheet — flag-gated (NEXT_PUBLIC_BEO_EDITOR). Day-of
+          {/* BEO / run-sheet. Day-of
               operations doc; read-only once the sheet is terminal.
               Issue #16 — BEO = "Banquet Event Order" — venue/catering
               concept. Previously rendered for every vendor type, so a
               photographer's function sheet was dominated by run-sheet
               fields (table layout, beverage service, MC cues, etc.)
               that have no meaning to them. Now gated to venue/catering. */}
-          {process.env.NEXT_PUBLIC_BEO_EDITOR === '1' &&
-            (user?.vendorType === 'Wedding venue' ||
-             user?.vendorType === 'Catering') && (
-            <BeoRunSheetCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
+          {(user?.vendorType === "Wedding venue" ||
+            user?.vendorType === "Catering") && (
+            <BeoRunSheetCard
+              sheet={sheet}
+              onSaved={loadAll}
+              readOnly={!canEdit}
+            />
           )}
-          {/* Deliverables tracker — flag-gated (NEXT_PUBLIC_DELIVERABLES).
+          {/* Deliverables tracker.
               Photographer signature; usable by every type. */}
-          {process.env.NEXT_PUBLIC_DELIVERABLES === '1' && (
-            <DeliverablesCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
-          )}
+          <DeliverablesCard
+            sheet={sheet}
+            onSaved={loadAll}
+            readOnly={!canEdit}
+          />
           {/* Kitchen sheet — caterer signature; gated by vendor type so other
-              types don't see an irrelevant card. Flag NEXT_PUBLIC_KITCHEN_SHEET. */}
-          {process.env.NEXT_PUBLIC_KITCHEN_SHEET === '1' &&
-            user?.vendorType === 'Catering' && (
-              <KitchenSheetCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
-            )}
-          {/* Bridal fitting / alteration schedule — bridal-wear signature.
-              Flag NEXT_PUBLIC_BRIDAL_FITTING + vendor-type gated. */}
-          {process.env.NEXT_PUBLIC_BRIDAL_FITTING === '1' &&
-            user?.vendorType === 'Bridal wearing' && (
-              <BridalFittingCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
-            )}
-          {/* Decor setup + inventory — decorator signature. Flag
-              NEXT_PUBLIC_DECORATOR_SETUP + vendor-type gated. */}
-          {process.env.NEXT_PUBLIC_DECORATOR_SETUP === '1' &&
-            user?.vendorType === 'Decorator' && (
-              <DecoratorSetupCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
-            )}
-          {/* Fleet + drivers — car-rental signature. Flag
-              NEXT_PUBLIC_CAR_RENTAL + vendor-type gated. */}
-          {process.env.NEXT_PUBLIC_CAR_RENTAL === '1' &&
-            user?.vendorType === 'Car rental' && (
-              <CarRentalCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
-            )}
-          {/* Mehndi schedule — henna-artist signature (per-hand pricing).
-              Flag NEXT_PUBLIC_HENNA_SCHEDULE + vendor-type gated. */}
-          {process.env.NEXT_PUBLIC_HENNA_SCHEDULE === '1' &&
-            user?.vendorType === 'Henna artist' && (
-              <HennaScheduleCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
-            )}
-          {/* Invitations & stationery — proofs → approval lock → print runs.
-              Flag NEXT_PUBLIC_STATIONERY + vendor-type gated. */}
-          {process.env.NEXT_PUBLIC_STATIONERY === '1' &&
-            user?.vendorType === 'Wedding Invitations and Stationery' && (
-              <StationeryCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
-            )}
-          {/* Makeup day sheet — subjects × package + trials + early-start +
-              cap warning. Flag NEXT_PUBLIC_MAKEUP + vendor-type gated. */}
-          {process.env.NEXT_PUBLIC_MAKEUP === '1' &&
-            user?.vendorType === 'Makeup artist' && (
-              <MakeupCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
-            )}
-          {/* Sub-contract ledger (M23, §20) — ALL vendor types. Flag
-              NEXT_PUBLIC_SUBCONTRACT. */}
-          {process.env.NEXT_PUBLIC_SUBCONTRACT === '1' && (
-            <SubcontractCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
+              types don't see an irrelevant card. */}
+          {user?.vendorType === "Catering" && (
+            <KitchenSheetCard
+              sheet={sheet}
+              onSaved={loadAll}
+              readOnly={!canEdit}
+            />
           )}
+          {/* Bridal fitting / alteration schedule — bridal-wear signature. Vendor-type gated. */}
+          {user?.vendorType === "Bridal wearing" && (
+            <BridalFittingCard
+              sheet={sheet}
+              onSaved={loadAll}
+              readOnly={!canEdit}
+            />
+          )}
+          {/* Decor setup + inventory — decorator signature. Flag Vendor-type gated. */}
+          {user?.vendorType === "Decorator" && (
+            <DecoratorSetupCard
+              sheet={sheet}
+              onSaved={loadAll}
+              readOnly={!canEdit}
+            />
+          )}
+          {/* Fleet + drivers — car-rental signature. Flag Vendor-type gated. */}
+          {user?.vendorType === "Car rental" && (
+            <CarRentalCard
+              sheet={sheet}
+              onSaved={loadAll}
+              readOnly={!canEdit}
+            />
+          )}
+          {/* Mehndi schedule — henna-artist signature (per-hand pricing). Vendor-type gated. */}
+          {user?.vendorType === "Henna artist" && (
+            <HennaScheduleCard
+              sheet={sheet}
+              onSaved={loadAll}
+              readOnly={!canEdit}
+            />
+          )}
+          {/* Invitations & stationery — proofs → approval lock → print runs. Vendor-type gated. */}
+          {user?.vendorType === "Wedding Invitations and Stationery" && (
+            <StationeryCard
+              sheet={sheet}
+              onSaved={loadAll}
+              readOnly={!canEdit}
+            />
+          )}
+          {/* Makeup day sheet — subjects × package + trials + early-start +
+              cap warning. Vendor-type gated. */}
+          {user?.vendorType === "Makeup artist" && (
+            <MakeupCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
+          )}
+          {/* Sub-contract ledger (M23, §20) — ALL vendor types. Flag */}
+          <SubcontractCard
+            sheet={sheet}
+            onSaved={loadAll}
+            readOnly={!canEdit}
+          />
           {/* Photography shoot sheet — days + crew + shot list + family
-              groups + RAW/drone policy + targets. Flag NEXT_PUBLIC_PHOTOGRAPHY
+              groups + RAW/drone policy + targets.
               + vendor-type gated. */}
-          {process.env.NEXT_PUBLIC_PHOTOGRAPHY === '1' &&
-            user?.vendorType === 'Photographer' && (
-              <PhotographyCard sheet={sheet} onSaved={loadAll} readOnly={!canEdit} />
-            )}
+          {user?.vendorType === "Photographer" && (
+            <PhotographyCard
+              sheet={sheet}
+              onSaved={loadAll}
+              readOnly={!canEdit}
+            />
+          )}
           {/* Customer + event */}
           <Card>
             <CardContent className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
@@ -606,7 +628,7 @@ export default function FunctionSheetDetailView({
                   Customer
                 </div>
                 <div className="text-base font-semibold">
-                  {sheet.customerName || '—'}
+                  {sheet.customerName || "—"}
                 </div>
                 {sheet.customerPhone && (
                   <a
@@ -687,7 +709,7 @@ export default function FunctionSheetDetailView({
                           <tr
                             key={idx}
                             className={
-                              idx % 2 === 0 ? 'bg-white' : 'bg-neutral-50/50'
+                              idx % 2 === 0 ? "bg-white" : "bg-neutral-50/50"
                             }
                           >
                             <td className="px-3 py-2">
@@ -699,10 +721,10 @@ export default function FunctionSheetDetailView({
                               )}
                             </td>
                             <td className="px-2 py-2 text-right">
-                              {qty.toLocaleString('en-PK')}
+                              {qty.toLocaleString("en-PK")}
                             </td>
                             <td className="px-2 py-2 text-right">
-                              {unit.toLocaleString('en-PK')}
+                              {unit.toLocaleString("en-PK")}
                             </td>
                             <td className="px-3 py-2 text-right font-medium">
                               {fmtPKR(total)}
@@ -887,19 +909,19 @@ export default function FunctionSheetDetailView({
                     <DropdownMenuSeparator />
                     {variants.map((v) => (
                       <React.Fragment key={v}>
-                        <DropdownMenuItem onClick={() => handlePdf(v, 'preview')}>
+                        <DropdownMenuItem
+                          onClick={() => handlePdf(v, "preview")}
+                        >
                           <ExternalLink className="mr-2 h-3 w-3" />
                           Preview {PDF_VARIANT_LABELS[v]}
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => handlePdf(v, 'download')}
+                          onClick={() => handlePdf(v, "download")}
                         >
                           <Download className="mr-2 h-3 w-3" />
                           Download {PDF_VARIANT_LABELS[v]}
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setWhatsappVariant(v)}
-                        >
+                        <DropdownMenuItem onClick={() => setWhatsappVariant(v)}>
                           <MessageSquare className="mr-2 h-3 w-3" />
                           Send {PDF_VARIANT_LABELS[v]} via WhatsApp
                         </DropdownMenuItem>
@@ -922,20 +944,22 @@ export default function FunctionSheetDetailView({
                 <Button
                   variant="outline"
                   className="w-full justify-start"
-                  onClick={() => setSignSide('vendor')}
+                  onClick={() => setSignSide("vendor")}
                   disabled={busy}
                 >
                   <PenLine className="mr-2 h-3 w-3" />
-                  {vendorSig?.signedAt ? 'Re-sign as vendor' : 'Sign as vendor'}
+                  {vendorSig?.signedAt ? "Re-sign as vendor" : "Sign as vendor"}
                 </Button>
                 <Button
                   variant="outline"
                   className="w-full justify-start"
-                  onClick={() => setSignSide('customer')}
+                  onClick={() => setSignSide("customer")}
                   disabled={busy}
                 >
                   <PenLine className="mr-2 h-3 w-3" />
-                  {customerSig?.signedAt ? 'Re-sign customer' : 'Sign as customer'}
+                  {customerSig?.signedAt
+                    ? "Re-sign customer"
+                    : "Sign as customer"}
                 </Button>
               </CardContent>
             </Card>
@@ -950,12 +974,12 @@ export default function FunctionSheetDetailView({
                 </div>
                 <Button
                   variant="outline"
-                  className={`w-full justify-start ${shareTokenLive ? 'border-sky-300 bg-sky-50 text-sky-800' : ''}`}
+                  className={`w-full justify-start ${shareTokenLive ? "border-sky-300 bg-sky-50 text-sky-800" : ""}`}
                   onClick={() => setShareOpen(true)}
                   disabled={busy}
                 >
                   <Share2 className="mr-2 h-3 w-3" />
-                  {shareTokenLive ? 'Manage share link' : 'Generate share link'}
+                  {shareTokenLive ? "Manage share link" : "Generate share link"}
                 </Button>
               </CardContent>
             </Card>
@@ -971,23 +995,23 @@ export default function FunctionSheetDetailView({
                 <Button
                   variant="outline"
                   className={`w-full justify-start ${
-                    sheet.fbrSubmissionStatus === 'accepted'
-                      ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
-                      : sheet.fbrSubmissionStatus === 'rejected'
-                        ? 'border-rose-300 bg-rose-50 text-rose-800'
-                        : ''
+                    sheet.fbrSubmissionStatus === "accepted"
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                      : sheet.fbrSubmissionStatus === "rejected"
+                        ? "border-rose-300 bg-rose-50 text-rose-800"
+                        : ""
                   }`}
                   onClick={() => setFbrOpen(true)}
                   disabled={busy}
                 >
                   <ShieldCheck className="mr-2 h-3 w-3" />
-                  {sheet.fbrSubmissionStatus === 'accepted'
-                    ? 'Re-submit to FBR'
-                    : 'Submit to FBR'}
+                  {sheet.fbrSubmissionStatus === "accepted"
+                    ? "Re-submit to FBR"
+                    : "Submit to FBR"}
                 </Button>
                 {sheet.fbrInvoiceNumber && (
                   <p className="text-[11px] text-muted-foreground">
-                    Current FBR #{' '}
+                    Current FBR #{" "}
                     <span className="font-mono">{sheet.fbrInvoiceNumber}</span>
                   </p>
                 )}
@@ -1011,7 +1035,7 @@ export default function FunctionSheetDetailView({
 
       <SignDialog
         sheet={signSide ? sheet : null}
-        side={signSide ?? 'vendor'}
+        side={signSide ?? "vendor"}
         onOpenChange={(o) => !o && setSignSide(null)}
         onSaved={async () => {
           setSignSide(null);
@@ -1041,21 +1065,18 @@ export default function FunctionSheetDetailView({
         onSubmitted={loadAll}
       />
 
-      <AlertDialog
-        open={cancelConfirmOpen}
-        onOpenChange={setCancelConfirmOpen}
-      >
+      <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel this function sheet?</AlertDialogTitle>
             <AlertDialogDescription>
-              The sheet flips to <strong>cancelled</strong> (terminal).
-              Existing customer-printed PDFs remain valid historical
-              records; the row is locked from further edits.
-              {sheet.state === 'paid' && (
+              The sheet flips to <strong>cancelled</strong> (terminal). Existing
+              customer-printed PDFs remain valid historical records; the row is
+              locked from further edits.
+              {sheet.state === "paid" && (
                 <span className="mt-2 block text-rose-700">
-                  This sheet is <strong>paid</strong> — cancellation here is
-                  for refund-and-void scenarios (force-majeure post-deposit).
+                  This sheet is <strong>paid</strong> — cancellation here is for
+                  refund-and-void scenarios (force-majeure post-deposit).
                 </span>
               )}
             </AlertDialogDescription>
@@ -1069,10 +1090,7 @@ export default function FunctionSheetDetailView({
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog
-        open={deleteConfirmOpen}
-        onOpenChange={setDeleteConfirmOpen}
-      >
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove this function sheet?</AlertDialogTitle>
@@ -1097,10 +1115,10 @@ function SignatureBlock({
   side,
   sig,
 }: {
-  side: 'vendor' | 'customer';
+  side: "vendor" | "customer";
   sig: any;
 }) {
-  const label = side === 'vendor' ? 'Vendor' : 'Customer';
+  const label = side === "vendor" ? "Vendor" : "Customer";
   if (!sig?.signedAt) {
     return (
       <div className="rounded-md border border-neutral-200 p-3 text-xs text-muted-foreground">
@@ -1114,7 +1132,7 @@ function SignatureBlock({
       <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
         {label}
       </div>
-      <div className="text-sm font-medium">{sig.name || '—'}</div>
+      <div className="text-sm font-medium">{sig.name || "—"}</div>
       <div className="text-[11px] text-emerald-700">
         <CheckCircle2 className="mr-1 inline h-3 w-3" />
         Signed {fmtDateTime(sig.signedAt)}
@@ -1179,11 +1197,11 @@ function InlineActivity({ events }: { events: AuditEvent[] }) {
           <div className="flex flex-wrap items-baseline gap-2 text-xs">
             <span className="font-medium">{formatAction(e.action)}</span>
             <span className="text-[10px] text-muted-foreground">
-              {e.actor?.fullName || e.actor?.email || (
-                e.action === 'customer:signed-via-token'
-                  ? 'Customer (share link)'
-                  : 'System'
-              )}
+              {e.actor?.fullName ||
+                e.actor?.email ||
+                (e.action === "customer:signed-via-token"
+                  ? "Customer (share link)"
+                  : "System")}
             </span>
             <span className="ml-auto text-[10px] text-muted-foreground">
               {fmtDateTime(e.at)}
@@ -1207,7 +1225,16 @@ function LinkedFinancialsSection({
 }: {
   financials: LinkedFinancials;
 }) {
-  const { pnl, receipts, pdcs, supplierInvoices, brokerCommissions, expenses, staffShifts, inventoryMovements } = financials;
+  const {
+    pnl,
+    receipts,
+    pdcs,
+    supplierInvoices,
+    brokerCommissions,
+    expenses,
+    staffShifts,
+    inventoryMovements,
+  } = financials;
 
   return (
     <Card>
@@ -1252,26 +1279,26 @@ function LinkedFinancialsSection({
               <PnlCard
                 label="Net (paid only)"
                 value={pnl.net}
-                tone={pnl.net >= 0 ? 'emerald' : 'rose'}
+                tone={pnl.net >= 0 ? "emerald" : "rose"}
                 icon={HandCoins}
                 subtitle={
                   pnl.customerOutstanding > 0
                     ? `${fmtPKR(pnl.customerOutstanding)} outstanding from customer`
-                    : 'customer fully paid'
+                    : "customer fully paid"
                 }
               />
             </div>
 
             {/* Cashflow vs net distinction */}
             <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-[11px]">
-              <span className="font-semibold">Realised cashflow:</span>{' '}
+              <span className="font-semibold">Realised cashflow:</span>{" "}
               <span
                 className={
-                  pnl.cashflow >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                  pnl.cashflow >= 0 ? "text-emerald-700" : "text-rose-700"
                 }
               >
                 {fmtPKR(pnl.cashflow)}
-              </span>{' '}
+              </span>{" "}
               <span className="text-muted-foreground">
                 (cash received − cash paid out)
               </span>
@@ -1289,9 +1316,9 @@ function LinkedFinancialsSection({
             rows={receipts.map((r) => ({
               key: r.id,
               primary: r.method,
-              secondary: `${fmtDate(r.receivedDate)} ${r.transactionRef ? `· ${r.transactionRef}` : ''}`,
+              secondary: `${fmtDate(r.receivedDate)} ${r.transactionRef ? `· ${r.transactionRef}` : ""}`,
               amount: Number(r.amount) || 0,
-              tone: 'emerald',
+              tone: "emerald",
             }))}
           />
           <ResourceList
@@ -1299,21 +1326,21 @@ function LinkedFinancialsSection({
             count={pdcs.length}
             icon={Banknote}
             total={pdcs
-              .filter((p) => p.status !== 'bounced' && p.status !== 'cancelled')
+              .filter((p) => p.status !== "bounced" && p.status !== "cancelled")
               .reduce((s, p) => s + (Number(p.amount) || 0), 0)}
             rows={pdcs.map((p) => ({
               key: p.id,
               primary: `${p.bankName} · ${p.chequeNumber}`,
-              secondary: `${fmtDate(p.chequeDate)} · ${p.status}${p.bounceReason ? ` (${p.bounceReason})` : ''}`,
+              secondary: `${fmtDate(p.chequeDate)} · ${p.status}${p.bounceReason ? ` (${p.bounceReason})` : ""}`,
               amount: Number(p.amount) || 0,
               tone:
-                p.status === 'cleared'
-                  ? 'emerald'
-                  : p.status === 'bounced'
-                    ? 'rose'
-                    : p.status === 'deposited'
-                      ? 'sky'
-                      : 'amber',
+                p.status === "cleared"
+                  ? "emerald"
+                  : p.status === "bounced"
+                    ? "rose"
+                    : p.status === "deposited"
+                      ? "sky"
+                      : "amber",
             }))}
           />
           <ResourceList
@@ -1322,28 +1349,25 @@ function LinkedFinancialsSection({
             icon={CreditCard}
             total={supplierInvoices.reduce(
               (s, inv) =>
-                inv.status === 'void'
-                  ? s
-                  : s + (Number(inv.totalAmount) || 0),
+                inv.status === "void" ? s : s + (Number(inv.totalAmount) || 0),
               0,
             )}
             rows={supplierInvoices.map((inv) => {
               const outstanding = Math.max(
                 0,
-                (Number(inv.totalAmount) || 0) -
-                  (Number(inv.amountPaid) || 0),
+                (Number(inv.totalAmount) || 0) - (Number(inv.amountPaid) || 0),
               );
               return {
                 key: inv.id,
-                primary: `${inv.supplierNameSnapshot}${inv.invoiceNumber ? ` · #${inv.invoiceNumber}` : ''}`,
-                secondary: `${fmtDate(inv.invoiceDate)} · ${inv.status}${outstanding > 0 ? ` · ${fmtPKR(outstanding)} outstanding` : ''}`,
+                primary: `${inv.supplierNameSnapshot}${inv.invoiceNumber ? ` · #${inv.invoiceNumber}` : ""}`,
+                secondary: `${fmtDate(inv.invoiceDate)} · ${inv.status}${outstanding > 0 ? ` · ${fmtPKR(outstanding)} outstanding` : ""}`,
                 amount: Number(inv.totalAmount) || 0,
                 tone:
-                  inv.status === 'paid'
-                    ? 'emerald'
-                    : inv.status === 'overdue' || inv.status === 'disputed'
-                      ? 'rose'
-                      : 'amber',
+                  inv.status === "paid"
+                    ? "emerald"
+                    : inv.status === "overdue" || inv.status === "disputed"
+                      ? "rose"
+                      : "amber",
               };
             })}
           />
@@ -1353,26 +1377,25 @@ function LinkedFinancialsSection({
             icon={Handshake}
             total={brokerCommissions.reduce(
               (s, c) =>
-                c.status === 'void' ? s : s + (Number(c.commissionAmount) || 0),
+                c.status === "void" ? s : s + (Number(c.commissionAmount) || 0),
               0,
             )}
             rows={brokerCommissions.map((c) => {
               const outstanding = Math.max(
                 0,
-                (Number(c.commissionAmount) || 0) -
-                  (Number(c.amountPaid) || 0),
+                (Number(c.commissionAmount) || 0) - (Number(c.amountPaid) || 0),
               );
               return {
                 key: c.id,
-                primary: `${c.brokerNameSnapshot} · ${c.commissionType === 'percentage' && c.commissionPct ? `${c.commissionPct}%` : 'flat'}`,
-                secondary: `${fmtDate(c.accruedDate)} · ${c.status}${outstanding > 0 ? ` · ${fmtPKR(outstanding)} unpaid` : ''}`,
+                primary: `${c.brokerNameSnapshot} · ${c.commissionType === "percentage" && c.commissionPct ? `${c.commissionPct}%` : "flat"}`,
+                secondary: `${fmtDate(c.accruedDate)} · ${c.status}${outstanding > 0 ? ` · ${fmtPKR(outstanding)} unpaid` : ""}`,
                 amount: Number(c.commissionAmount) || 0,
                 tone:
-                  c.status === 'paid'
-                    ? 'emerald'
-                    : c.status === 'disputed'
-                      ? 'rose'
-                      : 'amber',
+                  c.status === "paid"
+                    ? "emerald"
+                    : c.status === "disputed"
+                      ? "rose"
+                      : "amber",
               };
             })}
           />
@@ -1383,10 +1406,10 @@ function LinkedFinancialsSection({
             total={expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0)}
             rows={expenses.map((e) => ({
               key: e.id,
-              primary: `${e.category}${e.subcategory ? ` · ${e.subcategory}` : ''}${e.supplierName ? ` · ${e.supplierName}` : ''}`,
+              primary: `${e.category}${e.subcategory ? ` · ${e.subcategory}` : ""}${e.supplierName ? ` · ${e.supplierName}` : ""}`,
               secondary: `${fmtDate(e.spentDate)} · ${e.paymentMethod}`,
               amount: Number(e.amount) || 0,
-              tone: 'rose',
+              tone: "rose",
             }))}
           />
           <ResourceList
@@ -1399,15 +1422,15 @@ function LinkedFinancialsSection({
             )}
             rows={staffShifts.map((sh) => ({
               key: sh.id,
-              primary: `${sh.staffNameSnapshot} · ${sh.roleSnapshot.replace(/_/g, ' ')}`,
-              secondary: `${fmtDate(sh.shiftDate)} · ${sh.paymentStatus}${sh.paidVia ? ` · via ${sh.paidVia}` : ''}`,
+              primary: `${sh.staffNameSnapshot} · ${sh.roleSnapshot.replace(/_/g, " ")}`,
+              secondary: `${fmtDate(sh.shiftDate)} · ${sh.paymentStatus}${sh.paidVia ? ` · via ${sh.paidVia}` : ""}`,
               amount: Number(sh.grossPayable) || 0,
               tone:
-                sh.paymentStatus === 'paid'
-                  ? 'emerald'
-                  : sh.paymentStatus === 'disputed'
-                    ? 'rose'
-                    : 'amber',
+                sh.paymentStatus === "paid"
+                  ? "emerald"
+                  : sh.paymentStatus === "disputed"
+                    ? "rose"
+                    : "amber",
             }))}
           />
           {inventoryMovements.length > 0 && (
@@ -1418,11 +1441,11 @@ function LinkedFinancialsSection({
                 icon={Boxes}
                 rows={inventoryMovements.map((m) => ({
                   key: m.id,
-                  primary: m.item?.name || '(unknown item)',
-                  secondary: `${fmtDate(m.occurredAt)}${m.reason ? ` · ${m.reason}` : ''}`,
+                  primary: m.item?.name || "(unknown item)",
+                  secondary: `${fmtDate(m.occurredAt)}${m.reason ? ` · ${m.reason}` : ""}`,
                   amount: undefined,
-                  amountLabel: `${m.quantity} ${m.item?.unit || ''}`.trim(),
-                  tone: 'sky',
+                  amountLabel: `${m.quantity} ${m.item?.unit || ""}`.trim(),
+                  tone: "sky",
                 }))}
               />
             </div>
@@ -1436,33 +1459,33 @@ function LinkedFinancialsSection({
 // PnlCard — top-line summary tile.
 
 const PNL_TONE: Record<
-  'neutral' | 'emerald' | 'rose' | 'amber' | 'sky',
+  "neutral" | "emerald" | "rose" | "amber" | "sky",
   { border: string; bg: string; iconColor: string }
 > = {
   neutral: {
-    border: 'border-neutral-200',
-    bg: 'bg-white',
-    iconColor: 'text-neutral-500',
+    border: "border-neutral-200",
+    bg: "bg-white",
+    iconColor: "text-neutral-500",
   },
   emerald: {
-    border: 'border-emerald-200',
-    bg: 'bg-emerald-50/40',
-    iconColor: 'text-emerald-700',
+    border: "border-emerald-200",
+    bg: "bg-emerald-50/40",
+    iconColor: "text-emerald-700",
   },
   rose: {
-    border: 'border-rose-200',
-    bg: 'bg-rose-50/40',
-    iconColor: 'text-rose-700',
+    border: "border-rose-200",
+    bg: "bg-rose-50/40",
+    iconColor: "text-rose-700",
   },
   amber: {
-    border: 'border-amber-200',
-    bg: 'bg-amber-50/40',
-    iconColor: 'text-amber-700',
+    border: "border-amber-200",
+    bg: "bg-amber-50/40",
+    iconColor: "text-amber-700",
   },
   sky: {
-    border: 'border-sky-200',
-    bg: 'bg-sky-50/40',
-    iconColor: 'text-sky-700',
+    border: "border-sky-200",
+    bg: "bg-sky-50/40",
+    iconColor: "text-sky-700",
   },
 };
 
@@ -1513,7 +1536,7 @@ function ResourceList({
     secondary?: string;
     amount?: number;
     amountLabel?: string;
-    tone?: 'neutral' | 'emerald' | 'rose' | 'amber' | 'sky';
+    tone?: "neutral" | "emerald" | "rose" | "amber" | "sky";
   }>;
 }) {
   const [expanded, setExpanded] = useState(rows.length <= 3);
@@ -1554,7 +1577,7 @@ function ResourceList({
               </div>
               {r.amount != null ? (
                 <div
-                  className={`font-mono text-xs ${toneCls?.iconColor || 'text-neutral-900'}`}
+                  className={`font-mono text-xs ${toneCls?.iconColor || "text-neutral-900"}`}
                 >
                   {fmtPKR(r.amount)}
                 </div>
@@ -1573,7 +1596,7 @@ function ResourceList({
           onClick={() => setExpanded((v) => !v)}
           className="w-full border-t border-neutral-100 px-3 py-1 text-[10px] text-blue-700 hover:bg-neutral-50"
         >
-          {expanded ? 'Show less' : `Show ${rows.length - 3} more`}
+          {expanded ? "Show less" : `Show ${rows.length - 3} more`}
         </button>
       )}
     </div>
@@ -1581,18 +1604,18 @@ function ResourceList({
 }
 
 function formatAction(action: string): string {
-  if (action.startsWith('state:'))
-    return `State → ${action.slice(6).replace(/_/g, ' ')}`;
+  if (action.startsWith("state:"))
+    return `State → ${action.slice(6).replace(/_/g, " ")}`;
   const m: Record<string, string> = {
-    created: 'Created',
-    updated: 'Edited',
-    deleted: 'Removed',
-    'pdf:generated': 'PDF generated',
-    'whatsapp:sent': 'WhatsApp sent',
-    'share-token:issued': 'Share link issued',
-    'share-token:revoked': 'Share link revoked',
-    'customer:signed-via-token': 'Customer signed (share link)',
-    'fbr:submitted': 'FBR submitted',
+    created: "Created",
+    updated: "Edited",
+    deleted: "Removed",
+    "pdf:generated": "PDF generated",
+    "whatsapp:sent": "WhatsApp sent",
+    "share-token:issued": "Share link issued",
+    "share-token:revoked": "Share link revoked",
+    "customer:signed-via-token": "Customer signed (share link)",
+    "fbr:submitted": "FBR submitted",
   };
   return m[action] || action;
 }
