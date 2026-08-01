@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { LegalPageShell } from "@/components/legal/legal-page-shell"
+import { ComplaintForm } from "@/components/legal/complaint-form"
 import { buildPageMetadata, SITE_NAME, SUPPORT_EMAIL } from "@/lib/seo"
 
 export const metadata: Metadata = buildPageMetadata({
@@ -24,15 +25,21 @@ export default function ComplaintsPage() {
         </p>
       }
     >
-      <h2>1. Step 1 — Talk to support</h2>
-      <ol>
-        <li>If your issue is about a specific booking, open a dispute on the booking page first — that gets your case in front of the right team fastest.</li>
-        <li>For everything else, email{" "}
-          <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> with the subject
-          line <em>Complaint — [your name / booking ID]</em>.
-        </li>
-        <li>We <strong>acknowledge complaints within 48 hours</strong> with a case reference number.</li>
-      </ol>
+      <h2>1. Step 1 — Raise your complaint</h2>
+      <p>
+        Fill this in and you&apos;ll get a case reference number immediately. If your
+        issue is about a specific booking, opening a dispute on the booking page
+        instead gets your case in front of the right team fastest — a complaint here
+        is for everything else, and for anything about us rather than a vendor.
+      </p>
+
+      <ComplaintForm />
+
+      <p>
+        Prefer email? Write to <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>{" "}
+        with the subject line <em>Complaint — [your name / booking ID]</em>. Either way
+        we <strong>acknowledge within 48 hours</strong> with a case reference number.
+      </p>
 
       <h2>2. Step 2 — Investigation</h2>
       <p>

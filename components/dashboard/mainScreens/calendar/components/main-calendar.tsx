@@ -188,7 +188,7 @@ export default function MainCalendar() {
         }
     }, [bookingDetailsMap, fetchBookings]);
 
-    const calendarDndOn = process.env.NEXT_PUBLIC_CALENDAR_DND === '1';
+    const calendarDndOn = true;
 
     // Fetch blocked dates whenever month changes
     const fetchBlockedDates = useCallback(async (monthDate: Date) => {

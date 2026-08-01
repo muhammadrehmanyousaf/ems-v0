@@ -6,9 +6,9 @@
  * from Google can ask a question / ask for a price WITHOUT logging in — the
  * dialog drops a form_inquiry Lead straight into the vendor's inbox.
  *
- * Rendered only when NEXT_PUBLIC_SEO_INQUIRY_DIALOG_ON is set (see
- * lib/seo-inquiry-dialog-flag.ts); otherwise the page keeps its existing
- * "Ask a question → /contact" link. The booking (payment) CTA is never touched.
+ * Always rendered. This used to sit behind a flag, so search visitors were sent
+ * to a generic /contact page and the lead never reached the vendor. The booking
+ * (payment) CTA is never touched.
  */
 
 import { useState } from "react";

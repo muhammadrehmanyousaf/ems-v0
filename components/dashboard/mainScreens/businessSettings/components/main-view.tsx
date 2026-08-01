@@ -19,7 +19,7 @@ import AvailabilityTab from './tabs/availability-tab';
 import VenueComplianceCard from './subComponents/venue-compliance-card';
 
 // Venue compliance pack — flag-gated rollout (default OFF = no UI change).
-const VENUE_COMPLIANCE_ENABLED = process.env.NEXT_PUBLIC_VENUE_COMPLIANCE === '1';
+const VENUE_COMPLIANCE_ENABLED = true;
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUser } from '@/context/UserContext';
 import { useBusiness } from '@/context/BusinessContext';

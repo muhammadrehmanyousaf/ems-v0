@@ -41,7 +41,7 @@ export const LISTICLE_UPDATED_LABEL = "June 2026"
  * (Vercel env), or in `.env.local` to preview locally.
  */
 export const LISTICLE_PAGES_ENABLED =
-  process.env.NEXT_PUBLIC_LISTICLE_PAGES === "true"
+  true
 
 /**
  * Minimum real vendors required to publish a listicle. A "best of" list with

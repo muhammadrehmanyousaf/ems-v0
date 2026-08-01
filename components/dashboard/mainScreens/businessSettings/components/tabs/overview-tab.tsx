@@ -52,7 +52,7 @@ const OverviewTab = ({ business }: OverviewTabProps) => {
             </div>
 
             {/* "Link in bio" / public booking link — M17 adoption lever for IG/WhatsApp leads. */}
-            {process.env.NEXT_PUBLIC_PROMOTE_CARD === '1' && (
+            {(
                 <ProfileShareCard business={business} />
             )}
 

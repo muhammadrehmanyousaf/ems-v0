@@ -11,7 +11,6 @@
 import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type InsurancePolicy, type ClaimRoi } from "@/lib/api/venueOs";
-import { isInsuranceTrackingOn } from "@/lib/insurance-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +31,6 @@ function ExpiryBadge({ p }: { p: InsurancePolicy }): React.ReactElement {
 }
 
 export function InsurancePoliciesView(): React.ReactElement | null {
-  const enabled = isInsuranceTrackingOn();
   const [businessId, setBusinessId] = useBusinessIdField();
   const [policyType, setPolicyType] = React.useState<string>("EVENT");
   const [insurer, setInsurer] = React.useState<string>("");
@@ -60,7 +58,6 @@ export function InsurancePoliciesView(): React.ReactElement | null {
     setRoi(await venueOsApi.claimRoi(bid));
   }
 
-  if (!enabled) return null;
   const bid = Number(businessId);
 
   return (

@@ -20,13 +20,13 @@ import {
 } from "@/components/ui/sidebar"
 import { data } from "./nav-data"
 import { useUser } from "@/context/UserContext"
-import { isQuoteNegotiationEnabled } from "@/lib/quote-negotiation"
 import { useVenueOsFlags } from "@/lib/venue-os-runtime-flags"
 import { useBusiness } from "@/context/BusinessContext"
 import {
   getVendorTypeConfig,
   DEFAULT_VENDOR_CONFIG,
   MONEY_NAV_KEYS,
+  UNIVERSAL_EXTRA_NAV,
   type NavItemKey,
   type SettingsTabKey,
 } from "@/lib/vendor-type-config"
@@ -67,12 +67,6 @@ function buildVendorSections(
   // artist but my sidebar says Shoots" bug. Falls back to the user's
   // vendorType when the business object hasn't loaded yet.
   businessVendorType: string | null | undefined,
-  // FEAT_QUOTE_NEGOTIATION — resolved in AppSidebar after mount (env OR the
-  // localStorage pilot override), so the vendor "Quote requests" entry lights up
-  // on the SAME signal as the customer CTA/sidebar (isQuoteNegotiationEnabled),
-  // not env-only. Passed in (not read here) to keep this a pure builder + avoid a
-  // hydration mismatch.
-  quoteEnabled: boolean,
 ): NavSection[] {
   const vendorType = businessVendorType ?? user?.vendorType
   const vendorConfig = getVendorTypeConfig(vendorType)
@@ -85,8 +79,12 @@ function buildVendorSections(
   // payroll" surface — the team-user management screen — never
   // showed in their sidebar. Old vendors with explicit configs are
   // unaffected; their own extraNavItems still wins.
-  const extra =
-    vendorConfig?.extraNavItems ?? DEFAULT_VENDOR_CONFIG.extraNavItems ?? []
+  const extra = Array.from(
+    new Set([
+      ...(vendorConfig?.extraNavItems ?? DEFAULT_VENDOR_CONFIG.extraNavItems ?? []),
+      ...UNIVERSAL_EXTRA_NAV,
+    ]),
+  )
   const allowedKeys = new Set<NavItemKey>([...allowedMain, ...extra])
 
   const navLabels = vendorConfig?.navLabels
@@ -109,16 +107,12 @@ function buildVendorSections(
       !MONEY_NAV_KEYS.has(i.name as NavItemKey) &&
       !extraSet.has(i.name as NavItemKey),
   )
-  // PWA-02 — Field Capture hub leads the Main nav when offline mode is enabled
-  // (pilot-dark by default). Injected here so it needs no allowlist plumbing.
-  if (process.env.NEXT_PUBLIC_FEAT_OFFLINE_OUTBOX === "true") {
-    main.unshift(...data.vendorFieldCapture)
-  }
-  // FEAT_QUOTE_NEGOTIATION — customer quote/haggle requests in the Main nav.
-  // Flag-dark by default; injected here so it needs no allowlist plumbing.
-  if (quoteEnabled) {
-    main.push(...data.vendorQuotes)
-  }
+  // PWA-02 — Field Capture hub leads the Main nav. Offline-first lead, payment,
+  // expense and hold capture is the single most useful thing on a phone at a
+  // venue with no signal, and it was pilot-dark.
+  main.unshift(...data.vendorFieldCapture)
+  // Customer quote/haggle requests, in the Main nav.
+  main.push(...data.vendorQuotes)
   const money = allowed.filter((i) => MONEY_NAV_KEYS.has(i.name as NavItemKey))
   // Render extras in the order the config declares them (not nav-data
   // order) so the most craft-relevant tool leads.
@@ -156,20 +150,12 @@ function buildVendorSections(
   // Growth — Promote (§5) + Plan & billing (§17.1), each flag-gated
   // (default OFF). Grouped together so the monetization surfaces live
   // in one place.
-  const growItems = []
-  if (process.env.NEXT_PUBLIC_PROMOTIONS === "1") {
-    const promote = data.vendorMainNav.find((i) => i.name === "Promote")
-    if (promote) growItems.push(promote)
-  }
-  if (process.env.NEXT_PUBLIC_BILLING === "1") {
-    const billing = data.vendorMainNav.find((i) => i.name === "Plan & billing")
-    if (billing) growItems.push(billing)
-  }
-  // Collaborations (M23 Layer 2) — shares the sub-contract flag.
-  if (process.env.NEXT_PUBLIC_SUBCONTRACT === "1") {
-    const collab = data.vendorMainNav.find((i) => i.name === "Collaborations")
-    if (collab) growItems.push(collab)
-  }
+  // The whole Grow section was dark: /promotions/mine, /subscriptions/me and
+  // /collaborations/incoming are all live on production. A vendor could not
+  // promote a listing, see or upgrade their plan, or sub-contract work.
+  const growItems = ["Promote", "Plan & billing", "Collaborations"]
+    .map((name) => data.vendorMainNav.find((i) => i.name === name))
+    .filter((i): i is NonNullable<typeof i> => Boolean(i))
   if (growItems.length > 0) {
     sections.push({ label: "Grow", items: growItems })
   }
@@ -197,13 +183,11 @@ function buildAdminSections(role: DashboardRole): NavSection[] {
     (i) => isSuper || !SUPER_ONLY_PLATFORM.has(i.name),
   )
 
-  // Promotions queue (§5) + Plan-upgrades queue (§17.1) are super-admin
-  // only + each gated by their feature flag.
-  const promotionsOn = process.env.NEXT_PUBLIC_PROMOTIONS === "1"
-  const billingOn = process.env.NEXT_PUBLIC_BILLING === "1"
+  // Promotions queue (§5) + Plan-upgrades queue (§17.1) are super-admin only.
+  // Both were additionally flag-dark, so vendors could request an upgrade
+  // (/subscriptions/request-upgrade is live) into a queue no admin could open.
   const operations = data.adminOperations.filter((i) => {
-    if (i.name === "Promotions") return promotionsOn && isSuper
-    if (i.name === "Plan upgrades") return billingOn && isSuper
+    if (i.name === "Promotions" || i.name === "Plan upgrades") return isSuper
     return true
   })
 
@@ -233,15 +217,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { business } = useBusiness()
   const businessVendorType = business?.vendor?.vendorType
 
-  // FEAT_QUOTE_NEGOTIATION — resolve after mount (env OR localStorage pilot
-  // override) so the vendor "Quote requests" entry uses the SAME signal as the
-  // customer CTA/sidebar. Default false on first render → no hydration mismatch.
-  const [quoteEnabled, setQuoteEnabled] = React.useState(false)
-  React.useEffect(() => { setQuoteEnabled(isQuoteNegotiationEnabled()) }, [])
-
   const sections: NavSection[] = isAdminLike(role)
     ? buildAdminSections(role)
-    : buildVendorSections(user, businessVendorType, quoteEnabled)
+    : buildVendorSections(user, businessVendorType)
 
   // Relabel group headings + items through the bilingual persona dictionary
   // (Aasaan Roman-Urdu vs Professional English). Routes are never touched —

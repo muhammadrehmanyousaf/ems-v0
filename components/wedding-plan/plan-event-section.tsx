@@ -9,7 +9,7 @@
  * that opens the event-scoped shortlist picker, and a per-event subtotal.
  *
  * The whole surface is flag-gated upstream — this section is only mounted
- * behind `useWeddingPlanFlag()` on the plan builder.
+ * on the plan builder.
  */
 
 import * as React from "react";

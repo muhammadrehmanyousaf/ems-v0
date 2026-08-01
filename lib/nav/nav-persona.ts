@@ -75,6 +75,16 @@ export const NAV_LABELS: Record<string, DualLabel> = {
   "Business Settings": L("Business Settings", "Business Settings"),
   "Venue-OS": L("Meri Venues", "Venues"),
 
+  // WW-VENUEOS — the seven venue doors. An owner who chose Aasaan should not
+  // hit "Accounting" in English at the exact moment the words matter most.
+  Tonight: L("Aaj Raat", "Tonight"),
+  "Event profit": L("Event ka Nafa", "Event profit"),
+  "Venue money": L("Venue ka Paisa", "Venue money"),
+  "Halls & spaces": L("Hall aur Lawn", "Halls & spaces"),
+  "Cash & cheques": L("Cash aur Cheque", "Cash & cheques"),
+  Kitchen: L("Kitchen", "Kitchen"),
+  Accounting: L("Hisaab Kitaab", "Accounting"),
+
   // ── Existing sidebar group headings ─────────────────────────────────────
   Main: L("Aaj", "Overview"),
   Khata: L("Paisa", "Money"),

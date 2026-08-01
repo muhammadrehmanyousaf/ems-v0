@@ -9,6 +9,7 @@
  */
 
 import * as React from "react"
+import { BookingReceiptsCard, BookingDisputesCard } from "@/components/bookings/booking-related-lists"
 import { toast } from "sonner"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
@@ -398,6 +399,18 @@ export function FunctionSheetDetailRedesignedView({ id }: { id?: number } = {}) 
             <Section title="Internal notes">
               <p className="whitespace-pre-line text-sm text-muted-foreground">{sheet.notes}</p>
             </Section>
+          )}
+
+          {/* Money and problems on the EVENT this sheet bills for. A sheet is a
+              document about a booking; "has this invoice been paid?" is a
+              question about that booking's receipts, and the vendor should not
+              have to leave the invoice to answer it. Both self-hide when empty,
+              and neither renders for a sheet with no booking attached. */}
+          {sheet.bookingId != null && (
+            <>
+              <BookingReceiptsCard bookingId={sheet.bookingId} />
+              <BookingDisputesCard bookingId={sheet.bookingId} />
+            </>
           )}
         </div>
       </div>
