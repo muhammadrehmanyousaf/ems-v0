@@ -9,7 +9,6 @@
  */
 import * as React from "react";
 import { venueOsApi, type WeatherClaimResult } from "@/lib/api/venueOs";
-import { isInsuranceTrackingOn } from "@/lib/insurance-flag";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +19,6 @@ function readErr(e: unknown, fallback: string): string {
 }
 
 export function WeatherClaimView(): React.ReactElement | null {
-  const enabled = isInsuranceTrackingOn();
   const [weatherId, setWeatherId] = React.useState<string>("");
   const [windKph, setWindKph] = React.useState<string>("");
   const [rainMm, setRainMm] = React.useState<string>("");
@@ -40,7 +38,6 @@ export function WeatherClaimView(): React.ReactElement | null {
     }
   }
 
-  if (!enabled) return null;
 
   function measurement(): Record<string, number> {
     const m: Record<string, number> = {};

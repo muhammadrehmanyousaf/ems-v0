@@ -22,7 +22,6 @@ import type { Metadata } from "next"
 import { notFound, redirect, permanentRedirect } from "next/navigation"
 import { VenueSpaceSelector } from "@/components/booking/venue-space-selector"
 import { fetchVendorHasMultiSpace } from "@/lib/seo/fetch-vendor"
-import { isSeoInquiryDialogOn } from "@/lib/seo-inquiry-dialog-flag"
 import VendorInquiryCta from "@/components/seo/vendor-inquiry-cta"
 import {
   CITIES,
@@ -311,21 +310,13 @@ export async function VendorDetailPage(input: PageInput) {
               >
                 {vendor.priceMin ? "Check availability" : "Ask for a price"}
               </Link>
-              {/* Anonymous inquiry — a first-time visitor from Google can ask
-                  a question / ask for a price without logging in (the dialog
-                  drops a form_inquiry Lead in the vendor's inbox). Flag-gated
-                  OFF by default; when off we keep the /contact link so prod
-                  behaviour is unchanged. */}
-              {isSeoInquiryDialogOn() ? (
-                <VendorInquiryCta businessId={vendor.id} vendorName={vendor.name} />
-              ) : (
-                <Link
-                  href={`/contact?vendor=${encodeURIComponent(vendor.name)}`}
-                  className="inline-flex items-center justify-center px-5 py-2.5 rounded-full border border-bridal-beige hover:border-bridal-gold font-bridal text-[13px] text-bridal-charcoal transition-colors"
-                >
-                  Ask a question
-                </Link>
-              )}
+              {/* Anonymous inquiry — a first-time visitor from Google can ask a
+                  question or ask for a price WITHOUT logging in, and the dialog
+                  drops a form_inquiry Lead straight into the vendor's inbox.
+                  This was flag-gated off, so every visitor arriving from search
+                  was sent to a generic /contact page instead — a lead the vendor
+                  never saw. POST /leads/inquiry verified live (201). */}
+              <VendorInquiryCta businessId={vendor.id} vendorName={vendor.name} />
             </div>
           </div>
         </header>
