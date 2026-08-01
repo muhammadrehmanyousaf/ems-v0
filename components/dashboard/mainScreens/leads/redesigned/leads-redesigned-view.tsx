@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import Link from "next/link"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { LeadAPI, type Lead, type LeadStatus } from "@/lib/api/leads"
 import { BusinessesAPI } from "@/lib/api/dashboard"
@@ -97,7 +98,22 @@ export function LeadsRedesignedView() {
   const count = (s: LeadStatus) => byStatus[s] ?? all.filter((l) => l.status === s).length
 
   const columns: Column<Lead>[] = [
-    { key: "contact", header: "Contact", render: (l) => <span className="font-medium">{l.contactName || "Unknown"}</span> },
+    {
+      key: "contact",
+      header: "Contact",
+      // The name is the door into the lead's own page. Every other spine object
+      // opens from its list this way; the lead only had inline actions, so the
+      // enquiry itself — what they actually wrote, whether it converted — had
+      // nowhere to be read.
+      render: (l) => (
+        <Link
+          href={`/dashboard/leads/${l.id}`}
+          className="font-medium hover:text-primary hover:underline"
+        >
+          {l.contactName || "Unknown"}
+        </Link>
+      ),
+    },
     { key: "phone", header: "Phone", cellClassName: "text-muted-foreground", render: (l) => l.contactPhone || "—" },
     { key: "source", header: "Source", render: (l) => <StatusPill tone="neutral">{pretty(l.source)}</StatusPill> },
     { key: "event", header: "Event", cellClassName: "text-muted-foreground", render: (l) => pretty(l.eventType) },
