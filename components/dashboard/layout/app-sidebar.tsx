@@ -6,6 +6,7 @@ import Link from "next/link"
 import { Wallet } from "lucide-react"
 
 import { NavSections, type SettingsSubItem, type NavSection } from "./nav-projects"
+import { ModulePanel } from "./module-panel"
 import { NavUser } from "./nav-user"
 import { TeamSwitcher } from "./team-switcher"
 import {
@@ -325,7 +326,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </div>
         )}
         <Suspense fallback={null}>
-          <NavSections sections={displaySections} />
+          {/* Vendors get the contextual panel: the rail beside this holds the
+              modules, and this column holds the active module's own inside.
+              Admins keep the flat section list — their console is a set of
+              queues, not modules with depth, and giving it a rail it does not
+              need would be change for its own sake. */}
+          {isAdminLike(role) ? (
+            <NavSections sections={displaySections} />
+          ) : (
+            <ModulePanel />
+          )}
         </Suspense>
       </SidebarContent>
 

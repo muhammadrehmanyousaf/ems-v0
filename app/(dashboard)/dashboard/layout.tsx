@@ -2,6 +2,7 @@
 import "../../styles/dashboard-styles.css"
 import React from "react"
 import { AppSidebar } from "@/components/dashboard/layout/app-sidebar"
+import { ModuleRail } from "@/components/dashboard/layout/module-rail"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import Header from "@/components/dashboard/layout/header"
 import ProtectedRoutes from "@/lib/protected-routes"
@@ -63,6 +64,10 @@ const layout = ({ children }: { children: React.ReactNode }) => {
               suggest they have access to features that aren't live yet. */}
           <ReviewProfileGate>
             <SidebarProvider>
+              {/* Icon rail — one entry per module, ~68px, never changes.
+                  Desktop only; on mobile the bottom-tab nav plays this role.
+                  The panel beside it (inside AppSidebar) swaps per module. */}
+              <ModuleRail />
               <AppSidebar />
               {/* `min-w-0` on SidebarInset is the fix for cards getting clipped at
                   the right edge — without it the flex child can grow past the
