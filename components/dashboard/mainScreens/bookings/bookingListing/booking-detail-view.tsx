@@ -64,6 +64,7 @@ import {
   type Lead,
 } from '@/lib/api/leads';
 import { InstallmentsCard } from '@/components/bookings/installments-card';
+import { BookingReceiptsCard, BookingDisputesCard } from '@/components/bookings/booking-related-lists';
 import { OrderBuilderCard } from '@/components/bookings/order-builder-card';
 import { BeoSheetCard } from '@/components/bookings/beo-sheet-card';
 import { EventPnlCard } from '@/components/bookings/event-pnl-card';
@@ -692,6 +693,14 @@ export default function BookingDetailView({
 
           {/* Installments (BK-042) */}
           <InstallmentsCard bookingId={booking.id} />
+
+          {/* Payments received + Disputes on THIS booking. Both self-hide when
+              empty. Before these, "how much has actually come in on the Khan
+              wedding?" meant leaving the booking for Money and searching by
+              name, and "is there a dispute?" had no vendor-visible answer at
+              all. */}
+          <BookingReceiptsCard bookingId={booking.id} />
+          <BookingDisputesCard bookingId={booking.id} />
 
           {/* Linked Function Sheets — jump to the working surface */}
           <Card>
