@@ -11,7 +11,8 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Plus } from "lucide-react"
+import { Plus, Heart } from "lucide-react"
+import { TeamSwitcher } from "./team-switcher"
 import { NAV_MODULES, moduleForPath } from "@/lib/nav/module-panels"
 import { useT } from "@/lib/i18n/useT"
 import { useUser } from "@/context/UserContext"
@@ -37,6 +38,24 @@ export function ModuleRail() {
       aria-label="Modules"
       className="hidden md:flex w-[68px] shrink-0 flex-col items-center gap-1 border-r border-sidebar-border bg-sidebar py-3"
     >
+      {/* Brand and the business switcher live HERE, not in the panel.
+          Both are constant: the panel's whole contents change per module, and
+          identity plus "which business am I acting as" must not slide around
+          underneath the user. The switcher also scopes every module, so it
+          belongs beside all of them. */}
+      <Link
+        href="/dashboard"
+        aria-label="Wedding Wala — dashboard home"
+        title="Wedding Wala"
+        className="mb-1 flex size-11 items-center justify-center rounded-xl bg-sidebar-accent/60 transition-colors hover:bg-sidebar-accent"
+      >
+        <Heart className="size-5 text-primary" />
+      </Link>
+
+      <div className="mb-2 w-full px-2">
+        <TeamSwitcher variant="rail" />
+      </div>
+
       {NAV_MODULES.map((m) => {
         const isActive = m.id === active.id
         const Icon = m.icon

@@ -24,7 +24,21 @@ import { getVendorTypeConfig } from "@/lib/vendor-type-config"
 import { BusinessesAPI, type ApiBusiness } from "@/lib/api/dashboard"
 import { useActiveBusinessStore } from "@/lib/store/active-business-store"
 
-export function TeamSwitcher() {
+/** "Palm Court Marquee" -> "PC". Two letters is what fits in 44px. */
+function initialsOf(name: string): string {
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return "WW"
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase()
+  return (parts[0]![0]! + parts[1]![0]!).toUpperCase()
+}
+
+/**
+ * `variant="rail"` renders a 44px square trigger showing the business initials,
+ * for the 68px icon rail. The wide two-line row cannot fit there, and the
+ * business a vendor is acting as belongs beside the modules — it scopes all of
+ * them — rather than inside a panel that changes underneath it.
+ */
+export function TeamSwitcher({ variant = "panel" }: { variant?: "panel" | "rail" }) {
   const { isMobile } = useSidebar()
   const { user } = useUser()
   const vendorConfig = getVendorTypeConfig(user?.vendorType)
@@ -85,17 +99,28 @@ export function TeamSwitcher() {
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="default"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground focus:ring-0 focus:outline-none focus:border-none h-9"
-            >
-              <div className="h-4 w-1 bg-primary rounded-lg flex-shrink-0"></div>
-              <div className="grid flex-1 text-left leading-tight">
-                <span className="truncate font-medium text-xs">{displayName}</span>
-                <span className="truncate text-[10px] opacity-60">{subtitle}</span>
-              </div>
-              {(multi || canAddBusiness) && <ChevronsUpDown className="ml-auto size-3.5" />}
-            </SidebarMenuButton>
+            {variant === "rail" ? (
+              <button
+                type="button"
+                title={`${displayName} — ${subtitle}`}
+                aria-label={`Business: ${displayName}. Switch business.`}
+                className="mx-auto flex size-11 items-center justify-center rounded-xl border border-sidebar-border bg-sidebar-accent/60 text-[13px] font-semibold text-sidebar-accent-foreground transition-colors hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent"
+              >
+                {initialsOf(displayName)}
+              </button>
+            ) : (
+              <SidebarMenuButton
+                size="default"
+                className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground focus:ring-0 focus:outline-none focus:border-none h-9"
+              >
+                <div className="h-4 w-1 bg-primary rounded-lg flex-shrink-0"></div>
+                <div className="grid flex-1 text-left leading-tight">
+                  <span className="truncate font-medium text-xs">{displayName}</span>
+                  <span className="truncate text-[10px] opacity-60">{subtitle}</span>
+                </div>
+                {(multi || canAddBusiness) && <ChevronsUpDown className="ml-auto size-3.5" />}
+              </SidebarMenuButton>
+            )}
           </DropdownMenuTrigger>
           {(multi || canAddBusiness) && (
             <DropdownMenuContent

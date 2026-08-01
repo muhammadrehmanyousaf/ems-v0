@@ -103,6 +103,15 @@ export type NavModule = {
   owns?: string[];
   /** Panel title. Defaults to `label`. */
   panelTitle?: string;
+  /**
+   * Render the rail ALONE for this module — no panel.
+   *
+   * The dashboard is the first thing a vendor sees, and it is a place to read,
+   * not a place to navigate from. A second column of links beside it competes
+   * with the numbers it exists to show, and every one of those links is already
+   * a rail icon away. Home gets the full width.
+   */
+  railOnly?: boolean;
   groups: PanelGroup[];
 };
 
@@ -119,6 +128,7 @@ export const NAV_MODULES: NavModule[] = [
     icon: LayoutDashboard,
     href: "/dashboard",
     panelTitle: "Home",
+    railOnly: true,
     groups: [
       {
         label: "Quick actions",

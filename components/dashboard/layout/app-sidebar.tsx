@@ -3,10 +3,12 @@
 import * as React from "react"
 import { Suspense } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Wallet } from "lucide-react"
 
 import { NavSections, type SettingsSubItem, type NavSection } from "./nav-projects"
 import { ModulePanel } from "./module-panel"
+import { moduleForPath } from "@/lib/nav/module-panels"
 import { NavUser } from "./nav-user"
 import { TeamSwitcher } from "./team-switcher"
 import {
@@ -264,6 +266,7 @@ function buildAdminSections(role: DashboardRole): NavSection[] {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useUser()
+  const pathname = usePathname()
   // Resolve per-venue venue-OS flags (populates the runtime store so the
   // "Venue-OS" nav section appears for pilot venues even with the global flag off).
   useVenueOsFlags()
@@ -307,6 +310,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Admins get no rail, so no offset.
   const railOffset = isAdminLike(role) ? undefined : "md:!left-[68px]"
 
+  // Home is rail-only: the dashboard is a place to read, not to navigate from,
+  // and a second column of links beside it competes with the numbers it exists
+  // to show. Every one of those links is one rail icon away. Rendering nothing
+  // here (rather than an empty panel) also lets the content take the full width.
+  const activeModule = moduleForPath(pathname)
+  const hidePanel = !isAdminLike(role) && activeModule.railOnly === true
+  if (hidePanel) return null
+
   return (
     <Sidebar collapsible="icon" className={railOffset} {...props}>
       {/* Brand block — flat dark monogram + clean wordmark + role label. */}
@@ -333,11 +344,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
 
       <SidebarContent className="gap-0">
-        {role === "vendor" && (
-          <div className="px-2 py-2 border-b border-sidebar-border">
-            <TeamSwitcher />
-          </div>
-        )}
+        {/* The business switcher used to sit here, vendor-only. It has moved to
+            the rail: it scopes every module, so it belongs beside all of them
+            rather than inside a panel whose contents change underneath it.
+            Admins never had one. */}
         <Suspense fallback={null}>
           {/* Vendors get the contextual panel: the rail beside this holds the
               modules, and this column holds the active module's own inside.
