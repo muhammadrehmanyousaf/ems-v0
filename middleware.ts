@@ -43,6 +43,10 @@ export function middleware(request: NextRequest) {
     '/user/notifications',
     '/user/quotes',
     '/user/settings',
+    // Complaints are read via /complaints/mine, which is 401 without a token —
+    // an unauthenticated visitor would otherwise land on a screen that can only
+    // fail. Raising a complaint stays public at /complaints.
+    '/user/complaints',
     // Shaadi Plan — the whole multi-event cart surface is customer-scoped.
     // Route-level auth here is additive; the surface is still hidden behind
     // NEXT_PUBLIC_FEAT_WEDDING_PLAN client-side and 404s on the BE when off.
