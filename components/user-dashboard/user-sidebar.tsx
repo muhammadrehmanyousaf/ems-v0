@@ -9,6 +9,7 @@ import {
   MessageCircle,
   Bell,
   Wallet,
+  MessageSquareWarning,
   Star,
   Sparkles,
   User,
@@ -76,6 +77,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Account",
     items: [
       { href: "/user/payments", label: "Payments", icon: Wallet },
+      { href: "/user/complaints", label: "Complaints", icon: MessageSquareWarning },
       { href: "/user/settings", label: "Settings", icon: Settings },
     ],
   },

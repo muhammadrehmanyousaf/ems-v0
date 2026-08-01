@@ -17,6 +17,7 @@ import {
   FileBadge,
   Gauge,
   Gavel,
+  MessageSquareWarning,
   Inbox,
   LayoutDashboard,
   Megaphone,
@@ -128,6 +129,9 @@ export const data = {
     { name: "Claim requests", url: "/dashboard/claims",             icon: ShieldCheck },
     { name: "KYC documents",  url: "/dashboard/admin/documents",    icon: FileBadge },
     { name: "Disputes",       url: "/dashboard/admin/disputes",     icon: Gavel },
+    // Disputes are customer↔vendor about one booking. Complaints are about
+    // US — often with no booking at all. Different queue, different remedy.
+    { name: "Complaints",     url: "/dashboard/admin/complaints",   icon: MessageSquareWarning },
     { name: "Promotions",     url: "/dashboard/admin/promotions",   icon: Megaphone },
     { name: "Plan upgrades",  url: "/dashboard/admin/subscriptions", icon: CreditCard },
     // NO Bookings / Payments here. Both routes render VENDOR-scoped screens
