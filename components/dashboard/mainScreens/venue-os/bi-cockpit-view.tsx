@@ -39,7 +39,7 @@ export function BiCockpitView(): React.ReactElement | null {
     try {
       await fn();
     } catch (e: unknown) {
-      setErr(readErr(e, "BI cockpit is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load bI cockpit."));
     } finally {
       setBusy(false);
     }

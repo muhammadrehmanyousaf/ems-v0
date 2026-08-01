@@ -40,7 +40,7 @@ export function CapTableView(): React.ReactElement | null {
     try {
       await fn();
     } catch (e: unknown) {
-      setErr(readErr(e, "Cap-table is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load cap-table."));
     } finally {
       setBusy(false);
     }

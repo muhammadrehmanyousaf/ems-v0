@@ -66,7 +66,7 @@ export function WageCostingView(): React.ReactElement | null {
           amountPaid: Number(amount),
         }),
       );
-    }, "Wage register is not enabled for your account yet.");
+    }, "Couldn't load wage register.");
 
   const postToGl = (): Promise<void> =>
     guard(async () => {

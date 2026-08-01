@@ -36,7 +36,7 @@ export function FinancingView(): React.ReactElement | null {
     try {
       await fn();
     } catch (e: unknown) {
-      setErr(readErr(e, "Financing is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load financing."));
     } finally {
       setBusy(false);
     }

@@ -48,7 +48,7 @@ export function VenueOsInsights(): React.ReactElement | null {
     } catch (e: unknown) {
       const msg =
         (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        "Tax engine not enabled for your account";
+        "Couldn't compute tax just now.";
       setErr(msg);
       setTax(null);
     } finally {
@@ -67,7 +67,7 @@ export function VenueOsInsights(): React.ReactElement | null {
         </CardHeader>
         <CardContent>
           {health.isError ? (
-            <p className="text-sm text-muted-foreground">Venue-OS is not enabled for your account yet.</p>
+            <p className="text-sm text-muted-foreground">Couldn't load Venue-OS insights.</p>
           ) : !health.data ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : (

@@ -51,7 +51,7 @@ export function ForceMajeureBatchView(): React.ReactElement | null {
     try {
       await fn();
     } catch (e: unknown) {
-      setErr(readErr(e, "Force-majeure batch is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load force-majeure batch."));
     } finally {
       setBusy(false);
     }

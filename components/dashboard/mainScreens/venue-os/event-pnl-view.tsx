@@ -73,7 +73,7 @@ export function EventPnlView({
           </div>
         </div>
 
-        {pnl.isError && <p className="text-sm text-muted-foreground">Per-event P&amp;L is not enabled for your account yet.</p>}
+        {pnl.isError && <p className="text-sm text-muted-foreground">Couldn't load per-event P&amp;L.</p>}
         {bookingId != null && !pnl.data && !pnl.isError && <p className="text-sm text-muted-foreground">Loading…</p>}
 
         {d && (

@@ -32,7 +32,7 @@ export function WeatherClaimView(): React.ReactElement | null {
     try {
       await fn();
     } catch (e: unknown) {
-      setErr(readErr(e, "Insurance tracking is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load insurance tracking."));
     } finally {
       setBusy(false);
     }

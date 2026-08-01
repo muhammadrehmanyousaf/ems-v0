@@ -173,7 +173,6 @@ export const MONEY_NAV_KEYS: ReadonlySet<NavItemKey> = new Set<NavItemKey>([
   "Receipts",
   "Cheque ledger",
   "Expenses",
-  "Tax report",
 ]);
 
 // Regular vendors only see Business Settings in controls

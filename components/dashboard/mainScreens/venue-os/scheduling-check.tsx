@@ -39,7 +39,7 @@ export function SchedulingCheck(): React.ReactElement | null {
         }),
       );
     } catch (e: unknown) {
-      setErr(readErr(e, "Scheduling check is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load scheduling check."));
     } finally {
       setBusy(false);
     }

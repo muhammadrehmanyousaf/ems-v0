@@ -68,7 +68,27 @@ export function HoldsView() {
       {isLoading ? (
         <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground"><Spinner size={16} /> Loading…</div>
       ) : isError ? (
-        <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">Date holds aren&apos;t enabled for your account yet.</div>
+        // This used to read "Date holds aren't enabled for your account yet",
+        // written when the feature was flag-dark and the API 404'd. The API is
+        // live now, so that message is simply false — the common cause is a
+        // vendor with no business selected, which returns 400. Telling someone
+        // a working feature is switched off sends them to support for a
+        // problem they could have solved in one click.
+        <div className="rounded-lg border p-6 text-center">
+          <div className="text-sm font-medium">
+            {activeBusinessId ? "Couldn't load your holds" : "Pick a business first"}
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {activeBusinessId
+              ? "Something went wrong fetching them."
+              : "Date holds belong to one business. Choose one and its holds appear here."}
+          </p>
+          {activeBusinessId ? (
+            <Button size="sm" variant="outline" className="mt-3" onClick={() => refetch()}>
+              Try again
+            </Button>
+          ) : null}
+        </div>
       ) : list.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center">
           <div className="text-sm font-medium">No active holds</div>

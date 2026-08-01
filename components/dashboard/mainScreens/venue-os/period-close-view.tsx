@@ -45,7 +45,7 @@ export function PeriodCloseView(): React.ReactElement | null {
   const check = (): Promise<void> =>
     guard(async () => {
       setStatus(await venueOsApi.periodStatus(Number(businessId), period));
-    }, "Period close is not enabled for your account yet.");
+    }, "Couldn't load period close.");
 
   const close = (): Promise<void> =>
     guard(async () => {

@@ -40,7 +40,7 @@ export function RateContractView(): React.ReactElement | null {
     try {
       await fn();
     } catch (e: unknown) {
-      setErr(readErr(e, "Procurement is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load procurement."));
     } finally {
       setBusy(false);
     }

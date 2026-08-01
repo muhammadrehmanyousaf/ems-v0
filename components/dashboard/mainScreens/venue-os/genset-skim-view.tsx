@@ -65,7 +65,7 @@ export function GensetSkimView(): React.ReactElement | null {
     try {
       await fn();
     } catch (e: unknown) {
-      setErr(readErr(e, "Genset-skim is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load genset-skim."));
     } finally {
       setBusy(false);
     }

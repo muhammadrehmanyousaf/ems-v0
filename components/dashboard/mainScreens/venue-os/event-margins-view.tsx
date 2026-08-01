@@ -42,7 +42,7 @@ export function EventMarginsView(): React.ReactElement | null {
     try {
       setData(await venueOsApi.eventMargins(Number(businessId), { driver, from: from || undefined, to: to || undefined }));
     } catch (e: unknown) {
-      setErr(readErr(e, "Event profitability is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load event profitability."));
       setData(null);
     } finally {
       setBusy(false);

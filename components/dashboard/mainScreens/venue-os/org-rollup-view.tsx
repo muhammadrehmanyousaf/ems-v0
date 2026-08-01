@@ -59,7 +59,7 @@ export function OrgRollupView(): React.ReactElement | null {
           </div>
         </div>
 
-        {rollup.isError && <p className="text-sm text-muted-foreground">Group roll-up is not enabled for your account yet.</p>}
+        {rollup.isError && <p className="text-sm text-muted-foreground">Couldn't load the group roll-up.</p>}
         {orgId != null && rollup.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
 
         {d && (

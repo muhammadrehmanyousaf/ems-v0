@@ -44,7 +44,7 @@ export function PdcDrawer(): React.ReactElement | null {
           ))}
         </div>
 
-        {alerts.isError && <p className="text-sm text-muted-foreground">PDC tracking is not enabled for your account yet.</p>}
+        {alerts.isError && <p className="text-sm text-muted-foreground">Couldn't load PDC tracking.</p>}
         {alerts.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
         {!alerts.isLoading && !alerts.isError && rows.length === 0 && (
           <p className="text-sm text-muted-foreground">No cheques due to clear in the next {withinDays} days.</p>

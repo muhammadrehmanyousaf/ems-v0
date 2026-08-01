@@ -139,10 +139,15 @@ function buildVendorSections(
   // still exists and still works, so no bookmark or deep link breaks — this
   // collapses the rail, not the app.
   if (money.length > 0) {
-    sections.push({
-      label: "Khata",
-      items: [{ name: "Money", url: "/dashboard/money", icon: Wallet, i18nKey: "nav.money" }],
-    })
+    // Tax report is money, so it belongs in Khata — but NOT inside
+    // MONEY_NAV_KEYS. Everything in that set is swallowed by the single
+    // "Money" entry above, which points at /dashboard/money. Putting Tax there
+    // is what made /dashboard/tax unreachable even after it was given a nav
+    // entry: the entry existed and was immediately collapsed away.
+    const khata = [{ name: "Money", url: "/dashboard/money", icon: Wallet, i18nKey: "nav.money" }]
+    const tax = data.vendorMainNav.find((i) => i.name === "Tax report")
+    if (tax) khata.push(tax)
+    sections.push({ label: "Khata", items: khata })
   }
   if (operations.length > 0) {
     sections.push({ label: "Operations", items: operations })

@@ -42,7 +42,7 @@ export function BulkImportView(): React.ReactElement | null {
     try {
       await fn();
     } catch (e: unknown) {
-      setErr(readErr(e, "Bulk import is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load bulk import."));
     } finally {
       setBusy(false);
     }

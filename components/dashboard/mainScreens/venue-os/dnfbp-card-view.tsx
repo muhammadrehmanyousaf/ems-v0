@@ -33,7 +33,7 @@ export function DnfbpCardView(): React.ReactElement | null {
     try {
       await fn();
     } catch (e: unknown) {
-      setErr(readErr(e, "AML shield is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load aML shield."));
     } finally {
       setBusy(false);
     }

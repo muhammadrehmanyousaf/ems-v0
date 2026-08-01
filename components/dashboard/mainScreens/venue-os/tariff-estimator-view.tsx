@@ -37,7 +37,7 @@ export function TariffEstimatorView(): React.ReactElement | null {
     try {
       await fn();
     } catch (e: unknown) {
-      setErr(readErr(e, "Utility allocation is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load utility allocation."));
     } finally {
       setBusy(false);
     }

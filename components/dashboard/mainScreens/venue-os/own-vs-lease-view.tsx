@@ -61,7 +61,7 @@ export function OwnVsLeaseView(): React.ReactElement | null {
         }),
       );
     } catch (e: unknown) {
-      setErr(readErr(e, "Rent-vs-own is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load rent-vs-own."));
       setResult(null);
     } finally {
       setBusy(false);

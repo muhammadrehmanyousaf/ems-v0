@@ -34,7 +34,7 @@ export function CapexView(): React.ReactElement | null {
     try {
       await fn();
     } catch (e: unknown) {
-      setErr(readErr(e, "Capex ROI is not enabled for your account yet."));
+      setErr(readErr(e, "Couldn't load capex ROI."));
     } finally {
       setBusy(false);
     }
