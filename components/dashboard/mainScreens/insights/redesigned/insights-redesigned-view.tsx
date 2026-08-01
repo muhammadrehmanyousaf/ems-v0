@@ -16,6 +16,7 @@ import { DataTable, type Column } from "@/components/dashboard/primitives/data-t
 import { MoneyCell, formatPkr } from "@/components/dashboard/primitives/money-cell"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
+import UpgradeNudge from "@/components/dashboard/shared/upgrade-nudge"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
@@ -57,6 +58,12 @@ export function InsightsRedesignedView() {
         description="Where your bookings come from, and how leads convert."
         actions={<Button><Icon name="Download" size={16} className="mr-1.5" /> Export report</Button>}
       />
+
+      {/* Soft upgrade prompt. Analytics is a paid-tier feature, but the nudge
+          NEVER hides or blocks what's below it — live-system safety. This was
+          the platform's only in-product upsell surface and it went dark at the
+          redesign cutover, so paid tiers had no route to being discovered. */}
+      <UpgradeNudge feature="analytics" />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Unique customers" value={isLoading ? "…" : num(d?.customers?.unique)} icon="Users" />

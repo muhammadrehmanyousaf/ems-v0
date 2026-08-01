@@ -24,6 +24,7 @@ import { ExportMenu } from "@/components/dashboard/shared/export-menu"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
+import { LinkedFunctionSheetBadge } from "@/components/shared/linked-function-sheet-badge"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const fmtDate = (s?: string | null) => {
@@ -87,6 +88,7 @@ export function ReceiptsRedesignedView() {
     { key: "method", header: "Method", render: (r) => <StatusPill tone={methodTone(r.method)} variant="icon">{methodLabel(r.method)}</StatusPill> },
     ...(hasRef ? [{ key: "ref", header: "Txn ref", cellClassName: "text-muted-foreground", render: (r: PaymentReceipt) => r.transactionRef || "—" }] as Column<PaymentReceipt>[] : []),
     { key: "date", header: "Received", cellClassName: "text-muted-foreground", render: (r) => fmtDate(r.receivedDate) },
+    { key: "event", header: "Event", render: (r) => <LinkedFunctionSheetBadge bookingId={r.bookingId} variant="inline" /> },
     { key: "amount", header: "Amount", align: "right", render: (r) => <MoneyCell amount={num(r.amount)} tone="success" /> },
     {
       key: "actions", header: "", align: "right",
