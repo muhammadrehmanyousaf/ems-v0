@@ -72,6 +72,15 @@ export type PanelItem = {
    * always reads 0 would be the same defect as a link that goes nowhere.
    */
   badge?: "chatUnread" | "notifications";
+  /**
+   * This row is what the screen shows when its param is ABSENT.
+   *
+   * /dashboard/money with no ?tab= renders Receivables (the hub defaults to it),
+   * so without this the vendor sits on Receivables while the panel highlights
+   * nothing at all — the rail says Khata, the page says Receivables, and the
+   * panel says nowhere.
+   */
+  isDefaultView?: boolean;
   /** Roman-Urdu / Professional label override resolved by the persona layer. */
   i18nKey?: string;
 };
@@ -248,7 +257,7 @@ export const NAV_MODULES: NavModule[] = [
         items: [
           { label: "Payments", href: "/dashboard/money?tab=payments", icon: CircleDollarSign, i18nKey: "nav.payments" },
           { label: "Receipts", href: "/dashboard/money?tab=receipts", icon: Receipt, i18nKey: "nav.receipts" },
-          { label: "Receivables", href: "/dashboard/money?tab=receivables", icon: AlertCircle, i18nKey: "nav.receivables" },
+          { label: "Receivables", href: "/dashboard/money?tab=receivables", icon: AlertCircle, i18nKey: "nav.receivables", isDefaultView: true },
         ],
       },
       {
