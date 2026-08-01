@@ -11,6 +11,7 @@ import * as React from "react"
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
 import { AnalyticsAPI } from "@/lib/api/analytics"
+import { BusinessesAPI } from "@/lib/api/dashboard"
 import { useUser } from "@/context/UserContext"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
@@ -26,6 +27,7 @@ import { TodayBoard } from "@/components/dashboard/mainScreens/venue-os/today-bo
 import { EventProfitBoard } from "@/components/dashboard/mainScreens/venue-os/event-profit-board"
 import dynamic from "next/dynamic"
 import { getDashboardRole, isAdminLike } from "@/lib/dashboard-role"
+import { NoBusinessFirstRun } from "@/components/dashboard/mainScreens/dashboard/redesigned/no-business-first-run"
 
 // Admin overview is vendor-console-free and only ever renders for admin-like
 // roles, so keep it out of the vendor bundle. Mirrors dashboard-view.tsx.
@@ -109,6 +111,16 @@ function VendorOverviewRedesignedView() {
     queryFn: () => AnalyticsAPI.getRevenueBreakdowns("this_year"),
   })
 
+  // Does this vendor own a business at all? Everything on this screen assumes
+  // one exists. Only trust the answer once the request has actually resolved —
+  // rendering the first-run banner during load would flash it at every vendor
+  // on every hard refresh.
+  const businessesQ = useQuery({
+    queryKey: ["my-businesses"],
+    queryFn: () => BusinessesAPI.getUserBusinesses(),
+  })
+  const hasNoBusiness = businessesQ.isSuccess && (businessesQ.data ?? []).length === 0
+
   const k = kpisQ.data
   const recent = (recentQ.data?.bookings ?? []) as RecentRow[]
 
@@ -134,8 +146,19 @@ function VendorOverviewRedesignedView() {
         eyebrow="Vendor console · Overview"
         title={`Welcome back, ${firstName}`}
         description={`${today} — at-a-glance signal for your business: bookings, revenue and what needs you.`}
-        actions={<Button asChild><Link href="/dashboard/bookings"><Icon name="Plus" size={16} className="mr-1.5" /> Add booking</Link></Button>}
+        actions={
+          // "Add booking" is impossible without a business, so it must not be
+          // offered to someone who has none. No replacement here either — the
+          // first-run panel directly below owns that call to action, and two
+          // identical primary buttons a hundred pixels apart reads as an
+          // oversight rather than emphasis.
+          hasNoBusiness ? undefined : (
+            <Button asChild><Link href="/dashboard/bookings"><Icon name="Plus" size={16} className="mr-1.5" /> Add booking</Link></Button>
+          )
+        }
       />
+
+      {hasNoBusiness && <NoBusinessFirstRun />}
 
       {/* One-time "are you familiar with software like this?" register chooser.
           Self-hides once answered; default is Professional, so most vendors

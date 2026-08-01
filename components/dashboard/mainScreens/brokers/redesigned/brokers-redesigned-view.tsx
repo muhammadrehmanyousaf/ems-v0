@@ -30,6 +30,7 @@ import { ExportMenu } from "@/components/dashboard/shared/export-menu"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
+import { LinkedFunctionSheetBadge } from "@/components/shared/linked-function-sheet-badge"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
@@ -118,6 +119,7 @@ export function BrokersRedesignedView() {
       ),
     },
     { key: "type", header: "Type", cellClassName: "text-muted-foreground", render: (c) => brokerTypeLabel(c) },
+    { key: "event", header: "Event", render: (c) => <LinkedFunctionSheetBadge bookingId={c.bookingId} variant="inline" /> },
     {
       key: "commission",
       header: "Commission",

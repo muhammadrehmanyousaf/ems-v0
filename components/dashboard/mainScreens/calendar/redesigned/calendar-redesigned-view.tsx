@@ -17,6 +17,7 @@ import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { OfflineBookingDialog } from "@/components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog"
+import { CalendarFeedCard } from "@/components/dashboard/calendar-feed-card"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -198,6 +199,12 @@ export function CalendarRedesignedView() {
           )}
         </div>
       </div>
+
+      {/* Subscribe this calendar into Google / Apple / Outlook. Built in Phase 4
+          and reachable only from the old calendar screen, so it disappeared at
+          the redesign cutover — a vendor who runs their day out of Google
+          Calendar had no way to get Wedding Wala bookings into it. */}
+      <CalendarFeedCard />
 
       <OfflineBookingDialog
         open={createOpen}

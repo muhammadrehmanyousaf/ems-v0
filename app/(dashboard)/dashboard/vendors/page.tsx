@@ -1,14 +1,16 @@
-import VendorListingView from '@/components/dashboard/mainScreens/vendors/vendorsListing/vendor-listing-view';
-import { isRedesignOn } from "@/lib/dashboard-redesign-flag";
+import { AdminGuard } from "@/components/admin/AdminGuard";
 import { VendorsAdminRedesignedView } from "@/components/dashboard/mainScreens/vendors/redesigned/vendors-admin-redesigned-view";
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
     title: 'Dashboard : Vendors',
-    description: 'Basic dashboard with Next.js and Shadcn'
+    description: 'Every vendor on the platform — verification state, listings and activity.'
 };
 
 export default function page() {
-  if (isRedesignOn()) return <VendorsAdminRedesignedView />;
-  return <VendorListingView/>
+  return (
+    <AdminGuard>
+      <VendorsAdminRedesignedView />
+    </AdminGuard>
+  );
 }

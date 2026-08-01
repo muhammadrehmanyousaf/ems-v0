@@ -22,6 +22,7 @@ import { ExportMenu } from "@/components/dashboard/shared/export-menu"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
+import { LinkedFunctionSheetBadge } from "@/components/shared/linked-function-sheet-badge"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
@@ -76,6 +77,7 @@ export function PdcsRedesignedView() {
     { key: "bank", header: "Bank", cellClassName: "text-muted-foreground", render: (p) => p.bankName || "—" },
     { key: "customer", header: "Customer", cellClassName: "text-muted-foreground", render: (p) => p.customer?.fullName || "—" },
     { key: "chequeDate", header: "Cheque date", cellClassName: "text-muted-foreground", render: (p) => fmtDate(p.chequeDate) },
+    { key: "event", header: "Event", render: (p) => <LinkedFunctionSheetBadge bookingId={p.bookingId} variant="inline" /> },
     { key: "amount", header: "Amount", align: "right", render: (p) => <MoneyCell amount={num(p.amount)} /> },
     { key: "status", header: "Status", render: (p) => <StatusPill tone={TONE[p.status]}>{cap(p.status)}</StatusPill> },
     {

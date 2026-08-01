@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { useBeforeUnloadGuard } from "@/lib/hooks/useBeforeUnloadGuard"
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
@@ -30,6 +31,23 @@ export function BankAccountsManager() {
   const [editingId, setEditingId] = React.useState<number | null>(null)
   const [form, setForm] = React.useState<UpsertBankDetailInput>(EMPTY)
   const set = (k: keyof UpsertBankDetailInput, v: any) => setForm((f) => ({ ...f, [k]: v }))
+
+  // Bank details are the one form in the vendor portal that deliberately does
+  // NOT use the localStorage draft layer — an IBAN and account number in
+  // plaintext on a shared device is a financial-incident risk, so nothing is
+  // persisted. That makes an accidental refresh unrecoverable: 24 characters of
+  // IBAN typed off a chequebook, gone. This converts a one-click refresh into a
+  // deliberate two-click decision. Only armed while something is actually typed.
+  const hasUnsaved =
+    adding &&
+    Boolean(
+      (form.bankName || "").trim() ||
+        (form.accountHolderName || "").trim() ||
+        (form.accountNumber || "").trim() ||
+        (form.iban || "").trim() ||
+        (form.branchCode || "").trim(),
+    )
+  useBeforeUnloadGuard({ enabled: hasUnsaved, message: "Your bank account details haven't been saved yet. Leave anyway?" })
   const reset = () => { setForm(EMPTY); setAdding(false); setEditingId(null) }
   const invalidate = () => qc.invalidateQueries({ queryKey: ["bank-accounts"] })
   // Account number is masked on read — start it blank so a blank save keeps the existing one.

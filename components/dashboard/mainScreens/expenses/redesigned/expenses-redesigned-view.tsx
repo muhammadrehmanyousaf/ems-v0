@@ -29,6 +29,7 @@ import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { CustomFieldsManager } from "@/components/dashboard/shared/custom-fields-manager"
 import { useCustomFieldDefs } from "@/components/dashboard/shared/custom-fields-section"
 import type { CustomFieldDef } from "@/lib/api/customFields"
+import { LinkedFunctionSheetBadge } from "@/components/shared/linked-function-sheet-badge"
 
 const fmtCf = (v: unknown, d: CustomFieldDef): string => {
   if (v == null || v === "") return "—"
@@ -112,6 +113,10 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
     { key: "note", header: "Note", cellClassName: "max-w-[260px] truncate text-muted-foreground", render: (e) => e.description || "—" },
     { key: "method", header: "Method", render: (e) => <StatusPill tone="neutral">{cap(e.paymentMethod)}</StatusPill> },
     { key: "date", header: "Date", cellClassName: "text-muted-foreground", render: (e) => fmtDate(e.spentDate) },
+    // Reverse link back to the event. A vendor looking at "Rs 45,000 catering"
+    // needs to know WHICH wedding it was for; without this the money screens
+    // and the event screens are two unconnected worlds.
+    { key: "event", header: "Event", render: (e) => <LinkedFunctionSheetBadge bookingId={e.bookingId} variant="inline" /> },
     { key: "amount", header: "Amount", align: "right", render: (e) => <MoneyCell amount={num(e.amount)} tone="error" /> },
     {
       key: "actions", header: "", align: "right",

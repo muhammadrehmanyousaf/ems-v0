@@ -1,9 +1,4 @@
-import PageContainer from '@/components/dashboard/layout/page-container';
-import CollaborationsView from '@/components/dashboard/mainScreens/collaborations/collaborations-view';
-import { Heading } from '@/components/heading';
-import { Separator } from '@/components/ui/separator';
 import type { Metadata } from 'next';
-import { isRedesignOn } from '@/lib/dashboard-redesign-flag';
 import { CollaborationsRedesignedView } from '@/components/dashboard/mainScreens/collaborations/redesigned/collaborations-redesigned-view';
 
 export const metadata: Metadata = {
@@ -12,20 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  if (isRedesignOn()) return <CollaborationsRedesignedView />;
-
-  return (
-    <div>
-      <PageContainer>
-        <div className="space-y-4">
-          <Heading
-            title="Collaborations"
-            description="Bring other vendors onto your events — invite, accept, and track who's doing what."
-          />
-          <Separator />
-          <CollaborationsView />
-        </div>
-      </PageContainer>
-    </div>
-  );
+  return <CollaborationsRedesignedView />
 }

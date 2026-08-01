@@ -82,12 +82,18 @@ export function TeamSwitcher({ variant = "panel" }: { variant?: "panel" | "rail"
   // for "add another venue". The "All venues" roll-up still needs 2+ to be
   // meaningful, so it stays gated on `multi`.
   const canAddBusiness = !!user?.isVendor || !!user?.isSuperAdmin
+  // A vendor who owns nothing yet. Their onboarding lives on the dashboard
+  // (NoBusinessFirstRun), but the switcher must not pretend otherwise.
+  const noBusinessYet = businesses.length === 0
   const activeBusiness = businesses.find((b) => b.id === activeBusinessId) || null
   const displayName = activeBusiness
     ? activeBusiness.name
     : multi
       ? "All venues"
-      : businesses[0]?.name || user?.fullName || "Dashboard"
+      : // With no business at all, falling through to `user.fullName` labelled
+        // the PERSON as the business — the rail read "Business: Muhammad Rehman
+        // Yousaf" for someone who owns none.
+        businesses[0]?.name || (noBusinessYet ? "No business yet" : user?.fullName || "Dashboard")
   const subtitle = activeBusiness
     ? `${activeBusiness.city || ""}${activeBusiness.subArea ? `, ${activeBusiness.subArea}` : ""}` || (vendorConfig?.displayName ?? "Wedding Venue")
     : multi
@@ -130,7 +136,7 @@ export function TeamSwitcher({ variant = "panel" }: { variant?: "panel" | "rail"
               sideOffset={4}
             >
               <DropdownMenuLabel className="text-muted-foreground text-xs">
-                Your Businesses
+                {noBusinessYet ? "Get started" : "Your Businesses"}
               </DropdownMenuLabel>
               {/* Combined roll-up across every venue the vendor owns. Only
                   meaningful with 2+, so it stays gated on `multi`. */}
@@ -186,8 +192,12 @@ export function TeamSwitcher({ variant = "panel" }: { variant?: "panel" | "rail"
                         <Plus className="size-3.5 shrink-0" />
                       </div>
                       <div className="grid flex-1 text-left leading-tight">
-                        <span className="text-sm font-medium">Add a business</span>
-                        <span className="text-[10px] text-muted-foreground">Another venue or service</span>
+                        <span className="text-sm font-medium">
+                          {noBusinessYet ? "Add your business" : "Add a business"}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {noBusinessYet ? "Takes about two minutes" : "Another venue or service"}
+                        </span>
                       </div>
                     </Link>
                   </DropdownMenuItem>

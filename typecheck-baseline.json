@@ -1,12 +1,11 @@
 {
-  "total": 125,
+  "total": 123,
   "counts": {
     "app/(main)/search/page.tsx|TS18046": 2,
     "app/(main)/search/page.tsx|TS2488": 1,
     "app/(main)/search/page.tsx|TS7006": 1,
     "app/(main)/user/profile/page.tsx|TS2322": 1,
     "app/sitemap.ts|TS2353": 3,
-    "components/dashboard/mainScreens/bookings/import-bookings-dialog.tsx|TS2551": 2,
     "components/homepage/featured-vendors.tsx|TS2322": 3,
     "components/homepage/FeaturedBridalWear.tsx|TS2322": 1,
     "components/homepage/FeaturedCarRental.tsx|TS2322": 1,

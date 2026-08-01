@@ -1,8 +1,3 @@
-import PageContainer from '@/components/dashboard/layout/page-container';
-import { Heading } from '@/components/heading';
-import { Separator } from '@/components/ui/separator';
-import BrokersView from '@/components/dashboard/mainScreens/brokers/brokers-view';
-import { isRedesignOn } from '@/lib/dashboard-redesign-flag';
 import { BrokersRedesignedView } from '@/components/dashboard/mainScreens/brokers/redesigned/brokers-redesigned-view';
 import type { Metadata } from 'next';
 
@@ -13,16 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  if (isRedesignOn()) return <BrokersRedesignedView />;
-  return (
-    <div>
-      <PageContainer>
-        <div className="space-y-4">
-          <Heading title="Brokers &amp; commissions" />
-          <Separator />
-          <BrokersView />
-        </div>
-      </PageContainer>
-    </div>
-  );
+  return <BrokersRedesignedView />
 }

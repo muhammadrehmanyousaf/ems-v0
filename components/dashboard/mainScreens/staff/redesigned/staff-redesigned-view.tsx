@@ -26,6 +26,7 @@ import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { PayrollTab } from "@/components/dashboard/mainScreens/staff/redesigned/payroll-tab"
+import { StaffLoginControl } from "@/components/staff-portal/staff-login-control"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
@@ -95,6 +96,11 @@ export function StaffRedesignedView() {
       key: "actions", header: "", align: "right",
       render: (m) => (
         <div className="flex items-center justify-end gap-0.5">
+          {/* Give this staff member their own login to the staff portal. The
+              control and the whole /staff/me surface behind it were built in
+              Phase 1 and have never been reachable — the vendor screen that
+              rendered it was the legacy one. */}
+          <StaffLoginControl member={m} onChanged={invalidate} />
           <Button size="sm" variant="ghost" onClick={() => openEdit(m)} aria-label="Edit staff"><Icon name="Pencil" size={14} /></Button>
           <Button size="sm" variant="ghost" onClick={() => setDeleting(m)} aria-label="Remove staff"><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
         </div>
