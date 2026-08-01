@@ -16,6 +16,8 @@ import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
 import { moduleForPath, type PanelItem } from "@/lib/nav/module-panels"
 import { useT } from "@/lib/i18n/useT"
+import { useChat } from "@/context/ChatContext"
+import { useNotifications } from "@/context/NotificationContext"
 
 function normalise(href: string) {
   const [path, query = ""] = href.split("?")
@@ -42,6 +44,18 @@ export function ModulePanel() {
   }
 
   const label = (item: PanelItem) => (item.i18nKey ? t(item.i18nKey) : item.label)
+
+  // Live counters. Rendered ONLY when non-zero — a panel full of grey zeros
+  // teaches people to stop reading it, which is the opposite of what a badge
+  // is for. Matches the reference, where a count appears on a row only when
+  // there is something waiting.
+  const { totalUnread } = useChat()
+  const { unreadCount } = useNotifications()
+  const badgeFor = (item: PanelItem): number => {
+    if (item.badge === "chatUnread") return totalUnread || 0
+    if (item.badge === "notifications") return unreadCount || 0
+    return 0
+  }
 
   return (
     <div className="flex h-full w-full flex-col gap-4 overflow-y-auto px-3 py-4">
@@ -80,6 +94,11 @@ export function ModulePanel() {
                   }
                 />
                 <span className="truncate">{label(item)}</span>
+                {badgeFor(item) > 0 ? (
+                  <span className="ml-auto inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-semibold leading-none text-primary-foreground tabular-nums">
+                    {badgeFor(item) > 99 ? "99+" : badgeFor(item)}
+                  </span>
+                ) : null}
               </Link>
             )
           })}

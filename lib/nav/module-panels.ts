@@ -63,6 +63,15 @@ export type PanelItem = {
   label: string;
   href: string;
   icon: LucideIcon;
+  /**
+   * Which live counter badges this row, if any.
+   *
+   * The reference shows counts on the right of a row and renders them ONLY
+   * when non-zero — a rail full of grey zeros teaches people to stop reading it.
+   * Only counters that genuinely exist are listed here; inventing a badge that
+   * always reads 0 would be the same defect as a link that goes nowhere.
+   */
+  badge?: "chatUnread" | "notifications";
   /** Roman-Urdu / Professional label override resolved by the persona layer. */
   i18nKey?: string;
 };
@@ -115,7 +124,7 @@ export const NAV_MODULES: NavModule[] = [
         items: [
           { label: "Today", href: "/dashboard/today", icon: Sparkles, i18nKey: "nav.today" },
           { label: "Calendar", href: "/dashboard/calendar", icon: CalendarDays, i18nKey: "nav.calendar" },
-          { label: "Notifications", href: "/dashboard/notifications", icon: Bell, i18nKey: "nav.notifications" },
+          { label: "Notifications", href: "/dashboard/notifications", icon: Bell, i18nKey: "nav.notifications", badge: "notifications" },
           { label: "Reports", href: "/dashboard/reports", icon: BarChart3, i18nKey: "nav.reports" },
         ],
       },
@@ -210,8 +219,8 @@ export const NAV_MODULES: NavModule[] = [
     groups: [
       {
         items: [
-          { label: "Conversations", href: "/dashboard/chat", icon: MessageSquareText, i18nKey: "nav.conversations" },
-          { label: "Notifications", href: "/dashboard/notifications", icon: Bell, i18nKey: "nav.notifications" },
+          { label: "Conversations", href: "/dashboard/chat", icon: MessageSquareText, i18nKey: "nav.conversations", badge: "chatUnread" },
+          { label: "Notifications", href: "/dashboard/notifications", icon: Bell, i18nKey: "nav.notifications", badge: "notifications" },
           { label: "Reviews", href: "/dashboard/reviews", icon: Smile, i18nKey: "nav.reviews" },
         ],
       },
