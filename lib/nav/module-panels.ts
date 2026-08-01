@@ -163,8 +163,14 @@ export const NAV_MODULES: NavModule[] = [
     panelTitle: "Bookings",
     groups: [
       {
+        // These two are real: the list already sends `bucket` to the API, and
+        // now seeds it from the URL, so each row lands on a genuinely
+        // different set of bookings and survives a refresh. Compare with the
+        // "Upcoming / Awaiting payment" rows I did NOT add — the API has no
+        // such filter, so those links would look like they work and do nothing.
         items: [
-          { label: "All bookings", href: "/dashboard/bookings", icon: ClipboardList, i18nKey: "nav.bookings" },
+          { label: "Active bookings", href: "/dashboard/bookings", icon: ClipboardList, i18nKey: "nav.bookings" },
+          { label: "Completed", href: "/dashboard/bookings?bucket=completed", icon: ListChecks },
         ],
       },
       {

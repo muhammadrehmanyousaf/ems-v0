@@ -9,6 +9,7 @@
  */
 
 import * as React from "react"
+import { useSearchParams } from "next/navigation"
 import { useFetchData } from "@/hooks/use-fetch-data"
 import type { BookingData, BookingStatus } from "@/lib/dashboard-types"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
@@ -52,7 +53,15 @@ const fmtDate = (s?: string) => {
 
 export function BookingsRedesignedView() {
   const [search, setSearch] = React.useState("")
-  const [bucket, setBucket] = React.useState<"active" | "completed">("active")
+  // Seed the bucket from the URL so the sidebar panel can link straight to a
+  // view — /dashboard/bookings?bucket=completed — and so that view survives a
+  // refresh and can be pasted to a colleague. The in-page toggle still owns it
+  // afterwards; this only decides where you land.
+  const searchParams = useSearchParams()
+  const urlBucket = searchParams?.get("bucket")
+  const [bucket, setBucket] = React.useState<"active" | "completed">(
+    urlBucket === "completed" ? "completed" : "active",
+  )
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
   const [createOpen, setCreateOpen] = React.useState(false)
 

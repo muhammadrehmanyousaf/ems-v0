@@ -21,8 +21,13 @@ import { useNotifications } from "@/context/NotificationContext"
 
 function normalise(href: string) {
   const [path, query = ""] = href.split("?")
-  const tab = new URLSearchParams(query).get("tab")
-  return { path: path!.replace(/\/+$/, "") || "/", tab }
+  // Every param, not just `tab`. This started as a tab-only check and would
+  // have highlighted BOTH "Active bookings" and "Completed" at once the moment
+  // a row used a different param name (`bucket`).
+  return {
+    path: path!.replace(/\/+$/, "") || "/",
+    params: Array.from(new URLSearchParams(query).entries()),
+  }
 }
 
 export function ModulePanel() {
@@ -32,15 +37,25 @@ export function ModulePanel() {
   const t = useT()
 
   const currentPath = (pathname || "/dashboard").replace(/\/+$/, "") || "/"
-  const currentTab = searchParams?.get("tab") ?? null
 
   const isActive = (item: PanelItem) => {
-    const { path, tab } = normalise(item.href)
+    const { path, params } = normalise(item.href)
     if (path !== currentPath) return false
-    // A row that names a tab is only active for THAT tab. Without this every
-    // Khata row would highlight at once on /dashboard/money.
-    if (tab) return currentTab === tab
-    return true
+    // A row that names params is active only when every one of them matches.
+    // Without this, all the Khata rows would light up together on
+    // /dashboard/money.
+    if (params.length > 0) {
+      return params.every(([k, v]) => searchParams?.get(k) === v)
+    }
+    // A bare row (no params) is the module root — active only when no sibling
+    // row's param is present, so "Active bookings" dims once you are on
+    // ?bucket=completed.
+    const siblingParams = new Set(
+      mod.groups
+        .flatMap((g) => g.items)
+        .flatMap((i) => normalise(i.href).params.map(([k]) => k)),
+    )
+    return !Array.from(siblingParams).some((k) => searchParams?.get(k))
   }
 
   const label = (item: PanelItem) => (item.i18nKey ? t(item.i18nKey) : item.label)
