@@ -52,6 +52,10 @@ import { BACKEND_URL } from "@/lib/backend-url";
 // re-enable without a redeploy once storage is ready.
 const IMAGE_UPLOADS_ENABLED =
   true;
+
+/* Survives a remount of this component so a successful registration can never
+   present itself as a failure. Session-scoped, so it dies with the tab. */
+const REG_SUCCESS_KEY = "ww_vendor_reg_success";
 import { TERMS_VERSION } from "@/lib/seo";
 import { vanueValidations } from "./VendorStepForms/newVendorRegisterationForm/venueSteps/vanueComponents/vanueValidations";
 import SuccessModal from "./VendorStepForms/components/SuccessModal";
@@ -132,8 +136,41 @@ export function BusinessRegistrationForm() {
   // logo. Use this ref + the effect below to clear it the moment the
   // category changes to a different one.
   const fileBusinessTypeRef = useRef<string | null>(null);
+
+  /* Success state is seeded from sessionStorage, not just useState.
+
+     The bug: a vendor completed all 8 steps, the server returned 201 and created
+     the account (verified live — user 3371 / business 3361), and the screen threw
+     them back to a BLANK STEP 1 at "0% progress" with no modal, no toast and no
+     redirect. It reads exactly like a failure, so the natural response is to fill
+     all 8 steps again — which then fails on "email already in use", and by then
+     the draft has been deleted so there is nothing to resume.
+
+     Why it happened: `setOpenModal(true)` and `setCurrentStep(0)` are adjacent,
+     and the step reset demonstrably DID apply, so the modal state was set too.
+     But this route logs React #418 (hydration text mismatch) and #423 ("error
+     during concurrent rendering, recovered by synchronously re-rendering the
+     entire root"). A root re-render remounts this component, and every piece of
+     useState goes back to its initial value — openModal to false AND currentStep
+     to 0. That is precisely the two symptoms observed, together.
+
+     Rather than chase the hydration mismatch alone, make success survive a
+     remount: persist it, and restore it on mount. Even if React tears the tree
+     down, the vendor still gets told they succeeded.
+
+     The restore runs in an EFFECT, not in the useState initialiser: seeding from
+     sessionStorage during the first render would make the client disagree with
+     the server-rendered HTML and introduce exactly the kind of hydration
+     mismatch this is working around. */
   const [openModal, setOpenModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(REG_SUCCESS_KEY);
+      if (saved) { setSuccessMessage(saved); setOpenModal(true); }
+    } catch {}
+  }, []);
   // T&C acceptance — explicit consent gate on the final step. Submit is
   // blocked until checked. Reference:
   // docs/payfast/01-payfast-integration-overview.md §2 item 6.
@@ -947,7 +984,15 @@ export function BusinessRegistrationForm() {
           typeSpecificDetails: {},
         });
         loadingToastId.dismiss();
-        setSuccessMessage(response.data?.message || "");
+        // Persist BEFORE setting state: if the tree remounts (React #423 root
+        // recovery has been observed on this route), the mount effect reads this
+        // back and re-opens the modal, so the vendor is never left staring at a
+        // blank step 1 wondering whether their registration went through.
+        const successMsg =
+          response.data?.message ||
+          "Your business has been registered. Sign in to access your dashboard.";
+        try { sessionStorage.setItem(REG_SUCCESS_KEY, successMsg); } catch {}
+        setSuccessMessage(successMsg);
         setOpenModal(true);
         setCurrentStep(0);
 

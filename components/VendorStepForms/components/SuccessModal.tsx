@@ -17,16 +17,33 @@ interface SuccessModalProps {
     message?: string
 }
 
+/* Must match business-registration-form.tsx. The flag is what lets a successful
+   registration survive a remount of the form; clear it once the vendor has
+   actually seen and acted on this modal, otherwise it would re-open on every
+   later visit to the registration page in the same tab. */
+const REG_SUCCESS_KEY = "ww_vendor_reg_success"
+const clearRegSuccess = () => {
+    try { sessionStorage.removeItem(REG_SUCCESS_KEY) } catch {}
+}
+
 const SuccessModal: React.FC<SuccessModalProps> = ({ setOpen, open, message }) => {
     const router = useRouter()
 
     const onClick = () => {
+        clearRegSuccess()
         router.push("/login")
         setOpen(false)
     }
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog
+            open={open}
+            onOpenChange={(v) => {
+                // Dismissing by Esc / clicking outside counts as "seen" too.
+                if (!v) clearRegSuccess()
+                setOpen(v)
+            }}
+        >
             <DialogContent className="max-w-md p-0 overflow-hidden border-bridal-beige bg-bridal-cream rounded-md shadow-[0_24px_60px_-32px_rgba(176,125,84,0.55)]">
                 {/* Required for a11y but visually hidden — we render our own
                     Playfair italic title below. */}
