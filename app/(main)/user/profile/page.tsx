@@ -192,11 +192,15 @@ const ProfilePage = () => {
         description: "Your profile changes have been saved.",
       });
     } catch (error) {
-      let errorMessage = "Failed to update profile";
-      if (error instanceof Error) {
-        errorMessage = `Failed to update profile: ${error.message}`;
-      }
-      toast({ title: "Error", description: errorMessage, variant: "destructive" });
+      // Prefer the server's message. The backend writes these for humans —
+      // "This email is already in use by another account" — whereas
+      // `error.message` on an axios failure is only "Request failed with status
+      // code 400", which tells the customer nothing about what to change.
+      const serverMsg = (error as any)?.response?.data?.message;
+      const errorMessage =
+        serverMsg ||
+        (error instanceof Error ? `Failed to update profile: ${error.message}` : "Failed to update profile");
+      toast({ title: "Couldn't save your profile", description: errorMessage, variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -228,11 +232,15 @@ const ProfilePage = () => {
         router.push("/login");
       }, 2000);
     } catch (error) {
-      let errorMessage = "Failed to change password. Please try again.";
-      if (error instanceof Error) {
-        errorMessage = `Failed to change password: ${error.message}`;
-      }
-      toast({ title: "Error", description: errorMessage, variant: "destructive" });
+      // Same reasoning as above — the server says "Current password is
+      // incorrect", which is the one thing the customer needs to know.
+      const serverMsg = (error as any)?.response?.data?.message;
+      const errorMessage =
+        serverMsg ||
+        (error instanceof Error
+          ? `Failed to change password: ${error.message}`
+          : "Failed to change password. Please try again.");
+      toast({ title: "Couldn't change your password", description: errorMessage, variant: "destructive" });
     } finally {
       setIsPasswordChanging(false);
     }
