@@ -108,6 +108,7 @@ export function TeamSwitcher({ variant = "panel" }: { variant?: "panel" | "rail"
             {variant === "rail" ? (
               <button
                 type="button"
+                data-tour="business-switcher"
                 title={`${displayName} — ${subtitle}`}
                 aria-label={`Business: ${displayName}. Switch business.`}
                 className="mx-auto flex size-11 items-center justify-center rounded-xl border border-sidebar-border bg-sidebar-accent/60 text-[13px] font-semibold text-sidebar-accent-foreground transition-colors hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent"

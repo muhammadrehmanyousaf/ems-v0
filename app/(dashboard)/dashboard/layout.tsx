@@ -20,6 +20,7 @@ import NextTopLoader from "nextjs-toploader"
 // SSR locale always falls back to English.
 import { LocaleProvider } from "@/lib/i18n/useT"
 import { MobileBottomNav } from "@/components/dashboard/layout/mobile-bottom-nav"
+import { ProductTourProvider } from "@/components/dashboard/tour/product-tour"
 
 export const metadata: Metadata = {
   title: "Wedding Wala — Dashboard",
@@ -63,6 +64,10 @@ const layout = ({ children }: { children: React.ReactNode }) => {
               no sidebar / no header / no dashboard chrome that would
               suggest they have access to features that aren't live yet. */}
           <ReviewProfileGate>
+            {/* Tour provider wraps the shell so a step can spotlight the rail,
+                the panel or any page, and so "Take a tour" works from anywhere
+                inside the dashboard. Renders nothing until started. */}
+            <ProductTourProvider>
             <SidebarProvider>
               {/* Icon rail — one entry per module, ~68px, never changes.
                   Desktop only; on mobile the bottom-tab nav plays this role.
@@ -74,7 +79,9 @@ const layout = ({ children }: { children: React.ReactNode }) => {
                   available width when content is wide. */}
               <SidebarInset className="min-w-0 overflow-x-hidden">
                 <Header />
-                <div className="flex flex-1 min-w-0 flex-col">
+                {/* Anchor for route-level tour steps ("this is Enquiries").
+                    One stable target beats a bespoke selector per screen. */}
+                <div data-tour="page-root" className="flex flex-1 min-w-0 flex-col">
                   <div className="px-4 pt-4 md:px-6">
                     <VerificationBanner />
                   </div>
@@ -85,6 +92,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
                 <MobileBottomNav />
               </SidebarInset>
             </SidebarProvider>
+            </ProductTourProvider>
           </ReviewProfileGate>
         </LocaleProvider>
       </ProtectedRoutes>

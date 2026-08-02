@@ -33,6 +33,7 @@ import { PersonaPreference } from "@/components/dashboard/layout/persona-prefere
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { TourLauncherCard } from "@/components/dashboard/tour/tour-launcher"
 
 const numOrNull = (v: string) => (v.trim() === "" ? null : Number(v) || 0)
 
@@ -177,6 +178,7 @@ export function BusinessSettingsHubView() {
       {/* Label-style switch (Aasaan Roman-Urdu ⇄ Professional English). Sits at
           the top so a vendor who wants plainer words can find it immediately. */}
       <PersonaPreference />
+
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">
         {/* Tab rail */}
