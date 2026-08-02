@@ -63,9 +63,15 @@ export function CalendarSlotGridView() {
 
   // Vendor-blocked dates (leaves / dead months) — overlaid on the grid so a
   // block reflects instantly regardless of which block table backs it.
+  // Pass businessId EXPLICITLY. The query is already keyed by it, but the calls
+  // were not scoped: the GET relied on the axios interceptor's active-business
+  // guess (which can differ from the venue this grid is actually rendering), and
+  // the POST below carried no scope at all, so blocking one day here blocked it
+  // on every venue the vendor owns. Verified live on a two-venue account: a
+  // single block wrote rows against both 3361 and 3362.
   const { data: blocked } = useQuery({
     queryKey: ["blocked-dates", businessId],
-    queryFn: () => BlockedDatesAPI.getAll(),
+    queryFn: () => BlockedDatesAPI.getAll(undefined, businessId),
     enabled: !!businessId,
   });
   const blockedSet = useMemo(() => new Set((blocked ?? []).map((b) => b.blockedDate)), [blocked]);
@@ -73,7 +79,7 @@ export function CalendarSlotGridView() {
   const blockDate = async (date: Date) => {
     const ymd = format(date, "yyyy-MM-dd");
     try {
-      await BlockedDatesAPI.block(ymd, "Islamic dead month / event");
+      await BlockedDatesAPI.block(ymd, "Islamic dead month / event", businessId);
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["blocked-dates", businessId] }),
         qc.invalidateQueries({ queryKey: ["venue-calendar", businessId] }),

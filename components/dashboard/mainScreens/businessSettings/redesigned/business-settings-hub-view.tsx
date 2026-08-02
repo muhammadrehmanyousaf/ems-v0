@@ -326,7 +326,7 @@ export function BusinessSettingsHubView() {
           {active === "bank" && <BankAccountsManager />}
           {active === "packages" && <PackagesManager businessId={biz.id} />}
           {active === "menus" && <MenusManager businessId={biz.id} />}
-          {active === "availability" && <AvailabilityManager />}
+          {active === "availability" && <AvailabilityManager businessId={biz.id} />}
           {active === "images" && <ImagesManager businessId={biz.id} images={biz.images || []} />}
 
           {!tab.wired && tab.href && (
