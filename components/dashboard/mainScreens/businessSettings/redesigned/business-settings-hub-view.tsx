@@ -100,13 +100,30 @@ export function BusinessSettingsHubView() {
     queryKey: ["biz-settings-hub"],
     queryFn: () => BusinessesAPI.getUserBusinesses(),
   })
-  const biz = businesses?.[0]
-
   // Deep-link: sidebar sub-items navigate to /dashboard/settings?tab=<id>.
   // Resolve that id → the matching hub tab so each link opens its own section
   // (previously the param was ignored and everything opened on Profile).
   const searchParams = useSearchParams()
   const tabParam = searchParams?.get("tab") ?? null
+
+  /* Which business this hub is editing.
+     Previously this was hard-coded to `businesses?.[0]`, with no switcher
+     anywhere in the UI. For a vendor with more than one venue that meant every
+     business after the first was UNREACHABLE — they could not add photos,
+     packages, amenities, availability or bank details to it, ever. Worse, the
+     "Add a business" screen tells them: "You can add photos, packages and
+     amenities in Business Settings while you wait" — which was impossible.
+     Verified live on a fresh account owning 3361 (Lahore) + 3362 (Karachi):
+     Settings rendered 3361 only and offered no way to reach 3362.
+
+     `?biz=<id>` makes the choice linkable and survives a reload; it falls back
+     to the first business, so single-venue vendors see no change at all. */
+  const bizParam = Number(searchParams?.get("biz")) || null
+  const [pickedId, setPickedId] = React.useState<number | null>(bizParam)
+  React.useEffect(() => { if (bizParam) setPickedId(bizParam) }, [bizParam])
+  const biz =
+    (pickedId ? businesses?.find((b) => b.id === pickedId) : undefined) ??
+    businesses?.[0]
   const [active, setActive] = React.useState<TabKey>(() => (tabParam && PARAM_TO_TAB[tabParam]) || "profile")
   React.useEffect(() => {
     const mapped = tabParam ? PARAM_TO_TAB[tabParam] : undefined
@@ -174,6 +191,52 @@ export function BusinessSettingsHubView() {
         description="Your public profile, pricing and services."
         actions={biz.vendor?.vendorType ? <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">{biz.vendor.vendorType}</span> : undefined}
       />
+
+      {/* Business switcher — only rendered when there is something to switch
+          between, so nothing changes for single-venue vendors. Without this,
+          every business after the first was unreachable (see the `biz`
+          resolution above). Guarded on `dirty` so a vendor cannot lose an
+          in-progress edit by switching away from it — the old behaviour would
+          have silently carried venue A's unsaved fields onto venue B. */}
+      {(businesses?.length ?? 0) > 1 && (
+        <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
+          <div className="mb-2 flex items-center gap-2">
+            <Icon name="Building2" size={14} className="text-muted-foreground" />
+            <span className="text-xs font-medium text-muted-foreground">
+              Editing {businesses!.length} businesses — choose one
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {businesses!.map((b) => {
+              const isActive = b.id === biz.id
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  aria-current={isActive ? "true" : undefined}
+                  onClick={() => {
+                    if (b.id === biz.id) return
+                    if (dirty && !window.confirm("You have unsaved changes on this business. Switch anyway and lose them?")) return
+                    setDirty(false)
+                    setPickedId(b.id)
+                  }}
+                  className={cn(
+                    "rounded-lg border px-3 py-1.5 text-left text-xs transition-colors",
+                    isActive
+                      ? "border-primary bg-primary/10 font-medium text-primary"
+                      : "border-border hover:border-primary/40 hover:bg-muted",
+                  )}
+                >
+                  <span className="block max-w-[220px] truncate">{b.name || `Business #${b.id}`}</span>
+                  <span className="block text-[10px] text-muted-foreground">
+                    {[b.city, b.status].filter(Boolean).join(" · ")}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Label-style switch (Aasaan Roman-Urdu ⇄ Professional English). Sits at
           the top so a vendor who wants plainer words can find it immediately. */}
