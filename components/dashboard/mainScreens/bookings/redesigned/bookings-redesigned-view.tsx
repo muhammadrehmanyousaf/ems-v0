@@ -118,9 +118,6 @@ export function BookingsRedesignedView() {
         <StatCard label="This month" value={thisMonth} icon="TrendingUp" />
       </div>
 
-      {/* Phase-1 SPINE — owner money ledger (self-hides when backend feature is dark). */}
-      {<OwnerLedgerCard />}
-
       <DataTable
         columns={columns}
         data={bookings}
@@ -199,6 +196,12 @@ export function BookingsRedesignedView() {
           </div>
         )}
       />
+
+      {/* Phase-1 SPINE — owner money ledger. Moved BELOW the table: it repeats
+          the money the stat strip already shows (booked / received / baqaya),
+          and sitting above the table it pushed the first booking row 1,307px
+          down a 900px window. A summary belongs after the thing it summarises. */}
+      <OwnerLedgerCard />
 
       <OfflineBookingDialog open={createOpen} onOpenChange={setCreateOpen} onSuccess={() => refetch()} />
     </div>

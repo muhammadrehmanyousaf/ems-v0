@@ -9,12 +9,15 @@ export const metadata: Metadata = {
 };
 
 const page = () => {
-    // Phase-1 EPIC 2 — the v2 availability grid sits above the calendar for
-    // vendors whose business uses a multi-resource availability primitive.
+    // The month grid comes FIRST. The availability strip used to sit above it,
+    // so opening Calendar showed a two-week slot matrix and the Islamic-dates
+    // blackout panel before a single booking — on a 900px window the actual
+    // calendar started below the fold. Availability is a rules surface you go
+    // looking for; the calendar is what the page is called.
     return (
         <>
-            <CalendarV2Gate />
             <CalendarRedesignedView />
+            <CalendarV2Gate />
         </>
     );
 }

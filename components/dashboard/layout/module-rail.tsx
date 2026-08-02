@@ -36,7 +36,13 @@ export function ModuleRail() {
   return (
     <nav
       aria-label="Modules"
-      className="hidden md:flex w-[68px] shrink-0 flex-col items-center gap-1 border-r border-sidebar-border bg-sidebar py-3"
+      // Sticky, not static. The rail is a normal flex child of the shell, so it
+      // grew to the full height of the page content (1,647px on the bookings
+      // screen) and scrolled away with it — the one piece of navigation that is
+      // supposed to never move was the piece that moved most. `sticky top-0`
+      // with a viewport-height box pins it; `overflow-y-auto` keeps every module
+      // reachable on a short window instead of clipping the bottom ones.
+      className="sticky top-0 z-20 hidden h-svh shrink-0 overflow-y-auto overflow-x-hidden md:flex w-[68px] flex-col items-center gap-1 border-r border-sidebar-border bg-sidebar py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {/* Brand and the business switcher live HERE, not in the panel.
           Both are constant: the panel's whole contents change per module, and
