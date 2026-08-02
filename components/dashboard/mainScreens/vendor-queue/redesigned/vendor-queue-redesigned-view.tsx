@@ -92,9 +92,20 @@ const ACTION_BTN: Record<ActionKind, { icon: IconName; label: string }> = {
   restore: { icon: "Play", label: "Restore" },
 }
 
-/** Which actions are offered for each status (mirrors the original screen). */
+/**
+ * Which actions are offered for each status.
+ *
+ * `pending_review` was missing, so it fell through to `[]` and every row in the
+ * "New submissions" tab rendered an em-dash where the buttons belong. That tab
+ * holds exactly the businesses a vendor self-served through Add a business —
+ * the ones with a real person waiting — and an admin could see them but not act
+ * on them. The backend has always allowed the transitions
+ * (`pending_review: ["approved", "rejected", "draft"]`, and its comment says
+ * "same verdicts a `submitted` business gets"); only this map disagreed.
+ */
 function actionsFor(status: BusinessStatus): ActionKind[] {
   switch (status) {
+    case "pending_review":
     case "submitted":
       return ["approve", "request_changes", "reject"]
     case "draft":
@@ -110,7 +121,12 @@ function actionsFor(status: BusinessStatus): ActionKind[] {
 
 export function VendorQueueRedesignedView() {
   const qc = useQueryClient()
-  const [statusTab, setStatusTab] = React.useState<BusinessStatus>("submitted")
+  // Open on the self-served submissions, not the bulk OSM import. `submitted`
+  // holds 3,276 rows that arrived from a data import and no one is waiting on;
+  // `pending_review` holds the handful a real vendor typed in and is waiting to
+  // hear about. Landing on the import backlog buried the queue that matters
+  // behind a tab nobody had a reason to click.
+  const [statusTab, setStatusTab] = React.useState<BusinessStatus>("pending_review")
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
   const [pending, setPending] = React.useState<PendingAction | null>(null)
