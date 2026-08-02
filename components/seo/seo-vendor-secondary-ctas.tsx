@@ -18,9 +18,9 @@
  */
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { Handshake } from "lucide-react"
 import RequestQuoteDialog from "@/components/RequestQuoteDialog"
+import VendorInquiryDialog from "@/components/VendorInquiryDialog"
 import { AddToPlanButton } from "@/components/wedding-plan/add-to-plan-button"
 import { useUser } from "@/context/UserContext"
 
@@ -36,17 +36,30 @@ export function SeoVendorSecondaryCtas({
   vendorType?: string | null
 }) {
   const id = Number(businessId)
-  const router = useRouter()
   const { isAuthenticated } = useUser()
   const [quoteOpen, setQuoteOpen] = useState(false)
+  const [guestQuoteOpen, setGuestQuoteOpen] = useState(false)
 
+  /**
+   * A guest asking for a quote is captured, not bounced.
+   *
+   * This used to `router.push("/login?redirect=…")` — directly contradicting
+   * the note at the top of this file about never showing a first-time visitor
+   * from search a login wall. The wall was simply one click later, and it sat
+   * on the HIGHER-intent action: "Ask a question" right beside it opens a form
+   * for anyone, while "Request a quote" — someone with a date and a budget in
+   * mind — demanded an account first. In a market that runs on WhatsApp, being
+   * asked to register before you can ask a price is where the lead is lost.
+   *
+   * Guests now get the same public inquiry form, reframed as a quote request.
+   * It posts to the no-auth POST /leads/inquiry and lands the identical Lead in
+   * the vendor's inbox — verified end to end on production — so the vendor can
+   * reply with a price either way. Signed-in customers still get the real
+   * quote-negotiation dialog, which needs an account to track the thread.
+   */
   const onRequestQuote = () => {
-    if (!isAuthenticated) {
-      const back = typeof window !== "undefined" ? window.location.pathname : "/"
-      router.push(`/login?redirect=${encodeURIComponent(back)}`)
-      return
-    }
-    setQuoteOpen(true)
+    if (isAuthenticated) setQuoteOpen(true)
+    else setGuestQuoteOpen(true)
   }
 
   return (
@@ -73,6 +86,16 @@ export function SeoVendorSecondaryCtas({
         vendorName={vendorName}
         open={quoteOpen}
         onOpenChange={setQuoteOpen}
+      />
+
+      <VendorInquiryDialog
+        businessId={id}
+        vendorName={vendorName}
+        open={guestQuoteOpen}
+        onOpenChange={setGuestQuoteOpen}
+        title={`Request a quote from ${vendorName}`}
+        description="Tell them your date and guest count and they'll come back with a price. No account needed."
+        initialMessage="Please send me your packages and pricing for my function."
       />
     </>
   )
