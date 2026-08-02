@@ -34,10 +34,27 @@ interface Props {
   vendorName: string
   open: boolean
   onOpenChange: (v: boolean) => void
+  /**
+   * Optional reframing. The same form serves "ask a question" and a guest's
+   * "request a quote" — both land the identical Lead in the vendor's inbox, and
+   * the only honest difference is what the visitor thinks they are doing. Sent
+   * as copy rather than a second component so there is one form to maintain.
+   */
+  title?: string
+  description?: string
+  initialMessage?: string
 }
 
-export default function VendorInquiryDialog({ businessId, vendorName, open, onOpenChange }: Props) {
-  const [form, setForm] = useState({ name: "", phone: "", email: "", eventType: "", eventDate: "", guests: "", message: "", website: "" })
+export default function VendorInquiryDialog({
+  businessId,
+  vendorName,
+  open,
+  onOpenChange,
+  title,
+  description,
+  initialMessage,
+}: Props) {
+  const [form, setForm] = useState({ name: "", phone: "", email: "", eventType: "", eventDate: "", guests: "", message: initialMessage ?? "", website: "" })
   const [submitting, setSubmitting] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -91,8 +108,10 @@ export default function VendorInquiryDialog({ businessId, vendorName, open, onOp
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>Ask {vendorName}</DialogTitle>
-              <DialogDescription>Check your date, prices or packages — no commitment. They&apos;ll reply directly.</DialogDescription>
+              <DialogTitle>{title ?? `Ask ${vendorName}`}</DialogTitle>
+              <DialogDescription>
+                {description ?? "Check your date, prices or packages — no commitment. They'll reply directly."}
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-3 py-1">
               {/* Honeypot — hidden from humans, catches bots */}
