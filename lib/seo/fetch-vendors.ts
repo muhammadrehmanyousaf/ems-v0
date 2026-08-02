@@ -69,10 +69,49 @@ interface FetchOptions {
  * build timeout. A page that gives up renders its editorial shell and refreshes
  * on the next ISR pass an hour later — a far better outcome than a failed deploy.
  */
-const FETCH_TIMEOUT_MS = 8000
+const FETCH_TIMEOUT_MS = 12000
 
+/** One retry, because a cold Railway container answers the second call. */
+const RETRY_DELAY_MS = 700
+
+/**
+ * The outcome of a listings fetch, with the one distinction that matters:
+ * did we ASK and get nothing, or did we never manage to ask?
+ *
+ * `[]` was returned for both, and the city pages read that as "this city has no
+ * vendors" — printing "Coming soon" and, worse, stamping the page
+ * `noindex,follow`. Observed on production: /wedding-venues/lahore,
+ * /karachi and /islamabad all served "We're onboarding verified wedding venues
+ * now" and were noindexed, while the very same query returned 24 venues. A
+ * transient failure during one Vercel build had removed the highest-intent
+ * commercial pages on the site from Google, and nothing anywhere said so.
+ */
+export interface VendorFetchResult {
+  vendors: VendorListItem[]
+  /** True only when the backend actually answered. False = we never got data. */
+  ok: boolean
+}
+
+/**
+ * Back-compatible wrapper: the array only. Callers that cannot act on the
+ * difference between "empty" and "failed" keep using this.
+ */
 export async function fetchCityVendors(opts: FetchOptions): Promise<VendorListItem[]> {
-  if (!opts.vendorType) return [] // no backend mapping (e.g. wedding-planners, wedding-djs)
+  return (await fetchCityVendorsResult(opts)).vendors
+}
+
+/**
+ * The same fetch, reporting whether the backend actually answered.
+ *
+ * Retries once: the single most common failure here is a cold Railway
+ * container during a Vercel build, and the second call almost always
+ * succeeds. Two attempts inside the same page render is far cheaper than a
+ * page that lies for an hour until ISR next runs.
+ */
+export async function fetchCityVendorsResult(opts: FetchOptions): Promise<VendorFetchResult> {
+  // No backend mapping for this type (wedding-planners, wedding-djs). That is a
+  // genuine, permanent "we have none", not a failure — `ok: true` is correct.
+  if (!opts.vendorType) return { vendors: [], ok: true }
 
   const params = new URLSearchParams()
   if (opts.city) params.set("city", opts.city)
@@ -93,31 +132,37 @@ export async function fetchCityVendors(opts: FetchOptions): Promise<VendorListIt
   // The catch below already treats "no backend" as "render the editorial shell
   // with no listings", which is the right answer for a slow backend too — it
   // just never got the chance to run. An abort signal gives it that chance.
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
-
-  try {
-    const res = await fetch(url, {
-      // ISR: refresh from backend at most once per hour. Tweak if vendor
-      // inventory changes faster (e.g. set 600 = 10 min) but keep ≥ 60s
-      // to avoid hammering the backend on busy SEO traffic days.
-      next: { revalidate: 3600 },
-      headers: { Accept: "application/json" },
-      signal: controller.signal,
-    })
-    if (!res.ok) return []
-    const json = (await res.json()) as { data?: any }
-    const result = json?.data
-    const list: any[] = Array.isArray(result) ? result : result?.data ?? []
-    return list.map(normalize)
-  } catch {
-    // Backend unreachable, too slow, or aborted by the timeout above. Render
-    // the editorial shell with no listings — sitemap and schema still
-    // pre-render correctly, and the build completes.
-    return []
-  } finally {
-    clearTimeout(timer)
+  const attempt = async (): Promise<VendorFetchResult> => {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+    try {
+      const res = await fetch(url, {
+        // ISR: refresh from backend at most once per hour. Tweak if vendor
+        // inventory changes faster (e.g. set 600 = 10 min) but keep ≥ 60s
+        // to avoid hammering the backend on busy SEO traffic days.
+        next: { revalidate: 3600 },
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      })
+      // A non-2xx is the backend refusing to answer — 429 from the build's own
+      // burst, 502 mid-deploy. Not evidence that the city is empty.
+      if (!res.ok) return { vendors: [], ok: false }
+      const json = (await res.json()) as { data?: any }
+      const result = json?.data
+      const list: any[] = Array.isArray(result) ? result : result?.data ?? []
+      return { vendors: list.map(normalize), ok: true }
+    } catch {
+      // Unreachable, too slow, or aborted by the timeout above.
+      return { vendors: [], ok: false }
+    } finally {
+      clearTimeout(timer)
+    }
   }
+
+  const first = await attempt()
+  if (first.ok) return first
+  await new Promise((r) => setTimeout(r, RETRY_DELAY_MS))
+  return attempt()
 }
 
 function normalize(raw: any): VendorListItem {
