@@ -18,6 +18,28 @@ import { VENDOR_TYPES } from "@/lib/vendor-types"
 import VendorCard from "@/components/VendorCard"
 import { useVendors } from "@/hooks/use-vendors"
 
+/**
+ * Coerce any vendor field to a lowercase string before matching.
+ *
+ * Why this exists: these filters run over every business on the platform, and
+ * the data is not uniformly typed. Business 3273 shipped with
+ * `subBusinessType: []` — an empty ARRAY — and `v.subBusinessType?.toLowerCase()`
+ * threw `TypeError: s.toLowerCase is not a function` for it. Optional chaining
+ * does not protect against this: `[]` is neither null nor undefined, so `?.`
+ * happily proceeds to a property that does not exist.
+ *
+ * Because the throw happened inside a useMemo during render, React tore the
+ * whole route down to the error boundary — so ONE bad row out of 3,272 turned
+ * /search into "Something went wrong" for every query that did not short-circuit
+ * on an earlier `||` branch. Live effect: `?q=karachi`, `?q=photographer`,
+ * `?q=marquee` all died; only terms matching that one Lahore listing survived.
+ *
+ * Coercing here makes the page immune to the shape of the data rather than
+ * dependent on it — the next malformed row cannot take search down again.
+ */
+const txt = (v: unknown): string =>
+  typeof v === "string" ? v.toLowerCase() : v == null ? "" : String(v).toLowerCase()
+
 interface Filters {
   search: string
   category: string
@@ -81,7 +103,7 @@ function SearchContent() {
 
   const vendorMatchesCategory = (vendor: Vendor, category: string): boolean => {
     if (category === "all") return true
-    const vendorName = vendor.name?.toLowerCase() || ""
+    const vendorName = txt(vendor.name)
     const vendorType = vendor.type || ""
 
     const map: Record<string, { type: string; keywords: string[] }> = {
@@ -107,11 +129,9 @@ function SearchContent() {
     if (filters.search.trim()) {
       const s = filters.search.toLowerCase().trim()
       filtered = filtered.filter(v =>
-        v.name?.toLowerCase().includes(s) ||
-        v.location?.toLowerCase().includes(s) ||
-        v.city?.toLowerCase().includes(s) ||
-        v.type?.toLowerCase().includes(s) ||
-        v.subBusinessType?.toLowerCase().includes(s)
+        [v.name, v.location, v.city, v.type, v.subBusinessType].some(
+          field => txt(field).includes(s)
+        )
       )
     }
 
@@ -122,7 +142,7 @@ function SearchContent() {
     if (filters.location.trim()) {
       const l = filters.location.toLowerCase().trim()
       filtered = filtered.filter(v =>
-        v.location?.toLowerCase().includes(l) || v.city?.toLowerCase().includes(l)
+        txt(v.location).includes(l) || txt(v.city).includes(l)
       )
     }
 
@@ -141,9 +161,9 @@ function SearchContent() {
 
     if (filters.amenities.length > 0) {
       filtered = filtered.filter(v => {
-        if (!v.amenities?.length) return false
+        if (!Array.isArray(v.amenities) || v.amenities.length === 0) return false
         return filters.amenities.some(a =>
-          v.amenities.some(va => va.toLowerCase().includes(a.toLowerCase()))
+          v.amenities.some((va: unknown) => txt(va).includes(txt(a)))
         )
       })
     }

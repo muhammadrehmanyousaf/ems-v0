@@ -43,6 +43,23 @@ html {
   }
 }
 
+/* The comment above says "one rule, every case" — it was not. The gutter stops
+   the page getting WIDER, but react-remove-scroll separately injects
+
+     body[data-scroll-locked] { margin-right: 15px !important; }
+
+   as its own compensation, which now double-counts and makes the page 15px
+   NARROWER instead. Measured live on /dashboard/businesses, Export menu:
+   <h1> 1424.8 -> 1409.8, <table> 1168.8 -> 1153.8. Neutralising the margin
+   takes the shift to exactly 0 with the scroll lock still active.
+   Mirrors the rule in globals.css; kept here because this sheet declares its
+   own gutter for the dashboard tree. */
+@supports (scrollbar-gutter: stable) {
+  html body[data-scroll-locked] {
+    margin-right: 0 !important;
+  }
+}
+
 /*
  * Dashboard / CRM theme — neutral, professional, zero wedding-magazine vibe.
  *
