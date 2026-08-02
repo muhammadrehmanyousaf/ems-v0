@@ -29,6 +29,7 @@ import dynamic from "next/dynamic"
 import { getDashboardRole, isAdminLike } from "@/lib/dashboard-role"
 import { NoBusinessFirstRun } from "@/components/dashboard/mainScreens/dashboard/redesigned/no-business-first-run"
 import { ProfileCompletionCard } from "@/components/dashboard/mainScreens/dashboard/redesigned/profile-completion-card"
+import { FirstBookingJourney } from "@/components/dashboard/mainScreens/dashboard/redesigned/first-booking-journey"
 
 // Admin overview is vendor-console-free and only ever renders for admin-like
 // roles, so keep it out of the vendor bundle. Mirrors dashboard-view.tsx.
@@ -165,6 +166,11 @@ function VendorOverviewRedesignedView() {
           business exists — asking someone to complete a listing they have not
           created yet is the wrong order, and NoBusinessFirstRun above owns that
           moment. */}
+      {/* Order matters. The first booking is what earns money; the listing is
+          what attracts it. A vendor who has never taken a booking should be
+          looking at the chain that gets them one, not at a photo count. Both
+          remove themselves once done. */}
+      {!hasNoBusiness && <FirstBookingJourney />}
       {!hasNoBusiness && <ProfileCompletionCard />}
 
       {/* One-time "are you familiar with software like this?" register chooser.

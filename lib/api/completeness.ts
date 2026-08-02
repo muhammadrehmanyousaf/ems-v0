@@ -42,6 +42,12 @@ export interface ActivationSignals {
   futureConfirmed: number
   baaqiTracked: number
   shieldOn: boolean
+  /** The first-booking chain. Optional so an older backend still renders. */
+  leadsTotal?: number
+  leadsAwaitingReply?: number
+  leadsWorked?: number
+  receipts?: number
+  functionSheets?: number
 }
 
 export interface BusinessCompleteness {

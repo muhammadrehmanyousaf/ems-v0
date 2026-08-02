@@ -78,7 +78,13 @@ export function AddToPlanButton({
         <button
           type="button"
           onClick={handleClick}
-          className={`inline-flex items-center justify-center gap-2 h-12 rounded-[4px] border border-bridal-gold/55 bg-bridal-cream hover:bg-bridal-gold hover:text-bridal-charcoal text-bridal-gold-dark font-bridal text-[12px] uppercase tracking-[0.22em] font-medium transition-colors ${className}`}
+          // Matches the CTAs it sits beside on the vendor page. It used to be
+          // h-12, square-cornered, UPPERCASE and wide-tracked while "Check
+          // availability", "Ask a question" and "Request a quote" next to it
+          // were pill-shaped, sentence-case and 10px shorter — so it wrapped
+          // onto its own line looking like a different, half-finished
+          // component rather than the fourth option in a row of four.
+          className={`inline-flex items-center justify-center gap-2 rounded-full border border-bridal-gold/50 bg-white px-5 py-2.5 font-bridal text-[13px] font-medium text-bridal-charcoal transition-colors hover:bg-bridal-cream ${className}`}
         >
           <HeartHandshake className="w-4 h-4" />
           {text}

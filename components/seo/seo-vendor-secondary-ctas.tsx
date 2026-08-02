@@ -78,7 +78,9 @@ export function SeoVendorSecondaryCtas({
         businessName={vendorName}
         vendorType={vendorType ?? undefined}
         variant="detail"
-        label="Add to my wedding plan"
+        // Short enough to sit in the row with the other three rather than
+        // forcing a line of its own.
+        label="Add to my plan"
       />
 
       <RequestQuoteDialog
