@@ -71,8 +71,22 @@ export function BookingRowActions({ data, onRefresh }: BookingRowActionsProps) {
     data.paymentStatus !== "Paid"
   const canCancel =
     data.status === "Pending" || data.status === "Confirmed" || data.status === "Awaiting Payment"
+  // "Awaiting Payment" used to be excluded here, which meant the ONE state where
+  // the down payment has not been received was the one state where the vendor
+  // could not record receiving it. A couple hands over cash for the advance and
+  // there was no way to enter it — the booking sat "Awaiting Payment" forever, or
+  // the vendor had to cancel and re-create it.
+  //
+  // There is no backend basis for the restriction: paymentReceiptController's
+  // createReceipt gates on ownership, customer, method and amount, and never
+  // looks at booking.status. _syncBookingFromReceipts then recomputes
+  // downPayment + paymentStatus from the receipt sum, so a partial advance
+  // correctly lands as "Partial" and a full one as "Paid".
+  //
+  // Consistent with the rest of this file too — canEdit and canCancel both
+  // already include "Awaiting Payment".
   const canRecordPayment =
-    data.paymentStatus !== "Paid" && data.status !== "Cancelled" && data.status !== "Awaiting Payment"
+    data.paymentStatus !== "Paid" && data.status !== "Cancelled"
   const canRefund =
     (data.paymentStatus === "Partial" || data.paymentStatus === "Paid") && data.status !== "Cancelled"
   const canComplete = data.status === "Confirmed" && data.paymentStatus === "Paid"
