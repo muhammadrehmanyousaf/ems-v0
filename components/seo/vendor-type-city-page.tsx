@@ -27,7 +27,7 @@ import {
   type VendorTypeSlug,
 } from "@/lib/seo"
 import { Breadcrumbs } from "@/components/seo/breadcrumbs"
-import { fetchCityVendors, type VendorListItem } from "@/lib/seo/fetch-vendors"
+import { fetchCityVendorsResult, type VendorListItem } from "@/lib/seo/fetch-vendors"
 import { getCityEditorial, getVendorTypeGuide } from "@/lib/seo/city-editorial"
 import {
   getVendorTypePricing,
@@ -179,7 +179,7 @@ export async function VendorTypeCityPage({
   if (!vt || !city) notFound()
 
   const backendType = getBackendVendorType(vt.slug)
-  const fetched = await fetchCityVendors({
+  const { vendors: fetched, ok: listingsOk } = await fetchCityVendorsResult({
     city: city.slug,
     vendorType: backendType,
     limit: 24,
@@ -196,6 +196,9 @@ export async function VendorTypeCityPage({
   // the page becomes indexable automatically. (Content-led indexing gate is a
   // follow-up — see the SEO design backlog.)
   const hasListings = vendors.length > 0
+  // "We have no vendors here" is only sayable when the backend actually
+  // answered. When it did not, we know nothing — and must claim nothing.
+  const genuinelyEmpty = listingsOk && !hasListings
   const editorial = getCityEditorial(city.slug)
   const guide = getVendorTypeGuide(vt.slug)
   const pricing = getVendorTypePricing(vt.slug)
@@ -285,7 +288,15 @@ export async function VendorTypeCityPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
       />
-      {!hasListings && <meta name="robots" content="noindex,follow" />}
+      {/* Deindex only a page we KNOW is empty.
+          This was `!hasListings`, and fetchCityVendors returned [] for a failed
+          request exactly as it did for a genuinely empty city. So one slow
+          Railway container during a Vercel build noindexed the page — and it
+          stayed noindexed until the next successful ISR pass. Found live:
+          /wedding-venues/lahore, /karachi and /islamabad were all carrying
+          noindex while that very query returned 24 venues. Those are the
+          highest-commercial-intent URLs on the site. */}
+      {genuinelyEmpty && <meta name="robots" content="noindex,follow" />}
 
       {/* ─────────── HERO (B0 · B1 · B2) ─────────── */}
       <section className="relative overflow-hidden bg-bridal-hero">
@@ -378,7 +389,13 @@ export async function VendorTypeCityPage({
             <StatItem label="Indicative range" value={range ?? "On request"} />
             <StatItem
               label="Verified vendors"
-              value={hasListings ? String(vendors.length) : "Adding weekly"}
+              value={
+                hasListings
+                  ? String(vendors.length)
+                  : genuinelyEmpty
+                    ? "Adding weekly"
+                    : "On request"
+              }
             />
             <StatItem label="Peak season" value={editorial.peakSeason ?? "Nov–Feb"} />
             <StatItem label="Last updated" value="June 2026" />
@@ -390,7 +407,7 @@ export async function VendorTypeCityPage({
         {/* ─────────── B4 VENDOR GRID ─────────── */}
         <section id="vendors" className="mb-16 scroll-mt-24">
           <SectionHeading
-            kicker={hasListings ? `${vendors.length} verified` : "Coming soon"}
+            kicker={hasListings ? `${vendors.length} verified` : genuinelyEmpty ? "Coming soon" : "Get matched"}
             title={`Top ${vt.plural.toLowerCase()} in ${city.name}`}
           />
           {vendors.length === 0 ? (
@@ -398,10 +415,25 @@ export async function VendorTypeCityPage({
               <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-bridal-gold/10 font-display text-[22px] italic text-bridal-gold-dark">
                 ✦
               </span>
+              {/* Two different situations, two different sentences. Telling a
+                  family "we're still onboarding venues in Lahore" when we have
+                  24 of them — because a request timed out — is worse than
+                  saying nothing. The fallback makes the same offer without the
+                  false claim about our inventory. */}
               <p className="mx-auto mt-4 max-w-md font-bridal text-[14px] leading-relaxed text-bridal-text-soft">
-                We&apos;re onboarding verified {vt.plural.toLowerCase()} in {city.name} now.
-                Tell us what you need and we&apos;ll send you matched quotes — usually within a
-                day.
+                {genuinelyEmpty ? (
+                  <>
+                    We&apos;re onboarding verified {vt.plural.toLowerCase()} in {city.name} now.
+                    Tell us what you need and we&apos;ll send you matched quotes — usually within a
+                    day.
+                  </>
+                ) : (
+                  <>
+                    Tell us your date and guest count and we&apos;ll send you matched{" "}
+                    {vt.plural.toLowerCase()} in {city.name} with real prices — usually within a
+                    day.
+                  </>
+                )}
               </p>
               <a
                 href={waLink}
