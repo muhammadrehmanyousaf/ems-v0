@@ -28,6 +28,7 @@ import { EventProfitBoard } from "@/components/dashboard/mainScreens/venue-os/ev
 import dynamic from "next/dynamic"
 import { getDashboardRole, isAdminLike } from "@/lib/dashboard-role"
 import { NoBusinessFirstRun } from "@/components/dashboard/mainScreens/dashboard/redesigned/no-business-first-run"
+import { ProfileCompletionCard } from "@/components/dashboard/mainScreens/dashboard/redesigned/profile-completion-card"
 
 // Admin overview is vendor-console-free and only ever renders for admin-like
 // roles, so keep it out of the vendor bundle. Mirrors dashboard-view.tsx.
@@ -159,6 +160,12 @@ function VendorOverviewRedesignedView() {
       />
 
       {hasNoBusiness && <NoBusinessFirstRun />}
+
+      {/* Stays until the profile is complete, then removes itself. Only once a
+          business exists — asking someone to complete a listing they have not
+          created yet is the wrong order, and NoBusinessFirstRun above owns that
+          moment. */}
+      {!hasNoBusiness && <ProfileCompletionCard />}
 
       {/* One-time "are you familiar with software like this?" register chooser.
           Self-hides once answered; default is Professional, so most vendors

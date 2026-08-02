@@ -35,10 +35,16 @@ interface Item {
   label: string;
   weight: number;
   done: boolean;
+  /** Where this is fixed. Optional so the screen still renders against an
+   *  older backend that has not been deployed with the links yet. */
+  href?: string | null;
+  /** What it costs to leave undone, in the vendor's language. */
+  why?: string | null;
 }
 interface Category {
   key: string;
   label: string;
+  blurb?: string;
   earned: number;
   max: number;
   items: Item[];
@@ -226,36 +232,63 @@ function BusinessChecklistCard({ biz }: { biz: BizCompleteness }) {
                   </span>
                 </div>
                 <Progress value={pct} className="h-1" />
-                <ul className="space-y-0.5 pl-1">
-                  {cat.items.map((it) => (
-                    <li
-                      key={it.key}
-                      className={cn(
-                        'flex items-center justify-between gap-2 text-[12px]',
-                        it.done ? 'text-neutral-700' : 'text-neutral-500',
-                      )}
-                    >
-                      <span className="flex items-center gap-1.5 min-w-0">
-                        {it.done ? (
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                {/* Each row is a link to the field that fixes it, and carries
+                    the reason it matters. A checklist that names a gap without
+                    naming its fix is a scoreboard, not a checklist — and the
+                    reason is what turns "at least 5 photos" from a chore into
+                    something worth doing tonight. Done rows stay unlinked and
+                    quiet: there is nothing to act on. */}
+                <ul className="space-y-1 pl-1">
+                  {cat.items.map((it) => {
+                    const row = (
+                      <>
+                        <span className="flex min-w-0 flex-1 items-start gap-1.5">
+                          {it.done ? (
+                            <CheckCircle2 className="mt-[1px] h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                          ) : (
+                            <Circle className="mt-[1px] h-3.5 w-3.5 shrink-0 text-neutral-300" />
+                          )}
+                          <span className="min-w-0">
+                            <span className="block leading-snug">{it.label}</span>
+                            {!it.done && it.why && (
+                              <span className="mt-0.5 block text-[11px] leading-snug text-neutral-400">
+                                {it.why}
+                              </span>
+                            )}
+                          </span>
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'shrink-0 text-[10px]',
+                            it.done
+                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                              : 'border-neutral-200 bg-neutral-50 text-neutral-500',
+                          )}
+                        >
+                          {it.done ? '✓' : `+${it.weight}`}
+                        </Badge>
+                      </>
+                    );
+                    const base = cn(
+                      'flex items-start justify-between gap-2 rounded-md px-1.5 py-1 text-[12px]',
+                      it.done ? 'text-neutral-700' : 'text-neutral-500',
+                    );
+                    return (
+                      <li key={it.key}>
+                        {!it.done && it.href ? (
+                          <Link
+                            href={it.href}
+                            className={cn(base, 'transition-colors hover:bg-bridal-gold/10 hover:text-neutral-800')}
+                          >
+                            {row}
+                          </Link>
                         ) : (
-                          <Circle className="h-3.5 w-3.5 text-neutral-300 shrink-0" />
+                          <div className={base}>{row}</div>
                         )}
-                        <span className="truncate">{it.label}</span>
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          'text-[10px] shrink-0',
-                          it.done
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : 'bg-neutral-50 text-neutral-500 border-neutral-200',
-                        )}
-                      >
-                        {it.done ? '✓' : `+${it.weight}`}
-                      </Badge>
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             );
