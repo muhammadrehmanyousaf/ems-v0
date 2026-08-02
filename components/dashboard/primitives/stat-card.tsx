@@ -5,6 +5,14 @@ import { Icon, type IconName } from "@/components/dashboard/shared/icon"
 /**
  * StatCard — a KPI tile. Label, value, optional delta + trend, optional icon.
  * Token-only so it re-themes with the active palette.
+ *
+ * Deliberately compact. Every list screen in the portal opens with a row of
+ * these above its table, and at the previous size (p-4, text-2xl, 32px icon
+ * chip) the strip cost ~120px before any content. Combined with the panels some
+ * screens put underneath it, the actual table on Bookings began 1,307px down a
+ * 900px window — a vendor opened "Bookings" and could not see one booking
+ * without scrolling. These tiles are a glance, not the subject of the page, so
+ * they are sized like a glance.
  */
 export interface StatCardProps {
   label: string
@@ -48,7 +56,7 @@ export function StatCard({
       {...(href ? { href } : {})}
       {...(onClick ? { onClick, type: "button" } : {})}
       className={cn(
-        "group flex flex-col gap-1 rounded-xl border border-border bg-card p-4 text-left shadow-sm transition-colors",
+        "group flex flex-col gap-0.5 rounded-xl border border-border bg-card p-3 text-left shadow-sm transition-colors",
         interactive &&
           "hover:border-primary/40 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         className,
@@ -57,13 +65,13 @@ export function StatCard({
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-muted-foreground">{label}</span>
         {icon && (
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary">
-            <Icon name={icon} size={16} />
+          <span className="grid h-6 w-6 place-items-center rounded-md bg-primary/10 text-primary">
+            <Icon name={icon} size={13} />
           </span>
         )}
       </div>
       <div
-        className="text-2xl font-semibold tracking-tight text-card-foreground"
+        className="text-xl font-semibold tracking-tight text-card-foreground"
         style={{ fontVariantNumeric: "tabular-nums" }}
       >
         {value}
