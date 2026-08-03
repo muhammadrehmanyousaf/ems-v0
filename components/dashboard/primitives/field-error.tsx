@@ -231,6 +231,64 @@ export function validateAccountNumber(
   return undefined
 }
 
+/**
+ * A date that cannot be in the future — money received, money spent, a cheque
+ * banked. These fields were bare `<input type="date">` with no bounds at all, so
+ * a receipt could be dated next year and silently land in the ledger, throwing
+ * off every total and aging report that reads it.
+ *
+ * `maxYearsBack` catches the other common slip: a mistyped year (2016 for 2026)
+ * that would otherwise sit in the books unnoticed.
+ */
+export function validateNotFutureDate(
+  value: string,
+  {
+    label = "Date",
+    required = true,
+    maxYearsBack = 10,
+  }: { label?: string; required?: boolean; maxYearsBack?: number } = {},
+): string | undefined {
+  const raw = (value ?? "").trim()
+  if (!raw) return required ? `${label} is required.` : undefined
+  const d = new Date(raw)
+  if (Number.isNaN(d.valueOf())) return `${label} isn't a valid date.`
+  // Compare date-only; a receipt logged at 11pm today must not read as "future".
+  const today = new Date()
+  today.setHours(23, 59, 59, 999)
+  if (d > today) return `${label} can't be in the future.`
+  const floor = new Date()
+  floor.setFullYear(floor.getFullYear() - maxYearsBack)
+  if (d < floor) return `${label} looks wrong — please check the year.`
+  return undefined
+}
+
+/**
+ * Digital payment methods carry a transaction id, and without it a payment can't
+ * be reconciled against a bank statement later. Mirrors the NEEDS_TXN_REF set
+ * already used by the booking record-payment dialog so the two agree.
+ */
+const METHODS_NEEDING_REF = new Set([
+  "jazzcash",
+  "easypaisa",
+  "raast",
+  "ibft",
+  "bank_transfer",
+  "online",
+])
+
+export function validateTransactionRef(
+  value: string,
+  method: string,
+  { label = "Transaction ref" }: { label?: string } = {},
+): string | undefined {
+  const v = (value ?? "").trim()
+  const m = String(method || "").trim().toLowerCase()
+  if (!METHODS_NEEDING_REF.has(m)) return undefined
+  if (!v) return `${label} is required for ${m.replace("_", " ")} — you'll need it to match this against your bank statement.`
+  if (v.length < 4) return `${label} looks too short.`
+  return undefined
+}
+
 /** Optional free text with a ceiling, e.g. a description. */
 export function validateOptionalText(
   value: string,

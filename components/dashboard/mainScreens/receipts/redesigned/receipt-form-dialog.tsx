@@ -18,7 +18,16 @@ import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
+import {
+  FormBlockedHint,
+  FieldError,
+  fieldAria,
+  ERROR_INPUT_CLS,
+  validatePkr,
+  validateNotFutureDate,
+  validateTransactionRef,
+  validateOptionalText,
+} from "@/components/dashboard/primitives/field-error"
 
 const METHODS = Object.keys(RECEIPT_METHOD_LABELS) as ReceiptMethod[]
 const today = () => new Date().toISOString().slice(0, 10)
@@ -58,6 +67,10 @@ export function ReceiptFormDialog({
     if (open) { if (loaded.current !== k) { setForm(blank(receipt, prefill)); loaded.current = k } } else { loaded.current = null }
   }, [open, receipt, prefill])
   const set = (k: keyof FormState, v: string) => setForm((f) => ({ ...f, [k]: v }))
+  // Errors appear only after a field is touched, so opening the dialog doesn't
+  // immediately flag the empty amount the vendor is about to type.
+  const [touched, setTouched] = React.useState<Record<string, boolean>>({})
+  const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }))
 
   const { data: bookings } = useQuery<BookingOption[]>({
     queryKey: ["receipt-bookings"],
@@ -93,10 +106,34 @@ export function ReceiptFormDialog({
     },
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save receipt"),
   })
-  const canSave = Number(form.amount) > 0 && form.receivedDate && (isEdit || !!form.bookingId)
+  // This is a money ledger, so the gaps here cost real reconciliation work:
+  //   - amount had NO min, so the browser's spinner offered negatives
+  //   - receivedDate was a bare <input type="date"> with no bounds, so a
+  //     receipt could be dated NEXT YEAR and silently skew every total and
+  //     aging report that reads it
+  //   - transactionRef was free-text even for JazzCash / Easypaisa / Raast /
+  //     bank transfer, where without the id the payment cannot be matched
+  //     against a bank statement later
+  const errs = {
+    amount: validatePkr(form.amount, { label: "Amount" }),
+    receivedDate: validateNotFutureDate(form.receivedDate, { label: "Date received" }),
+    transactionRef: validateTransactionRef(form.transactionRef, form.method),
+    bookingId: !isEdit && !form.bookingId ? "Choose the booking this payment is for." : undefined,
+    notes: validateOptionalText(form.notes, { label: "Notes", max: 1000 }),
+  }
+  const shown = {
+    amount: touched.amount ? errs.amount : undefined,
+    receivedDate: touched.receivedDate ? errs.receivedDate : undefined,
+    transactionRef: touched.transactionRef ? errs.transactionRef : undefined,
+    notes: touched.notes ? errs.notes : undefined,
+  }
+  const canSave = !errs.amount && !errs.receivedDate && !errs.transactionRef && !errs.bookingId && !errs.notes
 
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
-  const blockedReason = canSave ? undefined : "Add an amount above 0 and the date it was received to save."
+  const blockedReason =
+    !canSave && !Object.values(shown).some(Boolean)
+      ? errs.bookingId ?? "Add an amount above 0 and the date it was received to save."
+      : undefined
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -104,14 +141,55 @@ export function ReceiptFormDialog({
         <DialogHeader><DialogTitle>{isEdit ? "Edit receipt" : "Record a receipt"}</DialogTitle><DialogDescription>A payment received from a customer.</DialogDescription></DialogHeader>
         <div className="space-y-4 py-1">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Amount (Rs)"><input type="number" className={cn(inputCls, "tabular-nums")} value={form.amount} onChange={(e) => set("amount", e.target.value)} autoFocus /></Field>
-            <Field label="Date"><input type="date" className={inputCls} value={form.receivedDate} onChange={(e) => set("receivedDate", e.target.value)} /></Field>
+            <Field label="Amount (Rs)">
+              <input
+                id="rcpt-amount"
+                type="number"
+                min={0}
+                step="0.01"
+                inputMode="decimal"
+                className={cn(inputCls, "tabular-nums", shown.amount && ERROR_INPUT_CLS)}
+                value={form.amount}
+                onChange={(e) => { set("amount", e.target.value); touch("amount") }}
+                onBlur={() => touch("amount")}
+                autoFocus
+                {...fieldAria("rcpt-amount", shown.amount)}
+              />
+              <FieldError id="rcpt-amount" message={shown.amount} />
+            </Field>
+            <Field label="Date">
+              <input
+                id="rcpt-date"
+                type="date"
+                /* Native ceiling as well as the JS check — the picker itself
+                   should not offer a future date for money already received. */
+                max={new Date().toISOString().slice(0, 10)}
+                className={cn(inputCls, shown.receivedDate && ERROR_INPUT_CLS)}
+                value={form.receivedDate}
+                onChange={(e) => { set("receivedDate", e.target.value); touch("receivedDate") }}
+                onBlur={() => touch("receivedDate")}
+                {...fieldAria("rcpt-date", shown.receivedDate)}
+              />
+              <FieldError id="rcpt-date" message={shown.receivedDate} />
+            </Field>
             <Field label="Method">
               <select className={inputCls} value={form.method} onChange={(e) => set("method", e.target.value as ReceiptMethod)}>
                 {METHODS.map((m) => <option key={m} value={m}>{RECEIPT_METHOD_LABELS[m]}</option>)}
               </select>
             </Field>
-            <Field label="Transaction ref"><input className={inputCls} value={form.transactionRef} onChange={(e) => set("transactionRef", e.target.value)} placeholder="TID / cheque #" /></Field>
+            <Field label="Transaction ref">
+              <input
+                id="rcpt-ref"
+                className={cn(inputCls, shown.transactionRef && ERROR_INPUT_CLS)}
+                value={form.transactionRef}
+                onChange={(e) => { set("transactionRef", e.target.value); touch("transactionRef") }}
+                onBlur={() => touch("transactionRef")}
+                maxLength={64}
+                placeholder="TID / cheque #"
+                {...fieldAria("rcpt-ref", shown.transactionRef)}
+              />
+              <FieldError id="rcpt-ref" message={shown.transactionRef} />
+            </Field>
           </div>
           {!isEdit && (
             <Field label="Linked booking (registered customer)">
