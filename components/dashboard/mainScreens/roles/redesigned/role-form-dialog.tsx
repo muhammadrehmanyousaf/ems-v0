@@ -14,6 +14,7 @@ import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
@@ -47,6 +48,9 @@ export function RoleFormDialog({
   })
   const canSave = name.trim()
 
+  // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
+  const blockedReason = canSave ? undefined : "Add a name to save."
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -58,6 +62,7 @@ export function RoleFormDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <FormBlockedHint message={blockedReason} />
           <Button disabled={!canSave || saveMut.isPending} onClick={() => saveMut.mutate()}>{saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={15} className="mr-1.5" /> {isEdit ? "Update role" : "Create role"}</>}</Button>
         </DialogFooter>
       </DialogContent>

@@ -26,6 +26,7 @@ import { formatPkr } from "@/components/dashboard/primitives/money-cell"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
 
 const PAYMENT_METHODS = Object.keys(COMMISSION_PAYMENT_METHOD_LABELS) as CommissionPaymentMethod[]
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
@@ -85,6 +86,10 @@ export function RecordPaymentDialog({
 
   const canSave = !!commission && Number(amount) > 0
 
+
+  // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
+  const blockedReason = canSave ? undefined : "Fill in the required fields above to save."
+
   return (
     <Dialog open={!!commission} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
@@ -114,6 +119,7 @@ export function RecordPaymentDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <FormBlockedHint message={blockedReason} />
           <Button disabled={!canSave || payMut.isPending} onClick={() => payMut.mutate()}>
             {payMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Recording…</> : <><Icon name="CheckCircle2" size={15} className="mr-1.5" /> Record</>}
           </Button>

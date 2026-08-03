@@ -18,6 +18,7 @@ import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
 
 const METHODS = Object.keys(RECEIPT_METHOD_LABELS) as ReceiptMethod[]
 const today = () => new Date().toISOString().slice(0, 10)
@@ -94,6 +95,9 @@ export function ReceiptFormDialog({
   })
   const canSave = Number(form.amount) > 0 && form.receivedDate && (isEdit || !!form.bookingId)
 
+  // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
+  const blockedReason = canSave ? undefined : "Add an amount above 0 and the date it was received to save."
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
@@ -122,6 +126,7 @@ export function ReceiptFormDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <FormBlockedHint message={blockedReason} />
           <Button disabled={!canSave || saveMut.isPending} onClick={() => saveMut.mutate()}>{saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={15} className="mr-1.5" /> {isEdit ? "Update" : "Log receipt"}</>}</Button>
         </DialogFooter>
       </DialogContent>

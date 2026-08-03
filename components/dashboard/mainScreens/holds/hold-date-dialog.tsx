@@ -19,6 +19,7 @@ import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const today = () => new Date().toISOString().slice(0, 10)
@@ -65,6 +66,10 @@ export function HoldDateDialog({
 
   const canSave = !!form.holdDate && !!form.holdTime.trim()
 
+
+  // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
+  const blockedReason = canSave ? undefined : "Add a date and a time to save."
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -90,6 +95,7 @@ export function HoldDateDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <FormBlockedHint message={blockedReason} />
           <Button disabled={!canSave || placeMut.isPending} onClick={() => placeMut.mutate()}>
             {placeMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Holding…</> : <><Icon name="CalendarCheck" size={15} className="mr-1.5" /> Hold date</>}
           </Button>

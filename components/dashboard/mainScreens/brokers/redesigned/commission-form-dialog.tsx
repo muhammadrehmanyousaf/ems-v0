@@ -16,6 +16,7 @@ import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
 
 const BROKER_TYPES = Object.keys(BROKER_TYPE_LABELS) as BrokerType[]
 const today = () => new Date().toISOString().slice(0, 10)
@@ -85,6 +86,9 @@ export function CommissionFormDialog({
     : (Number(form.commissionFlat) || 0) > 0
   const canSave = form.brokerNameSnapshot.trim() && form.accruedDate && amountOk && (isEdit || businessId != null)
 
+  // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
+  const blockedReason = canSave ? undefined : "Add a broker name and the date it accrued to save."
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
@@ -117,6 +121,7 @@ export function CommissionFormDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <FormBlockedHint message={blockedReason} />
           <Button disabled={!canSave || saveMut.isPending} onClick={() => saveMut.mutate()}>
             {saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={15} className="mr-1.5" /> {isEdit ? "Update" : "Save commission"}</>}
           </Button>

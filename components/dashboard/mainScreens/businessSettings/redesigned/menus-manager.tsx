@@ -15,6 +15,7 @@ import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
+import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
@@ -59,6 +60,9 @@ export function MenusManager({ businessId }: { businessId: number }) {
   })
   const canSave = form.title.trim() && Number(form.price) > 0
 
+  // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
+  const blockedReason = canSave ? undefined : "Add a title and a price above Rs 0 to save."
+
   return (
     <div className="rounded-xl border border-border bg-card shadow-sm">
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
@@ -77,6 +81,7 @@ export function MenusManager({ businessId }: { businessId: number }) {
             </div>
             <div className="space-y-1.5"><label className={labelCls}>Dishes (one per line)</label><textarea className={inputCls + " h-24 resize-y py-2"} value={form.items} onChange={(e) => set("items", e.target.value)} placeholder={"Chicken Biryani\nMutton Karahi\nSeekh Kebab\nZarda"} /></div>
             <div className="flex gap-2">
+              <FormBlockedHint message={blockedReason} />
               <Button size="sm" disabled={!canSave || saveMut.isPending} onClick={() => saveMut.mutate()}>{saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={14} className="mr-1.5" /> {editingId ? "Update menu" : "Save menu"}</>}</Button>
               <Button size="sm" variant="ghost" onClick={reset}>Cancel</Button>
             </div>

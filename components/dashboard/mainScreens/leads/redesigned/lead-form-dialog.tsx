@@ -16,6 +16,7 @@ import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { enqueue as outboxEnqueue, isOutboxEnabled, isOffline } from "@/lib/outbox"
+import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
 
 const STATUSES: LeadStatus[] = ["new", "contacted", "qualified", "quoted", "booked", "lost", "archived"]
 const SOURCES: LeadSource[] = ["manual_phone", "manual_walkin", "whatsapp", "instagram", "referral", "form_inquiry", "in_app_chat", "other"]
@@ -97,6 +98,9 @@ export function LeadFormDialog({
   })
   const canSave = form.contactName.trim() && (isEdit || businessId != null)
 
+  // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
+  const blockedReason = canSave ? undefined : "Add a contact name to save."
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
@@ -124,6 +128,7 @@ export function LeadFormDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <FormBlockedHint message={blockedReason} />
           <Button disabled={!canSave || saveMut.isPending} onClick={() => saveMut.mutate()}>{saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={15} className="mr-1.5" /> {isEdit ? "Update lead" : "Save lead"}</>}</Button>
         </DialogFooter>
       </DialogContent>

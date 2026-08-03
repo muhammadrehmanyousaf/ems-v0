@@ -26,6 +26,7 @@ import { enqueue as outboxEnqueue, isOutboxEnabled, isOffline } from "@/lib/outb
 import { AiAPI, fileToBase64 } from "@/lib/api/ai"
 import { useAiFeature } from "@/hooks/use-ai-status"
 import { validateReceiptFile, coerceReceipt } from "@/lib/ai/coerce"
+import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
 
 const CATEGORIES = Object.keys(EXPENSE_CATEGORY_LABELS) as ExpenseCategory[]
 const METHODS: ExpensePaymentMethod[] = ["cash", "bank_transfer", "cheque", "jazzcash", "easypaisa", "raast", "ibft", "card", "other"]
@@ -206,6 +207,10 @@ export function ExpenseFormDialog({
 
   const canSave = Number(form.amount) > 0 && !!form.spentDate
 
+
+  // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
+  const blockedReason = canSave ? undefined : "Add an amount above 0 and the date it was spent to save."
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
@@ -281,6 +286,7 @@ export function ExpenseFormDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <FormBlockedHint message={blockedReason} />
           <Button disabled={!canSave || saveMut.isPending} onClick={() => saveMut.mutate()}>
             {saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={15} className="mr-1.5" /> {isEdit ? "Update expense" : "Save expense"}</>}
           </Button>

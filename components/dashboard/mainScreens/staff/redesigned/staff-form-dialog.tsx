@@ -15,6 +15,7 @@ import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
 
 const ROLES: StaffRole[] = ["waiter", "cook_helper", "lead_cook", "cleaner", "parking_valet", "dhol_player", "qari", "imam", "decorator", "florist", "lighting_tech", "security", "driver", "photographer", "videographer", "manager", "bagpiper", "stage_host", "dj", "sound_tech", "other"]
 const EMPLOYMENT: EmploymentType[] = ["permanent_monthly", "casual_dihari", "contract"]
@@ -85,6 +86,9 @@ export function StaffFormDialog({
   })
   const canSave = form.fullName.trim() && (isEdit || businessId != null)
 
+  // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
+  const blockedReason = canSave ? undefined : "Add a full name to save."
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
@@ -121,6 +125,7 @@ export function StaffFormDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <FormBlockedHint message={blockedReason} />
           <Button disabled={!canSave || saveMut.isPending} onClick={() => saveMut.mutate()}>{saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={15} className="mr-1.5" /> {isEdit ? "Update" : "Save staff"}</>}</Button>
         </DialogFooter>
       </DialogContent>

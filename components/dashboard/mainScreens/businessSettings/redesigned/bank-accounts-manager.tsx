@@ -19,6 +19,7 @@ import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useBeforeUnloadGuard } from "@/lib/hooks/useBeforeUnloadGuard"
+import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
@@ -79,6 +80,10 @@ export function BankAccountsManager() {
 
   const canSave = (form.bankName || "").trim() && (form.accountHolderName || "").trim() && (!!editingId || (form.accountNumber || "").trim())
 
+
+  // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
+  const blockedReason = canSave ? undefined : "Add a bank name, an account holder name and an account number to save."
+
   return (
     <div className="rounded-xl border border-border bg-card shadow-sm">
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
@@ -101,6 +106,7 @@ export function BankAccountsManager() {
               <label className="flex items-center gap-2 self-end pb-1.5 text-sm"><input type="checkbox" className="h-4 w-4" checked={Boolean(form.isActive)} onChange={(e) => set("isActive", e.target.checked)} /> Make this the default payout account</label>
             </div>
             <div className="flex gap-2">
+              <FormBlockedHint message={blockedReason} />
               <Button size="sm" disabled={!canSave || saveMut.isPending} onClick={() => saveMut.mutate()}>{saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={14} className="mr-1.5" /> {editingId ? "Update account" : "Save account"}</>}</Button>
               <Button size="sm" variant="ghost" onClick={reset}>Cancel</Button>
             </div>

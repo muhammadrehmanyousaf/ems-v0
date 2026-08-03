@@ -15,6 +15,7 @@ import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
 
 const ENTRY_TYPES = Object.keys(ENTRY_TYPE_LABELS) as EntryType[]
 const FUEL_TYPES = Object.keys(FUEL_TYPE_LABELS) as FuelType[]
@@ -86,6 +87,9 @@ export function FuelEntryFormDialog({
     (isEdit || businessId != null) &&
     (form.type !== "delivery" || Number(form.costPerLitre) > 0)
 
+  // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
+  const blockedReason = canSave ? undefined : "Add the number of litres, a type and a cost per litre to save."
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
@@ -116,6 +120,7 @@ export function FuelEntryFormDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <FormBlockedHint message={blockedReason} />
           <Button disabled={!canSave || saveMut.isPending} onClick={() => saveMut.mutate()}>
             {saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={15} className="mr-1.5" /> {isEdit ? "Update" : "Log entry"}</>}
           </Button>
