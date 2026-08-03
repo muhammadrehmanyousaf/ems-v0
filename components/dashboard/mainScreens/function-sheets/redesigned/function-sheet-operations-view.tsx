@@ -154,8 +154,12 @@ export function FunctionSheetOperationsView() {
         ))}
       </Card>
 
-      {/* Sticky save bar */}
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 backdrop-blur md:left-[var(--sidebar-width,0)]">
+      {/* Sticky save bar — sits above the mobile bottom nav, which is z-40 and
+          would otherwise swallow every tap on this bar. */}
+      <div
+        style={{ bottom: "var(--ww-mobile-nav, 0px)" }}
+        className="fixed inset-x-0 z-20 border-t border-border bg-background/95 backdrop-blur md:left-[var(--sidebar-width,0)]"
+      >
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 md:px-6">
           <div className="text-sm text-muted-foreground">
             {shots.length} moments · {crew.length} crew · {deliverables.length} deliverables

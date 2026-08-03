@@ -170,7 +170,11 @@ export function PwaInstallPrompt() {
        * the prompt keeps its original resting position.
        */
       style={{
-        bottom: "calc(var(--ww-bottom-bar, 0px) + env(safe-area-inset-bottom, 0px) + 0.5rem)",
+        // Clear whichever bottom furniture is taller: a page's save bar (which
+        // already includes the nav offset) or, on pages with no save bar, the
+        // mobile bottom nav on its own.
+        bottom:
+          "calc(max(var(--ww-bottom-bar, 0px), var(--ww-mobile-nav, 0px)) + env(safe-area-inset-bottom, 0px) + 0.5rem)",
       }}
       className="fixed inset-x-2 z-50 sm:left-auto sm:right-4 sm:w-[360px] rounded-xl border border-bridal-beige bg-white shadow-lg p-3 flex items-start gap-3"
     >
