@@ -43,9 +43,21 @@ function initialValues(
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   for (const field of fields) {
-    out[field.key] =
-      getFieldValue(business, field.key) ??
-      (field.type === "boolean" ? false : field.type === "multi-select" ? [] : "")
+    const raw = getFieldValue(business, field.key)
+    if (field.type === "select") {
+      // A `select` renders a single string, but some of these keys are ARRAY
+      // columns in Postgres — "Venue Type" is bound to `subBusinessType`, which
+      // comes back as ["Marquee"]. Handing an array to a <select value> matches
+      // no <option>, so the control rendered EMPTY even though the value was
+      // saved. The vendor then re-picked it, saved, and watched it blank out
+      // again — indistinguishable from "the save doesn't work".
+      // saveMut already re-wraps the string into an array on the way out; this
+      // is the missing unwrap on the way in.
+      out[field.key] = Array.isArray(raw) ? (raw[0] != null ? String(raw[0]) : "") : (raw ?? "")
+    } else {
+      out[field.key] =
+        raw ?? (field.type === "boolean" ? false : field.type === "multi-select" ? [] : "")
+    }
   }
   return out
 }
