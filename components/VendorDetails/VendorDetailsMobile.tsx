@@ -2661,6 +2661,33 @@ export default function VendorDetailsMobile({
                     <MessageCircle className="w-4 h-4" />
                     Send an inquiry
                   </button>
+                  {/*
+                    Direct chat, reachable from every listing.
+                    handleMessageVendor was rendered in exactly ONE place: the
+                    "Pricing on request" empty state, which only appears when a
+                    vendor has NO packages. So for any vendor who had filled in
+                    their packages -- i.e. the ones furthest along and most worth
+                    contacting -- there was no way to open a conversation from
+                    their page at all. That is the "where is the message option
+                    from the details page of vendor" complaint.
+
+                    Kept distinct from "Send an inquiry": the inquiry is a
+                    no-login lead form, this is a real thread the couple can come
+                    back to. Shown only when the vendor actually has a user
+                    account to receive it (handleMessageVendor already guards
+                    !vendor.userId, but rendering a button that can only fail is
+                    itself the "unreachable control" problem in reverse).
+                  */}
+                  {vendor.userId ? (
+                    <button
+                      type="button"
+                      onClick={handleMessageVendor}
+                      className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-[4px] border border-bridal-beige bg-bridal-cream hover:border-bridal-gold/55 hover:text-bridal-gold-dark text-bridal-charcoal font-bridal text-[12px] uppercase tracking-[0.22em] font-medium transition-colors"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Message {vendor.name?.split(" ")[0] || "vendor"}
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     onClick={handleBookNow}
