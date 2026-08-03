@@ -1065,8 +1065,11 @@ export function BusinessRegistrationForm() {
                 saving={combinedSaving}
               />
             </div>
+            {/* "/get-help" is not a route and never has been — this 404'd.
+                A vendor stuck halfway through registration clicked "Need Help?"
+                and got a dead page. The help centre is app/(main)/help. */}
             <Link
-              href="/get-help"
+              href="/help"
               className="inline-flex items-center gap-1.5 px-3 sm:px-4 h-9 sm:h-10 rounded-[4px] border border-bridal-beige bg-bridal-cream font-bridal text-[12px] tracking-wide text-bridal-mauve hover:border-bridal-gold/60 hover:text-bridal-charcoal transition-colors"
             >
               <HelpCircle className="w-4 h-4" />
