@@ -125,7 +125,7 @@ function NotificationItem({
         <p className="text-[11px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">
           {notification.message}
         </p>
-        <span className="text-[10px] text-muted-foreground/60 mt-1 block">
+        <span className="text-[10px] text-muted-foreground mt-1 block">
           {timeAgo(notification.createdAt)}
         </span>
       </div>
@@ -221,7 +221,7 @@ const NotificationsPopover = () => {
               <p className="text-sm font-medium text-muted-foreground">
                 No notifications yet
               </p>
-              <p className="text-[11px] text-muted-foreground/60 mt-1">
+              <p className="text-[11px] text-muted-foreground mt-1">
                 You&apos;ll see booking updates, payment alerts, and more here
               </p>
             </div>
@@ -232,7 +232,7 @@ const NotificationsPopover = () => {
                   {/* Sticky date-bucket header */}
                   <div className="sticky top-0 z-10 bg-popover/95 backdrop-blur-sm px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70 border-b">
                     {group.label}
-                    <span className="ml-1.5 font-normal text-muted-foreground/50">
+                    <span className="ml-1.5 font-normal text-muted-foreground">
                       {group.items.length}
                     </span>
                   </div>

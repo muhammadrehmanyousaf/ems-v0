@@ -89,7 +89,7 @@ export function ModulePanel() {
       {mod.groups.map((group, gi) => (
         <div key={group.label ?? `g${gi}`} className="flex flex-col gap-0.5">
           {group.label ? (
-            <div className="px-2 pb-1 text-[10.5px] font-medium uppercase tracking-[0.08em] text-muted-foreground/70">
+            <div className="px-2 pb-1 text-[10.5px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
               {group.label}
             </div>
           ) : null}
