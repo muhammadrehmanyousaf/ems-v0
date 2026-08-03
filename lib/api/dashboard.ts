@@ -1367,22 +1367,49 @@ export interface BlockedDate {
   reason: string | null;
 }
 
+/**
+ * Blocked dates are PER BUSINESS, and this client never said which one.
+ *
+ * Observed live on a two-venue vendor: blocking 25 Dec from the Availability tab
+ * created TWO rows — id 9 on business 3361 (Lahore) and id 10 on 3362 (Karachi).
+ * A vendor booked at their Lahore marquee had silently made their Karachi venue
+ * unbookable the same day, and the list showed the date twice with no venue
+ * label and no way to release just one.
+ *
+ * The backend already supports scoping — blockDate reads `businessId` from the
+ * body and unblockDate reads `?businessId=`, with an ownership guard so a
+ * foreign id can never widen the blast radius. The comment on unblockDate even
+ * names this as "the cross-venue bug the app fix flagged": it was fixed for the
+ * mobile app and the web client never adopted it. These params close that gap.
+ *
+ * businessId stays OPTIONAL so single-venue vendors and existing callers keep
+ * the previous all-venues behaviour.
+ */
 export class BlockedDatesAPI {
-  static async getAll(month?: string): Promise<BlockedDate[]> {
-    const params = month ? { month } : {};
+  static async getAll(month?: string, businessId?: number | null): Promise<BlockedDate[]> {
+    const params: Record<string, string | number> = {};
+    if (month) params.month = month;
+    if (businessId != null) params.businessId = businessId;
     const res = await axiosInstance.get("/api/v1/bookings/blocked-dates", { params });
     return res.data?.data?.blockedDates ?? [];
   }
 
-  static async block(blockedDate: string, reason?: string): Promise<BlockedDate[]> {
+  static async block(
+    blockedDate: string,
+    reason?: string,
+    businessId?: number | null,
+  ): Promise<BlockedDate[]> {
     const res = await axiosInstance.post("/api/v1/bookings/blocked-dates", {
       blockedDate,
       reason: reason || null,
+      ...(businessId != null ? { businessId } : {}),
     });
     return res.data?.data?.blockedDates ?? [];
   }
 
-  static async unblock(date: string): Promise<void> {
-    await axiosInstance.delete(`/api/v1/bookings/blocked-dates/${date}`);
+  static async unblock(date: string, businessId?: number | null): Promise<void> {
+    await axiosInstance.delete(`/api/v1/bookings/blocked-dates/${date}`, {
+      params: businessId != null ? { businessId } : undefined,
+    });
   }
 }

@@ -26,6 +26,15 @@ import { enqueue as outboxEnqueue, isOutboxEnabled, isOffline } from "@/lib/outb
 import { AiAPI, fileToBase64 } from "@/lib/api/ai"
 import { useAiFeature } from "@/hooks/use-ai-status"
 import { validateReceiptFile, coerceReceipt } from "@/lib/ai/coerce"
+import {
+  FormBlockedHint,
+  FieldError,
+  fieldAria,
+  ERROR_INPUT_CLS,
+  validatePkr,
+  validateNotFutureDate,
+  validateOptionalText,
+} from "@/components/dashboard/primitives/field-error"
 
 const CATEGORIES = Object.keys(EXPENSE_CATEGORY_LABELS) as ExpenseCategory[]
 const METHODS: ExpensePaymentMethod[] = ["cash", "bank_transfer", "cheque", "jazzcash", "easypaisa", "raast", "ibft", "card", "other"]
@@ -93,6 +102,10 @@ export function ExpenseFormDialog({
   }, [open, expense, prefill])
 
   const set = (k: keyof FormState, v: string) => setForm((f) => ({ ...f, [k]: v }))
+  // Errors appear only after a field is touched, so opening the dialog doesn't
+  // immediately flag the empty amount the vendor is about to type.
+  const [touched, setTouched] = React.useState<Record<string, boolean>>({})
+  const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }))
 
   // Phase 5 — scan a receipt photo into the form. Create-mode only: re-scanning
   // over a saved expense would silently rewrite ledger values the vendor already
@@ -204,7 +217,30 @@ export function ExpenseFormDialog({
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save expense"),
   })
 
-  const canSave = Number(form.amount) > 0 && !!form.spentDate
+  // Same ledger discipline as receipts: amount had NO min (the browser spinner
+  // offered negatives on an expense book) and spentDate had NO bounds, so money
+  // could be recorded as spent NEXT YEAR and quietly distort every cost and
+  // margin report that reads it.
+  const errs = {
+    amount: validatePkr(form.amount, { label: "Amount" }),
+    spentDate: validateNotFutureDate(form.spentDate, { label: "Date spent" }),
+    vendorName: validateOptionalText(form.vendorName, { label: "Paid to", max: 150 }),
+    description: validateOptionalText(form.description, { label: "Note", max: 1000 }),
+  }
+  const shown = {
+    amount: touched.amount ? errs.amount : undefined,
+    spentDate: touched.spentDate ? errs.spentDate : undefined,
+    vendorName: touched.vendorName ? errs.vendorName : undefined,
+    description: touched.description ? errs.description : undefined,
+  }
+  const canSave = !errs.amount && !errs.spentDate && !errs.vendorName && !errs.description
+
+
+  // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
+  const blockedReason =
+    !canSave && !Object.values(shown).some(Boolean)
+      ? "Add an amount above 0 and the date it was spent to save."
+      : undefined
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -239,8 +275,36 @@ export function ExpenseFormDialog({
             </div>
           )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Amount (Rs)"><input type="number" className={cn(inputCls, "tabular-nums")} value={form.amount} onChange={(e) => set("amount", e.target.value)} placeholder="0" autoFocus /></Field>
-            <Field label="Date"><input type="date" className={inputCls} value={form.spentDate} onChange={(e) => set("spentDate", e.target.value)} /></Field>
+            <Field label="Amount (Rs)">
+              <input
+                id="exp-amount"
+                type="number"
+                min={0}
+                step="0.01"
+                inputMode="decimal"
+                className={cn(inputCls, "tabular-nums", shown.amount && ERROR_INPUT_CLS)}
+                value={form.amount}
+                onChange={(e) => { set("amount", e.target.value); touch("amount") }}
+                onBlur={() => touch("amount")}
+                placeholder="0"
+                autoFocus
+                {...fieldAria("exp-amount", shown.amount)}
+              />
+              <FieldError id="exp-amount" message={shown.amount} />
+            </Field>
+            <Field label="Date">
+              <input
+                id="exp-date"
+                type="date"
+                max={new Date().toISOString().slice(0, 10)}
+                className={cn(inputCls, shown.spentDate && ERROR_INPUT_CLS)}
+                value={form.spentDate}
+                onChange={(e) => { set("spentDate", e.target.value); touch("spentDate") }}
+                onBlur={() => touch("spentDate")}
+                {...fieldAria("exp-date", shown.spentDate)}
+              />
+              <FieldError id="exp-date" message={shown.spentDate} />
+            </Field>
             <Field label="Category">
               <select className={inputCls} value={form.category} onChange={(e) => set("category", e.target.value as ExpenseCategory)}>
                 {CATEGORIES.map((c) => <option key={c} value={c}>{EXPENSE_CATEGORY_LABELS[c]}</option>)}
@@ -251,7 +315,19 @@ export function ExpenseFormDialog({
                 {METHODS.map((m) => <option key={m} value={m}>{methodLabel(m)}</option>)}
               </select>
             </Field>
-            <Field label="Paid to"><input className={inputCls} value={form.vendorName} onChange={(e) => set("vendorName", e.target.value)} placeholder="Supplier / payee" /></Field>
+            <Field label="Paid to">
+              <input
+                id="exp-payee"
+                className={cn(inputCls, shown.vendorName && ERROR_INPUT_CLS)}
+                value={form.vendorName}
+                onChange={(e) => { set("vendorName", e.target.value); touch("vendorName") }}
+                onBlur={() => touch("vendorName")}
+                maxLength={150}
+                placeholder="Supplier / payee"
+                {...fieldAria("exp-payee", shown.vendorName)}
+              />
+              <FieldError id="exp-payee" message={shown.vendorName} />
+            </Field>
             <Field label="Subcategory (optional)"><input className={inputCls} value={form.subcategory} onChange={(e) => set("subcategory", e.target.value)} /></Field>
             {spaces.length > 0 && (
               <Field label="Space (optional)" className="sm:col-span-2">
@@ -281,6 +357,7 @@ export function ExpenseFormDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <FormBlockedHint message={blockedReason} />
           <Button disabled={!canSave || saveMut.isPending} onClick={() => saveMut.mutate()}>
             {saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={15} className="mr-1.5" /> {isEdit ? "Update expense" : "Save expense"}</>}
           </Button>

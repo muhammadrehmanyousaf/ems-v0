@@ -40,7 +40,21 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetails) => {
             ...prevData,
             staff: selectedstaff,
             expertise: selectedExpertise,
-            subBusinessType: selectedTypes || '',
+            // MUST be an array. The column is ARRAY(STRING), and the backend runs
+            // every incoming value through parseJsonField(value, []), which does
+            // JSON.parse() on any string it receives. "Marquee" is not valid JSON,
+            // so the parse threw and the helper silently substituted the fallback
+            // — the vendor's venue type was destroyed and the row was written with
+            // subBusinessType = [].
+            //
+            // That empty array is exactly what later crashed the public search
+            // page (`[].toLowerCase is not a function`, and `[]` is truthy so it
+            // also won the `||` chain in normalizeBusiness). So every venue that
+            // ever registered planted the crash seed here. Sending an array makes
+            // parseJsonField pass it straight through (it only JSON.parses
+            // strings), which both preserves the answer and stops producing the
+            // malformed shape. Matches what the other vendor types already send.
+            subBusinessType: selectedTypes ? [selectedTypes] : [],
             cancelationPolicy: cancellation,
             covidComplaint: covid === 'yes',
             parking: parking === 'yes',

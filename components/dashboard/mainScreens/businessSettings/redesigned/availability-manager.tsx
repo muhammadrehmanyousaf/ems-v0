@@ -23,20 +23,31 @@ const fmt = (s: string) => {
   return isNaN(d.getTime()) ? s : d.toLocaleDateString("en-PK", { weekday: "short", day: "2-digit", month: "long", year: "numeric" })
 }
 
-export function AvailabilityManager() {
+/**
+ * Scoped to ONE business. Previously this component took no businessId at all,
+ * so blocking a date hit every venue the vendor owned — verified live: one click
+ * created rows on both business 3361 (Lahore) and 3362 (Karachi), and the list
+ * then showed the same date twice with no way to tell them apart or release one.
+ * The query key includes businessId so switching venue refetches that venue's
+ * calendar rather than reusing the previous one's.
+ */
+export function AvailabilityManager({ businessId }: { businessId?: number | null }) {
   const qc = useQueryClient()
-  const { data: blocked, isLoading } = useQuery<BlockedDate[]>({ queryKey: ["blocked-dates"], queryFn: () => BlockedDatesAPI.getAll() })
+  const { data: blocked, isLoading } = useQuery<BlockedDate[]>({
+    queryKey: ["blocked-dates", businessId ?? "all"],
+    queryFn: () => BlockedDatesAPI.getAll(undefined, businessId),
+  })
   const [date, setDate] = React.useState("")
   const [reason, setReason] = React.useState("")
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["blocked-dates"] })
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["blocked-dates", businessId ?? "all"] })
 
   const blockMut = useMutation({
-    mutationFn: () => BlockedDatesAPI.block(date, reason.trim() || undefined),
+    mutationFn: () => BlockedDatesAPI.block(date, reason.trim() || undefined, businessId),
     onSuccess: () => { showSuccessToast("Date blocked"); setDate(""); setReason(""); invalidate() },
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't block date"),
   })
   const unblockMut = useMutation({
-    mutationFn: (d: string) => BlockedDatesAPI.unblock(d),
+    mutationFn: (d: string) => BlockedDatesAPI.unblock(d, businessId),
     onSuccess: () => { showSuccessToast("Date freed"); invalidate() },
     onError: (e: any) => toast.error(e?.message || "Couldn't free date"),
   })

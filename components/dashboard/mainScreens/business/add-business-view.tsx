@@ -25,6 +25,7 @@ import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { Button } from "@/components/ui/button"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { cn } from "@/lib/utils"
+import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
@@ -89,6 +90,10 @@ export function AddBusinessView() {
 
   const canSave =
     form.name.trim().length > 1 && form.city.trim().length > 1 && priceOk && !capacityInverted
+
+
+  // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
+  const blockedReason = canSave ? undefined : "Add a name and a city to save."
 
   const save = useMutation({
     mutationFn: () => BusinessesAPI.addMyBusiness(toPayload(form)),
@@ -204,6 +209,7 @@ export function AddBusinessView() {
 
       <div className="flex items-center justify-end gap-2">
         <Button variant="ghost" onClick={() => router.back()} disabled={save.isPending}>Cancel</Button>
+        <FormBlockedHint message={blockedReason} />
         <Button disabled={!canSave || save.isPending} onClick={() => save.mutate()}>
           {save.isPending
             ? <><Spinner size={14} className="mr-1.5" /> Sending…</>

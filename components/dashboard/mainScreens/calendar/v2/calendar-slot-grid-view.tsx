@@ -63,9 +63,15 @@ export function CalendarSlotGridView() {
 
   // Vendor-blocked dates (leaves / dead months) — overlaid on the grid so a
   // block reflects instantly regardless of which block table backs it.
+  // Pass businessId EXPLICITLY. The query is already keyed by it, but the calls
+  // were not scoped: the GET relied on the axios interceptor's active-business
+  // guess (which can differ from the venue this grid is actually rendering), and
+  // the POST below carried no scope at all, so blocking one day here blocked it
+  // on every venue the vendor owns. Verified live on a two-venue account: a
+  // single block wrote rows against both 3361 and 3362.
   const { data: blocked } = useQuery({
     queryKey: ["blocked-dates", businessId],
-    queryFn: () => BlockedDatesAPI.getAll(),
+    queryFn: () => BlockedDatesAPI.getAll(undefined, businessId),
     enabled: !!businessId,
   });
   const blockedSet = useMemo(() => new Set((blocked ?? []).map((b) => b.blockedDate)), [blocked]);
@@ -73,7 +79,7 @@ export function CalendarSlotGridView() {
   const blockDate = async (date: Date) => {
     const ymd = format(date, "yyyy-MM-dd");
     try {
-      await BlockedDatesAPI.block(ymd, "Islamic dead month / event");
+      await BlockedDatesAPI.block(ymd, "Islamic dead month / event", businessId);
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["blocked-dates", businessId] }),
         qc.invalidateQueries({ queryKey: ["venue-calendar", businessId] }),
@@ -167,7 +173,7 @@ export function CalendarSlotGridView() {
                       <div className="text-[10px] text-muted-foreground uppercase">{c.dow}</div>
                       <div className="text-xs font-medium tabular-nums">{c.dom}</div>
                       {/* approximate Hijri day — Pakistani families think in both */}
-                      <div className="text-[8px] text-muted-foreground/70 tabular-nums leading-none">{hj.day}</div>
+                      <div className="text-[8px] text-muted-foreground tabular-nums leading-none">{hj.day}</div>
                       {/* plain-booking count (offline / quick-add / migrated) */}
                       {booked > 0 && (
                         <div className="text-[8px] font-semibold text-fuchsia-600 dark:text-fuchsia-400 leading-none mt-0.5">●{booked > 1 ? booked : ""}</div>

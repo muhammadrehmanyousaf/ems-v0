@@ -15,6 +15,7 @@ import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
 
 const TYPES = Object.keys(PERMIT_TYPE_LABELS) as PermitType[]
 const AUTHORITIES = Object.keys(PERMIT_AUTHORITY_LABELS) as IssuingAuthority[]
@@ -84,6 +85,9 @@ export function PermitFormDialog({
   })
   const canSave = form.referenceNumber.trim() && form.validFrom && form.validUntil && (isEdit || businessId != null)
 
+  // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
+  const blockedReason = canSave ? undefined : "Add a reference number, a start date and an end date to save."
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
@@ -117,6 +121,7 @@ export function PermitFormDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <FormBlockedHint message={blockedReason} />
           <Button disabled={!canSave || saveMut.isPending} onClick={() => saveMut.mutate()}>
             {saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={15} className="mr-1.5" /> {isEdit ? "Update" : "Save permit"}</>}
           </Button>

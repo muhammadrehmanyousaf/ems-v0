@@ -123,7 +123,7 @@ export function NavSections({ sections }: { sections: NavSection[] }) {
           key={`${section.label}-${i}`}
           className="px-2 py-2"
         >
-          <SidebarGroupLabel className="px-2 h-7 text-[10.5px] font-medium uppercase tracking-[0.08em] text-muted-foreground/70">
+          <SidebarGroupLabel className="px-2 h-7 text-[10.5px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
             {section.label}
           </SidebarGroupLabel>
           <SidebarMenu className="gap-0.5">

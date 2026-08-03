@@ -18,6 +18,7 @@ import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
 
 const CATEGORIES: SupplierCategory[] = [
   "meat", "produce", "atta_grains", "dairy", "oil_ghee", "spices", "frozen_seafood", "bakery_sweets",
@@ -103,6 +104,10 @@ export function SupplierFormDialog({
 
   const canSave = form.name.trim() && (isEdit || businessId != null)
 
+
+  // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
+  const blockedReason = canSave ? undefined : "Add a name to save."
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
@@ -153,6 +158,7 @@ export function SupplierFormDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <FormBlockedHint message={blockedReason} />
           <Button disabled={!canSave || saveMut.isPending} onClick={() => saveMut.mutate()}>
             {saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={15} className="mr-1.5" /> {isEdit ? "Update supplier" : "Save supplier"}</>}
           </Button>

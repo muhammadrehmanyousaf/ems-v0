@@ -52,6 +52,32 @@ html {
   }
 }
 
+/* …and the other half of the same problem, which the gutter alone did NOT fix.
+   Radix's react-remove-scroll does not just hide the scrollbar — it injects
+
+     body[data-scroll-locked] { margin-right: 15px !important; }
+
+   to compensate for the scrollbar it removed. But `scrollbar-gutter: stable`
+   above already reserves that space, so the compensation lands a SECOND time and
+   the page content gets 15px NARROWER the instant any overlay opens.
+
+   Measured on live /dashboard/businesses opening the Export menu:
+     <h1>   1424.8px -> 1409.8px
+     <table> 1168.8px -> 1153.8px
+   i.e. every element reflows 15px — the "screen shakes when I open any
+   dropdown/menu" report. It fires for dropdown menus, selects, dialogs, sheets
+   and popovers, on every screen, because they all share the same scroll lock.
+
+   Specificity note: Radix's rule is `body[data-scroll-locked]` (0,1,1) with
+   !important, so `html body[...]` (0,1,2) + !important is required to win.
+   Scoped to @supports so browsers WITHOUT scrollbar-gutter keep Radix's
+   compensation, which is correct for them — there the scrollbar really is gone. */
+@supports (scrollbar-gutter: stable) {
+  html body[data-scroll-locked] {
+    margin-right: 0 !important;
+  }
+}
+
 /* Phase 3 #9.4 — When the locale toggle flips to Urdu, the dashboard
    subtree inherits the Nastaliq font stack so translated strings
    render in proper Urdu typography. data-locale="ur" is set on the

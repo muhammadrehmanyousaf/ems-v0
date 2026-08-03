@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Icon, Spinner } from "@/components/dashboard/shared/icon";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2";
 
@@ -160,6 +161,9 @@ function FieldForm({ entityType, businessId, type, edit, onDone, onCancel }: {
   });
   const canSave = d.label.trim().length > 0 && (!meta.hasOptions || d.options.length > 0);
 
+  // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
+  const blockedReason = canSave ? undefined : "Add a label to save."
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 text-sm">
@@ -207,6 +211,7 @@ function FieldForm({ entityType, businessId, type, edit, onDone, onCancel }: {
 
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+        <FormBlockedHint message={blockedReason} />
         <Button disabled={!canSave || saveMut.isPending} onClick={() => saveMut.mutate()}>
           {saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={15} className="mr-1.5" /> {edit ? "Update field" : "Add field"}</>}
         </Button>

@@ -59,11 +59,25 @@ function normalizeBusiness(raw: any): any {
   const rating = Number(raw.rating ?? 0) || 0
   const reviewCount =
     Number(raw.reviewCount ?? (Array.isArray(raw.reviews) ? raw.reviews.length : 0)) || 0
+  // Every consumer of these treats them as strings (.toLowerCase(), .includes()),
+  // so guarantee that here rather than hoping the row is well-formed. `str()`
+  // also stops a non-empty-but-non-string value winning an `||` chain: an empty
+  // ARRAY is truthy, so `raw.type || vendor.vendorType || raw.subBusinessType`
+  // would happily promote `[]` into `type` and crash every downstream filter.
+  // Business 3273 did exactly that and took the whole /search route down.
+  const str = (v: unknown): string => (typeof v === 'string' ? v : v == null ? '' : String(v))
+  const firstStr = (...vals: unknown[]): string => {
+    for (const v of vals) { const s = str(v).trim(); if (s) return s }
+    return ''
+  }
   return {
     ...raw,
     userId: raw.userId ?? vendor.id,
-    type: raw.type || vendor.vendorType || raw.subBusinessType || '',
-    location: raw.location || raw.subArea || raw.city || vendor.city || '',
+    type: firstStr(raw.type, vendor.vendorType, raw.subBusinessType),
+    subBusinessType: str(raw.subBusinessType),
+    name: str(raw.name),
+    city: str(raw.city),
+    location: firstStr(raw.location, raw.subArea, raw.city, vendor.city),
     rating,
     reviewCount,
     reviews: raw.reviews || [],

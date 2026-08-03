@@ -15,6 +15,15 @@ import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
+import {
+  FormBlockedHint,
+  FieldError,
+  fieldAria,
+  ERROR_INPUT_CLS,
+  validateName,
+  validatePkr,
+} from "@/components/dashboard/primitives/field-error"
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
@@ -26,7 +35,11 @@ export function MenusManager({ businessId }: { businessId: number }) {
   const [editingId, setEditingId] = React.useState<number | null>(null)
   const [form, setForm] = React.useState({ title: "", price: "", items: "" })
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
-  const reset = () => { setForm({ title: "", price: "", items: "" }); setAdding(false); setEditingId(null) }
+  // Errors show only after a field is touched, so a blank new form doesn't open
+  // covered in red.
+  const [touched, setTouched] = React.useState<Record<string, boolean>>({})
+  const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }))
+  const reset = () => { setForm({ title: "", price: "", items: "" }); setTouched({}); setAdding(false); setEditingId(null) }
   const invalidate = () => qc.invalidateQueries({ queryKey: ["menus", businessId] })
 
   const itemsOf = (m: ApiMenu): string[] => {
@@ -57,7 +70,23 @@ export function MenusManager({ businessId }: { businessId: number }) {
     onSuccess: () => { showSuccessToast("Menu removed"); invalidate() },
     onError: (e: any) => toast.error(e?.message || "Couldn't remove menu"),
   })
-  const canSave = form.title.trim() && Number(form.price) > 0
+  // Per-head pricing is the whole basis of a Pakistani catering quote, so a Rs 0
+  // menu is the "bookable at Rs 0" hole rather than a real free service.
+  const errs = {
+    title: validateName(form.title, { label: "Menu title", max: 150 }),
+    price: validatePkr(form.price, { label: "Price per head" }),
+  }
+  const shown = {
+    title: touched.title ? errs.title : undefined,
+    price: touched.price ? errs.price : undefined,
+  }
+  const canSave = !errs.title && !errs.price
+
+  // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
+  const blockedReason =
+    !canSave && !shown.title && !shown.price
+      ? "Add a title and a price above Rs 0 to save."
+      : undefined
 
   return (
     <div className="rounded-xl border border-border bg-card shadow-sm">
@@ -72,11 +101,25 @@ export function MenusManager({ businessId }: { businessId: number }) {
           <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
             <div className="text-xs font-semibold text-primary">{editingId ? "Edit menu" : "New menu"}</div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_180px]">
-              <div className="space-y-1.5"><label className={labelCls}>Menu title</label><input className={inputCls} value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="e.g. Standard Buffet (per head)" /></div>
-              <div className="space-y-1.5"><label className={labelCls}>Price / head (Rs)</label><input type="number" className={inputCls} value={form.price} onChange={(e) => set("price", e.target.value)} placeholder="2200" /></div>
+              <div className="space-y-1.5">
+                <label className={labelCls} htmlFor="menu-title">Menu title</label>
+                <input id="menu-title" className={cn(inputCls, shown.title && ERROR_INPUT_CLS)} value={form.title}
+                  onChange={(e) => { set("title", e.target.value); touch("title") }} onBlur={() => touch("title")}
+                  maxLength={150} placeholder="e.g. Standard Buffet (per head)" {...fieldAria("menu-title", shown.title)} />
+                <FieldError id="menu-title" message={shown.title} />
+              </div>
+              <div className="space-y-1.5">
+                <label className={labelCls} htmlFor="menu-price">Price / head (Rs)</label>
+                <input id="menu-price" type="number" min={0} step={1} inputMode="numeric"
+                  className={cn(inputCls, shown.price && ERROR_INPUT_CLS)} value={form.price}
+                  onChange={(e) => { set("price", e.target.value); touch("price") }} onBlur={() => touch("price")}
+                  placeholder="2200" {...fieldAria("menu-price", shown.price)} />
+                <FieldError id="menu-price" message={shown.price} />
+              </div>
             </div>
             <div className="space-y-1.5"><label className={labelCls}>Dishes (one per line)</label><textarea className={inputCls + " h-24 resize-y py-2"} value={form.items} onChange={(e) => set("items", e.target.value)} placeholder={"Chicken Biryani\nMutton Karahi\nSeekh Kebab\nZarda"} /></div>
             <div className="flex gap-2">
+              <FormBlockedHint message={blockedReason} />
               <Button size="sm" disabled={!canSave || saveMut.isPending} onClick={() => saveMut.mutate()}>{saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={14} className="mr-1.5" /> {editingId ? "Update menu" : "Save menu"}</>}</Button>
               <Button size="sm" variant="ghost" onClick={reset}>Cancel</Button>
             </div>

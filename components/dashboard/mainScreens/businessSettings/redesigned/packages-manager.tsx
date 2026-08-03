@@ -14,8 +14,18 @@ import { formatPkr } from "@/components/dashboard/primitives/money-cell"
 import { EmptyState } from "@/components/dashboard/primitives/empty-state"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
-import { showSuccessToast } from "@/lib/toast/undo"
+import { showSuccessToast, showUndoToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
+import {
+  FieldError,
+  FormBlockedHint,
+  fieldAria,
+  ERROR_INPUT_CLS,
+  validateName,
+  validatePkr,
+  validateOptionalText,
+} from "@/components/dashboard/primitives/field-error"
+import { cn } from "@/lib/utils"
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
@@ -28,11 +38,15 @@ export function PackagesManager({ businessId }: { businessId: number }) {
   const [adding, setAdding] = React.useState(false)
   const [editingId, setEditingId] = React.useState<number | null>(null)
   const [form, setForm] = React.useState({ name: "", price: "", description: "", features: "" })
+  // Errors show only once a field has been touched, so a freshly-opened blank
+  // form doesn't greet the vendor with red text before they've typed anything.
+  const [touched, setTouched] = React.useState<Record<string, boolean>>({})
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
-  const reset = () => { setForm({ name: "", price: "", description: "", features: "" }); setAdding(false); setEditingId(null) }
+  const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }))
+  const reset = () => { setForm({ name: "", price: "", description: "", features: "" }); setTouched({}); setAdding(false); setEditingId(null) }
   const startEdit = (p: ApiPackage) => {
     setForm({ name: p.name ?? "", price: String(p.price ?? ""), description: p.description ?? "", features: asFeatures(p.features).join("\n") })
-    setEditingId(p.id); setAdding(true)
+    setTouched({}); setEditingId(p.id); setAdding(true)
   }
   const invalidate = () => qc.invalidateQueries({ queryKey: ["pkgs", businessId] })
 
@@ -50,13 +64,54 @@ export function PackagesManager({ businessId }: { businessId: number }) {
     onSuccess: () => { showSuccessToast(editingId ? "Package updated" : "Package added"); reset(); invalidate() },
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save package"),
   })
+  // Remove had no confirmation and no way back — one stray click destroyed a
+  // priced package. Recreating it from the same values is a faithful undo.
   const removeMut = useMutation({
-    mutationFn: (id: number) => PackagesAPI.delete(id),
-    onSuccess: () => { showSuccessToast("Package removed"); invalidate() },
-    onError: (e: any) => toast.error(e?.message || "Couldn't remove package"),
+    mutationFn: (p: ApiPackage) => PackagesAPI.delete(p.id).then(() => p),
+    onSuccess: (p) => {
+      showUndoToast({
+        message: `"${p.name}" removed`,
+        onUndo: async () => {
+          try {
+            await PackagesAPI.create({
+              name: p.name,
+              price: Number(p.price) || 0,
+              description: p.description ?? undefined,
+              features: asFeatures(p.features),
+              businessId,
+            })
+            invalidate()
+          } catch {
+            toast.error("Couldn't restore that package.")
+          }
+        },
+      })
+      invalidate()
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove package"),
   })
 
-  const canSave = form.name.trim() && Number(form.price) > 0
+  // Validation now produces MESSAGES, not just a boolean. Previously this was a
+  // lone `canSave` driving `disabled`, so an invalid price greyed the button out
+  // and said nothing — the vendor saw a dead button and concluded the system was
+  // broken. Bounds mirror the server so the two can't disagree.
+  const errs = {
+    name: validateName(form.name, { label: "Package name", max: 150 }),
+    price: validatePkr(form.price, { label: "Price" }),
+    description: validateOptionalText(form.description, { label: "Description", max: 500 }),
+  }
+  const shown = {
+    name: touched.name ? errs.name : undefined,
+    price: touched.price ? errs.price : undefined,
+    description: touched.description ? errs.description : undefined,
+  }
+  const canSave = !errs.name && !errs.price && !errs.description
+  // If the button is disabled and no field is showing a reason (nothing touched
+  // yet), say so explicitly rather than leaving a dead control unexplained.
+  const blockedHint =
+    !canSave && !shown.name && !shown.price && !shown.description
+      ? "Add a package name and a price above Rs 0 to save."
+      : undefined
 
   return (
     <div className="rounded-xl border border-border bg-card shadow-sm">
@@ -71,14 +126,67 @@ export function PackagesManager({ businessId }: { businessId: number }) {
           <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
             <div className="text-xs font-semibold text-primary">{editingId ? "Edit package" : "New package"}</div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_160px]">
-              <div className="space-y-1.5"><label className={labelCls}>Package name</label><input className={inputCls} value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="e.g. Silver Wedding Package" /></div>
-              <div className="space-y-1.5"><label className={labelCls}>Price (Rs)</label><input type="number" className={inputCls} value={form.price} onChange={(e) => set("price", e.target.value)} placeholder="150000" /></div>
+              <div className="space-y-1.5">
+                <label className={labelCls} htmlFor="pkg-name">Package name</label>
+                <input
+                  id="pkg-name"
+                  className={cn(inputCls, shown.name && ERROR_INPUT_CLS)}
+                  value={form.name}
+                  onChange={(e) => { set("name", e.target.value); touch("name") }}
+                  onBlur={() => touch("name")}
+                  maxLength={150}
+                  placeholder="e.g. Silver Wedding Package"
+                  {...fieldAria("pkg-name", shown.name)}
+                />
+                <FieldError id="pkg-name" message={shown.name} />
+              </div>
+              <div className="space-y-1.5">
+                <label className={labelCls} htmlFor="pkg-price">Price (Rs)</label>
+                <input
+                  id="pkg-price"
+                  type="number"
+                  /* min/step are a real guard, not decoration: the field had no
+                     min at all, so the browser's own spinner offered negatives. */
+                  min={0}
+                  step={1}
+                  inputMode="numeric"
+                  className={cn(inputCls, shown.price && ERROR_INPUT_CLS)}
+                  value={form.price}
+                  onChange={(e) => { set("price", e.target.value); touch("price") }}
+                  onBlur={() => touch("price")}
+                  placeholder="150000"
+                  {...fieldAria("pkg-price", shown.price)}
+                />
+                <FieldError id="pkg-price" message={shown.price} />
+              </div>
             </div>
-            <div className="space-y-1.5"><label className={labelCls}>Description</label><input className={inputCls} value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Short summary" /></div>
+            <div className="space-y-1.5">
+              <label className={labelCls} htmlFor="pkg-desc">Description</label>
+              <input
+                id="pkg-desc"
+                className={cn(inputCls, shown.description && ERROR_INPUT_CLS)}
+                value={form.description}
+                onChange={(e) => { set("description", e.target.value); touch("description") }}
+                onBlur={() => touch("description")}
+                maxLength={500}
+                placeholder="Short summary"
+                {...fieldAria("pkg-desc", shown.description)}
+              />
+              <FieldError id="pkg-desc" message={shown.description} />
+            </div>
             <div className="space-y-1.5"><label className={labelCls}>Features (one per line)</label><textarea className={inputCls + " h-24 resize-y py-2"} value={form.features} onChange={(e) => set("features", e.target.value)} placeholder={"8 hours coverage\n2 photographers\nEdited album (40 pages)"} /></div>
-            <div className="flex gap-2">
-              <Button size="sm" disabled={!canSave || saveMut.isPending} onClick={() => saveMut.mutate()}>{saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={14} className="mr-1.5" /> {editingId ? "Update package" : "Save package"}</>}</Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                disabled={!canSave || saveMut.isPending}
+                // Surface every reason at once if they hit a disabled button
+                // without having touched the offending field.
+                onClick={() => { setTouched({ name: true, price: true, description: true }); saveMut.mutate() }}
+              >
+                {saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={14} className="mr-1.5" /> {editingId ? "Update package" : "Save package"}</>}
+              </Button>
               <Button size="sm" variant="ghost" onClick={reset}>Cancel</Button>
+              <FormBlockedHint message={blockedHint} />
             </div>
           </div>
         )}
@@ -104,7 +212,7 @@ export function PackagesManager({ businessId }: { businessId: number }) {
                 )}
                 <div className="mt-3 flex justify-end gap-1 border-t border-border/60 pt-2">
                   <Button size="sm" variant="ghost" onClick={() => startEdit(p)}><Icon name="Pencil" size={14} className="mr-1" /> Edit</Button>
-                  <Button size="sm" variant="ghost" disabled={removeMut.isPending} onClick={() => removeMut.mutate(p.id)}><Icon name="Trash2" size={14} className="mr-1 text-muted-foreground hover:text-destructive" /> Remove</Button>
+                  <Button size="sm" variant="ghost" disabled={removeMut.isPending} onClick={() => removeMut.mutate(p)}><Icon name="Trash2" size={14} className="mr-1 text-muted-foreground hover:text-destructive" /> Remove</Button>
                 </div>
               </div>
             ))}
