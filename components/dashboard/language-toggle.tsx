@@ -26,8 +26,8 @@ export function LanguageToggle({ className }: { className?: string }) {
         className={cn(
           'h-6 px-2 rounded transition-colors',
           locale === 'en'
-            ? 'bg-background shadow-sm font-medium text-neutral-900'
-            : 'text-neutral-500 hover:text-neutral-700',
+            ? 'bg-background shadow-sm font-medium text-foreground'
+            : 'text-muted-foreground hover:text-foreground',
         )}
       >
         EN
@@ -38,8 +38,8 @@ export function LanguageToggle({ className }: { className?: string }) {
         className={cn(
           'h-6 px-2 rounded transition-colors font-[Noto_Nastaliq_Urdu]',
           locale === 'ur'
-            ? 'bg-background shadow-sm font-medium text-neutral-900'
-            : 'text-neutral-500 hover:text-neutral-700',
+            ? 'bg-background shadow-sm font-medium text-foreground'
+            : 'text-muted-foreground hover:text-foreground',
         )}
         style={{ fontFamily: '"Noto Nastaliq Urdu", serif' }}
       >
