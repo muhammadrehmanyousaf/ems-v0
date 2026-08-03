@@ -1,21 +1,25 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { LoginForm } from "@/components/login-form";
 import { useUser } from "@/context/UserContext";
+import { safeRedirect } from "@/lib/auth/safe-redirect";
 
 const ProtectLogin = () => {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { isAuthenticated, isLoading } = useUser();
-  
+
   useEffect(() => {
     // Only redirect if we're not loading and user is authenticated
     if (!isLoading && isAuthenticated && pathname === "/login") {
-      router.replace("/dashboard");
+      // An already-signed-in visitor who lands here via ?redirect= wanted that
+      // page, not the dashboard — and a CUSTOMER has no dashboard to send to.
+      router.replace(safeRedirect(searchParams?.get("redirect")) ?? "/dashboard");
     }
-  }, [isAuthenticated, isLoading, pathname, router]);
+  }, [isAuthenticated, isLoading, pathname, searchParams, router]);
   
   // Show loading spinner while checking authentication
   if (isLoading) {
