@@ -59,8 +59,57 @@ export default function VendorInquiryDialog({
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
+  // Errors only after a field is touched, so opening the dialog doesn't
+  // immediately scold the customer about the empty phone they're about to type.
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }))
 
-  const canSend = form.name.trim().length > 0 || form.phone.trim().length > 0
+  /*
+   * This is the marketplace's core conversion form and it had NO validation.
+   * Verified live on production: phone "abc-not-a-phone", guests "-50" and
+   * email "not-an-email" were all accepted, Send stayed enabled, the POST
+   * returned 201, and the customer was told "…has it in their inbox and will
+   * get back to you. Keep an eye on your phone."
+   *
+   * The vendor cannot ring "abc-not-a-phone". Both sides lose, silently.
+   *
+   * Kept deliberately permissive — 9+ digits covers PK mobiles, landlines and
+   * international numbers. The point is to catch typos and junk, not to police
+   * formatting, and never to block a real customer mid-enquiry.
+   */
+  const digits = form.phone.replace(/\D/g, "")
+  const phoneUsable = digits.length >= 9 && digits.length <= 15
+  const emailUsable = /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(form.email.trim())
+  const guestsNum = form.guests.trim() === "" ? null : Number(form.guests)
+
+  const errs = {
+    phone: form.phone.trim() && !phoneUsable
+      ? "That doesn't look like a working number — the vendor replies here."
+      : undefined,
+    email: form.email.trim() && !emailUsable
+      ? "That email doesn't look right."
+      : undefined,
+    guests: guestsNum != null && (!Number.isFinite(guestsNum) || guestsNum <= 0)
+      ? "Guest count must be more than 0."
+      : undefined,
+  }
+  const shown = {
+    phone: touched.phone ? errs.phone : undefined,
+    email: touched.email ? errs.email : undefined,
+    guests: touched.guests ? errs.guests : undefined,
+  }
+
+  // A name alone is NOT enough: the vendor needs a channel to reply on.
+  const contactable = phoneUsable || emailUsable
+  const canSend = contactable && !errs.phone && !errs.email && !errs.guests
+
+  const blockedReason = canSend
+    ? undefined
+    : Object.values(shown).some(Boolean)
+      ? undefined
+      : !form.phone.trim() && !form.email.trim()
+        ? `Add your phone or email so ${vendorName} can reply.`
+        : "Check your phone number or email — the vendor replies there."
 
   const reset = () => { setForm({ name: "", phone: "", email: "", eventType: "", eventDate: "", guests: "", message: "", website: "" }); setSent(false); setError(null) }
 
@@ -123,7 +172,18 @@ export default function VendorInquiryDialog({
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="inq-phone">Phone / WhatsApp</Label>
-                  <Input id="inq-phone" value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="03xx-xxxxxxx" inputMode="tel" />
+                  <Input
+                    id="inq-phone"
+                    value={form.phone}
+                    onChange={(e) => { set("phone", e.target.value); touch("phone") }}
+                    onBlur={() => touch("phone")}
+                    placeholder="03xx-xxxxxxx"
+                    inputMode="tel"
+                    aria-invalid={shown.phone ? true : undefined}
+                    aria-describedby={shown.phone ? "inq-phone-error" : undefined}
+                    className={shown.phone ? "border-destructive focus-visible:ring-destructive" : undefined}
+                  />
+                  {shown.phone && <p id="inq-phone-error" role="alert" className="text-xs text-destructive">{shown.phone}</p>}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -142,11 +202,35 @@ export default function VendorInquiryDialog({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="inq-guests">Guests (approx)</Label>
-                  <Input id="inq-guests" type="number" value={form.guests} onChange={(e) => set("guests", e.target.value)} placeholder="350" inputMode="numeric" />
+                  <Input
+                    id="inq-guests"
+                    type="number"
+                    min={1}
+                    value={form.guests}
+                    onChange={(e) => { set("guests", e.target.value); touch("guests") }}
+                    onBlur={() => touch("guests")}
+                    placeholder="350"
+                    inputMode="numeric"
+                    aria-invalid={shown.guests ? true : undefined}
+                    aria-describedby={shown.guests ? "inq-guests-error" : undefined}
+                    className={shown.guests ? "border-destructive focus-visible:ring-destructive" : undefined}
+                  />
+                  {shown.guests && <p id="inq-guests-error" role="alert" className="text-xs text-destructive">{shown.guests}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="inq-email">Email (optional)</Label>
-                  <Input id="inq-email" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="you@email.com" />
+                  <Input
+                    id="inq-email"
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => { set("email", e.target.value); touch("email") }}
+                    onBlur={() => touch("email")}
+                    placeholder="you@email.com"
+                    aria-invalid={shown.email ? true : undefined}
+                    aria-describedby={shown.email ? "inq-email-error" : undefined}
+                    className={shown.email ? "border-destructive focus-visible:ring-destructive" : undefined}
+                  />
+                  {shown.email && <p id="inq-email-error" role="alert" className="text-xs text-destructive">{shown.email}</p>}
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -157,7 +241,12 @@ export default function VendorInquiryDialog({
               <Button className="w-full" disabled={!canSend || submitting} onClick={submit}>
                 {submitting ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Sending…</> : "Send inquiry"}
               </Button>
-              <p className="text-center text-[11px] text-muted-foreground">Add your name or phone so {vendorName} can reply.</p>
+              {/* A disabled button is not feedback — say what it's waiting for.
+                  The old copy said "name or phone" and never changed, even once
+                  the name was filled in. */}
+              <p className="text-center text-[11px] text-muted-foreground">
+                {blockedReason ?? `${vendorName} will reply on the phone or email you gave.`}
+              </p>
             </div>
           </>
         )}
