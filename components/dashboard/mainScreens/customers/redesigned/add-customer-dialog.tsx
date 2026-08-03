@@ -28,6 +28,15 @@ import { useUser } from "@/context/UserContext"
 import { getDashboardRole, isAdminLike } from "@/lib/dashboard-role"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import {
+  FieldError,
+  FormBlockedHint,
+  fieldAria,
+  ERROR_INPUT_CLS,
+  validateName,
+  validatePkPhone,
+  validateEmail,
+} from "@/components/dashboard/primitives/field-error"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
@@ -56,6 +65,10 @@ export function AddCustomerDialog({
   const [phoneno, setPhoneno] = React.useState("")
   const [address, setAddress] = React.useState("")
   const [email, setEmail] = React.useState("")
+  // Errors surface only after a field is touched, so a freshly-opened dialog
+  // doesn't greet the vendor with red text before they've typed anything.
+  const [touched, setTouched] = React.useState<Record<string, boolean>>({})
+  const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }))
 
   // Admin-only assignment state.
   const [vendorQuery, setVendorQuery] = React.useState("")
@@ -117,9 +130,30 @@ export function AddCustomerDialog({
   // Address is required for a vendor's own roster (existing rule). For an admin
   // assignment the required pair is a vendor + a phone, since that is what the
   // customer is deduped and routed on.
-  const canSave = isAdmin
-    ? Boolean(name.trim() && phoneno.trim() && vendor?.id)
-    : Boolean(name.trim() && phoneno.trim() && address.trim())
+  //
+  // Phone and email were only checked for .trim() — "abc" was an acceptable
+  // phone number. That matters here more than anywhere: customers are deduped
+  // and ROUTED on phone, so a junk number silently creates a duplicate customer
+  // who can never be contacted. And as everywhere else in this dashboard, the
+  // result was only ever a disabled button with no explanation.
+  const errs = {
+    name: validateName(name, { label: "Name", max: 120 }),
+    phoneno: validatePkPhone(phoneno),
+    address: !isAdmin && !address.trim() ? "Address is required." : undefined,
+    email: validateEmail(email),
+    vendor: isAdmin && !vendor?.id ? "Choose a vendor to assign this customer to." : undefined,
+  }
+  const shown = {
+    name: touched.name ? errs.name : undefined,
+    phoneno: touched.phoneno ? errs.phoneno : undefined,
+    address: touched.address ? errs.address : undefined,
+    email: touched.email ? errs.email : undefined,
+  }
+  const canSave = !errs.name && !errs.phoneno && !errs.address && !errs.email && !errs.vendor
+  const blockedHint =
+    !canSave && !Object.values(shown).some(Boolean)
+      ? errs.vendor ?? "Fill in the name, phone and address to save."
+      : undefined
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -134,12 +168,60 @@ export function AddCustomerDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-1">
-          <Field label="Name"><input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} autoFocus /></Field>
-          <Field label="Phone"><input className={inputCls} value={phoneno} onChange={(e) => setPhoneno(e.target.value)} placeholder="03xx-xxxxxxx" /></Field>
-          <Field label={isAdmin ? "City (optional)" : "Address"}>
-            <input className={inputCls} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="City / area" />
+          <Field label="Name">
+            <input
+              id="cust-name"
+              className={cn(inputCls, shown.name && ERROR_INPUT_CLS)}
+              value={name}
+              onChange={(e) => { setName(e.target.value); touch("name") }}
+              onBlur={() => touch("name")}
+              maxLength={120}
+              autoFocus
+              {...fieldAria("cust-name", shown.name)}
+            />
+            <FieldError id="cust-name" message={shown.name} />
           </Field>
-          <Field label="Email (optional)"><input className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
+          <Field label="Phone">
+            <input
+              id="cust-phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              className={cn(inputCls, shown.phoneno && ERROR_INPUT_CLS)}
+              value={phoneno}
+              onChange={(e) => { setPhoneno(e.target.value); touch("phoneno") }}
+              onBlur={() => touch("phoneno")}
+              placeholder="03xx-xxxxxxx"
+              {...fieldAria("cust-phone", shown.phoneno)}
+            />
+            <FieldError id="cust-phone" message={shown.phoneno} />
+          </Field>
+          <Field label={isAdmin ? "City (optional)" : "Address"}>
+            <input
+              id="cust-address"
+              className={cn(inputCls, shown.address && ERROR_INPUT_CLS)}
+              value={address}
+              onChange={(e) => { setAddress(e.target.value); touch("address") }}
+              onBlur={() => touch("address")}
+              placeholder="City / area"
+              {...fieldAria("cust-address", shown.address)}
+            />
+            <FieldError id="cust-address" message={shown.address} />
+          </Field>
+          <Field label="Email (optional)">
+            <input
+              id="cust-email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              className={cn(inputCls, shown.email && ERROR_INPUT_CLS)}
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); touch("email") }}
+              onBlur={() => touch("email")}
+              {...fieldAria("cust-email", shown.email)}
+            />
+            <FieldError id="cust-email" message={shown.email} />
+          </Field>
 
           {isAdmin && (
             <>
@@ -219,9 +301,13 @@ export function AddCustomerDialog({
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+          <FormBlockedHint message={blockedHint} />
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button disabled={!canSave || saveMut.isPending} onClick={() => saveMut.mutate()}>
+          <Button
+            disabled={!canSave || saveMut.isPending}
+            onClick={() => { setTouched({ name: true, phoneno: true, address: true, email: true }); saveMut.mutate() }}
+          >
             {saveMut.isPending
               ? <><Spinner size={14} className="mr-1.5" /> Saving…</>
               : <><Icon name="CheckCircle2" size={15} className="mr-1.5" /> Save customer</>}
