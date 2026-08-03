@@ -97,10 +97,22 @@ function EventChip({
         ? 'border-amber-300 bg-amber-50 text-amber-800'
         : 'border-neutral-300 bg-neutral-50 text-neutral-800';
 
+  // The chip must be able to wrap its OWN contents, not just wrap as a unit.
+  //
+  // This was a single non-wrapping row whose every span is whitespace-nowrap.
+  // Flex items don't shrink below their content (min-width:auto), so a longer
+  // chip — "Eid-ul-Fitr · Sat, Mar 21 · (1 Shawwal) · Block" — simply could not
+  // fit a 360px phone. Measured live at 360px: the chip ran 72px past the
+  // viewport and pushed the Block button 63px off-screen, with no scrollable
+  // ancestor to reach it. The one-tap blackout was therefore unusable on
+  // exactly the device this mobile calendar exists for.
+  //
+  // max-w-full + flex-wrap lets it reflow instead of overflowing; the pill
+  // radius is kept from sm up, where it still fits on one line.
   return (
     <li
       className={cn(
-        'flex items-center gap-2 rounded-full border px-2 py-1 text-[11px]',
+        'flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl border px-2 py-1 text-[11px] sm:rounded-full',
         severityTone,
       )}
     >
