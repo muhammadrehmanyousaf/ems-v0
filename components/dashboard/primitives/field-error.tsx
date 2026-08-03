@@ -289,6 +289,53 @@ export function validateTransactionRef(
   return undefined
 }
 
+/**
+ * Cheque number — digits only, 4–20.
+ *
+ * Pakistani cheque leaf numbers are typically 6–8 digits, but the length varies
+ * by bank and by cheque book series, so this bounds rather than prescribes.
+ */
+export function validateChequeNumber(
+  value: string,
+  { label = "Cheque number", required = true }: { label?: string; required?: boolean } = {},
+): string | undefined {
+  const v = (value ?? "").trim()
+  if (!v) return required ? `${label} is required.` : undefined
+  if (!/^\d+$/.test(v)) return `${label} should contain digits only.`
+  if (v.length < 4) return `${label} looks too short — cheque numbers are at least 4 digits.`
+  if (v.length > 20) return `${label} looks too long.`
+  return undefined
+}
+
+/**
+ * Cheque date — deliberately NOT the same rule as a receipt date.
+ *
+ * A PDC is a POST-dated cheque: a future date is the whole point, so
+ * validateNotFutureDate would be wrong here. Two real bounds apply instead:
+ *
+ *  - A cheque in Pakistan goes STALE six months after its date; banks refuse it
+ *    after that. A vendor holding a cheque already older than six months is
+ *    holding paper they cannot bank, and should be told now rather than at the
+ *    counter. Flagged, since it may be entered deliberately for the record.
+ *  - A date years out is a mistyped year, not a real arrangement.
+ */
+export function validateChequeDate(
+  value: string,
+  { label = "Cheque date", maxMonthsAhead = 24 }: { label?: string; maxMonthsAhead?: number } = {},
+): string | undefined {
+  const raw = (value ?? "").trim()
+  if (!raw) return `${label} is required.`
+  const d = new Date(raw)
+  if (Number.isNaN(d.valueOf())) return `${label} isn't a valid date.`
+  const ceiling = new Date()
+  ceiling.setMonth(ceiling.getMonth() + maxMonthsAhead)
+  if (d > ceiling) return `${label} is more than ${maxMonthsAhead} months away — please check the year.`
+  const stale = new Date()
+  stale.setMonth(stale.getMonth() - 6)
+  if (d < stale) return `This cheque is over 6 months old, so a bank will refuse it as stale.`
+  return undefined
+}
+
 /** Optional free text with a ceiling, e.g. a description. */
 export function validateOptionalText(
   value: string,

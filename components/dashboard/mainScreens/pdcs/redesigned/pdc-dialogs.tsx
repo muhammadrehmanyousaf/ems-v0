@@ -17,7 +17,18 @@ import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
+import {
+  FormBlockedHint,
+  FieldError,
+  fieldAria,
+  ERROR_INPUT_CLS,
+  validatePkr,
+  validateName,
+  validateChequeNumber,
+  validateChequeDate,
+  validateNotFutureDate,
+  validateOptionalText,
+} from "@/components/dashboard/primitives/field-error"
 
 const today = () => new Date().toISOString().slice(0, 10)
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
@@ -43,6 +54,10 @@ export function PdcFormDialog({ open, onOpenChange, pdc, onSaved }: { open: bool
     if (open) { const k = pdc?.id ?? "new"; if (loaded.current !== k) { setForm(blank(pdc)); loaded.current = k } } else { loaded.current = null }
   }, [open, pdc])
   const set = (k: keyof FormState, v: string) => setForm((f) => ({ ...f, [k]: v }))
+  // Errors appear only after a field is touched, so a freshly-opened dialog
+  // doesn't greet the vendor with red text before they've typed anything.
+  const [touched, setTouched] = React.useState<Record<string, boolean>>({})
+  const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }))
 
   // Bookings to link the cheque to a customer (backend requires a customer/booking on create).
   const { data: bookings } = useQuery<BookingOption[]>({
@@ -64,10 +79,32 @@ export function PdcFormDialog({ open, onOpenChange, pdc, onSaved }: { open: bool
     onSuccess: () => { showSuccessToast(isEdit ? "Cheque updated" : "Cheque logged"); onSaved?.(); onOpenChange(false) },
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save cheque"),
   })
-  const canSave = form.chequeNumber.trim() && form.bankName.trim() && Number(form.amount) > 0 && form.chequeDate && (isEdit || !!form.bookingId)
+  // NOTE: chequeDate deliberately does NOT use validateNotFutureDate. A PDC is a
+  // POST-dated cheque, so a future date is the entire point. What matters here
+  // is the Pakistani staleness rule (a bank refuses a cheque over six months
+  // old) and a sanity ceiling to catch a mistyped year.
+  const errs = {
+    chequeNumber: validateChequeNumber(form.chequeNumber),
+    bankName: validateName(form.bankName, { label: "Bank", min: 2, max: 100 }),
+    amount: validatePkr(form.amount, { label: "Amount" }),
+    chequeDate: validateChequeDate(form.chequeDate),
+    bookingId: !isEdit && !form.bookingId ? "Choose the booking this cheque is for." : undefined,
+    notes: validateOptionalText(form.notes, { label: "Notes", max: 1000 }),
+  }
+  const shown = {
+    chequeNumber: touched.chequeNumber ? errs.chequeNumber : undefined,
+    bankName: touched.bankName ? errs.bankName : undefined,
+    amount: touched.amount ? errs.amount : undefined,
+    chequeDate: touched.chequeDate ? errs.chequeDate : undefined,
+    notes: touched.notes ? errs.notes : undefined,
+  }
+  const canSave = !errs.chequeNumber && !errs.bankName && !errs.amount && !errs.chequeDate && !errs.bookingId && !errs.notes
 
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
-  const blockedReason = canSave ? undefined : "Add a cheque number, a bank name, an amount above 0 and a cheque date to save."
+  const blockedReason =
+    !canSave && !Object.values(shown).some(Boolean)
+      ? errs.bookingId ?? "Add a cheque number, a bank name, an amount above 0 and a cheque date to save."
+      : undefined
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -75,10 +112,31 @@ export function PdcFormDialog({ open, onOpenChange, pdc, onSaved }: { open: bool
         <DialogHeader><DialogTitle>{isEdit ? "Edit cheque" : "Log a cheque"}</DialogTitle><DialogDescription>A post-dated cheque in your ledger.</DialogDescription></DialogHeader>
         <div className="space-y-4 py-1">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Cheque number"><input className={inputCls} inputMode="numeric" value={form.chequeNumber} onChange={(e) => set("chequeNumber", e.target.value.replace(/\D/g, ""))} placeholder="4–20 digits" autoFocus /></Field>
-            <Field label="Bank"><input className={inputCls} value={form.bankName} onChange={(e) => set("bankName", e.target.value)} placeholder="e.g. Meezan, HBL" /></Field>
-            <Field label="Amount (Rs)"><input type="number" className={cn(inputCls, "tabular-nums")} value={form.amount} onChange={(e) => set("amount", e.target.value)} /></Field>
-            <Field label="Cheque date"><input type="date" className={inputCls} value={form.chequeDate} onChange={(e) => set("chequeDate", e.target.value)} /></Field>
+            <Field label="Cheque number">
+              <input id="pdc-num" className={cn(inputCls, shown.chequeNumber && ERROR_INPUT_CLS)} inputMode="numeric" maxLength={20}
+                value={form.chequeNumber} onChange={(e) => { set("chequeNumber", e.target.value.replace(/\D/g, "")); touch("chequeNumber") }}
+                onBlur={() => touch("chequeNumber")} placeholder="4–20 digits" autoFocus {...fieldAria("pdc-num", shown.chequeNumber)} />
+              <FieldError id="pdc-num" message={shown.chequeNumber} />
+            </Field>
+            <Field label="Bank">
+              <input id="pdc-bank" className={cn(inputCls, shown.bankName && ERROR_INPUT_CLS)} maxLength={100}
+                value={form.bankName} onChange={(e) => { set("bankName", e.target.value); touch("bankName") }}
+                onBlur={() => touch("bankName")} placeholder="e.g. Meezan, HBL" {...fieldAria("pdc-bank", shown.bankName)} />
+              <FieldError id="pdc-bank" message={shown.bankName} />
+            </Field>
+            <Field label="Amount (Rs)">
+              <input id="pdc-amt" type="number" min={0} step="0.01" inputMode="decimal"
+                className={cn(inputCls, "tabular-nums", shown.amount && ERROR_INPUT_CLS)}
+                value={form.amount} onChange={(e) => { set("amount", e.target.value); touch("amount") }}
+                onBlur={() => touch("amount")} {...fieldAria("pdc-amt", shown.amount)} />
+              <FieldError id="pdc-amt" message={shown.amount} />
+            </Field>
+            <Field label="Cheque date">
+              <input id="pdc-date" type="date" className={cn(inputCls, shown.chequeDate && ERROR_INPUT_CLS)}
+                value={form.chequeDate} onChange={(e) => { set("chequeDate", e.target.value); touch("chequeDate") }}
+                onBlur={() => touch("chequeDate")} {...fieldAria("pdc-date", shown.chequeDate)} />
+              <FieldError id="pdc-date" message={shown.chequeDate} />
+            </Field>
             <Field label="Branch code"><input className={inputCls} value={form.branchCode} onChange={(e) => set("branchCode", e.target.value)} /></Field>
           </div>
           {!isEdit && (
@@ -123,7 +181,8 @@ export function PdcTransitionDialog({ open, onOpenChange, pdc, onSaved }: { open
     onSuccess: () => { showSuccessToast(`Cheque marked ${to}`); onSaved?.(); onOpenChange(false) },
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't update cheque"),
   })
-  const canSave = !!pdc && options.length > 0 && (to !== "bounced" || bounceReason.trim().length > 0)
+  const depositErr = to === "deposited" ? validateNotFutureDate(depositDate, { label: "Deposit date" }) : undefined
+  const canSave = !!pdc && options.length > 0 && !depositErr && (to !== "bounced" || bounceReason.trim().length > 0)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -139,7 +198,16 @@ export function PdcTransitionDialog({ open, onOpenChange, pdc, onSaved }: { open
                   {options.map((o) => <option key={o} value={o}>{o[0].toUpperCase() + o.slice(1)}</option>)}
                 </select>
               </Field>
-              {to === "deposited" && <Field label="Deposit date"><input type="date" className={inputCls} value={depositDate} onChange={(e) => setDepositDate(e.target.value)} /></Field>}
+              {to === "deposited" && (
+                <Field label="Deposit date">
+                  {/* A cheque cannot have been banked tomorrow — unlike the
+                      cheque date above, this one IS bounded to today. */}
+                  <input id="pdc-dep" type="date" max={new Date().toISOString().slice(0, 10)}
+                    className={cn(inputCls, depositErr && ERROR_INPUT_CLS)} value={depositDate}
+                    onChange={(e) => setDepositDate(e.target.value)} {...fieldAria("pdc-dep", depositErr)} />
+                  <FieldError id="pdc-dep" message={depositErr} />
+                </Field>
+              )}
               {to === "bounced" && <Field label="Bounce reason"><input className={inputCls} value={bounceReason} onChange={(e) => setBounceReason(e.target.value)} placeholder="e.g. Insufficient funds" /></Field>}
             </>
           )}
