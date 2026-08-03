@@ -152,7 +152,27 @@ export function PwaInstallPrompt() {
     <div
       role="dialog"
       aria-live="polite"
-      className="fixed inset-x-2 bottom-2 z-50 sm:left-auto sm:right-4 sm:bottom-4 sm:w-[360px] rounded-xl border border-bridal-beige bg-white shadow-lg p-3 flex items-start gap-3"
+      /*
+       * Sits ABOVE any fixed bottom action bar — never on top of it.
+       *
+       * This prompt is `fixed bottom` at z-50; the settings save bar is `fixed
+       * inset-x-0 bottom-0` at z-20. They occupied the same space and the prompt
+       * won, so it physically covered "Save changes". Measured on production at
+       * 1440px: save button 1174–1328 × 852–888, prompt 1049–1409 × 736–884, and
+       * document.elementFromPoint at the button's centre returned the PROMPT.
+       * Playwright could not click through it. Reproduced identically at 360px.
+       *
+       * A vendor who saw this nag could not save their settings on ANY screen
+       * size — an install suggestion silently blocking the primary action.
+       *
+       * `--ww-bottom-bar` is published by whichever bottom bar is mounted (see
+       * business-settings-hub-view). It defaults to 0px, so on pages with no bar
+       * the prompt keeps its original resting position.
+       */
+      style={{
+        bottom: "calc(var(--ww-bottom-bar, 0px) + env(safe-area-inset-bottom, 0px) + 0.5rem)",
+      }}
+      className="fixed inset-x-2 z-50 sm:left-auto sm:right-4 sm:w-[360px] rounded-xl border border-bridal-beige bg-white shadow-lg p-3 flex items-start gap-3"
     >
       <div className="h-9 w-9 rounded-full bg-bridal-gold/15 text-bridal-gold-dark flex items-center justify-center shrink-0">
         <Smartphone className="h-4 w-4" />

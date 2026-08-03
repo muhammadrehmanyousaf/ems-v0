@@ -156,6 +156,23 @@ export function BusinessSettingsHubView() {
 
   const set = (k: string, v: any) => { setForm((f) => ({ ...f, [k]: v })); setDirty(true) }
 
+  // Publish this bar's height as --ww-bottom-bar so nothing else can sit on top
+  // of it. The PWA install prompt is `fixed bottom` at z-50 while this bar is
+  // z-20, so it physically covered "Save changes" — verified on production with
+  // elementFromPoint, at both 360px and 1440px. Anything anchored to the bottom
+  // now offsets by this value instead of overlapping the primary action.
+  const saveBarRef = React.useRef<HTMLDivElement | null>(null)
+  React.useLayoutEffect(() => {
+    const el = saveBarRef.current
+    const root = document.documentElement
+    if (!el) { root.style.removeProperty("--ww-bottom-bar"); return }
+    const publish = () => root.style.setProperty("--ww-bottom-bar", `${Math.round(el.getBoundingClientRect().height)}px`)
+    publish()
+    const ro = new ResizeObserver(publish)
+    ro.observe(el)
+    return () => { ro.disconnect(); root.style.removeProperty("--ww-bottom-bar") }
+  })
+
   const saveMut = useMutation({
     mutationFn: () =>
       BusinessesAPI.update(biz!.id, {
@@ -173,7 +190,21 @@ export function BusinessSettingsHubView() {
         ...Object.fromEntries(BOOLS.map((b) => [b.key, Boolean(form[b.key])])),
       } as Partial<ApiBusiness>),
     onSuccess: () => { showSuccessToast("Business profile saved"); setDirty(false); qc.invalidateQueries({ queryKey: ["biz-settings-hub"] }) },
-    onError: (e: any) => toast.error(e?.message || "Save failed"),
+    // Surface the SERVER's reason, not axios's generic wrapper.
+    //
+    // This read `e?.message`, which for an axios error is the useless string
+    // "Request failed with status code 400". The actual reason lives on
+    // e.response.data.message. Live on production this save was rejected with
+    // "Minimum price must be a positive number" and the vendor was never shown
+    // it — they saw a Save button that did nothing, which is exactly the
+    // "not a single patch is going" complaint. A rejected save must always say
+    // why, and the toast is held longer because a validation message is
+    // something the vendor has to read and act on.
+    onError: (e: any) =>
+      toast.error(
+        e?.response?.data?.message || e?.message || "Couldn't save your changes.",
+        { duration: 8000 },
+      ),
   })
 
   if (isLoading) return <div className="p-4 md:p-6"><DetailSkeleton /></div>
@@ -342,7 +373,10 @@ export function BusinessSettingsHubView() {
 
       {/* Sticky save bar — only meaningful on wired tabs */}
       {tab.wired && (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 backdrop-blur md:left-[var(--sidebar-width,0)]">
+        <div
+          ref={saveBarRef}
+          className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 backdrop-blur md:left-[var(--sidebar-width,0)]"
+        >
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 md:px-6">
             <div className="text-sm text-muted-foreground">{dirty ? <span className="text-amber-600 dark:text-amber-400">Unsaved changes</span> : "All changes saved"}</div>
             <Button disabled={!dirty || saveMut.isPending} onClick={() => saveMut.mutate()}>
