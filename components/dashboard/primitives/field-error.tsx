@@ -177,6 +177,60 @@ export function validateEmail(
   return undefined
 }
 
+/**
+ * Pakistani IBAN, checked properly — length, shape AND the ISO 13616 mod-97
+ * checksum.
+ *
+ * This field had no validation whatsoever (just `.trim()`), and it is the field
+ * the vendor's MONEY is paid into. A mistyped IBAN either bounces or, worse,
+ * routes a payout to a real stranger's account. The checksum exists precisely to
+ * catch single-character typos and transposed digits, which is the realistic
+ * failure when someone copies 24 characters off a chequebook — so validating
+ * length alone would miss the actual risk.
+ *
+ * PK IBAN = "PK" + 2 check digits + 4-letter bank code + 16 alphanumeric = 24.
+ * Spaces are stripped: people type them in groups of four, as printed.
+ */
+export function validatePkIban(
+  value: string,
+  { label = "IBAN", required = false }: { label?: string; required?: boolean } = {},
+): string | undefined {
+  const raw = (value ?? "").replace(/\s+/g, "").toUpperCase()
+  if (!raw) return required ? `${label} is required.` : undefined
+  if (!raw.startsWith("PK")) return "A Pakistani IBAN starts with PK."
+  if (raw.length !== 24) return `A Pakistani IBAN is 24 characters — this one has ${raw.length}.`
+  if (!/^PK\d{2}[A-Z]{4}[A-Z0-9]{16}$/.test(raw))
+    return "Check the IBAN — it should read PK, 2 digits, a 4-letter bank code, then 16 characters."
+
+  // ISO 13616 mod-97: move the first 4 chars to the end, map letters to numbers
+  // (A=10..Z=35), then the whole value mod 97 must equal 1.
+  const rearranged = raw.slice(4) + raw.slice(0, 4)
+  const numeric = rearranged.replace(/[A-Z]/g, (c) => String(c.charCodeAt(0) - 55))
+  // Chunked remainder — the number is far past Number.MAX_SAFE_INTEGER.
+  let remainder = 0
+  for (const digit of numeric) remainder = (remainder * 10 + Number(digit)) % 97
+  if (remainder !== 1) return "That IBAN doesn't look right — please check it digit by digit."
+  return undefined
+}
+
+/**
+ * Bank account number. Pakistani account numbers vary by bank (roughly 8–24
+ * digits), so this checks shape rather than pretending to know each bank's
+ * format: digits only once separators are stripped, and a sane length.
+ */
+export function validateAccountNumber(
+  value: string,
+  { label = "Account number", required = false }: { label?: string; required?: boolean } = {},
+): string | undefined {
+  const raw = (value ?? "").trim()
+  if (!raw) return required ? `${label} is required.` : undefined
+  const d = raw.replace(/[\s-]/g, "")
+  if (!/^\d+$/.test(d)) return "An account number should contain digits only."
+  if (d.length < 8) return `That account number looks too short — ${d.length} digits.`
+  if (d.length > 24) return `That account number looks too long — ${d.length} digits.`
+  return undefined
+}
+
 /** Optional free text with a ceiling, e.g. a description. */
 export function validateOptionalText(
   value: string,

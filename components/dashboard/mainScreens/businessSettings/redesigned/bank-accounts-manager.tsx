@@ -19,7 +19,15 @@ import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useBeforeUnloadGuard } from "@/lib/hooks/useBeforeUnloadGuard"
-import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
+import {
+  FormBlockedHint,
+  FieldError,
+  fieldAria,
+  ERROR_INPUT_CLS,
+  validateName,
+  validatePkIban,
+  validateAccountNumber,
+} from "@/components/dashboard/primitives/field-error"
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
@@ -30,6 +38,10 @@ export function BankAccountsManager() {
   const { data: accounts, isLoading } = useQuery<BankDetail[]>({ queryKey: ["bank-accounts"], queryFn: () => BankDetailsAPI.listMine() })
   const [adding, setAdding] = React.useState(false)
   const [editingId, setEditingId] = React.useState<number | null>(null)
+  // Errors surface only after a field is touched, so opening the form doesn't
+  // immediately flag an empty IBAN the vendor hasn't reached yet.
+  const [touched, setTouched] = React.useState<Record<string, boolean>>({})
+  const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }))
   const [form, setForm] = React.useState<UpsertBankDetailInput>(EMPTY)
   const set = (k: keyof UpsertBankDetailInput, v: any) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -78,11 +90,37 @@ export function BankAccountsManager() {
     onError: (e: any) => toast.error(e?.message || "Couldn't remove account"),
   })
 
-  const canSave = (form.bankName || "").trim() && (form.accountHolderName || "").trim() && (!!editingId || (form.accountNumber || "").trim())
-
+  // This is the form the vendor's MONEY is paid into, and it had no format
+  // checking at all — `.trim()` on the account number, nothing whatsoever on the
+  // IBAN. A mistyped IBAN either bounces or routes a payout to a real stranger's
+  // account, and the realistic failure is a single wrong character or two
+  // transposed digits while copying 24 characters off a chequebook. Length alone
+  // would miss exactly that, so validatePkIban runs the ISO 13616 mod-97
+  // checksum, which is what the check digits exist for.
+  //
+  // On EDIT the account number is intentionally write-only (blank keeps the
+  // stored one), so it is only validated when the vendor actually types one.
+  const errs = {
+    bankName: validateName(form.bankName ?? "", { label: "Bank name", min: 2, max: 100 }),
+    accountHolderName: validateName(form.accountHolderName ?? "", { label: "Account holder", min: 2, max: 120 }),
+    accountNumber: validateAccountNumber(form.accountNumber ?? "", {
+      required: !editingId,
+    }),
+    iban: validatePkIban(form.iban ?? ""),
+  }
+  const shown = {
+    bankName: touched.bankName ? errs.bankName : undefined,
+    accountHolderName: touched.accountHolderName ? errs.accountHolderName : undefined,
+    accountNumber: touched.accountNumber ? errs.accountNumber : undefined,
+    iban: touched.iban ? errs.iban : undefined,
+  }
+  const canSave = !errs.bankName && !errs.accountHolderName && !errs.accountNumber && !errs.iban
 
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
-  const blockedReason = canSave ? undefined : "Add a bank name, an account holder name and an account number to save."
+  const blockedReason =
+    !canSave && !Object.values(shown).some(Boolean)
+      ? "Add a bank name, an account holder name and an account number to save."
+      : undefined
 
   return (
     <div className="rounded-xl border border-border bg-card shadow-sm">
@@ -98,10 +136,26 @@ export function BankAccountsManager() {
           <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
             <div className="text-xs font-semibold text-primary">{editingId ? "Edit account" : "New account"}</div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5"><label className={labelCls}>Bank name</label><input className={inputCls} value={form.bankName ?? ""} onChange={(e) => set("bankName", e.target.value)} placeholder="e.g. Meezan Bank, HBL, UBL" /></div>
-              <div className="space-y-1.5"><label className={labelCls}>Account holder</label><input className={inputCls} value={form.accountHolderName ?? ""} onChange={(e) => set("accountHolderName", e.target.value)} placeholder="As on the account" /></div>
-              <div className="space-y-1.5"><label className={labelCls}>Account number</label><input className={inputCls} value={form.accountNumber ?? ""} onChange={(e) => set("accountNumber", e.target.value)} placeholder={editingId ? "Leave blank to keep current" : "Account / 16-digit"} /></div>
-              <div className="space-y-1.5"><label className={labelCls}>IBAN</label><input className={inputCls} value={form.iban ?? ""} onChange={(e) => set("iban", e.target.value)} placeholder="PK00XXXX0000000000000000" /></div>
+              <div className="space-y-1.5">
+                <label className={labelCls} htmlFor="bank-name">Bank name</label>
+                <input id="bank-name" className={cn(inputCls, shown.bankName && ERROR_INPUT_CLS)} value={form.bankName ?? ""} onChange={(e) => { set("bankName", e.target.value); touch("bankName") }} onBlur={() => touch("bankName")} maxLength={100} placeholder="e.g. Meezan Bank, HBL, UBL" {...fieldAria("bank-name", shown.bankName)} />
+                <FieldError id="bank-name" message={shown.bankName} />
+              </div>
+              <div className="space-y-1.5">
+                <label className={labelCls} htmlFor="bank-holder">Account holder</label>
+                <input id="bank-holder" className={cn(inputCls, shown.accountHolderName && ERROR_INPUT_CLS)} value={form.accountHolderName ?? ""} onChange={(e) => { set("accountHolderName", e.target.value); touch("accountHolderName") }} onBlur={() => touch("accountHolderName")} maxLength={120} placeholder="As on the account" {...fieldAria("bank-holder", shown.accountHolderName)} />
+                <FieldError id="bank-holder" message={shown.accountHolderName} />
+              </div>
+              <div className="space-y-1.5">
+                <label className={labelCls} htmlFor="bank-acct">Account number</label>
+                <input id="bank-acct" inputMode="numeric" autoComplete="off" className={cn(inputCls, shown.accountNumber && ERROR_INPUT_CLS)} value={form.accountNumber ?? ""} onChange={(e) => { set("accountNumber", e.target.value); touch("accountNumber") }} onBlur={() => touch("accountNumber")} maxLength={26} placeholder={editingId ? "Leave blank to keep current" : "Account / 16-digit"} {...fieldAria("bank-acct", shown.accountNumber)} />
+                <FieldError id="bank-acct" message={shown.accountNumber} />
+              </div>
+              <div className="space-y-1.5">
+                <label className={labelCls} htmlFor="bank-iban">IBAN</label>
+                <input id="bank-iban" autoComplete="off" autoCapitalize="characters" spellCheck={false} className={cn(inputCls, shown.iban && ERROR_INPUT_CLS, "uppercase")} value={form.iban ?? ""} onChange={(e) => { set("iban", e.target.value.toUpperCase()); touch("iban") }} onBlur={() => touch("iban")} maxLength={29} placeholder="PK00XXXX0000000000000000" {...fieldAria("bank-iban", shown.iban)} />
+                <FieldError id="bank-iban" message={shown.iban} />
+              </div>
               <div className="space-y-1.5"><label className={labelCls}>Branch code</label><input className={inputCls} value={form.branchCode ?? ""} onChange={(e) => set("branchCode", e.target.value)} placeholder="Optional" /></div>
               <label className="flex items-center gap-2 self-end pb-1.5 text-sm"><input type="checkbox" className="h-4 w-4" checked={Boolean(form.isActive)} onChange={(e) => set("isActive", e.target.checked)} /> Make this the default payout account</label>
             </div>
