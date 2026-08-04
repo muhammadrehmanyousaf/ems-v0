@@ -55,11 +55,19 @@ const STATUS = {
   "/dashboard/settings": {
     mark: "x",
     note:
-      "Deep: Profile · Capacity & pricing · Packages · Menus · Bank details · Availability tab. " +
-      "Render-only: Amenities & services · Listing content · Type-specific · Images · Team members. " +
-      "FOUND: no client validation on Capacity & pricing (fixed, PR #183); " +
-      "phantom Package Description field (fixed, backend PR #52); " +
-      "blocked-dates ignored businessId (fixed, backend PR #52).",
+      "ALL 11 TABS COVERED. Deep: Profile · Capacity & pricing · Amenities & services · " +
+      "Listing content · Type-specific · Packages · Menus · Bank details · Availability. " +
+      "Images = render only (no file uploaded). Team members = handoff card to its own screen, by design. " +
+      "FOUND + FIXED: no client validation on Capacity & pricing; no min on type-specific number " +
+      "fields; Listing content error toast showed the axios wrapper instead of the server reason. " +
+      "FOUND + FIXED backend: phantom Package Description column; blocked-dates ignored businessId.",
+  },
+  "/dashboard/receipts": {
+    mark: "~",
+    note:
+      "Record-receipt dialog validation deep-tested: negative amount and future date both blocked " +
+      "with aria-invalid + disabled Save; PK methods present (cash/jazzcash/easypaisa/raast/ibft/" +
+      "bank_transfer). NOT tested: actual create/edit/delete, Export, list filters, row actions.",
   },
   "/dashboard/bookings": {
     mark: "~",
