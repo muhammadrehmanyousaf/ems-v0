@@ -433,7 +433,10 @@ function SuppliersDirectoryTab({ businessId }: { businessId?: number }) {
   const removeMut = useMutation({
     mutationFn: (id: number) => SupplierAPI.remove(id),
     onSuccess: () => { showSuccessToast("Supplier removed"); setDeleting(null); invalidate() },
-    onError: (e: any) => toast.error(e?.message || "Couldn't remove supplier"),
+    onError: (e: any) => toast.error(
+        e?.response?.data?.message || e?.message || "Couldn't remove supplier",
+        { duration: 8000 },
+      ),
   })
 
   const all = data?.suppliers ?? []

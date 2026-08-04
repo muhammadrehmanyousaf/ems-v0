@@ -63,7 +63,10 @@ export function AutomationRedesignedView() {
   const toggleMut = useMutation({
     mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) => AutomationRulesAPI.toggle(id, enabled),
     onSuccess: () => { invalidate() },
-    onError: (e: any) => toast.error(e?.message || "Couldn't toggle rule"),
+    onError: (e: any) => toast.error(
+        e?.response?.data?.message || e?.message || "Couldn't toggle rule",
+        { duration: 8000 },
+      ),
   })
   const removeMut = useMutation({
     mutationFn: (id: number) => AutomationRulesAPI.remove(id),

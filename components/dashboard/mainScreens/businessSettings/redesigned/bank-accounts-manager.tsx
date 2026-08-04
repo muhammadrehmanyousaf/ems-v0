@@ -82,12 +82,18 @@ export function BankAccountsManager() {
   const activeMut = useMutation({
     mutationFn: (id: number) => BankDetailsAPI.setActive(id),
     onSuccess: () => { showSuccessToast("Default payout account updated"); invalidate() },
-    onError: (e: any) => toast.error(e?.message || "Couldn't set active"),
+    onError: (e: any) => toast.error(
+        e?.response?.data?.message || e?.message || "Couldn't set active",
+        { duration: 8000 },
+      ),
   })
   const removeMut = useMutation({
     mutationFn: (id: number) => BankDetailsAPI.remove(id),
     onSuccess: () => { showSuccessToast("Bank account removed"); invalidate() },
-    onError: (e: any) => toast.error(e?.message || "Couldn't remove account"),
+    onError: (e: any) => toast.error(
+        e?.response?.data?.message || e?.message || "Couldn't remove account",
+        { duration: 8000 },
+      ),
   })
 
   // This is the form the vendor's MONEY is paid into, and it had no format

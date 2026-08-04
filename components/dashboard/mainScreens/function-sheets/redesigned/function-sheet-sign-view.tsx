@@ -66,7 +66,10 @@ export function FunctionSheetSignView() {
       setShareLink(`${origin}/sign/${d.token}`)
       showSuccessToast("Signing link generated")
     },
-    onError: (e: any) => toast.error(e?.message || "Couldn't generate link"),
+    onError: (e: any) => toast.error(
+        e?.response?.data?.message || e?.message || "Couldn't generate link",
+        { duration: 8000 },
+      ),
   })
 
   const advanceMut = useMutation({

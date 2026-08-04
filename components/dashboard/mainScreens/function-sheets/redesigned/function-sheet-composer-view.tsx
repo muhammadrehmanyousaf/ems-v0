@@ -134,13 +134,19 @@ export function FunctionSheetComposerView() {
         notes: form.notes || null,
       } as any),
     onSuccess: () => { showSuccessToast("Function sheet saved"); setDirty(false); qc.invalidateQueries({ queryKey: ["fs-composer"] }); qc.invalidateQueries({ queryKey: ["fs-detail-redesigned"] }) },
-    onError: (e: any) => toast.error(e?.message || "Save failed"),
+    onError: (e: any) => toast.error(
+        e?.response?.data?.message || e?.message || "Save failed",
+        { duration: 8000 },
+      ),
   })
 
   const transitionMut = useMutation({
     mutationFn: (to: FunctionSheetState) => FunctionSheetAPI.transition(sheet!.id, { to }),
     onSuccess: (_d, to) => { showSuccessToast(`Moved to ${STATE_LABELS[to]}`); qc.invalidateQueries({ queryKey: ["fs-composer"] }) },
-    onError: (e: any) => toast.error(e?.message || "Couldn't change status"),
+    onError: (e: any) => toast.error(
+        e?.response?.data?.message || e?.message || "Couldn't change status",
+        { duration: 8000 },
+      ),
   })
 
   if (isLoading) return <div className="p-4 md:p-6"><DetailSkeleton /></div>

@@ -49,7 +49,10 @@ export function AvailabilityManager({ businessId }: { businessId?: number | null
   const unblockMut = useMutation({
     mutationFn: (d: string) => BlockedDatesAPI.unblock(d, businessId),
     onSuccess: () => { showSuccessToast("Date freed"); invalidate() },
-    onError: (e: any) => toast.error(e?.message || "Couldn't free date"),
+    onError: (e: any) => toast.error(
+        e?.response?.data?.message || e?.message || "Couldn't free date",
+        { duration: 8000 },
+      ),
   })
 
   const sorted = React.useMemo(() => [...(blocked ?? [])].sort((a, b) => a.blockedDate.localeCompare(b.blockedDate)), [blocked])

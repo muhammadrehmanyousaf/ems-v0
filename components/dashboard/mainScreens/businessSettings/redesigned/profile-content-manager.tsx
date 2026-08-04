@@ -157,7 +157,20 @@ export function ProfileContentManager({ business, onSaved }: { business: ApiBusi
       return BusinessesAPI.update(b.id, payload)
     },
     onSuccess: () => { toast.success("Listing content saved"); onSaved?.() },
-    onError: (e: any) => toast.error(e?.message || "Save failed"),
+    // Surface the SERVER's reason, not axios's wrapper.
+    //
+    // This read `e?.message`, which for an axios error is the useless string
+    // "Request failed with status code 400". Verified live: saving this tab
+    // with weddingsCompleted = -10 shows the vendor exactly that, while the
+    // API had actually replied
+    //   "WeddingsCompleted must be a whole number between 0 and 200000"
+    // — a message that says precisely what to fix. Same defect the main save
+    // bar had; this manager was missed at the time.
+    onError: (e: any) =>
+      toast.error(
+        e?.response?.data?.message || e?.message || "Couldn't save your listing content.",
+        { duration: 8000 },
+      ),
   })
 
   return (
