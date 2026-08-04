@@ -10,9 +10,9 @@ Status legend: `[ ]` untested · `[~]` render/health only · `[x]` deep-tested
 
 | | Modules | % |
 |---|---:|---:|
-| `[x]` deep-tested | 1 | 2% |
-| `[~]` render/health only | 5 | 11% |
-| `[ ]` **not touched** | **38** | **86%** |
+| `[x]` deep-tested | 2 | 5% |
+| `[~]` render/health only | 9 | 20% |
+| `[ ]` **not touched** | **33** | **75%** |
 | **Total** | **44** | |
 
 **2006 enumerated elements** across 44 modules.
@@ -410,7 +410,8 @@ Status legend: `[ ]` untested · `[~]` render/health only · `[x]` deep-tested
 
 - **Route:** `/dashboard/payments`
 - **Page:** `app\(dashboard)\dashboard\payments\page.tsx` (14 component files)
-- **Status:** `[ ]`
+- **Status:** `[~]`
+- **Coverage:** Renders, 0 covered controls, no overflow. 'Record payment' opens a dialog TITLED 'Record a receipt' (shared ReceiptFormDialog) — label mismatch, same validated form. NOT tested: create/edit/delete (deliberate — will not write fake money rows to a live ledger).
 
 **Tabs / views** (5)
 
@@ -514,7 +515,8 @@ Status legend: `[ ]` untested · `[~]` render/health only · `[x]` deep-tested
 
 - **Route:** `/dashboard/pdcs`
 - **Page:** `app\(dashboard)\dashboard\pdcs\page.tsx` (16 component files)
-- **Status:** `[ ]`
+- **Status:** `[~]`
+- **Coverage:** Log-a-cheque validation deep-tested and GOOD: rejects non-numeric cheque number, negative amount, and enforces the Pakistani staleness rule — 'This cheque is over 6 months old, so a bank will refuse it as stale.' 11 cheques render. NOT tested: create, status transitions (held→deposited→cleared/bounced), Export.
 
 **Tabs / views** (7)
 
@@ -563,7 +565,8 @@ Status legend: `[ ]` untested · `[~]` render/health only · `[x]` deep-tested
 
 - **Route:** `/dashboard/expenses`
 - **Page:** `app\(dashboard)\dashboard\expenses\page.tsx` (23 component files)
-- **Status:** `[ ]`
+- **Status:** `[~]`
+- **Coverage:** Add-expense dialog validation deep-tested: negative amount and future date both blocked with aria-invalid + disabled Save; amount min=0, date max=today. 169 rows render. NOT tested: create/edit/delete, Scan (receipt OCR), category filters, day/month/year toggle.
 
 **Tabs / views** (8)
 
@@ -620,7 +623,8 @@ Status legend: `[ ]` untested · `[~]` render/health only · `[x]` deep-tested
 
 - **Route:** `/dashboard/tax`
 - **Page:** `app\(dashboard)\dashboard\tax\page.tsx` (9 component files)
-- **Status:** `[ ]`
+- **Status:** `[x]`
+- **Coverage:** Read-only report. Arithmetic verified by hand: monthly revenue rows sum to the stated gross (14,349,700), monthly expenses sum to the stated total (4,869,700), and gross − expenses equals the stated Net P&L (9,480,000). FBR submitted Rs 0 — consistent with the adapter still being a no-op. No covered controls, no overflow.
 
 **Sections** (1)
 
@@ -636,7 +640,8 @@ Status legend: `[ ]` untested · `[~]` render/health only · `[x]` deep-tested
 
 - **Route:** `/dashboard/reports`
 - **Page:** `app\(dashboard)\dashboard\reports\page.tsx` (7 component files)
-- **Status:** `[ ]`
+- **Status:** `[~]`
+- **Coverage:** Renders, Roman-Urdu (Aasaan persona) copy correct, Maheena/Saal toggle works. OPEN QUESTION — cross-module money mismatch, NOT yet proven a bug: Reports/Saal shows Rs 33,493,850 over 22 events while Tax & P&L shows Rs 14,349,700 over 10 bookings for the same year and the same 'All venues' scope; Reports/Maheena shows Rs 16,065,700 for ONE month, more than Tax's entire year. Reports 'Baqaya' Rs 13,417,229 vs Receivables 'Outstanding' Rs 12,292,729 (Rs 1,124,500 apart). Could legitimately be different bases (contract value vs recognised revenue, active-bucket vs all bookings) — needs a definition check against the queries before calling it. Flagged, not asserted.
 
 **Actions / buttons** (1)
 
