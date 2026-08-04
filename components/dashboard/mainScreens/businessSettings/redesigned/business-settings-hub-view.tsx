@@ -34,6 +34,7 @@ import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { TourLauncherCard } from "@/components/dashboard/tour/tour-launcher"
+import { FieldError, fieldAria, ERROR_INPUT_CLS } from "@/components/dashboard/primitives/field-error"
 
 const numOrNull = (v: string) => (v.trim() === "" ? null : Number(v) || 0)
 
@@ -155,6 +156,54 @@ export function BusinessSettingsHubView() {
   }, [biz])
 
   const set = (k: string, v: any) => { setForm((f) => ({ ...f, [k]: v })); setDirty(true) }
+
+  /*
+   * Capacity & pricing had NO client-side validation at all. Verified live on
+   * production: a starting price of -5000, min guests 900 with max guests 100,
+   * and a 500% advance were all accepted by the form — Save stayed enabled, no
+   * field showed an error, aria-invalid was null on every input, and the number
+   * inputs carried no min/max so the browser's own spinner offered negatives.
+   *
+   * The API does reject all three, correctly and with good messages. But it
+   * returns ONE message per round-trip, so a vendor who got two fields wrong
+   * fixed one, pressed Save again, and got scolded about the next — with the
+   * form blanking nothing and no indication of WHICH field was at fault. The
+   * rules below mirror the server's exactly, so the vendor sees every problem
+   * at once, against the right input, before any request is sent.
+   */
+  const numOf = (v: any) => (String(v ?? "").trim() === "" ? null : Number(v))
+  const pricingErrs = (() => {
+    const price = numOf(form.minimumPrice)
+    const minC = numOf(form.minCapacity)
+    const maxC = numOf(form.maxCapacity)
+    const adv = numOf(form.downPayment)
+    const isPct = (form.downPaymentType ?? "Percentage") !== "Fixed Amount"
+    return {
+      minimumPrice:
+        price !== null && (!Number.isFinite(price) || price < 0)
+          ? "Starting price can't be negative."
+          : undefined,
+      minCapacity:
+        minC !== null && (!Number.isFinite(minC) || minC < 0)
+          ? "Minimum guests can't be negative."
+          : undefined,
+      maxCapacity:
+        maxC !== null && (!Number.isFinite(maxC) || maxC < 1)
+          ? "Maximum guests must be at least 1."
+          : maxC !== null && minC !== null && maxC < minC
+            ? "Maximum guests can't be less than minimum guests."
+            : undefined,
+      downPayment:
+        adv === null || !Number.isFinite(adv)
+          ? undefined
+          : adv < 0
+            ? "Advance can't be negative."
+            : isPct && adv > 100
+              ? "A percentage advance can't be more than 100%."
+              : undefined,
+    }
+  })()
+  const hasPricingError = Object.values(pricingErrs).some(Boolean)
 
   // Publish this bar's height as --ww-bottom-bar so nothing else can sit on top
   // of it. The PWA install prompt is `fixed bottom` at z-50 while this bar is
@@ -311,9 +360,36 @@ export function BusinessSettingsHubView() {
           {active === "pricing" && (
             <Section icon="DollarSign" title="Capacity & pricing" desc="Guest range, starting price and booking terms.">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <Row label="Starting price (Rs)"><input type="number" className={cn(inputCls, "tabular-nums")} value={form.minimumPrice ?? ""} onChange={(e) => set("minimumPrice", e.target.value)} /></Row>
-                <Row label="Min guests"><input type="number" className={cn(inputCls, "tabular-nums")} value={form.minCapacity ?? ""} onChange={(e) => set("minCapacity", e.target.value)} /></Row>
-                <Row label="Max guests"><input type="number" className={cn(inputCls, "tabular-nums")} value={form.maxCapacity ?? ""} onChange={(e) => set("maxCapacity", e.target.value)} /></Row>
+                <Row label="Starting price (Rs)">
+                  <input
+                    id="biz-minprice" type="number" min={0} step="1" inputMode="numeric"
+                    className={cn(inputCls, "tabular-nums", pricingErrs.minimumPrice && ERROR_INPUT_CLS)}
+                    value={form.minimumPrice ?? ""}
+                    onChange={(e) => set("minimumPrice", e.target.value)}
+                    {...fieldAria("biz-minprice", pricingErrs.minimumPrice)}
+                  />
+                  <FieldError id="biz-minprice" message={pricingErrs.minimumPrice} />
+                </Row>
+                <Row label="Min guests">
+                  <input
+                    id="biz-mincap" type="number" min={0} step="1" inputMode="numeric"
+                    className={cn(inputCls, "tabular-nums", pricingErrs.minCapacity && ERROR_INPUT_CLS)}
+                    value={form.minCapacity ?? ""}
+                    onChange={(e) => set("minCapacity", e.target.value)}
+                    {...fieldAria("biz-mincap", pricingErrs.minCapacity)}
+                  />
+                  <FieldError id="biz-mincap" message={pricingErrs.minCapacity} />
+                </Row>
+                <Row label="Max guests">
+                  <input
+                    id="biz-maxcap" type="number" min={1} step="1" inputMode="numeric"
+                    className={cn(inputCls, "tabular-nums", pricingErrs.maxCapacity && ERROR_INPUT_CLS)}
+                    value={form.maxCapacity ?? ""}
+                    onChange={(e) => set("maxCapacity", e.target.value)}
+                    {...fieldAria("biz-maxcap", pricingErrs.maxCapacity)}
+                  />
+                  <FieldError id="biz-maxcap" message={pricingErrs.maxCapacity} />
+                </Row>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Row label="Advance type">
@@ -322,7 +398,18 @@ export function BusinessSettingsHubView() {
                     <option value="Fixed Amount">Fixed amount</option>
                   </select>
                 </Row>
-                <Row label={form.downPaymentType === "Fixed Amount" ? "Advance (Rs)" : "Advance (%)"}><input type="number" className={cn(inputCls, "tabular-nums")} value={form.downPayment ?? ""} onChange={(e) => set("downPayment", e.target.value)} /></Row>
+                <Row label={form.downPaymentType === "Fixed Amount" ? "Advance (Rs)" : "Advance (%)"}>
+                  <input
+                    id="biz-advance" type="number" min={0}
+                    max={form.downPaymentType === "Fixed Amount" ? undefined : 100}
+                    step="0.01" inputMode="decimal"
+                    className={cn(inputCls, "tabular-nums", pricingErrs.downPayment && ERROR_INPUT_CLS)}
+                    value={form.downPayment ?? ""}
+                    onChange={(e) => set("downPayment", e.target.value)}
+                    {...fieldAria("biz-advance", pricingErrs.downPayment)}
+                  />
+                  <FieldError id="biz-advance" message={pricingErrs.downPayment} />
+                </Row>
               </div>
               <Row label="Cancellation policy"><textarea className={cn(inputCls, "h-24 resize-y py-2")} value={form.cancelationPolicy ?? ""} onChange={(e) => set("cancelationPolicy", e.target.value)} placeholder="e.g. Advance non-refundable within 30 days of event." /></Row>
             </Section>
@@ -378,8 +465,15 @@ export function BusinessSettingsHubView() {
           className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 backdrop-blur md:left-[var(--sidebar-width,0)]"
         >
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 md:px-6">
-            <div className="text-sm text-muted-foreground">{dirty ? <span className="text-amber-600 dark:text-amber-400">Unsaved changes</span> : "All changes saved"}</div>
-            <Button disabled={!dirty || saveMut.isPending} onClick={() => saveMut.mutate()}>
+            {/* A disabled Save must say WHY, or it reads as a broken button. */}
+            <div className="text-sm text-muted-foreground">
+              {hasPricingError
+                ? <span className="text-destructive">Fix the highlighted fields above to save.</span>
+                : dirty
+                  ? <span className="text-amber-600 dark:text-amber-400">Unsaved changes</span>
+                  : "All changes saved"}
+            </div>
+            <Button disabled={!dirty || hasPricingError || saveMut.isPending} onClick={() => saveMut.mutate()}>
               {saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={15} className="mr-1.5" /> Save changes</>}
             </Button>
           </div>
