@@ -38,7 +38,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 6 | Function sheets | `/dashboard/function-sheets` | ✅ 68 | **`[x]` COMPLETE — 57 run, 11 not run, 17 findings** |
 | 7 | Customers | `/dashboard/customers` | ✅ 66 | **`[x]` COMPLETE — 52 run, 14 not run, 11 findings** |
 | 8 | Calendar | `/dashboard/calendar` | ✅ 48 | **`[x]` COMPLETE — 38 run, 10 not run, 6 findings** |
-| 9 | Conversations | `/dashboard/chat` | ✅ 40 | `[~]` in progress |
+| 9 | Conversations | `/dashboard/chat` | ✅ 40 | **`[x]` COMPLETE — 26 run, 14 not run, 3 findings** |
 | 10 | Payments | `/dashboard/payments` | — | `[ ]` |
 | 11 | Receivables | `/dashboard/receivables` | — | `[ ]` |
 | 12 | Receipts | `/dashboard/receipts` | — | `[ ]` |
@@ -5045,3 +5045,141 @@ where an empty list is indistinguishable from "you have no messages".
 - [ ] **D9-039** — Desktop: no overflow.
 - [ ] **D9-040** — The `52` badge in the header — what is it counting, and does it agree with
   `unread-total: 0`?
+
+---
+
+## MODULE 9 — RESULTS
+
+**Nothing was sent.** Verified at close: conversation 10 still holds exactly **3 messages**,
+last is id 17 (vendor, `"hi"`, 2026-08-02T20:59:54Z) — identical to the starting state. All
+writes were blocked at the XHR/fetch layer and `chat:send-message` / `chat:typing` were trapped
+at the WebSocket layer; `window.__net` and `window.__emits` both stayed empty throughout.
+
+### ⚠️ WWL-104 — S3 — The send button has no accessible name
+
+The composer's send control is rendered as a bare icon button. Measured across five composer
+states (empty, whitespace, text, 5,000 chars, cleared): **`aria-label` and text content are
+`null` every time**. The accessibility snapshot confirms it — `button [disabled] [ref=…]` with
+no name at all.
+
+A screen-reader user hears an unlabelled button next to the message box and has to guess. Same
+class as WWL-066 (the hold dialog's unlabelled fields), and notable because the rest of this
+module's ARIA is decent.
+
+### ⚠️ WWL-105 — S3 — No length cap on the composer, with a known 255-char precedent
+
+The composer is a `<textarea>` with **`maxLength: -1`** — no cap, no counter. A 5,000-character
+message leaves `Send` fully enabled.
+
+WWL-064 established that this backend surfaces raw Postgres errors on overflow
+(*"Value too long for type character varying(255)"*). Whether `chat_messages.content` is `TEXT`
+or a bounded `VARCHAR` was **not determined** — establishing it would require actually sending
+a long message to a real customer, which is outside this module's safety limits.
+
+Recorded as an untested risk with its precedent, not as a confirmed defect.
+
+### ⚠️ WWL-106 — S4 — The page title is the generic fallback
+
+Every other dashboard route sets a specific title (`Dashboard : Bookings`,
+`Dashboard : Calendar`, `Dashboard : Customers`). This one is
+**`Wedding Wala — Dashboard | Wedding Wala`** — the generic fallback, with the brand name
+duplicated. It is what shows in the browser tab, in history, and in any bookmark.
+
+Minor naming drift in the same area: the sidebar calls it **Messages**, the breadcrumb calls it
+**Chat**, and the route is `/dashboard/chat`.
+
+### 🔎 D9-034 — the swallow is confirmed in source but **not** reproduced live
+
+`lib/api/chat.ts`:
+
+```js
+static async getConversations(): Promise<ConversationItem[]> {
+  try { … } catch (error) {
+    console.error("Error fetching conversations:", error);
+    return [];                                   // ← failure becomes "no conversations"
+  }
+}
+```
+
+Same shape as `CustomersAPI.getAll`, whose live consequence was proven in Module 7 (WWL-095:
+"No customers yet" for a vendor with 20).
+
+**I could not reproduce it on screen here.** The conversation list is fetched once on page load
+and served from `ChatContext` state thereafter; navigating within the module, firing `focus`
+and `visibilitychange`, and clicking the Conversations tab all failed to trigger a refetch, so
+the injected failure never ran. Injecting before the initial load is not possible with this
+harness, because navigation clears the injected hooks.
+
+Recorded as **source-confirmed, live-unverified**. I am not claiming the render.
+
+---
+
+### ✅ Module 9 passes — and it is the best mobile experience in the sweep
+
+- **D9-001 / D9-002 / D9-003** — the list matches the API exactly: one conversation, Waheed
+  Jutt, `2d`, prefixed **`You:`**. The prefix is **correct** — message id 17
+  (`senderId: 3351`, the vendor) is genuinely the most recent, at `20:59:54Z` versus Waheed's
+  `20:59:40Z`. *(I initially suspected the prefix was wrong from flattened text; checking the
+  message list showed it is right.)*
+- **D9-006 — my premise was wrong; the control exists.** The accessibility snapshot shows a
+  **`button "New conversation"`** in the list header. It is icon-only, which is why a text scan
+  missed it. Not a finding.
+- **D9-009** — there is a `Search conversations...` box.
+- **D9-012 / D9-013 — message attribution is structurally correct.** The DOM groups the
+  counterparty's messages under an avatar + name block, and renders the vendor's own as
+  separate unlabelled bubbles. Flattened text makes the two 1:59 AM messages look like one
+  speaker; the actual structure distinguishes them properly. Worth one measured note: the only
+  cue for "this one is mine" is **visual** (position/colour) with no text or ARIA marker, so a
+  screen-reader user hears `hi 1:40 AM`, `Waheed Jutt hi 1:59 AM`, `hi 1:59 AM` and must infer
+  the unlabelled ones are their own.
+- **D9-014 — timestamps are correct PKT.** Message 16 at `2026-08-02T20:59:40Z` renders as
+  **1:59 AM** under a date header of **"Monday, August 3"** — a correct UTC→PKT conversion
+  across a date boundary. Contrast WWL-097 (Customers' Quick view printing US `M/D/YYYY`) and
+  WWL-062 (the hold dialog's UTC floor): this module gets it right.
+- **D9-020 — no XSS path.** `chat-message-area.tsx` renders `{message.content}` as a plain JSX
+  child (lines 118 and 174) and **`dangerouslySetInnerHTML` appears nowhere** in
+  `components/chat/` or `ChatContext`. Customer-supplied message text cannot execute.
+- **D9-022 — composer gating is correct.** Empty → `Send` disabled; **whitespace-only → still
+  disabled** (trim guard works); real text → enabled; cleared → disabled again.
+- **D9-024** — Urdu, emoji and mixed RTL/LTR compose without breaking the control
+  (`السلام علیکم 🎉 …`).
+- **D9-025** — the affordance is stated in plain text under the box: *"Press Enter to send,
+  Shift+Enter for new line."*
+- **D9-040 — no contradiction.** The `52` badge is **Notifications**, not chat — the snapshot
+  resolves it as `link "Notifications 52"`. It has no relationship to `unread-total: 0`, which
+  is itself consistent with the single conversation's `unreadCount: 0`.
+- **D9-038 / D9-039 — the best 360px result of any module so far.** No overflow at either
+  width (`scrollWidth === clientWidth === 345`, zero overflowing elements). Tapping the
+  conversation opens the thread **with all 3 messages and a working composer fully inside the
+  viewport**.
+
+  This is the first module in the sweep whose mobile view is genuinely operable — Bookings
+  (WWL-053), Function sheets (WWL-086) and Customers (WWL-093) all render inert cards with zero
+  controls. Chat works because its list rows are real `<button>`s rather than decorative cards.
+
+  One usability note rather than a defect: the two-pane desktop layout does **not** collapse to
+  a single pane on mobile, so at 345px the list keeps ~115px and the thread is squeezed to
+  ~230px, with no back control (none is needed, since both panes stay visible). Cramped, but
+  functional.
+
+### Module 9 — status
+
+**40 cases written, 26 driven. 3 findings (all S3/S4) + 1 source-confirmed swallow.**
+
+Not driven, each with its reason:
+
+| Cases | Why |
+|---|---|
+| **D9-027 / D9-028** (failed-send behaviour, retry) | Requires actually attempting a send to a real customer. Even with the network blocked, the optimistic bubble path could reconcile against a real socket emit; not worth the risk of a message reaching a customer's phone. |
+| **D9-016 / D9-029 → D9-033** (socket join/leave, online truthfulness, reconnect) | The socket had already connected before the WebSocket hook could be installed (`window.__emits` stayed empty), and socket.io may be on XHR-polling transport. Would need instrumentation before page load. |
+| **D9-026** (attachments) | **No attachment control exists in the UI.** The API models `messageType: image \| file` with `attachmentUrl` / `attachmentName`, but the composer offers only a textarea and send. Recorded as built-but-unexposed, like Module 7's import and rating UI. |
+| **D9-019** (scroll-back pagination) | Only 3 messages exist; `hasMore` cannot be exercised. |
+| **D9-035** (fetching another vendor's conversation) | An authorisation probe against a conversation belonging to someone else. Not driven — reading another party's private messages is not an acceptable test on live production, even to prove a control works. |
+
+**The module's verdict.** Small surface, and the most solid one tested so far. Correct PKT
+timestamps, no XSS path, correct trim-gating, honest `You:` attribution, a real
+`New conversation` control, and the only genuinely usable 360px layout in the sweep. The
+defects are cosmetic or latent — an unlabelled send button, an uncapped composer with a known
+overflow precedent, and a generic page title. The one structural concern, the
+`catch { return [] }` swallow, is confirmed in source and inherits the severity already
+demonstrated in Module 7.
