@@ -42,7 +42,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 10 | Payments | `/dashboard/payments` | ✅ 118 | **`[x]` COMPLETE — 101 run, 17 not run, 22 findings (4× S1)** |
 | 11 | Receivables | `/dashboard/receivables` | ✅ 96 | **`[x]` COMPLETE — 84 run, 12 not run, 13 findings (2× S1)** |
 | 12 | Receipts | `/dashboard/receipts` | ✅ 92 | **`[x]` COMPLETE — 83 run, 9 not run, 17 findings** |
-| 13 | Cheque ledger | `/dashboard/pdcs` | ✅ 88 | `[ ]` IN PROGRESS |
+| 13 | Cheque ledger | `/dashboard/pdcs` | ✅ 88 | **`[x]` COMPLETE — 78 run, 10 not run, 16 findings** |
 | 14 | Expenses | `/dashboard/expenses` | — | `[ ]` |
 | 15 | Tax report | `/dashboard/tax` | — | `[ ]` |
 | 16 | Reports | `/dashboard/reports` | — | `[ ]` |
@@ -6524,3 +6524,176 @@ button and stopped there.
 | D13-086 | 360px: no overflow; cards readable | |
 | D13-087 | 360px: **are the three row actions reachable on a phone?** | WWL-146 recurrence probe |
 | D13-088 | Ledger count unchanged at module close | proof nothing was written |
+
+## MODULE 13 — EXECUTION RESULTS
+
+**Nothing was written.** Ledger at close: **11 cheques**, distribution unchanged
+(`held 5 · bounced 4 · cleared 2`). Cheque 40 / **513309** — the row I drove transition, edit and
+delete against — still reads Rs **687,690.00**, status **held**, `depositDate: null`, with its
+**original `updatedAt` of 2026-08-02T00:14:45.692Z**.
+
+All four write verbs were captured with their bodies and diverted:
+
+```
+POST   /api/v1/pdcs                {"chequeNumber":"998877","bankName":"Meezan Bank","amount":250000,"chequeDate":"2026-09-01","bookingId":171}
+POST   /api/v1/pdcs/40/transition  {"to":""}
+PATCH  /api/v1/pdcs/40             {"chequeNumber":"513309","bankName":"MCB","amount":687691,"chequeDate":"2026-08-18","notes":"Balance cheque taken at booking.","bookingId":168}
+DELETE /api/v1/pdcs/40             (no body)
+```
+
+### The best domain work in the sweep — the Pakistani staleness rule
+
+Before the findings, this deserves to be recorded plainly. `validateChequeDate` encodes real
+Pakistani banking practice and every boundary I probed is **exact**:
+
+| Cheque date | Result |
+|---|---|
+| 7 months ago (`2026-01-06`) | **"This cheque is over 6 months old, so a bank will refuse it as stale."** |
+| 6 months + 2 days ago (`2026-02-04`) | stale ✓ |
+| **exactly 6 months ago** (`2026-02-06`) | **accepted** ✓ — boundary correct |
+| 5 months ago (`2026-03-06`) | accepted ✓ |
+| today | accepted ✓ |
+| **12 months ahead** (`2027-08-06`) | **accepted** ✓ — post-dating is the entire point of a PDC |
+| 24 months ahead (`2028-08-05`) | accepted ✓ |
+| 25 months ahead (`2028-09-06`) | "more than 24 months away — please check the year." ✓ |
+| mistyped year `2206` | caught by the same ceiling ✓ |
+
+The source comment gets the reasoning right too: it deliberately does **not** apply
+`validateNotFutureDate` here, because a post-dated cheque is supposed to be in the future. This
+is the direct counter-example to WWL-131's careless substring matching — the same codebase, one
+rule thought through properly and one not.
+
+### WWL-159 (S2) — four write verbs, four false successes
+
+WWL-107's widest demonstration yet. Each request was diverted to a nonexistent path, answered
+**200** by the backend catch-all, and reported as done:
+
+| Verb | Toast |
+|---|---|
+| `POST /pdcs` | **"Cheque logged"** |
+| `POST /pdcs/40/transition` | **"Cheque marked"** |
+| `PATCH /pdcs/40` | **"Cheque updated"** |
+| `DELETE /pdcs/40` | **"Cheque removed"** |
+
+The transition is the one that matters most. Marking a cheque `bounced` or `cleared` records a
+fact about whether a customer's money actually arrived — and the UI will confirm it while the
+write silently goes nowhere.
+
+### WWL-160 (S2) — the entire cheque lifecycle is desktop-only
+
+Measured at a true emulated 360×740:
+
+| Control | Visible on mobile |
+|---|---|
+| `Update status` | **0** |
+| `Edit cheque` | **0** |
+| `Remove cheque` | **0** |
+| `Log a cheque` | 1 |
+
+A vendor can log a cheque on a phone but can never mark it **deposited, cleared or bounced** —
+the lifecycle that is the whole reason a PDC ledger exists. This is worse than WWL-146: there the
+missing mobile actions were corrections, here it is the primary workflow.
+
+The mobile card also **drops both Customer and Event**: rows read `500595 · Askari Bank ·
+25-Apr-2026 · Bounced · Rs 195,012` with no indication of whose cheque bounced. Chasing a bounced
+cheque from a phone is the single most likely mobile use of this screen, and the name is absent.
+
+### WWL-161 (S2) — a mis-marked cheque cannot be corrected
+
+`NEXT` makes `cleared`, `bounced` and `cancelled` terminal, and the view only renders the
+`Update status` button for `held`/`deposited` — confirmed live: bounced rows expose only
+`Edit cheque` and `Remove cheque`. The edit dialog contains **no status field at all** (verified:
+zero `<select>` elements in edit mode).
+
+So a cheque marked `bounced` by mistake — a single click on a dialog whose confirm is one
+dropdown and one button — can only be **deleted**, destroying the record of the cheque entirely.
+Read alongside WWL-159, where a transition can report success without writing, a vendor can
+plausibly end up clicking it twice.
+
+### WWL-162 (S2) — a cheque ledger that shows almost no money
+
+The four cards are `Total cheques` **5**, `Held / deposited` **3**, `Cleared value` **Rs 0**,
+`Bounced` **2**. Three of the four are **counts**, and the only money figure reads zero.
+
+Meanwhile the API returns, on every response, exactly the figures a vendor needs:
+
+```json
+"summary": { "total": 3389770,
+             "byStatus": { "held": 3065235, "bounced": 324535, "cleared": 0 } }
+```
+
+**Rs 3,065,235 of cheques waiting to clear and Rs 324,535 already bounced** — the money at risk,
+already computed, already sent, and rendered nowhere. `Held / deposited` also merges two
+operationally different states into one number: a cheque sitting in a drawer and a cheque already
+banked are not the same exposure.
+
+`Cleared value` reads Rs 0 truthfully, which leads to the next finding.
+
+### Findings S3 / S4
+
+| ID | Sev | Finding |
+|---|---|---|
+| **WWL-163** | S3 | **Duplicate cheque numbers are accepted silently.** I entered `513309` — which already exists in this same ledger as a **held Rs 687,690** cheque — and got no error, no warning, and an enabled Save. The same physical cheque can be logged twice, double-counting money that will only ever clear once. (Client-side confirmed; the backend's behaviour would need a real write.) |
+| **WWL-164** | S3 | **WWL-117 recurs verbatim.** Notes at 1001 characters silently disables Save with **no field error** and the hint *"Add a cheque number, a bank name, an amount above 0 and a cheque date to save."* — while all four of those are valid. `maxLength` is `-1`. Second dialog, identical defect. |
+| **WWL-165** | S3 | **WWL-112 recurs in two more places.** The **cheque date** seeds to `2026-08-05` (the UTC date) while it is 6 Aug in Pakistan; and in the transition dialog the **deposit date** both defaults to and is capped at `2026-08-05`, so between 00:00 and 05:00 PKT a vendor who banked a cheque *today* cannot record today. Four instances across three modules now. |
+| **WWL-166** | S3 | **The transition dialog never validates its own target status.** `canSave` checks `options.length > 0` but never `options.includes(to)`, so an out-of-range value submits happily — I captured `{"to":""}` with the toast *"Cheque marked "*. **Reproduced only by setting a select value synthetically; I did not find a path to it through the UI**, so this is recorded as a robustness gap in the guard, not a user-reachable bug. |
+| **WWL-167** | S3 | **Four of eleven cheques have `amount = 0.00`** — including **both** cleared ones (964999, 132166) and two bounced ones. The create form requires an amount above zero, so these entered through a path that does not apply that rule. This is why `Cleared value` reads Rs 0 with two cheques cleared. Same client-only-validation family as WWL-148. |
+| **WWL-168** | S3 | **Cards ignore the search filter** — fourth consecutive money module. `Total cheques 5` / `Bounced 2` stay frozen while the table filters to 1 row or 0. |
+| **WWL-169** | S3 | **No-match empty state presents a populated ledger as onboarding.** *"No cheques logged — Track every post-dated cheque so you know exactly what's clearing and when."* plus a **Log a cheque** button, for a vendor with 5 cheques on screen a moment earlier. WWL-152 pattern. |
+| **WWL-170** | S3 | **Table a11y, fourth module unchanged.** 0 of 9 `<th>` carry `scope`, no `<caption>`, all row checkboxes named *"Select row"*. |
+| **WWL-171** | S3 | **N+1 on the Event column** — 10 `function-sheets` requests to render 5 rows, exactly as in Receipts (WWL-149). Same shared badge component. |
+| **WWL-172** | S4 | CSV omits the **Event** column shown on screen — third module with this export/screen parity gap (WWL-136, WWL-155). It does correctly include **Status**, which is the improvement Receivables' export needed. |
+| **WWL-173** | S4 | The cheque-number field **silently strips non-digits** (`ABC123XYZ` → `123`), then reports *"looks too short"*. A vendor typing a serial with a letter prefix sees characters vanish with no explanation of why. |
+| **WWL-174** | S4 | The success toast interpolates the raw status: *"Cheque marked deposited"* rather than the capitalised label shown everywhere else. |
+
+### Notable passes
+
+- **D13-002/003 PASS** — `Dashboard : PDC Ledger`; sidebar "Cheque ledger" and `<h1>` agree.
+- **D13-004/005 PASS** — one `/api/v1/pdcs` call per load, correctly carrying `businessId`.
+- **D13-006 → D13-009 PASS** — cards match the scoped data exactly: 5 rows, 3 held, 2 bounced.
+- **D13-012 PASS — venue scoping is correct here.** 3 + 5 + 3 = **11** = the all-venues count. Another counter-example to WWL-129; Receivables remains the only endpoint of the four that scopes wrongly.
+- **D13-026 PASS** — status tones are right and *do* vary: held → blue (`bg-blue-50 text-blue-700`), bounced → red (`bg-red-50 text-red-700`). The direct contrast with WWL-131, where every aging bucket came out green.
+- **D13-029 PASS** — `Update status` renders **only** on held/deposited rows; terminal rows correctly show just Edit and Remove.
+- **D13-047/049 PASS** — trigger and dialog agree ("Log a cheque"), and a clean load opens with no errors.
+- **D13-051 PASS** — blocked hint names the booking first.
+- **D13-052/053/056/057 PASS** — cheque number under 4 digits, over 20 digits, a 1-character bank, amount 0 and amount −1 each produce the right specific message.
+- **D13-058 → D13-061 PASS** — the staleness and ceiling rules, exact at every boundary (table above).
+- **D13-069/071 PASS** — a held cheque offers **Deposited** and **Cancelled** only, and the dialog identifies it precisely: *"Cheque 513309 — currently held."*
+- **D13-074 PASS** — a future deposit date is rejected on both layers: *"Deposit date can't be in the future."* plus `validity.rangeOverflow`.
+- **D13-081 PASS — better identification than Receipts.** *"Cheque 513309 will be removed. This can't be undone."* names the cheque by its canonical identifier, where the receipts dialog offered only an amount (WWL-145).
+- **D13-034/035/036/038 PASS** — search matches cheque number, bank and customer, case-insensitively and trimmed.
+- **D13-043/045 PASS** — CSV exported all 5 rows matching the screen, **including Status**.
+- **D13-085 PASS** — 37 focusable controls, every one with a visible focus indicator.
+- **D13-086 PASS** — no horizontal overflow at 360×740.
+
+### A correction to my own reading
+
+I inferred from the data that *"the backend allows lifecycle jumps the UI forbids"*, because the
+ledger holds four `bounced` cheques and **zero** `deposited` ones, while `NEXT` requires
+`held → deposited → bounced`. I checked before writing it up: **all four bounced cheques carry a
+real `depositDate` and a `bounceReason`**, so they did pass through `deposited` properly. The
+absence of a currently-deposited row simply means none is mid-flight today. The inference was
+wrong and is not reported.
+
+### Module 13 — status
+
+**88 cases written, 78 driven. 16 findings (4× S2, 9× S3, 3× S4).**
+
+Not driven, each with its reason:
+
+| Cases | Why |
+|---|---|
+| **D13-070 / D13-075 / D13-076 / D13-077** (the `deposited → cleared/bounced` half of the lifecycle, and the bounce-reason gating) | **No cheque in the ledger is currently `deposited`**, so the second half of the state machine is unreachable without first transitioning a real cheque — a write that records a false fact about a customer's payment. The source shows the transition dialog has **no `FormBlockedHint`**, so an empty bounce reason would disable the button with no explanation (the BUG-057 problem the *form* dialog fixes); recorded as **source-confirmed, live-unverified**. |
+| **D13-013** (cheque ↔ receipt reconciliation) | Nothing in the data links a cleared cheque to a receipt row, and both cleared cheques are Rs 0, so there is no figure to reconcile. |
+| **D13-018** (a stale cheque on screen) | No cheque in the ledger is older than six months, so the staleness rule could only be exercised through the form — which it was, exhaustively. |
+| **D13-050** (stale-error leak into the create form) | The `touched` leak proven as WWL-143 lives in `ReceiptFormDialog`; this dialog has its own `touched` state with the same shape, but I drove create **before** edit here, so I did not reproduce the ordering that triggers it. Not claimed. |
+| **D13-064 backend half** (does the API reject a duplicate cheque number?) | Would require actually creating the duplicate on a live ledger. |
+| **D13-084** (error state + Retry) | `PdcAPI.list()` has no `catch`, the same shape as `ReceiptsAPI.list()` where the error state and Retry were driven and passed. Not re-driven. |
+
+**The module's verdict.** This screen contains the sweep's best domain work and some of its worst
+workflow gaps, side by side. The staleness rule is genuinely expert — six months, exact
+boundaries, future dates deliberately allowed — and the lifecycle, tones, identification in the
+delete confirm and per-status action gating are all correct. But the ledger hides the two numbers
+a vendor actually needs (Rs 3.07m held, Rs 324k bounced) behind counts, the entire lifecycle is
+unusable on a phone, a cheque marked bounced by mistake can only be deleted, and every one of the
+four write verbs will tell the vendor it succeeded when it did not.
