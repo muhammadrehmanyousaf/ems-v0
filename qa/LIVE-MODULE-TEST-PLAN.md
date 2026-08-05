@@ -3366,3 +3366,222 @@ rather than silently skipped.
 - [ ] **D6-066** — Table semantics and accessible names.
 - [ ] **D6-067** — 360px: no overflow; usable row actions (the WWL-053 test).
 - [ ] **D6-068** — Desktop: no overflow.
+
+---
+
+## MODULE 6 — RESULTS (Sections A–F)
+
+### 🔴🔴 WWL-071 — S1 — **Every line item on every customer document reads `(no label)`**
+
+Generated the Quotation for sheet #77 and extracted its text. This is what the customer
+receives for a **Rs 1,092,200** contract:
+
+```
+Description        Qty    Unit (Rs.)    Total (Rs.)
+(no label)           1       320,000       320,000
+(no label)         198         3,900       772,200
+Subtotal                              Rs. 1,092,200
+Grand total                           Rs. 1,092,200
+```
+
+Not a data problem — **the data is perfect**. The stored line items read:
+
+```json
+{ "qty": 1,   "amount": 320000, "unitPrice": 320000, "description": "Hall / marquee rental" }
+{ "qty": 198, "amount": 772200, "unitPrice": 3900,   "description": "Catering — 198 guests @ Rs 3900/head" }
+```
+
+**Root cause — a field-name mismatch between the writer and the reader.**
+
+`event-planner-api/src/utils/functionSheetPdfData.js:206`:
+
+```js
+label: _str(it?.label, 200) || "(no label)",
+```
+
+The generator reads **`label`**. Every stored line item uses **`description`**. Confirmed on
+all three sheets inspected — `lineItemKeys` is `qty,amount,unitPrice,description` every time.
+The TypeScript interface agrees with the generator and disagrees with reality:
+
+```ts
+export interface FunctionSheetLineItem {
+  label: string;      // ← data has `description`
+  total?: number;     // ← data has `amount`
+}
+```
+
+The `total` mismatch is masked — the generator falls back to `qty * unitPrice`, which happens
+to give the right number. `label` has no fallback, so it prints the placeholder.
+
+**Blast radius:** every Quotation, Service Contract, BEO, Tax Invoice and Payment Receipt this
+vendor has ever issued, for all 17 sheets and Rs 28,559,050 of business. Verified across
+sheets 77 (quote + contract), 80 (BEO) and 89 (draft quote) — `(no label)` in all five.
+
+**The fix is one line:** `it?.label ?? it?.description`.
+
+### 🔴 WWL-072 — S1 — The payment schedule exists, is correct, and never reaches the customer
+
+Every sheet carries a fully-populated `paymentScheduleJson`. Sheet #77:
+
+| Instalment | Amount | Due |
+|---|---:|---|
+| Booking advance (30%) | Rs 327,660 | 2025-12-28 |
+| Second instalment (40%) | Rs 436,880 | 2026-01-28 |
+| Balance on the day | Rs 327,660 | 2026-02-11 |
+| **Total** | **Rs 1,092,200** | = grand total ✔ |
+
+Verified on all three sheets — 77, 80 and 89 each sum **exactly** to their grand total
+(1,092,200 / 1,625,100 / 1,546,000).
+
+**None of it appears in any generated PDF.** Not the Quotation, not the Service Contract.
+The customer receives a document with a grand total and no indication of when anything is due,
+while the correct schedule sits in the record.
+
+For a Pakistani venue where staged advance payments are the norm, the payment schedule is the
+single most important clause in the document, and it is the one thing omitted.
+
+### 🔴 WWL-073 — S2 — Quotation, Service Contract and BEO are the same document with the title swapped
+
+Extracted and compared all three. The **only** differences:
+
+| Document | Differs from the Quotation by |
+|---|---|
+| **Service Contract** | title text; drops the `Valid until` line |
+| **Banquet Event Order (BEO)** | title text |
+
+The Service Contract for Rs 1,092,200 contains **no terms, no cancellation policy, no payment
+schedule, no signature block, no signatory names, no date-of-signature line**. The BEO — an
+*operational* document — contains no guest timings, no menu, no setup instructions, no
+staffing, no kitchen notes. It is a price list with "Banquet Event Order" at the top.
+
+**Being precise about cause, because the two halves differ:**
+
+- The **terms** gap is a *data* gap, not a code gap. The generator does support them —
+  `functionSheetPdfData.js` reads `row.termsJson` for `contract`/`beo`/`invoice`. But
+  `termsJson` is **`null` on all three sheets**. Nothing was ever authored, and no UI prompts
+  for it.
+- The **payment schedule** gap *is* a code gap — the data is there and populated (WWL-072).
+- The **BEO** gap is both: `beoJson` is `null` on sheet #80 despite its state being
+  `beo_ready`, and `kitchenSheetJson` is null too.
+
+So the state machine advances a sheet to `beo_ready` without any BEO content ever existing.
+
+### 🔴 WWL-074 — S2 — Sheets are marked `signed` with no signature recorded
+
+Sheet #77: `state: "signed"`, `signedAt: "2026-01-22"`, and the PDF prints a **`SIGNED`**
+badge. But `signaturesJson` is **`null`**.
+
+The module ships a `signature-pad.tsx` component and a whole `/dashboard/function-sheet-sign`
+route, and the sheet that claims to be signed holds no signature, no signatory name, and no
+IP/timestamp record. The `SIGNED` badge on a Rs 1,092,200 contract is backed by nothing but a
+state string — and the contract it appears on has no signature block to sign (WWL-073).
+
+Same on sheet #80: `signedAt: 2026-04-08`, `signaturesJson: null`.
+
+### 🔴 WWL-075 — S2 — No sheet has ever reached `invoiced` or `paid`, so 2 of the 5 PDFs are unreachable
+
+`byState`: `signed 10 · beo_ready 4 · quote_sent 1 · draft 2`. Zero `invoiced`, zero `paid`,
+zero `archived`. `invoicedAt` and `paidAt` are **null on every sheet inspected**.
+
+Because PDF variants are state-gated (`VARIANT_MIN`), this means **Tax Invoice and Payment
+Receipt cannot be generated for any sheet in the system** — verified live, see D6-043.
+
+Meanwhile the money has actually been collected. Cross-referencing sheets to their bookings:
+
+| Sheet | State | Booking | Booking status | Collected |
+|---|---|---|---|---:|
+| 77 | `signed` | 155 | Completed / Paid | Rs 1,092,200 of 1,092,200 |
+| 78 | `signed` | 156 | Completed / Paid | Rs 1,694,600 of 1,694,600 |
+| 79 | `signed` | 158 | Completed / Paid | Rs 1,858,450 of 1,858,450 |
+| 81 | `beo_ready` | 160 | Completed / Paid | Rs 1,685,200 of 1,685,200 |
+| 82 | `signed` | 161 | Completed / Paid | Rs 1,899,000 of 1,899,000 |
+| 84 | `beo_ready` | 163 | Completed / Paid | Rs 1,398,250 of 1,398,250 |
+| 85 | `signed` | 164 | Completed / Paid | Rs 1,464,500 of 1,464,500 |
+
+**Rs 11,092,200 fully collected across seven weddings**, and not one of them can be issued a
+tax invoice or a receipt. The two lifecycles — booking payment state and function-sheet state —
+are entirely disconnected: paying a booking in full does not advance its sheet.
+
+This also explains the tile reading **`Paid 0`** (D6-003): it is literally true and completely
+misleading. A vendor reads "Paid 0" on a Rs 28.5M book where Rs 11M is already banked.
+
+### ⚠️ WWL-076 — S3 — 8 bookings have no function sheet at all, and nothing says so
+
+17 sheets against 25 bookings. The 8 without:
+
+| Booking | Status | Customer | Value |
+|---|---|---|---:|
+| 167 | **Confirmed** | Danish Qureshi & Aiman Danish | Rs 1,877,750 |
+| 169 | **Confirmed** | Waqar Younis & Sana Waqar | Rs 930,650 |
+| 180 | **Confirmed** | Muhammad Rehman Yousaf | Rs 665,000 |
+| 179 | Awaiting Payment | Waheed Jutt | Rs 350,000 |
+| **157** | **Completed** | Usman Tariq & Hira Usman | **Rs 1,111,400** |
+| 175, 177, 178 | Cancelled | — | Rs 3,855,050 |
+
+Booking **157 is Completed and fully paid** — a wedding that has already happened, with no
+contract, no BEO and no invoice ever produced. Three *Confirmed* weddings worth Rs 3.47M have
+no paperwork either. The Function sheets module offers no "bookings without a sheet" view, so
+the only way to notice is to reconcile two screens by hand.
+
+### ⚠️ WWL-077 — S3 — Expired quotes generate silently
+
+Sheet #77's Quotation prints `Valid until: 4 Feb 2026`. Today is **5 Aug 2026** — it lapsed six
+months ago, and it generates on demand with no expiry marking.
+
+Sheet #89 is worse in kind: `Valid until: 2 Sept 2026` for an event on **9 Sept 2026** — the
+quote is set to expire *before the event it quotes for*.
+
+The generator clearly supports state-based watermarking (sheet #89 correctly renders a
+**`DRAFT`** watermark), so the mechanism to mark an expired quote exists and is unused.
+
+---
+
+### ✅ Module 6 passes so far
+
+- **D6-001 / D6-002** — `Total sheets 17` and `Total value Rs 28,559,050` both exact. Summed
+  all 17 `grandTotal` values independently: **28,559,050**. Matches `summary.totalGrand`.
+- **D6-006 / D6-007** — **zero** mismatches. Every sheet's `grandTotal` equals its linked
+  booking's `totalAmount`, across all 17.
+- **D6-012 / D6-013** — venue scoping works and rescopes the tiles. Switched to
+  **Rehman Marquee Bahria (3360)** → 4 rows, `Total sheets 4`, `Total value Rs 6,942,100` —
+  matching the independently-derived per-venue counts (`3358: 6, 3359: 7, 3360: 4`).
+- **D6-016 — search works here, and the contrast with Bookings is instructive.** Typing
+  `Ahmed` returned exactly 2 matching sheets. Crucially it issued **no new API request** — the
+  filter is **client-side**, which is precisely why it does not 500 the way the Bookings
+  server-side search does (WWL-041). Two modules, two implementations, opposite outcomes.
+- **D6-021 — the delete guard is done RIGHT.** `Remove function sheet` opens a proper
+  `role="alertdialog"`:
+
+  > **Remove this function sheet?**
+  > Mehndi — Ahmed Raza will be removed. This can't be undone.
+  > `[Cancel]` `[Remove]`
+
+  Names the specific sheet, states irreversibility, correct ARIA role, and **no write is
+  attempted** until confirmed (verified with a write-blocker armed — zero blocked requests).
+  This is the pattern the Date-holds `Release` is missing (WWL-063).
+- **D6-043 — server-side variant gating is real and correct.** Requested all five variants
+  directly against sheet #77 (state `signed`, so only quote + contract are legal):
+
+  | Variant | HTTP | Result |
+  |---|---|---|
+  | `quote` | **200** | `application/pdf`, `%PDF-` magic, 3040 bytes |
+  | `contract` | **200** | `application/pdf`, `%PDF-` magic, 3040 bytes |
+  | `beo` | **400** | `VARIANT_NOT_UNLOCKED_YET` |
+  | `invoice` | **400** | `VARIANT_NOT_UNLOCKED_YET` |
+  | `receipt` | **400** | `VARIANT_NOT_UNLOCKED_YET` |
+
+  The UI gating is backed by the server, matching the client's `VARIANT_MIN` table exactly.
+  Not a client-only control.
+- **D6-044** — PDFs are genuine, well-formed PDF 1.3 documents with embedded fonts.
+- **D6-045** — **the arithmetic is right in every PDF.** Sheet 77: `320,000 + 772,200 =
+  1,092,200` ✔. Sheet 80: `420,000 + 1,205,100 = 1,625,100` ✔. Sheet 89: `610,000 + 936,000 =
+  1,546,000` ✔. Each matches its sheet record *and* its booking total.
+- **D6-046** — **the correct venue appears on each document.** Sheet 77 → "Rehman Grand
+  Marquee, Johar Town, Lahore"; sheet 80 → "Rehman Banquet & Lawn, Gulberg III, Lahore".
+  Correct per-sheet for a 3-venue vendor.
+- **D6-039 (draft half)** — sheet #89 (`draft`) renders a **`DRAFT` watermark** plus a `DRAFT`
+  status badge. Correct and clearly marked.
+- **D6-049** — share-token state read before touching anything: sheet #77 has
+  `customerShareToken: null`, `shareTokenIssuedAt: null`, `shareTokenExpiresAt: null`,
+  `shareTokenRevokedAt: null`. **No live customer link exists**, so issuing one in testing
+  would not break anything a customer holds.
