@@ -2073,6 +2073,60 @@ Two records, opposite errors, one cause: the chip is rendered from a stored flag
 being derived from `total − paid`. This is now the single highest-leverage fix identified in
 the sweep — it would close **WWL-001, WWL-005 and WWL-037** together.
 
+### 🔴 WWL-040 — S1 — The Record Payment dialog tells the vendor to collect the down payment twice
+
+`Booking actions → Record payment` on booking 179. The dialog renders, in this order:
+
+```
+Total Amount     Rs. 350,000
+Down Payment     Rs. 35,000      ← it knows money was received
+Current Status   Pending
+Remaining        Rs. 350,000     ← and then ignores it
+```
+
+`350,000 − 35,000 = Rs 315,000`. The dialog shows the down payment and the remaining balance
+**three lines apart**, and they contradict each other.
+
+It is not a display slip — the instruction repeats it in words, and the input is pre-hinted
+with the same wrong number:
+
+> **Amount received (Rs) \*** — placeholder `350000`
+> *"Enter exactly what the customer handed over. **Remaining balance is Rs 350,000.**"*
+
+**This is the most directly harmful defect found in the sweep.** Every other money bug
+misreports a total on a dashboard. This one sits on the screen a vendor opens *while the
+customer is standing in front of them*, and instructs them to collect **Rs 35,000 more than is
+owed**. A vendor following the on-screen instruction overcharges the customer — and the wedding
+industry runs on exactly this kind of counter-side cash settlement.
+
+**Same root cause as WWL-037**: `Remaining` is derived from `paymentStatus` (`Pending` ⇒ assume
+nothing paid) rather than from `total − downPayment`. It is the identical error that makes
+Receivables show Waheed at Rs 350,000 instead of Rs 315,000 (**WWL-002**) — the same booking,
+the same wrong number, now reached through the collection flow.
+
+**Deriving the balance from the amounts closes WWL-001, WWL-002, WWL-005, WWL-037 and
+WWL-040 — five findings, one fix.**
+
+### ✅ Record Payment — what it gets right
+
+- Amount input is `type="number"` with **`min="1"`** — correctly floored.
+- Payment types are sensible: `Down Payment` · `Full Payment` · `Custom amount`, with the
+  custom option explained ("part-payment, instalment, or a top-up on the advance").
+- `Record Payment` is **disabled** until payment type and method are chosen.
+- **Cancel is clean** — verified against the API: `totalAmount 350000.00`,
+  `downPayment 35000.00`, `paymentStatus Pending`, nothing written.
+
+⚠️ The amount field has **no `max`**, so an over-payment is not blocked client-side. Not
+pursued further — testing it would mean recording a real payment.
+
+### ✅ D4-037 — `Booking actions` enumerated
+
+Four items: `Quick view` · `View detail page` (→ `/dashboard/bookings/179`) ·
+`Record payment` · `Cancel booking`. All four are reachable and named.
+
+`Cancel booking` was **not driven** — cancelling a live booking is irreversible and would
+corrupt the very ledger under test.
+
 ### ⚠️ WWL-038 — S3 — "Total bookings" means two different things on two screens
 
 | Screen | Label | Value | Means |
