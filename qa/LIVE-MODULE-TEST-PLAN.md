@@ -2127,6 +2127,47 @@ Four items: `Quick view` · `View detail page` (→ `/dashboard/bookings/179`) �
 `Cancel booking` was **not driven** — cancelling a live booking is irreversible and would
 corrupt the very ledger under test.
 
+### 🔴 WWL-041 — S1 — Booking search returns HTTP 500 for **every** term; the UI shows it as "0 bookings"
+
+Typing anything into `Search bookings…` crashes the endpoint. Isolated precisely:
+
+| Request | Result |
+|---|---|
+| `?bucket=active` (no search) | **200** — 10 bookings |
+| `?search=&bucket=active` (empty search) | **200** — 10 bookings |
+| `?bucket=completed` | **200** — 12 bookings |
+| **`?search=Ahmed&bucket=active`** | **500** — `"Error retrieving vendor bookings"` |
+| **`?search=Ahmed`** (no bucket) | **500** |
+
+Ten different terms tried — `Waheed`, `waheed`, `  WAHEED  `, `Rehman Grand`, `Nikah`,
+`zzzznomatch`, `Ahmed` — **all 500**. Any non-empty `search` parameter kills the query.
+
+**The UI does not surface the crash.** Searching "Ahmed" — whose booking is literally the first
+row — renders an empty table with `Total bookings 0`. The vendor concludes the booking does not
+exist. A 500 presented as "no results" is the **WWL-018 pattern on the ledger**.
+
+**Root cause, from the repo's own comment** (`bookingController.js`): `status` was included in
+the ILIKE list, but it is a Postgres **ENUM** (`enum_Bookings_status`) and Postgres has no
+ILIKE operator for an enum, so the whole query throws.
+
+> ### ⚠️ This bug is already fixed — and the fix has never been deployed
+>
+> `event-planner-api` commit **`2c62c20` — "fix(bookings): every search term returned HTTP 500"**
+> is on branch `fix/booking-search-500-enum-ilike`, which has **no upstream and is on no remote
+> branch**. Production runs the broken code.
+>
+> **This is the third confirmed-fixed-but-undeployed defect this sweep has re-discovered live:**
+>
+> | Fix | Commit | State | Still live on prod |
+> |---|---|---|---|
+> | Cancelled bookings counted as revenue | `0677c6e` (ems-v0) | unpushed | **WWL-008** |
+> | Lead form accepts anything | `5e7d74d` (ems-v0) | unpushed | **WWL-031** |
+> | Booking search 500s | `2c62c20` (event-planner-api) | **no remote at all** | **WWL-041** |
+>
+> Three real defects, already diagnosed and repaired by past work, still harming the live
+> product because the branches were never shipped. **The single highest-value action available
+> right now is not writing more code — it is deploying what already exists.**
+
 ### ⚠️ WWL-038 — S3 — "Total bookings" means two different things on two screens
 
 | Screen | Label | Value | Means |
