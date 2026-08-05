@@ -39,7 +39,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 7 | Customers | `/dashboard/customers` | ✅ 66 | **`[x]` COMPLETE — 52 run, 14 not run, 11 findings** |
 | 8 | Calendar | `/dashboard/calendar` | ✅ 48 | **`[x]` COMPLETE — 38 run, 10 not run, 6 findings** |
 | 9 | Conversations | `/dashboard/chat` | ✅ 40 | **`[x]` COMPLETE — 26 run, 14 not run, 3 findings** |
-| 10 | Payments | `/dashboard/payments` | — | `[ ]` |
+| 10 | Payments | `/dashboard/payments` | ✅ 78 | `[ ]` IN PROGRESS |
 | 11 | Receivables | `/dashboard/receivables` | — | `[ ]` |
 | 12 | Receipts | `/dashboard/receipts` | — | `[ ]` |
 | 13 | Cheque ledger | `/dashboard/pdcs` | — | `[ ]` |
@@ -5183,3 +5183,207 @@ defects are cosmetic or latent — an unlabelled send button, an uncapped compos
 overflow precedent, and a generic page title. The one structural concern, the
 `catch { return [] }` swallow, is confirmed in source and inherits the severity already
 demonstrated in Module 7.
+
+---
+
+# MODULE 10 — PAYMENTS (`/dashboard/payments`)
+
+**Component** `components/dashboard/mainScreens/payments/redesigned/payments-redesigned-view.tsx`
+**Data** `PaymentsAPI.getVendorRevenue()` → `GET /api/v1/payments/vendor-revenue`
+(business-scoped by the axios interceptor — `lib/axiosConfig.js:25`)
+**Write path** `ReceiptFormDialog` → `ReceiptsAPI.create` → `POST /api/v1/receipts`
+
+## SAFETY LIMIT FOR THIS MODULE — strictest in the sweep
+
+This module sits directly on the money path of a live vendor's ledger. **No money row is
+written.** The write blocker (`XMLHttpRequest.open/send` + `window.fetch` recording and
+aborting every `POST|PUT|PATCH|DELETE`, GETs passing through) is armed **before** the
+`Record payment` dialog is opened and stays armed for the whole dialog section. Validation,
+gating, error copy and the blocked-reason hint are all exercised against the real form; the
+request is captured and aborted at the transport layer. Any case that cannot be proven without
+an actual `INSERT` is recorded as **not driven, with its reason**, not as a pass.
+
+## What the source says before I touch the page
+
+Read first so the live run tests claims rather than impressions:
+
+- `received` and `due` are **derived from `paymentStatus` + `downPayment`**, not from receipt
+  rows: `received = isDead ? 0 : isPaid ? total : isPartial ? dp : 0`
+  (`paymentController.js`, `getVendorRevenue`). No `PaymentReceipts` row is read anywhere.
+- `isDead = status === 'Cancelled' || paymentStatus === 'Refunded'` zeroes **`received` and
+  `due`** — but `calcStats.total` still sums `p.totalAmount` for **every** row including dead
+  ones. So `Total billed` and `Received + Due` are computed over **different populations**.
+- Dedup keeps the **first** `BookingDetails` row per `bookingId`; later detail rows for the
+  same booking are dropped, along with their `totalAmount`.
+- `source`, `dateFrom`, `dateTo` are supported by both the backend and `getVendorRevenue`, and
+  `stats.offline` / `stats.online` are computed on every response — the view passes none of
+  them and renders only `stats.all`.
+- `dateFrom && dateTo` — the backend applies the range only when **both** are present.
+- `payTone()` matches on substrings: `v.includes("paid")`. `"Unpaid"` would tone **green**;
+  the enum is `Pending | Paid | Partial | Cancelled | Refunded | Failed`, so this is latent,
+  not live. `Pending`, `Cancelled` and `Failed` all fall through to **`error`** (red).
+- `queryKey: ["payments-redesigned"]` carries **no `businessId`**, but `team-switcher.tsx:58`
+  calls a bare `queryClient.invalidateQueries()`, which invalidates everything. Predicted to
+  work; verify live rather than assume.
+- The table has **no `onRowClick`** — nothing links a payment row to its booking.
+- `selectable` is on, but `selectedIds` is consumed **only** by `ExportMenu`.
+
+## Test cases — written in full before execution
+
+### A. Load, identity and money arithmetic
+
+| # | Case | Expect |
+|---|---|---|
+| D10-001 | Route loads at `/dashboard/payments` | 200, table renders, no error boundary |
+| D10-002 | Page `<title>` | `Dashboard : Payments` (contrast WWL-106) |
+| D10-003 | Sidebar item, breadcrumb and `<h1>` agree | one label, no drift |
+| D10-004 | Exactly one network call on load | `GET /vendor-revenue`, no duplicate/N+1 |
+| D10-005 | Request carries `businessId` when a venue is active, omits it on **All venues** | matches interceptor whitelist |
+| D10-006 | Row count === `stats.all.count` === rendered `<tr>` count | no silent truncation |
+| D10-007 | `Σ row.total` === `Total billed` card | headline reconciles with its own table |
+| D10-008 | `Σ row.received` === `Received` card | |
+| D10-009 | `Σ row.due` === `Due` card | |
+| D10-010 | **`Received + Due` === `Total billed`** | predicted FAIL when any Cancelled/Refunded row exists |
+| D10-011 | Per row, `received + due === total` | predicted FAIL on dead rows (0 + 0 ≠ total) |
+| D10-012 | Per row, `due === max(0, total − received)` | |
+| D10-013 | `Paid` rows: `received === total`, `due === 0` | |
+| D10-014 | `Partial` rows: `received === downPayment` | and NOT the sum of logged receipts |
+| D10-015 | `Pending` rows: `received === 0`, `due === total` | |
+| D10-016 | `Cancelled` / `Refunded` rows: `received === 0` **and** `due === 0` | correct per BK fix |
+| D10-017 | …but the same row's `total` still lands in `Total billed` | quantify the overstatement in Rs |
+| D10-018 | Cross-check against Receipts ledger: `Σ receipts.amount` vs `Received` | do the two money screens agree? |
+| D10-019 | Cross-check against Bookings module totals for the same vendor | |
+| D10-020 | Cross-check against the Dashboard revenue headline | third opinion on the same number |
+| D10-021 | Rs formatting: thousands separators, no decimals drift, no `NaN`/`undefined` | |
+| D10-022 | A `totalAmount` of `null`/`""` in the payload renders `Rs 0`, not `NaN` | `num()` coercion |
+| D10-023 | Multi-`BookingDetails` booking — is any row's `total` lower than the booking's real total? | dedup-drop probe |
+| D10-024 | Sort order is `bookingDate` DESC | matches backend `payments.sort` |
+| D10-025 | Are column headers sortable? | if not, record as a gap |
+| D10-026 | Event dates render `en-PK` `dd Mmm yyyy` | contrast WWL-097 (Customers' US format) |
+| D10-027 | A `bookingDate` far in the past and far in the future both render | no clamp |
+| D10-028 | Invalid/absent `bookingDate` renders `—`, not `Invalid Date` | `fmtDate` guard |
+
+### B. Stat cards
+
+| # | Case | Expect |
+|---|---|---|
+| D10-029 | All four cards present: Total billed, Received, Due, Payments | |
+| D10-030 | During load each shows `…`, never `Rs 0` | no false "you have no money" flash |
+| D10-031 | `Payments` card is a **count**, not currency | no `Rs` prefix |
+| D10-032 | `Received` card's `trend="up"` / `delta="collected"` | is an unconditional up-arrow honest when Received is 0? |
+| D10-033 | `Due` card `delta="to chase"` renders as a label, not a number | |
+| D10-034 | Cards are inert (not buttons) — or if clickable, they go somewhere real | |
+| D10-035 | The offline/online split the endpoint computes is surfaced **nowhere** | record the dead capability |
+
+### C. Table rendering and columns
+
+| # | Case | Expect |
+|---|---|---|
+| D10-036 | Columns: Customer, Venue*, Event date, Total, Received, Due, Payment | *Venue only when >1 distinct |
+| D10-037 | With 3 venues on **All venues**, the Venue column **appears** | `multiVenue` true |
+| D10-038 | With a single venue selected, the Venue column **disappears** | |
+| D10-039 | Money columns are right-aligned and tabular | |
+| D10-040 | `Received` toned success, `Due` toned warning only when > 0 | |
+| D10-041 | Status pill text === raw `paymentStatus` | no relabelling |
+| D10-042 | Pill tone per status: Paid→success, Partial→warning, Refunded→neutral, **Pending/Cancelled/Failed→error** | is red right for `Pending`? |
+| D10-043 | An empty `customerName` renders `—` | |
+| D10-044 | A long customer name truncates without breaking the row | |
+| D10-045 | Clicking a row does nothing | confirm the dead-end (no `onRowClick`) |
+| D10-046 | No way to reach the booking / customer / receipt from a payment row | navigational dead end |
+| D10-047 | Table has a real `<table>` semantic structure with `<th>` scope | a11y |
+
+### D. Search
+
+| # | Case | Expect |
+|---|---|---|
+| D10-048 | Search by full customer name filters correctly | |
+| D10-049 | Search by partial name, mid-word | `includes`, not prefix |
+| D10-050 | Search is case-insensitive | |
+| D10-051 | Search by phone number | field is in the predicate |
+| D10-052 | Search by venue name | |
+| D10-053 | Search by an **amount** — e.g. `800000` | predicted no match; record as a gap on a money screen |
+| D10-054 | Search by **status** — `Paid` | predicted no match |
+| D10-055 | Leading/trailing whitespace is trimmed | |
+| D10-056 | Regex/SQL metacharacters (`%`, `_`, `'`, `.*`) are treated literally, client-side | no crash, no injection |
+| D10-057 | A no-match query shows the empty state — and does its copy still say *"No payments yet"*? | wrong-empty-state probe |
+| D10-058 | **Do the stat cards follow the filter?** | predicted NO — cards read `stats`, table reads `payments` |
+| D10-059 | Clearing search restores every row | |
+| D10-060 | Does search survive a hard reload? | no URL state expected |
+
+### E. Selection and F. Export
+
+| # | Case | Expect |
+|---|---|---|
+| D10-061 | Header checkbox selects all **visible** rows | |
+| D10-062 | With a search active, "select all" selects filtered rows only | not the whole set |
+| D10-063 | Selecting rows produces **no** bulk-action bar | selection is export-only; is that discoverable? |
+| D10-064 | Selection survives typing in search? | stale-id probe |
+| D10-065 | Export CSV with nothing selected → all filtered rows | |
+| D10-066 | Export CSV with 2 selected → exactly those 2 | |
+| D10-067 | Exported row count and Rs totals match the screen exactly | |
+| D10-068 | CSV contains `customerPhone` | PII in a downloadable file — flag consistent with Module 7 |
+| D10-069 | CSV injection: a name beginning `=`/`+`/`-`/`@` is neutralised | formula-injection probe |
+| D10-070 | Export menu offers what it claims (CSV / print / copy) and each works | |
+
+### G. Density, error, empty, resilience
+
+| # | Case | Expect |
+|---|---|---|
+| D10-071 | Density toggle changes row height and **persists across reload** | |
+| D10-072 | Failure injection on `/vendor-revenue` → error state + working `Retry` | `Couldn't load payments.` |
+| D10-073 | Retry after restoring the network refills the table | |
+| D10-074 | A 500 from the endpoint — does `getVendorRevenue`'s `?? {}` fallback turn it into a **fake empty ledger**? | the swallow pattern again |
+| D10-075 | Offline (`navigator.onLine=false`) behaviour | honest message, not "No payments yet" |
+| D10-076 | Slow network — skeleton/loading state, no layout jump | |
+| D10-077 | Hard reload preserves nothing unexpected; no console errors | |
+| D10-078 | Rapid double navigation into the route doesn't double-fetch or leak | |
+
+### H. Record payment dialog — validation only, **writes blocked**
+
+| # | Case | Expect |
+|---|---|---|
+| D10-079 | `Record payment` opens `Record a receipt` | note the **label mismatch**: button says payment, dialog says receipt |
+| D10-080 | Fields present: Amount, Date, Method, Transaction ref, Linked booking, Notes | |
+| D10-081 | On open, no field shows an error (untouched) | `touched` gate |
+| D10-082 | `Log receipt` is disabled on open, with a blocked-reason hint | BUG-057 pattern |
+| D10-083 | Blocked hint names the **booking** first when nothing is chosen | `errs.bookingId` precedence |
+| D10-084 | Amount `0` → error | `validatePkr` |
+| D10-085 | Amount negative via keyboard (not the spinner) → error | `min={0}` is only the spinner |
+| D10-086 | Amount non-numeric / `e` / `1e5` → handled | number input quirks |
+| D10-087 | Amount with 3+ decimals → rejected or rounded, not silently truncated | `step=0.01` |
+| D10-088 | Amount **larger than the booking's outstanding due** → is over-payment blocked? | predicted NOT validated |
+| D10-089 | Date defaults to today (PKT, not UTC) | contrast WWL-062 |
+| D10-090 | Future date blocked by both `max` attribute and JS | `validateNotFutureDate` |
+| D10-091 | Absurd past date (1900) → accepted? | no floor in source |
+| D10-092 | Method select lists every `RECEIPT_METHOD_LABELS` entry | |
+| D10-093 | Choosing JazzCash/Easypaisa/Raast/bank **requires** a transaction ref | `validateTransactionRef` |
+| D10-094 | Cash does **not** require a ref | |
+| D10-095 | Transaction ref `maxLength=64` enforced | |
+| D10-096 | Linked-booking select is populated (limit 100, newest first) and shows name + date | |
+| D10-097 | Notes over 1000 chars → error | `validateOptionalText` |
+| D10-098 | With every field valid, `Log receipt` **enables** — then the write is captured and aborted | proves gating without an INSERT |
+| D10-099 | Cancel closes without saving; re-opening reseeds a blank form | `loaded.current` key |
+| D10-100 | Esc and the overlay close the dialog; focus returns to the trigger | a11y |
+| D10-101 | Dialog is keyboard-navigable end to end; focus is trapped | |
+| D10-102 | Every input has a programmatic label / `aria-describedby` on error | `fieldAria` |
+| D10-103 | The dialog never states which venue the receipt lands against | multi-venue ambiguity probe |
+
+### I. Venue scoping, a11y, responsive, security
+
+| # | Case | Expect |
+|---|---|---|
+| D10-104 | Switch venue → the table, the cards and the row count all change | `invalidateQueries()` |
+| D10-105 | Switching to a venue with no bookings → honest empty state | |
+| D10-106 | Return to **All venues** → totals equal the sum of the three venues | roll-up arithmetic |
+| D10-107 | Venue choice survives a hard reload (persisted store) and the money still matches | |
+| D10-108 | Keyboard: Tab reaches search, density, export, every checkbox and `Record payment` | |
+| D10-109 | Visible focus ring on each | |
+| D10-110 | Every icon-only control has an accessible name | contrast WWL-104 |
+| D10-111 | Stat-card values are announced with their labels | |
+| D10-112 | 360px: no horizontal overflow (`scrollWidth === clientWidth`) | |
+| D10-113 | 360px: rows render as cards — and are those cards **operable**? | contrast WWL-053/086/093 |
+| D10-114 | 360px: search, export and `Record payment` all reachable and usable | |
+| D10-115 | 360px: the dialog fits, and its footer buttons are reachable | |
+| D10-116 | Customer email/phone are not exposed beyond what the vendor owns | |
+| D10-117 | `offline_*` synthetic emails are nulled before reaching the client | backend strips them |
+| D10-118 | Route requires auth — no token → redirect, not a money leak | |
