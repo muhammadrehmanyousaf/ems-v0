@@ -40,7 +40,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 8 | Calendar | `/dashboard/calendar` | ✅ 48 | **`[x]` COMPLETE — 38 run, 10 not run, 6 findings** |
 | 9 | Conversations | `/dashboard/chat` | ✅ 40 | **`[x]` COMPLETE — 26 run, 14 not run, 3 findings** |
 | 10 | Payments | `/dashboard/payments` | ✅ 118 | **`[x]` COMPLETE — 101 run, 17 not run, 22 findings (4× S1)** |
-| 11 | Receivables | `/dashboard/receivables` | — | `[ ]` |
+| 11 | Receivables | `/dashboard/receivables` | ✅ 96 | `[ ]` IN PROGRESS |
 | 12 | Receipts | `/dashboard/receipts` | — | `[ ]` |
 | 13 | Cheque ledger | `/dashboard/pdcs` | — | `[ ]` |
 | 14 | Expenses | `/dashboard/expenses` | — | `[ ]` |
@@ -5667,3 +5667,166 @@ and the second genuinely non-overflowing 360px layout in the sweep. What is wron
 success, a headline that sums a different population than its own components, and a second money
 screen that disagrees with this one by Rs 1.12m. Those are not polish problems. On a live vendor's
 ledger, WWL-107 alone means a vendor can be told their cash was recorded when it was not.
+
+---
+
+# MODULE 11 — RECEIVABLES (`/dashboard/receivables`)
+
+**Component** `components/dashboard/mainScreens/receivables/redesigned/receivables-redesigned-view.tsx`
+**Data** `AnalyticsAPI.getReceivables()` → `GET /api/v1/analytics/receivables`
+(business-scoped — `/api/v1/analytics/` is on the interceptor whitelist)
+**Write path** none. The only outbound action is a **WhatsApp deep link** per row.
+
+## SAFETY LIMIT FOR THIS MODULE
+
+The single action on this screen sends a **dunning message to a real customer's phone**. That is
+not a thing to test on live production. Therefore:
+
+- **No WhatsApp link is ever followed.** I read the `href`, decode the prefilled text and check
+  the phone normalisation, but I never navigate to `wa.me`, never open WhatsApp Web, and never
+  put a message in front of a real person.
+- No writes of any kind (this screen has none, but the blocker is armed anyway).
+
+## What the source says before I touch the page
+
+- **`bucketTone()` looks broken by short-circuit.** The backend emits bucket keys
+  `current | days_1_30 | days_31_60 | days_61_90 | days_90_plus`. The tone function tests
+  `v.includes("current") || v.includes("0")` **first** and returns `success` (green). **Every
+  overdue key contains a `0`** — `days_1_30`, `days_31_60`, `days_61_90`, `days_90_plus` — so the
+  later `90`/`60`/`30` branches look unreachable and the whole aging column may render green.
+  Predicted, must be confirmed on screen.
+- **`cap()` produces "Days 1 30", "Days 31 60", "Days 90 plus"** rather than a readable range.
+- **`AnalyticsAPI.getReceivables` swallows into `null`** (`catch { return null }`). `null` →
+  `customers = []`, `isError` **false** → the empty state renders. Predicted: a failed load says
+  *"Nothing outstanding"*. Unlike Module 10 this is a `catch`, so fixing the backend catch-all
+  would not fix it.
+- **`waLink()` PK normalisation**: strips non-digits, `+` → drop, leading `0` → `92`, bare
+  `3XXXXXXXXX` (10) → `92…`. Live customer phones look like `0348678149` — **10 digits**, but a
+  real PK mobile is **11** (`03XX-XXXXXXX`). Must check what number the link actually produces.
+- **The greeting hard-codes the male honorific** `sahab` for every customer, and `customerName`
+  is often a **couple** name.
+- `getRowId` = `phone || email || name || JSON.stringify(row)` — collides when phone is absent.
+- No row click, no drill-through, no "record payment" action from a debtor row.
+
+## Test cases — written in full before execution
+
+### A. Load, identity, aging correctness
+
+| # | Case | Expect |
+|---|---|---|
+| D11-001 | Route loads, table renders, no error boundary | |
+| D11-002 | `<title>` is `Dashboard : Receivables` | |
+| D11-003 | Sidebar / breadcrumb / `<h1>` agree | |
+| D11-004 | Exactly one `analytics/receivables` call on load | |
+| D11-005 | `businessId` appended when a venue is active, omitted on All venues | |
+| D11-006 | Row count === `totals.customerCount` | |
+| D11-007 | `Σ row.totalOutstanding` === `Outstanding` card | |
+| D11-008 | `Σ row.installmentsOpen` === `Open installments` card | |
+| D11-009 | `max(row.oldestDaysOverdue)` === `Oldest overdue` card | |
+| D11-010 | `Σ buckets[*].total` === `grandOutstanding` | bucket roll-up closes |
+| D11-011 | `Σ buckets[*].count` === number of customers | |
+| D11-012 | Each customer's `bucket` matches `bucketKey(oldestDaysOverdue)` | server self-consistency |
+| D11-013 | **Aging pill tone per bucket** | predicted ALL green — the `includes("0")` short-circuit |
+| D11-014 | A customer 90+ days overdue is visually distinguishable from `current` | the point of an aging board |
+| D11-015 | Aging label text is readable | `Days 1 30` vs `1–30 days` |
+| D11-016 | `daysOverdue` is computed from UTC midnight — does it drift for PKT? | WW-246 anchors at UTC |
+| D11-017 | Reconcile `grandOutstanding` against **Payments → Due** (Rs 12,292,729) | two boards, one debt |
+| D11-018 | Reconcile against **Dashboard → Baqaya** (Rs 13,417,229) | third opinion; WWL-110 |
+| D11-019 | Are cancelled bookings excluded from receivables? | they are dead money |
+| D11-020 | Are refunded bookings excluded? | |
+| D11-021 | Rs formatting; no `NaN`/`undefined` in any cell | |
+| D11-022 | `bookingCount` and `installmentsOpen` render as counts, not currency | |
+| D11-023 | Row order — is it by outstanding, by overdue, or unsorted? | |
+| D11-024 | A customer with several bookings is merged into one row | backend merges by email/phone/name |
+| D11-025 | …and their `totalOutstanding` is the sum of those bookings | |
+| D11-026 | `generatedAt` is exposed to the user anywhere | staleness disclosure |
+
+### B. Stat cards
+
+| # | Case | Expect |
+|---|---|---|
+| D11-027 | Four cards: Outstanding, Customers owing, Open installments, Oldest overdue | |
+| D11-028 | `…` during load, never `Rs 0` | |
+| D11-029 | `Oldest overdue` renders `N days`, with correct singular/plural at 1 | |
+| D11-030 | `Outstanding` card `trend="down"` — is a down-arrow right for debt owed **to** the vendor? | semantics |
+| D11-031 | Cards are inert, not fake buttons | |
+| D11-032 | Cards show `Rs 0`/`0 days` in the error state | the WWL-121 pattern |
+| D11-033 | The five bucket totals are computed but surfaced **nowhere** | dead capability check |
+
+### C. Table, WhatsApp action, PK correctness
+
+| # | Case | Expect |
+|---|---|---|
+| D11-034 | Columns: Customer, Phone, Bookings, Open installments, Days overdue, Aging, Outstanding, action | |
+| D11-035 | Numeric columns right-aligned + tabular | |
+| D11-036 | Missing customer name → `—` | |
+| D11-037 | Missing phone → `—` **and no WhatsApp icon** | |
+| D11-038 | WhatsApp control has an accessible name | `aria-label` present in source |
+| D11-039 | **Phone normalisation** — what number does the href actually contain? | `0348678149` → `92348678149`? |
+| D11-040 | Is the produced number a **valid** PK mobile (92 + 10 digits)? | 10-digit source data is suspect |
+| D11-041 | A phone already in `+92…` form is not double-prefixed | |
+| D11-042 | A phone with spaces/dashes (`0300-123 4567`) normalises | |
+| D11-043 | A landline (`042…`) — does it silently produce a WhatsApp link to a landline? | |
+| D11-044 | **Prefilled text** decodes to correct Roman-Urdu with the right amount | |
+| D11-045 | The amount in the message === the row's Outstanding | a wrong figure in a dunning message is serious |
+| D11-046 | Amount is `Math.round`ed and `en-PK` formatted inside the message | |
+| D11-047 | **`sahab` is applied to every customer** including women and couples | PK honorific correctness |
+| D11-048 | Link opens in a new tab with `rel="noopener noreferrer"` | |
+| D11-049 | Clicking the link does not also trigger a row action | `stopPropagation` |
+| D11-050 | Row itself is not clickable / no drill-through to the customer or booking | |
+| D11-051 | No way to record a payment from the debtor row | the obvious next action |
+| D11-052 | Table semantics: `<th scope>`, caption | contrast WWL-120 |
+| D11-053 | Row checkboxes have distinguishable accessible names | contrast WWL-120 |
+
+### D. Search, selection, export
+
+| # | Case | Expect |
+|---|---|---|
+| D11-054 | Search by customer name, full and mid-word | |
+| D11-055 | Search case-insensitive | |
+| D11-056 | Search by phone | |
+| D11-057 | Search by amount / by aging bucket | predicted no match — record the gap |
+| D11-058 | Whitespace trimmed | |
+| D11-059 | Metacharacters treated literally | |
+| D11-060 | No-match empty state copy — does it wrongly say *"Nothing outstanding"*? | the WWL-116 pattern |
+| D11-061 | **Do the stat cards follow the filter?** | predicted NO — the WWL-115 pattern |
+| D11-062 | Clearing search restores all rows | |
+| D11-063 | Select all selects visible rows only under a filter | |
+| D11-064 | Selection survives filter changes | |
+| D11-065 | Export CSV unselected → all filtered rows | |
+| D11-066 | Export CSV selected → exactly those rows | |
+| D11-067 | Exported values match the screen | |
+| D11-068 | CSV carries **Phone** — a debtor phone list leaving the system | PII |
+| D11-069 | CSV formula-injection neutralisation | shared `ExportMenu`; WWL-123 |
+| D11-070 | CSV **omits the Aging bucket** even though it's a column | export/screen parity |
+| D11-071 | Excel export produces a valid file | |
+| D11-072 | `getRowId` collision when two customers share no phone/email | dedup risk |
+
+### E. Resilience, scope, a11y, responsive
+
+| # | Case | Expect |
+|---|---|---|
+| D11-073 | Density toggle works and persists across a hard reload | |
+| D11-074 | Genuine network failure → *"Couldn't load receivables."* + Retry | |
+| D11-075 | Retry recovers | |
+| D11-076 | **Mis-routed endpoint (backend 200 catch-all)** → what renders? | the WWL-107/108 pattern |
+| D11-077 | **`catch { return null }`** → does a real failure render *"Nothing outstanding"*? | S1 candidate |
+| D11-078 | Offline behaviour — honest, or stale-and-silent? | WWL-114 pattern |
+| D11-079 | Loading state: skeletons, `…`, no `Rs 0` flash | |
+| D11-080 | Venue switch re-scopes rows and totals | |
+| D11-081 | Per-venue totals sum to the All-venues total | |
+| D11-082 | Venue choice survives a hard reload | |
+| D11-083 | Keyboard: every control reachable, visible focus ring | |
+| D11-084 | The WhatsApp link is keyboard-reachable and announced | |
+| D11-085 | Stat cards announced with their labels | |
+| D11-086 | 360px: no horizontal overflow | |
+| D11-087 | 360px: cards render and are readable | |
+| D11-088 | 360px: **is the WhatsApp action reachable on a phone?** | this is the mobile use case |
+| D11-089 | 360px: search and export usable | |
+| D11-090 | 360px: is the aging bucket still shown on the card? | |
+| D11-091 | Unauthenticated → redirect, no debtor data leaked | |
+| D11-092 | Customer emails are not exposed in the DOM beyond need | |
+| D11-093 | `offline_*` synthetic emails not shown | |
+| D11-094 | No console errors across the whole run | |
+| D11-095 | Hard reload keeps the screen consistent | |
+| D11-096 | Rapid re-navigation doesn't double-fetch | |
