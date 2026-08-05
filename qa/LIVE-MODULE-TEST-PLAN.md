@@ -45,7 +45,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 13 | Cheque ledger | `/dashboard/pdcs` | ✅ 88 | **`[x]` COMPLETE — 78 run, 10 not run, 16 findings** |
 | 14 | Expenses | `/dashboard/expenses` | ✅ 104 | **`[x]` COMPLETE — 89 run, 15 not run, 14 findings** |
 | 15 | Tax report | `/dashboard/tax` | ✅ 72 | **`[x]` COMPLETE — 61 run, 11 not run, 10 findings** |
-| 16 | Reports | `/dashboard/reports` | — | `[ ]` |
+| 16 | Reports | `/dashboard/reports` | ✅ 70 | `[ ]` IN PROGRESS |
 | 17 | Trade operations | `/dashboard/trade-ops` | — | `[ ]` |
 | 18 | Automation | `/dashboard/automation` | — | `[ ]` |
 | 19 | Kitchen prep | `/dashboard/kitchen` | — | `[ ]` |
@@ -7297,3 +7297,141 @@ returned with every response. The frontend asks for one hard-coded year, drops t
 renders none of the period metadata, and wires the export button to nothing. Three of the four
 defects here are a missing parameter, a missing selector and a missing `onClick` — the capability
 is already paid for.
+
+---
+
+# MODULE 16 — REPORT CARDS (`/dashboard/reports`)
+
+**Component** `components/reports/report-cards-view.tsx`
+**Data** `getReportCards(period)` → `GET /api/v1/bookings/report-cards?period=month|year`
+**Write paths** none. Two outbound actions: a **per-card WhatsApp link** and a
+**share-all-as-image** canvas render.
+
+The Urdu-first "glanceable business" screen — big Urdu label, big number, one colour, one arrow.
+
+## SAFETY LIMIT
+
+No writes exist. **No WhatsApp link is followed and no share is sent** — hrefs and the generated
+image are inspected locally only, exactly as in Module 11.
+
+## What the source says before I touch the page
+
+- **`/report-cards` is not on `BUSINESS_SCOPED_PREFIXES`** — the second module after Tax
+  (WWL-190) that cannot follow the venue switcher.
+- **The "self-hides on 404" mechanism is dead code.** `getReportCards` catches `status === 404`
+  and returns null — but the backend's catch-all (WWL-107) never returns 404. The screen still
+  degrades safely, but via the `?? null` fallback, not the documented path.
+- **Any non-404 failure renders "Reports abhi enabled nahi hain."** (`Reports aren't enabled
+  yet`). A 500 or a network drop would tell the vendor the feature is switched off rather than
+  that something broke.
+- The vendor name in the share text comes from `useBusiness()` context, **not** the
+  `activeBusinessId` store the switcher writes to — two different sources of "which venue".
+- `delta` renders as a raw percentage with no cap; a near-empty previous period will produce very
+  large numbers.
+
+## First-glance readings that must be reconciled
+
+Two figures on this screen already contradict other modules:
+
+- **`Baqaya (Vasooli baaqi)` Rs 13,417,229 / 14 events** — matches the **Dashboard** exactly, and
+  contradicts **Payments' Due** and **Receivables' outstanding**, both Rs 12,292,729 / 13. This is
+  the WWL-110 split, now 2 screens against 2.
+- **`Is Maheene Ki Kamai` Rs 16,065,700 across 11 events** — but Module 15's monthly table gives
+  **Aug 2026 = 5 bookings, Rs 7,027,950** for the same vendor and month.
+
+## Test cases — written in full before execution
+
+### A. Load, identity, flag behaviour
+
+| # | Case | Expect |
+|---|---|---|
+| D16-001 | Route loads and renders cards | |
+| D16-002 | `<title>` is `Dashboard : Reports` | |
+| D16-003 | Sidebar "Reports" vs `<h1>` "Report Cards" | label drift |
+| D16-004 | One `bookings/report-cards` call on load | |
+| D16-005 | **Is `businessId` sent?** | predicted NO |
+| D16-006 | **Does switching venue change any card?** | decisive |
+| D16-007 | The loading state is a spinner, not skeletons | |
+| D16-008 | A failure renders *"Reports abhi enabled nahi hain."* rather than an error | mislabelled |
+| D16-009 | Is there any Retry? | predicted none |
+| D16-010 | The 404 self-hide path is unreachable given the backend catch-all | source-confirmed |
+
+### B. The numbers — reconciliation against other modules
+
+| # | Case | Expect |
+|---|---|---|
+| D16-011 | `Is Maheene Ki Kamai` — what period and what basis? | vs Module 15's Aug figure |
+| D16-012 | Its event count (11) vs Module 15's Aug booking count (5) | |
+| D16-013 | Is "this month" calendar, rolling-30-day, or fiscal? | |
+| D16-014 | Is it keyed on `bookingDate` or `createdAt`? | explains a mismatch |
+| D16-015 | Does it include Cancelled bookings? | Module 15 excludes them |
+| D16-016 | Does it include Pending / Awaiting Payment? | Module 15 excludes them |
+| D16-017 | **`Baqaya` Rs 13,417,229 vs Payments/Receivables Rs 12,292,729** | resolve the WWL-110 split |
+| D16-018 | Its event count 14 vs Receivables' 13 customers | |
+| D16-019 | `Aaj Ki Vasooli` (today's collection) — Rs 0, is that right? | vs Receipts dated today |
+| D16-020 | `Average Booking` === revenue ÷ bookings? | internal consistency |
+| D16-021 | `Fi Event Bachat` (per-event saving) Rs 0 with "kharch add karein" | but Module 14 has Rs 16.8m of expenses |
+| D16-022 | `Staff Kharcha` Rs 0 — but Module 14 shows salary expenses | |
+| D16-023 | `Sab Se Zyada` (most frequent) — 2 mehndi | vs actual event-type mix |
+| D16-024 | Seasonality bars — last 6 months, correct months and counts | |
+| D16-025 | Seasonality counts vs bookings per month from Module 10 | |
+| D16-026 | Deltas of +453% and +450% — what are they comparing? | |
+| D16-027 | Is there a guard against a zero previous period? | |
+| D16-028 | `Maheena` vs `Saal` toggle changes every card coherently | |
+| D16-029 | Year figures reconcile with Module 15's fiscal/calendar totals | |
+| D16-030 | Money formatting `Rs ` + `en-PK`, rounded | |
+| D16-031 | Percentages rounded, no `NaN`/`Infinity` | |
+
+### C. Urdu, tone, presentation
+
+| # | Case | Expect |
+|---|---|---|
+| D16-032 | All card labels are in Urdu (Roman) and read naturally | |
+| D16-033 | `Maheena` / `Saal` toggle labels correct | |
+| D16-034 | Card tones: good → emerald, warn → amber, neutral | |
+| D16-035 | Is a **Rs 0** "Fi Event Bachat" toned as good/warn appropriately? | |
+| D16-036 | Delta arrow direction matches sign | |
+| D16-037 | A negative delta renders rose with a down arrow | |
+| D16-038 | The first card spans two columns on mobile, one on desktop | |
+| D16-039 | Values are tabular-nums | |
+| D16-040 | `sub` text renders alongside the delta | |
+| D16-041 | Is any card explained? (no tooltips/definitions) | a number with no definition |
+| D16-042 | Urdu text direction — is RTL handled or is it Roman-only? | |
+| D16-043 | Does the `اردو` app-level language toggle change these labels? | they are already Urdu |
+
+### D. The two share paths
+
+| # | Case | Expect |
+|---|---|---|
+| D16-044 | Each card has a WhatsApp icon link | |
+| D16-045 | The link is `wa.me/?text=` with **no recipient** | share-sheet style |
+| D16-046 | The decoded text names the vendor, the Urdu label and the value | |
+| D16-047 | Vendor name comes from `useBusiness()` — does it follow the switcher? | two sources of truth |
+| D16-048 | `target="_blank"` + `rel="noopener noreferrer"` | |
+| D16-049 | The icon has an accessible name | `title` only, or `aria-label`? |
+| D16-050 | **`Image` button generates a shareable card image** | canvas render, inspected locally |
+| D16-051 | The image contains all cards with correct values | |
+| D16-052 | The image carries the vendor name and the period subtitle | |
+| D16-053 | Does the image path attempt a network send, or only produce a file? | must not send |
+| D16-054 | Does it work when the Web Share API is unavailable (desktop)? | fallback |
+| D16-055 | Is the `Image` button labelled for screen readers? | |
+
+### E. Resilience, a11y, responsive
+
+| # | Case | Expect |
+|---|---|---|
+| D16-056 | Genuine network failure → what renders? | predicted the "not enabled" copy |
+| D16-057 | No console errors | |
+| D16-058 | Hard reload consistent | |
+| D16-059 | Period choice survives reload? | local state only |
+| D16-060 | Keyboard: toggle, Image button and all card links reachable | |
+| D16-061 | Visible focus ring on each | |
+| D16-062 | Card values announced with their labels | |
+| D16-063 | 360px: no page overflow **and** no clipped elements | both checks, after WWL-178 |
+| D16-064 | 360px: seasonality bars readable | |
+| D16-065 | 360px: are the WhatsApp icons tappable? | |
+| D16-066 | 360px: is the `Image` button reachable? | |
+| D16-067 | Unauthenticated → redirect | |
+| D16-068 | Seasonality with a zero month renders a zero-height bar, not a broken one | `minHeight` guard |
+| D16-069 | `maxSeason` guard prevents divide-by-zero | `Math.max(1, …)` |
+| D16-070 | Nothing on this screen writes | read-only confirmation |
