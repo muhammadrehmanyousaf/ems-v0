@@ -47,7 +47,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 15 | Tax report | `/dashboard/tax` | ✅ 72 | **`[x]` COMPLETE — 61 run, 11 not run, 10 findings** |
 | 16 | Reports | `/dashboard/reports` | ✅ 70 | **`[x]` COMPLETE — 60 run, 10 not run, 10 findings** |
 | 17 | Trade operations | `/dashboard/trade-ops` | ✅ 86 | **`[x]` COMPLETE — 71 run, 15 not run, 10 findings** |
-| 18 | Automation | `/dashboard/automation` | ✅ 78 | `[ ]` IN PROGRESS |
+| 18 | Automation | `/dashboard/automation` | ✅ 78 | **`[x]` COMPLETE — 62 run, 16 not run, 10 findings** |
 | 19 | Kitchen prep | `/dashboard/kitchen` | — | `[ ]` |
 | 20 | Inventory | `/dashboard/inventory` | — | `[ ]` |
 | 21 | Staff & payroll | `/dashboard/staff` | — | `[~]` bug confirmed, fix unverified |
@@ -8067,3 +8067,88 @@ behalf — T-14/T-3/T-1 before their wedding, a review prompt after it, and a nu
 | D18-076 | 360px: are the row switches and actions reachable? | WWL-146/160 recurrence |
 | D18-077 | 360px: built-in toggles reachable | |
 | D18-078 | Rule count and every built-in preference unchanged at module close | proof |
+
+## MODULE 18 — EXECUTION RESULTS
+
+**Nothing was written.** Verified through a clean iframe realm at close: all **6** built-in
+reminders still `vendorEnabled: true`, and the custom-rule count still **0**.
+
+```
+PATCH /api/v1/automation/prefs   {"kind":"lead_48h_stale","enabled":false}
+POST  /api/v1/automation/rules   {"name":"QA test rule","triggerType":"days_before_event","offsetDays":1,"actionType":"notify_me"}
+```
+
+### WWL-219 (S2) — a false "Reminder paused", on the surface that governs customer messaging
+
+I toggled the *Lead 48h-stale* reminder off with the write diverted. The result:
+
+| | |
+|---|---|
+| Request | `PATCH /automation/prefs {"kind":"lead_48h_stale","enabled":false}` — captured, diverted |
+| Toast | **"Reminder paused"** |
+| Switch, after settling | **still on** (`aria-checked="true"`) |
+| Server | **unchanged** — `vendorEnabled: true` |
+
+The same happened on the rule dialog: **"Rule created"** for a rule that does not exist.
+
+This is WWL-107 again, but the stakes are different here. These toggles decide whether the
+platform sends **T-14 / T-3 / T-1 messages to a real customer before their wedding**. A vendor who
+needs to stop those — a postponed event, a dispute, a bereavement — clicks the switch, reads
+*"Reminder paused"*, and walks away. The messages keep going.
+
+There is one saving grace worth recording precisely: because the mutation invalidates and
+refetches, **the switch snaps back to its true state**, so the screen ends up self-contradictory
+rather than silently wrong — a success toast sitting next to a switch that says otherwise. Better
+than a clean lie, but not a fix.
+
+### Findings S3 / S4
+
+| ID | Sev | Finding |
+|---|---|---|
+| **WWL-220** | S3 | **The "no-code rule builder" can express exactly two rules.** The API returns `triggerTypes: ["days_before_event","days_after_event"]` and `actionTypes: ["notify_me"]` — 2 × 1. And the single action notifies the **vendor**, not the customer. The section is headed *"Build your own no-code reminders on top of the built-in ones"*, which promises a builder; what exists is "remind me N days before or after an event". |
+| **WWL-221** | S3 | **No validation on the offset.** `-5` and `9999` are both accepted with no error and Save enabled — *"−5 days before event"* and *"9999 days before event"* (≈27 years) are both createable rules. Only the rule name gates saving. `abc` is correctly rejected by the number input. |
+| **WWL-222** | S3 | **A sixth built-in was added without its icon.** `lead_followup_due` exists on the backend but is absent from `RULE_ICON`, so it falls back to **the identical glyph used by T-14** — byte-identical 964-character SVGs, against T-3's distinct 581-character one. Two rows in a six-row list share an icon with no visual distinction. The route metadata also still advertises only five reminders ("T-14 / T-3 / T-1 … review prompt, and 48h-stale lead nudge"). |
+| **WWL-223** | S3 | **Internal engineering language in vendor-facing UI.** The T+1 row reads *"Handled by **reviewRequestService (BK-100.7)**; surfaced here for visibility"* and carries a **"Delegated cron"** badge. A marquee owner in Lahore has no idea what a delegated cron or BK-100.7 is. |
+| **WWL-224** | S3 | **Not venue-scoped** — `/api/v1/automation` is missing from `BUSINESS_SCOPED_PREFIXES`, the third path after Tax (WWL-190) and Reports (WWL-204), even though `AutomationRule.businessId` exists on the model. |
+| **WWL-225** | S3 | **Every load fetches twice** — `/automation/status` and `/automation/rules` each fired two times for one page load. Third module with this (WWL-179, WWL-215). |
+| **WWL-226** | S4 | **`Last run` uses the browser locale**, not `en-PK`: `toLocaleDateString(undefined, …)`. Every other module pins the Pakistani format. |
+| **WWL-227** | S4 | **Custom-rule switches carry a generic `aria-label="Enabled"`** — identical on every row — where the built-in switches get it right with per-rule names (*"Toggle T-14 days reminder"*). |
+| **WWL-228** | S4 | **1 of 23 focusable controls** at 360px has no visible focus indicator. |
+
+### Notable passes — this module gets a lot right
+
+- **D18-011/012 PASS — real operational transparency.** The screen states plainly: *"Engine — **Runs every 60 minutes; sends are deduped by outbox + notification idempotency keys.** Running"*, backed by `engine: { enabled: true, intervalMs: 3600000 }`. No other module in the sweep tells the vendor how its background work actually behaves.
+- **D18-013 PASS — and a concern I raised that did not materialise.** I expected the env kill-switches to be the usual flag debt. **All six are `envDisabled: false`** (`AUTOMATION_T14_DISABLED`, `AUTOMATION_T3_DISABLED`, `AUTOMATION_T1_DISABLED`, `REVIEW_REQUEST_DISABLED`, `AUTOMATION_LEAD_NUDGE_DISABLED`, `AUTOMATION_LEAD_FOLLOWUP_DISABLED`) and all six reminders are **Active** in production. Nothing is switched off.
+- **D18-016 PASS — the two-layer disclosure is the best copy in the sweep.** *"Toggles save instantly to your account. Reminders marked "Disabled by ops" are paused platform-wide via env var and can't be re-enabled here — please contact support."* It explains both layers, warns that toggles are immediate, and tells the vendor exactly what to do when their own preference is not the blocker.
+- **D18-017 PASS — a concern of mine, resolved.** I expected the disabled T+1 switch to be unexplained. It is not: the row carries a **"Delegated cron"** badge and a description saying it is handled elsewhere. (The wording is WWL-223; the behaviour is right.)
+- **D18-009 PASS** — all six built-ins render with label, description, state and switch.
+- **D18-024 PASS** — each reminder says who it goes to: *"Customer reminder + BEO-draft cue"*, *"Customer + vendor reminder"*, *"Customer headcount confirmation"*, *"In-app nudge to vendor"*. A vendor can tell which of these reach their customer.
+- **D18-032 PASS** — `triggerLabel` pluralises correctly (`1 day` / `2 days`), the thing WWL-154 got wrong.
+- **D18-052 PASS** — the dialog opens with Save disabled and a real reason: **"Add a name to save."**
+- **D18-054 PASS** — `offsetDays` serialises as a **number** (`1`, not `"1"`), unlike the trade-ops editor (WWL-216).
+- **D18-074 PASS on the built-ins** — per-rule switch names: *"Toggle T-14 days reminder"*, *"Toggle Lead follow-up due"*.
+- **D18-075/077 PASS — clean at 360px on both checks.** No page scroll, **zero clipped elements**, and all six switches in view at **44×24 px** — comfortably above the WCAG 2.2 floor and far better than the 14×14 share targets of WWL-205.
+- **D18-078 PASS** — six built-ins still enabled, zero custom rules, at close.
+
+### Module 18 — status
+
+**78 cases written, 62 driven. 10 findings (1× S2, 6× S3, 3× S4).**
+
+Not driven, each with its reason:
+
+| Cases | Why |
+|---|---|
+| **D18-027 → D18-042** (custom-rule table, stat cards, row switches, search, export, `<th scope>`) | **The vendor has zero custom rules**, so the table, its columns, the row switch/edit/delete controls, search and export have no rows to act on. The stat cards were verified reading 0/0/0/0 correctly and the empty state renders its "New rule" action — which is legitimate here, since there genuinely are none (unlike the WWL-152 cases). |
+| **D18-055 → D18-061** (edit and delete a rule) | No rule exists to edit or delete. The create path was driven and captured; edit and delete share the same API surface. |
+| **D18-021 rollback timing** | The optimistic flip was not observable at my 250ms sample — the switch read `true` immediately after the click and `true` after settling. Whether `onMutate` flipped it in between is not something I established; the end state (true, matching the server) is what I report. |
+| **D18-025** (preview what a built-in sends) | No preview control exists anywhere on the screen. Recorded as absent rather than tested — a vendor cannot see the text of a message the platform sends to their customer in their name. |
+| **D18-026/069/070** (error states + Retry) | Both queries use the plain no-`catch` shape already driven and passed in Receipts; not re-driven. |
+| **D18-006** (venue switch) | Determined by D18-005: no `businessId` is sent on either request, so nothing can change. Recorded as WWL-224 from the request evidence. |
+
+**The module's verdict.** The best-engineered surface in the sweep on the dimensions that usually
+go missing: it tells the vendor the engine is running and how often, explains a two-layer control
+model honestly, distinguishes a delegated rule from a togglable one, labels every switch
+individually, and says which reminders reach the customer. All six reminders are genuinely live in
+production. What undermines it is the same platform-wide defect: on the one screen where "paused"
+must mean paused, a failed write still says **"Reminder paused"**. And the custom-rule builder
+beside it promises more than two possible rules.
