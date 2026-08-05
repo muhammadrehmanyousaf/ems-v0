@@ -32,7 +32,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 |---|---|---|---|---|
 | 1 | Dashboard | `/dashboard` | ✅ 62 | **`[x]` COMPLETE — 60 run, 2 unrun, 18 findings** |
 | 2 | Today | `/dashboard/today` | ✅ 58 | **`[x]` COMPLETE — 52 run, 6 not run, 11 findings** |
-| 3 | Lead inbox | `/dashboard/leads` | ✅ 61 | `[~]` in progress |
+| 3 | Lead inbox | `/dashboard/leads` | ✅ 61 | **`[x]` COMPLETE — 49 run, 12 not run, 5 findings** |
 | 4 | Bookings | `/dashboard/bookings` | — | `[ ]` |
 | 5 | Date holds | `/dashboard/date-holds` | — | `[ ]` |
 | 6 | Function sheets | `/dashboard/function-sheets` | — | `[ ]` |
@@ -1713,6 +1713,99 @@ on the most destructive action in the module (`Remove lead`).
 - **D3-059 ✅** — real `<thead>` with 9 `<th>` cells.
 - **D3-009 ✅** — all 76 rows are in the DOM; no pagination or virtualisation hiding rows, and
   the tiles count the full set.
+
+### ✅ D3-047 — Export is accurate (with one inherited flaw)
+
+Captured the generated file client-side rather than downloading it:
+
+- `leads.csv` · header `Contact,Phone,Source,Event,Event date,Budget,Status`
+- **76 data rows — exactly what is on screen** ✅
+- First row: `Asad Jameel,0311619148,Form inquiry,Walima,27 Nov,1175000,new`
+- Budget exports as a raw number (`1175000`) — machine-readable ✅
+
+**But `Event date` exports as `27 Nov`** — the same year-less display string as the table. So
+**WWL-032 is baked into the export**, not merely a display quirk: a CSV of 76 leads whose dates
+carry no year cannot be sorted, filtered or re-imported reliably. There is also no `id` column,
+so an exported row cannot be joined back to its lead.
+
+`Export` offers CSV and Excel (.xlsx).
+
+### ✅ D3-054/055/056 — lead rows navigate properly
+
+Row 0 contains a real `<a href="/dashboard/leads/178">`. Clicking it opens the detail page,
+which renders the **correct** lead (Asad Jameel) with its budget, guests and inquiry text, and
+no other lead's data. Browser Back returns a fully rendered inbox (76 tiles, 76 rows).
+
+**Direct contrast to WWL-030**, where the Today screen's rows had no link, no handler and no
+route to the booking at all. The pattern exists and works here.
+
+### ✅ D3-057 — failure handling is correct
+
+Blocked `/api/v1/leads` and forced a refetch. The page rendered:
+
+> **"Couldn't load leads."** + a **`Retry`** button
+
+Rows cleared to **0** rather than showing a fake empty state. This is the third module-level
+confirmation of **WWL-019's** diagnosis: wrappers that let errors propagate (leads,
+bookingTimeline) render their error UI correctly, while `analytics.ts` — which swallows into
+`catch { return null }` — cannot.
+
+⚠️ Same partial as Today: the tiles above the table keep showing stale `76 / 22 / 12 / 9`
+while the table below says it could not load.
+
+### Cases not run, with reasons
+
+- **D3-017 (duplicate phone detection)** — would require creating two live leads sharing a
+  phone and reasoning about merge behaviour on a real vendor's inbox. Not run.
+- **D3-032/033 (soft vs hard delete, effect on a converted booking)** — would require deleting
+  a lead that already has a booking attached. Not run on live data.
+- **D3-038 (converting an already-`Booked` lead)** — would risk creating a duplicate booking.
+  Not run.
+- **D3-048 (export respects scope)** — not run; export was verified only at All-venues scope.
+- **D3-049 (`Import`)** — dialog not driven; importing a file would write bulk rows.
+- **D3-050/051/052 (sort / filter / search)** — no sort, filter or search control exists in
+  this module's header (only `Log a lead`, density, `Import`, `Export`), which is itself the
+  substance of **WWL-033**: with 76 rows and no filter, archived leads cannot be hidden and a
+  specific lead cannot be found except by eye.
+- **D3-043/044 (AI failure path, Urdu handling)** — the happy path was verified in depth;
+  forcing an AI failure was not attempted.
+
+---
+
+## MODULE 3 — Lead inbox: COMPLETE
+
+**61 cases written · 49 executed · 12 not run (reasons above) · 5 findings.**
+
+| ID | Sev | Finding |
+|---|---|---|
+| **WWL-034** | **S1** | **Convert to booking discards the lead's budget — the dialog captures no amount at all** |
+| WWL-031 | S2 | Five server rejections, one at a time, to save one lead; messages name API fields not labels |
+| WWL-032 | S2 | A 2020 wedding date saves unchallenged, and dates render (and export) with no year |
+| WWL-033 | S3 | 6 archived leads sit in the live inbox; no filter, sort or search exists |
+| WWL-035 | S3 | 304 row-action buttons share only 4 accessible names, none naming the customer |
+
+**What this module proves for the whole sweep.** It is the strongest module tested, and its
+value is partly as a control group — it repeatedly demonstrates the *correct* implementation of
+things broken elsewhere:
+
+| Capability | Broken in | Correct here |
+|---|---|---|
+| Venue scoping | WWL-024 (Today ignores it), WWL-028 (receivables subset > whole) | 28+24+24 = 76 exactly, UI rescopes and persists |
+| `aria-pressed` on toggles | 7 control groups in Modules 1–2 | density toggle flips it correctly |
+| Delete confirmation | WWL-023 (timeline task, none) | `alertdialog` naming the record, "can't be undone" |
+| Missing value display | WWL-018 (`Rs 0` for a failed load) | `—` for a null budget, never `Rs 0` |
+| Row → record navigation | WWL-030 (Today rows dead) | real `<a>` to `/dashboard/leads/{id}` |
+| Error + Retry on failure | WWL-018/019 (dead error UI) | "Couldn't load leads." + Retry |
+| AI safety | — | editable draft, explicit "never sent automatically", model disclosed |
+
+**None of the defects found elsewhere are architectural limits.** Every one of them has a
+working counter-example inside this same codebase.
+
+**Test data written and fully restored:** one lead created (id 251, "ZZ QA DELETE ME") and
+deleted via the UI's own confirmation flow; baseline re-verified at **76 leads / 22 new** with
+no residue. Two Edit dialogs opened and cancelled without saving. One Convert dialog opened and
+cancelled — **booking count verified unchanged at 25**. Venue scope restored to **All venues**.
+No money rows. No customer contacted.
 
 ### ✅ Correction to my own measurement
 
