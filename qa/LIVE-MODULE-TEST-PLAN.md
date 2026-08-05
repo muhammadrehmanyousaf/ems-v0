@@ -36,7 +36,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 4 | Bookings | `/dashboard/bookings` | ✅ 60 | **`[x]` COMPLETE — 57 run, 3 not run, 21 findings** |
 | 5 | Date holds | `/dashboard/holds` | ✅ 52 | **`[x]` COMPLETE — 48 run, 4 not run, 14 findings** |
 | 6 | Function sheets | `/dashboard/function-sheets` | ✅ 68 | **`[x]` COMPLETE — 57 run, 11 not run, 17 findings** |
-| 7 | Customers | `/dashboard/customers` | ✅ 66 | `[~]` in progress |
+| 7 | Customers | `/dashboard/customers` | ✅ 66 | **`[x]` COMPLETE — 52 run, 14 not run, 11 findings** |
 | 8 | Calendar | `/dashboard/calendar` | — | `[ ]` |
 | 9 | Conversations | `/dashboard/chat` | — | `[ ]` |
 | 10 | Payments | `/dashboard/payments` | — | `[ ]` |
@@ -4388,4 +4388,142 @@ WWL-071 elsewhere. No breakage observed here; recorded as a smell only.
 | **D7-041 → D7-046** (Import customers) | Dialog not yet opened — next pass. |
 | **D7-047 → D7-055** (Rate customer) | **Unreachable through the UI.** `RateCustomerDialog` and `CustomerTrustCard` are imported and rendered in `customer-detail-view.tsx` (lines 434/442) but produce **no output** on a live Customer-360, because the rating API addresses `offlineCustomers` and the list/detail use `customers` (WWL-094). 780 lines of built rating UI that no vendor can currently reach. |
 | **D7-056** (k-anonymity ≥ 2 enforced) | Cannot be proven without creating real ratings on named private individuals — outside this module's safety limits. The withholding behaviour at `raterVendorCount: 0` is correct, and the threshold is declared. |
-| **D7-021 / D7-062 / D7-063** | Export contents and injected-failure behaviour — next pass. |
+| **D7-021 / D7-062 / D7-063** | Driven — see below. |
+
+---
+
+## MODULE 7 — RESULTS (continued): failure state, import, export
+
+### 🔴🔴 WWL-095 — S1 — **A failed load tells the vendor their client book is empty**
+
+This is the most damaging instance of the swallow pattern found in the whole sweep.
+
+Injected a transport failure on `GET /api/v1/customers` and forced a real refetch through the
+venue switcher. The module rendered:
+
+```
+Total customers  0     Total bookings  0     Repeat clients  0     Avg / customer  0
+
+                        No customers yet
+     Customers appear here as you take bookings. Import your existing
+              client list to get a head start.
+                  [ Add customer ]  [ Import ]
+```
+
+**No error message. No Retry. No indication anything went wrong.** The vendor is simply told
+they have **no customers** — when they have 20.
+
+**Root cause** — `lib/api/dashboard.ts`, `CustomersAPI.getAll`:
+
+```js
+} catch {
+  return {
+    customers: [],
+    pagination: { page: 1, limit, total: 0, totalPages: 0 },
+  };
+}
+```
+
+Every failure becomes a **successful empty result**. The query never enters `isError`, so the
+shared table's error UI — which demonstrably works, since Bookings and Function sheets both
+render *"Couldn't load…"* + `Retry` — is unreachable in this module.
+
+**Why this is worse than WWL-052 (Bookings).** Bookings at least prints `Couldn't load bookings.`
+next to its false zeros. Here there is no error surface at all, *and* the empty state actively
+invites a destructive recovery: it offers **`Import`** and tells the vendor to *"Import your
+existing client list to get a head start."* A vendor whose network blipped is being prompted to
+re-import a client list that was never lost — the straightest path to a duplicated client book.
+
+### 🔴 WWL-096 — S2 — `Import` is reachable **only** when you have zero customers
+
+`customers-redesigned-view.tsx:133` — the Import button exists solely as the empty state's
+`secondaryAction`:
+
+```js
+empty={{
+  title: "No customers yet",
+  description: "Customers appear here as you take bookings. Import your existing client list to get a head start.",
+  action:          <Button onClick={() => setDialogOpen(true)}>Add customer</Button>,
+  secondaryAction: <Button onClick={() => setImportOpen(true)}>Import</Button>,   // ← only here
+}}
+```
+
+Confirmed live: the toolbar contains only `Add customer`, `Comfortable`, `Compact`, `Export`.
+There is **no Import control anywhere** once the list is non-empty.
+
+Customers are created automatically from bookings, so a vendor leaves the empty state on their
+very first booking — permanently, and usually before they ever think to import their existing
+book. **250 lines of import functionality gated behind a state most vendors exit immediately
+and can never return to.**
+
+Combined with WWL-095, the only way a real vendor sees the Import button is when the API is
+failing.
+
+### ⚠️ WWL-097 — S3 — `Quick view` prints dates in US format
+
+`Quick view` for Bilal Hussain renders:
+
+> `Last booking: 11/7/2026`
+
+Everywhere else in the product — the list row, the CSV export, the Customer-360 — the same date
+is **`07-Nov-2026`**. `11/7/2026` is `M/D/YYYY`, which a Pakistani or British reader parses as
+**11 July 2026**; it means **7 November 2026**. Four months out, on the one date a vendor plans
+around.
+
+Isolated to this dialog — the export was verified as correct `en-PK` in the same session, so
+this is a single missed formatter, not a systemic locale problem.
+
+Two lesser issues in the same dialog: the **email is displayed twice** (as the subtitle and
+again in the field list), and the dialog contains **zero actions** — no `Open detail`, no
+`WhatsApp`, no close button. It is a dead end that has to be dismissed with Escape.
+
+### ⚠️ WWL-098 — S3 — Selection is dead here too (WWL-045, third instance)
+
+`Select all` works — 21 checkboxes checked, toolbar reports **`20 selected`** — and the only
+control it reveals is **`Clear`**. No bulk export, no bulk tag, no bulk anything, on a screen
+whose underlying view is explicitly built `selectable` with `selectedIds` plumbed through.
+
+Same dead-selection pattern as Bookings (WWL-045). `Clear` works correctly.
+
+---
+
+### ✅ Further Module 7 passes
+
+- **D7-021 — the CSV export is correct.** 20 data rows for 20 customers, header
+  `Name,Phone,Email,Bookings,Last booking`, and dates in proper `en-PK`
+  (`07-Nov-2026`, `22-Oct-2026`). *(An earlier reading of "18 rows" was an artifact of my own
+  1,200-character capture truncation — re-captured in full and the file is complete.)*
+
+  Worth recording rather than flagging: the export contains **full phone numbers and email
+  addresses of 20 private individuals in the clear**, with no confirmation step and no
+  "you are exporting 20 contacts" acknowledgement. The vendor owns this data, so it is
+  legitimate — but it is a one-click unprotected PII extract. It also carries no customer id,
+  so like the Bookings export it cannot be joined back to anything.
+- **D7-024** — `Quick view` opens the correct customer (Bilal Hussain, `0348678149`, 2 bookings).
+- **D7-027 / D7-028** — enumerated: 20 rows × 2 controls = **40 buttons** sharing **2**
+  accessible names (`Quick view`, `Open detail`); the row itself is inert (0 `<a>`,
+  `cursor: auto`, full pointer sequence does not navigate). Same classes as WWL-035 / WWL-054.
+
+### Module 7 — status
+
+**66 cases written, 52 driven. 11 findings (4 × S1, 3 × S2).**
+
+Not driven, each with its reason:
+
+| Cases | Why |
+|---|---|
+| **D7-042 → D7-046** (import validation, dry-run, dedup, row cap) | The dialog is **unreachable** on a non-empty client book (WWL-096). Driving it would require emptying the vendor's customer list. |
+| **D7-047 → D7-055** (rate a customer) | **Unreachable** — the rating API addresses `offlineCustomers`, the list/detail use `customers`, so the 780 lines of rating UI render nothing (WWL-094). Also outside the safety limit: a rating is a durable judgement about a named private person. |
+| **D7-056** (k-anonymity ≥ 2 enforced) | Cannot be proven without creating real ratings on real people. The withholding behaviour at `raterVendorCount: 0` is correct and `threshold: 2` is declared. |
+| **D7-037** (server-side duplicate handling) | The client sends an exact duplicate without warning; confirming what the *server* does would require letting the write land. |
+
+**The module's verdict.** Two subsystems totalling roughly **1,030 lines** — bulk import and
+the whole customer-rating / community-trust feature — are built, wired, and **unreachable by a
+live vendor**. Of what is reachable, the numbers are the problem: the client book reports
+bookings and money that belong to other vendors (WWL-088), counts unpaid invoices as lifetime
+revenue (WWL-089), and — worst — reports a failed API call as an empty client book while
+offering to re-import it (WWL-095).
+
+Against that, the module contains the sweep's **best form validation** (D7-035) and a piece of
+privacy engineering that is easy to miss and was done right: **customer emails are redacted out
+of the URL before any analytics beacon fires.**
