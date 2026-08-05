@@ -1585,6 +1585,64 @@ lead gone, `Total leads` back to **76**, `New` back to **22**, no residue.
 screen had *no* confirmation at all. Same codebase, same interaction, opposite treatment — so
 the Today gap is an oversight, not a house convention.
 
+### 🔴 WWL-034 — S1 — Converting a lead discards its budget; the booking captures no amount at all
+
+`Convert to booking` on a lead worth **Rs 1,175,000** opens the generic **"Add Offline
+Booking"** dialog. Its complete field set, read from the live DOM:
+
+> Customer Information (Full Name\*, Phone\*, Email) · Service Selection (Business\*) ·
+> Event Details (Event Date\*, Time Slot\*) · Additional Notes · Cancel · **Create Booking**
+
+**There is no price, amount, total or budget field anywhere in it:**
+`numberInputs: 0` · `anyPriceField: []` · `mentionsBudget: false`.
+
+Confirmed at source: `estimatedBudget` appears only in `lead-form-dialog.tsx` (the lead
+create/edit form). The convert path is `setConvertLead(l)` →
+`leads-redesigned-view.tsx:132`, which opens the offline-booking dialog — **the lead's budget
+is never passed into the booking payload.**
+
+So the one number that made the lead worth chasing is dropped at the exact moment it becomes a
+booking, and `Create Booking` is **enabled** with no amount captured. This is the documented
+"Rs 0 booking" hole arriving through the lead funnel.
+
+*Scope of this claim:* I verified the dialog captures no amount and the budget is not passed.
+I did **not** create a booking, so I have not observed the resulting `totalAmount` — that
+remains unverified by choice, since it would write a real money row on a live vendor's ledger.
+
+### ✅ D3-035 — prefill is otherwise correct
+
+Everything else carries over exactly: `Full Name: Asad Jameel` · `Phone: 0311619148` ·
+`Email: asad.jameel@gmail.com` · `Business: 3358` (matching the lead's own businessId) ·
+`Event Date: Nov 27, 2026` (matching the lead's 27 Nov). Time slots are sensible for Pakistan
+(Morning 9–12, Afternoon 2–6, Evening 6–11), and there is a `Single event` / `Full wedding`
+mode toggle.
+
+### ✅ D3-039 — Cancel is clean
+
+Cancelled the dialog and re-checked the API: **booking count still 25** (baseline 25), lead
+still `status: new`, lead total still 76. Nothing was written.
+
+### ✅ D3-010/011/012 — venue scope works correctly here (the counter-example)
+
+**This is the first module in the sweep that scopes properly.**
+
+| Scope | Leads |
+|---|---:|
+| All venues | 76 |
+| 3358 Grand Marquee | **28** |
+| 3359 Banquet & Lawn | **24** |
+| 3360 Marquee Bahria | **24** |
+
+`28 + 24 + 24 = 76` — **exactly the whole**, three distinct values, no subset exceeding the
+total, and matching the real `businessId` distribution on the lead records.
+
+Driven in the UI: selecting Grand Marquee took `Total leads` 76 → **28**, DOM rows 76 → **28**,
+and rescoped `New`/`Qualified`/`Booked` too. **Persisted across a hard reload.**
+
+This matters beyond this module: it proves the platform *can* scope correctly, so
+**WWL-024** (Today ignoring scope entirely) and **WWL-028** (receivables returning a subset
+larger than the whole) are defects in those specific endpoints — not an architectural limit.
+
 ### ✅ Correction to my own measurement
 
 I first recorded "no toast, no feedback at all" on the failed save. **That was wrong** — my
