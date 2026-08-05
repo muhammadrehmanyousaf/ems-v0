@@ -46,7 +46,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 14 | Expenses | `/dashboard/expenses` | ✅ 104 | **`[x]` COMPLETE — 89 run, 15 not run, 14 findings** |
 | 15 | Tax report | `/dashboard/tax` | ✅ 72 | **`[x]` COMPLETE — 61 run, 11 not run, 10 findings** |
 | 16 | Reports | `/dashboard/reports` | ✅ 70 | **`[x]` COMPLETE — 60 run, 10 not run, 10 findings** |
-| 17 | Trade operations | `/dashboard/trade-ops` | — | `[ ]` |
+| 17 | Trade operations | `/dashboard/trade-ops` | ✅ 86 | `[ ]` IN PROGRESS |
 | 18 | Automation | `/dashboard/automation` | — | `[ ]` |
 | 19 | Kitchen prep | `/dashboard/kitchen` | — | `[ ]` |
 | 20 | Inventory | `/dashboard/inventory` | — | `[ ]` |
@@ -7584,3 +7584,180 @@ other modules because it reads a different ledger, "collected today" measures so
 entirely, and the profit cards tell a vendor to enter costs they have already entered. A
 glanceable screen is only as good as the glance, and four of its eight cards are currently
 misleading.
+
+---
+
+# MODULE 17 — TRADE OPERATIONS (`/dashboard/trade-ops`)
+
+**Component** `components/dashboard/mainScreens/function-sheets/redesigned/trade-operations-hub-view.tsx`
+**Registry** `lib/dashboard/trade-ops-config.ts` — **9 trades · 30 sections · 134 columns**
+**Data** `FunctionSheetAPI.list()` → `FunctionSheetAPI.get(id)`
+**Write path** `FunctionSheetAPI.update(sheet.id, { [jsonField]: obj })`
+
+One generic editor for every wedding trade's operational plan. Each trade maps to its own JSON
+column on a function sheet:
+
+| Trade | Label | JSON column |
+|---|---|---|
+| beo | Run sheet | `beoJson` |
+| kitchen | Kitchen sheet | `kitchenSheetJson` |
+| bridal | Bridal Wear | `bridalWearJson` |
+| decorator | Decor setup | `decoratorSetupJson` |
+| carRental | Fleet plan | `carRentalJson` |
+| henna | Mehndi plan | `hennaJson` |
+| stationery | Stationery | `stationeryJson` |
+| makeup | Makeup plan | `makeupJson` |
+| subcontracts | Subcontracts | `subcontractsJson` |
+
+## SAFETY LIMIT FOR THIS MODULE
+
+This screen edits a **real function sheet** belonging to a real booking — the sheets hold
+Rs 28,559,050 of contracted work. The write blocker is armed before any cell is touched, and
+every `PATCH` is captured with its body and diverted. Rows are added and removed **in local state
+only**; nothing is persisted.
+
+## What the source says before I touch the page
+
+Two hazards stand out, both already seen elsewhere in this codebase:
+
+- **With no `?id=`, it loads the FIRST sheet from the list straight into a live editor**
+  (`const first = list?.functionSheets?.[0]`). This is the exact shape of WWL-071/081 in the
+  function-sheet composer: a vendor clicking "Trade operations" in the nav is editing an arbitrary
+  sheet they never chose.
+- **Save writes the entire JSON column**, rebuilt from `trade.sections` alone:
+  ```js
+  const obj = {}
+  for (const s of t.sections) obj[s.key] = (rows[active]?.[s.key] ?? []).map(stripRid)
+  return FunctionSheetAPI.update(sheet.id, { [t.jsonField]: obj })
+  ```
+  Any key stored in that column that the registry does not describe is **silently dropped**. The
+  WWL-081 data-destruction shape.
+
+Also predicted:
+- **Dirty state is per-trade but the Save button only saves the active trade.** Editing trade A,
+  switching to B and saving leaves A dirty in memory with no `beforeunload` guard — navigate away
+  and the edits vanish.
+- After a save the effect re-runs but `loadedId.current === sheet.id`, so local state is **not**
+  rebuilt from the server response.
+- The empty state ("No function sheet") offers **no action** — a dead end.
+- Two links are provided to screens the comment says were "reachable from nowhere":
+  `/dashboard/function-sheet-operations` and `/dashboard/function-sheet-sign`. The `/sign/`
+  family was implicated in WWL-079/080 (the lowercase middleware destroying base64url tokens).
+
+## Test cases — written in full before execution
+
+### A. Load, sheet selection, identity
+
+| # | Case | Expect |
+|---|---|---|
+| D17-001 | Route loads and renders an editor | |
+| D17-002 | `<title>` is `Dashboard : Trade operations hub` | |
+| D17-003 | Sidebar / breadcrumb / `<h1>` agree | |
+| D17-004 | **Which sheet does it load with no `?id=`?** | predicted the first in the list |
+| D17-005 | Is the loaded sheet named anywhere the vendor can see? | the breadcrumb shows the title |
+| D17-006 | Is there any way to **choose** a different sheet from this screen? | predicted none |
+| D17-007 | `?id=<other sheet>` loads that sheet | |
+| D17-008 | `?id=<nonexistent>` → honest empty state, not a crash | |
+| D17-009 | `?id=<another vendor's sheet>` → refused | authz probe |
+| D17-010 | `?trade=kitchen` opens on that trade | |
+| D17-011 | `?trade=garbage` falls back to the first trade | `getTrade` fallback |
+| D17-012 | Only one `function-sheets` list call + one get on load | |
+| D17-013 | `businessId` scoping on the underlying calls | function-sheets is whitelisted |
+| D17-014 | Empty state when the vendor has no sheets — with an action? | predicted dead end |
+
+### B. The 9 trades, 30 sections, 134 columns
+
+| # | Case | Expect |
+|---|---|---|
+| D17-015 | All **9** trade buttons render with icons and labels | |
+| D17-016 | The trade switcher scrolls horizontally without clipping | `overflow-x-auto` |
+| D17-017 | Switching trade swaps the sections without a reload | |
+| D17-018 | `aria-current` tracks the active trade | |
+| D17-019 | Each trade renders its full section set — **30 sections total** | |
+| D17-020 | Each section renders its full column set — **134 columns total** | |
+| D17-021 | Column headers render on desktop, per-cell labels on mobile | |
+| D17-022 | Section descriptions and icons render | |
+| D17-023 | An empty section says "Nothing yet — <add label>." | |
+| D17-024 | Text / number / date / select column types each render the right control | |
+| D17-025 | A `select` with a stored value outside its options keeps that value | the `!includes` guard |
+| D17-026 | Number columns are right-aligned tabular | |
+| D17-027 | Placeholders fall back to the column label | |
+| D17-028 | Which trades have existing data on this sheet? | |
+| D17-029 | Existing rows are seeded into the right cells | |
+| D17-030 | Are there any validation rules at all on 134 columns? | predicted none |
+
+### C. Editing, dirty state, the save contract
+
+| # | Case | Expect |
+|---|---|---|
+| D17-031 | Typing in a cell marks that trade dirty (amber dot) | |
+| D17-032 | The sticky bar shows "Unsaved" and the row count | |
+| D17-033 | Row count is per-trade, not global | |
+| D17-034 | `Add row` appends a blank row with select defaults filled | |
+| D17-035 | `Remove row` removes the right row | |
+| D17-036 | Removing then adding does not reuse a stale `_rid` | |
+| D17-037 | Save is disabled until the active trade is dirty | |
+| D17-038 | **Edit trade A, switch to B — is A still dirty?** | |
+| D17-039 | **Does saving B persist A's edits?** | predicted no — separate columns |
+| D17-040 | **Is there any unsaved-changes guard on navigation?** | predicted none |
+| D17-041 | Switching trades does not lose in-memory edits | |
+| D17-042 | **The captured PATCH body contains ONLY the active trade's column** | |
+| D17-043 | **Does the body include every section key of that trade?** | rebuilt wholesale |
+| D17-044 | **Would a key stored in that column but absent from the registry be dropped?** | data-destruction probe |
+| D17-045 | `_rid` is stripped from the payload | |
+| D17-046 | Empty sections serialise as `[]`, not omitted | |
+| D17-047 | Save reports success while the write is diverted | WWL-107 recurrence |
+| D17-048 | After save, is local state rebuilt from the server? | `loadedId` guard says no |
+| D17-049 | Save failure surfaces a real error with an 8s toast | |
+| D17-050 | Cell values are sent as strings even for number columns | type fidelity |
+
+### D. The two side doors
+
+| # | Case | Expect |
+|---|---|---|
+| D17-051 | `Night-of operations` link resolves to a working screen | |
+| D17-052 | It carries the sheet context, or does it load its own first sheet? | |
+| D17-053 | `Sign contract` link resolves | |
+| D17-054 | Does the `/sign` route suffer the lowercase-middleware problem? | WWL-079/080 family |
+| D17-055 | Are these two screens reachable from the nav at all? | the comment says no |
+| D17-056 | Both links are keyboard-reachable with visible focus | |
+
+### E. Resilience, a11y, responsive
+
+| # | Case | Expect |
+|---|---|---|
+| D17-057 | Genuine network failure → the "No function sheet" empty state or an error? | `isError \|\| !sheet` merges both |
+| D17-058 | **A load failure is indistinguishable from having no sheets** | mislabelled-error probe |
+| D17-059 | Is there a Retry? | |
+| D17-060 | Loading state renders a skeleton | |
+| D17-061 | No console errors across all 9 trades | |
+| D17-062 | Hard reload preserves the trade via `?trade=`? | predicted no — state resets |
+| D17-063 | Keyboard: trade switcher, every cell, add/remove, save | |
+| D17-064 | Visible focus ring on all | |
+| D17-065 | `Remove row` has an accessible name | source says `aria-label` |
+| D17-066 | Trade buttons announce their state | `aria-current` |
+| D17-067 | Section headings are real headings | `<h2>` |
+| D17-068 | 360px: no page overflow **and** no clipped elements | both checks |
+| D17-069 | 360px: the trade switcher is usable | |
+| D17-070 | 360px: cells stack with their labels | `sm:hidden` label |
+| D17-071 | 360px: the sticky save bar does not cover the last row | `pb-24` |
+| D17-072 | 360px: `Remove row` reachable | |
+| D17-073 | The sticky bar respects the sidebar width on desktop | |
+| D17-074 | Unauthenticated → redirect | |
+
+### F. Data integrity — the questions that matter most
+
+| # | Case | Expect |
+|---|---|---|
+| D17-075 | Read the sheet's current JSON columns before any edit | baseline |
+| D17-076 | Compare stored keys against the registry's section keys per trade | orphan-key hunt |
+| D17-077 | **Does any live sheet hold a key the registry would drop?** | the real WWL-081 test |
+| D17-078 | Do stored rows hold columns the registry does not render? | invisible-field hunt |
+| D17-079 | Are those columns preserved on save, or dropped with the row? | `stripRid` keeps unknown keys |
+| D17-080 | Does `beoJson` overlap with the BEO/function-sheet screens? | two editors, one column |
+| D17-081 | Could this screen and the composer overwrite each other? | cross-editor conflict |
+| D17-082 | Sheet count and every JSON column unchanged at module close | proof nothing was written |
+| D17-083 | Number cells round-trip as strings — any coercion loss? | |
+| D17-084 | Very long cell text is accepted without limit | |
+| D17-085 | Unicode / Urdu text in cells | |
+| D17-086 | Nothing else on the page writes | |
