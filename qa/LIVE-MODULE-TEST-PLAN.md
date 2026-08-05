@@ -33,8 +33,8 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 1 | Dashboard | `/dashboard` | ✅ 62 | **`[x]` COMPLETE — 60 run, 2 unrun, 18 findings** |
 | 2 | Today | `/dashboard/today` | ✅ 58 | **`[x]` COMPLETE — 52 run, 6 not run, 11 findings** |
 | 3 | Lead inbox | `/dashboard/leads` | ✅ 61 | **`[x]` COMPLETE — 49 run, 12 not run, 5 findings** |
-| 4 | Bookings | `/dashboard/bookings` | ✅ 60 | `[~]` in progress |
-| 5 | Date holds | `/dashboard/date-holds` | — | `[ ]` |
+| 4 | Bookings | `/dashboard/bookings` | ✅ 60 | **`[x]` COMPLETE — 57 run, 3 not run, 21 findings** |
+| 5 | Date holds | `/dashboard/date-holds` | ✅ 52 | `[~]` in progress |
 | 6 | Function sheets | `/dashboard/function-sheets` | — | `[ ]` |
 | 7 | Customers | `/dashboard/customers` | — | `[ ]` |
 | 8 | Calendar | `/dashboard/calendar` | — | `[ ]` |
@@ -2786,3 +2786,131 @@ live vendor's ledger. Recorded here rather than silently skipped:
 
 Everything else in the module was clicked in the live UI, hard-reloaded where a mutation was
 involved, and re-read from the API for confirmation.
+
+---
+
+# MODULE 5 — Date holds (`/dashboard/holds`)
+
+> **Route correction:** the module index listed `/dashboard/date-holds`. That URL returns a
+> **404** on live. The real route is **`/dashboard/holds`** (`app/(dashboard)/dashboard/holds`).
+> Index corrected.
+
+**What this module is for.** "Tentatively hold a date for a lead — even offline at an expo.
+Holds expire automatically." A hold is a soft reservation on the vendor's own calendar while
+they chase a lead. Backing API `/api/v1/vendor-holds`; the backend expires `DateHold` rows on
+a timer. Offline holds queue in the outbox and can conflict on reconnect.
+
+**Starting state on live:** `No active holds` — the module is empty for this vendor. That
+makes it the one module where creation can be exercised end to end without touching money:
+holds carry no financial value, expire on their own, and are individually releasable. Every
+row this module creates will be released and the release verified. Test dates are far-future
+(2027) so a hold can never shadow a real event while the test runs.
+
+**Surface is small and fully enumerable** — 2 × `Hold a date`, a dialog with Date + Slot, and
+a per-hold `Release`. So these cases go deep rather than wide: PKT boundaries, venue scoping
+on a 3-venue account, conflict/idempotency, expiry semantics, and whether a hold actually
+does the one thing it claims to do — protect the date.
+
+## Section A — Empty state, load, scoping
+
+- [ ] **D5-001** — Empty state renders the real message (`No active holds`) and not the stale
+  "Date holds aren't enabled for your account yet" the source comments describe.
+- [ ] **D5-002** — Both `Hold a date` buttons (header and empty state) open the same dialog.
+- [ ] **D5-003** — With **All venues** active (`activeBusinessId === null`), what does the list
+  actually request, and what comes back? The view has a `Pick a business first` branch keyed on
+  `!activeBusinessId` — determine whether it is reachable or dead.
+- [ ] **D5-004** — Create a hold under venue A, then switch to venue B: the hold must disappear.
+- [ ] **D5-005** — Switch back to A: it must return.
+- [ ] **D5-006** — With **All venues** selected, does a hold created under a specific venue
+  appear? (Roll-up view must either aggregate or say it cannot.)
+- [ ] **D5-007** — Scope survives a hard reload, as Bookings' did.
+- [ ] **D5-008** — Blocked/errored list shows the error branch + `Try again`, and Try again
+  actually refetches (the D4-055 test, repeated here).
+- [ ] **D5-009** — `retry: false` is set — confirm a failure does not hammer the endpoint.
+
+## Section B — The `Hold a date` dialog: fields and defaults
+
+- [ ] **D5-010** — Enumerate every control. Expected: `Date` (native date input), `Slot`
+  (select of 7 presets + `Custom…`), Cancel, `Hold date`.
+- [ ] **D5-011** — Default date is today; default slot is `Evening`.
+- [ ] **D5-012** — The 7 slot presets are the Pakistani-wedding set: Morning, Afternoon,
+  Evening, Full day, **Mehndi, Baraat, Walima**.
+- [ ] **D5-013** — `min` on the date input blocks past dates in the picker.
+- [ ] **D5-014** — 🔴 **PKT boundary.** `min`/default come from
+  `new Date().toISOString().slice(0,10)` — that is **UTC**, and Pakistan is UTC+5. Between
+  00:00 and 05:00 PKT the UTC date is still *yesterday*. Determine whether the dialog therefore
+  offers/defaults to a date already in the past for a Pakistani vendor — exactly the hours an
+  expo or a late baraat runs.
+- [ ] **D5-015** — Typing a past date directly into the date field (bypassing the picker) —
+  is it rejected on submit, or accepted?
+- [ ] **D5-016** — Selecting `Custom…` clears the slot, disables save, and shows the
+  `FormBlockedHint` reason rather than a silently dead button.
+- [ ] **D5-017** — The blocked reason reads "Add a date and a time to save."
+- [ ] **D5-018** — Custom slot free-text accepts a normal value (`6pm Nikah`) and saves.
+- [ ] **D5-019** — Whitespace-only custom slot must be refused (`holdTime.trim()`).
+- [ ] **D5-020** — Very long custom slot (500+ chars) — client cap, server cap, or a 500?
+  (`ems_registration_500_rootcause`: VARCHAR(255) overflow aborts the transaction.)
+- [ ] **D5-021** — Emoji / Urdu script in the custom slot round-trips intact after reload.
+- [ ] **D5-022** — `<script>` and SQL-ish input is stored inertly and rendered as text.
+- [ ] **D5-023** — Dialog reopens clean: values from a previous open must not persist
+  (the `loaded.current` keying).
+- [ ] **D5-024** — Cancel writes nothing — verified by API count before/after.
+- [ ] **D5-025** — Escape and the overlay close the dialog without saving.
+
+## Section C — Creating a hold
+
+- [ ] **D5-026** — Create a hold on a far-future date. Success toast is `Date held`.
+- [ ] **D5-027** — **Hard reload** — the hold is still listed. (Rule 2.)
+- [ ] **D5-028** — The row shows `<date> · <slot>` formatted `en-PK`, plus `Expires <when>`.
+- [ ] **D5-029** — 🔴 **How long is a hold?** The dialog says it "expires on its own" but never
+  says when. Read the real TTL from `expiresAt` and judge whether the vendor could know it
+  before committing a date to a customer.
+- [ ] **D5-030** — Re-place the **same** date+slot: `alreadyHeld` must return true and the
+  toast must read `Hold extended`, not `Date held` — and no duplicate row appears.
+- [ ] **D5-031** — Confirm the extension actually moved `expiresAt` forward.
+- [ ] **D5-032** — Place a **different slot on the same date** — must be allowed (a venue can
+  run mehndi and baraat on one day).
+- [ ] **D5-033** — Multiple holds list in a sensible order.
+- [ ] **D5-034** — 🔴 **Which venue does it land on?** `place()` sends
+  `businessId: activeBusinessId ?? undefined`. On **All venues** that is `undefined`. For a
+  3-venue vendor, determine what the backend does — silently pick one, or refuse. A hold on
+  the wrong venue is a double-booking waiting to happen.
+- [ ] **D5-035** — Nothing in the dialog names a **lead or customer**, despite the module's own
+  description being "hold a date *for a lead*". With two holds on the same day, can the vendor
+  tell which lead each is for?
+
+## Section D — Does a hold actually protect the date?
+
+This is the module's reason to exist. If a held date can still be booked by anything else,
+the feature is decorative.
+
+- [ ] **D5-036** — After holding date X, does `/dashboard/calendar` show X as held?
+- [ ] **D5-037** — Does the Bookings `Add booking` calendar block or warn on X?
+- [ ] **D5-038** — Does the public-side availability for this venue reflect the hold?
+- [ ] **D5-039** — Hold a date that already has a **confirmed booking** on it — refused,
+  warned, or silently allowed?
+- [ ] **D5-040** — Two holds, same venue, same date, same slot, placed from two contexts —
+  the "race-safe slot guard" the API doc claims. Verify a second placer gets 409, not a
+  duplicate.
+
+## Section E — Release
+
+- [ ] **D5-041** — 🔴 `Release` fires `releaseMut.mutate(h.id)` directly with **no confirm
+  dialog**. Verify on live and rate against the WWL-023 class.
+- [ ] **D5-042** — Released hold disappears and the toast reads `Hold released`.
+- [ ] **D5-043** — **Hard reload** — it is really gone from the API, not just the cache.
+- [ ] **D5-044** — Is the release undoable? (`showSuccessToast` is the undo-capable helper —
+  check whether an Undo affordance is actually offered.)
+- [ ] **D5-045** — Releasing the last hold returns the empty state, not a blank panel.
+- [ ] **D5-046** — Release error path surfaces the server's reason.
+- [ ] **D5-047** — Double-clicking Release must not fire two DELETEs (`disabled` while pending).
+
+## Section F — Offline / outbox, a11y, responsive
+
+- [ ] **D5-048** — `OutboxStatus` and `OutboxConflicts` render. With the outbox flag dark,
+  they must not show a broken or confusing control.
+- [ ] **D5-049** — Every control has an accessible name; the date and slot inputs have real
+  labels associated (they are styled `<label>`s — check `htmlFor`/wrapping).
+- [ ] **D5-050** — Keyboard: dialog traps focus, Escape closes, `Hold date` reachable by Tab.
+- [ ] **D5-051** — 360px: dialog fits, the 2-column grid collapses, no overflow.
+- [ ] **D5-052** — Desktop: no overflow; `max-w-3xl` centring does not strand the action.
