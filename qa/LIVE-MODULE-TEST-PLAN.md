@@ -31,7 +31,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | # | Module | Route | Cases written | Status |
 |---|---|---|---|---|
 | 1 | Dashboard | `/dashboard` | ✅ 62 | **`[x]` COMPLETE — 60 run, 2 unrun, 18 findings** |
-| 2 | Today | `/dashboard/today` | ✅ 58 | `[~]` in progress |
+| 2 | Today | `/dashboard/today` | ✅ 58 | **`[x]` COMPLETE — 52 run, 6 not run, 11 findings** |
 | 3 | Lead inbox | `/dashboard/leads` | — | `[ ]` |
 | 4 | Bookings | `/dashboard/bookings` | — | `[ ]` |
 | 5 | Date holds | `/dashboard/date-holds` | — | `[ ]` |
@@ -1246,7 +1246,97 @@ all. That is precisely why every venue selection returns the same two events.
 cancelled bookings correctly never appear (D2-010 ✅), and also means **`Completed` events are
 excluded from the day-of screen**.
 
-**Test data written and fully restored:** 13 timeline tasks created across two seed cycles on
-booking 179 (7 + 6) and all 13 deleted, with per-round API verification down to zero each time
-and a hard reload confirming `Total tasks 0 / Open tasks 0` and no `ZZ QA` residue. Venue scope
-restored to **All venues**. No money rows. No customer contacted.
+### 🔴 WWL-029 — S3 — Dialog does not return focus to the opener
+
+Opened the `Day-of timeline` dialog by real click and pressed Escape. The dialog closes, but
+`document.activeElement` becomes **`<body>`** — focus is not returned to the `Timeline` button
+that opened it. A keyboard user is dumped to the top of the document and must Tab through the
+entire sidebar and header to get back to the row they were working on.
+
+The rest of the dialog's semantics are correct: `role="dialog"`, `aria-labelledby` resolving to
+**"Day-of timeline"**, and focus moves *into* the dialog on open. Only the return leg is missing.
+(`aria-modal` is also absent.)
+
+### 🔴 WWL-030 — S2 — You cannot open a booking from the Today screen
+
+Neither event row is clickable: no `<a>`, no `role="button"`, no click handler, no
+`cursor-pointer`. Verified by actually clicking the row — `navigated: false`,
+`dialogOpen: false`, nothing happens.
+
+The only actions available are `Timeline` and `Run sheet`. So on the operational screen a
+vendor sees *"Waheed Jutt · 12:00 · Rs 350,000 · Awaiting Payment"* and has **no route to the
+booking** to take a payment or check details — they must leave, go to Bookings, and find it.
+
+Combined with **WWL-020** (his Rs 315,000 balance is not shown at all), the day-of screen both
+hides what is owed and offers no way to act on it.
+
+### 🔴 WWL-022 extended — out-of-bounds input is silently discarded or truncated
+
+Three probes on the Add-task form, all accepted with no `aria-invalid`, no error and no toast:
+
+| Input | Stored |
+|---|---|
+| `mins` = `-30` | **`null`** — dropped |
+| `mins` = `999999` | **`null`** — dropped |
+| 419-character task label | **truncated to 160 chars** |
+
+No corruption reaches the database, but the vendor is never told. They believe they set a
+30-minute duration and a full task description; they got neither. Layout did not break under
+the long string (`scrollWidth` unchanged) ✅.
+
+### ✅ Remaining passes
+
+- **D2-050/051 ✅** — `View timeline` navigates to `/dashboard/calendar` and browser Back
+  returns a **fully rendered** Today page with every tile intact (`Events today 2`,
+  `Revenue today Rs 1,612,250`, `Outstanding Rs 12,292,729`, both rows).
+- **D2-053 ✅ (mostly)** — the table uses a real `<thead>` with 6 `<th>` cells. No `scope`
+  attributes and no `<caption>` (minor).
+- **D2-055 ✅** — no skipped heading levels (the page has a single `h1`; note it has no
+  section headings at all, so heading navigation is thin).
+- **Accessible names ✅** — 0 of 24 visible focusable elements lack an accessible name.
+- **D2-023 ✅** — Save disabled while the task name is empty.
+- **D2-031/032 ✅** — Escape closes the dialog without saving; `Cancel` on the add-task
+  sub-form discards cleanly (verified by task count staying put).
+
+### Cases explicitly NOT run, with reasons
+
+- **D2-016 (date rollover on a tab left open past midnight)** — would require holding the page
+  open across a real PKT midnight. Not run.
+- **D2-036 (`Print`)** — clicking it opens the OS/browser print dialog, which blocks the
+  automation session. Not run; the print *view* was inspected via the run-sheet dialog content.
+- **D2-041 / D2-044 / D2-045 (empty state)** — unreachable because WWL-024 means no venue
+  selection ever yields zero events.
+- **D2-004** — I judged the `Revenue today` label semantics (it sums **booked totals**, not
+  money received today) but did not compute a separate received-today figure. Partial.
+
+---
+
+## MODULE 2 — Today: COMPLETE
+
+**58 cases written · 52 executed · 6 not run (reasons above) · 11 findings.**
+
+| ID | Sev | Finding |
+|---|---|---|
+| WWL-020 | S1 | Day-of row shows no balance for a customer owing Rs 315,000 (driven by quotation, not booking) |
+| WWL-021 | S2 | `Outstanding` is all-time on a "Today" screen, and inherits WWL-001's understatement |
+| WWL-024 | S1 | Screen ignores venue selection entirely — Lahore manager shown a Rawalpindi event |
+| **WWL-028** | **S1** | **Per-venue receivables: a subset (Rs 23,961,479) nearly doubles the company total (Rs 12,292,729); two venues return identical figures** |
+| WWL-030 | S2 | No way to open a booking from the Today screen |
+| WWL-022 | S3 | Out-of-bounds durations dropped to `null`, long labels truncated — silently |
+| WWL-023 | S3 | `Delete` on a run-of-show task has no confirmation |
+| WWL-025 | S3 | `Run sheet` disabled with no reason given |
+| WWL-026 | S3 | `View timeline` navigates to the Calendar, not a timeline |
+| WWL-027 | S3 | Printed run sheet never names the venue |
+| WWL-029 | S3 | Dialog does not return focus to its opener |
+
+**What this module does well** — the timeline engine is the strongest thing tested so far:
+full create/toggle/delete all survive hard reloads with every counter correct; the run sheet is
+a genuinely usable printed artefact grouped SETUP/EVENT/TEARDOWN; the seed templates are
+properly Pakistani (Mehndi, Nikah, Baraat, Walima, Dholki); **the date boundary is handled in
+PKT deliberately and stated out loud**; and **its failure handling is correct** — which is the
+evidence that WWL-019's `catch { return null }` is the single thing breaking error UI elsewhere.
+
+**Test data written and fully restored:** 20 timeline tasks created across three seed cycles on
+booking 179 (7 + 6 + 7) and all 20 deleted, with per-round API verification down to zero each
+time and a final hard reload confirming `Total tasks 0 / Open tasks 0` and no `ZZQA` residue.
+Venue scope restored to **All venues**. No money rows. No customer contacted.
