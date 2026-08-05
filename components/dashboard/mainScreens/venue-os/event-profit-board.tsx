@@ -47,8 +47,26 @@ export function EventProfitBoard(): React.ReactElement {
   const rows = React.useMemo(() => {
     const r = bookings
       .map((b) => {
-        const revenue = num(b.totalAmount);
-        const received = num(b.downPayment);
+        /*
+         * A cancelled shaadi earned nothing — this card asks "did each shaadi
+         * make money?", and one that never happened made none.
+         *
+         * Verified live on production (vendor 3351): booking 175
+         * "Usman Tariq & Hira Usman" is Cancelled with a total of Rs 2,742,400
+         * and was ranked #1 under BOTH "Most profit" and "Biggest". Three
+         * cancelled bookings worth Rs 3,855,050 were being counted as revenue,
+         * which also inflated every headline tile below — including
+         * "Outstanding · to collect", telling the vendor to chase money for
+         * events that were called off.
+         *
+         * Tagged spend is deliberately KEPT: if the venue had already bought
+         * flowers before the cancellation, that rupee left the account and is a
+         * real loss. So a cancelled row now shows revenue 0 against whatever was
+         * spent — which is exactly what it cost them.
+         */
+        const cancelled = /^(cancel|refund)/i.test(String(b.status ?? ""));
+        const revenue = cancelled ? 0 : num(b.totalAmount);
+        const received = cancelled ? 0 : num(b.downPayment);
         const spent = spentByBooking.get(b.id) || 0;
         const net = revenue - spent;
         return {
