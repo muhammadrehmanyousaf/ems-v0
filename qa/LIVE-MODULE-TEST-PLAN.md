@@ -2410,3 +2410,148 @@ as an empty column in every CSV (WWL-048).
 - **D4-054** — export respects the active view. Verified by exporting both.
 - **D4-058** (checkbox half) — every checkbox has an accessible name: `Select all` on the
   header, `Select row` on each of the 10. Not a WWL-035 repeat.
+
+---
+
+## Module 4 — Section D (venue scoping) and Section F (`Add booking`)
+
+### ✅ D4-012 / D4-013 / D4-014 — venue scoping is **correct, exact, and durable**
+
+This is the behaviour Leads got right and Today got wrong. Bookings gets it right too, and the
+arithmetic holds to the rupee. Switched the business switcher from `All venues` to
+**Rehman Grand Marquee (3358)**:
+
+| | Predicted from API | Observed on screen |
+|---|---|---|
+| Active rows | 3 — bookings 173, 179, 167 | **3** — Ahmed Raza, Waheed Jutt, Danish Qureshi ✔ |
+| `Collected (shown)` | 0 + 35,000 + 657,213 = **Rs 692,213** | **Rs 692,213** ✔ |
+| `Due (shown)` | 3,901,000 − 692,213 = **Rs 3,208,787** | **Rs 3,208,787** ✔ |
+| `This month` | 179 (5 Aug) + 167 (13 Aug) = **2** | **2** ✔ |
+| Archive rows | 5 — 170, 164, 161, 158, 155 | **5** ✔ |
+| Archive `Collected` | **Rs 6,700,650** | **Rs 6,700,650** ✔ |
+
+- **D4-012** ✔ the list rescopes.
+- **D4-013** ✔ every tile rescopes with it, and recomputes correctly rather than filtering a
+  cached total.
+- **D4-014** ✔ scope survives a hard reload — `ww-active-business` persists
+  `{"state":{"activeBusinessId":3358}}`, the switcher still reads
+  `Business: Rehman Grand Marquee`, and the table still shows 3 rows with identical tiles.
+- The switcher's `aria-label` is a model of how to do this: `Business: Rehman Grand Marquee.
+  Switch business.` — current value *and* the action, in one string.
+
+### 🔴 The single cleanest repro of WWL-037 lives in this scoped view
+
+Scope to **Rehman Grand Marquee**, switch to **Archive**. Five rows. The tiles read:
+
+```
+Total bookings  5      Collected (shown)  Rs 6,700,650      Due (shown)  Rs 1,159,500  to chase
+```
+
+Four of those five bookings are `Paid` in full (164, 161, 158, 155 — `totalAmount` exactly
+equals `downPayment`). So **the entire Rs 1,159,500 "to chase" belongs to booking 170** — and
+booking 170's own `PAYMENT` chip, three columns to the left on the same screen, reads
+**`Paid`**.
+
+One venue, five rows, no scrolling: the tile says a million rupees is outstanding and the only
+row that can owe it says it is settled. Use this as the reproduction case when fixing WWL-037.
+
+### 🔴 WWL-051 — S3 — The Active/Archive toggle has no accessible state at all
+
+The two view buttons carry **only** these attributes:
+
+| Button | Attributes |
+|---|---|
+| `Active` | `type=button`, `class="… text-muted-foreground …"` |
+| `Archive` | `type=button`, `class="… bg-primary text-primary-foreground"` |
+
+No `aria-pressed`, no `role="tab"` + `aria-selected`, no `data-state`. Which view you are in
+is communicated **purely by background colour**. A screen-reader user hears two identical
+buttons and cannot tell whether they are looking at 10 active bookings worth Rs 11,176,762
+outstanding or 12 completed ones — two different data sets with different money.
+
+The fix is already in the codebase: the density toggle **immediately to the right** sets
+`aria-pressed` correctly (D4-024). The pattern exists; it just was not applied here.
+
+### 🔴 D4-043 / D4-044 — CONFIRMED: `Add booking` cannot capture money either
+
+`Add booking` opens **`Add Offline Booking` — "Create a booking for a walk-in customer."**
+Complete field enumeration, nothing omitted:
+
+| # | Field | Required | Type |
+|---:|---|---|---|
+| 1 | Booking type — `Single event` / `Full wedding` | — | segmented buttons |
+| 2 | `Existing customer` | — | select (`+ New customer`, or a saved customer) |
+| 3 | `Full Name *` | **yes** (native `required`) | text |
+| 4 | `Phone Number *` | **yes** (native `required`) | text, `03XX-XXXXXXX` |
+| 5 | `Email(optional)` | no | email |
+| 6 | `Business *` | **yes** (custom) | 3 venues |
+| 7 | `Event Date *` | **yes** (custom) | calendar |
+| 8 | `Time Slot *` | **yes** (custom) | Morning / Afternoon / Evening |
+| 9 | `Additional Notes` | no | textarea |
+
+**Ten controls. Not one of them is money.** No total, no package, no per-head rate, no guest
+count, no advance, no down payment. The vendor's primary booking CTA — the button at the top
+right of the Bookings module — cannot record what the event costs.
+
+This is **WWL-034 reproduced from the second entry point**. The lead-conversion path and the
+`Add booking` path both create a booking with no amount, which lands as the documented Rs 0
+booking. Two doors, same hole — so this is one shared omission, not a one-off in the lead flow.
+
+The severity is compounded by what we already know from this module:
+- the created booking will show `Rs 0` in `AMOUNT` (D4-009 territory),
+- it will carry `paymentStatus: Pending` which the chip renders as literally correct only by
+  accident, and
+- it will export to CSV as `,0,0,` into the vendor's books (WWL-047).
+
+The amount has to be added afterwards through the booking detail's order editor — an editor
+the vendor has to know exists, on a page they can only reach by clicking into the row.
+
+### ✅ D4-045 — required-field gating is **correct**, and every refusal states its reason
+
+Tested by arming a network write-blocker in the page (all `POST`/`PUT`/`PATCH`/`DELETE`
+intercepted and aborted before leaving the browser) so submission could be exercised on a live
+vendor ledger with zero risk of a write. Three submits, three different refusals:
+
+| Submit attempt | Result | Booking POST attempted? |
+|---|---|---|
+| Everything empty | native `required` fires, focus jumps to `#ob-name` | **no** |
+| Name + phone filled, no date/time/business | toast: **"Please select a date and time"** | **no** |
+| + date `Aug 20, 2026`, no time/business | toast: **"Please select a date and time"** | **no** |
+| + time `Evening (6 PM – 11 PM)`, no business | toast: **"Please select a business"** | **no** |
+
+Every required field is genuinely gated, each refusal names the missing field, and **no write
+was ever attempted** — the only blocked requests in the whole sequence were two Google
+Analytics beacons. There is no silent default: leaving `Business` untouched does **not**
+quietly file the booking against the first venue.
+
+Three caveats, none of which change the verdict:
+
+1. Reasons arrive as **transient toasts, one at a time**. A vendor missing three fields must
+   submit three times to discover all three. Inline errors under each field would say it once.
+2. `Create Booking` stays **enabled** throughout, with no `aria-describedby` blocked-reason
+   hint — the `FormBlockedHint` pattern used elsewhere in this codebase is not applied here.
+3. The hidden native `<select>` elements behind the custom triggers carry values that do
+   **not** reflect real state — `3358` for Business and `09:00` for Time, while the visible
+   triggers correctly read `Select your business` and `Select time`. Validation reads the real
+   state (proven by the toasts above), so this is latent, not live. It is a trap for anyone
+   who later reads those selects.
+
+### ✅ D4-030 (Add-booking half) — past dates are correctly blocked
+
+The calendar disables every day before today. Verified across the month boundary: 26–31 Jul
+and 1–4 Aug 2026 all `disabled: true`; **5 Aug (today) onward enabled**. A walk-in booking
+cannot be back-dated from this dialog.
+
+### ✅ D4-046 — Cancel writes nothing
+
+Filled name, phone, date and time slot, then pressed `Cancel`. Verified against the API
+immediately afterwards on a fresh page load:
+
+| | Before | After |
+|---|---:|---:|
+| Total bookings | 25 | **25** |
+| Highest booking id | 180 | **180** |
+| Rows named `QA Harness Test` | 0 | **0** |
+
+No row created, no id burned. Page state restored to `All venues` / `Active` / 10 rows, and
+the test harness confirmed cleared from the page.
