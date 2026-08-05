@@ -595,6 +595,68 @@ The same defect recurs: state conveyed only by CSS class, never to assistive tec
 `Hide details` and the accent swatches prove the codebase knows the right pattern; it is
 applied inconsistently.
 
+### 🔴 WWL-016 — S3 — Dashboard CTAs don't do what they say
+
+All three of the hero's calls to action resolve to the same unfiltered list:
+
+| Control | Context it appears in | href | What actually happens |
+|---|---|---|---|
+| `see all` | `across 14 events` (BAQAYA debt) | `/dashboard/bookings` | Unfiltered bookings list, 10 rows, **no filter for the 14 owing** |
+| `Nayi Booking` | Hero primary CTA | `/dashboard/bookings` | Lands on the list; **no create flow opens** — you must then find "Add booking" |
+| `Add booking` | Hero | `/dashboard/bookings` | Same |
+
+Verified by clicking each: `dialogOpen: false`, no query filter, `anyFilterApplied: false`.
+"See all" for a 14-item debt list that shows you 25 unrelated bookings is a dead end, and the
+main "New Booking" button does not begin a booking.
+
+### ✅ Section D — navigation integrity, all 14 links driven
+
+Every in-`main` dashboard link was loaded and checked for **rendered content**, not HTTP 200
+(SSR returns only a shell here — a fetch of `/dashboard/receivables` has the right `<title>`
+but `mentionsMoney: false` — so status codes prove nothing).
+
+| Route | main text | Rendered |
+|---|---:|---|
+| `/dashboard/leads` | 392 | ✅ |
+| `/dashboard/bookings` | 521 | ✅ |
+| `/dashboard/calendar` | 800 | ✅ |
+| `/dashboard/chat` | 339 | ✅ (⚠️ no `h1`) |
+| `/dashboard/money` | 611 | ✅ → resolves to Receivables |
+| `/dashboard/customers` | 376 | ✅ |
+| `/dashboard/settings` | 801 | ✅ |
+| `/dashboard/settings?tab=profile` | 801 | ✅ |
+| `/dashboard/settings?tab=listing` | 801 | ✅ |
+| `/dashboard/onboarding` | 1131 | ✅ |
+| `/dashboard/payments` | 483 | ✅ |
+| `/dashboard/bookings/179` | 347→2386 | ✅ |
+| `/dashboard/bookings/166` | 347 | ✅ |
+| `/dashboard` | 965 | ✅ |
+
+**No blank pages, no error states. D1-044 passes.**
+
+- **D1-045 ✅** — deep links open the *correct* record: `/dashboard/bookings/179` shows
+  Waheed Jutt with matching email, phone `03030936741`, date Wed 5 Aug 2026, status
+  `Awaiting Payment`.
+- **D1-046 ✅** — clicking a link to the page you are already on does **not** blank it
+  (7,934 → 7,934 chars). The known blank-page-on-same-route class of bug is absent here.
+- **D1-047 ✅** — browser Back from Receivables returns a fully rendered dashboard
+  (7,934 chars, BAQAYA / totals / PER-HALL all intact) — no empty shell.
+- **D1-049 ✅** — `?tab=profile` and `?tab=listing` both activate the correct tab on arrival
+  (verified by active-tab class and by the pane's own headings), not the default tab.
+- **D1-037 ✅** — mobile `More` sheet opens at 360px with 10 reachable destinations
+  (Calendar, Messages, Customers, Set up, Date holds, Expenses, Staff & Payroll, Inventory,
+  Reviews, Venues), none clipped. *(It is invisible at desktop — it belongs to the mobile
+  bottom tab bar, which is why it cannot be clicked at 1536px.)*
+
+**Checked and cleared — not a bug.** Booking 179's page shows `Balance due Rs 0`, which
+initially looked like a fourth conflicting figure. It is not: that belongs to the **Quotation**
+widget, which states *"No items yet"*, so Subtotal / Grand total / Balance are all correctly
+Rs 0 for an empty quotation. Booking 170's same widget *does* have line items and correctly
+shows Rs 1,159,500. Consistent.
+
+⚠️ Sixth instance of the accessibility pattern: none of the **10 Settings tabs** expose
+`aria-selected` or `data-state` — active tab is a CSS class only.
+
 ### Cases executed so far
 
 **Section A — all 15 executed.**
