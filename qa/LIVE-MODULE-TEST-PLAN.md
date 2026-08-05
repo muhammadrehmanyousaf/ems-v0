@@ -37,7 +37,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 5 | Date holds | `/dashboard/holds` | ✅ 52 | **`[x]` COMPLETE — 48 run, 4 not run, 14 findings** |
 | 6 | Function sheets | `/dashboard/function-sheets` | ✅ 68 | **`[x]` COMPLETE — 57 run, 11 not run, 17 findings** |
 | 7 | Customers | `/dashboard/customers` | ✅ 66 | **`[x]` COMPLETE — 52 run, 14 not run, 11 findings** |
-| 8 | Calendar | `/dashboard/calendar` | — | `[ ]` |
+| 8 | Calendar | `/dashboard/calendar` | ✅ 48 | `[~]` in progress |
 | 9 | Conversations | `/dashboard/chat` | — | `[ ]` |
 | 10 | Payments | `/dashboard/payments` | — | `[ ]` |
 | 11 | Receivables | `/dashboard/receivables` | — | `[ ]` |
@@ -4527,3 +4527,123 @@ offering to re-import it (WWL-095).
 Against that, the module contains the sweep's **best form validation** (D7-035) and a piece of
 privacy engineering that is easy to miss and was done right: **customer emails are redacted out
 of the URL before any analytics beacon fires.**
+
+---
+
+# MODULE 8 — Calendar (`/dashboard/calendar`)
+
+**Live starting state:** August 2026, **6 events**, month grid with events on the 5th (2), 13th
+(2), 21st (1) and 29th (1).
+
+**Five distinct surfaces on one page:**
+
+| Surface | What it is |
+|---|---|
+| Month grid | `Today`, `Previous/Next month`, per-day event chips, `Add booking` |
+| Day detail panel | *"Thursday, 6 August — Nothing scheduled"* |
+| **Calendar subscription** | `Generate calendar feed` — an **iCal/ICS token** (`/api/v1/calendar/me/ical-token`, GET/POST/DELETE). Feed spans **past 90 days + 365 forward**; *"cancelled bookings show as struck through"* |
+| **Availability strip** | 14 days (6 Aug – 19 Aug), legend **Free / Booked / Held / Blocked** |
+| **Upcoming Islamic dates** | *"next 120 days · auto-suggested blackouts"* — Eid Milad-un-Nabi, Tue 25 Aug (12 Rabi' al-Awwal), with a **`Block`** button |
+
+Plus a spaces row (Main Hall · afsana · Terrace Lawn · Mardana Section · Zenana Section · …)
+and `CalendarV2Gate`, which renders a halls×slots grid only when the runtime flag
+**`venue_os_v2`** is on.
+
+**Why this module matters most for cross-checking.** Three earlier findings all predict
+specific behaviour here, and this is the screen where they become visible to a vendor:
+
+- **WWL-036** — 3 cancelled bookings are invisible in the Bookings module. Two of them
+  (**177 on 4-Aug**, **178 on 12-Aug**) fall inside the month currently displayed.
+- **WWL-070** — a `[QA] duplicate test` block is sitting on **6-Aug** at Rehman Grand Marquee.
+  The availability strip starts at exactly 6 Aug and has a `Blocked` state.
+- **WWL-057 / WWL-058** — availability never subtracts holds or bookings. The strip's
+  `Free / Booked / Held` legend is drawn from that same data.
+
+**The ICS feed is the security-relevant surface.** A calendar subscription URL must work
+unauthenticated in Google/Apple/Outlook, so the token *is* the credential — the same shape as
+the function-sheet share token that WWL-079 destroys. It carries customer names, event dates
+and (possibly) amounts, for a 15-month window.
+
+## Safety limits
+
+| Action | Limit |
+|---|---|
+| **`Block` an Islamic date** | Writes a real availability block that makes a date unsellable across the vendor's venues. Enumerated, not committed. |
+| **Deleting the `[QA] duplicate test` block** | Not driven — it is pre-existing data (WWL-070), and removing a block is a live availability mutation outside this module's remit. |
+| **Generating the iCal feed** | Creates a live, unauthenticated, publicly-fetchable URL exposing 15 months of customer data. Driven **once**, audited, then **revoked immediately** — the same protocol used for the share token in Module 6. |
+
+## Section A — Month grid
+
+- [ ] **D8-001** — `6 events` matches the bookings actually dated in Aug 2026.
+- [ ] **D8-002** — 🔴 Cancelled bookings **177 (4-Aug)** and **178 (12-Aug)** — do they appear?
+  The 4th and 12th render empty. Confirm and rate against WWL-036.
+- [ ] **D8-003** — Each day's chips name the right customers.
+- [ ] **D8-004** — Multi-event days (5th, 13th) show a count and all events.
+- [ ] **D8-005** — `Today` highlights 5-Aug-2026 (PKT), not a UTC-shifted day.
+- [ ] **D8-006** — `Previous month` / `Next month` load the right data.
+- [ ] **D8-007** — Navigate to a month with known bookings (Sept: 170 on the 9th, 171 on the
+  23rd) and verify.
+- [ ] **D8-008** — Navigate far forward/back — no crash, no runaway fetching.
+- [ ] **D8-009** — Does the grid rescope per venue?
+- [ ] **D8-010** — Clicking a day loads that day's detail panel.
+- [ ] **D8-011** — Clicking an event opens the booking.
+- [ ] **D8-012** — `Add booking` from the calendar — does it prefill the clicked date?
+- [ ] **D8-013** — Day cells are keyboard reachable and named.
+- [ ] **D8-014** — Money on the day panel matches the booking (WWL-037 check).
+
+## Section B — Availability strip
+
+- [ ] **D8-015** — 🔴 **6-Aug must render `Blocked`** — the `[QA] duplicate test` block is on it.
+  If it shows `Free`, the strip does not read blocks.
+- [ ] **D8-016** — Days with confirmed bookings show `Booked` — tests WWL-057 from the UI side.
+- [ ] **D8-017** — Place a hold, confirm the strip shows `Held`, then release — tests WWL-058.
+- [ ] **D8-018** — Legend colours are distinguishable and not colour-only.
+- [ ] **D8-019** — "tap a day to see its status" — does tapping actually work?
+- [ ] **D8-020** — Strip window is 14 days from today; verify boundaries.
+- [ ] **D8-021** — Does the strip rescope per venue?
+
+## Section C — Islamic dates / blackouts
+
+- [ ] **D8-022** — Eid Milad-un-Nabi is dated **Tue, 25 Aug 2026 (12 Rabi' al-Awwal)** —
+  verify against the real Islamic calendar.
+- [ ] **D8-023** — "next 120 days" — are other Islamic dates in range missing?
+- [ ] **D8-024** — `Block` — enumerate what it would write (not committed).
+- [ ] **D8-025** — Is the blackout per-venue or all venues?
+- [ ] **D8-026** — Is a blocked date reversible, and is that stated?
+- [ ] **D8-027** — Hijri↔Gregorian conversion method, and whether moon-sighting variance is
+  acknowledged (a real Pakistani concern — Eid dates commonly shift ±1 day).
+
+## Section D — Calendar subscription (ICS)
+
+- [ ] **D8-028** — `Generate calendar feed` issues a token and shows the URL.
+- [ ] **D8-029** — 🔴 **Does the lowercase middleware break it, as it does the share link
+  (WWL-079)?**
+- [ ] **D8-030** — 🔴 Fetch the feed **unauthenticated** — what does it expose?
+- [ ] **D8-031** — Token entropy.
+- [ ] **D8-032** — Feed is valid iCalendar (`BEGIN:VCALENDAR`, well-formed `VEVENT`s).
+- [ ] **D8-033** — Event count matches the claimed window (past 90 / +365 days).
+- [ ] **D8-034** — Cancelled bookings "show as struck through" — verify how that is encoded.
+- [ ] **D8-035** — Does the feed leak customer **phone/email**, or only names?
+- [ ] **D8-036** — Does it include money?
+- [ ] **D8-037** — Revoke kills the feed; verify the URL then fails.
+- [ ] **D8-038** — Re-generating rotates the token and invalidates the old URL.
+- [ ] **D8-039** — Is the vendor warned the URL is unauthenticated and shareable?
+
+## Section E — Spaces / v2 grid
+
+- [ ] **D8-040** — Enumerate the spaces row (Main Hall, afsana, Terrace Lawn, Mardana Section,
+  Zenana Section, …) and confirm they are this vendor's real spaces.
+- [ ] **D8-041** — `afsana` — a lowercase, non-space-looking name. Real data or test residue?
+- [ ] **D8-042** — Is `CalendarV2Gate` on? (`venue_os_v2` runtime flag — and per the standing
+  no-flags rule, whether the flag is debt to remove.)
+- [ ] **D8-043** — Do the spaces reconcile with the SPACE column being permanently dead in
+  Bookings (WWL-050)?
+
+## Section F — Failure, a11y, responsive
+
+- [ ] **D8-044** — Block the calendar endpoint → error + Retry, **not** an empty month
+  (the WWL-095 test).
+- [ ] **D8-045** — Does an errored calendar claim "no events"?
+- [ ] **D8-046** — Accessible names on day cells and navigation.
+- [ ] **D8-047** — 360px: grid usable, no overflow, events reachable.
+- [ ] **D8-048** — Desktop: no overflow.
