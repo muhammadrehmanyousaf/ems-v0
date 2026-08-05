@@ -30,7 +30,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 
 | # | Module | Route | Cases written | Status |
 |---|---|---|---|---|
-| 1 | Dashboard | `/dashboard` | ✅ 62 | `[~]` in progress |
+| 1 | Dashboard | `/dashboard` | ✅ 62 | **`[x]` COMPLETE — 60 run, 2 unrun, 18 findings** |
 | 2 | Today | `/dashboard/today` | — | `[ ]` |
 | 3 | Lead inbox | `/dashboard/leads` | — | `[ ]` |
 | 4 | Bookings | `/dashboard/bookings` | — | `[ ]` |
@@ -724,6 +724,103 @@ Every number the strip claims was checked against `businesses/my-completeness`:
   re-verified — `ownerName: null`, score back to **44**, 20 remaining. Account left as found.
 - **D1-052 ✅** — the +5 weighting is real, not decorative: the score moved by exactly the
   advertised amount.
+
+### 🔴 WWL-018 — S1 — A failed load renders as "Rs 0 collected, Rs 0 owed" with no error
+
+**The most dangerous finding in the module.** Blocked the three money endpoints
+(`analytics/kpis`, `bookings/action-summary`, `analytics/revenue-breakdowns`) and forced a
+real refetch by switching venue. 7 requests failed. The dashboard rendered:
+
+| Tile | Value shown |
+|---|---|
+| Total bookings | **0** |
+| Revenue collected | **Rs 0** ↗ *received* |
+| Revenue due | **Rs 0** *to chase* |
+| Today's events | **0** |
+| Upcoming (7d) | **0** |
+
+- `showsErrorUi: false` — **no error message anywhere on the page**
+- `retryButtons: []` — **no retry affordance**
+- The BAQAYA hero simply vanished rather than reporting a problem
+
+There is nothing to distinguish this from a genuine, truthful zero. It is rendered with full
+confidence — the words *"received"* and *"to chase"* sit beside it, and **Rs 0 collected even
+carries a green upward trend arrow**.
+
+And the same screen contradicts itself: while `Revenue due` reads **Rs 0 · to chase**, the
+`Who to chase` panel directly below still lists **Waheed Jutt Rs 315,000** and **Danish
+Qureshi Rs 1,220,537** — because that panel is fed by a different query that was not blocked.
+
+For a venue owner on unreliable mobile data this is the worst possible failure mode: it does
+not say "couldn't load", it says *"you have collected nothing and are owed nothing."* Either
+they panic, or they conclude there is nothing to chase and stop chasing.
+
+Evidence: `dash-failure-rs0.png`.
+
+### ✅ Section G — accessibility, and H — desktop
+
+- **D1-057 ✅ (partial)** — 54 visible focusable elements; focus rings render on every control
+  sampled (`outline` present on all 6 tested); no focus trap encountered.
+- **D1-059 ✅** — **0 of 54 focusable elements lack an accessible name.** Every icon-only
+  control has one. *(The bell's name is the bare count "53" — technically named, but it does
+  not say "notifications"; see WWL-012's class of issue.)*
+- **D1-060 🔴 (minor, S4)** — heading order is `1,3,3,3,3,3,3,4,4,2,2,3`: one true skip
+  (**h1 → h3** at "Your listing is half-built") and the h2s appear *after* the h3s, so
+  heading-based navigation does not reflect the visual structure.
+- **D1-056 ✅** — long names truncate with an ellipsis rather than overflowing
+  ("Owais Siddiqui & Laiba Owa…").
+- **D1-062 ✅ desktop 1536px** — no horizontal overflow (`scrollWidth 1521`), **0 covered
+  controls**.
+- **D1-061 🔴 360px** — see WWL-014.
+
+### Not scored — measurement did not hold
+
+- **D1-054 (Retry)** — cannot be scored: WWL-018 shows there *is* no retry control to press.
+- **D1-055 (slow-network layout shift)** — my first attempt at forcing a refetch via
+  `focus`/`online` events produced **zero change** (`textLenChange: 0`), so that run proved
+  nothing and I did not score it. The later venue-switch method worked and produced WWL-018.
+  A true throttled-load shift test needs CDP network emulation, which this harness does not
+  expose. **Left explicitly unrun rather than assumed.**
+
+---
+
+## MODULE 1 — Dashboard: COMPLETE
+
+**62 cases written · 60 executed · 2 explicitly left unrun (D1-054, D1-055) · 18 findings.**
+
+| ID | Sev | Finding |
+|---|---|---|
+| WWL-001 | S1 | Rs 1,159,500 owed absent from Receivables (booking 170 flagged `Paid` while owing) |
+| WWL-002 | S1 | Receivables ignores a Rs 35,000 down payment already taken |
+| WWL-003 | S2 | Two "money owed" totals on one screen (Δ Rs 1,124,500, reconciles exactly) |
+| WWL-004 | S1 | Today's-events KPI drops an `Awaiting Payment` event happening in hours |
+| WWL-005 | S1 | `Revenue collected` overstates by Rs 1,124,500 — reports uncollected money as collected |
+| WWL-006 | S1 | 4 sections never rescope — one venue shows all venues' money and events |
+| WWL-007 | S3 | Venue switcher marks no active option |
+| WWL-008 | S1 | Cancelled weddings ranked #1 most profitable; header totals include them |
+| WWL-009 | S1 | "Net profit" is revenue — ignores receipts; every untagged row shows 100% margin |
+| WWL-010 | S1 | Three different "outstanding" figures and two "received" figures coexist |
+| WWL-011 | S2 | اردو toggle inert — page text byte-identical, 0 differing characters |
+| WWL-012 | S3 | 12 reminder buttons share one accessible name |
+| WWL-013 | S2 | `Toggle Sidebar` dead at 1536/1024/360 — screenshots pixel-identical |
+| WWL-014 | S2 | 360px: today's events clipped off-screen, unreachable, money truncated |
+| WWL-015 | S2 | ⌘K finds no data; returns unrelated routes for customer names |
+| WWL-016 | S3 | Hero CTAs resolve to an unfiltered list; "Nayi Booking" starts no booking |
+| WWL-017 | S2 | 11 of 20 onboarding tasks dead-end (6 wrong tab, 5 × hard 404) |
+| **WWL-018** | **S1** | **Failed load renders as "Rs 0 collected, Rs 0 owed" with no error and no retry** |
+
+**Root-cause clusters (not 18 separate bugs):**
+1. **`paymentStatus` trusted over actual amounts** → WWL-001, 002, 003, 005, 010
+2. **Cancelled bookings not excluded from aggregates** → WWL-008, and the `0677c6e` fix for
+   this is **unpushed/undeployed**
+3. **Profit maths ignores receipts** → WWL-009
+4. **Venue scope not threaded through 4 panels** → WWL-006
+5. **No error/empty-state discipline** → WWL-018
+6. **Active state expressed as CSS class only** → WWL-007, 012, and 6 more control groups
+
+**Data written during testing:** one reminder log on the vendor's own booking (180); one
+notification read (53→52); Owner name set and **restored to `null`**; venue scope and theme
+**restored**. No money rows created. No customer contacted.
 
 ### Cases executed so far
 
