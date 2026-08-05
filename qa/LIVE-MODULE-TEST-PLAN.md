@@ -2011,6 +2011,68 @@ Active view, verified against the API:
 - The **"(shown)"** qualifier is doing real work: it tells the vendor these totals cover the
   current view only. That is the honest labelling missing from the Dashboard's tiles.
 
+### 🔴 WWL-039 — S1 (unconfirmed by design) — `Edit Booking` cannot see or preserve a negotiated price
+
+`Edit Booking #179` contains **no total, amount or down-payment field**. The price is implied
+entirely by a `Package` select:
+
+> `Silver — Nikah Package · Rs 325,000` · `Gold — Barat Package · Rs 760,000` ·
+> `Platinum — Full Shaadi · Rs 1,320,000`
+
+But booking 179's stored `totalAmount` is **Rs 350,000** — **Rs 25,000 above** its package's
+list price of Rs 325,000. The dialog shows the vendor `Rs 325,000` and gives no indication the
+booking is actually worth Rs 350,000.
+
+Negotiated prices are clearly normal here — the booking detail page has a **"Final price
+(haggle)"** field, and **3 of the 4 package-linked bookings carry a total above list**:
+
+| id | Customer | Package list | Booking total | Difference |
+|---|---|---:|---:|---:|
+| 179 | Waheed Jutt | 325,000 | 350,000 | **+25,000** |
+| 178 | Waheed Jutt | 760,000 | 762,650 | +2,650 |
+| 177 | Waheed Jutt | 325,000 | 350,000 | **+25,000** |
+
+**The risk:** if `Save Changes` writes the package's list price back to `totalAmount`, saving
+an unrelated edit (a phone number, a guest count) silently destroys the negotiated amount —
+Rs 25,000 off this booking, on a screen that never displayed the number it overwrote.
+
+> **I did not verify this by saving, deliberately.** Confirming it would mean overwriting a
+> real booking's value on a live vendor's ledger, and the dialog offers no way to type the
+> original Rs 350,000 back — the damage would not be reversible through the UI. **This needs
+> checking in a non-production environment before anyone edits a haggled booking.** Recorded as
+> a risk with its evidence, not as a confirmed defect.
+
+### ✅ D4-033 — Cancel is clean
+
+Cancelled the dialog and re-read the API: `totalAmount` still `350000.00`, `downPayment` still
+`35000.00`. Nothing written.
+
+### ✅ Guest Count is properly floored
+
+`Guest Count` carries **`min="1"`** — a correctly bounded number input, in a portal where 164
+number inputs have no floor at all (`scripts/qa-scan-number-inputs.mjs`). Credit.
+
+### 🔴 WWL-037 extended — the payment flag is wrong in *both* directions
+
+Booking 179 on the same ledger:
+
+> `Silver — Nikah Package | Waheed Jutt | Rs 350,000 | Rs 35,000 | Awaiting Payment |`
+> **`Pending`**
+
+`downPayment: 35000.00` — money **has** been received — yet the chip reads `Pending`, not
+`Partial`. Confirmed in the API: `paymentStatus: "Pending"` with a non-zero down payment.
+
+So the stored flag disagrees with the amounts in **both** directions on the same screen:
+
+| Booking | Amount | Paid | Truth | Chip says |
+|---|---:|---:|---|---|
+| 170 Imran Shafi | 1,546,000 | 386,500 | **Partial** | **`Paid`** ← overstates |
+| 179 Waheed Jutt | 350,000 | 35,000 | **Partial** | **`Pending`** ← understates |
+
+Two records, opposite errors, one cause: the chip is rendered from a stored flag instead of
+being derived from `total − paid`. This is now the single highest-leverage fix identified in
+the sweep — it would close **WWL-001, WWL-005 and WWL-037** together.
+
 ### ⚠️ WWL-038 — S3 — "Total bookings" means two different things on two screens
 
 | Screen | Label | Value | Means |
