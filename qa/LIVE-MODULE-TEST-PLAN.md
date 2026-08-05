@@ -40,7 +40,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 8 | Calendar | `/dashboard/calendar` | ✅ 48 | **`[x]` COMPLETE — 38 run, 10 not run, 6 findings** |
 | 9 | Conversations | `/dashboard/chat` | ✅ 40 | **`[x]` COMPLETE — 26 run, 14 not run, 3 findings** |
 | 10 | Payments | `/dashboard/payments` | ✅ 118 | **`[x]` COMPLETE — 101 run, 17 not run, 22 findings (4× S1)** |
-| 11 | Receivables | `/dashboard/receivables` | ✅ 96 | `[ ]` IN PROGRESS |
+| 11 | Receivables | `/dashboard/receivables` | ✅ 96 | **`[x]` COMPLETE — 84 run, 12 not run, 13 findings (2× S1)** |
 | 12 | Receipts | `/dashboard/receipts` | — | `[ ]` |
 | 13 | Cheque ledger | `/dashboard/pdcs` | — | `[ ]` |
 | 14 | Expenses | `/dashboard/expenses` | — | `[ ]` |
@@ -5830,3 +5830,202 @@ not a thing to test on live production. Therefore:
 | D11-094 | No console errors across the whole run | |
 | D11-095 | Hard reload keeps the screen consistent | |
 | D11-096 | Rapid re-navigation doesn't double-fetch | |
+
+## MODULE 11 — EXECUTION RESULTS
+
+**Nothing was written, and no message was sent.** This screen has no write path; its only
+outbound action is a WhatsApp deep link, and **no link was ever followed**. I read `href`s,
+decoded the prefilled text and checked the phone normalisation without navigating to `wa.me`
+once.
+
+### WWL-129 (S1) — venue scoping is inverted: **one venue shows 95% more money than all three combined**
+
+Driven entirely through the venue switcher in the live UI:
+
+| Switcher shows | Outstanding | Customers owing | Rows |
+|---|---|---|---|
+| Rehman Grand Marquee *(1 of 3)* | **Rs 23,961,479** | **34** | 34 |
+| **All venues** *(all 3)* | **Rs 12,292,729** | **13** | 13 |
+| Rehman Marquee Bahria *(1 of 3)* | Rs 4,005,205 | 3 | 3 |
+| Rehman Banquet & Lawn *(1 of 3)* | **Rs 23,961,479** | **34** | 34 |
+
+Three things are wrong at once:
+
+1. **A subset exceeds the whole.** Selecting one venue shows Rs 23,961,479; all three together
+   show Rs 12,292,729.
+2. **Two different venues are byte-identical.** Grand Marquee and Banquet & Lawn return the same
+   total, the same customer count and the same 34-name debtor list.
+3. **The parts sum to 4.2× the whole** — Rs 51,928,163 against Rs 12,292,729.
+
+Only the Bahria figure is trustworthy: Rs 4,005,205 matches Module 10's Bahria Due **exactly**.
+
+**Root cause** — `analyticsController.js`. The two scope predicates are **different sets, not
+nested sets**, and the scoped one *replaces* the vendor filter rather than narrowing it:
+
+```js
+const vendorWhere = scopedBid ? bookingWhereForBusiness(scopedBid) : vendorBookingWhere(req.user);
+
+function vendorBookingWhere(user)      { return { vendorIds: { [Op.contains]: [user.id] } }; }
+function bookingWhereForBusiness(bid)  { return { id: { [Op.in]: sequelize.literal(
+    `(SELECT "bookingId" FROM "BookingDetails" WHERE "businessId" = ${bid})`) } }; }
+```
+
+The unscoped path requires `vendorIds @> [user.id]`. The scoped path **drops that condition
+entirely** and matches any booking with a `BookingDetails` row for the venue — so every legacy,
+offline and QA booking with a stale or empty `vendorIds` array becomes visible the moment a venue
+is selected. The scoped list contains 21 names the all-venues list does not, including
+`QA Booking Tester`, `ZZQA-2026-07-30 Booking Customer`, `WW QA Cart Customer (delete me)` and
+`QA Import One`/`Two`.
+
+This is the same defect the codebase already fixed once for a different surface: `vendorBookingWhereWide`
+(Issue #57/#53) exists precisely because the `vendorIds`-only filter misses these bookings, and it
+solves it by **OR-ing** the two conditions. `bookingWhereForBusiness` never got the same treatment,
+and it must be **AND**-ed with the vendor scope, not substituted for it.
+
+**I did not establish cross-tenant leakage.** `resolveOwnedBusinessId` does verify the business
+belongs to the requester, and the extra names look like this vendor's own legacy/QA data. The
+proven defect is scope correctness and a grossly inflated collections figure — not a data breach.
+
+### WWL-130 (S1) — the error state is unreachable, so a dead endpoint reads as "Nothing outstanding"
+
+```js
+static async getReceivables(): Promise<ReceivablesData | null> {
+  try { … } catch { return null; }      //  ← every failure becomes a successful null
+}
+```
+
+`null` → `customers = []` and `totals` undefined → `isError` is **false**, so
+`error={isError ? "Couldn't load receivables." : null}` and `onRetry` can never fire. They are
+dead code.
+
+Driven live against an unroutable host — a total network failure — on a board holding
+**Rs 23,961,479 across 34 customers**:
+
+> Outstanding **Rs 0** · Customers owing **0** · Open installments **0** · Oldest overdue **0 days**
+> **"Nothing outstanding — When customers have pending payments, their aging will show here."**
+
+No error. **No Retry button.** This is worse than Module 10's WWL-108 in two ways: there the error
+UI existed and worked and was merely bypassed by the backend's 200, so fixing the backend fixes the
+read; here the `catch` swallows **every** failure mode, so no backend fix helps. And the copy makes
+an affirmative financial claim — *nothing outstanding* — rather than merely reporting no rows.
+
+### WWL-131 (S2) — the entire aging column renders green, including 99 days overdue
+
+Predicted from source before loading the page, then confirmed on screen. Every bucket resolves to
+the same tone:
+
+| Aging | Days overdue | Outstanding | Rendered tone |
+|---|---|---|---|
+| Days 90 plus | **99** | Rs 325,020 | `bg-emerald-50 text-emerald-700` |
+| Days 61 90 | 61 | Rs 420,000 | `bg-emerald-50 text-emerald-700` |
+| Days 31 60 | 51 | Rs 280,000 | `bg-emerald-50 text-emerald-700` |
+| Days 1 30 | 11 | Rs 215,872 | `bg-emerald-50 text-emerald-700` |
+| Current | 0 | Rs 2,596,400 | `bg-emerald-50 text-emerald-700` |
+
+```js
+const bucketTone = (b) => {
+  const v = (b || "").toLowerCase()
+  if (v.includes("current") || v.includes("0")) return "success"   // ← swallows everything
+  if (v.includes("90") || v.includes("over"))   return "error"     // unreachable
+  if (v.includes("60"))                          return "warning"  // unreachable
+  if (v.includes("30"))                          return "info"     // unreachable
+```
+
+The backend keys are `current | days_1_30 | days_31_60 | days_61_90 | days_90_plus` — **every
+overdue key contains a `0`**, so the `includes("0")` test matches first and the three severity
+branches can never be reached. A customer 99 days late is coloured identically to one who is not
+late at all. The colour gradient is the entire reason an aging board exists.
+
+The classification underneath is **correct** — D11-012 verified every customer's `bucket` matches
+`bucketKey(oldestDaysOverdue)` with zero mismatches. Only the colour is wrong. Matching on the
+bucket key rather than substrings fixes it.
+
+### WWL-132 (S2) — a third of the WhatsApp reminders point at invalid numbers
+
+`waLink()` maps a leading `0` to `92` with no length check. Live results across all 34 rows:
+
+| | Rows | Owed |
+|---|---|---|
+| Valid PK mobile (`92` + 10 digits = 12) | 23 | Rs 12,683,750 |
+| **Invalid (11 digits — one short)** | **11 (32%)** | **Rs 11,277,729 (47%)** |
+
+Examples: `0348976582` → `92348976582` (11) · `0307406366` → `92307406366` (11) ·
+`0348678149` → `92348678149` (11). A correct 11-digit source number works properly:
+`03034445566` → `923034445566` (12) ✓, and an already-prefixed `923007771014` is **not**
+double-prefixed ✓ (D11-041 PASS).
+
+The stored 10-digit numbers are a data-quality problem, but the screen emits a broken deep link
+with no indication — the vendor taps and WhatsApp reports an invalid number. **Nearly half the
+money on the collections board cannot be chased from the button provided to chase it.**
+
+### WWL-133 (S3) — every dunning message calls the customer `sahab`
+
+The greeting hard-codes a male honorific for all recipients. Decoded from the live `href`s:
+
+- *"Assalam-o-Alaikum **Nadia Sheikh** sahab,"* — a woman
+- *"Assalam-o-Alaikum **Kamran Sheikh & Zoya Kamran** sahab,"* — a couple, addressed as one man
+- *"Assalam-o-Alaikum **Shahzad Butt & Iqra Shahzad** sahab,"*
+
+`customerName` on a wedding booking is usually a **couple**, so the couple case is the norm, not
+the exception. This goes out over the vendor's own WhatsApp to a paying customer who is being
+asked for money — the one message where tone matters most. A neutral greeting
+(*"Assalam-o-Alaikum,"* or *… ji,"*) avoids the whole problem.
+
+The message is otherwise correct: Roman Urdu reads naturally, and **the amount matches the row
+exactly** in every sample, `Math.round`ed and `en-PK` formatted (D11-044/045/046 PASS).
+
+### Findings S3 / S4
+
+| ID | Sev | Finding |
+|---|---|---|
+| **WWL-134** | S3 | **Stat cards ignore the search filter.** Filtering 34 rows down to 1 — or to 0 — leaves the headline at **Rs 23,961,479 / 34 customers** in every case. The WWL-115 pattern, on a second money screen. |
+| **WWL-135** | S3 | **A no-match search asserts a financial falsehood.** Searching `zzzqqq` with Rs 23.9m on the books renders *"Nothing outstanding — When customers have pending payments, their aging will show here."* Worse than the Payments variant (WWL-116) because it states a conclusion about the money, not just about the rows. |
+| **WWL-136** | S3 | **CSV drops the Aging column and mangles `+92` phones.** The export header is `Customer,Phone,Bookings,Open installments,Days overdue,Outstanding` — the **Aging bucket, the one classification this board exists to produce, is missing**. Separately, the live export contains `+923274811220`: a leading `+` makes Excel treat the cell as a formula. This is a **demonstrated** instance of the injection gap in the shared `ExportMenu`, upgrading WWL-123 from latent to reproduced. |
+| **WWL-137** | S3 | **Table a11y, unchanged from Module 10.** 0 of 9 `<th>` carry `scope`, no `<caption>`, and all **34** row checkboxes share the identical accessible name *"Select row"*. |
+| **WWL-138** | S3 | **No next action from a debtor row.** Rows are not clickable; there is no link to the customer, the booking or its installments, and **no way to record a payment** — the obvious follow-up once a customer pays. The only action offered is a WhatsApp reminder, 32% of which are broken (WWL-132). |
+| **WWL-139** | S4 | Aging labels read **"Days 1 30"**, **"Days 31 60"**, **"Days 90 plus"** — `cap()` merely upper-cases and swaps underscores for spaces instead of rendering a readable range. |
+| **WWL-140** | S4 | **The five bucket totals and `generatedAt` are computed on every response and surfaced nowhere.** No staleness disclosure, no bucket summary bar. Also `buckets[].count` totals **51** — it counts *installments*, matching `installmentsOpen`, not the 34 customers — contradicting the controller's own header comment ("buckets CUSTOMERS not individual installments"). |
+| **WWL-141** | S4 | The `Outstanding` card carries an unconditional `trend="down"` arrow regardless of whether debt rose or fell. |
+
+### Notable passes
+
+- **D11-002/003 PASS** — `Dashboard : Receivables`; sidebar, breadcrumb and `<h1>` agree.
+- **D11-004/005 PASS** — one `analytics/receivables` call per load, correctly carrying `businessId` when a venue is active.
+- **D11-007 → D11-012 PASS** — every internal total reconciles: Σ rows = `grandOutstanding` = Σ buckets (Rs 23,961,479); Σ open = 51; max days = 99; and **every** customer's bucket matches `bucketKey(oldestDaysOverdue)` — zero mismatches.
+- **D11-017 PASS on the unscoped path** — all-venues `grandOutstanding` **Rs 12,292,729** equals Module 10's all-venues `Due` **exactly**. Receivables and Payments agree to the rupee; it is the **Dashboard's** Rs 13,417,229 (WWL-110) that is the outlier of the three.
+- **D11-019 PASS** — cancelled bookings are correctly excluded (`status: { [Op.ne]: "Cancelled" }` on both the installment join and the orphan backfill).
+- **D11-023 PASS** — rows are ordered by days overdue DESC (99, 61, 51, 50, 38…), the right default for a collections board.
+- **D11-038/048/084 PASS** — the WhatsApp control has `aria-label="WhatsApp reminder"` and a title, opens `target="_blank"` with `rel="noopener noreferrer"`, and is keyboard-focusable.
+- **D11-054/055/056/058/059/062 PASS** — search matches name (full and mid-word), is case-insensitive, matches phone, trims whitespace, treats `%_.*` literally, and restores cleanly.
+- **D11-065/067 PASS** — CSV exported all 34 rows with values identical to the screen.
+- **D11-073 PASS across a hard reload** — density toggles (56.8px ↔ 64.8px) and persists in `ww-ui-prefs`.
+- **D11-079 PASS** — during load the cards show `…`, never `Rs 0`, with 63 skeletons and one clean transition at ~1.5s.
+- **D11-082 PASS** — venue choice survives a hard reload (3359 restored, same figures).
+- **D11-083 PASS** — 81 focusable controls, **every one** with a visible focus indicator.
+- **D11-086 → D11-090 — the best mobile result of the sweep.** At a true emulated 360×740: **no horizontal overflow**, cards carry customer, phone, days overdue, aging and outstanding with **contextual labels** (`0348976582 · 99d overdue`) rather than Payments' bare figures, search and export both usable, and — critically — **all 34 WhatsApp links render and are reachable on the phone**. This is the one screen whose primary action actually works in the place it would really be used, chasing payments on a handset. The tap target is 28×28px, above WCAG 2.2's 24×24 floor but small for a primary action.
+
+### Module 11 — status
+
+**96 cases written, 84 driven. 13 findings (2× S1, 3× S2, 5× S3, 3× S4).**
+
+Not driven, each with its reason:
+
+| Cases | Why |
+|---|---|
+| **D11-020** (refunded bookings excluded) | The scope filters on `status ≠ Cancelled` and `paymentStatus ≠ Paid`; no `Refunded` booking exists in the live set to confirm the behaviour either way. |
+| **D11-036/037** (missing name / missing phone → `—`, no WhatsApp icon) | All 34 rows have both a name and a phone. The `—` fallback and the no-link branch cannot be exercised without creating data. |
+| **D11-042/043** (spaced/dashed phone, landline) | No such number exists live. `waLink` strips non-digits so a dashed number would normalise, and a landline would produce a WhatsApp link with no validation — both readable from source, neither reproduced. |
+| **D11-063/064/066/071/072** (selected export, Excel, rowId collision) | `ExportMenu` is the shared component already exercised in Module 10, where *Selected → CSV* was proven exact. Not re-driven here; the rowId collision needs two customers with no phone or email, which the live set does not contain. |
+| **D11-074/075** (error copy + Retry) | **Structurally unreachable** — that is finding WWL-130, not an untested case. Recorded as a defect rather than a pass or a gap. |
+| **D11-076** (mis-routed endpoint via the backend 200 catch-all) | Would land in the same `catch { return null }` as WWL-130 and render identically; not re-driven, since WWL-130 already demonstrates the outcome from a harder failure. |
+| **D11-078** (offline) | Behaviour is determined by the same swallow; the offline **scope** hazard was already demonstrated on Payments (WWL-114) against the same shared store. |
+| **D11-091/092/093** (auth gate, email exposure) | The auth gate was proven at the start of Module 10 on the same middleware. No `offline_*` address exists in this dataset. |
+
+**The module's verdict.** The presentation is the strongest in the sweep — the only screen whose
+primary action works properly on a phone, with honest loading states, complete keyboard access,
+correct Roman-Urdu copy and exact internal arithmetic. But the numbers it presents are wrong the
+moment a vendor picks a venue, the colour that makes it an *aging* board never varies, a third of
+its reminders point at invalid numbers, and any failure at all is reported as *"Nothing
+outstanding"*. A collections board that inflates one venue's debt to Rs 23.9m, paints a
+99-day-overdue customer green, and cannot message 47% of the money it lists is not usable for
+collections.
