@@ -36,7 +36,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 4 | Bookings | `/dashboard/bookings` | ✅ 60 | **`[x]` COMPLETE — 57 run, 3 not run, 21 findings** |
 | 5 | Date holds | `/dashboard/holds` | ✅ 52 | **`[x]` COMPLETE — 48 run, 4 not run, 14 findings** |
 | 6 | Function sheets | `/dashboard/function-sheets` | ✅ 68 | **`[x]` COMPLETE — 57 run, 11 not run, 17 findings** |
-| 7 | Customers | `/dashboard/customers` | — | `[ ]` |
+| 7 | Customers | `/dashboard/customers` | ✅ 66 | `[~]` in progress |
 | 8 | Calendar | `/dashboard/calendar` | — | `[ ]` |
 | 9 | Conversations | `/dashboard/chat` | — | `[ ]` |
 | 10 | Payments | `/dashboard/payments` | — | `[ ]` |
@@ -4021,3 +4021,150 @@ would fix the labels destroys them instead (WWL-081).**
 
 Not one of these is architectural. WWL-071 and WWL-081 are the same one-line field-name fix;
 WWL-079 is one middleware exclusion; WWL-078 is moving a `useMemo` above a guard.
+
+---
+
+# MODULE 7 — Customers (`/dashboard/customers`)
+
+**Live starting state:** 20 customers · `Total bookings 28` · `Repeat clients 5` ·
+`Avg / customer 1.4`. Columns: CUSTOMER · PHONE · EMAIL · BOOKINGS · LAST BOOKING.
+Row actions: `Quick view` · `Open detail`.
+
+**Subsystems in this module** (2,604 lines across 9 components):
+
+| Component | What it does |
+|---|---|
+| `customers-redesigned-view` | the list |
+| `customer-detail-view` (810 lines) | Customer-360 |
+| `customer-timeline` | per-customer history |
+| `add-customer-dialog` · `import-customers-dialog` | create / bulk import |
+| **`rate-customer-dialog`** | **the vendor rates the customer** — stars + flags |
+| **`community-trust-card` / `community-trust-panel`** | **cross-vendor reputation on a private individual** |
+
+**Two things make this module different from every previous one.**
+
+1. **It is about private individuals, not the vendor's own data.** Names, phone numbers,
+   emails, spend history and now *behavioural ratings* of named Pakistani couples.
+2. **`CommunityTrustAPI` claims a specific privacy guarantee** — k-anonymity ≥ 2 other
+   vendors, *"never returns identities or notes"*, vendor-only. A claimed guarantee is a
+   testable guarantee, and it is the most important thing in this module.
+
+**Already visible from the first read, to be pinned down:**
+- `Total bookings 28` here vs **25** in the Bookings module.
+- `firstBookingAt` looks wrong on multiple customers (Ahmed Raza `2026-01-02` vs a genuine
+  first booking of `11-Feb-2026`).
+- `CommunityTrustAPI.get` ends in `catch { return null }` — the WWL-018 swallow pattern.
+
+## Safety limits for this module
+
+| Action | Limit |
+|---|---|
+| **Rating a real customer** | A rating is a durable judgement about a named private person that feeds a cross-vendor reputation score. **Not applied to a real customer.** Validation and the dialog are driven with writes blocked. |
+| **Deleting a customer** | Not driven — would destroy booking history linkage. |
+| **Bulk import** | Not driven to completion — would create real customer records. Dialog, validation and dry-run behaviour enumerated. |
+| **Editing a real customer's contact details** | Not driven — the phone/email are the dedup keys. |
+
+## Section A — List, tiles, arithmetic
+
+- [ ] **D7-001** — `Total customers 20` matches the API count.
+- [ ] **D7-002** — 🔴 `Total bookings 28` here vs **25** in Bookings. Which is right, and where
+  do the extra 3 come from?
+- [ ] **D7-003** — `Repeat clients 5` = customers with `totalBookings > 1`.
+- [ ] **D7-004** — `Avg / customer 1.4` = total bookings ÷ total customers.
+- [ ] **D7-005** — Per-row `BOOKINGS` matches that customer's real booking count.
+- [ ] **D7-006** — `LAST BOOKING` matches the latest booking date for that customer.
+- [ ] **D7-007** — 🔴 `firstBookingAt` — Ahmed Raza shows `2026-01-02` but his earliest booking
+  (155) is `11-Feb-2026`; Bilal Hussain `2026-01-23` vs `04-Mar-2026`. Establish what the field
+  actually holds and whether anything surfaces it to the vendor.
+- [ ] **D7-008** — `totalSpentPkr` — is it billed or collected? Rizwan Anjum has a
+  Rs 2,596,400 booking and `totalSpentPkr 0.00`.
+- [ ] **D7-009** — Does `totalSpentPkr` inherit the WWL-037 payment lie?
+- [ ] **D7-010** — Cancelled bookings: counted in `totalBookings`? Should they be?
+- [ ] **D7-011** — The vendor's **own account** appears as a customer (Muhammad Rehman Yousaf,
+  +923274811220). Correct, or self-pollution of the client book?
+- [ ] **D7-012** — 20 customers against 25 bookings — verify the dedup is right and no two
+  people were merged.
+- [ ] **D7-013** — `_id` prefers email, else phone. What happens to a customer with neither?
+- [ ] **D7-014** — City is in the payload but there is no CITY column — deliberate or dropped?
+
+## Section B — List controls
+
+- [ ] **D7-015** — Search by name / phone / email; client-side or server-side; does it 500?
+- [ ] **D7-016** — Search matches partial and case-insensitive.
+- [ ] **D7-017** — No-match search shows a proper empty state.
+- [ ] **D7-018** — Venue scoping: does the client book rescope per venue?
+- [ ] **D7-019** — Scope survives hard reload.
+- [ ] **D7-020** — Density toggle + `aria-pressed`.
+- [ ] **D7-021** — Export: row count, columns, and **whether it exports phone/email in the
+  clear** — this is a contact-list export of private individuals.
+- [ ] **D7-022** — Pagination: `limit` is 20 by default. With 20 customers exactly, is there a
+  page 2 control, and does the count cap silently (the WWL-043 test)?
+- [ ] **D7-023** — Sorting on any column.
+
+## Section C — Quick view / Open detail
+
+- [ ] **D7-024** — `Quick view` opens a dialog with the right customer.
+- [ ] **D7-025** — Enumerate every field it shows.
+- [ ] **D7-026** — `Open detail` navigates to the correct Customer-360.
+- [ ] **D7-027** — 40 row buttons, 2 accessible names — WWL-035 again?
+- [ ] **D7-028** — Is the row clickable (WWL-054 again)?
+- [ ] **D7-029** — Detail view: bookings, spend, timeline all agree with the list row.
+- [ ] **D7-030** — Timeline renders real events in the right order.
+- [ ] **D7-031** — Detail view for a customer with **one** booking vs **two** — both correct.
+- [ ] **D7-032** — Money on the detail page agrees with the Bookings module.
+
+## Section D — Add customer
+
+- [ ] **D7-033** — Enumerate every field.
+- [ ] **D7-034** — Required-field gating with stated reasons.
+- [ ] **D7-035** — PK phone validation — does it accept `03XX-XXXXXXX` and reject nonsense?
+- [ ] **D7-036** — Email validation.
+- [ ] **D7-037** — 🔴 Duplicate handling: add a customer with an **existing phone/email**.
+  Merged, rejected, or a silent duplicate that corrupts the dedup key?
+- [ ] **D7-038** — Hostile input: long strings, Urdu, emoji, `<script>`.
+- [ ] **D7-039** — Cancel writes nothing (API count before/after).
+- [ ] **D7-040** — Which venue does a manually-added customer belong to on "All venues"?
+  (WWL-067 / WWL-084 pattern.)
+
+## Section E — Import customers
+
+- [ ] **D7-041** — Enumerate the dialog: file types, template, column mapping.
+- [ ] **D7-042** — Is there a preview / dry-run before committing?
+- [ ] **D7-043** — Malformed CSV handling.
+- [ ] **D7-044** — Duplicate rows within the file, and against existing customers.
+- [ ] **D7-045** — Is there a row cap, and is it disclosed?
+- [ ] **D7-046** — Cancel writes nothing.
+
+## Section F — Rate customer (vendor → customer)
+
+- [ ] **D7-047** — Enumerate the rating dialog: stars, flags, notes.
+- [ ] **D7-048** — What are the `allowedFlags`, and are they defensible about a named person?
+- [ ] **D7-049** — Is the vendor told the rating is shared (in aggregate) with other vendors?
+- [ ] **D7-050** — Can a vendor rate a customer they have **never** had a booking with?
+- [ ] **D7-051** — Can a vendor rate the same customer repeatedly to skew the aggregate?
+- [ ] **D7-052** — Are ratings editable / deletable by their author (`remove` exists)?
+- [ ] **D7-053** — Are notes private to the vendor, as the API comment claims?
+- [ ] **D7-054** — Hostile input in the note field.
+- [ ] **D7-055** — Is the customer ever told they have been rated? Any right of reply?
+
+## Section G — Community trust (the privacy guarantee)
+
+- [ ] **D7-056** — 🔴 **k-anonymity ≥ 2 other vendors** — verify a lone rating does NOT
+  surface. This is the guarantee the API claims; it must hold.
+- [ ] **D7-057** — 🔴 Verify **no identities and no notes** are ever returned — inspect the
+  raw payload, not the rendered card.
+- [ ] **D7-058** — `hasData: false, reason: "insufficient"` renders honestly rather than as
+  "this customer is fine".
+- [ ] **D7-059** — What is `threshold`, and is it stated to the vendor?
+- [ ] **D7-060** — The lookup is by **phone/email**. Can it be used to probe an arbitrary
+  Pakistani phone number the vendor has no relationship with?
+- [ ] **D7-061** — `catch { return null }` — does a failed trust lookup render as
+  "no concerns"? That would be the WWL-018 swallow with reputational consequences.
+
+## Section H — Failure, a11y, responsive
+
+- [ ] **D7-062** — Block the customers endpoint → error + Retry, not `0`.
+- [ ] **D7-063** — Tiles must not print zeros above an errored table.
+- [ ] **D7-064** — Accessible names on all controls; table semantics.
+- [ ] **D7-065** — 360px: no overflow, and are the row actions reachable (WWL-053/086 test)?
+- [ ] **D7-066** — Desktop: no overflow.
