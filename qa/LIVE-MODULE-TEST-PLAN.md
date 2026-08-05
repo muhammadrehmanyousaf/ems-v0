@@ -3585,3 +3585,170 @@ The generator clearly supports state-based watermarking (sheet #89 correctly ren
   `customerShareToken: null`, `shareTokenIssuedAt: null`, `shareTokenExpiresAt: null`,
   `shareTokenRevokedAt: null`. **No live customer link exists**, so issuing one in testing
   would not break anything a customer holds.
+
+---
+
+## MODULE 6 — RESULTS (Section F: the customer share link)
+
+**The share feature is broken twice over, independently.** Either defect alone makes it 100%
+non-functional; fixing one still leaves the other.
+
+### 🔴🔴 WWL-078 — S1 — `Share link` crashes the entire function-sheet page
+
+Clicking **`Share link`** on the sheet detail page destroys the page. Not a dialog failure —
+the whole route is replaced by the app's crash screen:
+
+> **SOMETHING WENT WRONG**
+> We hit an unexpected error
+> This has been logged and our team will look into it…
+
+**Reproduced deterministically** on sheet **#77** and again on sheet **#80** — the sheet
+content is gone (`document.body.innerText` drops from ~1,800 chars to 318) and only the error
+boundary remains.
+
+Console:
+
+```
+Error: Minified React error #310
+  at Object.lt [as useMemo]
+  at _ (…/dashboard/function-sheets/[id]/page-…js)
+```
+
+React **#310 = "Rendered more hooks than during the previous render."**
+
+**Root cause — a Rules-of-Hooks violation in
+`components/dashboard/mainScreens/function-sheets/share-link-dialog.tsx`:**
+
+| Line | Code |
+|---|---|
+| 88, 89, 90 | `useState` × 3 |
+| 96 | `useEffect` |
+| **118** | **`if (!sheet) return null;`** ← early return |
+| **167** | **`const waMessage = useMemo(…)`** ← 5th hook, *after* the return |
+
+The dialog first renders with `sheet == null` (4 hooks), then re-renders once `sheet` arrives
+(5 hooks). React sees the hook count change and throws.
+
+**Fix:** hoist the `useMemo` (and the `url` it depends on, line 155) above the `if (!sheet)`
+guard, and null-check inside the memo instead:
+
+```js
+const url = issuedToken ? buildShareUrl(issuedToken.token) : '';
+const waMessage = useMemo(() => { if (!sheet || !url) return ''; … }, [sheet, url, issuedToken]);
+if (!sheet) return null;
+```
+
+### 🔴🔴 WWL-079 — S1 — The site's own lowercase-URL middleware destroys every share token
+
+Even with the crash fixed, no share link can ever work.
+
+`buildShareUrl()` produces `${origin}/sign/${token}`, and the token is **case-sensitive
+base64url**. But `middleware.ts` enforces the locked URL convention — *"301 redirect anything
+with uppercase in the pathname to the lowercase equivalent"* — and `/sign/*` is **not
+excluded**:
+
+```js
+// middleware.ts:26
+if (pathname !== pathname.toLowerCase()) {
+  url.pathname = pathname.toLowerCase();   // 301
+}
+```
+
+Driven live. Issued a real token and opened its URL:
+
+| | |
+|---|---|
+| Link handed to the customer | `/sign/`**`cHZ2YfmvONVXH36AECCmboQ6suAifuOZi9gQwPI9JFM`** |
+| Where the browser lands after the 301 | `/sign/`**`chz2yfmvonvxh36aeccmboq6suaifuozi9gqwpi9jfm`** |
+| What the customer sees | **"Link not found — Double-check the URL or ask the vendor to resend."** |
+
+The token is 43 base64url characters; lowercasing mangles every uppercase one. The probability
+a token survives is effectively zero.
+
+The customer-facing message is the cruellest part: it tells them to *double-check the URL or
+ask the vendor to resend* — and resending produces another link that dies the same way.
+
+**Fix:** exclude `/sign/` (and any other token-bearing path) from the lowercase rule in
+`middleware.ts`, or move the token to a query parameter, which the rule does not touch.
+
+### 🔴 WWL-071 — extended — the line-item bug hits the **vendor's own screen**, not just PDFs
+
+The sheet detail page renders the line-items table with the description column **empty**:
+
+```
+DESCRIPTION   QTY   UNIT          TOTAL
+              1     Rs 320,000    Rs 320,000
+              198   Rs 3,900      Rs 772,200
+```
+
+Same `label` vs `description` mismatch as WWL-071. So the vendor cannot see what their own
+Rs 1,092,200 quote is composed of either — the module is unusable for reviewing a quote before
+sending it, not merely for printing one.
+
+### 🔴 WWL-074 — sharper — one screen says "Signed" and "Not yet signed" simultaneously
+
+Sheet #77's detail page, two panels apart:
+
+| Panel | Says |
+|---|---|
+| Header badge | **`Signed`** |
+| Lifecycle strip | `Draft` · `Quote sent 12-Jan-2026` · `Contract pending` · **`Signed 22-Jan-2026`** |
+| **Signatures panel** | **`VENDOR — Not yet signed`** · **`CUSTOMER — Not yet signed`** |
+
+The state machine records a signature date; the signature record is empty (`signaturesJson:
+null`). Both are rendered on the same screen, and they contradict each other outright.
+
+### 🔴 WWL-075 — sharper — the page shows the money is fully collected and still won't advance
+
+Same page, further down:
+
+```
+Payments received                    Rs. 1,092,200
+  Rs. 327,660   Bank transfer · 02-Feb-2026 · TXN177656
+  Rs. 436,880   Cash · 19-Dec-2025
+  Rs. 327,660   Easypaisa · 16-Nov-2025 · TXN248051
+```
+
+Three real payments summing **exactly** to the grand total — displayed on the very same page
+whose lifecycle strip shows `Invoiced` and `Paid` un-reached, and whose module tile reads
+**`Paid 0`**.
+
+Everything needed to advance the sheet is already on screen. The only lifecycle action offered
+is a single **`Move to BEO ready`** button — one manual step at a time, with nothing driven by
+the payments the system has already recorded.
+
+---
+
+### ✅ Section F passes
+
+- **D6-050 — the expiry clamp is enforced server-side.** Requested `expiresInDays: 9999`;
+  the server returned `expiresInDays: 365` with `expiresAt` exactly one year after `issuedAt`.
+  Clamped as documented, not trusted from the client.
+- **D6-052 — token entropy is strong.** 43 characters, base64url charset — **256 bits**.
+  Not guessable, not sequential, not derived from the sheet id.
+- **D6-054 — revoke behaves exactly as documented.** `DELETE` returned `Share token revoked`;
+  re-reading the sheet shows `shareTokenRevokedAt: 2026-08-05T19:00:17.053Z` with
+  `customerShareToken` **retained but flagged dead** — the "flag-dead, do NOT clear" contract
+  the API docstring promises.
+- **Invalid tokens fail safe.** `/sign/qa-nonexistent-token-probe-000` renders
+  **"Link not found — Double-check the URL or ask the vendor to resend."** No stack trace, no
+  sheet data, no enumeration hint.
+- **No customer data in the server-rendered HTML.** The `/sign/[token]` page is
+  client-rendered; the initial HTML contains no customer name, phone, email, totals, line
+  items or payment schedule — so a contract cannot leak into a search-engine cache from the
+  SSR payload.
+- **The payment schedule renders correctly in the UI** — labels, due dates and amounts all
+  present on the detail page. This confirms WWL-072 is specifically a **PDF-generator** gap:
+  the app reads `paymentScheduleJson` fine, only the document omits it.
+
+### Section F — cases blocked, with reasons
+
+| Case | Blocked by |
+|---|---|
+| **D6-051** — what the live link exposes | No link can resolve (WWL-079), so the rendered customer view cannot be reached to audit it. The *unauthenticated* surface was still checked as far as possible — invalid-token handling and SSR payload, both clean. |
+| **D6-053** — issuing rotates and kills the previous link | Requires two successive working links. |
+| **D6-055** — vendor sees link expiry/status | Dialog crashes before rendering (WWL-078). |
+| **D6-056** — copy-to-clipboard | Same. |
+
+**Cleanup:** the token issued for this test was **revoked immediately** and verified
+(`shareTokenRevokedAt` set). No live customer link remains on sheet #77.
