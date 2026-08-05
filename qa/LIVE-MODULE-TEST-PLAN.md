@@ -37,7 +37,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 5 | Date holds | `/dashboard/holds` | ✅ 52 | **`[x]` COMPLETE — 48 run, 4 not run, 14 findings** |
 | 6 | Function sheets | `/dashboard/function-sheets` | ✅ 68 | **`[x]` COMPLETE — 57 run, 11 not run, 17 findings** |
 | 7 | Customers | `/dashboard/customers` | ✅ 66 | **`[x]` COMPLETE — 52 run, 14 not run, 11 findings** |
-| 8 | Calendar | `/dashboard/calendar` | ✅ 48 | `[~]` in progress |
+| 8 | Calendar | `/dashboard/calendar` | ✅ 48 | **`[x]` COMPLETE — 38 run, 10 not run, 6 findings** |
 | 9 | Conversations | `/dashboard/chat` | — | `[ ]` |
 | 10 | Payments | `/dashboard/payments` | — | `[ ]` |
 | 11 | Receivables | `/dashboard/receivables` | — | `[ ]` |
@@ -4834,3 +4834,116 @@ all 22 events**. The token *is* the credential, and nothing on screen says so.
 - **D8-013 / D8-046** — every availability cell carries a full accessible name in the form
   `<space> · <ISO date> · <status>`. That is a better-than-average a11y pattern: it conveys the
   status in text, not colour alone, satisfying D8-018.
+
+### 🔴🔴 WWL-103 — S1 — "Every event on one grid" hides every **completed** wedding. The calendar has no past
+
+WWL-101 established that *cancelled* bookings do not render. Driving the month navigation
+backwards shows the omission is far larger — **completed bookings are hidden too**.
+
+**September 2026** — header reads **`1 events`**, and only one cell renders:
+
+| Booking | Date | Status | Value | On the calendar? |
+|---|---|---|---|---|
+| 171 — Asad Jameel & Alishba Asad | 23-Sept | `Confirmed` | Rs 1,460,600 | **yes** |
+| **170 — Imran Shafi & Hafsa Imran** | **09-Sept** | **`Completed`** | **Rs 1,546,000** | **no** |
+
+**June 2026** is the decisive case — every booking that month is `Completed`:
+
+| Booking | Date | Customer | Value |
+|---|---|---|---|
+| 161 | 02-Jun-2026 | Adnan Malik & Rabia Adnan | Rs 1,899,000 |
+| 162 | 16-Jun-2026 | Shahzad Butt & Iqra Shahzad | Rs 2,160,300 |
+| 163 | 30-Jun-2026 | Talha Nadeem & Areeba Talha | Rs 1,398,250 |
+
+The calendar renders:
+
+```
+June 2026        0 events
+```
+
+**Zero cells. Rs 5,457,550 of delivered weddings, and the month is blank.**
+
+Since a booking becomes `Completed` after the event, this means **the calendar has no history
+whatsoever** — every month more than a few weeks old empties itself out as its bookings are
+marked complete. A vendor cannot look back at what they did last season, cannot show a client
+"here's the Saturday we ran your cousin's walima", and cannot use the calendar to reconcile
+anything.
+
+Between WWL-101 and this, the grid shows **only active bookings**, under a heading that reads
+*"Every event on one grid."*
+
+**And once again the ICS feed is more truthful than the product's own screen.** The feed
+includes completed bookings — `UID:booking-160`, `Status: Completed`, `STATUS:CONFIRMED` — so a
+vendor who subscribes in Google Calendar gets a **more complete record than Wedding Wala shows
+them**. That is now the third instance of the feed out-reporting the app (cancelled bookings,
+completed bookings, and blocks).
+
+### ⚠️ D8-044 / D8-045 — the failure test could not be run by month navigation, and here is why
+
+Armed a blocker on `/api/v1/bookings`, `/api/v1/calendar` and `/api/v1/venue-os`, then changed
+month. **`window.__blocked` came back empty — no request was made at all.**
+
+The calendar fetches its bookings **once on page load** and pages through months entirely
+client-side. So month navigation cannot exercise a load failure, and the injected-failure test
+would have to happen at initial page load instead. Recorded rather than reported as a pass: the
+error/empty-state behaviour of this module under a failed initial load remains **undriven**.
+
+Worth noting as a positive: client-side month paging means navigation is instant and cannot
+half-load a month — the D8-008 "no runaway fetching" concern is structurally answered.
+
+### ✅ Further Module 8 passes
+
+- **D8-005 — the calendar gets PKT right, and this is a useful contrast.** At 01:40 PKT on
+  6 August the day panel opened on **"Thursday, 6 August"** — the correct PKT date. The
+  `Hold a date` dialog, at the same moment, defaulted to **5 August** (WWL-062). Two date
+  implementations in one product, one correct and one not — so the right pattern already exists
+  in the codebase.
+- **D8-006 / D8-007** — month navigation works in both directions and lands on the right month
+  (August → September → June verified), with the header, event count and grid all updating
+  together.
+- **D8-022 — the Hijri conversion is correct.** The strip claims **Tue, 25 Aug 2026 =
+  12 Rabi' al-Awwal**. Verified with `Intl.DateTimeFormat` across the four Islamic calendar
+  bases:
+
+  | Basis | 2026-08-25 |
+  |---|---|
+  | **islamic-umalqura** (standard civil) | **Rabiʻ I 12, 1448 AH** ✔ |
+  | islamic-tbla | Rabiʻ I 12 ✔ |
+  | islamic | Rabiʻ I 13 |
+  | islamic-civil | Rabiʻ I 11 |
+
+  The app matches Umm al-Qura exactly. *(My own initial mental arithmetic put this in early
+  September and was wrong — checked before asserting.)*
+- **D8-027 — a fair note rather than a defect.** The ±1-day spread across those bases is
+  precisely the moon-sighting variance that matters in Pakistan, where Eid Milad-un-Nabi is
+  observed on local sighting and routinely lands a day either side of the calculated date. The
+  UI presents `(12 Rabi' al-Awwal)` as a flat fact with no acknowledgement of that. For a
+  feature whose whole purpose is deciding whether to **block a date**, a one-day error is the
+  difference between blocking the right day and the wrong one. Recommend wording that admits
+  the variance ("expected — confirm locally").
+- **D8-023** — only one Islamic date appears in the 120-day window, which is correct: after
+  Eid Milad-un-Nabi the next major observance (Shab-e-Barat, 15 Sha'ban) falls well outside it.
+
+---
+
+## Module 8 — status
+
+**48 cases written, 38 driven. 6 findings (2 × S1, 3 × S2) plus one upgrade and one correction.**
+
+Not driven, each with its reason:
+
+| Cases | Why |
+|---|---|
+| **D8-024 → D8-026** (`Block` an Islamic date) | Writes a real availability block that makes a date unsellable across the vendor's venues — the safety limit set at the top of this module. Given three junk blocks are already live (WWL-070), adding a fourth was not acceptable. |
+| **D8-044 / D8-045** (failure state) | Not reachable via month navigation — the module fetches once and pages client-side. Needs an initial-load injection. |
+| **D8-011 / D8-012 / D8-014** (event click, prefilled `Add booking`, day-panel money) | Deferred with the responsive checks below. |
+| **D8-047 / D8-048** (360px) | Deferred — the three preceding modules all showed the same inert-mobile pattern (WWL-053 / 086 / 093), so this is a known-shape check rather than a discovery. |
+
+**The module's verdict.** The Calendar is the best-engineered surface in the sweep so far in
+places — a genuinely privacy-correct ICS feed, a 256-bit token, correct PKT handling, correct
+Umm al-Qura conversion, correct per-venue scoping, and availability cells that carry their
+status as text rather than colour. And it is undermined by three things that make it unusable
+as a calendar: **the subscription URL points at the wrong host so nobody can subscribe
+(WWL-099), the grid shows one status per date across all seven spaces so it cannot say which
+hall is free (WWL-100), and it hides every completed and cancelled booking so it has no past
+at all (WWL-101 / WWL-103).**
