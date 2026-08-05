@@ -214,6 +214,35 @@ export function validatePkIban(
 }
 
 /**
+ * Pakistani CNIC — 13 digits, written 12345-1234567-1.
+ *
+ * Separators are stripped before checking, because people type it all three
+ * ways they see it printed: with dashes, with spaces, or as one run of digits.
+ *
+ * This is not cosmetic. On a staff record the CNIC is the identity the vendor
+ * uses to file the person with a security agency, put them on a venue gate
+ * pass, or prove who was on shift when something goes wrong. A 12-digit CNIC
+ * is not a slightly-wrong CNIC, it is a CNIC that matches nobody — and it will
+ * be discovered at the exact moment it is needed. The field previously
+ * accepted the literal string "not-a-cnic".
+ *
+ * Deliberately NOT validated: the last digit's odd/even gender convention.
+ * It is a real convention, but rejecting on it would turn a data-entry helper
+ * into a gatekeeper for something the vendor cannot fix from this screen.
+ */
+export function validatePkCnic(
+  value: string,
+  { label = "CNIC", required = false }: { label?: string; required?: boolean } = {},
+): string | undefined {
+  const raw = (value ?? "").trim()
+  if (!raw) return required ? `${label} is required.` : undefined
+  const d = raw.replace(/[\s-]/g, "")
+  if (!/^\d+$/.test(d)) return `${label} should contain digits only, e.g. 12345-1234567-1.`
+  if (d.length !== 13) return `A CNIC has 13 digits — this one has ${d.length}.`
+  return undefined
+}
+
+/**
  * Bank account number. Pakistani account numbers vary by bank (roughly 8–24
  * digits), so this checks shape rather than pretending to know each bank's
  * format: digits only once separators are stripped, and a sane length.

@@ -179,8 +179,14 @@ export function ProfileContentManager({ business, onSaved }: { business: ApiBusi
         <Field label="Owner / lead name"><input className={inputCls} value={ownerName} onChange={(e) => setOwnerName(e.target.value)} /></Field>
         <Field label="About the owner"><textarea className={cn(inputCls, "h-24 resize-y py-2")} value={ownerBio} onChange={(e) => setOwnerBio(e.target.value)} placeholder="A short bio shown in your listing's team area" /></Field>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Years in business"><input type="number" className={inputCls} value={years} onChange={(e) => setYears(e.target.value)} /></Field>
-          <Field label="Weddings completed"><input type="number" className={inputCls} value={weddings} onChange={(e) => setWeddings(e.target.value)} /></Field>
+          {/*
+            Verified live: saving weddingsCompleted = -10 round-tripped to a 400
+            ("WeddingsCompleted must be a whole number between 0 and 200000").
+            The earlier fix here made that message legible; these bounds stop the
+            trip being made at all. Same floor as type-specific-manager.
+          */}
+          <Field label="Years in business"><input type="number" min={0} max={200} step={1} inputMode="numeric" className={inputCls} value={years} onChange={(e) => setYears(e.target.value)} /></Field>
+          <Field label="Weddings completed"><input type="number" min={0} max={200000} step={1} inputMode="numeric" className={inputCls} value={weddings} onChange={(e) => setWeddings(e.target.value)} /></Field>
         </div>
         <Field label="Languages spoken">
           <ChipRow options={LANGUAGES.map((l) => [l, l])} selected={languages} onToggle={(v) => toggle(languages, setLanguages, v)} />
@@ -195,7 +201,8 @@ export function ProfileContentManager({ business, onSaved }: { business: ApiBusi
           render={(a, i) => (
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_120px]">
               <input className={inputCls} placeholder="Award title" value={a.title} onChange={(e) => setAwards(awards.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} />
-              <input className={inputCls} type="number" placeholder="Year" value={a.year ?? ""} onChange={(e) => setAwards(awards.map((x, j) => (j === i ? { ...x, year: e.target.value ? Number(e.target.value) : null } : x)))} />
+              {/* A year, not a count — min 0 would be meaningless, so bound it to real ones. */}
+              <input className={inputCls} type="number" min={1900} max={new Date().getFullYear() + 1} step={1} inputMode="numeric" placeholder="Year" value={a.year ?? ""} onChange={(e) => setAwards(awards.map((x, j) => (j === i ? { ...x, year: e.target.value ? Number(e.target.value) : null } : x)))} />
             </div>
           )}
         />
@@ -275,7 +282,7 @@ export function ProfileContentManager({ business, onSaved }: { business: ApiBusi
             {(["comfortCapacity", "seatedCapacity", "standingCapacity", "indoorCapacity", "outdoorCapacity"] as const).map((k) => (
               <div key={k}>
                 <span className="mb-1 block text-[11px] capitalize text-muted-foreground">{k.replace("Capacity", "")}</span>
-                <input type="number" className={inputCls} value={caps[k]} onChange={(e) => setCaps({ ...caps, [k]: e.target.value })} />
+                <input type="number" min={0} step={1} inputMode="numeric" className={inputCls} value={caps[k]} onChange={(e) => setCaps({ ...caps, [k]: e.target.value })} />
               </div>
             ))}
           </div>
@@ -284,14 +291,14 @@ export function ProfileContentManager({ business, onSaved }: { business: ApiBusi
           <ChipRow options={VENUE_AMENITIES.map(([v, l]) => [v, l])} selected={amenities} onToggle={(v) => toggle(amenities, setAmenities, v)} />
         </Field>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Legal guest cap"><input type="number" className={inputCls} value={legalCap} onChange={(e) => setLegalCap(e.target.value)} /></Field>
+          <Field label="Legal guest cap"><input type="number" min={0} step={1} inputMode="numeric" className={inputCls} value={legalCap} onChange={(e) => setLegalCap(e.target.value)} /></Field>
           <Field label="Event closing time"><input className={inputCls} value={closing} onChange={(e) => setClosing(e.target.value)} placeholder="23:00" /></Field>
         </div>
         <SwitchRow label="One-dish policy applies" checked={oneDish} onChange={setOneDish} />
         <SwitchRow label="Event needs a permit" checked={requiresPermit} onChange={setRequiresPermit} />
         {requiresPermit && <Field label="Permit checklist link"><input className={inputCls} value={permitUrl} onChange={(e) => setPermitUrl(e.target.value)} placeholder="https://…" /></Field>}
         <SwitchRow label="Couples may bring outside vendors" checked={outsideAllowed} onChange={setOutsideAllowed} />
-        {outsideAllowed && <Field label="Outside-vendor fee (Rs)"><input type="number" className={inputCls} value={outsideFee} onChange={(e) => setOutsideFee(e.target.value)} placeholder="e.g. 50000" /></Field>}
+        {outsideAllowed && <Field label="Outside-vendor fee (Rs)"><input type="number" min={0} step="any" inputMode="decimal" className={inputCls} value={outsideFee} onChange={(e) => setOutsideFee(e.target.value)} placeholder="e.g. 50000" /></Field>}
       </Group>
 
       <div className="flex justify-end">
