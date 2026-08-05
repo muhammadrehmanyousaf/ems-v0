@@ -39,7 +39,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 7 | Customers | `/dashboard/customers` | ✅ 66 | **`[x]` COMPLETE — 52 run, 14 not run, 11 findings** |
 | 8 | Calendar | `/dashboard/calendar` | ✅ 48 | **`[x]` COMPLETE — 38 run, 10 not run, 6 findings** |
 | 9 | Conversations | `/dashboard/chat` | ✅ 40 | **`[x]` COMPLETE — 26 run, 14 not run, 3 findings** |
-| 10 | Payments | `/dashboard/payments` | ✅ 78 | `[ ]` IN PROGRESS |
+| 10 | Payments | `/dashboard/payments` | ✅ 118 | **`[x]` COMPLETE — 101 run, 17 not run, 22 findings (4× S1)** |
 | 11 | Receivables | `/dashboard/receivables` | — | `[ ]` |
 | 12 | Receipts | `/dashboard/receipts` | — | `[ ]` |
 | 13 | Cheque ledger | `/dashboard/pdcs` | — | `[ ]` |
@@ -5387,3 +5387,283 @@ Read first so the live run tests claims rather than impressions:
 | D10-116 | Customer email/phone are not exposed beyond what the vendor owns | |
 | D10-117 | `offline_*` synthetic emails are nulled before reaching the client | backend strips them |
 | D10-118 | Route requires auth — no token → redirect, not a money leak | |
+
+## MODULE 10 — EXECUTION RESULTS
+
+**Nothing was written.** Verified at close: receipts count **39** before and after every dialog
+run, `maxReceiptId` unchanged. Both write attempts were captured at the transport layer with
+their exact bodies. No booking, receipt or payment row was created, edited or deleted.
+
+Test data during the run: 25 bookings across 3 venues, Rs 37,348,900 billed, 39 receipts.
+
+### The two findings that matter most
+
+---
+
+#### WWL-107 (S1) — the backend answers **200** to every unmatched path, so a failed save is reported to the vendor as a success
+
+`src/loaders/routes.js:331`
+
+```js
+app.use("/", (req, res) => {
+  res.status(200).json({ message: "Event Planner API is running" });
+});
+```
+
+`app.use("/")` matches **every method on every unmatched path**. Probed live:
+
+| Request | Status | Body |
+|---|---|---|
+| `POST /api/v1/__qa_blocked_no_write__` | **200** | `{"message":"Event Planner API is running"}` |
+| `GET /api/v1/__totally_made_up_route__` | **200** | `{"message":"Event Planner API is running"}` |
+
+**Proved end to end on the money path.** I pointed the receipt `POST` at that nonexistent path
+and submitted a valid form. The portal showed the success toast **"Receipt logged"**, closed the
+dialog, and invalidated the query. Receipts count stayed at **39** — nothing was written.
+
+The vendor is told their cash was recorded. It was not. Any route that is renamed, removed, or
+deployed out of sync between frontend and backend becomes a silent, success-reporting no-op —
+and it also means nothing can ever alert on a missing endpoint, because there are no 404s.
+
+**Fix** — scope the banner to the exact root and add a real terminal 404:
+
+```js
+app.get("/", (req, res) => res.status(200).json({ message: "Event Planner API is running" }));
+app.use((req, res) => res.status(404).json({ success: false, message: "Not found" }));
+```
+
+---
+
+#### WWL-108 (S1) — the same catch-all turns a broken read into "you have no money"
+
+`PaymentsAPI.getVendorRevenue` ends with:
+
+```js
+return res.data?.data ?? { payments: [], stats: { offline: empty, online: empty, all: empty } };
+```
+
+A 200 with `{message:…}` has no `.data.data`, so the fallback fires and TanStack Query sees a
+**successful empty result**. `isError` is false, so the error branch never renders.
+
+Driven live with the endpoint mis-routed, on a venue holding **Rs 11,726,550**:
+
+> Total billed **Rs 0** · Received **Rs 0** · Due **Rs 0** · Payments **0**
+> *"No payments yet — Payments against your bookings will appear here as they come in."*
+
+No error. No Retry. A confident, ordinary-looking empty state.
+
+**The error UI is not missing — it works.** Driven separately against an unroutable host, the
+screen correctly showed **"Couldn't load payments."** with a **Retry** button, and Retry restored
+all 7 rows and the correct totals once the network came back (D10-072, D10-073 both PASS). The
+handling is well built; the catch-all 200 is what makes it unreachable. Fixing WWL-107 fixes the
+read path too — but the `?? {}` fallback should also stop manufacturing a valid empty ledger.
+
+Same family as the Customers and ChatAPI swallows, but here it is a **200**, so no `catch` can
+help.
+
+---
+
+### Money arithmetic
+
+#### WWL-109 (S1) — `Total billed` and `Received + Due` are computed over different populations
+
+The three headline figures do not reconcile, and the shortfall is exact:
+
+| Figure | Rs |
+|---|---|
+| Total billed | 37,348,900 |
+| Received | 21,201,121 |
+| Due | 12,292,729 |
+| **Received + Due** | **33,493,850** |
+| **Gap** | **3,855,050** |
+
+The gap is precisely the total of the three Cancelled bookings:
+
+| Booking | Customer | `status` / `paymentStatus` | Total | Received | Due |
+|---|---|---|---|---|---|
+| 178 | Waheed Jutt | Cancelled / Pending | 762,650 | 0 | 0 |
+| 177 | Waheed Jutt | Cancelled / Pending | 350,000 | 0 | 0 |
+| 175 | Usman Tariq & Hira Usman | Cancelled / Pending | 2,742,400 | 0 | 0 |
+
+`isDead` correctly zeroes `received` and `due`, but `calcStats.total` still sums `totalAmount`
+over **every** row. So **10.3% of the all-venues headline is money nobody owes and nobody paid**,
+and it is worse per venue:
+
+| Venue | Total billed | Overstatement | % |
+|---|---|---|---|
+| Rehman Grand Marquee (3358) | 12,873,800 | 1,112,650 | 8.6% |
+| Rehman Banquet & Lawn (3359) | 12,748,550 | 0 | 0% |
+| **Rehman Marquee Bahria (3360)** | **11,726,550** | **2,742,400** | **23.4%** |
+
+Nearly a quarter of Bahria's headline revenue does not exist.
+
+#### WWL-110 (S1) — the Dashboard and Payments disagree about outstanding money by Rs 1,124,500
+
+| Screen | Outstanding | Count |
+|---|---|---|
+| Dashboard — *BAQAYA · TO COLLECT* | **Rs 13,417,229** | across **14 events** |
+| Payments — *Due* | **Rs 12,292,729** | **13** rows with Due > 0 |
+
+A specific contradiction: **Imran Shafi & Hafsa Imran, 2026-09-09.** Payments reports
+`Paid / Completed`, Received Rs 1,546,000, **Due Rs 0**. The Dashboard's baqaya list shows the
+same event with **Rs 1,159,500** still to collect. The Dashboard also lists
+*"Event · 2026-08-05 Rs 315,000"*, which matches no Payments row at all.
+
+Two screens on the same ledger, one vendor, two answers. This is the consolidation already
+flagged in WWL-001/002/005/037/040/047: derive payment state from `total − paid` in **one**
+place.
+
+#### What the arithmetic gets right
+
+- **D10-006/007/008/009 PASS** — `stats.all` matches Σ rows exactly (25 · 37,348,900 · 21,201,121 · 12,292,729), and again at venue scope (7 · 11,726,550 · 4,978,945 · 4,005,205).
+- **D10-106 PASS** — the roll-up is exact: the three per-venue stat blocks sum to the All-venues block on every field.
+- **D10-013/015 PASS** — `Paid` rows are `received = total, due = 0`; `Pending` rows are `received = 0, due = total`.
+- **D10-016 PASS** — dead rows correctly carry `received = 0` **and** `due = 0`. The BK fix works.
+- **D10-019 PASS** — Bookings and Payments agree exactly: 25 bookings, Rs 37,348,900 on both.
+- **D10-018 PASS, with a caveat I will not overstate** — all 39 receipts sum to Rs 21,201,121, **exactly** the `Received` headline, and **per booking there is not a single divergence**. But this agreement is structural coincidence, not wiring: `received` is derived from `paymentStatus` + `downPayment` and **never reads a receipt row**. The seed data simply keeps `downPayment` in step. I could not demonstrate divergence without writing a receipt to a live ledger, so I am recording the risk as **source-confirmed, live-unverified** rather than claiming a defect I did not see.
+- **D10-014 PASS** — all 9 `Partial` rows have `received === downPayment` exactly (20%–85% of total), confirming the derivation.
+- **D10-021/022 PASS** — no `NaN`, `undefined` or `null` in any money cell; separators correct.
+
+---
+
+### WWL-111 (S2) — a Cancelled booking shows a red "Pending" pill and Rs 0 due
+
+The pill renders `paymentStatus`; the lifecycle `status` is never shown. So booking 175 appears as:
+
+> Usman Tariq & Hira Usman · 06-May-2026 · Total **Rs 2,742,400** · Received **Rs 0** · Due **Rs 0** · <span>**Pending**</span> *(red)*
+
+Verified tone class `bg-red-50 text-red-700`. A vendor reads an alarming red *Pending* on a
+Rs 2.7m booking that is actually cancelled and owes nothing — indistinguishable from real
+unpaid money except by noticing Due is 0. It exports to CSV the same way, and the same cancelled
+bookings are **selectable in the receipt dialog's booking picker**.
+
+`payTone()` has a latent trap too: it matches substrings, so `"Unpaid"` would tone **green**
+(`"unpaid".includes("paid")`). The enum is `Pending | Paid | Partial | Cancelled | Refunded |
+Failed`, so this is dormant — but one added status value makes an unpaid booking look settled.
+
+### WWL-112 (S2) — for the first 5 hours of every Pakistani day the receipt dialog defaults to yesterday and refuses today
+
+`receipt-form-dialog.tsx` uses `new Date().toISOString().slice(0,10)` for **both** the default
+value and the native `max` — that is the **UTC** date. PKT is UTC+5.
+
+Driven live at **02:09 AM PKT on 6 Aug 2026**:
+
+```
+browserTZ: Asia/Karachi   utcNow: 2026-08-05T21:09:59Z
+dialog date value: "2026-08-05"     ← yesterday in Pakistan
+dialog date max:   "2026-08-05"
+setting 2026-08-06 → validity.rangeOverflow: true
+                     "Value must be 08/05/2026 or earlier."
+```
+
+Between **00:00 and 05:00 PKT — 20.8% of every day, and precisely when a marquee settles cash
+after a wedding** — the dialog pre-fills the wrong day and the picker will not offer today.
+
+Scope stated precisely: `validateNotFutureDate` is **timezone-correct** (it compares against
+local end-of-day, so it accepts 6 Aug). Only the default value and the native ceiling are wrong.
+Same family as WWL-062.
+
+Related, and confirmed in prod data: **5 receipts are dated in the future**, up to 2026-10-08,
+totalling **Rs 1,844,635**. The frontend forbids future dates; the backend does not enforce it.
+Client-side-only validation on a money ledger.
+
+### WWL-113 (S2) — no over-payment guard
+
+Against booking 176 (total Rs 1,673,250, due Rs 1,673,250):
+
+| Amount entered | Result |
+|---|---|
+| Rs 99,999,999 | **accepted, Save enabled, no warning** — ~60× the booking total |
+| Rs 999,999,999,999 | rejected — *"Amount looks too large."* |
+
+There is an absolute sanity cap but nothing relative to the booking. A single extra zero
+(Rs 16,732,500 for Rs 1,673,250) saves silently and desynchronises the ledger permanently.
+
+### WWL-114 (S2) — offline, the venue switcher lies about scope
+
+Offline, switching to **Rehman Grand Marquee**: the switcher label and the persisted store both
+update to 3358, but the table still shows **all 25 rows across 3 venues** and the cards still read
+**Rs 37,348,900 / 21,201,121 / 12,292,729**. Grand Marquee's real total is Rs 12,873,800.
+
+No error, no toast, no offline banner. The vendor sees one venue named and three venues' money.
+It self-corrects on the next successful refetch (verified: back online it showed the correct
+Rs 12,873,800 / 10 rows).
+
+---
+
+### Findings S3 / S4
+
+| ID | Sev | Finding |
+|---|---|---|
+| **WWL-115** | S3 | **Stat cards ignore the search filter.** Filtering to `Bahria` shows **7 rows** while the headline stays at **Rs 37,348,900 / 25 payments**. The cards read `stats`, the table reads `payments`. On a money screen the headline then describes a different set than the rows beneath it. |
+| **WWL-116** | S3 | **Wrong empty state on a no-match search.** A vendor with 25 payments searching `zzzzqqqq` is told *"No payments yet — Payments against your bookings will appear here as they come in."* Same defect family as the Customers empty state. |
+| **WWL-117** | S3 | **Notes over 1000 chars block Save silently, with a false explanation.** `errs.notes` gates `canSave`, but the Notes field renders **no `FieldError`** and `touch("notes")` is never called, so no message can ever appear. At 1001 chars Save disables and the hint says *"Add an amount above 0 and the date it was received to save."* — while amount and date are both **valid**. At exactly 1000 it saves. The textarea has no `maxLength` (`-1`), so nothing stops the paste. This defeats the very purpose of `FormBlockedHint` (BUG-057). |
+| **WWL-118** | S3 | **A money table with no sorting and no money filters.** Zero sortable headers (no buttons, no `aria-sort`), no status filter, no date-range filter, and search does not match amounts (`1411500` → 0 rows) or statuses (`Paid` → 0 rows). Fixed order is event-date DESC, so future events sit on top. The vendor cannot ask "who owes me the most" or "who is overdue" at all. The backend already supports `source`, `dateFrom`, `dateTo`. |
+| **WWL-119** | S3 | **Every row is a navigational dead end.** `<tr>` with no `onRowClick`, no links, no buttons, `tabIndex -1`, `cursor: auto`. From a payment you cannot reach the booking, the customer, or its receipts. |
+| **WWL-120** | S3 | **Table a11y.** All row checkboxes carry the identical accessible name **"Select row"** — a screen-reader user hears it 10 times with nothing to distinguish the rows. **0 of 8 `<th>` have `scope`**, and there is no `<caption>`. Checkbox hit area is 16×16px, under the 24×24 WCAG 2.2 target minimum. |
+| **WWL-121** | S3 | **Stat cards assert Rs 0 during the error state.** With the table correctly showing *"Couldn't load payments."*, the four headline cards read **Rs 0 / Rs 0 / Rs 0 / 0**. `isLoading` is false and `stats` is undefined, so `num(undefined)` → 0. An error should not render as a confident zero. |
+| **WWL-122** | S3 | **Mobile cards drop the labels and the Total.** At 360px the cards show two unlabelled money figures — Rizwan reads *"Rs 0 \| Rs 2,596,400"* — and `totalAmount` is omitted entirely; a Paid row shows a single bare number. Desktop has column headers; the card has none. There is also **no checkbox on mobile**, so *"Selected → CSV"* cannot be used at all on a phone. |
+| **WWL-123** | S3 | **CSV export is not neutralised against formula injection.** `escapeCsv` is RFC-4180 correct for quotes, commas and newlines but does nothing about a leading `=`, `+`, `-` or `@`. `customerName` is customer-supplied. This is the shared `ExportMenu`, so it affects **every** exporting module. |
+| **WWL-124** | S4 | Button says **"Record payment"**; the dialog it opens says **"Record a receipt"**. |
+| **WWL-125** | S4 | The ref-required error names the internal key, not the label the vendor just picked: *"required for **ibft**"* and *"for **bank transfer**"* rather than *"Bank IBFT"* / *"Bank transfer"*. |
+| **WWL-126** | S4 | Amount accepts `1e5` (→ 100,000), `100.999` and `0.001` with no warning; `step="0.01"` is unenforced and `DECIMAL(10,2)` rounds silently. |
+| **WWL-127** | S3 | **The booking picker cannot be used reliably.** Options show only `name · date`: three entries read **"Waheed Jutt"**, distinguished only by date. No venue, no outstanding balance, no status — and **cancelled bookings are listed**. With 25 options and no balance shown, allocating a receipt to the right booking is guesswork. |
+| **WWL-128** | S3 | **The endpoint's whole documented purpose is dead in the UI.** `stats.offline` and `stats.online` are computed on every response (live: 11 offline / Rs 18,183,350 vs 14 online / Rs 19,165,550) and rendered **nowhere**; `source`, `dateFrom` and `dateTo` are supported by the backend and by `getVendorRevenue` and are never passed. |
+
+---
+
+### Notable passes
+
+- **D10-002/003 PASS** — `Dashboard : Payments`, and sidebar, breadcrumb and `<h1>` all agree. Contrast WWL-106.
+- **D10-004/005 PASS** — exactly **one** `vendor-revenue` call per load; `businessId` omitted on All venues and appended (`&businessId=3360`) when a venue is active, matching the interceptor whitelist.
+- **D10-024/026 PASS** — event-date DESC as specified; dates render `en-PK` `07-Nov-2026`, correct and unambiguous. Contrast WWL-097.
+- **D10-030/076 PASS** — during load the cards show **`…`**, never `Rs 0`, with 49 skeleton elements, then resolve in one clean transition. No false "you have no money" flash.
+- **D10-034 PASS** — stat cards are inert `<div>`s, not fake buttons.
+- **D10-037/038 PASS** — the Venue column appears on All venues and **disappears** when one venue is selected; `multiVenue` is correct.
+- **D10-045 confirmed / D10-047 partial** — table markup is a real `<table>`/`<thead>`, and header-to-body alignment is **correct** (8 headers, 8 cells, correctly paired).
+- **D10-048/049/050/051/052/055 PASS** — search matches name, mid-word, case-insensitively, by phone and by venue, and trims whitespace. `%_.*` is treated literally — no crash, no injection.
+- **D10-061/062/064 PASS** — select-all takes 25 on the full set and only the **7 visible** under a filter; the selection survives clearing the filter and still refers to the same rows.
+- **D10-065/066/067 PASS** — *Selected → CSV* exported exactly the 7 selected rows, values identical to the screen, correct BOM and MIME, named `payments-selected.csv`.
+- **D10-071 PASS across a hard reload** — density toggles 46.1px → 38.1px, `aria-pressed` flips, and the choice persists in `ww-ui-prefs`.
+- **D10-072/073 PASS** — genuine network failure shows *"Couldn't load payments."* + **Retry**, and Retry fully recovers.
+- **D10-084/085/090/091 PASS** — `Amount must be more than Rs 0.` · `Amount cannot be negative.` · `Date received can't be in the future.` · `Date received looks wrong — please check the year.`
+- **D10-093/094 PASS** — a transaction ref is correctly **required** for jazzcash, easypaisa, raast, **ibft** and bank_transfer, and correctly **not** required for cash or other; refs under 4 chars are rejected.
+- **D10-098/099/100 PASS** — with every field valid `Log receipt` enables; Cancel reseeds a blank form; **Esc closes the dialog**.
+- **D10-104/106/107 PASS** — venue switching refetches scoped, the roll-up is arithmetically exact, and the choice survives a hard reload with the money still matching.
+- **D10-108/109 PASS** — all 24 controls focusable, **no positive `tabindex`** (DOM order is tab order), and **every one** has a visible focus indicator.
+- **D10-112/114/115 PASS** — at a true emulated 360×740 there is **no horizontal overflow** (`scrollWidth === clientWidth === 360`, zero overflowing elements); Record payment, Search and Export are all in view and usable; the dialog's box overhangs by 23px of its own padding but **no field, label or button is clipped**.
+- **D10-118 PASS** — hitting `/dashboard/payments` unauthenticated redirects to `/login?redirect=%2Fdashboard%2Fpayments`. No money rendered before auth.
+
+### Corrections to my own readings during this module
+
+Recorded because each one would have been a false report:
+
+1. **"`bank_ibft` doesn't require a transaction ref"** — **wrong, my harness.** The option value is `ibft`, not `bank_ibft`; setting a non-existent value blanked the select. Re-driven with `ibft`: the ref **is** required. `METHODS_NEEDING_REF` contains it.
+2. **"The save hangs on *Saving…* forever after a failure"** — **wrong, my harness.** My first blocker called `xhr.abort()` *before* `send()`, and aborting an unsent XHR fires no event, so axios's promise never settled. Re-tested by routing writes to a real endpoint; the app behaves correctly on a genuine response.
+3. **"The density toggle does nothing"** — **wrong, my selector.** The buttons are icon-only with `aria-label`; my text lookup found nothing to click. Driven by `aria-label`, density works and persists.
+4. **"Offline, the VENUE column vanished — header/body desync"** — **wrong, my case-sensitivity.** I compared against `'VENUE'` while the DOM text is `Venue` (uppercase is CSS `text-transform`). The table is correctly aligned; there is no desync. The offline **scope** finding (WWL-114) stands on separate evidence.
+5. **"The mobile dialog clips its title"** — **wrong, checked and retracted.** The box overhangs the viewport by its own padding, but `clippedElements` is empty: every field, label and button is inside.
+
+### Module 10 — status
+
+**118 cases written, 101 driven. 22 findings (4× S1, 4× S2, 11× S3, 3× S4).**
+
+Not driven, each with its reason:
+
+| Cases | Why |
+|---|---|
+| **D10-023** (multi-`BookingDetails` dedup drop) | Confirmed in source — the dedup keeps only the first detail row per `bookingId`. Not reproducible here: every one of the 25 bookings has exactly one detail row, and Bookings and Payments agree to the rupee. Source-confirmed, live-unverified. |
+| **D10-117** (`offline_*` email stripping) | No `offline_` address exists in this dataset — all 25 are `@demo.weddingwala.pk`, none null. The strip cannot be exercised. |
+| **D10-018** (receipt-vs-derivation divergence) | Would require **writing a receipt to a live vendor's ledger** to prove the derivation ignores it. Refused. The structural risk is recorded from source; the live reconciliation is reported as the PASS it actually was. |
+| **D10-043/044** (empty and very long customer names) | No row in the live set has an empty or overlong name; the `—` fallback and truncation cannot be exercised without creating data. |
+| **D10-069** (live CSV formula injection) | No customer name in the live set begins with `=`/`+`/`-`/`@`, so no live payload demonstrates it. The gap is confirmed by reading `escapeCsv`; recorded as WWL-123 on source evidence, not claimed as reproduced. |
+| **D10-088 write** (over-payment actually saved) | Validation was proven to accept Rs 99,999,999; the **save** was captured and aborted. Confirming the row persists would mean corrupting a live ledger. |
+| **D10-060/077/078** (search in URL, double-navigation leak) | Search holds no URL state by design and nothing was observed to leak; folded into the reload and navigation passes rather than claimed separately. |
+
+**The module's verdict.** The presentation layer is careful — correct PKT dates, honest loading
+states, exact roll-up arithmetic, a real working error state with Retry, clean keyboard access,
+and the second genuinely non-overflowing 360px layout in the sweep. What is wrong sits
+**underneath** it: a catch-all route that converts every mis-routed request into a reported
+success, a headline that sums a different population than its own components, and a second money
+screen that disagrees with this one by Rs 1.12m. Those are not polish problems. On a live vendor's
+ledger, WWL-107 alone means a vendor can be told their cash was recorded when it was not.
