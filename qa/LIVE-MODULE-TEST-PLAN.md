@@ -1643,6 +1643,77 @@ This matters beyond this module: it proves the platform *can* scope correctly, s
 **WWL-024** (Today ignoring scope entirely) and **WWL-028** (receivables returning a subset
 larger than the whole) are defects in those specific endpoints — not an architectural limit.
 
+### ⭐ `Draft a reply` — the best-implemented feature found in the entire sweep
+
+Clicked on lead 178 (Asad Jameel). It produced, in ~9s:
+
+> **Draft a reply to Asad Jameel**
+> *"Assalam-o-Alaikum Asad! 🤝 Shukria for reaching out to Rehman Grand Marquee! Haan bilkul,
+> hum mehndi ke liye separate mardana aur zenana setup provide karte hain — 390 guests ke liye
+> hum perfect arrangement kar sakte hain…"*
+
+Everything about this is right:
+
+- **Editable, not read-only** — `readOnly: false`, `disabled: false` (D3-041 ✅)
+- **Never auto-sends** — the footer states it explicitly:
+  *"AI-drafted · anthropic/claude-haiku-4.5 — never sent automatically. Prices and dates are not
+  verified."* Actions are `Redraft` / `Copy` / `Send on WhatsApp` — all manual.
+- **Honest framing** — *"Read it before you send — edit anything that isn't right."*
+- **Correct grounding** (D3-042 ✅) — it pulled the lead's own `inquiry` ("separate
+  mardana/zenana"), its **390 guests**, and the **venue name**. No other lead's data leaked
+  (`mentionsOtherLead: false`).
+- **Real Roman Urdu**, not translated English — the register a Pakistani venue owner would
+  actually send.
+
+This is the standing WW constraint (editable, no auto-send) honoured **and disclosed to the
+vendor**. Recorded as an exemplar, not a finding.
+
+*(Minor: the lead's `eventType` is `walima` while its `inquiry` says "Mehndi function" — the
+draft followed the inquiry text. Source-data conflict in the seed, not a defect.)*
+
+### ✅ D3-024/029 — Edit prefills perfectly and does not leak between leads
+
+Opened `Edit lead` on lead 178: **all 11 fields** matched the API exactly — name, phone,
+WhatsApp, email, source `form_inquiry`, status `new`, event type `walima`, date `2026-11-27`,
+budget `1175000.00`, guests `390`, and the inquiry text.
+
+Cancelled, opened Edit on a **different** lead: every field belonged to the second lead
+(phone `0332880364`, source `whatsapp`, status `quoted`, `engagement`, `2027-01-14`,
+budget `500000.00`, guests `409`) with **zero carryover** from the first
+(`phone0311: false`, `budget1175000: false`, `guests390: false`, `eventWalima: false`).
+
+**This second lead also proves WWL-032 concretely**: its date is **2027**-01-14 and the table
+renders it as **"14 Jan"** — the identical display to the 2020 lead's **"01 Jan"**. Two dates
+seven years apart, indistinguishable in the inbox.
+
+### ✅ D3-045 — density toggle is the *correct* aria implementation
+
+`Comfortable` → `Compact`: row height **57px → 49px**, and `aria-pressed` flips properly
+(`Comfortable: true→false`, `Compact: false→true`).
+
+**This is the counter-example to the seven control groups in Modules 1–2 that convey active
+state by CSS class alone** (sort segments, venue switcher, theme mode, run-sheet grouping,
+settings tabs…). The house pattern exists and is correct here — it is simply not applied
+consistently.
+
+### 🔴 WWL-035 — S3 — 304 row-action buttons share just 4 accessible names
+
+All 76 rows × 4 actions = **304 buttons**, **0 unnamed** (good), but only **4 distinct
+names**: `Convert to booking`, `Draft a reply`, `Edit lead`, `Remove lead`. None carries the
+customer.
+
+A screen-reader user tabbing this inbox hears "Convert to booking" seventy-six times with no
+way to know which lead is which. This is **WWL-012 at the largest scale found** — and it sits
+on the most destructive action in the module (`Remove lead`).
+
+### ✅ Responsive and table semantics
+
+- **D3-060 ✅ 360px** — `scrollWidth 345 < 360`, **no horizontal overflow, 0 off-screen
+  controls**, all 76 rows rendered. Clean, like Today and unlike the Dashboard (WWL-014).
+- **D3-059 ✅** — real `<thead>` with 9 `<th>` cells.
+- **D3-009 ✅** — all 76 rows are in the DOM; no pagination or virtualisation hiding rows, and
+  the tiles count the full set.
+
 ### ✅ Correction to my own measurement
 
 I first recorded "no toast, no feedback at all" on the failed save. **That was wrong** — my
