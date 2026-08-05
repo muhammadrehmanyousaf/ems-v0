@@ -2685,3 +2685,104 @@ minimum in at least one dimension. The worst are the 28×28 icon buttons: `Toggl
 `Active` (32px tall), `Archive` (32px), `Add booking` (36px) and `Export` (36px) are all
 under as well. Recorded as an observation rather than a separate finding — on this screen it
 is moot, because per WWL-053 almost none of them do anything for a booking.
+
+---
+
+## Module 4 — Section E (navigation) and sorting
+
+### 🔴🔴 WWL-037 — **the decisive artifact.** One page, two blocks, two different answers
+
+`/dashboard/bookings/170`. Both of these render on the same screen, one scroll apart:
+
+| Block | Field | Value |
+|---|---|---:|
+| **Payment** (summary, top) | Your total | Rs 1,546,000 |
+| | Down payment | Rs 386,500 |
+| | **Remaining** | **Rs 0** ❌ |
+| **Order & Price** (editor, below) | Grand total | Rs 1,546,000 |
+| | **Balance due** | **Rs 1,159,500** ✅ |
+
+Same booking. Same two inputs. `1,546,000 − 386,500 = 1,159,500`.
+
+The Payment block does not subtract — it reads `paymentStatus`, sees `Paid`, and prints
+`Remaining Rs 0`. Confirmed by the contrast with booking 175, where `paymentStatus` is
+`Pending` and the same block correctly shows `Remaining Rs 2,742,400`. The rule is
+`if (paymentStatus === "Paid") remaining = 0`, not arithmetic.
+
+**Why this closes the argument:** the correct calculation is *already in the codebase, on the
+same page*. The order editor derives `Balance due` from the numbers. Nothing needs to be
+invented — the summary blocks, the list chip, and the CSV export simply need to use the
+derivation the order editor already performs.
+
+That single change closes WWL-001, WWL-002, WWL-005, WWL-037, WWL-040 and WWL-047, and makes
+the Archive tile stop contradicting its own rows.
+
+### 🔴 WWL-055 — S2 — No column sorting at all, and the default order is operationally meaningless
+
+Every one of the 10 `<th>` elements: no `<button>`, no `aria-sort`, `cursor: auto`, no click
+handler. The list is pinned to the request the page hard-codes —
+`sortBy=createdAt&sortOrder=DESC`.
+
+So bookings are ordered by **when the record was created**, not when the event happens. The
+10 active rows come out in this event-date order:
+
+```
+22-Oct · 23-Sept · 13-Aug · 05-Aug · 07-Nov · 29-Aug · 13-Aug · 07-Oct · 21-Aug · 05-Aug
+```
+
+That is not an order — it is noise. A venue operator's single most common question of this
+screen is "what is coming up next", and the answer is scattered across ten rows with no way
+to reorder by date, by amount, or by balance outstanding. There is no sort control anywhere
+on the page.
+
+### ⚠️ WWL-056 — S3 — The view toggle never updates the URL, so a reload silently changes the view
+
+`?bucket=completed` deep-links correctly (D4-051 passes). But the toggle is one-way:
+
+| Step | URL | View shown |
+|---|---|---|
+| Open `?bucket=completed` | `…?bucket=completed` | Archive, 12 rows ✔ |
+| Click **Active** | `…?bucket=completed` *(unchanged)* | Active, 10 rows |
+| **Reload** | `…?bucket=completed` | **Archive, 12 rows** — silently back |
+
+Consequences: the URL in the address bar stops describing the screen; copying it to a
+colleague sends them somewhere else; bookmarking captures the wrong view; and a refresh throws
+away the view the vendor selected without saying so.
+
+Contrast with density, which persists correctly through `ww-ui-prefs` (D4-024) — this page
+already has a working persistence pattern, just not applied to the view.
+
+### ✅ D4-047 (corrected) / D4-049 / D4-050 / D4-051 — navigation passes
+
+- **D4-047** — the row is not clickable (WWL-054), but the documented path works and lands
+  correctly: `Booking actions` → `View detail page` on row 1 → **`/dashboard/bookings/173`**,
+  which is Ahmed Raza & Sanam Ahmed, the correct booking for that row.
+- **D4-049** — every paperwork/operations link renders and is wired:
+  `/dashboard/function-sheets`, `/dashboard/function-sheet-sign`, `/dashboard/trade-ops`,
+  `/dashboard/function-sheet-operations`, `/dashboard/kitchen-prep`, plus the booking-scoped
+  `/dashboard/bookings/170/financials`, `/dashboard/money?tab=receipts` and a resolved
+  `/dashboard/function-sheets/89`.
+- **D4-050** — browser Back returns a **fully rendered** list, not a blank shell: 10 rows,
+  table present, `Active` still selected, scope still `All venues`, density still Comfortable,
+  and tiles correct at `Rs 3,342,938` / `Rs 11,176,762`. No re-fetch flash, no empty state.
+- **D4-051** — `?bucket=completed` lands on Archive with 12 rows and correctly recomputed
+  tiles. (The one-way half of this is WWL-056.)
+
+---
+
+## Module 4 — status
+
+All 60 written cases are now driven. Findings raised in this module: **WWL-034 (confirmed from
+a second entry point), WWL-036 through WWL-056** — 21 findings, 7 of them S1.
+
+Three cases were deliberately **not driven**, each because it would write irreversibly to a
+live vendor's ledger. Recorded here rather than silently skipped:
+
+| Case | Why not driven |
+|---|---|
+| **D4-039** `Cancel booking` | Irreversible on a real booking; would corrupt the ledger under test. Enumerated and inspected instead. |
+| **D4-040** `Record payment` | Would post money to a live customer's account. Dialog enumerated and its arithmetic assessed — that is what produced WWL-040. |
+| **D4-044** end-to-end Rs 0 creation | Would create a real Rs 0 booking. Proven instead by full field enumeration of the dialog (10 fields, none monetary) plus the write-blocker submit test. |
+
+Everything else in the module was clicked in the live UI, hard-reloaded where a mutation was
+involved, and re-read from the API for confirmation.
