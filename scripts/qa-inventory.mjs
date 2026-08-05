@@ -119,6 +119,26 @@ const STATUS = {
       "OPEN (minor): the page has no h1. NOT tested: sending a message (would message a real " +
       "customer), attachments, search filtering, realtime socket delivery.",
   },
+  "/dashboard/inventory": {
+    mark: "x",
+    note:
+      "36 items, Rs 68,511 stock value, 0 covered, no overflow. All 10 add-item fields exercised. " +
+      "FOUND + FIXED: all four number inputs (opening stock, low-stock threshold, last cost/unit, " +
+      "reorder lead time) accepted negatives — -500 / -10 / -9999 / -30 all saved-enabled with no " +
+      "min, no error and aria-invalid null. The header derives 'Stock value' and 'Low / out of " +
+      "stock' from these, so one negative silently corrupts both tiles for every other item.",
+  },
+  "/dashboard/suppliers": {
+    mark: "~",
+    note:
+      "23 A/P invoices, 122 interactive, 0 covered, no overflow. Status filter chips all verified " +
+      "EXACT: All 23, Received 3, Partially paid 6, Paid 11, Overdue 3 — counts sum to 23 and each " +
+      "chip filters to precisely its stated number. " +
+      "FOUND (NOT fixed): the 'Suppliers' tab is DEAD. Clicking the real role=tab element leaves " +
+      "aria-selected as A/P invoices=true / Suppliers=false, the table headers stay " +
+      "SUPPLIER·DUE·PAID/TOTAL·OUTSTANDING·STATUS and the first row is still an invoice (#INV-5297). " +
+      "A vendor clicking through to their supplier list silently stays on the A/P ledger.",
+  },
   "/dashboard/payments": {
     mark: "~",
     note:

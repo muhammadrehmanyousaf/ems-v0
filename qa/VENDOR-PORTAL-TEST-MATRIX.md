@@ -10,12 +10,12 @@ Status legend: `[ ]` untested · `[~]` render/health only · `[x]` deep-tested
 
 | | Modules | % |
 |---|---:|---:|
-| `[x]` deep-tested | 6 | 14% |
-| `[~]` render/health only | 11 | 25% |
-| `[ ]` **not touched** | **27** | **61%** |
+| `[x]` deep-tested | 7 | 16% |
+| `[~]` render/health only | 12 | 27% |
+| `[ ]` **not touched** | **25** | **57%** |
 | **Total** | **44** | |
 
-**2006 enumerated elements** across 44 modules.
+**2012 enumerated elements** across 44 modules.
 
 > Element lists are extracted statically and are a FLOOR, not a ceiling —
 > anything rendered through a shared toolbar or a deep component chain may
@@ -97,11 +97,14 @@ Status legend: `[ ]` untested · `[~]` render/health only · `[x]` deep-tested
 - **Status:** `[~]`
 - **Coverage:** Render/health only. 76 leads load. NOT tested: Log a lead, Import, Export, filters, detail, status transitions.
 
-**Tabs / views** (3)
+**Tabs / views** (6)
 
 - [ ] Comfortable
 - [ ] Compact
+- [ ] Inquiry / notes
+- [ ] Phone
 - [ ] Undo
+- [ ] WhatsApp
 
 **Sections** (1)
 
@@ -733,7 +736,8 @@ Status legend: `[ ]` untested · `[~]` render/health only · `[x]` deep-tested
 
 - **Route:** `/dashboard/inventory`
 - **Page:** `app\(dashboard)\dashboard\inventory\page.tsx` (17 component files)
-- **Status:** `[ ]`
+- **Status:** `[x]`
+- **Coverage:** 36 items, Rs 68,511 stock value, 0 covered, no overflow. All 10 add-item fields exercised. FOUND + FIXED: all four number inputs (opening stock, low-stock threshold, last cost/unit, reorder lead time) accepted negatives — -500 / -10 / -9999 / -30 all saved-enabled with no min, no error and aria-invalid null. The header derives 'Stock value' and 'Low / out of stock' from these, so one negative silently corrupts both tiles for every other item.
 
 **Tabs / views** (6)
 
@@ -840,7 +844,8 @@ Status legend: `[ ]` untested · `[~]` render/health only · `[x]` deep-tested
 
 - **Route:** `/dashboard/suppliers`
 - **Page:** `app\(dashboard)\dashboard\suppliers\page.tsx` (18 component files)
-- **Status:** `[ ]`
+- **Status:** `[~]`
+- **Coverage:** 23 A/P invoices, 122 interactive, 0 covered, no overflow. Status filter chips all verified EXACT: All 23, Received 3, Partially paid 6, Paid 11, Overdue 3 — counts sum to 23 and each chip filters to precisely its stated number. FOUND (NOT fixed): the 'Suppliers' tab is DEAD. Clicking the real role=tab element leaves aria-selected as A/P invoices=true / Suppliers=false, the table headers stay SUPPLIER·DUE·PAID/TOTAL·OUTSTANDING·STATUS and the first row is still an invoice (#INV-5297). A vendor clicking through to their supplier list silently stays on the A/P ledger.
 
 **Tabs / views** (3)
 
@@ -2798,14 +2803,17 @@ Status legend: `[ ]` untested · `[~]` render/health only · `[x]` deep-tested
 - **Page:** `app\(dashboard)\dashboard\field\page.tsx` (13 component files)
 - **Status:** `[ ]`
 
-**Tabs / views** (6)
+**Tabs / views** (9)
 
 - [ ] Amount
 - [ ] Date received
 - [ ] Date spent
+- [ ] Inquiry / notes
 - [ ] Note
 - [ ] Notes
 - [ ] Paid to
+- [ ] Phone
+- [ ] WhatsApp
 
 **Sections** (1)
 
