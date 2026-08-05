@@ -4647,3 +4647,190 @@ and (possibly) amounts, for a 15-month window.
 - [ ] **D8-046** — Accessible names on day cells and navigation.
 - [ ] **D8-047** — 360px: grid usable, no overflow, events reachable.
 - [ ] **D8-048** — Desktop: no overflow.
+
+---
+
+## ⭐ WWL-062 — UPGRADED FROM INFERENCE TO LIVE PROOF
+
+Module 5 recorded the UTC/PKT date-floor bug as reasoned-but-unobserved, because the
+divergence window is only 00:00–04:59 PKT. **This session ran into that window.** Re-opened the
+`Hold a date` dialog at **01:40 PKT on Thursday 6 August 2026**:
+
+| | |
+|---|---|
+| Browser local time | `Thu Aug 06 2026 01:40:13 GMT+0500 (Pakistan Standard Time)` |
+| Real PKT date | **`2026-08-06`** |
+| `new Date().toISOString().slice(0,10)` (what the code uses) | **`2026-08-05`** |
+| Dialog **default** value | **`2026-08-05`** ← yesterday |
+| Dialog **`min`** floor | **`2026-08-05`** ← yesterday |
+
+So for a Pakistani vendor working after midnight — the expo and late-baraat hours this feature
+explicitly names — the hold dialog **pre-fills yesterday's date and accepts it**. Combined with
+WWL-061 (past dates are accepted by the server anyway), a hold placed at 1am lands on a date
+that has already passed, silently.
+
+No longer an inference. Observed on production.
+
+---
+
+## MODULE 8 — RESULTS
+
+### 🔴🔴 WWL-099 — S1 — The calendar subscription URL points at the wrong host, so no calendar can ever subscribe
+
+`Generate calendar feed` issues a token and presents this to the vendor to paste into Google
+Calendar / Apple Calendar / Outlook:
+
+```
+https://weddingwala.pk/api/v1/calendar/feed/Esi11gCfB7TmsfRW7v_Rp4E7apc-ksljLWFD6juvh3M.ics
+```
+
+Fetched all three candidate hosts unauthenticated, exactly as a calendar client would:
+
+| Host | HTTP | Result |
+|---|---|---|
+| **`weddingwala.pk`** ← *the URL the product gives the vendor* | **503** | `{"success":false,"message":"Offline — no cached response available"}` — the **service worker** answers, because the frontend has no such route |
+| `www.weddingwala.pk` | **404** | 77 KB of Next.js 404 HTML |
+| `ems-v0-backend-production.up.railway.app` | **200** | `text/calendar`, 9,091 bytes, **valid iCalendar, 22 events** |
+
+**The feed itself is built correctly and works perfectly.** The URL handed to the vendor simply
+addresses the frontend domain instead of the API host. Every subscription attempt fails, and it
+fails as a 503 from the service worker — so a vendor debugging it sees "Offline", not "wrong
+address".
+
+Same class as WWL-085 (`pdfUrl` building a relative path against the wrong origin) — except
+that one is dead code, and this one **is the entire feature**.
+
+### 🔴 WWL-100 — S2 — The availability grid has a per-space axis carrying no per-space data
+
+The grid renders 7 rows × 14 days = **98 cells** for Rehman Grand Marquee:
+
+```
+Main Hall · afsana · Terrace Lawn · Mardana Section · Zenana Section
+· Lunch event (12:00) · Dinner event (19:00)
+```
+
+Every status is **uniform across all 7 rows** for any given date:
+
+| Date | All 7 spaces |
+|---|---|
+| 2026-08-06 | **Blocked** (×7) |
+| 2026-08-13 | **Booked** (×7) |
+| 2026-08-12 | Free (×7) |
+
+Status counts across the whole grid: `Blocked 7, Booked 7, Free 84` — i.e. exactly one date's
+worth of each non-free state, replicated down every row.
+
+This is the operational consequence of **WWL-050** (bookings carry no space assignment). One
+booking on 13-Aug marks the **entire property** unavailable — the vendor cannot see that the
+Main Hall is taken while the Terrace Lawn is free, and cannot sell the Terrace Lawn that day.
+For a product built around multi-hall venue operations, a halls×days matrix whose columns are
+all identical is worse than no matrix: it *implies* a granularity that does not exist.
+
+Two modelling problems visible in the same axis:
+
+- **Time slots are listed as spaces.** `Lunch event (12:00)` and `Dinner event (19:00)` are not
+  places; they sit in the same column as `Main Hall` and `Terrace Lawn`.
+- **`afsana`** — a lowercase personal-looking name among properly-named halls. Almost certainly
+  test residue in live space data.
+
+### 🔴 WWL-101 — S2 — Cancelled bookings are invisible on the calendar, but present in the feed
+
+The August grid renders **nothing** on **4-Aug** and **12-Aug**, where cancelled bookings
+**177 (Rs 350,000)** and **178 (Rs 762,650)** sit. The days with live bookings (5th, 13th,
+21st, 29th) all show their chips correctly.
+
+This is **WWL-036 on a third surface** — cancelled bookings are unreachable in the Bookings
+list, absent from Archive, and now invisible on the Calendar.
+
+**And the product contradicts itself about it.** The subscription panel states:
+
+> *"cancelled bookings show as struck through"*
+
+Verified true — the ICS feed emits `STATUS:CANCELLED`, which calendar clients render struck
+through. So a vendor who subscribes sees their cancelled bookings **in Google Calendar** but
+cannot see them **in Wedding Wala's own calendar**.
+
+### 🔴 WWL-070 — CORRECTED AND WIDER — all three venues are blocked tomorrow by junk data
+
+Module 5 recorded a single `[QA] duplicate test` block on 6-Aug at Rehman Grand Marquee.
+Querying availability per venue shows that was **too narrow**, and my initial reading here —
+that one block was leaking across venues — was **wrong**. They are three independent rows:
+
+| Venue | 2026-08-06 | `blockReason` |
+|---|---|---|
+| 3358 Rehman Grand Marquee | blocked | `[QA] duplicate test` |
+| 3359 Rehman Banquet & Lawn | blocked | **`hi`** |
+| 3360 Rehman Marquee Bahria | blocked | **`hi`** |
+
+So blocks are correctly venue-scoped — but **all three of this vendor's venues are marked
+unsellable tomorrow**, two of them with the reason `"hi"`. This is live production data, and
+the grid renders it faithfully: every space at every venue shows `Blocked` on 6-Aug.
+
+Raised from S4 to **S2** — it is not one stale test row, it is the vendor's entire business
+being unavailable for a day.
+
+### ⚠️ WWL-102 — S3 — The vendor is never told the feed URL is unauthenticated
+
+The subscription panel explains how to use the feed and that apps re-fetch automatically. It
+never says that **anyone holding the URL can read 15 months of the vendor's schedule without
+logging in** — which is inherent to how ICS subscriptions work, and precisely why the URL
+should be treated as a secret.
+
+Verified live: fetched with `credentials: 'omit'` and no `Authorization` header → **200 with
+all 22 events**. The token *is* the credential, and nothing on screen says so.
+
+---
+
+### ✅ Module 8 passes — and the feed's privacy design is genuinely good
+
+- **D8-030 / D8-035 / D8-036 — the ICS feed exposes no customer data at all.** Fetched
+  unauthenticated and searched:
+
+  | Checked for | Present? |
+  |---|---|
+  | Customer names | **no** |
+  | Phone numbers | **no** |
+  | Email addresses | **no** |
+  | Any money figure | **no** |
+
+  A representative event:
+
+  ```
+  UID:booking-160@weddingwala.pk
+  SUMMARY:Booking #160 — Rehman Marquee Bahria
+  DESCRIPTION:Vendor: Rehman Marquee Bahria\nStatus: Completed\n
+              Open in dashboard: https://weddingwala.pk/dashboard/bookings/160
+  LOCATION:Rehman Marquee Bahria\, Rawalpindi
+  STATUS:CONFIRMED
+  ```
+
+  Booking id and venue only. For a URL that must work unauthenticated in a third-party calendar
+  app, that is exactly the right trade — the vendor gets a usable schedule, and anyone who
+  obtains the link learns nothing about a customer. Deliberate and well judged.
+
+- **D8-031** — token is 43-character base64url = **256 bits**, same strength as the share token.
+- **D8-032** — valid iCalendar: `VERSION:2.0`, `PRODID:-//Wedding Wala//Vendor Calendar//EN`,
+  `METHOD:PUBLISH`, and **`X-WR-TIMEZONE:Asia/Karachi`** — correctly localised, not UTC.
+- **D8-033 — the window reconciles exactly.** 22 events = **19 bookings + 3 availability
+  blocks** (`vblock-6/7/8`). Of 25 bookings, six fall outside "past 90 days": 155 (11-Feb),
+  156 (04-Mar), 157 (22-Mar), 158 (05-Apr), 159 (28-Apr) and 175 (06-May, just before the
+  8-May boundary). 25 − 6 = **19** ✔
+- **D8-034** — cancelled bookings are encoded as `STATUS:CANCELLED`, the correct iCal mechanism.
+- **D8-037 — revoke works and is verified.** After `Revoke`: `token: null`, `feedUrl: null`, and
+  the previously-working backend URL returns **404**. The link is genuinely dead.
+- **Revoke is properly guarded** — a confirm dialog stating the consequence:
+  *"Revoke this feed? Any calendar app subscribed to it will stop syncing."*
+- **D8-001** — `6 events` for August is internally consistent: 2 (5th) + 2 (13th) + 1 (21st) +
+  1 (29th). (It excludes the 2 cancelled — WWL-101.)
+- **D8-009 / D8-021 — venue scoping is correct, and my hypothesis here was wrong.** I expected
+  a booking at one venue to mark other venues busy. It does not. Scoped to **Rehman Marquee
+  Bahria**: the space rows change to that venue's real spaces (**Marquee A, Marquee B,
+  Rooftop**), the month header changes to **2 events** (bookings 166 and 169, both genuinely
+  at 3360), and **13-Aug reads `Free`** — correctly, since bookings 167 and 180 belong to
+  other venues. Bookings do not cross venues.
+- **D8-015 — the strip does read availability blocks.** 6-Aug renders `Blocked` with an `×`
+  marker and an accessible label `Main Hall · 2026-08-06 · Blocked`.
+- **D8-016** — 13-Aug renders `Booked`; 12-Aug (cancelled booking) correctly renders `Free`.
+- **D8-013 / D8-046** — every availability cell carries a full accessible name in the form
+  `<space> · <ISO date> · <status>`. That is a better-than-average a11y pattern: it conveys the
+  status in text, not colour alone, satisfying D8-018.
