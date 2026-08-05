@@ -100,6 +100,25 @@ const STATUS = {
       "quote/BEO dated six years in the past. Date holds gets this right; this dialog does not. " +
       "NOT tested: create (avoided cluttering live data), edit, remove, Export, view, status flow.",
   },
+  "/dashboard/calendar": {
+    mark: "x",
+    note:
+      "179 interactive elements, 0 covered, no overflow. Month navigation verified " +
+      "(August → September → August). Day 5 shows exactly the 2 events Today reported, so the two " +
+      "screens agree. Correctly EXCLUDES cancelled bookings: 12-Aug is empty even though booking " +
+      "178 (Cancelled, Rs 762,650) is dated then — the calendar handles cancellation properly, " +
+      "unlike the profit board did. ICS feed documents that cancelled bookings render struck " +
+      "through. NOT tested: generating the calendar feed, per-day drill-in, Add booking from a cell.",
+  },
+  "/dashboard/chat": {
+    mark: "~",
+    note:
+      "Thread opens on a real click (a synthetic click on the wrapper does NOT — worth knowing for " +
+      "future automation). Message composer 'Type a message…' present, conversation search present, " +
+      "0 covered, no overflow, history renders with timestamps and online/offline state. " +
+      "OPEN (minor): the page has no h1. NOT tested: sending a message (would message a real " +
+      "customer), attachments, search filtering, realtime socket delivery.",
+  },
   "/dashboard/payments": {
     mark: "~",
     note:

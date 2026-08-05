@@ -10,9 +10,9 @@ Status legend: `[ ]` untested · `[~]` render/health only · `[x]` deep-tested
 
 | | Modules | % |
 |---|---:|---:|
-| `[x]` deep-tested | 5 | 11% |
-| `[~]` render/health only | 10 | 23% |
-| `[ ]` **not touched** | **29** | **66%** |
+| `[x]` deep-tested | 6 | 14% |
+| `[~]` render/health only | 11 | 25% |
+| `[ ]` **not touched** | **27** | **61%** |
 | **Total** | **44** | |
 
 **2006 enumerated elements** across 44 modules.
@@ -345,7 +345,8 @@ Status legend: `[ ]` untested · `[~]` render/health only · `[x]` deep-tested
 
 - **Route:** `/dashboard/calendar`
 - **Page:** `app\(dashboard)\dashboard\calendar\page.tsx` (16 component files)
-- **Status:** `[ ]`
+- **Status:** `[x]`
+- **Coverage:** 179 interactive elements, 0 covered, no overflow. Month navigation verified (August → September → August). Day 5 shows exactly the 2 events Today reported, so the two screens agree. Correctly EXCLUDES cancelled bookings: 12-Aug is empty even though booking 178 (Cancelled, Rs 762,650) is dated then — the calendar handles cancellation properly, unlike the profit board did. ICS feed documents that cancelled bookings render struck through. NOT tested: generating the calendar feed, per-day drill-in, Add booking from a cell.
 
 **Sections** (2)
 
@@ -397,7 +398,8 @@ Status legend: `[ ]` untested · `[~]` render/health only · `[x]` deep-tested
 
 - **Route:** `/dashboard/chat`
 - **Page:** `app\(dashboard)\dashboard\chat\page.tsx` (13 component files)
-- **Status:** `[ ]`
+- **Status:** `[~]`
+- **Coverage:** Thread opens on a real click (a synthetic click on the wrapper does NOT — worth knowing for future automation). Message composer 'Type a message…' present, conversation search present, 0 covered, no overflow, history renders with timestamps and online/offline state. OPEN (minor): the page has no h1. NOT tested: sending a message (would message a real customer), attachments, search filtering, realtime socket delivery.
 
 **Actions / buttons** (1)
 
