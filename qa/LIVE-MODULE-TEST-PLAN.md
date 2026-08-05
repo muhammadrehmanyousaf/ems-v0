@@ -385,6 +385,130 @@ accessibility tree says which venue is currently selected — a screen-reader us
 menu cannot tell what they are switching *from*. Same defect class as the sort segments
 (D1-025).
 
+### ⚠️ CORRECTION to my own Section A result
+
+I recorded **D1-012 as ✅ "no cancelled row in the profit board — regression holds."**
+**That was wrong.** I asserted it from the default `Recent` view without parsing the rows.
+Clicking `Most profit` and parsing all 25 rows shows the opposite. D1-012 is 🔴.
+
+The likely reason live still has this: the fix (`0677c6e`, "cancelled bookings counted as
+revenue and profit") is sitting in the **local unpushed commits** — it has never been
+deployed. Live is running the pre-fix code.
+
+### 🔴 WWL-008 — S1 — Cancelled weddings are ranked as the most profitable events
+
+Under `Most profit`, parsed live from all 25 rows:
+
+| Rank | Function | Status | Received | Net | Margin |
+|---|---|---|---:|---:|---:|
+| **1** | Usman Tariq & Hira Usman | **Cancelled** | Rs 0 | **Rs 2,742,400** | **100%** |
+| 19 | Waheed Jutt (12-Aug) | **Cancelled** | Rs 0 | Rs 762,650 | 100% |
+| 25 | Waheed Jutt (04-Aug) | **Cancelled** | Rs 0 | Rs 350,000 | 100% |
+
+The board's own header totals include them too — verified to the rupee:
+
+- `Booked Rs 37,348,900` = **all 25** bookings. Live-only is Rs 33,493,850.
+  The difference is exactly Rs 3,855,050 — the three cancelled bookings.
+- `Outstanding Rs 17,272,279` = includes cancelled (live-only is Rs 13,417,229).
+- `Net profit Rs 29,363,900` = `Booked − Spent`, so it books Rs 3,855,050 of profit on
+  weddings that did not happen.
+
+**The single worst line on the dashboard:** a cancelled wedding, Rs 0 received, presented to
+the owner as their most profitable event of the year at 100% margin.
+
+### 🔴 WWL-009 — S1 — "Net profit" is revenue, not profit
+
+`Net` ignores what was actually received and, when no expense is tagged, ignores cost too.
+Every row with `Spent —` reports **100% margin**, including bookings with **Rs 0 received**:
+
+- Rizwan Anjum & Momina Rizwan — `Pending`, received **Rs 0** → Net Rs 2,596,400, 100%
+- Ahmed Raza & Sanam Ahmed — `Awaiting Payment`, received **Rs 0** → Net Rs 1,673,250, 100%
+- Imran Shafi & Hafsa Imran — received Rs 386,500 of Rs 1,546,000 → Net **Rs 1,546,000**, 100%
+
+Header-level: `Net profit Rs 29,363,900 · 79% margin`, while the owner has actually received
+Rs 20,076,621 and spent Rs 7,985,000 — a real cash position of **Rs 12,091,621**. The headline
+overstates realised profit by roughly **Rs 17.3M**.
+
+The panel's own subtitle promises "Revenue vs what you've received vs what you spent" — it
+shows the received column correctly and then excludes it from the maths.
+
+### 🔴 WWL-010 — S1 — Three different "outstanding" figures on one screen
+
+| Element | Figure | Basis |
+|---|---:|---|
+| `BAQAYA · TO COLLECT` | Rs 13,417,229 | total − down, excl. cancelled |
+| KPI `Revenue due` | Rs 12,292,729 | installment ledger (misses booking 170) |
+| Profit board `Outstanding` | **Rs 17,272,279** | total − down, **incl. cancelled** |
+
+…and **two** different "received" figures: KPI `Revenue collected` **Rs 21,201,121** vs profit
+board `Received` **Rs 20,076,621**.
+
+This independently confirms WWL-005: the profit board's Received matches the true sum of down
+payments exactly (Rs 20,076,621), so **the KPI's Rs 21,201,121 is the wrong one**, over by the
+same Rs 1,124,500.
+
+### ✅ Sort mechanics pass
+
+- **D1-022/023/024** — all three sorts reorder correctly. `Most profit` verified strictly
+  monotonic descending across all 25 rows (2,742,400 → … → 350,000).
+- **D1-025** 🔴 — confirmed still open: active segment is conveyed by a `bg-primary` class
+  only. No `aria-pressed`, no `aria-current` on any of the three.
+
+### 🔴 WWL-011 — S2 — The اردو language toggle does nothing
+
+Clicked اردو, waited, captured the full page text; clicked EN, captured again:
+
+- `urLen 7934` · `enLen 7934` · **`identical: true`** · **`differingChars: 0`**
+- `<html lang>` flips `en` ⇄ `ur` — and that is the only effect.
+- `dir` is never set; computed direction stays `ltr`.
+- Total Urdu characters on the page in "Urdu" mode: **4** — which is the toggle's own
+  "اردو" label.
+- Every label stays English: Home, Bookings, Calendar, Customers, Dashboard, Total bookings,
+  Revenue, Upcoming, Booked, Received, Outstanding, Net profit, Sort, Recent, Biggest.
+
+A language switch given prime header placement, in a product whose users are Pakistani venue
+owners, is inert. (The portal's Roman-Urdu labels — *Baqaya*, *Aaj ke events*, *Naye Rabtay*,
+*Yaad dilao*, *Khata* — are present in **both** modes, so they are not the toggle working.)
+
+D1-042 (RTL money formatting) is therefore **not applicable** — nothing renders RTL.
+
+### 🔴 WWL-012 — S3 — All 12 reminder buttons have the same accessible name
+
+Every `Yaad dilao` button exposes exactly `"Yaad dilao"` with no `aria-label` distinguishing
+the customer. A screen-reader user hears twelve identical buttons and cannot tell which one
+chases Kamran Sheikh (Rs 325,020) from the one that chases Rizwan Anjum (Rs 2,596,400).
+The visible row context is not associated with the control. (D1-058)
+
+### ✅ Section C passes — driven, not just observed
+
+- **D1-022/023/024** — all three sorts reorder correctly; `Most profit` and `Biggest` both
+  verified strictly monotonic descending across all 25 rows.
+- **D1-026** — ties are stable: the two Rs 350,000 rows keep a deterministic order.
+- **D1-027** — clicking the active segment a second time does not reverse or clear the sort
+  (order byte-identical). No hidden toggle to mis-discover.
+- **D1-028** — `Hide details` works: `aria-expanded` flips true→false, the accessible name
+  changes to "Show what's left", 431 characters of content hide, and toggling back restores
+  the page byte-for-byte.
+- **D1-029** — that collapsed state **survives a hard reload**.
+- **D1-030** — `Yaad dilao` fully verified end to end. Fired on the vendor's **own** booking
+  (Muhammad Rehman Yousaf) rather than a customer's, since the control is outward-facing:
+  `POST /bookings/180/reminders/log` → button becomes **"Dubara"** → **hard reload** →
+  exactly **one** of the twelve persists as "Dubara", on the correct row. It does **not**
+  auto-send: it logs the reminder and opens WhatsApp pre-filled in Urdu for the vendor to
+  send. Good design.
+- **D1-031** — not silently duplicable: the control relabels to "Dubara" ("again"), so a
+  repeat is an explicit choice rather than an invisible second reminder.
+
+### Cross-check: the reminder panel is the most *correct* money view on the screen
+
+`Aaj kis ko yaad dilana hai` lists **Imran Shafi & Hafsa Imran at Rs 1,159,500** (the booking
+Receivables drops entirely, WWL-001) **and** Waheed Jutt at **Rs 315,000** (the figure
+Receivables overstates as Rs 350,000, WWL-002). Its 12 visible rows total Rs 10,614,779, and
+the 2 rows behind `see all remaining` account for the balance to Rs 13,417,229.
+
+This triangulates the whole money story: **BAQAYA / the reminder panel / the booking detail
+pages all agree at Rs 13,417,229. Receivables and the KPI row are the outliers.**
+
 ### Cases executed so far
 
 **Section A — all 15 executed.**
@@ -397,6 +521,10 @@ excluded from both totals) · D1-012 ✅ (no cancelled row in the profit board �
 holds) · D1-013 ✅ (per-hall sums to Rs 33,493,850 = total booked, 22 = 25 − 3 cancelled) ·
 D1-014 ✅ (per-hall is this-year scoped as labelled) · D1-015 ✅ (no NaN/undefined/drift;
 separators correct throughout)
+
+> **D1-012 is 🔴, not ✅ — see the correction in the findings above.** My original pass was
+> asserted from the default sort without parsing rows; cancelled bookings are in fact present
+> and rank #1 under `Most profit`.
 
 **Section B — all 6 executed.**
 `[x]` D1-016 ✅ · D1-017 🔴 WWL-006 · D1-018 ✅ · D1-019 🔴 WWL-006 (PER-HALL never
