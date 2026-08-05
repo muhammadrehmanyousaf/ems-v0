@@ -41,7 +41,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 9 | Conversations | `/dashboard/chat` | ✅ 40 | **`[x]` COMPLETE — 26 run, 14 not run, 3 findings** |
 | 10 | Payments | `/dashboard/payments` | ✅ 118 | **`[x]` COMPLETE — 101 run, 17 not run, 22 findings (4× S1)** |
 | 11 | Receivables | `/dashboard/receivables` | ✅ 96 | **`[x]` COMPLETE — 84 run, 12 not run, 13 findings (2× S1)** |
-| 12 | Receipts | `/dashboard/receipts` | ✅ 92 | `[ ]` IN PROGRESS |
+| 12 | Receipts | `/dashboard/receipts` | ✅ 92 | **`[x]` COMPLETE — 83 run, 9 not run, 17 findings** |
 | 13 | Cheque ledger | `/dashboard/pdcs` | — | `[ ]` |
 | 14 | Expenses | `/dashboard/expenses` | — | `[ ]` |
 | 15 | Tax report | `/dashboard/tax` | — | `[ ]` |
@@ -6196,3 +6196,165 @@ The 39 receipts here are the only record of Rs 21,201,121 actually collected.
 | D12-090 | 360px: no overflow; cards readable | |
 | D12-091 | 360px: **are Edit and Remove reachable on a phone?** | actions live in a column |
 | D12-092 | Receipt count and maxId unchanged at module close | proof nothing was written |
+
+## MODULE 12 — EXECUTION RESULTS
+
+**Nothing was created, edited or deleted.** Verified against the API through a clean iframe realm
+after every phase:
+
+| Checkpoint | Receipts | maxId | Total |
+|---|---|---|---|
+| Baseline | 39 | 187 | Rs 21,201,121 |
+| After the PATCH run | 39 | 187 | Rs 21,201,121 |
+| After the DELETE run | 39 | 187 | Rs 21,201,121 |
+| **Module close** | **39** | **187** | **Rs 21,201,121** |
+
+Receipt 179 — the row I drove edit and delete against — still reads `458460.00`, notes
+`"Final settlement"`, with its **original `updatedAt` of 2026-08-02T00:14:45.322Z**. Untouched.
+
+All three write verbs were captured with their bodies and redirected away from the receipts
+endpoint:
+
+```
+POST   /api/v1/receipts       {"method":"cash","amount":1,"receivedDate":"2026-08-05","bookingId":171}
+PATCH  /api/v1/receipts/179   {"method":"cash","amount":458461,"receivedDate":"2026-08-06","notes":"Final settlement","bookingId":168}
+DELETE /api/v1/receipts/179   (no body)
+```
+
+### WWL-142 (S2) — **every** CRUD verb on the money ledger reports success on failure
+
+This is WWL-107 again, and this module proves it exhaustively. Each request was diverted to a
+path that does not exist; the backend's catch-all answered **200**; the UI declared success:
+
+| Action | Toast shown | What actually happened |
+|---|---|---|
+| Create | **"Receipt logged"** | no row created |
+| Edit | **"Receipt updated"** | amount still 458460.00, `updatedAt` unchanged |
+| Delete | **"Receipt removed"** | row still present |
+
+The delete case has a distinctive symptom worth flagging for support: the toast says *"Receipt
+removed"*, the dialog closes, the query invalidates — and then **the row reappears** in the table
+on refetch. A vendor will read that as the delete silently failing, or as the row coming back from
+the dead, with no error anywhere to explain it.
+
+Three modules, three verbs, one root cause: `app.use("/", …)` at `routes.js:331`.
+
+### WWL-143 (S3) — validation errors leak between dialog sessions
+
+`touched` is never reset. The effect reseeds `form` on open but leaves `touched` alone:
+
+```js
+if (open) { if (loaded.current !== k) { setForm(blank(receipt, prefill)); loaded.current = k } }
+//                                      ^ touched is never cleared, on open or on close
+```
+
+Driven from a clean load, in order:
+
+| Step | Result |
+|---|---|
+| 1. Fresh load → open **Create** | no errors ✓ |
+| 2. Open **Edit**, clear the amount | *"Amount is required."* ✓ correct |
+| 3. Cancel → open **Create** again | **blank untouched form shows "Amount is required."** ✗ |
+
+This defeats the exact intent the source documents — *"errors appear only after a field is
+touched, so opening the dialog doesn't immediately flag the empty amount the vendor is about to
+type"*. Because `ReceiptFormDialog` is shared, the same leak reaches the Payments screen.
+
+### WWL-144 (S3) — a misallocated receipt can never be reallocated
+
+Edit mode renders **one** select (Method). The booking selector is gated behind `{!isEdit && …}`,
+and the dialog never displays which booking or customer the receipt belongs to — the only clue is
+which row you clicked. Confirmed live: editing Salman Rauf's Rs 458,460 cash receipt showed
+Amount, Date, Method, Transaction ref and Notes, and nothing identifying booking 168.
+
+The captured PATCH does carry `"bookingId":168`, so the link is preserved — it simply cannot be
+changed. A receipt logged against the wrong booking has to be **deleted and re-created**, which on
+a `paranoid` ledger means an orphaned soft-deleted row plus a new one, for what should be a
+one-field correction.
+
+### WWL-145 (S3) — the delete confirmation identifies the receipt only by its amount
+
+> **Remove this receipt?**
+> This **Rs 458,460** receipt will be removed. This can't be undone.
+
+No customer, no date, no event, no transaction ref. For an irreversible action on a money ledger
+where amounts repeat (this vendor has two "Barat — Salman Rauf" receipts), the amount alone is
+weak identification. Everything else about the dialog is right: `role="alertdialog"`, destructive
+styling on Remove, the amount correctly interpolated, and **Cancel and Esc both close it without
+firing any request** (verified — `window.__net` stayed empty for both).
+
+### WWL-146 (S3) — receipts are create-only on a phone
+
+At a true emulated 360×740, `renderCard` reproduces payer, date, ref, method and amount — but
+**not the actions column**. Measured live: `Edit receipt` buttons visible = **0**, `Remove
+receipt` buttons visible = **0**. The `Record receipt` button is reachable, so a vendor can add
+receipts on a phone but can never correct or remove one. The card also drops the **Event** column,
+so there is no way on mobile to tell which wedding a receipt belongs to.
+
+### Findings S3 / S4
+
+| ID | Sev | Finding |
+|---|---|---|
+| **WWL-147** | S3 | **The money headlines flash `Rs 0` on every load.** Unlike Payments and Receivables, the Receipts cards have **no `isLoading` guard** — `value={formatPkr(total)}` with `total` computed from an empty array. Sampled at 120ms intervals: at t=868ms the cards read **`Rs 0`** with 49 skeletons and 0 rows; the real Rs 7,704,813 appears at t=1786ms. Nearly a second of "you have collected nothing". The same Rs 0 shows in the error state (the WWL-121 pattern). |
+| **WWL-148** | S3 | **Future-dated receipts are counted as money received.** Four rows are dated after today, Rs 1,386,175 in total (Rs 720,480 within the Banquet & Lawn view), and because the sort is `receivedDate DESC` they land at the **top of the ledger** — the first row on screen is dated 08-Oct-2026. Nothing flags them. Two of them fall inside the current month and inflate the `This month` card. The frontend forbids future dates on entry (WWL-112) while the backend accepts them, so the ledger contains values its own form would reject. |
+| **WWL-149** | S3 | **N+1 on the Event column.** Rendering 13 rows fired **14 separate `function-sheets` requests** across 7 distinct `bookingId`s — one round-trip per booking purely to label a column. There is no batch endpoint in play. On a ledger of a few hundred receipts this becomes hundreds of requests per page view. |
+| **WWL-150** | S3 | **The API's method breakdown is discarded.** Every response carries `summary.byMethod` — live: cash 6,314,023 · JazzCash 5,558,585 · bank_transfer 3,175,730 · Easypaisa 2,990,946 · Raast 2,002,337 · other 1,159,500 — and the screen surfaces **only cash**, recomputing everything client-side. For a Pakistani vendor the JazzCash/Easypaisa/Raast split is precisely the reconciliation view they need, and it is already being sent. |
+| **WWL-151** | S3 | **Stat cards ignore the search filter** — third consecutive money module. Filtering 13 rows to 2, or to 0, leaves the headline at Rs 7,704,813 / Rs 458,460 every time. |
+| **WWL-152** | S3 | **A no-match search presents a populated ledger as empty onboarding.** Searching `zzzqqq` renders *"No receipts yet — Record cash, JazzCash, Easypaisa and bank payments so every rupee is accounted for."* **plus a `Record receipt` button**. Worse than WWL-116/135 because it also offers a primary call-to-action, as if the vendor had never used the feature. |
+| **WWL-153** | S3 | **Table a11y, unchanged for the third module.** 0 of 8 `<th>` carry `scope`, no `<caption>`, all 13 row checkboxes named *"Select row"*. |
+| **WWL-157** | S3 | **No pagination and no limit.** `PaymentReceipt.findAll` has no `limit` and the client has no paging, so the entire ledger ships on every load and `total` / `thisMonthTotal` / `cashTotal` are summed in the browser. Fine at 39 rows; it degrades linearly and silently. |
+| **WWL-158** | S3 | **A receipt dated today opens natively invalid for editing.** Receipt 179 is legitimately dated **2026-08-06**; the edit dialog seeds `value="2026-08-06"` while `max="2026-08-05"` (the UTC date). Measured: `validity.rangeOverflow: true`, `checkValidity(): false`, *"Value must be 08/05/2026 or earlier."* — on a field the vendor never touched. The JS validator correctly disagrees, so `Update` stays enabled and the save is not blocked, but the browser flags a valid stored record as invalid and there is no date the vendor could pick to clear it without falsifying the row. A second, sharper face of WWL-112. |
+| **WWL-154** | S4 | `This month` delta renders **"1 receipts"** — `${thisMonth.length} receipts` with no singular form. |
+| **WWL-155** | S4 | CSV omits the **Event** column that is shown on screen — the same export/screen parity gap as Receivables' missing Aging column (WWL-136). |
+| **WWL-156** | S4 | The confirm says *"This can't be undone"* while the model is `paranoid: true`, so `destroy()` only sets `deletedAt`. True from the UI, false in the database — and telling a panicking vendor the row is gone forever when support could restore it is the wrong way round. |
+
+### Notable passes
+
+- **D12-002/003 PASS** — `Dashboard : Payment Receipts`; sidebar, breadcrumb and `<h1>` agree.
+- **D12-004/005 PASS** — one `/api/v1/receipts` call per load, correctly carrying `businessId`.
+- **D12-006/007/009/010 PASS** — 13 rows, Rs 7,704,813 total, Rs 4,054,803 cash, Rs 458,460 this month: every card matches the API to the rupee.
+- **D12-008 and D12-088 PASS — the cleanest cross-module reconciliation in the sweep.** Venue scoping on this endpoint is **correct**: 15 + 13 + 11 = 39 rows and Rs 8,517,363 + 7,704,813 + 4,978,945 = Rs 21,201,121 exactly. And **every per-venue receipt sum equals Module 10's per-venue `Received` figure exactly**. Three modules, one ledger, no drift — which is what makes WWL-129 (Receivables' inverted scoping) so clearly a defect in that endpoint rather than in the data.
+- **D12-032 PASS** — method labels are the PK-correct forms: Cash, JazzCash, Easypaisa, Raast, IBFT, Bank transfer, Other.
+- **D12-033 PASS** — the Txn-ref column renders because refs exist; the `hasRef` guard would drop it for an all-cash ledger.
+- **D12-037 PASS** — Edit and Remove carry `aria-label="Edit receipt"` / `"Remove receipt"`.
+- **D12-041 → D12-045 PASS** — search matches payer name (full and mid-word), is case-insensitive, and matches **transaction ref**, **method** and **notes**. The widest search predicate of any module so far.
+- **D12-047/049 PASS** — `%_.*` treated literally, clearing restores all rows.
+- **D12-051/082 PASS** — selection offers **no bulk delete**; the only destructive action is per-row and confirmed.
+- **D12-052 PASS** — CSV exported all 13 rows with values matching the screen.
+- **D12-056 PASS — a positive contrast.** The receipts CSV carries **no phone and no email**, unlike the Payments (WWL-... phone) and Receivables (WWL-136) exports which both ship customer phone numbers.
+- **D12-057/060 PASS** — trigger and dialog titles agree here ("Record receipt" → "Record a receipt"), and the booking selector **is** present in create mode with 9 options.
+- **D12-074/075/077/078/079 PASS** — `role="alertdialog"`, amount interpolated correctly, destructively styled Remove, and **Cancel and Esc both close without firing a request**.
+- **D12-083/084 PASS — the module that gets error handling right.** `ReceiptsAPI.list()` has **no `catch`**, so a genuine network failure renders *"Couldn't load receipts."* with a working **Retry**. This is the direct counter-example to Receivables' WWL-130, and it shows the pattern is achievable in this codebase.
+- **D12-090 PASS** — no horizontal overflow at a true emulated 360×740.
+
+### Corrections to my own readings during this module
+
+1. **"Cancel and Esc don't close the delete dialog"** — **wrong, my polling window.** Radix leaves the node mounted with `data-state="closed"` through its exit animation; a later check found it fully unmounted. Both close correctly and neither fires a request.
+2. **"`showSuccessToast` offers Undo, contradicting *can't be undone*"** — **wrong, checked and dropped.** `showSuccessToast` is the no-undo variant; `showUndoToast` is a separate export that this screen does not use. The copy is accurate as far as the UI goes (the `paranoid` nuance is WWL-156, a different point).
+3. **My `everRs0` flag reported `false` while the raw samples clearly showed `Rs 0`** — my regex used a normal space against `formatPkr`'s non-breaking space. The finding (WWL-147) rests on the raw sampled values, not the flag.
+
+### Module 12 — status
+
+**92 cases written, 83 driven. 17 findings (1× S2, 13× S3, 3× S4).**
+
+Not driven, each with its reason:
+
+| Cases | Why |
+|---|---|
+| **D12-021/022** (walk-in receipt, `bookingId: null`) | Every receipt in this ledger has both a linked customer and a booking. The `payerName` fallback chain and the null-booking render path cannot be exercised without creating data. |
+| **D12-023** (per-booking reconciliation) | Already driven in Module 10 with zero divergences; not repeated. |
+| **D12-053** (Selected → CSV) | The shared `ExportMenu` selected-export was proven exact in Module 10; not re-driven. |
+| **D12-069/070** (edit-mode validation, future date on edit) | The validators are the same instance already exercised field-by-field in Module 10, and WWL-158 covers the edit-mode date behaviour specifically. |
+| **D12-072** (reseed across different rows) | Partially covered — WWL-143 demonstrates the `touched` half of the reseed logic failing; the `form` half reseeded correctly in every observed open. |
+| **D12-085** (mis-routed GET → fake empty ledger) | The `?? {}` fallback in `ReceiptsAPI.list` is identical in shape to Module 10's, where the outcome was demonstrated. Not re-driven; the genuine-failure path (D12-083) was driven instead and passed. |
+| **D12-086/087/089** (loading detail, density, keyboard) | Density and keyboard behaviour come from the shared primitives already verified across a hard reload in Modules 10 and 11; the loading behaviour that differs here is WWL-147. |
+
+**The module's verdict.** This is the best-built money screen in the sweep and the clearest
+evidence that the codebase knows how to do this properly: correct venue scoping, exact
+reconciliation with two other modules, a real working error state with Retry, the widest search
+predicate, PK-correct method labels, a properly confirmed destructive action, and an export
+carrying no PII. What lets it down is mostly at the edges — a `Rs 0` flash on every load, a
+create-only mobile experience, validation state leaking between dialog sessions, and a receipt
+that can never be moved to the right booking. The one systemic problem is not this module's at
+all: with the backend catch-all in place, **create, edit and delete on the vendor's money ledger
+all report success when the request never arrived**.
