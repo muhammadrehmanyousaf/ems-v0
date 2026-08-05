@@ -269,8 +269,21 @@ down payment Rs 386,500, **balance Rs 1,159,500**).
 completed wedding with Rs 1.16M unpaid never appears on it. The money is not flagged
 anywhere the vendor would look to collect it.
 
-**Suspected cause:** the receivables/installment source excludes `status = Completed`,
-treating a finished event as a closed account regardless of its balance.
+**ROOT CAUSE — confirmed, and it is not what I first suspected.** My initial hypothesis was
+that Receivables excludes `status = Completed`. **That is wrong** — three other `Completed`
+bookings with balances (165 Rs 215,872 · 162 Rs 540,075 · 159 Rs 325,020) *do* appear on the
+chase list. The real discriminator is `paymentStatus`:
+
+> **Booking 170 is stored as `paymentStatus = "Paid"` while `totalAmount − downPayment =
+> Rs 1,159,500`.** The record contradicts itself.
+
+Its own detail page renders **both** a `Paid` badge **and** `Balance due Rs 1,159,500`
+simultaneously. Everything that trusts the `paymentStatus` flag (Receivables, `Revenue due`,
+`Revenue collected`) is wrong by this amount; everything that computes from the actual
+amounts (BAQAYA hero, the booking page's own balance line) is right.
+
+This is a **data-integrity defect with a code consequence**: no screen should derive money
+owed from a boolean-ish status flag when the amounts are present and disagree with it.
 
 ### 🔴 WWL-002 — S1 — Receivables ignores a down payment already taken
 
@@ -309,8 +322,85 @@ Two bookings are dated today (2026-08-05): **166** Owais Siddiqui (`Confirmed`, 
 A vendor reading the KPI believes they have one event today. They have two, and the
 uncounted one starts *earlier*. Status is not a safe proxy for "is this happening today".
 
+### 🔴 WWL-005 — S1 — `Revenue collected` counts money that has not been collected
+
+`Revenue collected` reads **Rs 21,201,121**. The actual sum of `downPayment` across all 22
+non-cancelled bookings is **Rs 20,076,621**. Overstated by **Rs 1,124,500** — the same
+Rs 1,124,500, arriving the same way: `+1,159,500` (booking 170 counted as fully paid because
+its flag says `Paid`) `− 35,000` (Waheed Jutt's down payment, which the ledger never saw).
+
+Verified identities:
+
+- `per-hall revenue sum` = **Rs 33,493,850** = total booked value of the 22 non-cancelled
+  bookings. ✅ correct, and correctly excludes all 3 cancelled bookings (22 = 25 − 3).
+- `Revenue collected + Revenue due` = 21,201,121 + 12,292,729 = **Rs 33,493,850**. The KPI
+  row is internally consistent — but consistently wrong, because both halves are built on the
+  same bad `Paid` flag.
+
+**This is the most serious finding in the module.** The other four are visible contradictions a
+vendor might notice and question. This one is silent: it tells the owner they have collected
+Rs 1.12M more than they actually have. Cash-flow decisions get made on this number.
+
+### 🔴 WWL-006 — S1 — Four dashboard sections ignore the venue selection entirely
+
+Driven live across all four scopes (All venues → Grand Marquee → Banquet & Lawn → Marquee
+Bahria). The KPI row rescopes correctly. **These four sections never change at all:**
+
+| Section | All venues | Grand Marquee | Banquet & Lawn | Marquee Bahria |
+|---|---|---|---|---|
+| `BAQAYA · TO COLLECT` | Rs 13,417,229 / 14 | **Rs 13,417,229 / 14** | **Rs 13,417,229 / 14** | **Rs 13,417,229 / 14** |
+| `Aaj ke events` | 2 today | **2 today** | **2 today** | **2 today** |
+| `Naye Rabtay` | 22 new | **22 new** | **22 new** | **22 new** |
+| `PER-HALL PERFORMANCE` | 3 venues | **3 venues** | **3 venues** | **3 venues** |
+
+Select **Rehman Marquee Bahria** (Rawalpindi) and the largest number on the screen still
+claims you are owed **Rs 13,417,229 across 14 events** — while that venue's own KPI says
+Rs 4,005,205. The vendor is shown another venue's money, another venue's events and another
+venue's enquiries under this venue's name. `PER-HALL` still lists all three halls and the
+literal label "3 venues" while scoped to one.
+
+`Aaj ke events` is the operational half of this: scoped to Bahria it lists Waheed Jutt's
+12:00 event, which is at **Grand Marquee**.
+
+### ✅ Passes confirmed in Section B
+
+- **D1-016 — venue roll-up is exact.** All five KPI metrics sum precisely:
+  bookings `10+8+7 = 25` · collected `8,517,363 + 7,704,813 + 4,978,945 = 21,201,121` ·
+  due `3,243,787 + 5,043,737 + 4,005,205 = 12,292,729` · today `0+0+1 = 1` ·
+  upcoming `1+4+3 = 8`. (The KPI row is arithmetically sound — it is the *inputs* that are
+  wrong, per WWL-001/005.)
+- **D1-018 — scope survives a hard reload.** `ww-active-business` persists
+  (`activeBusinessId: 3360`) and all five values are byte-identical after a full reload.
+
+### WWL-004 extended — confirmed at venue level
+
+Booking 179 (Waheed Jutt, `Awaiting Payment`, **today 12:00**) belongs to **Rehman Grand
+Marquee**. With Grand Marquee selected, its `Today's events` tile reads **0**. The venue
+running a wedding in the next hours reports no events today.
+
+### 🔴 WWL-007 — S3 — The venue switcher marks no active option
+
+The switcher menu's 5 items carry neither `aria-checked` nor `data-state`. Nothing in the
+accessibility tree says which venue is currently selected — a screen-reader user opening the
+menu cannot tell what they are switching *from*. Same defect class as the sort segments
+(D1-025).
+
 ### Cases executed so far
 
-`[x]` D1-001 · D1-002 · D1-003 · D1-005 (fails → WWL-003) · D1-008 (25 = 25, passes)
-`[x]` D1-011 (cancelled correctly excluded from both totals — passes)
-`[x]` D1-012 (regression guard: no cancelled row in the profit board — passes)
+**Section A — all 15 executed.**
+`[x]` D1-001 🔴 WWL-003 · D1-002 🔴 (ruled out cancellations) · D1-003 🔴 WWL-004 ·
+D1-004 🔴 (not a TZ bug — it is a status filter) · D1-005 🔴 WWL-001 · D1-006 🔴 WWL-005 ·
+D1-007 ✅ (identity holds: 21,201,121 + 12,292,729 = 33,493,850) · D1-008 ✅ (25 = 25) ·
+D1-009 ✅ (8 = 8, verified by roll-up) · D1-010 🔴 (14 / 14 / 13 — Receivables lists 13,
+BAQAYA claims 14; the missing one is booking 170) · D1-011 ✅ (all 3 cancelled correctly
+excluded from both totals) · D1-012 ✅ (no cancelled row in the profit board — regression
+holds) · D1-013 ✅ (per-hall sums to Rs 33,493,850 = total booked, 22 = 25 − 3 cancelled) ·
+D1-014 ✅ (per-hall is this-year scoped as labelled) · D1-015 ✅ (no NaN/undefined/drift;
+separators correct throughout)
+
+**Section B — all 6 executed.**
+`[x]` D1-016 ✅ · D1-017 🔴 WWL-006 · D1-018 ✅ · D1-019 🔴 WWL-006 (PER-HALL never
+rescopes) · D1-020 🔴 WWL-006 (other venues' customers shown under a single-venue scope) ·
+D1-021 ✅ (3 rapid switches, final state correct — no stale render)
+
+Plus 🔴 WWL-007 (switcher marks no active option) found during Section B.
