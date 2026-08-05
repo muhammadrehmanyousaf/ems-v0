@@ -4168,3 +4168,224 @@ Row actions: `Quick view` · `Open detail`.
 - [ ] **D7-064** — Accessible names on all controls; table semantics.
 - [ ] **D7-065** — 360px: no overflow, and are the row actions reachable (WWL-053/086 test)?
 - [ ] **D7-066** — Desktop: no overflow.
+
+---
+
+## MODULE 7 — RESULTS
+
+### 🔴🔴 WWL-088 — S1 — The client book reports bookings and spend that are **not this vendor's**
+
+`Total bookings 28` on this screen; the Bookings module has **25**. The gap is exactly 3, and
+it localises to precisely two customers:
+
+| Customer | Client book says | This vendor's real bookings | Client book says spent | Actually collected |
+|---|---|---:|---|---:|
+| **Muhammad Rehman Yousaf** | `totalBookings 3`, `completed 1` | **1** (booking 180, Confirmed, Rs 665,000, **paid Rs 0**) | **Rs 1,040,000** | **Rs 0** |
+| **Waheed Jutt** | `totalBookings 4`, `cancelled 0` | **3** (179 Awaiting Payment, 177 + 178 **Cancelled**) | **Rs 1,487,650** | **Rs 35,000** |
+
+`2 + 1 = 3` extra bookings — exactly the 28 − 25 discrepancy.
+
+**The discriminator is exact.** All 20 customers have a `userId`. **18 are seeded demo accounts**
+(`@demo.weddingwala.pk`) and every one of them reconciles perfectly. The **only two non-demo,
+real platform accounts are the only two that are wrong** — and both are inflated, never
+deflated.
+
+The most probable explanation is that the `Customer` rollup aggregates the person's activity
+**across the whole platform** rather than scoping to the querying vendor: seeded demo users have
+only ever booked this vendor (so global == local), while the two real users have booked
+elsewhere.
+
+Two consequences, either of which is serious:
+
+1. **The numbers are wrong.** `Rs 1,040,000` of "spend" against a customer this vendor has
+   collected **nothing** from. A vendor deciding how much to trust a client, or which client to
+   chase, is reading a figure that is not about their own relationship.
+2. **If the inference is right, it is a cross-vendor disclosure** — this vendor's client book is
+   revealing how many bookings and how much money a person has transacted with *other* vendors.
+   That flatly contradicts the careful k-anonymity design in the community-trust feature
+   sitting in the same module.
+
+`cancelledBookings: 0` for Waheed Jutt is broken on any reading — **two of his three bookings
+with this vendor are Cancelled**.
+
+**The module contradicts itself, which is the part that needs no inference:** the list row says
+**4** bookings; his own Customer-360 page says **`Bookings 3`** and lists exactly 177, 178, 179;
+the header tile on that page says **`1 active`**. Three numbers for one customer, on two screens.
+
+### 🔴 WWL-089 — S1 — "Lifetime revenue" counts money that was never received
+
+Waheed Jutt's Customer-360, top of the page:
+
+```
+LIFETIME REVENUE     Rs. 350,000
+                     Rs. 1,112,650 cancelled
+AVG TICKET SIZE      Rs. 350,000
+```
+
+And further down the *same page*:
+
+```
+Payments received    0
+No payments recorded against this customer's bookings yet.
+```
+
+**Rs 350,000 of "lifetime revenue" from a customer with zero payments recorded.** The
+Rs 350,000 is booking 179's full billed value — a booking still in `Awaiting Payment`. Revenue
+is being recognised from what was invoiced, not what was banked.
+
+The real figure is **Rs 35,000** (booking 179's down payment), which the page itself prints
+three lines lower as `DP Rs. 35,000`. So the correct number is on screen, next to the wrong one.
+
+This is the WWL-037 family again — billed treated as collected — now in a third module.
+
+### ⚠️ WWL-090 — S2 — `firstBookingAt` is not the first booking
+
+| Customer | `firstBookingAt` | Earliest real booking |
+|---|---|---|
+| Ahmed Raza | `2026-01-02` | **11-Feb-2026** (booking 155) |
+| Bilal Hussain | `2026-01-23` | **04-Mar-2026** (booking 156) |
+| Muhammad Rehman Yousaf | `2026-07-26` | **13-Aug-2026** (booking 180) |
+
+In every case `firstBookingAt` **equals `firstSeenAt`** and precedes the real first booking by
+weeks. The field holds the date the customer was first *seen* (enquiry/lead), not their first
+booking, while its name and any UI derived from it say otherwise. A "customer since" date
+built on this is wrong by up to six weeks.
+
+### 🔴 WWL-091 — S2 — The community-trust endpoint answers for **any** phone number
+
+`GET /api/v1/offlineCustomers/community-trust?phone=…` is live. Queried three ways:
+
+| Query | HTTP | Response |
+|---|---|---|
+| Waheed Jutt (real customer) | 200 | `{hasData:false, reason:"insufficient", raterVendorCount:0, threshold:2}` |
+| Ahmed Raza (real customer) | 200 | same |
+| **`03001234567` — a number this vendor has no relationship with** | **200** | **same well-formed response** |
+
+There is no check that the querying vendor has any booking, lead or prior contact with the
+number. It is an **open reputation-lookup oracle keyed on a Pakistani mobile number**.
+
+Today it returns "insufficient" for everyone because no ratings exist anywhere, so nothing
+leaks *yet*. That is precisely why this is worth fixing now: the moment vendors start rating
+customers, this endpoint lets any vendor screen any person who calls them — or enumerate
+numbers in bulk — without ever having done business with them. The k-anonymity threshold
+protects *who* said it; it does not stop *who can ask*.
+
+**Recommended:** require an existing relationship (booking/lead/offline-customer row) between
+the querying vendor and the phone/email before answering.
+
+### ⚠️ WWL-092 — S3 — A failed trust lookup will be indistinguishable from "no concerns"
+
+`CommunityTrustAPI.get` ends in `catch { return null }` — the WWL-018 swallow. `CommunityTrustPanel`
+renders nothing for `null` **and** nothing for `hasData: false`. So a network failure, a 500, or
+a genuine "not enough vendors have rated this person" all present identically: **an absent panel**.
+
+Impact is currently nil (nothing renders either way, because there are no ratings anywhere). It
+is recorded because the moment ratings exist, an API failure will silently read as a clean
+record — the highest-consequence version of this pattern found so far, since the subject is a
+named private individual.
+
+### 🔴 WWL-093 — S1 — **WWL-053 / WWL-086 repeat a third time: Customers is inert on mobile**
+
+At 360 × 780:
+
+| Measured | Result |
+|---|---|
+| Table | `display: none` |
+| Mobile cards rendered | **20** |
+| **Controls inside the entire card list** | **0** |
+| Horizontal overflow | none — `scrollWidth === clientWidth === 345` |
+| Card content | `BH \| Bilal Hussain \| 0348678149 \| 2 bookings \| 07-Nov-2026` |
+
+Both row actions — `Quick view` and `Open detail` — live in the hidden table. On a phone a
+vendor can read their client list and **cannot open a single customer**.
+
+**This is now the third module with the identical architecture** (Bookings WWL-053, Function
+sheets WWL-086, Customers WWL-093). It is not three bugs; it is one responsive pattern applied
+across the portal that renders a mobile card list with no affordances. Worth fixing once,
+centrally.
+
+### ⚠️ WWL-094 — S3 — `Add customer` writes to a different entity than the list reads
+
+The captured payload (write blocked):
+
+```
+POST /api/v1/offlineCustomers :: {"name":"Waheed Jutt","phoneno":"03030936741",
+                                  "address":"Lahore","email":"waheedjutt7429@gmail.com"}
+```
+
+Three observations:
+
+1. It posts to **`/api/v1/offlineCustomers`**, while the list reads **`/api/v1/customers`** —
+   two different entities. The same split makes
+   `GET /api/v1/offlineCustomers/47/ratings` return **404 "Offline customer not found"** for
+   customer id 47, i.e. **the rating subsystem cannot address the customers the list shows**.
+   That is why `CustomerTrustCard` renders nothing on a Customer-360.
+2. **No duplicate detection client-side.** The dialog accepted an exact match of an existing
+   customer's name, phone *and* email and submitted it without warning. (Server behaviour on
+   duplicates was not tested — that would require letting the write through.)
+3. **No `businessId`** in the payload — unlike Date holds and Function sheets, which both
+   silently attach venue #1. Here the offline customer is not venue-scoped at all.
+
+Also note the field is `phoneno`, not `phone` — the same writer/reader naming drift that caused
+WWL-071 elsewhere. No breakage observed here; recorded as a smell only.
+
+---
+
+### ✅ Module 7 passes — including two that are genuinely well done
+
+- **D7-001 / D7-003 / D7-004** — tile arithmetic is internally exact: 20 customers,
+  `Repeat clients 5` = customers with `totalBookings > 1`, `Avg 1.4` = 28 ÷ 20. (The **28**
+  itself is WWL-088.)
+- **D7-005 / D7-006** — per-row `BOOKINGS` and `LAST BOOKING` reconcile exactly for **18 of 20**
+  customers; the two exceptions are WWL-088.
+- **D7-035 — the best form validation found in this sweep so far.** Entering
+  `abc-not-a-phone` produced an **inline, field-level** error under the input:
+
+  > *Enter a valid Pakistani number, e.g. 0300 1234567.*
+
+  with `aria-invalid="true"` set on the field and `Save customer` held disabled. Field-level,
+  correctly ARIA-flagged, and PK-specific with a real example — materially better than the
+  Bookings dialog, which leaves its button enabled with no hint at all.
+- **D7-034** — blocked-reason hint done right: *"Fill in the name, phone and address to save."*
+- **D7-039** — nothing written. After the blocked submit, still **20 customers** and exactly
+  **1** Waheed Jutt row.
+- **D7-015 / D7-016** — search works and does **not** 500. Searching `0324657672` returned
+  exactly the one matching customer. Like Function sheets it is **client-side** (no `search=`
+  request is issued) — again the direct contrast with Bookings' crashing server-side search.
+- **D7-026** — `Open detail` navigates to the correct Customer-360.
+- **D7-057 — the privacy payload is clean.** The raw community-trust response contains
+  **only** `hasData`, `reason`, `raterVendorCount`, `threshold` — no identities, no notes, no
+  vendor names, exactly as the API contract promises. Verified on the wire, not from the
+  rendered card.
+- **D7-059** — `threshold: 2` is present in the payload, matching the documented k-anonymity
+  rule of ≥ 2 other vendors.
+- **PII is deliberately redacted before analytics — a genuine and easily-missed piece of
+  privacy engineering.** `Open detail` puts the customer's **email address in the URL path**
+  (`/dashboard/customers/waheedjutt7429%40gmail.com`), and this site runs GA4 on every page.
+  Checked what actually left the browser:
+
+  ```
+  dl = "https://www.weddingwala.pk/dashboard/customers/(redacted)"
+  dt = "Dashboard : Customer"
+  ```
+
+  The email is **stripped and replaced with `(redacted)`** before the GA beacon fires; no
+  customer identifier appears in any analytics call. My concern going in was that every
+  customer's email was being shipped to Google — it is not. Someone built a redaction layer for
+  exactly this, and it works.
+
+  *Residual, worth noting rather than a finding:* the email is still in the URL itself, so it
+  lands in browser history and any server/CDN access log.
+
+- **D7-020** — density toggle present with correct `aria-pressed`.
+- **D7-066 / D7-065 (layout half)** — no horizontal overflow at 1521px or 360px; zero
+  overflowing elements at either width.
+
+### Module 7 — cases not yet driven
+
+| Cases | Status |
+|---|---|
+| **D7-041 → D7-046** (Import customers) | Dialog not yet opened — next pass. |
+| **D7-047 → D7-055** (Rate customer) | **Unreachable through the UI.** `RateCustomerDialog` and `CustomerTrustCard` are imported and rendered in `customer-detail-view.tsx` (lines 434/442) but produce **no output** on a live Customer-360, because the rating API addresses `offlineCustomers` and the list/detail use `customers` (WWL-094). 780 lines of built rating UI that no vendor can currently reach. |
+| **D7-056** (k-anonymity ≥ 2 enforced) | Cannot be proven without creating real ratings on named private individuals — outside this module's safety limits. The withholding behaviour at `raterVendorCount: 0` is correct, and the threshold is declared. |
+| **D7-021 / D7-062 / D7-063** | Export contents and injected-failure behaviour — next pass. |
