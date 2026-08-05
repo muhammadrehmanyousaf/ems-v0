@@ -46,7 +46,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 14 | Expenses | `/dashboard/expenses` | ✅ 104 | **`[x]` COMPLETE — 89 run, 15 not run, 14 findings** |
 | 15 | Tax report | `/dashboard/tax` | ✅ 72 | **`[x]` COMPLETE — 61 run, 11 not run, 10 findings** |
 | 16 | Reports | `/dashboard/reports` | ✅ 70 | **`[x]` COMPLETE — 60 run, 10 not run, 10 findings** |
-| 17 | Trade operations | `/dashboard/trade-ops` | ✅ 86 | `[ ]` IN PROGRESS |
+| 17 | Trade operations | `/dashboard/trade-ops` | ✅ 86 | **`[x]` COMPLETE — 71 run, 15 not run, 10 findings** |
 | 18 | Automation | `/dashboard/automation` | — | `[ ]` |
 | 19 | Kitchen prep | `/dashboard/kitchen` | — | `[ ]` |
 | 20 | Inventory | `/dashboard/inventory` | — | `[ ]` |
@@ -7761,3 +7761,153 @@ Also predicted:
 | D17-084 | Very long cell text is accepted without limit | |
 | D17-085 | Unicode / Urdu text in cells | |
 | D17-086 | Nothing else on the page writes | |
+
+## MODULE 17 — EXECUTION RESULTS
+
+**Nothing was written.** Verified through a clean iframe realm at close: **17 sheets, and all 9
+trade columns still `null` on every one of them** — `carRentalJson` on sheet 77 is still `null`
+despite the toast saying *"Fleet plan saved"*, and the sheet's `updatedAt` still predates this
+session.
+
+```
+PATCH /api/v1/function-sheets/77
+{"carRentalJson":{"vehicles":[{"vehicleName":"","vehicleType":"Luxury sedan (dulha car)",
+                               "plateNumber":"","decor":"Full floral decor"}],
+                  "routeSchedule":[],"drivers":[]}}
+```
+
+### WWL-209 (S2) — three screens auto-load an arbitrary contract, and one of them can sign it
+
+With no `?id=`, the hub loads `list.functionSheets[0]` — **sheet 77, "Mehndi — Ahmed Raza"** — out
+of **17**. The vendor never chose it, and **there is no sheet picker anywhere on the screen**.
+
+The same pattern repeats on both screens the hub links to, and both also landed on sheet 77:
+
+| Route | Loads | Picker |
+|---|---|---|
+| `/dashboard/trade-ops` | sheet 77 | none |
+| `/dashboard/function-sheet-operations` | sheet 77 | none |
+| `/dashboard/function-sheet-sign` | sheet 77 | none |
+
+The third one is the problem. Two clicks from the hub — `Sign contract` → the signature screen —
+a vendor is looking at:
+
+> **Mehndi — Ahmed Raza** · Ahmed Raza & Sanam Ahmed · Rehman Grand Marquee
+> Grand total **Rs 1,092,200**
+> Vendor signature · Type / Draw · **[Sign as vendor]**
+> Customer signature · **[Generate signing link]**
+
+Both buttons are **enabled**. I did **not** click either — signing is an irreversible legal act
+and generating a link would send a real customer a signing request. But the exposure is plain: an
+arbitrary contract, selected by nothing but list order, one click from being signed.
+
+This is the same defect the function-sheet composer has (WWL-071/081), now on three more routes,
+one of which is a signature page.
+
+### WWL-210 (S2) — unsaved work is discarded silently, and the UI knows it
+
+Driven end to end:
+
+1. Added and filled a row under **Kitchen sheet** → amber dirty dot appears, sticky bar reads
+   **"Kitchen sheet · 1 row Unsaved"**.
+2. Switched to **Fleet plan** → Kitchen keeps its dot (per-trade tracking is correct), but the
+   Save button relabels to *"Save fleet plan"* and **disables**. Kitchen cannot be saved from here.
+3. Clicked a sidebar link.
+
+Result: navigated straight to `/dashboard/bookings`.
+`onbeforeunload` handler: **none**. `beforeunload` default-prevented: **false**. Confirm dialog:
+**none**. The Kitchen row was gone.
+
+The screen renders an "Unsaved" warning and a per-trade dirty dot — it is tracking the state — and
+then does nothing to protect it. On a surface of 9 trades × up to 4 sections, a vendor can enter a
+full kitchen plan, switch trade to check something, click away, and lose all of it without a
+prompt.
+
+### WWL-211 (S2) — save rebuilds the whole JSON column from the registry
+
+The captured payload confirms the mechanism: saving Fleet plan sent the **entire `carRentalJson`
+column**, rebuilt from `trade.sections` alone — all three section keys present, the two empty ones
+serialised as `[]`. `_rid` was correctly stripped, and **Kitchen's unsaved row was absent**,
+confirming that each save writes only its own column.
+
+```js
+for (const s of t.sections) obj[s.key] = (rows[active]?.[s.key] ?? []).map(stripRid)
+return FunctionSheetAPI.update(sheet.id, { [t.jsonField]: obj })
+```
+
+Any key stored in that column that the registry does not describe would be **silently dropped**.
+**I could not demonstrate the loss** — see WWL-213: every column is null in production, so there
+is nothing to destroy. Recorded as source-confirmed, with the captured payload as evidence of the
+wholesale rebuild rather than a reproduced data loss.
+
+### WWL-212 (S2) — two different screens are both called "Trade operations", and the hub is missing a trade
+
+The hub's own docstring calls it *"one renderer for every wedding trade"*. It registers **9**:
+Run sheet, Kitchen sheet, Bridal Wear, Decor setup, Fleet plan, Mehndi plan, Stationery, Makeup
+plan, Subcontracts. **Photography is not among them.**
+
+Photography lives on `/dashboard/function-sheet-operations`, which renders *"Photography
+operations — Shot list, crew and deliverables for this function sheet"* — and carries:
+
+| | Hub | The other screen |
+|---|---|---|
+| `<title>` | `Dashboard : Trade operations hub` | **`Dashboard : Trade operations`** |
+| Eyebrow | `Operate · Trade operations` | **`OPERATE · TRADE OPERATIONS`** |
+| Trades | 9 | 1 (Photographer) |
+
+And the hub's link to it is labelled **"Night-of operations"**, which describes neither a
+photography shot list nor the screen's own title. A vendor looking for the photographer's plan
+will not find it in the hub that claims to cover every trade, and the one link that reaches it is
+named after something else.
+
+### Findings S3 / S4
+
+| ID | Sev | Finding |
+|---|---|---|
+| **WWL-213** | S3 | **The entire surface is empty in production.** I fetched all **17** function sheets and checked all 9 trade columns on each: **not one is populated**. A 9-trade / 30-section / **134-column** editor, and nothing in the product writes those columns except manual entry on this one screen. This is the "portal feels empty" shape — a large built surface with no data path feeding it. |
+| **WWL-214** | S3 | **A load failure is indistinguishable from having no sheets.** `if (isError \|\| !sheet)` renders *"No function sheet — Create a function sheet first to plan its operations."* with **no Retry**. A vendor holding 17 sheets would be told they have none, and invited to create another. |
+| **WWL-215** | S3 | **Every load fetches twice.** Observed on the network: `function-sheets` (list) and `function-sheets/77` (detail) each fired **two** times for a single page load. |
+| **WWL-216** | S3 | **No validation on any of the 134 columns**, and every cell serialises as a **string** — `setCell` stores `e.target.value` verbatim, so a `type="number"` column round-trips as `"350"`, not `350`. Confirmed in source; the captured payload contained no numeric column to demonstrate it. |
+| **WWL-217** | S4 | **Inconsistent label casing across the registry**, visible when switching trades: sentence case in some trades (*"Setup item list"*, *"Run of show"*, *"Menu plan"*) and Title Case in others (*"Outfits by Function"*, *"Fitting & Alteration Schedule"*, *"Proof & Approval Tracker"*). |
+| **WWL-218** | S4 | **Four names for one screen**: `<title>` "Trade operations **hub**", `<h1>` "Trade operations", breadcrumb "**Trade Ops**", sidebar "Trade operations". |
+
+### Notable passes
+
+- **D17-015/017/018/019 PASS — the generic renderer works.** All **9** trades drive cleanly, producing exactly **30 sections** in total (4+4+3+3+3+3+3+4+3), each with its own icon, description, empty message and a tailored add-label (*Add space*, *Add cue*, *Add dish*, *Add stall*, *Add artist*, *Add proof*, *Add handover*…). `aria-current` tracks the active trade correctly.
+- **The section design is real domain work.** *"Prep & cooking timeline"*, *"Live counters & stalls"*, *"Design List (Per Person)"*, *"Artist Roster & Assignments"*, *"Proof & Approval Tracker"*, *"Deliverable & Handover Schedule"* — these are the actual working documents of Pakistani wedding trades, not generic CRUD.
+- **D17-034 PASS** — `Add row` creates a blank row with **select defaults already chosen** (`Mayun`, `Buffet`, `Mixed`, `Luxury sedan (dulha car)`, `Full floral decor`) and number fields carrying realistic placeholders (`350`, `400`).
+- **D17-031/032/033 PASS** — dirty tracking is genuinely per-trade: the dot appeared on Kitchen only, and the sticky bar reported *"Kitchen sheet · 1 row Unsaved"* then *"Fleet plan · 0 rows"* after switching.
+- **D17-042/045/046 PASS** — the payload carried only the active trade's column, stripped `_rid`, and serialised empty sections as `[]` rather than omitting them.
+- **D17-010 PASS** — `?trade=kitchen` opens directly on Kitchen sheet.
+- **D17-065 PASS** — the row delete carries `aria-label="Remove row"`.
+- **D17-068 PASS — and a false positive of mine, corrected.** My first pass flagged **33 clipped elements** at 360px. Re-measured against the scroll container: **0 of them are outside the trade switcher**, which is `overflow-x: auto` with `scrollWidth 1212 / clientWidth 328` — i.e. deliberately scrollable and fully reachable. The mobile layout is clean.
+- **D17-070/071/072 PASS** — per-cell labels render on mobile (5 for a 5-column row), the `Remove row` control is in view, and after scrolling to the bottom the `pb-24` padding clears the sticky bar: `lastInputHidden: false`.
+
+### Corrections to my own readings
+
+1. **"33 elements clipped at 360px"** — **wrong**. All 33 are inside the horizontally scrollable trade switcher and are reachable by scrolling it. Not reported.
+2. **"The sticky save bar covers the last row"** — **wrong**. I measured mid-page; after scrolling to the bottom, both the last input and the Remove button clear the bar.
+
+### Module 17 — status
+
+**86 cases written, 71 driven. 10 findings (4× S2, 4× S3, 2× S4).**
+
+Not driven, each with its reason:
+
+| Cases | Why |
+|---|---|
+| **D17-044 / D17-077 / D17-078 / D17-079** (orphan-key destruction) | **Nothing is stored to destroy** — all 9 columns are null on all 17 sheets (WWL-213). The mechanism is confirmed from source and from the captured wholesale-rebuild payload; the data loss itself is not reproducible on this vendor's data. |
+| **D17-009** (another vendor's sheet via `?id=`) | An authorisation probe against someone else's contract. Not run, consistent with the limit set in Module 9. |
+| **D17-053 write half** (`Sign as vendor`, `Generate signing link`) | Both are **enabled** on a contract the vendor never selected — which is the finding (WWL-209). Neither was clicked: one signs a real agreement irreversibly, the other sends a real customer a signing request. |
+| **D17-054** (the `/sign/<token>` lowercase-middleware problem) | Reaching it requires generating a real signing link. The page route itself (`/dashboard/function-sheet-sign`) is already lowercase and loads fine; the customer-facing token route remains as recorded in WWL-079/080. |
+| **D17-080/081** (two editors over `beoJson`) | The hub owns `beoJson` as its "Run sheet" trade, and the BEO/function-sheet screens also read it. With every column null, a cross-editor overwrite cannot be demonstrated — but the wholesale-rebuild mechanism (WWL-211) means it is the same risk. |
+| **D17-057/059** (error state and Retry) | Merged into WWL-214: there is no distinct error state to drive — `isError` and "no sheet" render the same thing, and no Retry exists. |
+
+**The module's verdict.** The renderer itself is good work — one config-driven editor covering 9
+trades and 134 columns, with per-trade dirty tracking, sensible defaults and genuine domain
+modelling of how Pakistani wedding trades actually plan a function. What surrounds it is unsafe:
+three screens that open an arbitrary customer's contract with no picker, one of which can sign it;
+unsaved work discarded without a prompt by a UI that is actively displaying an "Unsaved" badge; a
+save that rewrites a whole JSON column from a registry; and a sibling screen with almost the same
+name holding the one trade the hub forgot. And after all of it, the entire surface is empty in
+production.
