@@ -31,7 +31,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | # | Module | Route | Cases written | Status |
 |---|---|---|---|---|
 | 1 | Dashboard | `/dashboard` | ✅ 62 | **`[x]` COMPLETE — 60 run, 2 unrun, 18 findings** |
-| 2 | Today | `/dashboard/today` | — | `[ ]` |
+| 2 | Today | `/dashboard/today` | ✅ 58 | `[~]` in progress |
 | 3 | Lead inbox | `/dashboard/leads` | — | `[ ]` |
 | 4 | Bookings | `/dashboard/bookings` | — | `[ ]` |
 | 5 | Date holds | `/dashboard/date-holds` | — | `[ ]` |
@@ -904,3 +904,202 @@ rescopes) · D1-020 🔴 WWL-006 (other venues' customers shown under a single-v
 D1-021 ✅ (3 rapid switches, final state correct — no stale render)
 
 Plus 🔴 WWL-007 (switcher marks no active option) found during Section B.
+
+---
+
+# MODULE 2 — Today (`/dashboard/today`)
+
+**What this screen is.** The operational screen: what is happening on the floor *today*, who
+owes what on the day, and which day-of tasks are still open. Unlike the Dashboard (a summary a
+vendor reads), this is a screen a vendor *acts from* while an event is running. Two things
+therefore matter more here than anywhere else: **the date boundary must be correct in PKT**,
+and **a task marked done must stay done**.
+
+**Live inventory captured 2026-08-05** — h1 `Today — 05-Aug-2026`; 15 buttons (4 × `Timeline`,
+2 × `Run sheet`, `View timeline`, plus chrome); 5 tiles; 2 event rows; 8 nav links.
+
+**Tiles:** Events today `2` · Total tasks `0` · Open tasks `0` · Revenue today `Rs 1,612,250` ·
+Outstanding `Rs 12,292,729 to collect`.
+
+**Rows:** Waheed Jutt 12:00 `Rs 350,000` `Awaiting Payment` tasks 0 · Owais Siddiqui & Laiba
+Owais 13:00 `Rs 1,262,250` + `Rs 757,350 due` `Confirmed` tasks 0.
+
+**Two anomalies visible before testing:** Waheed's row shows no "due" line although he owes
+Rs 315,000, and `Outstanding` is the all-time receivables figure Module 1 proved understated
+(WWL-001/005) — on a screen titled *Today*.
+
+## A. Data correctness and cross-screen consistency
+
+- [ ] **D2-001** — `Events today = 2` must equal bookings dated today (PKT) per the API, and
+  must match the Dashboard's `Aaj ke events` (2), not its KPI tile (1).
+- [ ] **D2-002** — Both rows must be the correct bookings (179 Waheed, 166 Owais) with correct
+  venue attribution.
+- [ ] **D2-003** — `Revenue today Rs 1,612,250`: 350,000 + 1,262,250 = **booked totals**, not
+  money received today. Judge whether the label is defensible or misleading.
+- [ ] **D2-004** — Compute what was actually *received* today and quantify the gap.
+- [ ] **D2-005** — Waheed's row shows `Rs 350,000` and **no due line**; he owes Rs 315,000.
+  Determine why it is suppressed and whether it is status-driven.
+- [ ] **D2-006** — `Outstanding Rs 12,292,729` — confirm it is all-time, not today's.
+- [ ] **D2-007** — Confirm it inherits WWL-001 (excludes booking 170's Rs 1,159,500).
+- [ ] **D2-008** — `Total tasks 0` / `Open tasks 0` must match the tasks API.
+- [ ] **D2-009** — Row `TASKS` column must agree with the tiles.
+- [ ] **D2-010** — The two **cancelled** Waheed bookings (04-Aug, 12-Aug) must not leak in.
+- [ ] **D2-011** — Money formatting: separators, no `NaN`, no `Rs 0` standing for missing.
+
+## B. Date boundary — highest-risk area on this screen
+
+- [ ] **D2-012** — h1 `05-Aug-2026` must equal today in **PKT**, not UTC.
+- [ ] **D2-013** — An event at 00:30 PKT is 19:30 UTC the previous day; determine which side
+  the query uses. A UTC window would drop early-morning events.
+- [ ] **D2-014** — An event at 23:30 PKT (a normal barat) must still count as today.
+- [ ] **D2-015** — Must agree with `bookings/action-summary.today` (`2026-08-05`).
+- [ ] **D2-016** — Does the page recompute on date rollover, or is the date fixed at render?
+
+## C. Timeline dialog — full CRUD, the core of this module
+
+- [ ] **D2-017** — `Timeline` opens a dialog; capture title and every field.
+- [ ] **D2-018** — Enumerate all controls: `Add task`, `By person`, `By time`, `Cancel`,
+  `Print`, `Toggle done`; fields `What happens?`, `e.g. lead photographer`, `mins`, `Note`.
+- [ ] **D2-019** — **Create** a task with valid values → appears.
+- [ ] **D2-020** — **Hard-reload** → persists; row TASKS 0→1; `Total tasks` and `Open tasks`
+  both increment.
+- [ ] **D2-021** — **Toggle done** → hard-reload → persists; `Open tasks` decrements,
+  `Total tasks` unchanged.
+- [ ] **D2-022** — **Delete** → hard-reload → gone, counts back to 0 (also my cleanup path).
+- [ ] **D2-023** — Empty task name → Save blocked **with a stated reason**.
+- [ ] **D2-024** — `mins` = `-30` → rejected, not stored.
+- [ ] **D2-025** — `mins` = `banana` / `999999`.
+- [ ] **D2-026** — 500+ char task name → bounded, no layout break.
+- [ ] **D2-027** — Owner field length bound.
+- [ ] **D2-028** — `Note (optional)` genuinely optional; long note bounded.
+- [ ] **D2-029** — API rejection must surface the **server's** reason (WWL-019 class).
+- [ ] **D2-030** — `By person` / `By time` actually regroup, and mark active state accessibly.
+- [ ] **D2-031** — `Cancel` discards without saving — verified by hard reload.
+- [ ] **D2-032** — Escape and backdrop click close without saving.
+- [ ] **D2-033** — Opening for a *different* event must not carry the previous event's tasks
+  or draft state across.
+
+## D. Run sheet & View timeline
+
+- [ ] **D2-034** — `Run sheet` produces something real for the correct booking.
+- [ ] **D2-035** — Run sheet content matches the booking (customer, time, amount, venue).
+- [ ] **D2-036** — `Print` produces a print view without dashboard chrome.
+- [ ] **D2-037** — Header `View timeline` vs per-row `Timeline` — same or different?
+- [ ] **D2-038** — **4 `Timeline` buttons for 2 rows** — account for the extra two.
+
+## E. Venue scope
+
+- [ ] **D2-039** — Grand Marquee → only Waheed's 12:00 event (`Events today = 1`).
+- [ ] **D2-040** — Marquee Bahria → only Owais's 13:00 event.
+- [ ] **D2-041** — Banquet & Lawn → no events today; verify empty state.
+- [ ] **D2-042** — `Revenue today` and `Outstanding` must rescope (Dashboard failed this).
+- [ ] **D2-043** — Scope persists across hard reload.
+
+## F. Empty state
+
+- [ ] **D2-044** — No-events venue must say so, not render `Rs 0` as a real figure.
+- [ ] **D2-045** — Empty state offers a way forward.
+
+## G. Failure states
+
+- [ ] **D2-046** — Block today/tasks endpoints → error + Retry expected, `0 / Rs 0` feared.
+- [ ] **D2-047** — Does this module's API wrapper share the `catch { return null }` pattern?
+- [ ] **D2-048** — Does the matrix-listed `Retry` ever render?
+
+## H. Navigation
+
+- [ ] **D2-049** — Row / customer click opens the correct booking.
+- [ ] **D2-050** — All in-`main` links render real content.
+- [ ] **D2-051** — Back returns a fully rendered Today page.
+
+## I. Accessibility
+
+- [ ] **D2-052** — Do the 4 `Timeline` / 2 `Run sheet` buttons have distinguishing accessible
+  names, or is this WWL-012 again?
+- [ ] **D2-053** — Table header semantics and row/column association.
+- [ ] **D2-054** — Dialog traps focus, restores focus to opener, has an accessible name.
+- [ ] **D2-055** — Heading order not skipped.
+
+## J. Responsive
+
+- [ ] **D2-056** — 360px: no overflow; table scrolls in its own container, not clipped.
+- [ ] **D2-057** — 360px: `Timeline` / `Run sheet` remain reachable.
+- [ ] **D2-058** — Desktop 1536px: no overflow, zero covered controls.
+
+## Findings raised (Module 2)
+
+### 🔴 WWL-020 — S1 — On the day-of screen, a customer owing Rs 315,000 shows no amount due
+
+The endpoint returns two money fields per booking, and the UI's "due" line is driven by the
+**quotation builder**, not by the booking's real balance:
+
+| Booking | `totalAmount` | `orderGrand` | `orderBalance` | Row shows |
+|---|---:|---:|---:|---|
+| 179 Waheed Jutt · **12:00 today** | 350,000 | **null** | **null** | `Rs 350,000` — **no due line** |
+| 166 Owais Siddiqui · 13:00 today | 1,262,250 | 1,262,250 | 757,350 | `Rs 1,262,250` + `Rs 757,350 due` |
+
+Waheed genuinely owes **Rs 315,000** (350,000 − 35,000 down) — the Dashboard's own
+`Aaj ke events` and reminder panels both say so. The Today screen shows nothing, purely because
+nobody built a quotation for that booking (Module 1 confirmed its Quotation widget reads
+*"No items yet"*).
+
+This is the operational screen a vendor works from **while the event is running**. A guest
+arrives at 12:00 owing Rs 315,000 and the screen for that hour shows no balance to collect.
+The failure is silent and status-independent — it depends only on whether a quotation exists.
+
+### 🔴 WWL-021 — S2 — `Outstanding` on the "Today" screen is the all-time figure, and it's the understated one
+
+`Outstanding Rs 12,292,729 · to collect` is served by `analytics/receivables` — verified live:
+`receivablesHasBooking170: false`. So this screen:
+
+1. shows an **all-time** receivables total on a page titled *Today* (nothing about it is
+   today-scoped), and
+2. inherits **WWL-001** — it excludes booking 170's **Rs 1,159,500** entirely.
+
+Both defects ride on one tile.
+
+### 🔴 WWL-022 — S3 — Invalid task duration is silently discarded
+
+Entered `mins = -30` on a new task: no `aria-invalid`, no error, Save enabled. The task saved
+with **`durationMin: null`** — the value was neither stored nor rejected, just dropped, with no
+toast and no indication. The vendor believes they set a duration. (The `mins` input carries
+`min: ""` — the same unfloored-number pattern found across the portal.)
+
+### 🔴 WWL-023 — S3 — `Delete` on a timeline task has no confirmation
+
+One click permanently removes a run-of-show item — verified by deleting 7 tasks in sequence,
+each gone immediately with no confirm step. On a screen used *during* a live event, a mis-tap
+silently destroys part of the run sheet. `Toggle done`, `Edit` and `Delete` are three adjacent
+icon-only buttons per row.
+
+### ✅ Module 2 passes so far — the timeline engine is genuinely good
+
+- **D2-001/002 ✅** — `Events today = 2`, exactly bookings 179 and 166, correct venue
+  attribution (3358 Grand Marquee, 3360 Marquee Bahria). Matches the Dashboard's
+  `Aaj ke events` (2) — and therefore confirms the Dashboard KPI tile's `1` is the wrong one
+  (WWL-004).
+- **D2-010 ✅** — both cancelled Waheed bookings (04-Aug, 12-Aug) correctly excluded.
+- **D2-012/015 ✅** — endpoint `date` field is `2026-08-05` and matches PKT today.
+- **D2-019/020 ✅ — create + persist.** Seeded the `Generic event` template → 6 tasks with
+  times, durations and owners. **Hard reload**: `Total tasks` 0→**6**, `Open tasks` 0→**6**,
+  Waheed's row TASKS 0→**6**, Owais's stays **0**. API agreed exactly.
+- **D2-021 ✅ — toggle done persists.** Toggled one task → **hard reload** → `Total tasks`
+  stays **6**, `Open tasks` **6→5**, API shows `status: "done"` with `doneAt` set. Correct on
+  every counter.
+- **D2-022 ✅ — delete persists.** Deleted all 7 with API verification each round
+  (6→5→4→3→2→1→0), then hard-reloaded: tiles back to `0/0`, no residue.
+- **D2-023 ✅** — Save is correctly **disabled** while the task name is empty.
+- **D2-038 ✅ — not a bug.** The 4 `Timeline` buttons are 2 visible desktop + 2 hidden mobile
+  variants, standard responsive duplication.
+- **Template quality** — the seed templates are properly Pakistani: Mehndi, Nikah, Baraat,
+  Walima, Engagement, Dholki, Generic.
+
+### ⚠️ Accessibility note (D2-052)
+
+Both visible `Timeline` buttons share `aria-label="Manage timeline"` with no customer context;
+the hidden mobile variants have **no** accessible name at all. Inside the dialog, every task
+row exposes three identical icon-only buttons — `Toggle done` / `Edit` / `Delete` — with no
+indication of *which task* they act on. Same class as WWL-012.
+
+**Test data written and fully restored:** 7 timeline tasks created on booking 179 and all 7
+deleted; verified 0 remaining via API and a hard reload. No money rows. No customer contacted.
