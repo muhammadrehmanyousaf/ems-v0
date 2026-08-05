@@ -33,7 +33,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 1 | Dashboard | `/dashboard` | ✅ 62 | **`[x]` COMPLETE — 60 run, 2 unrun, 18 findings** |
 | 2 | Today | `/dashboard/today` | ✅ 58 | **`[x]` COMPLETE — 52 run, 6 not run, 11 findings** |
 | 3 | Lead inbox | `/dashboard/leads` | ✅ 61 | **`[x]` COMPLETE — 49 run, 12 not run, 5 findings** |
-| 4 | Bookings | `/dashboard/bookings` | — | `[ ]` |
+| 4 | Bookings | `/dashboard/bookings` | ✅ 60 | `[~]` in progress |
 | 5 | Date holds | `/dashboard/date-holds` | — | `[ ]` |
 | 6 | Function sheets | `/dashboard/function-sheets` | — | `[ ]` |
 | 7 | Customers | `/dashboard/customers` | — | `[ ]` |
@@ -1807,10 +1807,218 @@ no residue. Two Edit dialogs opened and cancelled without saving. One Convert di
 cancelled — **booking count verified unchanged at 25**. Venue scope restored to **All venues**.
 No money rows. No customer contacted.
 
-### ✅ Correction to my own measurement
+### ✅ Correction to my own measurement (Module 3)
 
 I first recorded "no toast, no feedback at all" on the failed save. **That was wrong** — my
 toast poll ran in a *separate* tool call after the click, so the toast had already
 auto-dismissed. Re-run with the click and poll in **one** execution context, the vendor clearly
 sees `Invalid contactEmail`. Same measurement trap I hit in Module 1; caught and corrected
 before it reached a finding.
+
+---
+
+# MODULE 4 — Bookings (`/dashboard/bookings`)
+
+**What this screen is.** The ledger. Every other money figure in the portal derives from these
+rows, so an error here propagates everywhere — Modules 1 and 2 produced five distinct money
+defects that all trace back to how a booking's `totalAmount`, `downPayment` and `paymentStatus`
+are read. It is also where a vendor edits a booking, making it the highest-risk write surface
+in the sweep.
+
+**Live inventory captured 2026-08-05** — h1 `Bookings`; **10 rows** in the `Active` view;
+41 buttons; a real **search box**; 10 row checkboxes; `Active`/`Archive` toggle; `Add booking`;
+`Export`; density toggle.
+
+**Tiles:** Total bookings `10` · Collected (shown) `Rs 3,342,938` · Due (shown)
+`Rs 11,176,762` · This month `6`.
+
+**Columns:** BOOKING · SPACE · CUSTOMER · DATE · AMOUNT · **PAID** · STATUS · PAYMENT.
+
+**Per-row controls (×10):** `Edit booking` · `Booking actions`.
+
+**Verified before writing cases — the arithmetic here is exact.** The API holds 25 bookings
+(Confirmed 7 · Awaiting Payment 2 · Pending 1 · Completed 12 · Cancelled 3). Excluding
+Completed and Cancelled leaves **10** = the Active view. Their `downPayment` sums to
+**Rs 3,342,938** = `Collected (shown)` exactly; their `totalAmount` sums to Rs 14,519,700, and
+`14,519,700 − 3,342,938 = 11,176,762` = `Due (shown)` exactly. The "(shown)" qualifier is
+honest labelling.
+
+**Noted before testing:** the `PAID` column shows Waheed Jutt at **Rs 35,000** — the exact down
+payment Receivables ignores (WWL-002). The ledger holds the right number; the derived screen is
+the wrong one.
+
+## A. Tile arithmetic and cross-module consistency
+
+- [ ] **D4-001** — `Total bookings 10` here vs the Dashboard's `Total bookings 25`: same label,
+  two numbers, because this one means *active only*. Judge the labelling.
+- [ ] **D4-002** — `Collected (shown)` = sum of `downPayment` across shown rows.
+- [ ] **D4-003** — `Due (shown)` = shown `totalAmount` − shown `downPayment`.
+- [ ] **D4-004** — `This month 6` = bookings dated in the current PKT month.
+- [ ] **D4-005** — `Archive` shows the remaining 15 and recomputes the tiles.
+- [ ] **D4-006** — Cancelled must be visually distinguishable from Completed in Archive.
+- [ ] **D4-007** — Row `AMOUNT` / `PAID` match the API per booking, including booking 170.
+- [ ] **D4-008** — `PAYMENT` chip must agree with `AMOUNT` vs `PAID`. **Booking 170 is the test
+  case**: flag says `Paid`, amounts say Rs 1,159,500 owed.
+- [ ] **D4-009** — Money formatting; no `Rs 0` standing in for missing.
+- [ ] **D4-010** — `BOOKING` column shows a venue for some rows and a **package name** for
+  others ("Gold — Barat Package"). Establish the rule.
+- [ ] **D4-011** — `SPACE` is `—` on all 10 rows. Real, or broken?
+
+## B. Venue scope
+
+- [ ] **D4-012** — Does the list rescope by venue (leads did, Today did not)?
+- [ ] **D4-013** — Do the tiles rescope with it?
+- [ ] **D4-014** — Scope persists across hard reload.
+
+## C. Search, filter, sort, selection
+
+- [ ] **D4-015** — Search by customer name returns the right rows.
+- [ ] **D4-016** — Search by booking id / venue / package.
+- [ ] **D4-017** — No-match search shows a proper empty state, not a blank table.
+- [ ] **D4-018** — Search is case- and whitespace-insensitive.
+- [ ] **D4-019** — Clearing search restores all rows.
+- [ ] **D4-020** — Column sorting where present; stable for ties.
+- [ ] **D4-021** — Row checkboxes select; is there a select-all?
+- [ ] **D4-022** — Bulk actions revealed by selection — enumerate and assess risk.
+- [ ] **D4-023** — Selection is correctly cleared by search / view switching.
+- [ ] **D4-024** — Density toggle changes rows and sets `aria-pressed`.
+
+## D. `Edit booking` — highest-risk write surface
+
+- [ ] **D4-025** — Enumerate every field and its prefill against the API.
+- [ ] **D4-026** — Are `totalAmount` / `downPayment` editable here?
+- [ ] **D4-027** — Hostile money: negative total, negative paid.
+- [ ] **D4-028** — **Paid greater than total** — negative balance? Guarded downstream?
+- [ ] **D4-029** — Rs 0 total (the documented zero-price hole).
+- [ ] **D4-030** — Past date, and a date colliding with another booking.
+- [ ] **D4-031** — Status change via Edit vs via the actions menu — do they agree?
+- [ ] **D4-032** — Save → **hard reload** → persisted; then **restore the original**.
+- [ ] **D4-033** — Cancel discards; verified by hard reload.
+- [ ] **D4-034** — Editing must not clear fields the dialog does not display.
+- [ ] **D4-035** — Opening Edit for a second booking must not carry the first's values.
+- [ ] **D4-036** — Error path surfaces the server's reason.
+
+## E. `Booking actions` menu (×10)
+
+> **Deliberate limit:** enumerate and validate, but **do not** record a payment, cancel a real
+> booking, or change a status that moves money on a live vendor's ledger.
+
+- [ ] **D4-037** — Enumerate every item.
+- [ ] **D4-038** — Status transitions offered vs the backend state machine.
+- [ ] **D4-039** — Cancel booking: confirmation, reason captured, irreversibility stated.
+- [ ] **D4-040** — Record payment, if present — amount validation.
+- [ ] **D4-041** — Every destructive action confirms (WWL-023 class).
+- [ ] **D4-042** — Actions on an already-Cancelled booking blocked or hidden.
+
+## F. `Add booking`
+
+- [ ] **D4-043** — Same dialog as lead conversion? Does it capture an amount here?
+- [ ] **D4-044** — If not, confirm the Rs 0 hole from this entry point too (WWL-034 was the
+  lead path).
+- [ ] **D4-045** — Required-field gating with stated reasons.
+- [ ] **D4-046** — Cancel writes nothing (API count before/after).
+
+## G. Navigation
+
+- [ ] **D4-047** — Row opens the correct booking detail.
+- [ ] **D4-048** — Booking 170's detail shows its balance correctly from this entry point.
+- [ ] **D4-049** — `Function Sheets` / `Sign contract` / `Trade operations` links render.
+- [ ] **D4-050** — Back returns a fully rendered list with the same view and scope.
+- [ ] **D4-051** — `?bucket=completed` deep link lands on Archive.
+
+## H. Export
+
+- [ ] **D4-052** — Row count and columns match what is shown.
+- [ ] **D4-053** — Money columns exported machine-readable.
+- [ ] **D4-054** — Export respects the Active/Archive view.
+
+## I. Failure states
+
+- [ ] **D4-055** — Block the bookings endpoint → error + Retry, not `0 / Rs 0`.
+- [ ] **D4-056** — Tiles must not show stale values above an errored table.
+
+## J. Accessibility and responsive
+
+- [ ] **D4-057** — 20 row-action buttons: distinguishing names, or WWL-035 again?
+- [ ] **D4-058** — Table semantics; each row checkbox has an accessible name.
+- [ ] **D4-059** — 360px: no overflow; the 8-column table scrolls in its own container.
+- [ ] **D4-060** — Desktop: no overflow, zero covered controls.
+
+## Findings raised (Module 4)
+
+### 🔴 WWL-036 — S1 — Three cancelled bookings are invisible in the entire Bookings module
+
+| View | Rows | Statuses present |
+|---|---:|---|
+| `Active` | **10** | Confirmed, Awaiting Payment, Pending |
+| `Archive` | **12** | **`Completed` only** — `anyRowSaysCancelled: false` |
+| **Total visible** | **22** | |
+| **API holds** | **25** | |
+
+The three missing records are real bookings with real money:
+
+| id | Customer | Date | Value |
+|---|---|---|---:|
+| 178 | Waheed Jutt | 2026-08-12 | Rs 762,650 |
+| 177 | Waheed Jutt | 2026-08-04 | Rs 350,000 |
+| 175 | Usman Tariq & Hira Usman | 2026-05-06 | Rs 2,742,400 |
+
+Verified by signature: none of `762,650`, `350,000` or `2,742,400` appears in any Archive row.
+There is no third view, no status filter, and `Archive` — the one place a vendor would look for
+a cancelled event — contains only Completed ones.
+
+**The pairing with WWL-008 is the real problem.** These same three cancelled bookings **are**
+included in the Dashboard's profit board, where Usman Tariq ranks **#1 most profitable event at
+100% margin** on Rs 0 received. So a cancelled wedding is:
+
+- **invisible** on the screen where a vendor would manage or review it, and
+- **counted** on the screen where it corrupts revenue, outstanding and profit.
+
+Exactly backwards.
+
+### 🔴 WWL-037 — S1 — A single ledger row contradicts itself: `Rs 1,546,000` / `Rs 386,500` / **`Paid`**
+
+Booking 170 (Imran Shafi & Hafsa Imran), read straight off the Archive table:
+
+> `Rehman Grand Marquee | — | Imran Shafi & Hafsa Imran | 09-Sept-2026 |`
+> **`Rs 1,546,000`** `|` **`Rs 386,500`** `|` `Completed |` **`Paid`**
+
+The row prints the amount and the amount paid **side by side** — `1,546,000 − 386,500 =
+Rs 1,159,500 still owed` — and then chips it **`Paid`**. Both facts are on one line,
+contradicting each other.
+
+This is the root record behind **WWL-001** (Rs 1,159,500 missing from Receivables) and
+**WWL-005** (Revenue collected overstated by Rs 1,124,500), now visible in its rawest form.
+
+**The chip logic itself is sound** — other rows prove it:
+
+- `Zeeshan Akram · Rs 1,439,150 / Rs 1,223,278 → Partial` ✅ correct
+- `Junaid Farooq · Rs 1,464,500 / Rs 1,464,500 → Paid` ✅ correct
+
+So the chip is rendered from the stored `paymentStatus` flag rather than derived from the two
+amounts it is displayed next to. One bad flag on one record then propagates into every derived
+screen. **Deriving the chip from `total − paid` would have made this record self-correcting
+and would fix WWL-001/005 at the same time.**
+
+### ✅ D4-002/003 — the tile arithmetic is exact and honestly labelled
+
+Active view, verified against the API:
+
+- `Collected (shown) Rs 3,342,938` = sum of `downPayment` across the 10 active bookings —
+  **exact**.
+- Active `totalAmount` = Rs 14,519,700; `14,519,700 − 3,342,938 = 11,176,762` =
+  `Due (shown)` — **exact**.
+- The **"(shown)"** qualifier is doing real work: it tells the vendor these totals cover the
+  current view only. That is the honest labelling missing from the Dashboard's tiles.
+
+### ⚠️ WWL-038 — S3 — "Total bookings" means two different things on two screens
+
+| Screen | Label | Value | Means |
+|---|---|---:|---|
+| Dashboard | `Total bookings` | **25** | every booking incl. cancelled |
+| Bookings (Active) | `Total bookings` | **10** | active only |
+| Bookings (Archive) | `Total bookings` | **12** | completed only |
+
+Three different numbers under one label, none of them qualified as "active" or "completed".
+A vendor comparing the two screens has no way to reconcile 10 against 25 — especially since
+neither view can show the 3 that make up the difference (WWL-036).
