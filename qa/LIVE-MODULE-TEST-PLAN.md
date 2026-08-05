@@ -34,7 +34,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 2 | Today | `/dashboard/today` | ✅ 58 | **`[x]` COMPLETE — 52 run, 6 not run, 11 findings** |
 | 3 | Lead inbox | `/dashboard/leads` | ✅ 61 | **`[x]` COMPLETE — 49 run, 12 not run, 5 findings** |
 | 4 | Bookings | `/dashboard/bookings` | ✅ 60 | **`[x]` COMPLETE — 57 run, 3 not run, 21 findings** |
-| 5 | Date holds | `/dashboard/date-holds` | ✅ 52 | `[~]` in progress |
+| 5 | Date holds | `/dashboard/holds` | ✅ 52 | **`[x]` COMPLETE — 48 run, 4 not run, 14 findings** |
 | 6 | Function sheets | `/dashboard/function-sheets` | — | `[ ]` |
 | 7 | Customers | `/dashboard/customers` | — | `[ ]` |
 | 8 | Calendar | `/dashboard/calendar` | — | `[ ]` |
@@ -2914,3 +2914,313 @@ the feature is decorative.
 - [ ] **D5-050** — Keyboard: dialog traps focus, Escape closes, `Hold date` reachable by Tab.
 - [ ] **D5-051** — 360px: dialog fits, the 2-column grid collapses, no overflow.
 - [ ] **D5-052** — Desktop: no overflow; `max-w-3xl` centring does not strand the action.
+
+---
+
+## MODULE 5 — RESULTS
+
+**Test rows created and destroyed:** 5 holds (ids 107, 108, 110, 111, plus one for the venue
+switch test). **All released; cleanup verified** by querying `/api/v1/vendor-holds` with no
+param and with `businessId` = 3358 / 3359 / 3360 — **0 holds on every one** — and the UI back
+to `No active holds`. Scope restored to `All venues`.
+
+### 🔴🔴 WWL-057 — S1 — Availability does not know about bookings **at all**
+
+`GET /api/v1/bookings/availability?businessIds=3358&month=…` is the endpoint that decides
+whether a date can be sold. Queried for three months:
+
+| Month | Real bookings at venue 3358 | `availability` returned |
+|---|---|---|
+| **2026-09** | booking 170 — 09-Sept, Rs 1,546,000, `Completed` | **`{}` — empty** |
+| **2026-10** | booking 173 — 22-Oct, Rs 1,673,250, `Awaiting Payment` | **`{}` — empty** |
+| **2027-12** | none | one entry — and only because a **hold** existed |
+
+The map contains **only holds and manually-blocked dates**. Confirmed, paid, in-progress
+bookings produce no availability entry whatsoever. A month with a Rs 1.5M confirmed wedding in
+it comes back as an empty object — indistinguishable from a month with nothing booked.
+
+### 🔴🔴 WWL-058 — S1 — Holds and availability speak two different languages, so nothing is ever subtracted
+
+Even for the dates availability *does* track, the held slot is never removed from the available
+ones. Raw response for the hold placed on 25-Dec-2027:
+
+```json
+"2027-12-25": {
+  "bookedSlots": ["Mehndi"],
+  "heldSlots":   ["Mehndi"],
+  "heldSlotsExpiry": { "Mehndi": "2026-08-07T18:32:43.615Z" },
+  "availableSlots": ["09:00", "14:00", "18:00"]
+}
+```
+
+Held **`"Mehndi"`**. Still available: **`"09:00"`, `"14:00"`, `"18:00"`**.
+
+Two incompatible vocabularies are in use for the same concept:
+
+| Where | Slot vocabulary |
+|---|---|
+| `HOLD_SLOT_PRESETS` (hold dialog) | `Morning`, `Afternoon`, `Evening`, `Full day`, **`Mehndi`, `Baraat`, `Walima`** |
+| `bookedSlots` / `heldSlots` | the same **names** |
+| `availableSlots` | **clock times** — `09:00`, `14:00`, `18:00` |
+| `Add booking` → Time Slot | **clock times** — `09:00` / `14:00` / `18:00` |
+
+`"Mehndi"` can never equal `"18:00"`. `"Evening"` can never equal `"18:00"` either — verified
+on 2026-08-13, where `heldSlots: ["Evening"]` sat next to `availableSlots` still listing all
+three times. **No named slot can ever match a clock slot, so the subtraction never happens.**
+
+Combined with WWL-057, the consequence is total: **`availableSlots` returns all three slots,
+for every date, forever.** The venue can never be shown as unavailable — not by a booking, not
+by a hold. `urgency.remaining` says `2` on a date already sold for Rs 1.88M.
+
+This is the root cause behind the whole module being decorative. It is one seam, and both
+sides of it are already written.
+
+### 🔴 WWL-059 — S2 — A hold is invisible everywhere except its own screen
+
+Placed a hold on **13-Aug-2026 · Evening** at venue 3358, then went looking for it:
+
+| Surface | Shows the hold? |
+|---|---|
+| `/dashboard/holds` | yes — the only place |
+| **`/dashboard/calendar`** (Aug 2026) | **no** — the word "hold" appears exactly once on the entire page, as the sidebar nav link. Day 13 shows `2 · Danish Qureshi · Muhammad Rehman Yousaf` and nothing else |
+| **`Add booking` date picker** | **no** — 13-Aug renders enabled, unmarked, `aria-label` "Thursday, August 13th, 2026", indistinguishable from any free day. `anyHoldMarkerInGrid: false` |
+
+The module's own page header reads `CALENDAR / Date holds` and its description says a hold is
+"a tentative reservation **on your calendar**". The calendar has no concept of it.
+
+The `Add booking` picker's only disabled days in August were 1–4 — i.e. it knows about *past*
+and nothing else. Not holds, not the two confirmed bookings already on the 13th.
+
+### 🔴 WWL-060 — S2 — A date that already has a confirmed booking can be held, with no warning
+
+Placed a hold on **13-Aug-2026 · Evening at business 3358**. That exact date and venue already
+carries **booking 167 — Danish Qureshi & Aiman Danish, `Confirmed`, Rs 1,877,750**.
+
+Accepted silently. No warning, no confirmation step, no note on the created row. The vendor
+now has a "hold" telling them a date is theirs to sell, on an evening already committed to a
+Rs 1.88M wedding.
+
+### 🔴 WWL-061 — S2 — Holds can be placed on dates that have already passed
+
+Today is **05-Aug-2026**. Typed `2026-08-01` into the date field and submitted:
+
+| | |
+|---|---|
+| Native validity | `rangeUnderflow: true` — the browser knows it is invalid |
+| `Hold date` button | **enabled** |
+| Result | toast **"Date held"**, row `id 107, holdDate 2026-08-01` |
+| Row in the list | `01-Aug-2026 · Baraat` · **`Expires 07 Aug, 11:31 pm`** |
+
+The `min` attribute only constrains the picker; typing bypasses it, the dialog is not a
+`<form>` so native validation never runs on submit, `canSave` checks only for non-emptiness,
+and the server has no past-date check either.
+
+The result is self-evidently wrong: **the system held a date four days in the past, and will
+keep holding it until two days in the future.** It also sorts to the **top** of the list,
+above genuine future holds.
+
+### ⚠️ WWL-062 — S3 — The date floor is computed in UTC on a UTC+5 product
+
+`hold-date-dialog.tsx` derives both the default value and the `min` floor from:
+
+```js
+const today = () => new Date().toISOString().slice(0, 10)
+```
+
+`toISOString()` is **UTC**. Pakistan is **UTC+5**. Between **00:00 and 04:59 PKT** the UTC date
+is still yesterday, so `today()` returns yesterday's date — and the dialog will both **default
+to** and **permit** a date that is already in the past for the vendor using it.
+
+Measured live at 23:29 PKT: `utcSlice` = `2026-08-05`, PKT date = `2026-08-05` — they agree
+*outside* the window, which is why this does not show up in ordinary testing. The divergence
+window is the five hours after midnight — exactly when an expo wraps up or a baraat ends,
+which is the stated use case ("even offline at an expo").
+
+The fix is the one already used in `bookingTimelineController.js`: resolve the date in
+`Asia/Karachi`, not UTC. Rated S3 rather than S2 only because WWL-061 means past dates are
+accepted anyway — fixing that one makes this one matter more, not less.
+
+### 🔴 WWL-063 — S2 — `Release` destroys a hold on one click: no confirm, no undo
+
+`onClick={() => releaseMut.mutate(h.id)}` — fired directly. Verified live with `window.confirm`
+instrumented and a check for Radix alert dialogs:
+
+| | |
+|---|---|
+| `window.confirm` calls | **0** |
+| `[role=alertdialog]` rendered | **0** |
+| Result | row gone from the API immediately; hard reload confirms |
+| Undo offered | **none** — `showSuccessToast("Hold released")` is called without an undo handler |
+
+One misclick on a row-level button permanently frees a date the vendor was holding for a
+customer, and there is no way back. Same class as WWL-023.
+
+### ⚠️ WWL-064 — S3 — A raw Postgres error is shown to the vendor as the error message
+
+Submitted a 500-character custom slot. The toast read, verbatim:
+
+> **`Value too long for type character varying(255)`**
+
+That leaks the database engine and the exact column definition, and tells the vendor nothing
+they can act on. There is no `maxLength` on the input, no character counter, and no
+client-side length check — the only feedback is the database's own complaint.
+
+Handled correctly otherwise: the write failed atomically (no row created), and the dialog
+stayed open with the text preserved so it could be shortened.
+
+Same root as `ems_registration_500_rootcause` (VARCHAR(255) overflow), surfacing here as a
+leaked message rather than a 500.
+
+### ⚠️ WWL-065 — S3 — The 48-hour TTL is never disclosed, and the expiry line omits the year
+
+Measured from the API: `createdAt 2026-08-05T18:31:04.843Z` → `expiresAt 2026-08-07T18:31:04.837Z`
+= **exactly 48 hours**.
+
+The dialog says only "It expires on its own if you don't confirm a booking" — never how long.
+A vendor telling a customer "I've held the date for you" has no idea they have two days.
+
+Worse, the row renders the expiry **without a year** while the hold date **has** one:
+
+```
+25-Dec-2027 · Mehndi
+Expires 07 Aug, 11:32 pm
+```
+
+A hold on a date 16 months out, expiring in 48 hours, displayed as "Expires 07 Aug" — which
+reads naturally as *August 2027*, i.e. months of protection. The two most important numbers on
+the row are formatted so that they invite exactly the wrong reading.
+
+### ⚠️ WWL-066 — S3 — Neither field in the dialog has an accessible name
+
+Both labels are bare `<label>` elements with no association to their controls:
+
+```html
+<label class="text-xs font-medium text-muted-foreground">Date</label>
+<label class="text-xs font-medium text-muted-foreground">Slot</label>
+```
+
+Measured: `dateAccessibleName: null`, `slotAccessibleName: null`. No `for`, no `id` on the
+inputs, no wrapping, no `aria-label`, no `aria-labelledby`. In a two-field dialog where both
+fields are required, that is the entire form unlabelled to a screen reader.
+
+### ⚠️ WWL-067 — S3 — On "All venues" the hold silently lands on the first venue
+
+`place()` sends `businessId: activeBusinessId ?? undefined`. With **All venues** selected that
+is `undefined`, and the dialog has **no venue field at all**.
+
+Every hold created this way came back as **`businessId: 3358`** — Rehman Grand Marquee, the
+first of three. The vendor was never asked and never told. On a 3-venue account, a hold
+intended for Bahria silently lands on Johar Town.
+
+The fix is small: the dialog should either show a venue selector, or inherit the switcher's
+scope and *state which venue* it is holding.
+
+### ⚠️ WWL-068 — S3 — "Hold a date for a lead" cannot record which lead
+
+The module description is "Tentatively hold a date **for a lead**". The dialog captures date
+and slot only — no lead, no customer, no name, no note. With two holds on the same date (which
+is supported — see D5-032), the list reads:
+
+```
+25-Dec-2027 · Mehndi
+25-Dec-2027 · Baraat
+```
+
+Nothing distinguishes whose wedding either one is being held for, and nothing links back to
+the enquiry that prompted it.
+
+### ⚠️ WWL-069 — S3 — Double-clicking `Release` fires two DELETEs
+
+`disabled={releaseMut.isPending}` does not survive a real double-click — the second click
+lands before React re-renders. Instrumented and measured:
+
+```
+DELETE /api/v1/vendor-holds/107
+DELETE /api/v1/vendor-holds/107
+```
+
+Outcome was correct here because DELETE is idempotent, and the final state was right. Recorded
+because the same guard pattern on a non-idempotent action would double-fire.
+
+### ⚠️ WWL-070 — S4 — Test residue is blocking a real date on live production
+
+Not created by this sweep — found while reading availability:
+
+```json
+"2026-08-06": { "isBlocked": true, "blockReason": "[QA] duplicate test",
+                "availableSlots": [], "urgency": { "capacity": 3, "used": 3, "remaining": 0 } }
+```
+
+**6-Aug-2026 — tomorrow — is fully blocked at Rehman Grand Marquee by a row labelled
+`[QA] duplicate test`.** Capacity reads 3/3 used, 0 remaining. Left from earlier QA and never
+cleaned up. Flagged rather than deleted: removing an availability block is a live mutation
+outside this module's scope.
+
+---
+
+### ✅ Module 5 passes
+
+- **D5-001 / D5-002** — empty state reads `No active holds` (not the stale "aren't enabled for
+  your account yet" the source comments describe), and **both** `Hold a date` buttons — page
+  header and empty state — open the same dialog. Both driven.
+- **D5-003** — the `Pick a business first` branch is **effectively dead**. It triggers on
+  `isError`, but `GET /api/v1/vendor-holds` with no `businessId` returns **200** with
+  `{"holds": []}`. On All venues the vendor gets the empty state, never that message.
+- **D5-004 / D5-005 / D5-006** — scoping verified by driving the real switcher:
+
+  | Action | Result |
+  |---|---|
+  | Hold created on 11-Nov-2027, switcher on `All venues` | lands on 3358 |
+  | Switch to **Rehman Banquet & Lawn (3359)** | list empties, `No active holds` ✔ |
+  | Switch back to **Rehman Grand Marquee (3358)** | `11-Nov-2027 · Evening` returns ✔ |
+  | `All venues` roll-up | shows holds from the member venues ✔ |
+
+- **D5-016 / D5-017** — **better than the Bookings dialog.** Choosing `Custom…` clears the
+  slot, **disables** `Hold date`, and renders a `role="status"` hint reading exactly
+  *"Add a date and a time to save."* This is the `FormBlockedHint` pattern done right — worth
+  copying to `Add Offline Booking`, which leaves its button enabled with no hint.
+- **D5-019** — a whitespace-only custom slot keeps the button disabled and the hint visible.
+  The `.trim()` guard works.
+- **D5-021 / D5-022** — hostile input round-trips **intact and inert**. Stored and re-rendered
+  as literal text: `بارات 🎉 <script>alert(1)</script> '; DROP TABLE bookings;--`.
+  Urdu and emoji survive exactly; `document.querySelectorAll('ul script').length === 0`; no
+  alert fired. React escaping is doing its job.
+- **D5-023** — the dialog reopens clean: after saving `2026-08-01 / Baraat`, the next open
+  showed `2026-08-05 / Evening`. No carry-over.
+- **D5-025 / D5-050** — Escape closes the dialog and writes nothing (hold count unchanged).
+- **D5-027 / D5-043** — both creation and release survive a hard reload, verified against the
+  API each time.
+- **D5-030 / D5-031** — **idempotency is genuinely well built.** Re-placing the identical
+  date+slot produced the toast **`Hold extended`** (not "Date held"), created **no** duplicate
+  row, and moved `expiresAt` forward from `18:32:07.212Z` to `18:32:43.615Z` — the extension
+  is real, not cosmetic.
+- **D5-032** — a different slot on the same date is allowed. 25-Dec-2027 held for both
+  `Mehndi` and a second slot simultaneously. Correct: a venue does run mehndi and baraat on
+  one day.
+- **D5-033** — ordered by `holdDate` ascending, which is the right primary sort. (Ties within
+  a date fall in an unspecified order.)
+- **D5-042 / D5-045** — release removes the row with toast `Hold released`, and releasing the
+  last hold returns the proper empty state rather than a blank panel.
+- **D5-051 / D5-052** — 360px is clean: `scrollWidth === clientWidth === 345`, **zero**
+  overflowing elements, dialog spans 0→345 exactly, the 2-column grid collapses to one
+  295.2px column, and both buttons render full-width (295×36) fully inside the viewport.
+  Desktop likewise no overflow.
+
+### Module 5 — status
+
+**52 cases written, 48 driven. 14 findings (2 × S1, 5 × S2).**
+
+Not driven, with reasons:
+
+| Case | Why |
+|---|---|
+| **D5-008 / D5-009** | The list-failure + `Try again` path. Same component pattern as D4-055, which was driven and passed; not re-injected here. |
+| **D5-040** | The two-context race on the "race-safe slot guard" needs two authenticated sessions in parallel — not available in this harness. The single-session idempotency half was driven (D5-030) and passes. |
+| **D5-048** | `OutboxStatus` / `OutboxConflicts` render with the outbox flag dark; exercising a real offline→reconnect conflict needs the flag on. |
+
+**The module's verdict:** every individual interaction works. Creation, extension, scoping,
+release, persistence, input safety and responsive layout are all correct — several of them
+better built than equivalents elsewhere in the portal. But WWL-057 and WWL-058 mean the thing
+the module exists to do — stop a held date being sold twice — **does not happen**. The hold is
+written to a table, listed on one screen, and expires 48 hours later having influenced
+nothing.
