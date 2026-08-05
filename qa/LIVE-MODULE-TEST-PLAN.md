@@ -44,7 +44,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 12 | Receipts | `/dashboard/receipts` | ✅ 92 | **`[x]` COMPLETE — 83 run, 9 not run, 17 findings** |
 | 13 | Cheque ledger | `/dashboard/pdcs` | ✅ 88 | **`[x]` COMPLETE — 78 run, 10 not run, 16 findings** |
 | 14 | Expenses | `/dashboard/expenses` | ✅ 104 | **`[x]` COMPLETE — 89 run, 15 not run, 14 findings** |
-| 15 | Tax report | `/dashboard/tax` | ✅ 72 | `[ ]` IN PROGRESS |
+| 15 | Tax report | `/dashboard/tax` | ✅ 72 | **`[x]` COMPLETE — 61 run, 11 not run, 10 findings** |
 | 16 | Reports | `/dashboard/reports` | — | `[ ]` |
 | 17 | Trade operations | `/dashboard/trade-ops` | — | `[ ]` |
 | 18 | Automation | `/dashboard/automation` | — | `[ ]` |
@@ -7171,3 +7171,129 @@ whole in each vendor's tax return.
 | D15-070 | Is the current (incomplete) month flagged as partial? | |
 | D15-071 | Rounding — `_round` on the backend, any drift vs source ledgers? | |
 | D15-072 | Nothing on this screen writes | read-only confirmation |
+
+## MODULE 15 — EXECUTION RESULTS
+
+Read-only screen; nothing was written. The story here is unusually clean: **the backend does
+everything correctly and the frontend renders a fraction of it.**
+
+### WWL-189 (S2) — `Export PDF` is a dead button, and it is the only way out of this screen
+
+Clicked on live production. Measured either side:
+
+| | |
+|---|---|
+| New network requests | **0** |
+| Downloads / blobs created | **0** |
+| Toasts | **0** |
+| URL | unchanged |
+| `onclick` | `false`, `type="submit"`, not inside a `<form>` or `<a>` |
+
+Meanwhile the endpoint it should call **works perfectly**:
+
+```
+GET /api/v1/tax/annual-report.pdf?year=2026&basis=fiscal
+→ 200 · application/pdf · 3,056 bytes · magic "%PDF-1.3"
+```
+
+`lib/api/tax.ts` exposes two PDF helpers. The capability is built, the button is rendered, and
+they were never connected. There is **no `ExportMenu`, no print action and no CSV** on this
+screen, so a vendor cannot get their tax report out of the portal at all — while the route's own
+metadata promises *"One-click PDF export for your accountant."*
+
+### WWL-190 (S2) — the tax report silently ignores the venue switcher
+
+Driven through all four selections in the live UI:
+
+| Switcher shows | Gross revenue | Expenses | Net P&L |
+|---|---|---|---|
+| Rehman Banquet & Lawn | Rs 14,349,700 | Rs 4,869,700 | Rs 9,480,000 |
+| Rehman Grand Marquee | Rs 14,349,700 | Rs 4,869,700 | Rs 9,480,000 |
+| Rehman Marquee Bahria | Rs 14,349,700 | Rs 4,869,700 | Rs 9,480,000 |
+| All venues | Rs 14,349,700 | Rs 4,869,700 | Rs 9,480,000 |
+
+All four requests were byte-identical — `tax/annual-report?year=2026&basis=fiscal`, **no
+`businessId`**. The cause is one missing line: `/api/v1/tax` is absent from
+`BUSINESS_SCOPED_PREFIXES` in `lib/axiosConfig.js`, where every other money path is listed.
+
+The backend is not at fault — it scopes correctly and partitions exactly:
+
+| Venue | Revenue | Expenses |
+|---|---|---|
+| 3358 Grand Marquee | 4,888,250 | 1,690,500 |
+| 3359 Banquet & Lawn | 7,268,550 | 1,827,700 |
+| 3360 Marquee Bahria | 2,192,900 | 1,351,500 |
+| **Σ** | **14,349,700** ✓ | **4,869,700** ✓ |
+
+So a vendor who selects "Rehman Grand Marquee" reads **Rs 14,349,700** and will reasonably take
+it as that venue's revenue. It is three times too high — on the document they hand to an
+accountant.
+
+Worth noting the contrast: `taxReportController._buildReport` **ANDs** `_vendorBookingWhere(user)`
+with the venue narrowing rather than replacing it — exactly the fix `getReceivables` needs
+(WWL-129). The backend got the hard part right; the frontend never asks.
+
+### WWL-191 (S2) — the year you actually file is unreachable
+
+`const year = new Date().getFullYear()` with **no year picker anywhere** — the only controls on
+the page are app chrome and the dead `Export PDF`.
+
+Today is 6 Aug 2026, so the screen shows **Fiscal 2026-27**, which began five weeks ago. The
+fiscal year a Pakistani vendor is filing right now is **2025-26**, and the API returns it
+correctly on request:
+
+| Period | Revenue | Expenses | Net |
+|---|---|---|---|
+| Fiscal **2026-27** (shown) | 14,349,700 | 4,869,700 | **9,480,000** |
+| Fiscal **2025-26** (unreachable) | 14,524,500 | 11,962,300 | **2,562,200** |
+| Calendar 2026 (unreachable) | 28,874,200 | 16,832,000 | 12,042,200 |
+
+The net figures differ by a factor of nearly four. The API also accepts `basis=calendar`, which
+the UI never offers.
+
+### Findings S3 / S4
+
+| ID | Sev | Finding |
+|---|---|---|
+| **WWL-192** | S3 | **The report never states its own period.** The API returns `period.label: "Fiscal 2026-27 (1 Jul 2026 – 30 Jun 2027)"` on every response and the screen renders none of it — no heading, no subtitle, no range. The only clue is the month rows. A report handed to an accountant with no stated period is not a document. This is an unrendered field, not a missing capability. |
+| **WWL-193** | S3 | **The revenue basis is correct but undisclosed.** Verified exactly: the report counts **Confirmed + Completed only** — 7 + 3 bookings summing to **Rs 14,349,700**, matching to the rupee. It therefore **excludes Rs 4,619,650** of `Pending` and `Awaiting Payment` business, and **includes** confirmed-but-unpaid bookings. That is a defensible accrual position and the controller documents it, but nothing on screen tells the accountant which bookings are in or out. |
+| **WWL-194** | S3 | **`FBR submitted: Rs 0` is unexplained and will always read zero.** The FBR/PRA adapter is a noop pending a PRA sandbox token, so the card is structurally Rs 0. No tooltip, no "not configured" state — a vendor reading it would conclude they have filed nothing, which is a different claim from "this feature is not switched on". |
+| **WWL-195** | S3 | **The monthly table has no Net column**, so per-month profitability — the reason to break a year into months — must be done by hand. There is also no drill-through from a month to its bookings or expenses, and no `basis` selector. |
+| **WWL-196** | S3 | **Table a11y, sixth module unchanged.** 0 of 4 `<th>` carry `scope` and there is no `<caption>`. |
+| **WWL-197** | S4 | **Mobile month cards run two money figures together, unlabelled** — `Rs 2,903,650Rs 2,718,100` with no separator and no indication which is revenue and which is expenses. The WWL-122 pattern. |
+| **WWL-198** | S4 | **Three labels for one screen**: sidebar **"Tax report"**, breadcrumb **"Tax"**, heading **"Tax & P&L"**. |
+
+### Notable passes
+
+- **D15-002 PASS** — `Dashboard : Tax report`.
+- **D15-009/010 PASS — the FBR fiscal year is right.** Rows run **Jul 2026 → Jun 2027**, not Jan–Dec, and every label carries its year (`Jul 2026`, …, `Jun 2027`), so the fiscal-year boundary is unambiguous.
+- **D15-011/012/013 PASS — the arithmetic closes exactly.** Σ month revenue = Rs 14,349,700 = `Gross revenue`; Σ month expenses = Rs 4,869,700 = `Expenses`; and 14,349,700 − 4,869,700 = **Rs 9,480,000** = `Net P&L`.
+- **D15-016 PASS — expenses reconcile perfectly with Module 14.** All 51 expenses dated inside the fiscal window total **Rs 4,869,700**, matching the tax report to the rupee.
+- **D15-017 PASS — cancelled bookings are excluded.** The two Cancelled Waheed Jutt bookings (Rs 1,112,650) are correctly outside the revenue line, consistent with FBR accrual treatment.
+- **D15-036 PASS** — months with no activity render `0` and `Rs 0` rather than blanks, so the year reads as a complete series.
+- **D15-039 PASS** — cards show `…` during load, never `Rs 0`. Correct, unlike Receipts (WWL-147).
+- **D15-043/044 PASS** — a genuinely read-only surface: no row checkboxes, no row buttons, nothing writes.
+- **D15-052 PASS** — all 9 focusable controls carry a visible focus ring, and `Export PDF` is keyboard-reachable (it simply does nothing when activated).
+- **D15-055 PASS — the cleanest mobile result of the sweep.** At a true emulated 360×740: `scrollWidth === clientWidth === 360`, the page does not scroll horizontally, **and zero elements are clipped**. This is the first module where both checks pass together — the direct contrast with WWL-178, where the page-level check passed while 22 elements were cut off.
+
+### Module 15 — status
+
+**72 cases written, 61 driven. 10 findings (3× S2, 5× S3, 2× S4).**
+
+Not driven, each with its reason:
+
+| Cases | Why |
+|---|---|
+| **D15-018 / D15-067** (the WW-021 vendor-slice rule) | This vendor's bookings are single-vendor, so their `BookingDetails` slice equals `Booking.totalAmount` and the two are indistinguishable here. Proving the multi-vendor case would need a booking shared with another vendor. The logic is confirmed in source; not demonstrated live. |
+| **D15-045/046/047** (error state, Retry, mis-routed endpoint) | `TaxReportAPI.getAnnualReport` has the same no-`catch` shape as `ReceiptsAPI.list`, where the error state and Retry were driven and passed, and the `?? {}` fallback behaviour was demonstrated in Module 10. Not re-driven. |
+| **D15-049** (empty-period copy) | Every fiscal year I could reach has data. The empty state would need a year with none — which the UI cannot select anyway (WWL-191). |
+| **D15-064/065** (is any tax actually computed) | Answered by inspection rather than a test: the screen is a **P&L**, not a tax computation. There is no taxable-income line, no slab, no withholding, no sales-tax split — only revenue, expenses, net and the noop FBR card. Recorded here rather than as a defect, since the module's description says "revenue + expense + P&L summary". |
+| **D15-070/071** (partial-month flagging, rounding drift) | The current month is not flagged as incomplete, but with the year hard-wired (WWL-191) every report is a partial year by definition, which is the larger issue. No rounding drift was observable — every cross-check matched exactly. |
+
+**The module's verdict.** The backend is the best-behaved of any module tested: correct FBR fiscal
+windows, correct exclusion of cancelled bookings, exact venue partitioning, a working PDF
+renderer, previous years and calendar basis all available on request, and a labelled period
+returned with every response. The frontend asks for one hard-coded year, drops the venue scope,
+renders none of the period metadata, and wires the export button to nothing. Three of the four
+defects here are a missing parameter, a missing selector and a missing `onClick` — the capability
+is already paid for.
