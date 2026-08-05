@@ -45,7 +45,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 13 | Cheque ledger | `/dashboard/pdcs` | ✅ 88 | **`[x]` COMPLETE — 78 run, 10 not run, 16 findings** |
 | 14 | Expenses | `/dashboard/expenses` | ✅ 104 | **`[x]` COMPLETE — 89 run, 15 not run, 14 findings** |
 | 15 | Tax report | `/dashboard/tax` | ✅ 72 | **`[x]` COMPLETE — 61 run, 11 not run, 10 findings** |
-| 16 | Reports | `/dashboard/reports` | ✅ 70 | `[ ]` IN PROGRESS |
+| 16 | Reports | `/dashboard/reports` | ✅ 70 | **`[x]` COMPLETE — 60 run, 10 not run, 10 findings** |
 | 17 | Trade operations | `/dashboard/trade-ops` | — | `[ ]` |
 | 18 | Automation | `/dashboard/automation` | — | `[ ]` |
 | 19 | Kitchen prep | `/dashboard/kitchen` | — | `[ ]` |
@@ -7435,3 +7435,152 @@ Two figures on this screen already contradict other modules:
 | D16-068 | Seasonality with a zero month renders a zero-height bar, not a broken one | `minHeight` guard |
 | D16-069 | `maxSeason` guard prevents divide-by-zero | `Math.max(1, …)` |
 | D16-070 | Nothing on this screen writes | read-only confirmation |
+
+## MODULE 16 — EXECUTION RESULTS
+
+Read-only screen; nothing was written. **No WhatsApp link was followed and nothing was shared** —
+I intercepted `navigator.share` so the image path could be driven to completion without
+transmitting anything.
+
+### WWL-199 (S2) — "this month's earnings" counts this month **and every month after it**
+
+```js
+const cur  = bookings.filter((b) => inRange(b, startCur, null));   // ← no upper bound
+const prev = bookings.filter((b) => inRange(b, startPrev, endPrev)); // ← bounded
+const inRange = (b, from, to) => { const d = …; return d >= from && (to ? d <= to : true) }
+```
+
+`cur` is passed `null` for `to`, so the "current month" window is **open-ended into the future**.
+Verified to the rupee against the live data:
+
+| | Events | Value |
+|---|---|---|
+| Card says *Is Maheene Ki Kamai* | **11** | **Rs 16,065,700** |
+| Live bookings dated **≥ 1 Aug 2026, no upper bound** | 11 | Rs 16,065,700 ✓ exact match |
+| **True August 2026 only** | **6** | **Rs 7,377,950** |
+
+The 11 bookings span **2026-08, 2026-09, 2026-10 and 2026-11** — September, October and November
+weddings counted as *this month's* earnings. The headline number on the vendor's glanceable
+business screen is **2.18× the truth**.
+
+**The screen contradicts itself.** Lower down, the seasonality bar for August reads **6** — the
+correct figure — directly beneath a card claiming 11.
+
+The deltas are a consequence: `+453%` and `+450%` compare an **unbounded forward window** against
+a **closed** prior month. They cannot be meaningful in any month.
+
+### WWL-200 (S2) — the WWL-110 split has a mechanism: two valuations of the same bookings
+
+Four money surfaces, two answers:
+
+| Screen | Outstanding | Events |
+|---|---|---|
+| Dashboard *Baqaya* | Rs 13,417,229 | 14 |
+| **Report Cards** *Baqaya (Vasooli baaqi)* | **Rs 13,417,229** | **14** |
+| Payments *Due* | Rs 12,292,729 | 13 |
+| Receivables *Outstanding* | Rs 12,292,729 | 13 |
+
+**Rs 1,124,500 apart.** I tested and rejected the obvious explanation: `reportCardsService`
+**does** exclude cancelled bookings —
+`.filter((b) => !CANCELLED.has(b.status) && !CANCELLED.has(b.orderStage))` — and Payments' `due`
+is identical whether or not cancelled rows are included, so cancellation is not the difference.
+
+The actual mechanism is the **source of truth for what a booking is worth**: `reportCardsService`
+computes `money(b).balance` from `orderTotalsJson` / `BookingOrderLines`, while Payments and
+Receivables derive from `BookingDetails.totalAmount` and `downPayment`. Two independent ledgers
+for the same bookings, disagreeing by Rs 1.12m.
+
+**I have not established which is authoritative** — that needs a decision, not a test. What is
+certain is that a vendor asking "how much am I owed?" gets two different answers depending on
+which screen they open.
+
+### WWL-201 (S2) — "Aaj Ki Vasooli" is not today's collections
+
+```js
+// Today's collections (advance on bookings dated today — a proxy for vasooli).
+const todaysAdvance = bookings.filter((b) => b.bookingDate === today)
+                              .reduce((s, b) => s + money(b).advance, 0);
+```
+
+The card is labelled *Aaj Ki Vasooli* — today's recovery — and its English label is literally
+`"Collected today"`. It actually sums the **advance on bookings whose event date is today**. The
+source comment admits it is "a proxy".
+
+Live it reads **Rs 0**, while **receipt 179 for Rs 458,460 carries `receivedDate 2026-08-06`** —
+today. Real money collected today exists and the card reports none of it. A vendor closing the
+day's cash would conclude nothing came in.
+
+### WWL-202 (S2) — the profit and staff-cost cards ignore the Expenses module entirely
+
+`Fi Event Bachat` reads **Rs 0** with the prompt **"kharch add karein"** (*add expenses*), and
+`Staff Kharcha` reads **Rs 0**. Both are computed from `BookingOrderLines` where
+`kind='cost' OR moneyFlow='expense'` — **not** from the Expenses ledger.
+
+Module 14 holds **Rs 16,832,000 of expenses across 165 rows**, including a dedicated
+`salary / payroll` category (Rs 1,083,000 in one venue alone). The vendor is being told to add
+costs they have already entered, on a different screen, in the same product.
+
+### WWL-203 (S2) — a server failure is reported as "the feature is switched off"
+
+Driven against an unroutable host — a total network failure. After 12 seconds:
+
+> **Reports abhi enabled nahi hain.**
+
+No error state, no Retry, no cards. `getReportCards` catches only `404`; anything else re-throws,
+and the view's `if (!data)` branch renders the not-enabled copy for every failure mode.
+
+This is worse than the usual swallow (WWL-130): it does not merely hide the error, it
+**misattributes it to a product decision**. A vendor told the feature is not enabled will not
+retry and will not report a fault.
+
+Related: the documented *"self-hides on 404"* mechanism is **dead code**. The backend's catch-all
+(WWL-107) never returns 404, so that branch can never fire; the screen degrades only through the
+`?? null` fallback.
+
+### Findings S3 / S4
+
+| ID | Sev | Finding |
+|---|---|---|
+| **WWL-204** | S3 | **Not venue-scoped, and the share misattributes the figures.** `/report-cards` is absent from `BUSINESS_SCOPED_PREFIXES` — the second module after Tax (WWL-190). Worse, the vendor name in both share paths comes from `useBusiness()`, not the active-venue store: with the switcher on **All venues**, every WhatsApp message and the generated image are headed **"Rehman Grand Marquee"** while carrying all three venues' combined numbers. |
+| **WWL-205** | S3 | **The share targets are 14×14 px.** Measured at 360×740 on the screen whose entire purpose is sharing from a phone. That is below WCAG 2.2's 24×24 floor and far below the 44/48px touch guidance. |
+| **WWL-206** | S3 | **Share links have no `aria-label`** — the accessible name falls back to `title="Share on WhatsApp"`, and all eight are identical, so a screen-reader user cannot tell which card each one shares. The WWL-104 family. |
+| **WWL-207** | S4 | The bookings query carries a silent **`limit: 5000`** with no indication when it truncates. |
+| **WWL-208** | S4 | Sidebar says **"Reports"**, the heading says **"Report Cards"**. |
+
+### Notable passes
+
+- **D16-002 PASS** — `Dashboard : Reports`.
+- **D16-024/025 PASS — the seasonality bar is correct.** Mar 2 · Apr 2 · May 1 · Jun 3 · Jul 2 · **Aug 6**, and August's 6 matches the true count of live August bookings exactly. It is the headline card above it that is wrong.
+- **D16-028 PASS — the period labels switch properly.** I expected a stale label in year mode and was **wrong**: the service supplies `"Saal ki Kamai"` and `"Saal ki Bookings"` for `period=year`, and `"Is Maheene…"` for month.
+- **D16-020 PASS** — `Average Booking` Rs 1,460,518 = Rs 16,065,700 ÷ 11 exactly (internally consistent, though built on WWL-199's numerator).
+- **D16-032/033 PASS — the Urdu is good.** `Is Maheene Ki Kamai`, `Baqaya (Vasooli baaqi)`, `Fi Event Bachat`, `Staff Kharcha`, `Sab Se Zyada`, `Kaunse maheene busy`, and the `Maheena` / `Saal` toggle all read naturally in Roman Urdu. This is the most confidently localised screen in the portal.
+- **D16-045/048 PASS** — every share link is `wa.me/?text=…` with **no recipient**, i.e. the OS share sheet rather than a message to a specific person, and each carries `target="_blank"` with `rel="noopener noreferrer"`.
+- **D16-050 → D16-053 PASS — the image share is well built and entirely local.** Driven to completion with `navigator.share` intercepted: it produced **1 file**, made **zero network calls**, and generated a correctly formatted Roman-Urdu summary of all eight cards with the subtitle *"Is maheene ka hisaab"* and a `— Wedding Wala` footer. Nothing is transmitted by the app itself; the OS share sheet is the only egress.
+- **D16-060/061 PASS** — 22 focusable controls, all with a visible focus ring.
+- **D16-063 PASS — clean at 360px on both checks.** `scrollWidth === clientWidth === 360`, the page does not scroll horizontally, **and zero elements are clipped** — only the second module (after Tax) to pass both, and appropriate for the one screen designed mobile-first.
+- **D16-068/069 PASS** — `Math.max(1, …)` guards the seasonality divisor and the `minHeight` rule renders a zero month as a flat baseline rather than a broken bar.
+
+### Module 16 — status
+
+**70 cases written, 60 driven. 10 findings (5× S2, 3× S3, 2× S4).**
+
+Not driven, each with its reason:
+
+| Cases | Why |
+|---|---|
+| **D16-006** (venue switch changes a card) | The endpoint receives no `businessId` (D16-005 confirmed), so the outcome is determined: it cannot change. Recorded as WWL-204 from the request evidence rather than re-driven through the switcher as in Module 15. |
+| **D16-014/015/016** (exact basis of the money card) | Superseded — D16-011 identified the rule exactly (`bookingDate ≥ startCur`, unbounded, cancelled excluded), which answers all three. |
+| **D16-029** (year figures vs Module 15) | Year mode returns Rs 33,493,850 across 22 events = every live booking. All 25 bookings fall inside calendar 2026, so **"this year" and "all time" are indistinguishable on this data** — the unbounded-window bug cannot be separated from correct behaviour at year granularity. |
+| **D16-037** (negative delta styling) | No card currently carries a negative delta; the rose/down-arrow branch could not be exercised without different data. |
+| **D16-042/043** (RTL and the app language toggle) | The labels are **Roman** Urdu, not Urdu script, so there is no RTL text to lay out. The `اردو` toggle governs the app shell, not these server-supplied labels. |
+| **D16-054** (Web Share fallback) | `navigator.share` **is** available in this browser, so the no-Web-Share fallback path never ran. |
+| **D16-059** (period survives reload) | `period` is local component state with no URL or storage backing — it resets to `month`. Noted rather than raised; a two-option toggle is cheap to re-set. |
+
+**The module's verdict.** The presentation is the best-localised and most mobile-honest screen in
+the portal — natural Roman Urdu, a clean 360px layout with nothing clipped, a genuinely nice
+local image-share, and a correct seasonality chart. Every serious problem is in the numbers
+behind it: the headline counts four months as one, the outstanding figure disagrees with two
+other modules because it reads a different ledger, "collected today" measures something else
+entirely, and the profit cards tell a vendor to enter costs they have already entered. A
+glanceable screen is only as good as the glance, and four of its eight cards are currently
+misleading.
