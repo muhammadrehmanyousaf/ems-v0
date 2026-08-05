@@ -41,7 +41,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 9 | Conversations | `/dashboard/chat` | ✅ 40 | **`[x]` COMPLETE — 26 run, 14 not run, 3 findings** |
 | 10 | Payments | `/dashboard/payments` | ✅ 118 | **`[x]` COMPLETE — 101 run, 17 not run, 22 findings (4× S1)** |
 | 11 | Receivables | `/dashboard/receivables` | ✅ 96 | **`[x]` COMPLETE — 84 run, 12 not run, 13 findings (2× S1)** |
-| 12 | Receipts | `/dashboard/receipts` | — | `[ ]` |
+| 12 | Receipts | `/dashboard/receipts` | ✅ 92 | `[ ]` IN PROGRESS |
 | 13 | Cheque ledger | `/dashboard/pdcs` | — | `[ ]` |
 | 14 | Expenses | `/dashboard/expenses` | — | `[ ]` |
 | 15 | Tax report | `/dashboard/tax` | — | `[ ]` |
@@ -6029,3 +6029,170 @@ its reminders point at invalid numbers, and any failure at all is reported as *"
 outstanding"*. A collections board that inflates one venue's debt to Rs 23.9m, paints a
 99-day-overdue customer green, and cannot message 47% of the money it lists is not usable for
 collections.
+
+---
+
+# MODULE 12 — RECEIPTS (`/dashboard/receipts`)
+
+**Component** `components/dashboard/mainScreens/receipts/redesigned/receipts-redesigned-view.tsx`
+**Data** `ReceiptsAPI.list()` → `GET /api/v1/receipts` (business-scoped)
+**Write paths** `POST /api/v1/receipts` · `PATCH /api/v1/receipts/:id` · **`DELETE /api/v1/receipts/:id`**
+
+## SAFETY LIMIT FOR THIS MODULE — the first with a delete
+
+This is the first module in the sweep that can **destroy** a row on a live vendor's money ledger.
+The 39 receipts here are the only record of Rs 21,201,121 actually collected.
+
+- The write blocker is armed **before** any dialog opens and stays armed throughout. Every
+  `POST`/`PATCH`/`DELETE` is captured with its body and stopped at the transport layer.
+- **The delete confirmation is driven all the way to the Remove button** so the copy, the amount
+  interpolation and the destructive styling are all tested — but the `DELETE` never leaves the
+  browser.
+- Receipt count and `maxId` are read before and after every phase.
+
+## What the source says before I touch the page
+
+- **The API's own `summary` (`total` + `byMethod`) is discarded.** The view recomputes `total`,
+  `thisMonthTotal` and `cashTotal` client-side from `data.receipts`.
+- **`findAll` has no `limit` and there is no pagination anywhere** — the whole ledger is shipped
+  and summed in the browser.
+- **The model is `paranoid: true`**, so `destroy()` is a soft delete, while the dialog says
+  *"This can't be undone."*
+- **Edit mode hides the booking selector** (`{!isEdit && …}`), so a receipt allocated to the wrong
+  booking cannot be reallocated — only deleted and re-created.
+- `hasRef` drops the Txn-ref column entirely when no row has a reference.
+- `thisMonth` compares `new Date(receivedDate).getMonth()` against `now.getMonth()` — **local**
+  months. Safe at UTC+5, fragile elsewhere.
+- **5 receipts in this ledger are dated in the future** (up to 2026-10-08, Rs 1,844,635 total).
+  Both headline figures count them as received.
+- Stat cards read `all`, the table reads `receipts` — the WWL-115 filter-divergence shape.
+- `showSuccessToast` carries **no** Undo action, so the delete really is unrecoverable from the UI.
+
+## Test cases — written in full before execution
+
+### A. Load, totals, and the future-dated money
+
+| # | Case | Expect |
+|---|---|---|
+| D12-001 | Route loads, table renders | |
+| D12-002 | `<title>` is `Dashboard : Payment Receipts` | |
+| D12-003 | Sidebar / breadcrumb / `<h1>` agree — sidebar says "Receipts" | |
+| D12-004 | One `/api/v1/receipts` call on load | |
+| D12-005 | `businessId` appended when a venue is active | |
+| D12-006 | Row count === `Receipts` card === API length | |
+| D12-007 | `Σ row.amount` === `Total received` card | |
+| D12-008 | `Total received` === Module 10's `Received` (Rs 21,201,121) | cross-module |
+| D12-009 | `Cash collected` === Σ amount where method = cash | |
+| D12-010 | `This month` === Σ amount where receivedDate is in the current month | |
+| D12-011 | `This month` delta count === number of those receipts | |
+| D12-012 | **Do future-dated receipts inflate `Total received`?** | 5 rows, Rs 1,844,635 |
+| D12-013 | **Do future-dated receipts inflate `This month`?** | Aug rows dated 11 and 14 Aug |
+| D12-014 | Is a future-dated receipt visually flagged anywhere? | predicted no |
+| D12-015 | Sort order is `receivedDate DESC, id DESC` | future-dated rows sort to the top |
+| D12-016 | The API's `summary.byMethod` is surfaced nowhere | dead capability |
+| D12-017 | No pagination / no limit — whole ledger fetched | scalability observation |
+| D12-018 | Rs formatting; no `NaN` | |
+| D12-019 | Dates render `en-PK` `dd-Mmm-yyyy` | |
+| D12-020 | `payerName` prefers the linked account, falls back to booking, never the vendor | |
+| D12-021 | A receipt with `customerUserId: null` still shows a payer name | walk-in path |
+| D12-022 | A receipt with no booking renders without crashing | `bookingId: null` |
+| D12-023 | Reconcile per-booking receipt sums against Payments' `Received` | already exact in Module 10 |
+
+### B. Stat cards and columns
+
+| # | Case | Expect |
+|---|---|---|
+| D12-024 | Four cards: Total received, This month, Cash collected, Receipts | |
+| D12-025 | Cards show real values during load, or `Rs 0`? | **no `isLoading` guard in source** — predicted `Rs 0` flash |
+| D12-026 | `Receipts` card is a count, not currency | |
+| D12-027 | `trend="up"` on Total received and This month is unconditional | |
+| D12-028 | Cards are inert | |
+| D12-029 | **Do the cards follow the search filter?** | predicted NO |
+| D12-030 | Columns: Customer, Method, Txn ref*, Received, Event, Amount, actions | |
+| D12-031 | Method pill tone: cash → success, other → neutral, rest → info | |
+| D12-032 | Method labels are the PK-correct names (JazzCash, Easypaisa, Raast, IBFT) | |
+| D12-033 | `hasRef` — Txn-ref column present here, and would vanish if all rows were cash | |
+| D12-034 | `Event` column (`LinkedFunctionSheetBadge`) — does it fire a request **per row**? | N+1 probe |
+| D12-035 | Event badge for a booking with no function sheet | |
+| D12-036 | Amount right-aligned, tabular, success tone | |
+| D12-037 | Edit and Remove buttons have accessible names | source says yes |
+| D12-038 | Row itself is not clickable; no drill-through to the booking | |
+| D12-039 | `<th scope>` / caption | contrast WWL-120/137 |
+| D12-040 | Row checkbox accessible names | |
+
+### C. Search, selection, export
+
+| # | Case | Expect |
+|---|---|---|
+| D12-041 | Search by payer name, full and mid-word | |
+| D12-042 | Search case-insensitive | |
+| D12-043 | Search by **transaction ref** | in the predicate |
+| D12-044 | Search by **method** (`cash`, `jazzcash`) | in the predicate |
+| D12-045 | Search by **notes** | in the predicate |
+| D12-046 | Search by amount | predicted no match |
+| D12-047 | Whitespace trimmed; metacharacters literal | |
+| D12-048 | No-match empty state — does it wrongly offer *"Record receipt"* as if the ledger were empty? | |
+| D12-049 | Clearing restores all rows | |
+| D12-050 | Select all / filtered select all | |
+| D12-051 | Selection has no bulk delete | destructive-action check |
+| D12-052 | Export CSV all rows; values match screen | |
+| D12-053 | Export selected → exactly those | |
+| D12-054 | CSV omits the **Event** column that is on screen | parity check |
+| D12-055 | CSV formula-injection exposure | shared ExportMenu |
+| D12-056 | CSV contains no phone/email | PII comparison with Modules 10/11 |
+
+### D. Create dialog — writes blocked
+
+| # | Case | Expect |
+|---|---|---|
+| D12-057 | `Record receipt` opens `Record a receipt` — label matches here | contrast WWL-124 |
+| D12-058 | Fields present and empty; no errors on open | |
+| D12-059 | Save disabled with a blocked-reason hint | |
+| D12-060 | Booking selector present in **create** mode | |
+| D12-061 | Full valid form enables Save; `POST` captured and aborted | |
+| D12-062 | Captured body has the right shape | |
+| D12-063 | Cancel discards; reopening reseeds blank | |
+| D12-064 | Date default is the UTC date again | WWL-112 recurrence on its own screen |
+
+### E. Edit dialog — writes blocked
+
+| # | Case | Expect |
+|---|---|---|
+| D12-065 | Edit opens with the row's values seeded | |
+| D12-066 | Title switches to `Edit receipt`, button to `Update` | |
+| D12-067 | **Booking selector is absent in edit mode** | a misallocated receipt cannot be reallocated |
+| D12-068 | Amount/date/method/ref/notes all editable | |
+| D12-069 | Validation applies identically in edit mode | |
+| D12-070 | Editing a receipt to a future date is blocked | |
+| D12-071 | `PATCH` captured and aborted; body is the diff or the whole record | |
+| D12-072 | Opening edit on a **different** row reseeds (the `loaded.current` key) | stale-form probe |
+| D12-073 | Edit → Cancel → Create shows a blank form, not the edited row's values | leakage probe |
+
+### F. Delete — driven to the button, request blocked
+
+| # | Case | Expect |
+|---|---|---|
+| D12-074 | Remove opens a confirm dialog, not an immediate delete | |
+| D12-075 | Copy names the **amount** of the receipt being removed | |
+| D12-076 | Copy says it can't be undone — **true from the UI, but the model is `paranoid`** | |
+| D12-077 | Cancel closes without deleting | |
+| D12-078 | Esc / overlay closes without deleting | |
+| D12-079 | Remove button is styled destructively | |
+| D12-080 | Clicking Remove fires `DELETE /api/v1/receipts/:id` — **captured and aborted** | |
+| D12-081 | The confirm dialog does not say which **booking** the receipt belongs to | deleting the wrong one |
+| D12-082 | No bulk delete anywhere | |
+
+### G. Resilience, scope, a11y, responsive
+
+| # | Case | Expect |
+|---|---|---|
+| D12-083 | Genuine network failure → *"Couldn't load receipts."* + Retry | `list()` has **no catch** — predicted reachable |
+| D12-084 | Retry recovers | |
+| D12-085 | Mis-routed endpoint (backend 200) → the `?? {}` fallback → fake empty ledger | WWL-108 recurrence |
+| D12-086 | Loading state — skeletons and card behaviour | |
+| D12-087 | Density persists across a hard reload | |
+| D12-088 | Venue switch re-scopes; per-venue sums vs all-venues | after WWL-129, check this endpoint too |
+| D12-089 | Keyboard reach + visible focus on every control including Edit/Remove | |
+| D12-090 | 360px: no overflow; cards readable | |
+| D12-091 | 360px: **are Edit and Remove reachable on a phone?** | actions live in a column |
+| D12-092 | Receipt count and maxId unchanged at module close | proof nothing was written |
