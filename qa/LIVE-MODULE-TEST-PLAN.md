@@ -509,6 +509,92 @@ the 2 rows behind `see all remaining` account for the balance to Rs 13,417,229.
 This triangulates the whole money story: **BAQAYA / the reminder panel / the booking detail
 pages all agree at Rs 13,417,229. Receivables and the KPI row are the outliers.**
 
+### 🔴 WWL-013 — S2 — `Toggle Sidebar` does nothing, at any width
+
+Driven at three viewports. The button flips internal state (`data-sidebar` `true`⇄`false`)
+and produces **zero** visual change:
+
+| Viewport | main width | visible nav links | result |
+|---|---|---|---|
+| 1536px | 1521 → 1521 | 30 → 30 | **screenshots pixel-identical** (SHA-256 `445108EA…` both) |
+| 1024px | 1009 → 1009 | 30 → 30 | no change |
+| 360px | — | 24 → 24 | no change, no overlay opened |
+
+At 1536/1024 the sidebar is already a fixed icon rail that the button never collapses. At
+360px the navigation is a bottom tab bar, so there is no sidebar to toggle at all — yet the
+button still renders in the header. It is a dead control on every screen size.
+
+### 🔴 WWL-014 — S2 — At 360px, today's events and the enquiries card are clipped off-screen
+
+Measured and screenshotted at 360×800:
+
+| Control | right edge | viewport | scrollable ancestor? |
+|---|---:|---:|---|
+| `12:00 Waheed Jutt — Rs 315,000 due` | 419 / 390 | 360 | **none** |
+| `13:00 Owais Siddiqui & Laiba Owais` | 419 | 360 | **none** |
+| `22 new enquiries to reply` | 415 | 360 | **none** |
+| `Agle 7 din` calendar strip | 363 | 360 | ✅ yes (`overflow-x:auto`, 51px) |
+
+The screenshot shows the money truncated mid-word — **"Rs 315,000 d"** and
+**"Rs 757,350 d"** — and the `Aaj ke events` / `Naye Rabtay` cards running off the right edge
+with no right border, while the `BAQAYA` and `Agle 7 din` cards on the same screen are
+correctly inset. So it is these specific cards missing the container inset, not a global
+layout failure.
+
+The page itself does **not** overflow (`scrollWidth 345 < 360`), which is why this is easy to
+miss: the content is **clipped**, not scrollable. There is no gesture that reveals the cut-off
+amount. Today's event and its balance are the two things a venue owner opens the phone to
+check.
+
+Evidence: `dash-360.png`, `dash-360-clipped.png`.
+
+### 🔴 WWL-015 — S2 — The ⌘K palette cannot find any data, and returns misleading matches
+
+It opens correctly (both by click and by Ctrl/⌘K, auto-focusing the input) and navigating to a
+page works. But its placeholder says **"Search or jump to…"** and it searches only route
+names — never bookings, customers, leads or invoices:
+
+| Query | Results |
+|---|---|
+| `Imran Shafi` | **0** — a customer with Rs 1,159,500 owed, visible on the same screen |
+| `170` | **0** — a real booking id |
+| `Imran` | 2 — *"Trade operations hub"*, *"Sign contract — e-signature"* |
+| `Waheed` | 1 — *"Trade operations — editor"* |
+| `Kamran` | 1 — *"Trade operations hub — all trades"* |
+| *(empty)* | 29 commands — Add booking, Log a lead, Record a payment… |
+
+Two defects: it finds **no data at all**, and its fuzzy matcher returns results with no visible
+relationship to the query — typing a customer's name offers "Trade operations hub" and "Sign
+contract". A vendor searching for a customer is told, in effect, that the customer does not
+exist.
+
+### ✅ More Section C passes
+
+- **D1-038 (navigation half)** — palette opens by click *and* keyboard, auto-focuses, and
+  selecting `Receivables` navigates correctly to `/dashboard/receivables`.
+- **D1-039 — notification bell, full pass.** Badge `53` matched `notifications/unread-count`
+  exactly. Opened the panel (22 real items), clicked **one** notification (not "Read all"),
+  which navigated correctly to `/dashboard/leads` for a lead follow-up. **Hard reload → 52**,
+  and the UI badge matched the API again.
+- **D1-040 — theme, full pass.** Light → Dark applies (`html.dark`, bg `rgb(21,18,15)`),
+  **persists across hard reload**, money renders amber `rgb(245,158,11)` on near-black with
+  good contrast, no overflow introduced. Restored to Light.
+
+### 🔴 Accessibility pattern confirmed across four separate controls (D1-059)
+
+The same defect recurs: state conveyed only by CSS class, never to assistive tech.
+
+| Control | Marks active state? |
+|---|---|
+| Sort segments (Recent / Most profit / Biggest) | ❌ no `aria-pressed`, no `aria-current` — `bg-primary` class only |
+| Venue switcher menu items | ❌ no `aria-checked` / `data-state` |
+| Theme mode (Light / Dark / System) | ❌ none — *though the 6 accent swatches beside them DO set `aria-checked`* |
+| Notification bell | ❌ `aria-label` is null — announces only "53" |
+| `Hide details` | ✅ correct — `aria-expanded` + name changes to "Show what's left" |
+
+`Hide details` and the accent swatches prove the codebase knows the right pattern; it is
+applied inconsistently.
+
 ### Cases executed so far
 
 **Section A — all 15 executed.**
