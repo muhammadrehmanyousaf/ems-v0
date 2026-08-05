@@ -62,6 +62,44 @@ const STATUS = {
       "fields; Listing content error toast showed the axios wrapper instead of the server reason. " +
       "FOUND + FIXED backend: phantom Package Description column; blocked-dates ignored businessId.",
   },
+  "/dashboard": {
+    mark: "x",
+    note:
+      "0 covered controls once the cookie banner is dismissed (it was the only occluder), no " +
+      "overflow, 59 interactive elements. Recent/Most profit/Biggest segments all re-sort correctly. " +
+      "FOUND + FIXED: the event-profit board counted CANCELLED bookings as revenue — booking 175 " +
+      "(Cancelled, Rs 2,742,400) ranked #1 under both profit sorts, and 3 cancelled bookings worth " +
+      "Rs 3,855,050 inflated every headline tile including 'Outstanding · to collect'. " +
+      "OPEN (minor): the sort segments set neither aria-current nor aria-pressed, so a screen-reader " +
+      "user cannot tell which sort is active.",
+  },
+  "/dashboard/today": {
+    mark: "x",
+    note:
+      "Verified against the API rather than assumed: shows exactly the 2 bookings dated today and " +
+      "correctly excludes the two Cancelled Waheed Jutt bookings (dated 04-Aug and 12-Aug). " +
+      "Revenue today (350,000 + 1,262,250 = 1,612,250) arithmetic correct. Outstanding " +
+      "Rs 12,292,729 matches Receivables exactly — which makes Reports' Rs 13,417,229 the outlier " +
+      "in the open money-mismatch question. 0 covered, no overflow.",
+  },
+  "/dashboard/holds": {
+    mark: "x",
+    note:
+      "FULL CRUD verified live. Create → toast 'Date held' → row appears. Release → toast " +
+      "'Hold released' → row gone WITHOUT reload → 0 holds left in the DB. Date field correctly " +
+      "carries min=today so a past date cannot be held. Test hold created and cleaned up. " +
+      "OPEN (minor): the dialog defaults to today/Evening with the button already enabled, so one " +
+      "click holds today without the vendor explicitly choosing a date.",
+  },
+  "/dashboard/function-sheets": {
+    mark: "~",
+    note:
+      "17 sheets, Rs 28,559,050 total value, 0 covered, no overflow. New-sheet dialog gating is " +
+      "correct: disabled when empty AND when the title is whitespace-only (properly trimmed). " +
+      "FOUND (minor): Event date has no min attribute and accepts 2020-01-01 with no warning — a " +
+      "quote/BEO dated six years in the past. Date holds gets this right; this dialog does not. " +
+      "NOT tested: create (avoided cluttering live data), edit, remove, Export, view, status flow.",
+  },
   "/dashboard/payments": {
     mark: "~",
     note:

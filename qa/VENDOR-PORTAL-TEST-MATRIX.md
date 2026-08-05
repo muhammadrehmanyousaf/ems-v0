@@ -10,9 +10,9 @@ Status legend: `[ ]` untested · `[~]` render/health only · `[x]` deep-tested
 
 | | Modules | % |
 |---|---:|---:|
-| `[x]` deep-tested | 2 | 5% |
-| `[~]` render/health only | 9 | 20% |
-| `[ ]` **not touched** | **33** | **75%** |
+| `[x]` deep-tested | 5 | 11% |
+| `[~]` render/health only | 10 | 23% |
+| `[ ]` **not touched** | **29** | **66%** |
 | **Total** | **44** | |
 
 **2006 enumerated elements** across 44 modules.
@@ -38,7 +38,8 @@ Status legend: `[ ]` untested · `[~]` render/health only · `[x]` deep-tested
 
 - **Route:** `/dashboard`
 - **Page:** `app\(dashboard)\dashboard\page.tsx` (21 component files)
-- **Status:** `[ ]`
+- **Status:** `[x]`
+- **Coverage:** 0 covered controls once the cookie banner is dismissed (it was the only occluder), no overflow, 59 interactive elements. Recent/Most profit/Biggest segments all re-sort correctly. FOUND + FIXED: the event-profit board counted CANCELLED bookings as revenue — booking 175 (Cancelled, Rs 2,742,400) ranked #1 under both profit sorts, and 3 cancelled bookings worth Rs 3,855,050 inflated every headline tile including 'Outstanding · to collect'. OPEN (minor): the sort segments set neither aria-current nor aria-pressed, so a screen-reader user cannot tell which sort is active.
 
 **Tabs / views** (3)
 
@@ -61,7 +62,8 @@ Status legend: `[ ]` untested · `[~]` render/health only · `[x]` deep-tested
 
 - **Route:** `/dashboard/today`
 - **Page:** `app\(dashboard)\dashboard\today\page.tsx` (13 component files)
-- **Status:** `[ ]`
+- **Status:** `[x]`
+- **Coverage:** Verified against the API rather than assumed: shows exactly the 2 bookings dated today and correctly excludes the two Cancelled Waheed Jutt bookings (dated 04-Aug and 12-Aug). Revenue today (350,000 + 1,262,250 = 1,612,250) arithmetic correct. Outstanding Rs 12,292,729 matches Receivables exactly — which makes Reports' Rs 13,417,229 the outlier in the open money-mismatch question. 0 covered, no overflow.
 
 **Dialogs** (1)
 
@@ -225,7 +227,8 @@ Status legend: `[ ]` untested · `[~]` render/health only · `[x]` deep-tested
 
 - **Route:** `/dashboard/holds`
 - **Page:** `app\(dashboard)\dashboard\holds\page.tsx` (11 component files)
-- **Status:** `[ ]`
+- **Status:** `[x]`
+- **Coverage:** FULL CRUD verified live. Create → toast 'Date held' → row appears. Release → toast 'Hold released' → row gone WITHOUT reload → 0 holds left in the DB. Date field correctly carries min=today so a past date cannot be held. Test hold created and cleaned up. OPEN (minor): the dialog defaults to today/Evening with the button already enabled, so one click holds today without the vendor explicitly choosing a date.
 
 **Tabs / views** (1)
 
@@ -256,7 +259,8 @@ Status legend: `[ ]` untested · `[~]` render/health only · `[x]` deep-tested
 
 - **Route:** `/dashboard/function-sheets`
 - **Page:** `app\(dashboard)\dashboard\function-sheets\page.tsx` (16 component files)
-- **Status:** `[ ]`
+- **Status:** `[~]`
+- **Coverage:** 17 sheets, Rs 28,559,050 total value, 0 covered, no overflow. New-sheet dialog gating is correct: disabled when empty AND when the title is whitespace-only (properly trimmed). FOUND (minor): Event date has no min attribute and accepts 2020-01-01 with no warning — a quote/BEO dated six years in the past. Date holds gets this right; this dialog does not. NOT tested: create (avoided cluttering live data), edit, remove, Export, view, status flow.
 
 **Tabs / views** (3)
 
