@@ -773,20 +773,75 @@ Evidence: `dash-failure-rs0.png`.
   controls**.
 - **D1-061 🔴 360px** — see WWL-014.
 
-### Not scored — measurement did not hold
+### 🔴 WWL-019 — S1 — **ROOT CAUSE**: 59 `catch` blocks swallow every API error
 
-- **D1-054 (Retry)** — cannot be scored: WWL-018 shows there *is* no retry control to press.
-- **D1-055 (slow-network layout shift)** — my first attempt at forcing a refetch via
-  `focus`/`online` events produced **zero change** (`textLenChange: 0`), so that run proved
-  nothing and I did not score it. The later venue-switch method worked and produced WWL-018.
-  A true throttled-load shift test needs CDP network emulation, which this harness does not
-  expose. **Left explicitly unrun rather than assumed.**
+`lib/api/analytics.ts:272-278` — the wrapper feeding the dashboard:
+
+```js
+const res = await axiosInstance.get(`${BACKEND_URL}api/v1/analytics/recent-bookings…`);
+return res.data.data;
+} catch {
+  return null;          // ← every failure becomes a SUCCESSFUL null
+}
+```
+
+React Query therefore resolves **successfully** with `null`. `isError` is never true. That is
+why both correctly-written error branches in `overview-redesigned-view.tsx` are **dead code**:
+
+| Line | Code that exists | Why it never runs |
+|---|---|---|
+| 186-190 | `kpisQ.isError ? "—"` | `isError` never true → falls through to `num(undefined)` → **Rs 0 / 0** |
+| 257-258 | `error="Couldn't load recent bookings."` + `onRetry={() => recentQ.refetch()}` | same → renders the **empty state** instead |
+
+**Blast radius — 59 error-swallowing catches across 14 API modules:**
+
+| Count | Module | | Count | Module |
+|---:|---|---|---:|---|
+| **18** | `analytics.ts` *(feeds the dashboard)* | | 3 | `payments.ts` |
+| 13 | `bookingOrder.ts` | | 3 | `dashboard.ts` |
+| 5 | `vendors.ts` | | 2 | `favorites.ts` |
+| 4 | `chat.ts` | | 2 | `businessDrafts.ts` |
+| 4 | `ai.ts` | | 1 each | `whatsapp`, `venueOs`, `subscription`, `notifications`, `availabilitySetup` |
+
+Any error state or Retry built on `isError` anywhere in the portal is unreachable by the same
+mechanism. **This one pattern is the cause of WWL-018 and of D1-054 below** — fix it and both
+already-written error UIs start working.
+
+### ✅ D1-054 — Retry: control exists, but is unreachable (completed)
+
+Blocked only `analytics/recent-bookings` and forced a real refetch. The panel rendered:
+
+> **"No bookings yet — Your most recent bookings will appear here as they come in."**
+
+`errorMessageShown: false` · `retryPresent: false` — while this venue has **8 bookings**.
+A failed load is presented as a confident factual claim that the vendor has no bookings.
+The Retry button in the source is real; it is simply never rendered (see WWL-019).
+
+### 🔴 D1-055 — Layout shift: CLS 1.03, ten times the "good" threshold (completed)
+
+Measured with a real `PerformanceObserver` on `layout-shift` (`buffered: true`), with API
+responses delayed 2.5s to expose panel-arrival shifts:
+
+| Metric | Value |
+|---|---|
+| **Cumulative CLS** | **1.0259** |
+| Verdict | **POOR** (good < 0.1 · needs-work < 0.25) |
+| Largest shift | **0.6762** at t=2.29s — initial load, *not* caused by the delay |
+| Second shift | **0.3497** — panels re-arriving after a venue switch |
+
+Content jumps as panels arrive rather than reserving space with skeletons. The 0.676 shift is
+present on an ordinary load, so this is not an artefact of the injected delay.
+
+> **Correction to my earlier note.** I had written that this needed "CDP network emulation,
+> which this harness does not expose," and left the case unrun. That was wrong on both counts:
+> the `chrome-devtools` tools do expose network throttling, and in any case the shift is
+> measurable directly with `PerformanceObserver`. The case is now run and it fails.
 
 ---
 
 ## MODULE 1 — Dashboard: COMPLETE
 
-**62 cases written · 60 executed · 2 explicitly left unrun (D1-054, D1-055) · 18 findings.**
+**62 cases written · 62 executed · 0 unrun · 19 findings (9 × S1).**
 
 | ID | Sev | Finding |
 |---|---|---|
@@ -808,6 +863,8 @@ Evidence: `dash-failure-rs0.png`.
 | WWL-016 | S3 | Hero CTAs resolve to an unfiltered list; "Nayi Booking" starts no booking |
 | WWL-017 | S2 | 11 of 20 onboarding tasks dead-end (6 wrong tab, 5 × hard 404) |
 | **WWL-018** | **S1** | **Failed load renders as "Rs 0 collected, Rs 0 owed" with no error and no retry** |
+| **WWL-019** | **S1** | **ROOT CAUSE — 59 `catch` blocks across 14 API modules return `null` on failure, so `isError` is never true and every error/Retry UI is dead code** |
+| D1-055 | S2 | CLS **1.03** (10× the "good" threshold) — panels jump in without reserved space |
 
 **Root-cause clusters (not 18 separate bugs):**
 1. **`paymentStatus` trusted over actual amounts** → WWL-001, 002, 003, 005, 010
@@ -815,7 +872,9 @@ Evidence: `dash-failure-rs0.png`.
    this is **unpushed/undeployed**
 3. **Profit maths ignores receipts** → WWL-009
 4. **Venue scope not threaded through 4 panels** → WWL-006
-5. **No error/empty-state discipline** → WWL-018
+5. **`catch { return null }` in the API layer (59 sites)** → WWL-018, WWL-019, D1-054.
+   The error UIs are already written and correct; they are simply never reached. **This is the
+   single highest-leverage fix in the module.**
 6. **Active state expressed as CSS class only** → WWL-007, 012, and 6 more control groups
 
 **Data written during testing:** one reminder log on the vendor's own booking (180); one
