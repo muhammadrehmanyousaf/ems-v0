@@ -47,7 +47,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 15 | Tax report | `/dashboard/tax` | ✅ 72 | **`[x]` COMPLETE — 61 run, 11 not run, 10 findings** |
 | 16 | Reports | `/dashboard/reports` | ✅ 70 | **`[x]` COMPLETE — 60 run, 10 not run, 10 findings** |
 | 17 | Trade operations | `/dashboard/trade-ops` | ✅ 86 | **`[x]` COMPLETE — 71 run, 15 not run, 10 findings** |
-| 18 | Automation | `/dashboard/automation` | — | `[ ]` |
+| 18 | Automation | `/dashboard/automation` | ✅ 78 | `[ ]` IN PROGRESS |
 | 19 | Kitchen prep | `/dashboard/kitchen` | — | `[ ]` |
 | 20 | Inventory | `/dashboard/inventory` | — | `[ ]` |
 | 21 | Staff & payroll | `/dashboard/staff` | — | `[~]` bug confirmed, fix unverified |
@@ -7911,3 +7911,159 @@ unsaved work discarded without a prompt by a UI that is actively displaying an "
 save that rewrites a whole JSON column from a registry; and a sibling screen with almost the same
 name holding the one trade the hub forgot. And after all of it, the entire surface is empty in
 production.
+
+---
+
+# MODULE 18 — AUTOMATION (`/dashboard/automation`)
+
+**Components** `automation-redesigned-view.tsx` + `built-in-reminders-section.tsx` +
+`rule-form-dialog.tsx`
+**Data** `GET /api/v1/automation/status` (built-ins) · `GET /api/v1/automation/rules` (custom)
+**Write paths** `PATCH /automation/prefs` · `POST|PATCH|DELETE /automation/rules`
+
+Two independent surfaces stacked on one page:
+
+1. **Built-in reminders** — 5 system reminders (`t_minus_14`, `t_minus_3`, `t_minus_1`,
+   `t_plus_1_review`, `lead_48h_stale`) with **two layers of control**: a per-vendor opt-out
+   (`vendorEnabled`, persisted to `User.automationPrefs`) and a **global env kill-switch**
+   (`envDisabled`, which takes precedence).
+2. **Custom rules** — a "no-code rule builder" whose entire vocabulary is
+   `triggerType ∈ {days_before_event, days_after_event}` and `actionType = "notify_me"`.
+
+## SAFETY LIMIT FOR THIS MODULE
+
+The built-in reminders decide whether the platform **messages real customers** on this vendor's
+behalf — T-14/T-3/T-1 before their wedding, a review prompt after it, and a nudge on stale leads.
+
+- The write blocker is armed **before** the page is interacted with. Every `PATCH`/`POST`/`DELETE`
+  is captured and diverted.
+- Toggles **are** driven — that is the only way to test optimistic UI and the success path — but
+  only with the blocker armed, and the server state is re-read afterwards through a clean realm to
+  prove nothing changed.
+- No rule is created, edited or deleted for real.
+
+## What the source says before I touch the page
+
+- **The custom-rule builder has one action: `notify_me`** — it notifies the **vendor**, not the
+  customer. So "automation" here is "remind me N days before/after an event". Worth stating
+  plainly against the page's own framing of a no-code builder.
+- **`envDisabled` is an env-var kill switch** — precisely the feature-flag debt pattern. If the
+  flags are off in production the vendor sees "Disabled by ops" and the reminders never fire.
+- **The toggle fires immediately with no confirmation**, and `onMutate` applies an **optimistic**
+  update, so the UI flips before the server answers.
+- `fmtDate` uses `toLocaleDateString(undefined, …)` — the **browser** locale, unlike every other
+  module which pins `en-PK`.
+- `/api/v1/automation` is **not** on `BUSINESS_SCOPED_PREFIXES` — the third module after Tax
+  (WWL-190) and Reports (WWL-204) that cannot follow the venue switcher, despite
+  `AutomationRule.businessId` existing on the model.
+- `triggerLabel` pluralises correctly (`1 day` / `2 days`) — contrast WWL-154.
+
+## Test cases — written in full before execution
+
+### A. Load and the two surfaces
+
+| # | Case | Expect |
+|---|---|---|
+| D18-001 | Route loads; both sections render | |
+| D18-002 | `<title>` is `Dashboard : Automation` | |
+| D18-003 | Sidebar / breadcrumb / `<h1>` agree | |
+| D18-004 | Two calls on load: `/automation/status` and `/automation/rules` | |
+| D18-005 | **Is `businessId` sent on either?** | predicted no |
+| D18-006 | Does switching venue change anything? | |
+| D18-007 | Section headings and descriptions render | |
+| D18-008 | The two surfaces are visually distinguishable | |
+
+### B. Built-in reminders — the five system rules
+
+| # | Case | Expect |
+|---|---|---|
+| D18-009 | All **5** built-ins render with label, description and icon | |
+| D18-010 | Each shows its current state | |
+| D18-011 | **`engine.enabled` — is the automation engine actually running in prod?** | |
+| D18-012 | `engine.intervalMs` — is the cadence disclosed to the vendor? | |
+| D18-013 | **How many are `envDisabled` (ops kill-switch)?** | the flag-debt question |
+| D18-014 | An `envDisabled` rule shows a distinct "Disabled by ops" pill | |
+| D18-015 | …and its vendor toggle is disabled or clearly overridden | |
+| D18-016 | A vendor-disabled rule is distinguishable from an ops-disabled one | two layers, two messages |
+| D18-017 | `delegated` — what does it mean and is it surfaced? | |
+| D18-018 | Toggling a built-in fires `PATCH /automation/prefs` with `{kind, enabled}` | captured, diverted |
+| D18-019 | The optimistic update flips the UI before the server answers | |
+| D18-020 | **With the write diverted, does the UI still report success?** | WWL-107 recurrence |
+| D18-021 | After invalidation, does the true server state come back? | optimistic rollback |
+| D18-022 | **Server state unchanged after the toggle test** | re-read through a clean realm |
+| D18-023 | Is there any confirmation before changing customer messaging? | predicted none |
+| D18-024 | Does the copy explain what each reminder sends, and to whom? | |
+| D18-025 | Can the vendor preview the message a built-in sends? | |
+| D18-026 | Failure of `/automation/status` → error state with Retry? | |
+
+### C. Custom rules — table and stats
+
+| # | Case | Expect |
+|---|---|---|
+| D18-027 | Four stat cards: Total, Active, Paused, Before event | |
+| D18-028 | Counts match the rule list | |
+| D18-029 | **Do the cards follow the search filter?** | predicted no |
+| D18-030 | Columns: Rule, Trigger, Offset, Action, Last run, Status, actions | |
+| D18-031 | `triggerLabel` renders "N days before/after event" | |
+| D18-032 | **Pluralisation at offset 1** — "1 day", not "1 days" | contrast WWL-154 |
+| D18-033 | Offset 0 renders sensibly ("0 days before event"?) | |
+| D18-034 | `Last run` — is any rule actually running? | `lastRunAt` |
+| D18-035 | **`Last run` uses the browser locale, not `en-PK`** | inconsistency |
+| D18-036 | Status pill Active/Paused matches the switch | two controls, one state |
+| D18-037 | Row switch, Edit and Remove all have accessible names | |
+| D18-038 | Toggling a custom rule fires `PATCH /automation/rules/:id {enabled}` | captured |
+| D18-039 | No confirmation on the row switch | |
+| D18-040 | `<th scope>` / caption | |
+| D18-041 | Row checkbox names | |
+| D18-042 | Empty state offers "New rule" | |
+
+### D. The rule dialog — writes blocked
+
+| # | Case | Expect |
+|---|---|---|
+| D18-043 | `New rule` opens the dialog | |
+| D18-044 | Fields: Name, Trigger, Offset days, Action, Message | |
+| D18-045 | **How many trigger types does the API offer?** | predicted 2 |
+| D18-046 | **How many action types?** | predicted 1 — `notify_me` |
+| D18-047 | Selects default sensibly when options load | |
+| D18-048 | Is there any validation on name / offset / message? | |
+| D18-049 | Negative offset days | |
+| D18-050 | Huge offset days (9999) | |
+| D18-051 | Non-numeric offset | |
+| D18-052 | Empty name → blocked with a hint | `FormBlockedHint` is imported |
+| D18-053 | Message length cap | |
+| D18-054 | `POST` captured and aborted; body shape correct | |
+| D18-055 | Edit seeds all values; `PATCH` captured | |
+| D18-056 | Editing a rule that is currently enabled — does it stay enabled? | |
+| D18-057 | Cancel discards; reopening reseeds | |
+| D18-058 | Stale-error leak between create and edit sessions | WWL-143 recurrence probe |
+
+### E. Delete, search, export
+
+| # | Case | Expect |
+|---|---|---|
+| D18-059 | Remove opens a confirm naming the **rule** | better than WWL-145 |
+| D18-060 | Cancel / Esc close without deleting | |
+| D18-061 | `DELETE` captured and aborted | |
+| D18-062 | Search by name, message, trigger type | |
+| D18-063 | Search by action / status | predicted no match |
+| D18-064 | Case-insensitive, trimmed, metacharacters literal | |
+| D18-065 | No-match empty state offers "New rule" as if none exist | WWL-152 pattern |
+| D18-066 | Export CSV matches screen | |
+| D18-067 | **CSV includes the full `Message` text** | what the vendor's automation says |
+| D18-068 | CSV omits nothing shown on screen | parity |
+
+### F. Resilience, a11y, responsive
+
+| # | Case | Expect |
+|---|---|---|
+| D18-069 | `/automation/rules` failure → error + Retry | |
+| D18-070 | Retry recovers | |
+| D18-071 | Loading states for both surfaces | |
+| D18-072 | Keyboard: both toggles, dialog, delete all reachable | |
+| D18-073 | Visible focus ring on every control including the switches | |
+| D18-074 | Switches announce their state | `aria-label="Enabled"` is generic |
+| D18-075 | 360px: no page overflow **and** nothing clipped outside a scroll container | |
+| D18-076 | 360px: are the row switches and actions reachable? | WWL-146/160 recurrence |
+| D18-077 | 360px: built-in toggles reachable | |
+| D18-078 | Rule count and every built-in preference unchanged at module close | proof |
