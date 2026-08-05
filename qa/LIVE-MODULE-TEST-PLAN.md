@@ -43,7 +43,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 11 | Receivables | `/dashboard/receivables` | ✅ 96 | **`[x]` COMPLETE — 84 run, 12 not run, 13 findings (2× S1)** |
 | 12 | Receipts | `/dashboard/receipts` | ✅ 92 | **`[x]` COMPLETE — 83 run, 9 not run, 17 findings** |
 | 13 | Cheque ledger | `/dashboard/pdcs` | ✅ 88 | **`[x]` COMPLETE — 78 run, 10 not run, 16 findings** |
-| 14 | Expenses | `/dashboard/expenses` | — | `[ ]` |
+| 14 | Expenses | `/dashboard/expenses` | ✅ 104 | `[ ]` IN PROGRESS |
 | 15 | Tax report | `/dashboard/tax` | — | `[ ]` |
 | 16 | Reports | `/dashboard/reports` | — | `[ ]` |
 | 17 | Trade operations | `/dashboard/trade-ops` | — | `[ ]` |
@@ -6697,3 +6697,182 @@ delete confirm and per-status action gating are all correct. But the ledger hide
 a vendor actually needs (Rs 3.07m held, Rs 324k bounced) behind counts, the entire lifecycle is
 unusable on a phone, a cheque marked bounced by mistake can only be deleted, and every one of the
 four write verbs will tell the vendor it succeeded when it did not.
+
+---
+
+# MODULE 14 — EXPENSES (`/dashboard/expenses`)
+
+**Components** `expenses-redesigned-view.tsx` + **`expense-cockpit.tsx`** (a second, independent
+panel) + `expense-form-dialog.tsx`
+**Data** `ExpensesAPI.list()` → `GET /api/v1/expenses` (business-scoped)
+**Write paths** `POST /expenses` · `PATCH /expenses/:id` · `DELETE /expenses/:id` ·
+**bulk import** · **custom-field definitions** · **AI receipt scan**
+
+The widest surface in the sweep so far: a spending cockpit with period navigation, a full ledger,
+per-venue vendor-defined custom fields, a CSV import, an export, and a receipt-photo scan that
+calls an AI coercion path.
+
+## SAFETY LIMIT FOR THIS MODULE
+
+- Write blocker armed before any dialog. Create / edit / delete captured and diverted.
+- **No import is committed.** The import dialog is opened and its validation examined; no file is
+  ever submitted.
+- **No custom-field definition is created or edited.** Those are schema changes on a live venue.
+- **No receipt image is uploaded.** The AI coercion path calls an external model; client-side file
+  validation is tested, the upload is not performed.
+
+## What the source says before I touch the page
+
+- **The page fetches the whole expense ledger twice.** The table uses
+  `["expenses-redesigned", activeBusinessId, bookingId]`; the cockpit uses a *separate*
+  `["expense-cockpit"]` key with its own `ExpensesAPI.list()`.
+- **`invalidate()` only touches `["expenses-redesigned"]`.** The cockpit key is not matched, so a
+  create / edit / delete should refresh the ledger but **not** the spending overview above it.
+- **Two different definitions of "fixed overhead" on one screen.** The `Fixed overheads` card sums
+  `bookingId == null`; the `fixed` chip on category rows uses `OVERHEAD_CATS`
+  (`rentals, electricity, salary, repairs, tax, marketing`). A rentals expense tagged to a booking
+  gets the chip but is excluded from the card; an untagged ingredients purchase counts in the card
+  but gets no chip.
+- **The cockpit's date handling is correct** — `new Date(dateStr + "T00:00:00")` and local `ymd()`,
+  not `toISOString()`. Worth verifying and crediting.
+- 13 genuinely Pakistani categories (broker commission, tax FBR/SECP, casual labour, fuel
+  diesel/petrol) and 9 payment methods including JazzCash / Easypaisa / Raast / IBFT.
+- The query key here **does** include `activeBusinessId` — better than Modules 10–13, which all
+  used bare keys.
+- Same `LinkedFunctionSheetBadge` Event column → expect the same N+1.
+
+## Test cases — written in full before execution
+
+### A. Load, double-fetch, ledger integrity
+
+| # | Case | Expect |
+|---|---|---|
+| D14-001 | Route loads; cockpit and ledger both render | |
+| D14-002 | `<title>` is `Dashboard : Expenses` | |
+| D14-003 | Sidebar / breadcrumb / `<h1>` agree | |
+| D14-004 | **How many `/api/v1/expenses` calls fire on load?** | predicted 2 — table + cockpit |
+| D14-005 | `businessId` appended when a venue is active | |
+| D14-006 | Row count === API length | |
+| D14-007 | Σ row amount === cockpit "Spent · all time" when granularity = all | |
+| D14-008 | Per-venue sums reconcile to all-venues | after WWL-129 |
+| D14-009 | Rs formatting; no `NaN` | |
+| D14-010 | Dates render `en-PK` | |
+| D14-011 | Category labels are the PK-specific ones | broker commission, tax FBR/SECP |
+| D14-012 | Payment-method labels include the PK rails | |
+| D14-013 | Sort order of the ledger | |
+| D14-014 | An expense with no booking renders | `bookingId: null` |
+| D14-015 | An expense with no payee / note renders `—` | |
+| D14-016 | Amount tone is "error" (money out) | contrast Receipts' success tone |
+
+### B. The cockpit
+
+| # | Case | Expect |
+|---|---|---|
+| D14-017 | Four cockpit cards: Spent, Fixed overheads, Event/function costs, Biggest category | |
+| D14-018 | `Spent + granularity` label tracks the selected granularity | |
+| D14-019 | Day / Month / Year / All toggle switches the period | |
+| D14-020 | Previous / Next period navigation shifts the anchor correctly | |
+| D14-021 | Period label reads correctly for each granularity | |
+| D14-022 | **`inPeriod` uses local dates, not UTC** | the timezone-correct counter-example |
+| D14-023 | Day granularity on a date with known spend matches the ledger rows for that day | |
+| D14-024 | Month granularity totals match Σ of that month's rows | |
+| D14-025 | Year granularity totals match | |
+| D14-026 | "All" shows every row and hides period navigation? | |
+| D14-027 | Delta vs previous period is computed only when prevTotal > 0 | no divide-by-zero |
+| D14-028 | Delta sign and direction are right | |
+| D14-029 | **`Fixed overheads` = Σ where bookingId is null** | not the category list |
+| D14-030 | **The `fixed` chip uses a different rule from the card** | inconsistency probe |
+| D14-031 | `Event / function costs` === total − overheads | |
+| D14-032 | The event count in the delta matches distinct bookings | |
+| D14-033 | `Biggest category` matches the top of the category bars | |
+| D14-034 | Category bars sum to the period total | |
+| D14-035 | Category colours are stable per category | |
+| D14-036 | Per-event roll-up sorted by spend desc | |
+| D14-037 | Navigating to a period with no expenses → honest zero state | |
+| D14-038 | Cockpit cards during load | `Rs 0` flash? |
+| D14-039 | **Does the cockpit refresh after a ledger mutation?** | predicted NO — separate query key |
+| D14-040 | Cockpit has its own `Add expense` button — same dialog? | |
+
+### C. Ledger table, columns, custom fields
+
+| # | Case | Expect |
+|---|---|---|
+| D14-041 | Columns: Category, Space, Paid to, Note, Method, Date, Event, Amount, actions | |
+| D14-042 | Long note truncates without breaking the row | |
+| D14-043 | Event column N+1 probe | |
+| D14-044 | Space column populated when a sub-venue is set | |
+| D14-045 | Custom-field columns appear only when defs exist with `showInList` | |
+| D14-046 | `Fields` button appears only when a venue is active (`cfEnabled`) | |
+| D14-047 | `Fields` on **All venues** — is the button hidden or broken? | `activeBusinessId` null |
+| D14-048 | Custom-field manager opens (not driven further) | |
+| D14-049 | Action buttons have accessible names | |
+| D14-050 | `<th scope>` / caption | |
+| D14-051 | Row checkbox names | |
+| D14-052 | Row not clickable | |
+
+### D. Search, selection, export, import
+
+| # | Case | Expect |
+|---|---|---|
+| D14-053 | Search by payee | |
+| D14-054 | Search by note/description | |
+| D14-055 | Search by category | |
+| D14-056 | Search by amount / method | predicted no match |
+| D14-057 | Case-insensitive, trimmed, metacharacters literal | |
+| D14-058 | No-match empty state — "No expenses logged" + Add CTA? | WWL-152 pattern |
+| D14-059 | **Do the cockpit cards follow the ledger search?** | they are separate components |
+| D14-060 | Clearing restores | |
+| D14-061 | Select all / filtered select all | |
+| D14-062 | No bulk delete | |
+| D14-063 | Export CSV matches screen | |
+| D14-064 | CSV omits **Space**, **Event** and any custom fields shown on screen | parity |
+| D14-065 | Formula-injection exposure | |
+| D14-066 | **Import dialog opens; template/format is discoverable** | not committed |
+| D14-067 | Import validates before committing | inspect only |
+| D14-068 | Import is reachable but clearly separated from destructive action | |
+
+### E. Expense dialog — writes blocked
+
+| # | Case | Expect |
+|---|---|---|
+| D14-069 | `Add expense` opens the dialog | |
+| D14-070 | Fields: Amount, Date, Category, Method, Paid to, Subcategory, Space, Function, Note | |
+| D14-071 | No errors on open from a clean load | |
+| D14-072 | **After an edit session, does a blank create form show stale errors?** | WWL-143 recurrence |
+| D14-073 | Save disabled with a blocked-reason hint | |
+| D14-074 | Amount 0 / negative → errors | |
+| D14-075 | **Date default — UTC or local?** | WWL-112 recurrence probe |
+| D14-076 | Future spent date → rejected | `validateNotFutureDate` |
+| D14-077 | Payee > 150 chars → error | |
+| D14-078 | Note > 1000 → silent block with a false hint? | WWL-117 recurrence |
+| D14-079 | Category select lists all 13 | |
+| D14-080 | Method select lists all 9 | |
+| D14-081 | Space select scoped to the active venue | |
+| D14-082 | Function/booking select populated and optional | |
+| D14-083 | **Receipt file picker — client-side validation** (type, size) | no upload performed |
+| D14-084 | Valid form enables Save; `POST` captured and aborted | |
+| D14-085 | Edit seeds all values; `PATCH` captured and aborted | |
+| D14-086 | **Is the booking selector present in edit mode?** | WWL-144 recurrence probe |
+| D14-087 | Cancel discards | |
+
+### F. Delete, resilience, a11y, responsive
+
+| # | Case | Expect |
+|---|---|---|
+| D14-088 | Remove opens a confirm naming the **amount** | WWL-145 shape |
+| D14-089 | Confirm does not name the category / payee / date | identification probe |
+| D14-090 | Cancel / Esc close without deleting | |
+| D14-091 | Remove fires `DELETE` — captured and aborted | |
+| D14-092 | Delete error toast has an 8s duration (longer than default) | deliberate choice |
+| D14-093 | Genuine network failure → *"Couldn't load expenses."* + Retry | |
+| D14-094 | Retry recovers | |
+| D14-095 | **Does the cockpit show an error state, or silently zero?** | separate query |
+| D14-096 | Loading state | |
+| D14-097 | Density persists | |
+| D14-098 | Venue switch re-scopes both cockpit and ledger | cockpit key lacks businessId |
+| D14-099 | Keyboard reach + visible focus | |
+| D14-100 | 360px: no overflow | |
+| D14-101 | 360px: are Edit / Remove reachable? | WWL-146/160 recurrence |
+| D14-102 | 360px: is the cockpit usable (period toggle, cards)? | |
+| D14-103 | 360px: category bars and per-event roll-up readable | |
+| D14-104 | Expense count unchanged at module close | proof nothing was written |
