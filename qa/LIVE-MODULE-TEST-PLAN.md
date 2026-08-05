@@ -2555,3 +2555,133 @@ immediately afterwards on a fresh page load:
 
 No row created, no id burned. Page state restored to `All venues` / `Active` / 10 rows, and
 the test harness confirmed cleared from the page.
+
+---
+
+## Module 4 — Sections H (failure), I (a11y), J (responsive)
+
+### ✅ D4-055 — the error state is **real here**, and Retry actually works
+
+Injected a transport failure on `GET /api/v1/bookings?…` in the page, then forced a refetch by
+switching view. Unlike the Dashboard — where `catch { return null }` turns every failure into
+a successful empty result and makes the error UI dead code (WWL-018/019) — the Bookings module
+renders it properly:
+
+> **Couldn't load bookings.**   `[ Retry ]`
+
+Then disarmed the injector and clicked **Retry**: the list recovered **in place**, no page
+reload — 12 rows returned, `Collected (shown) Rs 16,733,683` and `Due (shown) Rs 2,240,467`
+restored exactly, error message gone.
+
+So the failure path in this module is correctly wired end to end. It is worth stating plainly
+because it proves the Dashboard's dead error UI is a *local* defect in `lib/api/analytics.ts`,
+not a house style.
+
+### 🔴 WWL-052 — S2 — On load failure the money tiles print `Rs 0` instead of `—`
+
+Same injected failure. Directly **above** the "Couldn't load bookings." message, the four KPI
+tiles rendered:
+
+```
+Total bookings  0      Collected (shown)  Rs 0      Due (shown)  Rs 0      This month  0
+```
+
+`Rs 0 received` and `Rs 0 to chase` are not "no data" — they are a confident financial claim,
+and they are false. The vendor has collected Rs 3,342,938 and is owed Rs 11,176,762. The
+screen simultaneously says the data could not be loaded and states the data.
+
+The correct treatment already exists in this codebase — the Dashboard KPI cards use
+`kpisQ.isError ? "—"`. That is the pattern to apply here. Whichever of the two messages a
+vendor believes, one of them is lying to them; a dash cannot lie.
+
+### 🔴 WWL-053 — S1 — **On mobile the Bookings module is completely inert — a booking cannot be opened at all**
+
+At 360 × 780 the `<table>` is `display: none` (`hidden md:block`) and is replaced by a card
+list (`space-y-2 p-3 md:hidden`). The card list renders all 10 bookings. It contains
+**zero interactive elements**:
+
+| Measured at 360px | Result |
+|---|---|
+| Cards rendered | 10 |
+| Cards containing a link, button, or input | **0** |
+| Total controls inside the entire card list | **0** |
+| First card: `tag` / `role` / `tabIndex` / `cursor` | `DIV` / `null` / `-1` / `auto` |
+| Full pointer sequence on a card (`pointerdown → mouseup → click`) | **no navigation**; `closest('a,button,[role=button],[onclick]')` → **`null`** |
+| `Select all` checkbox | not rendered |
+
+The desktop row's two controls — `Edit booking` and `Booking actions` (which is the **only**
+route to `View detail page`) — live inside the hidden table, so they do not exist on mobile
+either. There is no card tap target, no kebab, no link.
+
+**Net effect on a phone:** the vendor can read ten cards and nothing else. They cannot open a
+booking, edit one, record a payment, cancel one, or reach a function sheet. The single
+remaining interactive control in the module is the search box — which returns HTTP 500 for
+every term (WWL-041).
+
+For a Pakistani venue operator, whose primary and often only device is a phone, this makes the
+Bookings module non-functional rather than degraded. Rated S1 on that basis.
+
+Two aggravating details:
+
+- The mobile card drops the **`PAID`** column. It shows `Rs 1,673,250` and the `Pending` chip
+  but not how much has actually been collected. On desktop a vendor can catch WWL-037 by
+  reading `AMOUNT` against `PAID`; on mobile the corroborating number is gone, leaving only
+  the chip that is wrong.
+- Card fields are: venue, `customer · date`, amount, status chip, payment chip. `SPACE` is
+  correctly dropped (it is dead anyway — WWL-050).
+
+### 🔴 WWL-054 — S3 — Table rows are not clickable on desktop either; the only way in is an icon-only kebab
+
+**This corrects the earlier D4-047 note in this file.** That check confirmed the *route*
+`/dashboard/bookings/175` renders when typed. It did not test the case as written — "row opens
+the correct booking detail" — and that fails:
+
+| Row property | Value |
+|---|---|
+| `<a>` elements in the row | **0** |
+| `cursor` | `auto` |
+| `tabIndex` | `-1` |
+| `role` | `null` |
+| Full pointer sequence on the CUSTOMER cell | **no navigation** |
+
+The row's only controls are the two trailing icon buttons. Opening a booking therefore costs:
+click the kebab → click `View detail page`. The customer name, venue, date and both money
+columns are inert text.
+
+Every convention a vendor brings from every other table on the web says the row is clickable.
+It is not, it gives no hover affordance, and the actual door is an unlabelled-looking icon at
+the far right of the row.
+
+### ⚠️ D4-057 — confirms WWL-035 inside this module
+
+10 rows × 2 controls = **20 row-action buttons**, sharing exactly **2** accessible names:
+`Edit booking` (×10) and `Booking actions` (×10). Neither carries the customer, the date, or
+the booking id. A screen-reader user tabbing the table hears "Edit booking" ten times with
+nothing to tell them which booking they are about to edit — on a screen where the wrong choice
+edits the wrong wedding's money.
+
+Same defect class as WWL-035; recorded here as the Bookings-module instance rather than as a
+new finding.
+
+### ✅ D4-059 / D4-060 — no layout overflow at either width
+
+| Width | `documentElement.scrollWidth` vs `clientWidth` | Verdict |
+|---|---|---|
+| 1521px (desktop) | 1521 / 1521 | **no horizontal overflow**, zero elements past the right edge |
+| 360px (mobile) | 345 / 345 | **no horizontal overflow** |
+
+One element measured past the viewport edge at 360px — a `<span>` reading `· engagement` at
+`right: 367` — but its parent is `text-sm font-medium truncate`, so it is clipped by the
+truncation and never paints outside. Not a defect; recorded so the raw measurement is not
+mistaken for one later.
+
+The responsive strategy is the *good* one: rather than horizontally scrolling an 8-column
+table on a phone, the table is swapped for cards. The strategy is right — the execution is
+WWL-053.
+
+**Mobile tap targets** — 36 of 41 interactive elements in `<main>` fall under the 44px
+minimum in at least one dimension. The worst are the 28×28 icon buttons: `Toggle Sidebar`,
+`Comfortable`, `Compact`, and ten `WhatsApp reminder` buttons in the receivables strip.
+`Active` (32px tall), `Archive` (32px), `Add booking` (36px) and `Export` (36px) are all
+under as well. Recorded as an observation rather than a separate finding — on this screen it
+is moot, because per WWL-053 almost none of them do anything for a booking.
