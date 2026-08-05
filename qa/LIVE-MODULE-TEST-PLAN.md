@@ -3752,3 +3752,134 @@ the payments the system has already recorded.
 
 **Cleanup:** the token issued for this test was **revoked immediately** and verified
 (`shareTokenRevokedAt` set). No live customer link remains on sheet #77.
+
+---
+
+## MODULE 6 — RESULTS (Section G: the other three routes)
+
+### 🔴🔴 WWL-080 — S1 — **No customer can ever sign a contract.** End-to-end proof
+
+`/dashboard/function-sheet-sign` is well designed. It states the integrity rule explicitly:
+
+> **Customer signature**
+> The customer signs on their own device via a secure link — **you can't sign for them.**
+
+That is correct and important: the vendor is prevented from forging the customer's signature.
+The customer's *only* route is the secure link. Driven end to end through the real UI:
+
+| Step | Result |
+|---|---|
+| 1. Open `/dashboard/function-sheet-sign` | renders, sheet loaded |
+| 2. Click **`Generate signing link`** | **works** — no crash (this is a separate inline implementation, not the `ShareLinkDialog` of WWL-078) |
+| 3. UI displays the link to send | `https://www.weddingwala.pk/sign/`**`2SrIgEOrVBBISyVNDswOmMi3eQXFOgXHMsQvAf0cKmo`** |
+| 4. Customer opens that link | 301 → `/sign/`**`2srigeorvbbisyvndswommi3eqxfogxhmsqvaf0ckmo`** |
+| 5. Customer sees | **"Link not found — Double-check the URL or ask the vendor to resend."** |
+
+So the workflow is: the vendor may not sign for the customer (by design), and the customer's
+only path is a link that is destroyed in transit by the site's own middleware (WWL-079).
+**The contract-signing feature cannot be completed by anyone, ever.**
+
+This closes the loop on WWL-074. Every sheet marked `signed` has `signaturesJson: null` not
+because of a data-migration quirk — but because **the signature flow has never been completable
+on production**. The `Signed` state is being set by the lifecycle button alone, with no
+signature behind it.
+
+The page confirms it in its own words. Sheet #77 — state `Signed`, `signedAt 22-Jan-2026`,
+`SIGNED` on its PDF — displays:
+
+> **Awaiting both signatures.**
+
+**Note there are two share-link surfaces, and they behave differently:** `Share link` on the
+detail page crashes (WWL-078); `Generate signing link` here works. Both feed the same
+`/sign/<token>` URL that WWL-079 kills. Fixing the crash alone changes nothing.
+
+### 🔴 WWL-081 — S1 — Opening the composer and pressing Save **destroys the line-item descriptions**
+
+WWL-071 is not only a display bug. It is a latent data-destruction bug, and the composer is
+the trigger.
+
+`function-sheet-composer-view.tsx`:
+
+```js
+// line 86 — LOAD: reads `label`, which does not exist on the stored items
+setItems((sheet.lineItemsJson ?? []).map((i) => ({ label: i.label ?? "", qty: …, unitPrice: … })))
+
+// line 130 — SAVE: writes `label` only. No `description` key at all.
+lineItemsJson: items.map((i) => ({ label: i.label, qty: …, unitPrice: …, total: …, notes: … }))
+```
+
+Confirmed live — the composer's two `Description` inputs render **empty** while `Qty` and
+`Unit` are correctly populated (`1 / 320000`, `198 / 3900`).
+
+So a vendor who opens the composer to adjust a price and clicks **`Save changes`** writes back
+`label: ""` and **drops the `description` key entirely** — permanently destroying
+*"Hall / marquee rental"* and *"Catering — 198 guests @ Rs 3900/head"* on a Rs 1,092,200
+contract. Today the data is intact and merely unread; one save makes the loss permanent and
+unrecoverable.
+
+**Not driven** — `Save changes` was deliberately not clicked. The read path (empty inputs) was
+observed live and the write path confirmed in source.
+
+### ⚠️ WWL-082 — S2 — The composer opens a real contract with no `?id`, and never shows which one
+
+`function-sheet-composer-view.tsx:57`:
+
+```js
+const first = list?.functionSheets?.[0]
+```
+
+Navigating to `/dashboard/function-sheet-composer` **bare** — no query string — silently loads
+the **first function sheet in the list** into a fully live editor. Verified: it opened sheet
+#77 (Ahmed Raza, Rs 1,092,200, state `Signed`) with `Save changes` enabled.
+
+The page header reads only *"Edit function sheet"* and the state chip *"Signed"*. **The sheet
+number is never displayed** — only the customer name inside an editable Title field.
+
+Combined with WWL-081, a vendor who reaches this route from a stale tab or a bookmark is one
+click away from damaging a contract they did not choose to open.
+
+### 🔴 WWL-083 — S2 — A marquee vendor is shown a **photographer's** operations screen
+
+`/dashboard/function-sheet-operations` for this **wedding-venue / marquee** vendor renders:
+
+> **Photography operations**
+> Shot list, crew and deliverables for this function sheet.
+> **Photographer** — *Shot list:* "Key moments to capture, in running order"
+> *Crew:* "Who's on the shoot" — *Deliverables:* "e.g. edited album, highlight reel"
+
+There is nothing about kitchen, catering covers, setup, staffing, timings or the banquet
+run-sheet — the things a venue actually needs on the day. This is **D6-038 confirmed**: the
+vendor-type-specific blocks (`photographyJson`, `bridalWearJson`, `hennaJson`, `makeupJson`,
+`carRentalJson`, …) render without regard to the vendor's actual type.
+
+It also explains WWL-073's BEO gap from the other side: the operational data a BEO would print
+is being collected against the wrong trade entirely, and `kitchenSheetJson` stays null.
+
+This route also defaults to the first sheet with no `?id`, same as the composer.
+
+---
+
+### ✅ Section G passes
+
+- **D6-057 — the signature pad genuinely works.** Switching to `Draw` renders a 520×120
+  canvas; a synthetic stroke moved it from **0 → 1,057 ink pixels**, and `Save signature`
+  flipped from disabled to **enabled**. `Clear` restored it. (Not saved — no signature was
+  applied to a real contract.)
+- **D6-058 — the vendor genuinely cannot sign for the customer.** Separate vendor and customer
+  blocks, and the customer block offers no input at all — only the link generator, with the
+  rule stated in plain language. The integrity model is right; only its delivery is broken.
+- **D6-061 / D6-062** — both routes render without crashing and are wired to the live API.
+  The composer is a real editor (16 inputs, `Add item`, `Remove item`, `Suggest items`,
+  Discount, Sales tax, **`Terms (one per line)`**, Internal notes) and states plainly:
+  *"Editing is wired to the live API — saving updates the function sheet and the server
+  recomputes totals."*
+- The composer confirms WWL-073's data half from the other direction: a
+  **`Terms (one per line)`** field exists and is empty. The contract has no terms because none
+  were ever authored here — not because the generator cannot print them.
+- **Share-link expiry copy is honest** on the sign page: *"The link expires in 30 days;
+  generating a new one revokes the old."* Matches the API's documented behaviour.
+
+**Cleanup:** the second token (issued through the real UI by `Generate signing link`) was
+revoked and verified — `shareTokenRevokedAt: 2026-08-05T19:06:50.903Z`. Re-read sheet #77
+afterwards: `signaturesJson` still `null`, `state` still `signed`. **No signature was applied
+and no state was changed by this testing.**
