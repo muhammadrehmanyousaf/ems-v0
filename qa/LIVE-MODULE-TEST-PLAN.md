@@ -32,7 +32,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 |---|---|---|---|---|
 | 1 | Dashboard | `/dashboard` | ✅ 62 | **`[x]` COMPLETE — 60 run, 2 unrun, 18 findings** |
 | 2 | Today | `/dashboard/today` | ✅ 58 | **`[x]` COMPLETE — 52 run, 6 not run, 11 findings** |
-| 3 | Lead inbox | `/dashboard/leads` | — | `[ ]` |
+| 3 | Lead inbox | `/dashboard/leads` | ✅ 61 | `[~]` in progress |
 | 4 | Bookings | `/dashboard/bookings` | — | `[ ]` |
 | 5 | Date holds | `/dashboard/date-holds` | — | `[ ]` |
 | 6 | Function sheets | `/dashboard/function-sheets` | — | `[ ]` |
@@ -1340,3 +1340,255 @@ evidence that WWL-019's `catch { return null }` is the single thing breaking err
 booking 179 (7 + 6 + 7) and all 20 deleted, with per-round API verification down to zero each
 time and a final hard reload confirming `Total tasks 0 / Open tasks 0` and no `ZZQA` residue.
 Venue scope restored to **All venues**. No money rows. No customer contacted.
+
+---
+
+# MODULE 3 — Lead inbox (`/dashboard/leads`)
+
+**What this screen is.** The top of the funnel and, per the vendor research, the single screen
+that decides whether the portal earns its keep: in Pakistan almost every enquiry arrives on
+WhatsApp or by phone, and the vendor's real job is to answer fast and stop leads going cold.
+A lead whose phone cannot be dialled is worthless; a lead that silently duplicates wastes the
+one follow-up the family will tolerate.
+
+**Live inventory captured 2026-08-05** — h1 `Leads`; **76 rows**; **320 buttons** (4 per row ×
+76 = 304, plus chrome); 12 in-`main` links including lead detail routes.
+
+**Tiles:** Total leads `76` · New `22` · Qualified `12` · Booked `9 converted`.
+
+**Header controls:** `Log a lead` · `Comfortable` / `Compact` (density) · `Import` · `Export`.
+
+**Per-row controls (×76):** `Convert to booking` · `Draft a reply` · `Edit lead` ·
+`Remove lead`.
+
+**Statuses seen:** New · Contacted · Quoted · Qualified · Booked.
+**Sources seen:** Form inquiry · Whatsapp · Manual walkin · Manual phone · In app chat.
+
+**Noted before testing:** `Comfortable`/`Compact` expose real `aria-pressed` (`true`/`false`) —
+this module gets right what seven other control groups in Modules 1–2 got wrong. Worth
+confirming and crediting.
+
+**Known context:** commit `5e7d74d` ("fix(leads): every field except contact name accepted
+anything") is in the **local unpushed** commits, so **live should still exhibit that bug**.
+Confirming it live is itself a test — it tells us the fix is real and undeployed.
+
+## A. Data correctness and tile arithmetic
+
+- [ ] **D3-001** — `Total leads 76` must equal the API's lead count for this vendor.
+- [ ] **D3-002** — `New 22` must equal leads with status `New`, and match the Dashboard's
+  `Naye Rabtay · 22 new enquiries` exactly.
+- [ ] **D3-003** — `Qualified 12` must equal leads with status `Qualified`.
+- [ ] **D3-004** — `Booked 9 converted` must equal leads that became bookings — and should
+  reconcile against the Bookings module.
+- [ ] **D3-005** — Status counts must not overlap or double-count; sum of all statuses ≤ 76.
+- [ ] **D3-006** — Budget column formatting: separators, no `NaN`, no `Rs 0` for missing.
+- [ ] **D3-007** — Event dates render sensibly (`27 Nov`, `03 Oct`) — check whether the **year**
+  is shown anywhere, since leads span multiple years (Jan/Feb dates are next year).
+- [ ] **D3-008** — Phone numbers render in a dialable form.
+- [ ] **D3-009** — Are the 76 rows all loaded, or paginated/virtualised? Establish which, and
+  whether tiles count all 76 or only the loaded page.
+
+## B. Venue scope (the recurring defect)
+
+- [ ] **D3-010** — Switch venue: do lead counts and rows rescope, or is this WWL-006/024 again?
+- [ ] **D3-011** — Does the leads API accept a `businessId`, and does it discriminate correctly
+  (the WWL-028 failure mode)?
+- [ ] **D3-012** — Scope persists across hard reload.
+
+## C. `Log a lead` — create, validate, persist
+
+- [ ] **D3-013** — Open the dialog; enumerate every field and its constraints.
+- [ ] **D3-014** — **Confirm the known bug live**: phone `abc-not-phone`, WhatsApp `!!!`,
+  email `bad-email`, budget `-5000`, guests `-10`, event date `2020-01-01` — expect all
+  accepted with Save enabled once a name is typed (the `5e7d74d` defect, undeployed).
+- [ ] **D3-015** — Determine what the **server** does with each hostile value: rejected,
+  coerced, or persisted.
+- [ ] **D3-016** — Create a valid lead → **hard reload** → it persists and `Total leads`
+  76 → 77 and `New` 22 → 23.
+- [ ] **D3-017** — Duplicate detection: create a second lead with the **same phone** — is it
+  flagged, merged, or silently duplicated? (Duplicates are the stated dedup key.)
+- [ ] **D3-018** — Required-field gating: which fields actually block Save, and is the reason
+  stated (not just a disabled button)?
+- [ ] **D3-019** — Long free text (2,000+ chars) in the enquiry/notes field — bounded, no
+  layout break, no silent truncation without notice.
+- [ ] **D3-020** — Event date far in the past and far in the future — both should be
+  questioned; a wedding in 2020 is a typo.
+- [ ] **D3-021** — Source and status selects contain the expected Pakistani-relevant options.
+- [ ] **D3-022** — Cancel discards; Escape discards; verified by hard reload.
+- [ ] **D3-023** — Error path surfaces the **server's** reason, not an axios wrapper string.
+
+## D. `Edit lead` — update and persist
+
+- [ ] **D3-024** — Open Edit on a known lead; every field pre-populates with current values.
+- [ ] **D3-025** — Change one field → save → **hard reload** → change persisted.
+- [ ] **D3-026** — Restore the original value → hard reload → confirmed restored.
+- [ ] **D3-027** — Editing does not silently clear fields the dialog does not show (the
+  whitelist-drops-fields failure mode seen in other WW integrations).
+- [ ] **D3-028** — Hostile values on edit are treated the same as on create.
+- [ ] **D3-029** — Opening Edit for a second lead must not carry the first lead's values.
+
+## E. `Remove lead` — delete safely
+
+- [ ] **D3-030** — Is there a confirmation step? (Timeline tasks had none — WWL-023.)
+- [ ] **D3-031** — Delete a lead I created → hard reload → gone, `Total leads` decrements.
+- [ ] **D3-032** — Is deletion soft or hard? Check whether it can be undone.
+- [ ] **D3-033** — Deleting must not affect a booking already converted from that lead.
+
+## F. `Convert to booking` — the money-adjacent path
+
+> **Deliberate limit:** I will drive this dialog and its validation but **will not complete a
+> conversion**, because it creates a real booking with a value on a live vendor's ledger.
+
+- [ ] **D3-034** — Open the dialog; enumerate every field and prefill.
+- [ ] **D3-035** — Prefill correctness: customer, phone, event type, date and budget must carry
+  over from the lead exactly.
+- [ ] **D3-036** — Validation on the money fields (the Rs 0 hole is a known WW risk).
+- [ ] **D3-037** — Does it warn before creating, and can it be cancelled cleanly?
+- [ ] **D3-038** — Converting a lead already `Booked` — is it blocked or silently duplicated?
+- [ ] **D3-039** — Cancel → hard reload → **no booking created** (verified via the bookings API
+  count before and after).
+
+## G. `Draft a reply` — the AI path
+
+- [ ] **D3-040** — Opens and produces a draft for the correct lead.
+- [ ] **D3-041** — The draft must be **editable** and must **not auto-send** (a standing WW
+  constraint).
+- [ ] **D3-042** — Draft references the right customer, event and date — no other lead's data.
+- [ ] **D3-043** — Behaviour when the AI call fails: error shown, not an empty box.
+- [ ] **D3-044** — Urdu/Roman-Urdu handling in the generated text.
+
+## H. Density, Import, Export
+
+- [ ] **D3-045** — `Comfortable` / `Compact` genuinely change row density; `aria-pressed`
+  updates correctly (credit if so).
+- [ ] **D3-046** — Density choice persists across hard reload.
+- [ ] **D3-047** — `Export` produces a file whose row count and columns match what is on screen.
+- [ ] **D3-048** — Export respects the current filter/scope rather than dumping everything.
+- [ ] **D3-049** — `Import` — inspect the dialog, required format, and whether it validates
+  before committing. **Will not import a real file.**
+
+## I. Sorting, filtering, search
+
+- [ ] **D3-050** — Column sorting, if present, actually sorts and is stable.
+- [ ] **D3-051** — Status filtering matches the tile counts.
+- [ ] **D3-052** — Search finds a lead by name and by phone.
+- [ ] **D3-053** — With 76 rows, confirm no row is unreachable (pagination/virtualisation).
+
+## J. Navigation
+
+- [ ] **D3-054** — Row / contact click opens the lead detail (`/dashboard/leads/{id}`) —
+  contrast with WWL-030 where Today's rows were dead.
+- [ ] **D3-055** — Lead detail renders real content for the correct lead.
+- [ ] **D3-056** — Back returns a fully rendered inbox.
+
+## K. Failure states
+
+- [ ] **D3-057** — Block the leads endpoint → error + Retry expected. Check whether this
+  module's API wrapper has the `catch { return null }` swallow (WWL-019).
+
+## L. Accessibility and responsive
+
+- [ ] **D3-058** — 304 row-level buttons: do they carry distinguishing accessible names, or is
+  this WWL-012 at scale (76 × 4 identical labels)?
+- [ ] **D3-059** — Table header semantics; heading order.
+- [ ] **D3-060** — 360px: no overflow, table scrolls in its own container, row actions reachable.
+- [ ] **D3-061** — Desktop 1536px: no overflow, zero covered controls.
+
+## Findings raised (Module 3)
+
+### 🔴 WWL-031 — S2 — Saving one lead takes five rejections and five round-trips
+
+**The client-side defect is confirmed live**, exactly as `5e7d74d` describes and exactly as
+expected given that commit is unpushed. With `aria-invalid: null` on every field, no inline
+error, no blocked-hint and **Save enabled**, the form accepted:
+
+`phone: abc-not-phone` · `whatsapp: !!!` · `email: bad-email` · `budget: -5000` ·
+`guests: -10` · `event date: 2020-01-01`
+
+The **server** catches them — but strictly one at a time. Driven live, each round a real submit:
+
+| Round | Server response |
+|---|---|
+| 1 | `Invalid contactEmail` |
+| 2 | `Invalid contactPhone` |
+| 3 | `Invalid contactWhatsapp` |
+| 4 | `EstimatedBudget must be ≥ 0` |
+| 5 | `EstimatedGuests must be a non-negative integer` |
+| 6 | ✅ `Lead added` |
+
+**Five failed submits to log one lead.** Every message names the **API field**
+(`contactPhone`, `EstimatedBudget`) rather than the label on screen (`Phone`, `Budget (Rs)`),
+and nothing is anchored to the field — no `aria-invalid`, no red border, no inline message. The
+vendor must map "contactWhatsapp" to a box by guesswork, five times, in an inbox whose entire
+value proposition is answering fast.
+
+The already-written client validation in `5e7d74d` collapses all five into one pass. **This is
+the strongest deployment argument in the sweep so far.**
+
+### 🔴 WWL-032 — S2 — A wedding six years in the past saves without question
+
+`eventDate: 2020-01-01` was accepted by **both** the client and the server and persisted
+(lead 251). It was never challenged in any of the five rounds above — the server validates
+email, phone, WhatsApp, budget and guests, but **not the event date**.
+
+Compounded by display: the row renders the date as **"01 Jan"** with **no year**. A lead for
+January 2020 is visually identical to one for January 2027. Since this inbox holds leads
+spanning multiple years (Jan/Feb dates are next season), a vendor cannot tell a stale or
+mistyped lead from a live one by looking.
+
+### ⚠️ WWL-033 — S3 — Archived leads sit in the live inbox with no way to filter them out
+
+6 of the 76 leads have `status: archived` and are rendered in the main table alongside live
+ones (`Archived` appears as a status chip). The header offers only `Log a lead`,
+`Comfortable`/`Compact`, `Import` and `Export` — **no status filter**. So archived leads
+permanently pad the inbox a vendor is meant to work top-down, and the `Total leads 76` headline
+counts them.
+
+### ✅ Section A — tile arithmetic is exact
+
+Verified against `/api/v1/leads`, which serves a proper `summary.byStatus` the tiles read from:
+
+| Tile | UI | API | |
+|---|---:|---:|---|
+| Total leads | 76 | 76 | ✅ |
+| New | 22 | 22 | ✅ (also matches the Dashboard's `Naye Rabtay · 22`) |
+| Qualified | 12 | 12 | ✅ |
+| Booked | 9 | 9 | ✅ |
+
+Statuses sum to exactly **76** (new 22 · contacted 15 · quoted 12 · qualified 12 · booked 9 ·
+archived 6) — **no double-counting** (D3-005 ✅). Sources also enumerate cleanly
+(form_inquiry 21 · manual_walkin 16 · manual_phone 15 · in_app_chat 14 · whatsapp 10).
+
+### ✅ Missing budgets render as `—`, never `Rs 0` (D3-006)
+
+Three leads have `estimatedBudget: null`. The table shows a dash for them:
+`budgetCellsShowingRs0: 0`. **This is the correct behaviour and the direct opposite of
+WWL-018**, where the Dashboard rendered a failed load as a confident `Rs 0`. Credit where due —
+the same product gets this right here.
+
+### ✅ D3-016 — create persists and tiles increment correctly
+
+Created lead 251 → **hard reload** → `Total leads` 76→**77**, `New` 22→**23**, row present,
+77 DOM rows. API agreed exactly.
+
+### ✅ D3-030/031 — `Remove lead` is done properly
+
+Clicking Remove opens a real **`role="alertdialog"`**:
+
+> **Remove this lead?**
+> *ZZ QA DELETE ME will be removed. **This can't be undone.*** — `Cancel` / `Remove`
+
+It names the specific record and states irreversibility. Confirmed → **hard reload** →
+lead gone, `Total leads` back to **76**, `New` back to **22**, no residue.
+
+**This is the direct contrast to WWL-023**, where deleting a run-of-show task on the Today
+screen had *no* confirmation at all. Same codebase, same interaction, opposite treatment — so
+the Today gap is an oversight, not a house convention.
+
+### ✅ Correction to my own measurement
+
+I first recorded "no toast, no feedback at all" on the failed save. **That was wrong** — my
+toast poll ran in a *separate* tool call after the click, so the toast had already
+auto-dismissed. Re-run with the click and poll in **one** execution context, the vendor clearly
+sees `Invalid contactEmail`. Same measurement trap I hit in Module 1; caught and corrected
+before it reached a finding.
