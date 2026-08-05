@@ -1101,5 +1101,75 @@ the hidden mobile variants have **no** accessible name at all. Inside the dialog
 row exposes three identical icon-only buttons — `Toggle done` / `Edit` / `Delete` — with no
 indication of *which task* they act on. Same class as WWL-012.
 
-**Test data written and fully restored:** 7 timeline tasks created on booking 179 and all 7
-deleted; verified 0 remaining via API and a hard reload. No money rows. No customer contacted.
+### 🔴 WWL-024 — S1 — The Today screen ignores the venue selection completely
+
+Driven across all four scopes. `/timeline-tasks/today` takes **no business parameter at all**:
+
+| Scope selected | Events today | Rows shown | Correct answer |
+|---|---:|---|---:|
+| All venues | 2 | Waheed + Owais | 2 ✅ |
+| **Rehman Grand Marquee** | **2** | Waheed + Owais | 1 |
+| **Rehman Banquet & Lawn** | **2** | Waheed + Owais | **0** |
+
+The Banquet & Lawn case is decisive: that venue has **no events today**, yet the screen still
+reports 2 and lists both — verified `apiVenuesReturned: ["Rehman Grand Marquee", "Rehman
+Marquee Bahria"]`, neither of which is the selected venue.
+
+Worse than the Dashboard's WWL-006 because this is the **operations** screen. A floor manager
+at the Lahore venue opens *Today* and is shown an event running in **Rawalpindi**. There is no
+indication on the row which venue an event belongs to, so it cannot even be disambiguated by
+eye.
+
+### 🔴 WWL-025 — S3 — `Run sheet` is disabled with no reason given
+
+With no timeline seeded, both `Run sheet` buttons are `disabled` with **no `title`, no
+`aria-describedby`, and no nearby hint**. The vendor sees a greyed-out button and cannot know
+it requires a timeline first. (Verified the dependency is real: after seeding 6 tasks the
+button enabled for that booking and stayed disabled for the booking with 0 tasks.)
+
+This is exactly the BUG-057 pattern the codebase already has a primitive for
+(`FormBlockedHint`) and has fixed elsewhere.
+
+### ⚠️ WWL-026 — S3 — `View timeline` does not open a timeline
+
+The header button `View timeline` is an `<a href="/dashboard/calendar">` — it navigates to the
+**Calendar**. The per-row `Timeline` button opens the day-of timeline dialog. Two different
+destinations behind near-identical labels on the same screen.
+
+### ⚠️ WWL-027 — S3 — The printable run sheet never names the venue
+
+`mentionsVenue: false`. For a three-venue operator whose crews move between sites, a printed
+day-of run sheet that names the client and the date but not **which venue** is missing the one
+fact a crew needs to show up at the right place.
+
+### ✅ Run sheet and grouping — genuinely well built
+
+- **D2-034/035 ✅** — Run sheet renders the correct booking: `Client: Waheed Jutt`,
+  `Date: Wednesday, 05 August 2026`, `Start: 12:00`, all 6 tasks with times, durations and
+  owners, grouped into **SETUP / EVENT / TEARDOWN**, footed `6 steps · Wedding Wala run sheet`.
+- **Timezone stated explicitly** — the footer reads **"times are Asia/Karachi"**. Rare and
+  correct; it directly answers the PKT concern for the printed artefact.
+- **D2-030 ✅** — `By person` genuinely regroups: FLOOR MANAGER (4), BEARER LEAD (1),
+  CLEANUP CREW (1). Functionally correct — but neither `By time` nor `By person` sets
+  `aria-pressed`/`aria-current` (**7th instance** of that defect).
+- **D2-037 ✅ answered** — see WWL-026.
+
+### ✅ Responsive — Today is better than the Dashboard here
+
+- **D2-056/057 ✅ 360px** — `scrollWidth 345 < 360`, **no horizontal overflow, zero off-screen
+  controls**, cards stack cleanly, `Timeline` reachable. Screenshot confirms a clean layout.
+  Notably **not** affected by WWL-014, which clips the Dashboard's equivalent rows.
+  *(One control was flagged "covered" by the automated probe; the screenshot shows it visible
+  and usable — recorded as a false positive, not a finding.)*
+
+### Cases not runnable as specified
+
+- **D2-041 / D2-044 / D2-045 (empty state)** — I intended to reach the empty state by selecting
+  a venue with no events today. **WWL-024 makes that impossible**: scope is ignored, so no
+  selection ever yields zero events. The empty state cannot be reached from this account today
+  and is recorded as **unreached**, not passed.
+
+**Test data written and fully restored:** 13 timeline tasks created across two seed cycles on
+booking 179 (7 + 6) and all 13 deleted, with per-round API verification down to zero each time
+and a hard reload confirming `Total tasks 0 / Open tasks 0` and no `ZZ QA` residue. Venue scope
+restored to **All venues**. No money rows. No customer contacted.
