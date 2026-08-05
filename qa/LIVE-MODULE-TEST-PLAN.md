@@ -2179,3 +2179,234 @@ ILIKE operator for an enum, so the whole query throws.
 Three different numbers under one label, none of them qualified as "active" or "completed".
 A vendor comparing the two screens has no way to reconcile 10 against 25 — especially since
 neither view can show the 3 that make up the difference (WWL-036).
+
+---
+
+## Module 4 — Section C/G continued (selection, density, export, columns)
+
+Live, `https://www.weddingwala.pk/dashboard/bookings`, backend
+`ems-v0-backend-production.up.railway.app`. Ground truth for this whole block is a single
+authenticated read of `GET /api/v1/bookings?page=1&limit=200&sortBy=createdAt&sortOrder=DESC`,
+which returns all 25 bookings for this vendor.
+
+### 🔴 WWL-042 — S1 — `bucket` is a silent fall-through: an unrecognised value returns **everything**
+
+The list endpoint accepts a `bucket` filter. Only two values are actually implemented.
+Anything else does not error, does not return empty — it returns the **entire** ledger:
+
+| Request | HTTP | Server message | Rows | Statuses returned |
+|---|---|---|---:|---|
+| `bucket=active` | 200 | "10 bookings retrieved successfully" | 10 | Awaiting Payment 2, Confirmed 7, Pending 1 |
+| `bucket=completed` | 200 | "12 bookings retrieved successfully" | 12 | Completed 12 |
+| `bucket=cancelled` | 200 | "**25** bookings retrieved successfully" | **25** | **all five statuses** |
+| `bucket=all` | 200 | "25 bookings retrieved successfully" | 25 | all five |
+| `bucket=archive` | 200 | "25 bookings retrieved successfully" | 25 | all five |
+| *(no bucket)* | 200 | "25 bookings retrieved successfully" | 25 | all five |
+
+`bucket=cancelled` is the dangerous one. It reads like a narrowing filter, it is spelled like
+the status that exists in the enum, and it returns **more** rows than either real bucket — the
+complete book, Completed and Confirmed included. A filter whose failure mode is *widen*
+rather than *empty* is the wrong way round: a typo'd or stale bucket value anywhere in the
+app silently dumps the full ledger into a view that asked for a slice of it.
+
+**Fix:** validate `bucket` against the known set; unknown → 400, or at minimum fall through
+to `active`, never to unfiltered.
+
+### 🔴 WWL-043 — S2 — `limit` is ignored and `total` lies; past 100 bookings the list silently truncates
+
+Three separate reads, same endpoint:
+
+- Asked `limit=3` → server answered **"10 bookings retrieved successfully"** and returned 10.
+- Asked `limit=200` → response metadata came back `"limit": 100`.
+- `meta.filters.total` is **10 / 12 / 25** — i.e. it echoes the number of rows *returned*,
+  not the number that exist.
+
+So the client requests a page size, the server overrides it to 100, and reports a `total`
+equal to the returned count. **There is no signal the client could use to detect truncation** —
+`total === rows.length` always, by construction.
+
+The Bookings page has **no pagination control of any kind** (no page numbers, no "load more",
+no infinite scroll — verified: the only toolbar controls are search, Active/Archive, density,
+Export). Today this vendor has 25 bookings so nothing is lost. A venue doing 100+ events a
+year crosses the line and:
+
+- rows past 100 vanish with no message,
+- `Total bookings` shows 100 and looks plausible,
+- **`Collected (shown)` and `Due (shown)` silently understate the money**, because they sum
+  only the rows that arrived.
+
+That last point is what makes this S2 rather than S3 — the failure is quiet and it is
+financial. The tiles are honestly labelled "(shown)", but nothing tells the vendor that
+"shown" has been capped by the server rather than by their filter.
+
+### 🔴 WWL-044 — S2 — A cancelled booking is fully editable, `Save order` and all
+
+Booking **175** — `status: "Cancelled"`, Rs 2,742,400, Usman Tariq & Hira Usman — opened at
+`/dashboard/bookings/175`. The page renders the Cancelled badge correctly and then offers a
+completely live editor beneath it:
+
+| Control | State |
+|---|---|
+| 23 form inputs (item names, qty, rates, guest counts, guarantee/served) | **all enabled, none read-only** |
+| `Remove line` × 4 | **enabled** |
+| `Hall / Venue`, `Per-head menu`, `Extra charge`, `Discount`, `My cost` | **enabled** |
+| **`Save order`** | **enabled** |
+
+Nothing is disabled, greyed, or annotated. A vendor can rewrite the price of a cancelled
+event — change `Catering — Platinum` from Rs 3,900 × 616 to anything, delete lines, and press
+Save — with no warning that the booking is dead. Whatever the cancellation/refund engine on
+the same page computes against (`Policy accept karwayen`, `Refund nikalein`, reason
+`customer_cancel`) is computed from numbers the vendor can still move after the fact.
+
+**Not tested destructively** — `Save order` was inspected for enabled state, never clicked.
+Live vendor ledger; see the standing limit at the top of this file.
+
+### 🔴 WWL-045 — S3 — Row selection exists and does nothing
+
+The table has a working select-all plus 10 row checkboxes (both with correct accessible
+names — see D4-058). Clicking select-all checks all 11 boxes and the toolbar reports
+**`10 selected`**.
+
+The only control that appears next to it is **`Clear`**.
+
+There is no bulk status change, no bulk export, no bulk delete, no bulk anything. Export's
+label does not change to "Export selected" and its output is unaffected by the selection
+(verified — see D4-052). The entire selection mechanism is decorative: a vendor selects ten
+bookings, looks for the action, and finds a button that undoes the selection.
+
+### ⚠️ WWL-046 — S3 — The selection counter desyncs from the checkboxes on view switch
+
+With 10 rows selected in **Active**, click **Archive**:
+
+| | |
+|---|---|
+| Checkboxes rendered | 13 (12 rows + select-all) |
+| Checkboxes **checked** | **0** |
+| Toolbar still reads | **`10 selected`** |
+| `Clear` | still present |
+
+The counter and the underlying id set survive the view change; the checkboxes do not. The
+vendor is shown "10 selected" over a table where nothing is selected — and the 10 ids being
+held are Active bookings they can no longer see.
+
+Harmless today only because WWL-045 means there is no bulk action to fire. If a bulk action
+is ever added on top of this state, it operates on ten invisible rows from the other view.
+
+`Clear` does work — after clicking it, the `selected` text is gone and 0 boxes are checked.
+
+### 🔴 WWL-047 — S1 — The payment lie is exported into the vendor's accounting file
+
+`Export → CSV (.csv)` on **Archive**, header plus first data row:
+
+```
+Booking,Space,Customer,Phone,Date,Amount,Paid,Status,Payment
+Rehman Grand Marquee,,Imran Shafi & Hafsa Imran,0319263021,09-Sept-2026,1546000,386500,Completed,Paid
+```
+
+`1546000` billed, `386500` received, **`Paid`**. Rs 1,159,500 outstanding, exported as settled.
+
+This is WWL-037 crossing out of the UI. The screen bug is recoverable — a vendor might notice
+the two numbers next to the chip. The export is not: it lands in Excel, gets filtered on
+`Payment = Paid`, and the row drops out of the chase list permanently. Same for booking 179
+in the Active export (`350000,35000,Awaiting Payment,Pending` — Rs 35,000 collected, flagged
+Pending).
+
+### ⚠️ WWL-048 — S3 — The CSV export has no booking id and an Excel-hostile date column
+
+Same two exports. Header: `Booking,Space,Customer,Phone,Date,Amount,Paid,Status,Payment`.
+
+1. **No id column.** Nothing in the file joins back to `/dashboard/bookings/<id>` or to any
+   other export. Two bookings for `Bilal Hussain & Ayesha Bilal` (156 and 174) and two for
+   `Ahmed Raza & Sanam Ahmed` (155 and 173) are distinguishable only by date. For an
+   accounting export the primary key is the one column that must not be missing.
+2. **Dates do not parse, and inconsistently so.** `09-Sept-2026` uses a four-letter month
+   abbreviation; Excel and Sheets expect `Sep`, so that cell imports as **text**. `05-Aug-2026`
+   in the same column imports as a **date**. The result is a mixed-type column — worse than
+   uniformly text, because sorting silently splits into two groups.
+3. **`Space` is exported as an always-empty column** (see WWL-050 below).
+4. **Both views write the same filename**, `bookings.csv`. Export Active then Archive and you
+   get `bookings.csv` and `bookings (1).csv` with no in-file provenance — no view name, no
+   export timestamp, no vendor name.
+
+**What is right:** money is exported machine-readable — `1673250`, `438180`, no `Rs`, no
+thousands separators, no currency symbol. That is the part most exports get wrong, and this
+one gets it right. D4-053 passes cleanly.
+
+### 🔴 WWL-049 — S2 — The `BOOKING` column hides the venue whenever a package is attached
+
+The column shows a venue name for most rows and a **package** name for others. It is not a
+display quirk — the two are mutually exclusive, and the venue is the one that gets dropped:
+
+| Row | `businessId` (real venue) | `packageId` | `BOOKING` column shows | Venue visible? |
+|---|---|---|---|---|
+| 173 | 3358 Rehman Grand Marquee | null | `Rehman Grand Marquee` | yes |
+| 171 | 3359 Rehman Banquet & Lawn | null | `Rehman Banquet & Lawn` | yes |
+| **180** | **3359 Rehman Banquet & Lawn** | 65 | **`Gold — Barat Package`** | **no** |
+| **179** | **3358 Rehman Grand Marquee** | 61 | **`Silver — Nikah Package`** | **no** |
+
+This account runs **three** venues. Two of the ten active rows do not say which one the event
+is at, and no other column carries it — `SPACE` is `—` for every booking (WWL-050). Booking
+179 is dated **05-Aug-2026, today**; booking 180 is 13-Aug-2026. The operator reading this
+list to plan staffing cannot tell where either event is happening without opening it.
+
+The venue is present in the payload the table already has (`bookingDetails[0].businessId`).
+Nothing needs fetching — the column just picks the package over the venue when both exist.
+
+### ⚠️ WWL-050 — S3 — `SPACE` is a permanently dead column
+
+`SPACE` renders `—` on all 10 Active rows and all 12 Archive rows. Checked the payload for
+all **25** bookings: `bookingDetails[0]` contains **no** space/hall/floor/partition key at
+all — not null, absent. The column is wired to a field the API does not send.
+
+This is the Hall→Floor→Partition hierarchy shipping its column ahead of its data. It costs a
+full column slot in an 8-column table that has to survive 360px (D4-059), and it is exported
+as an empty column in every CSV (WWL-048).
+
+---
+
+### ✅ Passes in this block
+
+- **D4-004** — `This month` is exact. Today is 05-Aug-2026 PKT. Active bookings dated in
+  Aug 2026: 180 (13th), 179 (5th), 169 (29th), 167 (13th), 168 (21st), 166 (5th) = **6**,
+  matching the tile. Archive has no Aug-2026 completions → tile reads **0**. Correct in both
+  views. (The two cancelled August bookings, 177 and 178, are excluded — consistent with
+  WWL-036, and arguably the right call for a "this month" workload count.)
+- **D4-005** — Archive recomputes every tile, verified to the rupee against the API:
+  - `Collected (shown)` — summed the 12 `downPayment` values: 386500 + 1223278 + 1464500 +
+    1620225 + 1398250 + 1899000 + 1300080 + 1685200 + 1858450 + 1111400 + 1694600 + 1092200
+    = **Rs 16,733,683**. Tile: **Rs 16,733,683**. ✔
+  - Sum of the 12 `totalAmount` = Rs 18,974,150; minus collected = **Rs 2,240,467**.
+    Tile `Due (shown)`: **Rs 2,240,467**. ✔
+  - Archive holds 12, not the 15 predicted when the case was written — because 3 are
+    cancelled and appear in neither view (WWL-036).
+  - Worth naming: this same screen prints `Due (shown) Rs 2,240,467 to chase` in the tile
+    and `Paid` in the chip of the row responsible for half of it (booking 170, Rs 1,159,500).
+    The contradiction is visible without scrolling.
+- **D4-006** — not applicable as written. There are **zero** Cancelled rows in Archive to
+  distinguish from Completed; superseded by WWL-036.
+- **D4-021** — select-all works. 11/11 boxes checked, toolbar reports `10 selected`.
+  (What it reveals is WWL-045.)
+- **D4-023** — `Clear` works correctly. Cross-view behaviour is WWL-046.
+- **D4-024** — density toggle is **correct and complete**:
+
+  | | Comfortable | Compact |
+  |---|---|---|
+  | Row height | 64.8px | **56.8px** |
+  | Cell padding | `12px 16px` | **`8px 16px`** |
+  | `aria-pressed` | `true` / `false` | flips to `false` / `true` |
+
+  Persisted to `ww-ui-prefs` (`{"state":{"density":"compact"}}`) and **survives a hard
+  reload** — re-measured after a fresh navigation: still 56.8px, still
+  `Comfortable=false, Compact=true`. Restored to Comfortable afterwards.
+  Both buttons are icon-only but carry `aria-label` — they are *not* part of WWL-035.
+- **D4-047** — direct navigation to a booking detail renders fully. `/dashboard/bookings/175`
+  returns the complete page — header, Cancelled badge, customer block, event block,
+  financials, order editor, BEO. The data and the route are fine; only the *list* cannot
+  reach it (WWL-036).
+- **D4-052** — export row count matches the view exactly: Active → 10 data rows, Archive →
+  12 data rows (13 lines with header). Columns match the table, plus `Phone`.
+- **D4-053** — **money is machine-readable.** `1673250`, `438180`, `1146150` — no `Rs`, no
+  commas, no symbol. Clean.
+- **D4-054** — export respects the active view. Verified by exporting both.
+- **D4-058** (checkbox half) — every checkbox has an accessible name: `Select all` on the
+  header, `Select row` on each of the 10. Not a WWL-035 repeat.
