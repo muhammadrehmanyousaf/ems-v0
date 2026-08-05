@@ -35,7 +35,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 3 | Lead inbox | `/dashboard/leads` | ✅ 61 | **`[x]` COMPLETE — 49 run, 12 not run, 5 findings** |
 | 4 | Bookings | `/dashboard/bookings` | ✅ 60 | **`[x]` COMPLETE — 57 run, 3 not run, 21 findings** |
 | 5 | Date holds | `/dashboard/holds` | ✅ 52 | **`[x]` COMPLETE — 48 run, 4 not run, 14 findings** |
-| 6 | Function sheets | `/dashboard/function-sheets` | ✅ 68 | `[~]` in progress |
+| 6 | Function sheets | `/dashboard/function-sheets` | ✅ 68 | **`[x]` COMPLETE — 57 run, 11 not run, 17 findings** |
 | 7 | Customers | `/dashboard/customers` | — | `[ ]` |
 | 8 | Calendar | `/dashboard/calendar` | — | `[ ]` |
 | 9 | Conversations | `/dashboard/chat` | — | `[ ]` |
@@ -3883,3 +3883,141 @@ This route also defaults to the first sheet with no `?id`, same as the composer.
 revoked and verified — `shareTokenRevokedAt: 2026-08-05T19:06:50.903Z`. Re-read sheet #77
 afterwards: `signaturesJson` still `null`, `state` still `signed`. **No signature was applied
 and no state was changed by this testing.**
+
+---
+
+## MODULE 6 — RESULTS (Sections B, C, H) and module close
+
+### 🔴 WWL-084 — S2 — `New function sheet` needs only a title, and silently picks a venue
+
+Dialog fields: **Title**, **Customer name**, **Event date** — and nothing else. Filled *only*
+the title, left customer and date empty. `Create & compose` **enabled**, and the exact payload
+was captured with the write blocked:
+
+```
+POST /api/v1/function-sheets :: {"businessId":3358,"title":"QA probe sheet — do not use"}
+```
+
+Three things wrong in one request:
+
+1. **No `bookingId`** — the dialog has no booking field at all, so a quote/contract can be
+   created floating free of any booking. This is how WWL-076's orphan situation arises from the
+   other direction.
+2. **No `customerName`, no `eventDate`** — both were empty and simply omitted. A function sheet
+   — the object that becomes a **Quotation, Service Contract and Tax Invoice** — can be created
+   with a title and nothing else. No customer, no date.
+3. **`businessId: 3358` was chosen silently.** The switcher was on **All venues**
+   (`activeBusinessId: null`, label `Business: All venues`), the dialog offers no venue field,
+   and the payload nonetheless committed the sheet to **Rehman Grand Marquee**, the first of
+   three.
+
+That third point is **WWL-067 repeating in a second module** — the same silent first-venue
+default seen in Date holds. Two modules, same pattern: on "All venues" the app quietly picks
+venue #1 and tells the vendor nothing.
+
+### ⚠️ WWL-085 — S3 — `pdfUrl()` is dead code with a docstring that cannot be true
+
+`lib/api/functionSheets.ts:720` returns a **relative** path:
+
+```js
+static pdfUrl(id, variant) { return `/api/v1/function-sheets/${id}/pdf${params}`; }
+```
+
+On `www.weddingwala.pk` that resolves to the **frontend**, not the backend — it would 404. Its
+docstring claims *"browser handles the Bearer auth via the same axios interceptor"*, which is
+impossible for a plain `<a target="_blank">`; a browser navigation carries no Authorization
+header.
+
+**Verified harmless today:** `grep` shows `FunctionSheetAPI.pdfUrl` is **referenced nowhere**.
+`Preview Quotation` was driven live and correctly opened a **`blob:`** URL
+(`blob:https://www.weddingwala.pk/ea6f161b-…`), i.e. the working `pdfBlob()` +
+`createObjectURL` path. Recorded as a trap for whoever wires up preview next, not as a live
+defect — my initial hypothesis that preview was broken was wrong.
+
+### 🔴 WWL-086 — S1 — **WWL-053 repeats: Function sheets is inert on mobile**
+
+At 360 × 780 the table is `display: none` and is replaced by a card list:
+
+| Measured at 360px | Result |
+|---|---|
+| Cards rendered | 6 (correct for the active venue scope) |
+| **Controls inside the entire card list** | **0** |
+| Horizontal overflow | none — `scrollWidth === clientWidth === 345` |
+| Card content | `Mehndi — Ahmed Raza \| Ahmed Raza & Sanam Ahmed · Rs 1,092,200 \| Signed` |
+
+The three row actions — `View`, `Edit`, `Remove function sheet` — live inside the hidden
+table, so on a phone a vendor **cannot open, edit, or remove a function sheet**, and cannot
+reach the PDF menu, the share link, or the signing flow.
+
+Identical architecture to WWL-053 in Bookings. Two of the portal's most important modules are
+read-only on the device Pakistani vendors actually use.
+
+### ⚠️ WWL-087 — S3 — 51 row buttons, 3 accessible names; rows are not clickable
+
+- **D6-018** — 17 rows × 3 controls = **51 buttons** sharing exactly **3** accessible names:
+  `View function sheet`, `Edit function sheet`, `Remove function sheet`. None carries the
+  customer, the sheet number or the value. A screen-reader user hears "Remove function sheet"
+  seventeen times, on a screen where the wrong one destroys a different customer's contract.
+  Same class as WWL-035.
+- **D6-022** — the row itself is inert: **0** `<a>` elements, `cursor: auto`, and a full
+  pointer sequence on the CUSTOMER cell does not navigate. Same as WWL-054 in Bookings.
+
+---
+
+### ✅ Sections B / C / H passes
+
+- **D6-019** — `View function sheet` on row 1 lands on **`/dashboard/function-sheets/77`**, the
+  correct sheet for that row.
+- **D6-026** — the blocked-reason pattern is used correctly here: with the title empty,
+  `Create & compose` is **disabled** and a hint reads **"Add a title to save."** Same good
+  `FormBlockedHint` treatment as the Date-holds dialog.
+- **D6-028** — nothing was written. After the blocked submit, the list still reports
+  **17 sheets** and **Rs 28,559,050**, with **zero** rows titled `QA probe`.
+- **D6-041** — **UI variant gating matches the server exactly.** The `PDF` menu on sheet #77
+  (state `signed`) is headed *"Available variants"* and offers only:
+
+  | Quotation | Service Contract |
+  |---|---|
+  | Preview · Download · Send via WhatsApp | Preview · Download · Send via WhatsApp |
+
+  No BEO, no Invoice, no Receipt — precisely `variantsAvailable('signed')`, and precisely what
+  the server enforces (D6-043). Client and server agree.
+- **D6-064** — the error state is real: `Couldn't load function sheets.` + `Retry`, table
+  emptied to 0 rows, no crash.
+- **D6-065 — better than Bookings, and worth calling out.** Under the same injected failure,
+  the tiles **kept their last-known values** (`Total sheets 17`, `Total value Rs 28,559,050`)
+  rather than collapsing to `Rs 0` the way Bookings does (WWL-052). No false financial claim
+  is made. It is still imperfect — the retained values are **stale** (they describe the
+  previous scope, shown under a newly-selected one) so `—` remains the correct treatment — but
+  showing last-known-good is materially safer than inventing zeros.
+- **D6-068 / D6-067 (layout half)** — no horizontal overflow at either width: 1521px clean,
+  360px `scrollWidth === clientWidth === 345` with **zero** overflowing elements.
+
+---
+
+## Module 6 — status
+
+**68 cases written, 57 driven. 17 findings (7 × S1, 6 × S2).**
+
+Not driven, each with its reason:
+
+| Cases | Why |
+|---|---|
+| **D6-051 / 053 / 055 / 056** | Share-link surface unreachable — blocked by WWL-078 (crash) and WWL-079 (token mangled). The unauthenticated surface was still audited as far as it could be: invalid-token handling and the SSR payload, both clean. |
+| **D6-031 / 032 / 033** | State transitions on real customer contracts. Enumerated instead: the detail page offers exactly one forward step (`Move to BEO ready`), so transitions are single-step-forward by design. |
+| **D6-048** | Tax Invoice content — unreachable, because no sheet can reach `invoiced` (WWL-075). |
+| **D6-059 / 060** | WhatsApp send and FBR submit — both contact a real customer or file a real tax document. |
+| **D6-027** | Second sheet on a booking that already has one — would create a real duplicate contract. |
+
+**The module's verdict.** The engineering underneath is strong: server-enforced PDF variant
+gating, 256-bit share tokens with a server-side expiry clamp, a revoke that flags rather than
+clears, a proper `alertdialog` before deletion, an integrity model that refuses to let a vendor
+sign for a customer, exact money arithmetic everywhere, and correct per-venue attribution.
+
+What fails is the last mile to the customer. **Every document says `(no label)` (WWL-071),
+the payment schedule never prints (WWL-072), the contract has no terms or signature block
+(WWL-073), no customer can ever open a link to sign it (WWL-079/080), and the composer that
+would fix the labels destroys them instead (WWL-081).**
+
+Not one of these is architectural. WWL-071 and WWL-081 are the same one-line field-name fix;
+WWL-079 is one middleware exclusion; WWL-078 is moving a `useMemo` above a guard.
