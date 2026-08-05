@@ -1169,6 +1169,83 @@ fact a crew needs to show up at the right place.
   selection ever yields zero events. The empty state cannot be reached from this account today
   and is recorded as **unreached**, not passed.
 
+### 🔴 WWL-028 — S1 — Per-venue receivables returns figures larger than the company total, and two venues return the *same* number
+
+Found by noticing the `Outstanding` tile change while testing something else. Queried
+`analytics/receivables` with each `businessId`:
+
+| Scope | Outstanding returned |
+|---|---:|
+| All venues (no `businessId`) | Rs 12,292,729 |
+| **3358 Rehman Grand Marquee** | **Rs 23,961,479** |
+| **3359 Rehman Banquet & Lawn** | **Rs 23,961,479** ← *identical to 3358* |
+| 3360 Rehman Marquee Bahria | Rs 4,005,205 |
+
+Two independent impossibilities:
+
+1. **A subset exceeds the whole.** One venue reports **Rs 23,961,479** against a company-wide
+   total of **Rs 12,292,729** — nearly double. The three venues sum to **Rs 51,928,163**,
+   **4.2×** the all-venues figure.
+2. **`businessId` does not discriminate.** 3358 and 3359 return byte-identical totals despite
+   being different venues in different parts of Lahore. Only 3360 differs — and it alone
+   matches the Dashboard's per-venue KPI (Rs 4,005,205).
+
+Confirmed rendered live, not just in the API: with Grand Marquee selected the tile reads
+**`Outstanding · Rs 23,961,479 · to collect`**.
+
+The Dashboard's own per-venue `Revenue due` figures (3,243,787 / 5,043,737 / 4,005,205) sum
+correctly to 12,292,729 — so **the Dashboard and this screen disagree about the same venue's
+receivables by ~Rs 20.7M**, because they use different endpoints.
+
+Note the irony against WWL-024: the event list on this page **ignores** the venue selection,
+while the `Outstanding` tile **does** pass `businessId` — and that is the path that is broken.
+
+### ✅ D2-046/047/048 — failure handling here is CORRECT, and it proves WWL-019
+
+Blocked `/timeline-tasks/today` and forced a refetch. The page rendered:
+
+> **"Couldn't load today's schedule."** + a **`Retry`** button
+
+`showsErrorUi: true` · `retryPresent: true` · rows cleared rather than shown as empty.
+
+**This is the direct contrast that confirms WWL-019.** The wrapper for this endpoint —
+`lib/api/bookingTimeline.ts:152-155` — has **no `catch`**, so the error propagates, `isError`
+becomes true, and the already-written error UI renders exactly as intended. The Dashboard's
+`analytics.ts` wraps the identical pattern in `catch { return null }` and its error UI never
+fires. Same codebase, same component conventions; the only difference is the swallow.
+
+⚠️ Partial: the KPI tiles above the errored table keep showing `Events today 2`,
+`Revenue today Rs 1,612,250` and `Outstanding` while the table below says it could not load —
+a mixed state where stale numbers sit above an error.
+
+### ✅ Date boundary — correct, verified at source (D2-012/013/014)
+
+`bookingTimelineController.js:384-385`:
+
+```js
+const tz = process.env.BOOKING_TZ || "Asia/Karachi";
+const todayPKT = moment.tz(new Date(), tz).format("YYYY-MM-DD");
+```
+
+Today is computed in **PKT**, not UTC (the comment cites BK-025 as the same guard used across
+the booking engine), and `bookingDate` is compared against that date string. An event at
+00:30 or 23:30 PKT therefore falls on the correct local day. The printed run sheet also states
+**"times are Asia/Karachi"**. This is the one area of the portal where the timezone is handled
+deliberately and said out loud.
+
+**WWL-024 root cause, at source** — same controller, line 403:
+
+```js
+if (!isAdmin) businessInclude.where = { userId: req.user.id };
+```
+
+The query scopes by **owner**, not by the selected venue; there is no `businessId` filter at
+all. That is precisely why every venue selection returns the same two events.
+
+**Status filter** (line 408) is `["Pending", "Awaiting Payment", "Confirmed"]` — which is why
+cancelled bookings correctly never appear (D2-010 ✅), and also means **`Completed` events are
+excluded from the day-of screen**.
+
 **Test data written and fully restored:** 13 timeline tasks created across two seed cycles on
 booking 179 (7 + 6) and all 13 deleted, with per-round API verification down to zero each time
 and a hard reload confirming `Total tasks 0 / Open tasks 0` and no `ZZ QA` residue. Venue scope
