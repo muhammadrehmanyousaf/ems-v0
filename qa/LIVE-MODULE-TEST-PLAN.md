@@ -657,6 +657,74 @@ shows Rs 1,159,500. Consistent.
 ⚠️ Sixth instance of the accessibility pattern: none of the **10 Settings tabs** expose
 `aria-selected` or `data-state` — active tab is a CSS class only.
 
+### 🔴 WWL-017 — S2 — 11 of the 20 onboarding tasks send you where you cannot do them
+
+The strip is *accurate about what is missing* (see the passes below) but its "Add it" links
+are wrong for more than half the list.
+
+**Six items point to `?tab=profile`, where none of these fields exist.** The Profile tab holds
+exactly five: Business name, Description, City, Area / locality, Brand logo URL. All six of
+these live on the **Listing content** tab:
+
+| Task (weight) | Sent to | Actually on |
+|---|---|---|
+| Owner name (+5) | `?tab=profile` | `?tab=listing` — "Owner / lead name" |
+| WhatsApp number (+5) | `?tab=profile` | `?tab=listing` — "WhatsApp number (bookings)" |
+| Languages spoken (+3) | `?tab=profile` | `?tab=listing` |
+| Years in business (+3) | `?tab=profile` | `?tab=listing` |
+| Weddings completed (+3) | `?tab=profile` | `?tab=listing` |
+| Owner bio written (+2) | `?tab=profile` | `?tab=listing` — "About the owner" |
+
+**Five items point to `/dashboard/business-documents`, which is a hard 404** ("404 · Page not
+found · The page you were loo…"):
+
+- NTN submitted · NTN verified by Wedding Wala · CNIC submitted · CNIC verified by
+  Wedding Wala · Venue visited by Wedding Wala
+
+So the two highest-value prompts the vendor actually sees on the dashboard — Owner name and
+WhatsApp number, the ones the strip argues hardest for ("Families in Pakistan book people, not
+companies") — both dead-end on a tab with no such field, and the entire verification/trust
+category dead-ends on a 404.
+
+**Verified working, so this is specifically a link-mapping defect, not a routing failure:**
+`?tab=listing` ✅, `?tab=images` ✅ (activates Images), `?tab=amenities` ✅ (activates
+Amenities & services, contains parking capacity), `?tab=profile` ✅ (activates Profile),
+`/dashboard/profile` ✅ resolves.
+
+> Note on method: my first sweep of these routes reported `activeTab: null` for `?tab=images`
+> and `?tab=amenities`, which would have made them look broken too. That was **premature
+> measurement** — the Settings page needs ~6s to render its tabs. Re-tested with a real
+> navigation, both are correct. Only the 6 wrong-tab items and the 5 × 404 are real.
+
+### ✅ Section E — the completeness engine itself is exact
+
+Every number the strip claims was checked against `businesses/my-completeness`:
+
+| UI claim | Computed from API | Match |
+|---|---|---|
+| Score `44 OF 100` | weakest business score = 44 | ✅ |
+| "See all **20** remaining" | 20 of 29 items `done: false` | ✅ |
+| "Worth **56** more points" | missing weight = 56 | ✅ |
+| "· Rehman Grand Marquee · weakest of 3" | 44 vs 52 vs 52 | ✅ |
+| 44 + 56 | = 100; item weights total exactly 100 | ✅ |
+
+- **D1-050 ✅** — all three visible prompts are truthful: `ownerName: null`,
+  `whatsappNumber: null`, and "Cancellation policy set" is genuinely in the missing list.
+- **D1-051 ✅ — full write/verify/restore cycle on live.** Typed a real Owner name on
+  `?tab=listing`, saved (`ownerName` persisted to the API), **hard-reloaded the dashboard**:
+
+  | | before | after | expected |
+  |---|---:|---:|---:|
+  | Score | 44 | **49** | 49 (+5, the item's stated weight) |
+  | "See all N remaining" | 20 | **19** | 19 |
+  | "Worth N more points" | 56 | **51** | 51 |
+  | Owner name prompt | shown | **gone** | gone |
+
+  Exact on every value, and the API agreed. **Then restored**: field cleared, saved,
+  re-verified — `ownerName: null`, score back to **44**, 20 remaining. Account left as found.
+- **D1-052 ✅** — the +5 weighting is real, not decorative: the score moved by exactly the
+  advertised amount.
+
 ### Cases executed so far
 
 **Section A — all 15 executed.**
