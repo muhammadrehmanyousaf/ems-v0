@@ -44,7 +44,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 12 | Receipts | `/dashboard/receipts` | ✅ 92 | **`[x]` COMPLETE — 83 run, 9 not run, 17 findings** |
 | 13 | Cheque ledger | `/dashboard/pdcs` | ✅ 88 | **`[x]` COMPLETE — 78 run, 10 not run, 16 findings** |
 | 14 | Expenses | `/dashboard/expenses` | ✅ 104 | **`[x]` COMPLETE — 89 run, 15 not run, 14 findings** |
-| 15 | Tax report | `/dashboard/tax` | — | `[ ]` |
+| 15 | Tax report | `/dashboard/tax` | ✅ 72 | `[ ]` IN PROGRESS |
 | 16 | Reports | `/dashboard/reports` | — | `[ ]` |
 | 17 | Trade operations | `/dashboard/trade-ops` | — | `[ ]` |
 | 18 | Automation | `/dashboard/automation` | — | `[ ]` |
@@ -7038,3 +7038,136 @@ import that previews before it commits. It is undermined by four structural prob
 upcoming wedding's costs cannot be edited at all, the cockpit silently diverges from the ledger
 after every change, the panel contradicts itself about what "fixed overhead" means, and on a
 phone the profit column is clipped out of existence.
+
+---
+
+# MODULE 15 — TAX & P&L (`/dashboard/tax`)
+
+**Component** `components/dashboard/mainScreens/tax/redesigned/tax-redesigned-view.tsx`
+**Data** `TaxReportAPI.getAnnualReport(year)` → `GET /api/v1/tax/annual-report`
+**Write paths** none. Read-only report.
+
+This is the screen a vendor hands to their accountant. Its metadata promises *"Annual revenue +
+expense + P&L summary, FBR-fiscal-year aligned. One-click PDF export for your accountant."*
+
+## What the source says before I touch the page
+
+Three things stand out, all of which must be confirmed on the live page:
+
+- **`/api/v1/tax` is absent from `BUSINESS_SCOPED_PREFIXES`** in `lib/axiosConfig.js`. Every other
+  money module (bookings, expenses, receipts, pdcs, payments/vendor-revenue, analytics) is on that
+  whitelist. The backend fully supports `?businessId=` via `_resolveOwnedBusiness` — the frontend
+  simply never sends it. Predicted: **selecting a venue changes every other money screen but not
+  this one.**
+- **The `Export PDF` button has no `onClick`**: `actions={<Button><Icon name="Download" …/> Export
+  PDF</Button>}`. Meanwhile `lib/api/tax.ts` exposes **two** PDF paths
+  (`/api/v1/tax/annual-report.pdf`). Predicted: the capability exists, the button exists, and they
+  are not connected.
+- **The year is hard-wired**: `const year = new Date().getFullYear()`, with no year picker and no
+  `basis` selector, though the API accepts both. A tax report you cannot point at *last* year is
+  not much use at filing time.
+
+Also worth crediting up front, and worth verifying: `taxReportController._buildReport` **ANDs**
+`_vendorBookingWhere(user)` with the venue narrowing rather than replacing it — precisely the fix
+that `getReceivables` is missing (WWL-129). And `WW-021` computes a vendor's revenue from **their
+own `BookingDetails` slice**, not `Booking.totalAmount`, so a multi-vendor wedding is not counted
+whole in each vendor's tax return.
+
+## Test cases — written in full before execution
+
+### A. Load, identity, fiscal-year correctness
+
+| # | Case | Expect |
+|---|---|---|
+| D15-001 | Route loads; cards and monthly table render | |
+| D15-002 | `<title>` is `Dashboard : Tax report` | |
+| D15-003 | Sidebar "Tax report" vs `<h1>` "Tax & P&L" — do they agree? | label drift probe |
+| D15-004 | One `/api/v1/tax/annual-report` call on load | |
+| D15-005 | **Is `businessId` sent?** | predicted NO — not on the whitelist |
+| D15-006 | **Does switching venue change any figure on this screen?** | the decisive test |
+| D15-007 | What `year` is requested, and what period does the backend return? | FBR fiscal 1 Jul – 30 Jun |
+| D15-008 | Is the period stated anywhere on screen? | a report with no stated period is unusable |
+| D15-009 | Month rows cover the fiscal year, not the calendar year | |
+| D15-010 | Month labels are unambiguous (include the year) | Jul 2026 … Jun 2027 |
+| D15-011 | Σ month revenue === `Gross revenue` card | |
+| D15-012 | Σ month expenses === `Expenses` card | |
+| D15-013 | `Net P&L` === revenue − expenses | |
+| D15-014 | Σ month bookingCount === a sensible booking total | |
+| D15-015 | Revenue reconciles against Payments / Bookings for the same period | cross-module |
+| D15-016 | Expenses reconcile against Module 14 for the same period | cross-module |
+| D15-017 | **Are cancelled bookings excluded from revenue?** | controller says yes (FBR accrual) |
+| D15-018 | **Is revenue the vendor's slice, not the whole booking total?** | WW-021 |
+| D15-019 | `FBR submitted` card — what does it show, and is it meaningful? | adapter is a noop |
+| D15-020 | Does the screen explain what "FBR submitted" means? | |
+| D15-021 | Rs formatting; no `NaN` | |
+| D15-022 | Negative Net P&L renders correctly with a "down" trend | |
+
+### B. The missing controls
+
+| # | Case | Expect |
+|---|---|---|
+| D15-023 | **Is there a year selector?** | predicted no |
+| D15-024 | Can a vendor view the previous fiscal year at all? | filing needs last year |
+| D15-025 | Is there a `basis` (fiscal vs calendar) selector? | API supports it |
+| D15-026 | **Does `Export PDF` do anything?** | predicted dead button |
+| D15-027 | Does clicking it fire any request? | |
+| D15-028 | Does it produce a download, a new tab, or an error? | |
+| D15-029 | Does the backend PDF endpoint itself work? | probe directly — the capability exists |
+| D15-030 | Is there any other way to get the report out (print, CSV)? | no ExportMenu on this screen |
+| D15-031 | No search / density / selection on this screen — intentional for a report? | |
+
+### C. Table, cards, rendering
+
+| # | Case | Expect |
+|---|---|---|
+| D15-032 | Columns: Month, Bookings, Revenue, Expenses | |
+| D15-033 | **Is there a per-month Net column?** | only the annual card has net |
+| D15-034 | Money columns right-aligned, tabular | |
+| D15-035 | Expenses toned "error", revenue neutral | |
+| D15-036 | A month with no activity renders zeros, not blanks | |
+| D15-037 | `getRowId` is `monthLabel` — unique across the set? | collision probe |
+| D15-038 | Four cards present and correctly typed | |
+| D15-039 | Cards show `…` during load, not `Rs 0` | source has the guard |
+| D15-040 | `Gross revenue` trend is unconditionally "up" | |
+| D15-041 | Cards are inert | |
+| D15-042 | `<th scope>` / caption | |
+| D15-043 | No row actions, no checkboxes — read-only surface | |
+| D15-044 | Row not clickable; no drill-through to the month's bookings | |
+
+### D. Resilience, a11y, responsive
+
+| # | Case | Expect |
+|---|---|---|
+| D15-045 | Genuine network failure → *"Couldn't load the annual tax report."* + Retry | |
+| D15-046 | Retry recovers | |
+| D15-047 | Mis-routed endpoint (backend 200) → fake empty report? | WWL-108 pattern |
+| D15-048 | Loading state — skeletons | |
+| D15-049 | Empty state copy when a period genuinely has no data | |
+| D15-050 | Hard reload is consistent | |
+| D15-051 | No console errors | |
+| D15-052 | Keyboard: every control reachable with a visible focus ring | |
+| D15-053 | `Export PDF` is keyboard-reachable and announced | |
+| D15-054 | Card values announced with labels | |
+| D15-055 | 360px: no horizontal overflow **and no clipped content** | after WWL-178, check both |
+| D15-056 | 360px: month cards readable | |
+| D15-057 | 360px: is `Export PDF` reachable? | |
+| D15-058 | Unauthenticated → redirect | |
+
+### E. The numbers an accountant would question
+
+| # | Case | Expect |
+|---|---|---|
+| D15-059 | Does revenue include bookings that are only `Pending`? | accrual vs cash |
+| D15-060 | Does revenue include **unpaid** money? | accrual basis means yes |
+| D15-061 | Is that basis stated anywhere for the accountant? | |
+| D15-062 | Do expenses include the future-dated rows from Module 14? | WWL-175's rows |
+| D15-063 | Do expenses include untagged overheads? | |
+| D15-064 | Is any tax actually **computed** — or is this only a P&L? | screen is titled "Tax" |
+| D15-065 | Is there any FBR/PRA filing status beyond the one card? | |
+| D15-066 | Does the report distinguish the three venues at all? | it cannot if unscoped |
+| D15-067 | Would two vendors sharing a booking both see the full amount? | WW-021 says no |
+| D15-068 | Month ordering is chronological across the fiscal-year boundary | Jul→Jun, not Jan→Dec |
+| D15-069 | Does a month with bookings but no expenses show Rs 0 or blank? | |
+| D15-070 | Is the current (incomplete) month flagged as partial? | |
+| D15-071 | Rounding — `_round` on the backend, any drift vs source ledgers? | |
+| D15-072 | Nothing on this screen writes | read-only confirmation |
