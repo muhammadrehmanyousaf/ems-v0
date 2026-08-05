@@ -35,7 +35,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 3 | Lead inbox | `/dashboard/leads` | ✅ 61 | **`[x]` COMPLETE — 49 run, 12 not run, 5 findings** |
 | 4 | Bookings | `/dashboard/bookings` | ✅ 60 | **`[x]` COMPLETE — 57 run, 3 not run, 21 findings** |
 | 5 | Date holds | `/dashboard/holds` | ✅ 52 | **`[x]` COMPLETE — 48 run, 4 not run, 14 findings** |
-| 6 | Function sheets | `/dashboard/function-sheets` | — | `[ ]` |
+| 6 | Function sheets | `/dashboard/function-sheets` | ✅ 68 | `[~]` in progress |
 | 7 | Customers | `/dashboard/customers` | — | `[ ]` |
 | 8 | Calendar | `/dashboard/calendar` | — | `[ ]` |
 | 9 | Conversations | `/dashboard/chat` | — | `[ ]` |
@@ -3224,3 +3224,145 @@ better built than equivalents elsewhere in the portal. But WWL-057 and WWL-058 m
 the module exists to do — stop a held date being sold twice — **does not happen**. The hold is
 written to a table, listed on one screen, and expires 48 hours later having influenced
 nothing.
+
+---
+
+# MODULE 6 — Function sheets (`/dashboard/function-sheets`)
+
+The largest module so far: **4 routes and 9 components**, backed by a 968-line API client.
+
+| Route | Purpose |
+|---|---|
+| `/dashboard/function-sheets` | list |
+| `/dashboard/function-sheets/<id>` | detail |
+| `/dashboard/function-sheet-composer` | composer |
+| `/dashboard/function-sheet-sign` | customer signature |
+| `/dashboard/function-sheet-operations` | operations view |
+
+**A 9-state machine:** `draft → quote_sent → contract_pending → signed → beo_ready →
+invoiced → paid → archived`, plus `cancelled`.
+
+**5 PDF variants gated by state** (`variantsAvailable`): Quotation (draft+), Service Contract
+(contract_pending+), BEO (beo_ready+), Tax Invoice (invoiced+), Payment Receipt (paid+).
+
+**Live starting state:** 17 sheets, `Total value Rs 28,559,050`, states
+`signed 10 · beo_ready 4 · quote_sent 1 · draft 2`.
+
+## ⚠️ Safety limits for this module — these are real customer documents
+
+Unlike date holds, a function sheet is a **contract, quote and tax invoice for a named
+customer**. The limits below are deliberate; each un-driven case is recorded with its reason
+rather than silently skipped.
+
+| Action | Limit |
+|---|---|
+| **State transitions** on real sheets | **Not driven.** Moving a customer's contract from `signed` to `invoiced` is a real commercial event. Enumerated and gated-checked instead. |
+| **Delete** a real sheet | **Not driven.** Destroys a signed contract. The confirmation guard is tested up to — not through — the confirm step. |
+| **Issue a share token** on a real sheet | Issuing **rotates** the token and *"previous link dies instantly"*. If a customer holds a live link, testing would break it. Existing token state is read first; only tested where no live token exists. |
+| **FBR submit** | Not driven — submits a real tax document to the Federal Board of Revenue. |
+| **WhatsApp send** | Not driven — messages a real customer. |
+| **Signature capture** | Not applied to a real contract. |
+
+## Section A — List, tiles, arithmetic
+
+- [ ] **D6-001** — `Total sheets 17` matches the API count.
+- [ ] **D6-002** — `Total value Rs 28,559,050` equals the sum of the 17 `grandTotal` values.
+- [ ] **D6-003** — 🔴 `Open 17` / `Paid 0`. Every sheet is counted "Open" including 10 `signed`
+  and 4 `beo_ready`. Determine what "Open" means and whether it is useful.
+- [ ] **D6-004** — 🔴 **Sheet state vs booking payment state.** Sheet 77 ↔ booking 155, which is
+  `Completed` / `Paid` Rs 1,092,200. The sheet says `signed`. Establish whether the two
+  lifecycles are connected at all, and what `Paid 0` is really telling the vendor.
+- [ ] **D6-005** — 17 sheets against 25 bookings — identify the 8 bookings with no sheet and
+  whether the vendor can tell.
+- [ ] **D6-006** — Row `GRAND TOTAL` matches the API per sheet.
+- [ ] **D6-007** — Grand totals reconcile against the linked booking's `totalAmount`.
+- [ ] **D6-008** — `STATUS` chip label matches `STATE_LABELS` for each of the 4 live states.
+- [ ] **D6-009** — Chip colour comes from `STATE_TONES` and is distinguishable, not colour-only.
+- [ ] **D6-010** — Event dates render `en-PK` and match the booking date.
+- [ ] **D6-011** — List ordering — by event date, id, or arbitrary?
+- [ ] **D6-012** — Venue scoping: does the list rescope on the business switcher? (Bookings and
+  holds do; Today did not.)
+- [ ] **D6-013** — Scope survives a hard reload.
+- [ ] **D6-014** — Density toggle works and sets `aria-pressed` (as Bookings did).
+- [ ] **D6-015** — Export: row count, columns, machine-readable money, view-respecting.
+- [ ] **D6-016** — Is there a state filter / search? If not, how does a vendor find one sheet
+  among 17 (and among 200)?
+
+## Section B — Row actions
+
+- [ ] **D6-017** — Enumerate the 3 row actions: `View` / `Edit` / `Remove` function sheet.
+- [ ] **D6-018** — 51 row buttons sharing 3 accessible names — WWL-035 again?
+- [ ] **D6-019** — `View function sheet` opens the correct detail page.
+- [ ] **D6-020** — `Edit function sheet` opens the correct sheet in edit mode.
+- [ ] **D6-021** — 🔴 `Remove function sheet` — is there a confirmation? Does it state that a
+  signed contract is being destroyed? Is it offered on `signed` sheets at all?
+- [ ] **D6-022** — Is the row itself clickable, or is it WWL-054 again?
+
+## Section C — `New function sheet`
+
+- [ ] **D6-023** — Enumerate every field in the dialog.
+- [ ] **D6-024** — Does it require a booking, or can a sheet float free?
+- [ ] **D6-025** — Does it capture money (line items, totals) or is it another Rs 0 door?
+- [ ] **D6-026** — Required-field gating with stated reasons.
+- [ ] **D6-027** — Can a second sheet be created for a booking that already has one?
+- [ ] **D6-028** — Cancel writes nothing — API count before/after.
+
+## Section D — Detail view and the state machine
+
+- [ ] **D6-029** — Detail renders every section for a `signed` sheet.
+- [ ] **D6-030** — Line items, quantities, unit prices and totals are arithmetically consistent.
+- [ ] **D6-031** — Enumerate the transitions offered at each live state.
+- [ ] **D6-032** — Are illegal transitions hidden, disabled, or offered-then-rejected?
+- [ ] **D6-033** — Is `cancelled` reachable, and is it guarded?
+- [ ] **D6-034** — Does the detail page show the linked booking, and is it navigable?
+- [ ] **D6-035** — `linkedFinancials` — does the sheet's money agree with the booking's?
+- [ ] **D6-036** — Audit log renders and shows real entries.
+- [ ] **D6-037** — Deliverables tracker — present, and does it apply to a venue vendor?
+- [ ] **D6-038** — Vendor-type JSON blocks (bridalWear, henna, makeup, photography…) — do
+  irrelevant ones render for a **venue** vendor?
+
+## Section E — PDF generation (5 variants)
+
+- [ ] **D6-039** — On a `draft` sheet only `Quotation` is offered.
+- [ ] **D6-040** — On `quote_sent` — still quote only (contract needs `contract_pending`).
+- [ ] **D6-041** — On `signed` — Quotation + Contract, **not** BEO/Invoice/Receipt.
+- [ ] **D6-042** — On `beo_ready` — Quotation + Contract + BEO.
+- [ ] **D6-043** — 🔴 Request a **locked** variant directly (e.g. `?variant=invoice` on a
+  `signed` sheet). Does the server enforce, or does the UI gate alone?
+- [ ] **D6-044** — Quotation PDF actually generates and is a real PDF (magic bytes).
+- [ ] **D6-045** — PDF money matches the sheet's money.
+- [ ] **D6-046** — PDF carries the correct venue for a 3-venue vendor.
+- [ ] **D6-047** — 🔴 `pdfUrl()` returns a **relative** path (`/api/v1/function-sheets/…`).
+  On `www.weddingwala.pk` that resolves to the frontend, not the backend. Determine whether
+  anything uses it, and whether "open in new tab" is therefore broken.
+- [ ] **D6-048** — Tax invoice shows tax fields consistent with the FBR requirement.
+
+## Section F — Customer share link (public surface)
+
+- [ ] **D6-049** — Read existing token state before touching anything.
+- [ ] **D6-050** — `expiresInDays` default 30, clamped 1–365 — verify the clamp.
+- [ ] **D6-051** — 🔴 Is the share link **unauthenticated**? What does it expose — customer
+  name, phone, money, contract terms?
+- [ ] **D6-052** — 🔴 Is the token long/random enough to resist guessing?
+- [ ] **D6-053** — Issuing a new token kills the previous link "instantly" — verify.
+- [ ] **D6-054** — Revoke flags dead without clearing; the link then fails.
+- [ ] **D6-055** — Does the vendor see the link's expiry and status in the UI?
+- [ ] **D6-056** — Is the share dialog's copy-to-clipboard functional?
+
+## Section G — Sign, WhatsApp, FBR, other routes
+
+- [ ] **D6-057** — `/dashboard/function-sheet-sign` renders; signature pad draws.
+- [ ] **D6-058** — Is the sign route reachable by the customer, or vendor-only?
+- [ ] **D6-059** — WhatsApp dialog composes a sane message and does not send prematurely.
+- [ ] **D6-060** — FBR submit surfaces `no_provider` honestly rather than claiming success.
+- [ ] **D6-061** — `/dashboard/function-sheet-composer` renders and is reachable.
+- [ ] **D6-062** — `/dashboard/function-sheet-operations` renders and is reachable.
+- [ ] **D6-063** — All four routes appear in navigation, or are they orphan doors?
+
+## Section H — Failure, a11y, responsive
+
+- [ ] **D6-064** — Block the list endpoint → error + Retry, not `0 / Rs 0` (the WWL-052 test).
+- [ ] **D6-065** — Tiles must not print `Rs 0` above an errored table.
+- [ ] **D6-066** — Table semantics and accessible names.
+- [ ] **D6-067** — 360px: no overflow; usable row actions (the WWL-053 test).
+- [ ] **D6-068** — Desktop: no overflow.
