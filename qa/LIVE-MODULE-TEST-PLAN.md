@@ -43,7 +43,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 11 | Receivables | `/dashboard/receivables` | ✅ 96 | **`[x]` COMPLETE — 84 run, 12 not run, 13 findings (2× S1)** |
 | 12 | Receipts | `/dashboard/receipts` | ✅ 92 | **`[x]` COMPLETE — 83 run, 9 not run, 17 findings** |
 | 13 | Cheque ledger | `/dashboard/pdcs` | ✅ 88 | **`[x]` COMPLETE — 78 run, 10 not run, 16 findings** |
-| 14 | Expenses | `/dashboard/expenses` | ✅ 104 | `[ ]` IN PROGRESS |
+| 14 | Expenses | `/dashboard/expenses` | ✅ 104 | **`[x]` COMPLETE — 89 run, 15 not run, 14 findings** |
 | 15 | Tax report | `/dashboard/tax` | — | `[ ]` |
 | 16 | Reports | `/dashboard/reports` | — | `[ ]` |
 | 17 | Trade operations | `/dashboard/trade-ops` | — | `[ ]` |
@@ -6876,3 +6876,165 @@ calls an AI coercion path.
 | D14-102 | 360px: is the cockpit usable (period toggle, cards)? | |
 | D14-103 | 360px: category bars and per-event roll-up readable | |
 | D14-104 | Expense count unchanged at module close | proof nothing was written |
+
+## MODULE 14 — EXECUTION RESULTS
+
+**Nothing was written. No import was committed, no custom field created, no receipt uploaded.**
+Ledger at close: **165 expenses, Rs 16,832,000**. Expense 470 — the row I drove edit and delete
+against — still reads Rs 46,400.00, `spentDate 2026-08-21`, with its **original `updatedAt` of
+2026-08-02T00:15:30.916Z**.
+
+```
+POST   /api/v1/expenses      {"amount":12345,"category":"supplies","vendorName":"Bismillah Meat Supply","spentDate":"2026-08-05","paymentMethod":"cash","bookingId":null,"businessId":3359,"subVenueId":null}
+DELETE /api/v1/expenses/470  (no body)
+```
+The `PATCH` never fired at all — which turned out to be the module's sharpest finding.
+
+### WWL-175 (S2) — future-dated expenses are permanently uneditable, silently
+
+Opening **Edit** on expense 470 (fuel, Rs 46,400, spent 21-Aug-2026 for the 21-Aug wedding):
+
+| | |
+|---|---|
+| Date field value | `2026-08-21` — the stored value, untouched |
+| Date field `max` | `2026-08-05` |
+| `validity.rangeOverflow` | **true** — *"Value must be 08/05/2026 or earlier."* |
+| Error shown on open | **"Date spent can't be in the future."** |
+| `Update expense` | **disabled** |
+| Blocked hint | none (correctly suppressed, since a field error is showing) |
+
+I changed the amount and clicked Update: **`window.__net` stayed empty**. No request. The button
+is permanently disabled because `validateNotFutureDate` rejects a value the vendor never entered
+and cannot legitimately change.
+
+**6 of 55 expenses in this venue — 11%, Rs 745,200 — are locked this way**, and they are not
+scattered: they are *every* expense of the Salman Rauf 21-Aug event. **An entire upcoming
+wedding's cost sheet is read-only.**
+
+The vendor's only options are to falsify the date to today or earlier, or delete and re-create.
+Note the form's own booking selector offers *"Recurring overhead — not tied to one function"*
+against a list of **future** events, so the product plainly expects costs to be recorded against
+weddings that have not happened yet — while the date rule forbids the natural date for them.
+
+Same family as WWL-148 (future receipts) and WWL-167 (Rs 0 cheques): the backend accepts what the
+frontend forbids. Here the consequence is worse — the record becomes permanently uneditable.
+
+### WWL-176 (S2) — the spending cockpit never refreshes after a mutation
+
+The page runs **two independent queries over the same data**:
+
+```js
+// table
+queryKey: ["expenses-redesigned", activeBusinessId, bookingId ?? null]
+// cockpit — a different key entirely
+queryKey: ["expense-cockpit"]
+// and the only invalidation:
+qc.invalidateQueries({ queryKey: ["expenses-redesigned"] })
+```
+
+**Proven live.** I counted `/api/v1/expenses` requests either side of a save that reported
+success: **11 before, 12 after — exactly one refetch.** The ledger refreshed; the cockpit did
+not.
+
+So after adding, editing or deleting an expense, *"Spent · month"*, *"Fixed overheads"*,
+*"Event / function costs"*, *"Biggest category"*, the whole category breakdown and the entire
+**Cost per function** profit table all keep showing pre-mutation numbers, sitting directly above
+a ledger that has updated. Nothing tells the vendor which half is current.
+
+### WWL-177 (S2) — two contradictory definitions of "fixed overhead", Rs 219,500 apart, on one panel
+
+At *All time* for this venue, the same panel simultaneously states:
+
+| | Rule | Value |
+|---|---|---|
+| **`Fixed overheads` card** | `bookingId == null` | **Rs 2,910,500** |
+| **Category bars marked `FIXED`** | `OVERHEAD_CATS` membership | **Rs 3,130,000** |
+
+Electricity 1,295,500 + Salary 1,083,000 + Rentals 304,000 + Repairs 233,500 + Marketing 214,000
+= Rs 3,130,000, against a card reading Rs 2,910,500 — a **Rs 219,500** contradiction visible
+without scrolling.
+
+The card's own subtitle is *"rent · utilities · salary"* — it **names categories while computing
+by booking linkage**. And at *August 2026* the panel reads `Fixed overheads Rs 0` while the bars
+below it show **"Rentals · FIXED · Rs 78,200"**.
+
+The booking-linkage rule is the intentional one (the dialog's default option is *"Recurring
+overhead — not tied to one function (rent, utilities, salary)"*), so the `FIXED` chip is the odd
+one out — but as shipped, two figures both labelled fixed disagree on screen.
+
+### WWL-178 (S2) — mobile clips the per-event profit column with no way to reach it
+
+At a true emulated 360×740 the page-level check **passes** — `scrollWidth === clientWidth === 360`
+— but that is because the overflow is clipped, not because the content fits. **22 elements extend
+past the right edge and the page does not scroll** (`pageScrolls: false`, and none of the
+offenders is itself scrollable):
+
+| Clipped element | Right edge | Lost |
+|---|---|---|
+| **Cost-per-function table** (`min-w-[560px]`) | **577px** | **217px — the SPENT and NET columns** |
+| `Fields \| Import \| Export` toolbar | 416px | 56px — Export partly cut |
+| Category percentage labels (`61%`, `14%`, `10%`…) | 381px | every percentage in the breakdown |
+| `Today` period-reset button | 369px | 9px |
+
+The **NET column is the per-event profit** — the single most valuable number on the screen — and
+on a phone it is invisible and unreachable. This is also a caution about the measurement itself:
+`scrollWidth === clientWidth` alone is not evidence that a layout fits.
+
+Edit and Remove are, once again, **entirely absent on mobile** (0 visible), the third module in a
+row (WWL-146, WWL-160).
+
+### Findings S3 / S4
+
+| ID | Sev | Finding |
+|---|---|---|
+| **WWL-179** | S3 | **The entire expense ledger is fetched twice on every load.** Confirmed live: two identical `GET /api/v1/expenses?businessId=3359` requests, one for the table's query key and one for the cockpit's. 165 rows shipped twice. |
+| **WWL-180** | S3 | **WWL-117, third recurrence.** A note of 1001 characters silently disables Save with **no field error** and the false hint *"Add an amount above 0 and the date it was spent to save."* — while both are valid. The **Paid to** field on the same form gets this right, with an excellent message: *"Paid to must be 150 characters or fewer — currently 151."* The notes field simply has no `FieldError`. |
+| **WWL-181** | S3 | **WWL-112, fifth instance.** `spentDate` defaults to and is capped at `2026-08-05` (the UTC date) while it is 6 Aug in Pakistan. Setting today's PKT date is accepted by the JS validator but flagged by the native `max` — the same split as WWL-158, and the mechanism behind WWL-175. |
+| **WWL-182** | S3 | **The delete confirm names only the amount** — *"This Rs 46,400 entry will be removed."* No category, payee, date or event, on a 55-row ledger. WWL-145 repeated; the cheque ledger (WWL-... D13-081) shows how to do it properly. |
+| **WWL-183** | S3 | **The Pakistani payment rails are mis-labelled in this module.** The selects and table render **"Jazzcash"**, **"Ibft"**, **"Bank Transfer"** — title-cased raw keys — where `EXPENSE_PAYMENT_METHOD_LABELS` already defines `JazzCash`, `IBFT`, `Bank transfer`, and the Receipts module renders them correctly. *Ibft* in particular reads as a word rather than the initialism it is. |
+| **WWL-184** | S3 | **The import dialog offers no template or column reference.** *"Upload or paste a CSV/TSV"* with no sample, no header list and no download link — the vendor has to guess the schema. (The dialog's safety design is otherwise good — see the passes.) |
+| **WWL-185** | S3 | **Cards ignore the search filter** — fifth consecutive money module. `Spent · month` stayed at Rs 745,200 while the ledger filtered from 55 rows to 5, to 0, and back. |
+| **WWL-186** | S3 | **No-match empty state presents a populated ledger as onboarding** — *"No expenses logged — Track fuel, salaries, rentals and supplies to see your true per-event profit."* plus an **Add expense** button. WWL-152 pattern, fourth module. |
+| **WWL-187** | S3 | **Table a11y, fifth module unchanged.** 0 of 10 `<th>` carry `scope`, no `<caption>`, all row checkboxes named *"Select row"*. |
+| **WWL-188** | S4 | **CSV omits Space and Event**, both visible columns, and any vendor-defined custom-field columns. Header is `Category,Paid to,Note,Method,Date,Amount`. Fourth module with an export/screen parity gap. |
+
+### Notable passes
+
+- **D14-008 PASS — venue scoping is correct.** I suspected otherwise when all three venues returned exactly **55** rows, so I checked the IDs: **zero overlap between any pair**, union = 165 = the all-venues count. A genuine clean partition; the even split is just how the data was seeded. Receivables (WWL-129) remains the only one of five endpoints that scopes wrongly.
+- **D14-007 PASS** — cockpit *Spent · all time* **Rs 6,049,000** equals the API total for the venue exactly; *Event / function costs* = total − overheads exactly.
+- **D14-011 PASS — the category list is genuinely Pakistani.** All 13 render: Ingredients, **Fuel (diesel / petrol)**, **Casual labour**, Salary / payroll, Electricity, Rentals, Repairs, Marketing, **Broker commission**, **Tax (FBR / SECP)**, Supplies, Transport (non-fuel), Other.
+- **D14-022 PASS — the cockpit's dates are timezone-correct.** `inPeriod` parses `dateStr + "T00:00:00"` as local midnight and compares with local `getFullYear/getMonth/ymd` — no `toISOString()` anywhere. This is the counter-example that shows WWL-112 is a fixable oversight, not a house style.
+- **D14-019/020/021 PASS** — Day/Month/Year/All all switch correctly, with a working period label (`August 2026`), prev/next navigation and a `Today` reset.
+- **D14-027/028 PASS** — the delta renders as `-31% vs last month` and is computed only when the previous period is non-zero.
+- **D14-031/036 PASS** — per-event roll-up sorted by spend, and its revenue figures agree with Module 10 exactly (Shahzad Butt Rs 2,160,300; Salman Rauf Rs 2,292,300).
+- **D14-074/076/077 PASS** — amount 0 and negative, future date, and a 151-character payee each produce the right specific message.
+- **D14-079/081/082 PASS** — 13 categories, the Space select correctly scoped to this venue's three spaces (`Banquet Hall · HALL`, `Open Lawn · LAWN`, `Basement Hall · BASEMENT`), and a booking select whose default option is unusually well written: *"Recurring overhead — not tied to one function (rent, utilities, salary)"*.
+- **D14-086 PASS — and the counter-example to WWL-144.** The **booking selector IS present in edit mode**, correctly seeded (`Salman Rauf & Kinza Salman · 21-Aug-2026`), alongside category, method and space. An expense can be re-tagged to a different event; a receipt (WWL-144) and a cheque cannot.
+- **D14-053/054/055 PASS** — search matches payee, note **and** category.
+- **D14-063 PASS** — CSV exported all 55 rows matching the screen.
+- **D14-066 PASS — the safest write surface in the sweep.** The import dialog states plainly: *"Upload or paste a CSV/TSV. **We preview first — nothing is saved until you confirm.**"* with a `Preview` button and no direct commit. Exactly the right shape for a bulk write.
+- **D14-102 PASS** — the cockpit itself is usable on mobile: all four period toggles, the stat cards, the category breakdown and the per-function panel all render (the clipping in WWL-178 is horizontal, not structural).
+- **D14-104 PASS** — 165 expenses and Rs 16,832,000 at close, unchanged.
+
+### Module 14 — status
+
+**104 cases written, 89 driven. 14 findings (4× S2, 9× S3, 1× S4).**
+
+Not driven, each with its reason:
+
+| Cases | Why |
+|---|---|
+| **D14-045/046/047/048** (custom-field columns and manager) | No custom-field definitions exist for `expense` on this venue, so no extra columns render. The `Fields` button is present; **opening the manager was as far as I went — creating or editing a field definition is a schema change on a live venue.** |
+| **D14-067/068** (import validation and commit) | The dialog was opened and its copy and controls examined. **No file was submitted** — an import writes rows in bulk. |
+| **D14-083** (receipt scan) | The file input exists and the AI coercion path is wired, but **no image was uploaded**: it calls an external model and would create a row. Client-side `validateReceiptFile` was read, not exercised. |
+| **D14-072** (stale-error leak into the create form) | This dialog has its own `touched` state with the same shape as WWL-143, but I drove create before edit, so I did not reproduce the triggering order. Not claimed. |
+| **D14-093/094/095** (error state, Retry, cockpit error behaviour) | `ExpensesAPI.list()` has no `catch`, matching Receipts where the error state and Retry were driven and passed. The cockpit's separate query would fail independently — recorded as a consequence of WWL-176 rather than re-driven. |
+| **D14-098** (venue switch re-scopes the cockpit) | The cockpit's key omits `activeBusinessId`, but the switcher fires a bare `invalidateQueries()` that matches everything, so it should refetch. Not separately driven; the mutation-path staleness (WWL-176) is the reachable defect. |
+
+**The module's verdict.** The most capable screen in the portal and, in places, the best built —
+a real spending cockpit with correct period arithmetic and genuinely timezone-safe dates, a
+Pakistani category taxonomy, per-event profit, per-venue spaces, editable event tagging, and an
+import that previews before it commits. It is undermined by four structural problems: an entire
+upcoming wedding's costs cannot be edited at all, the cockpit silently diverges from the ledger
+after every change, the panel contradicts itself about what "fixed overhead" means, and on a
+phone the profit column is clipped out of existence.
