@@ -71,7 +71,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 39 | Halls & spaces | `/dashboard/venue-os?tab=spaces` | ✅ 170 | `[x]` COMPLETE — 124 run, 46 not run, 10 findings (1× S1, 3× S2) |
 | 40 | Cash & cheques | `/dashboard/venue-os?tab=cash` | ✅ 140 | `[x]` COMPLETE — 108 run, 32 not run, 10 findings (4× S2) |
 | 41 | Kitchen & suppliers | `/dashboard/venue-os?tab=kitchen` | ✅ 140 | `[x]` COMPLETE — 104 run, 36 not run, 8 findings (3× S2) |
-| 42 | Accounting | `/dashboard/venue-os?tab=advanced` | ✅ 210 | `[~]` cases written, executing |
+| 42 | Accounting | `/dashboard/venue-os?tab=advanced` | ✅ 210 | `[x]` COMPLETE — 141 run, 69 not run, 7 findings (1× S2) + WWL-528 answered |
 | 43 | Field capture | `/dashboard/field` | — | `[ ]` |
 | 44 | Quote requests | `/dashboard/quotes` | — | `[ ]` |
 
@@ -20962,3 +20962,166 @@ Fourth Venue-OS tab in a row (37, 38, 40, 41).
 | D42-210 | **Zero writes delivered across the entire module** | headline safety assertion |
 
 **Total: 210 cases.**
+
+---
+
+## Module 42 — RESULTS (live production, visible browser)
+
+**210 cases written · 141 driven · 69 not run · 7 findings (1× S2, 5× S3, 1× S4).**
+
+**Nothing was written.** Three `close-ritual` POSTs and the bulk-import preview were captured and
+diverted. Three AML checks were allowed through only after verifying `section21MeterHandler`,
+`structuringCheckHandler` and `benamiCheckHandler` each call a pure `aml.*` function and return.
+
+**This module answers WWL-528.** Module 36 reported the Advanced tab as *"seven collapsed group
+headers, nothing inside"*. Expanded, **all 28 views render** — not one is a bare heading.
+
+---
+
+### WWL-597 (S2) — three buttons in a row, and the third locks the books
+
+The month-end close ritual renders `Preview accruals · Post accruals · Close & lock month` inline,
+identical size, identical styling. Captured from the live page — **all three hit the same endpoint**:
+
+| Button | Body |
+|---|---|
+| Preview accruals | `{"dryRun":true,"lock":false}` |
+| Post accruals | `{"dryRun":false,"lock":false}` |
+| **Close & lock month** | `{"dryRun":false,"lock":true}` |
+
+`POST /venue-os/business/3358/period/2026-07/close-ritual`
+
+`PeriodCloseView`'s own comment states what the third one does: *"Closing a month locks that
+business's journal entries and freezes the reported P&L; the engine then rejects any new posting into
+the closed month."* Module 38 confirmed that guard is live in `txPostingEngine.postEvent` — a closed
+month rejects rent, depreciation and utility postings outright.
+
+**None of the three has a confirmation step.** A vendor exploring, one button to the right of a
+harmless preview, then one more, locks their own books. The status panel below correctly reports
+`2026-07 · OPEN` — so the destination of that click is visible, but only if you look at a different
+sub-panel.
+
+Same shape as WWL-558 (Money tab) and WWL-595 (Kitchen), and this is the most consequential instance:
+the other two post entries, this one freezes a month.
+
+### WWL-598 (S3) — 35 unlabelled inputs across 28 views
+
+Counted per group (`input` with no `<label>` ancestor and no `aria-label`):
+
+| Group | Unlabelled / total |
+|---|---|
+| **Working capital & financing** | **14 / 14** |
+| Group, partners & capital | 9 / 31 |
+| Legal, insurance & safety | 6 / 10 |
+| Compliance (AML / KYC) | 4 / 6 |
+| Setup & tools | 2 / 2 |
+| Costing, Accounting | 0 / 4, 0 / 6 |
+
+Working capital has **no labelled input at all** — every field is placeholder-only, so a half-filled
+form has no field names. The same pattern as WWL-593 on Kitchen, at four times the scale.
+
+### WWL-599 (S3) — seven raw-id boxes survive here
+
+`Counterparty biz #` · `Org #` · `Org #` · `business #` · `business #` · `partner #` ·
+`Weather event #`
+
+Every `Venue #` box is gone across all 28 views — the Module 36 fix carries completely — but these
+seven ask for other primary keys with no picker and no list to read them from. Same family as
+`Event night #`, `Card IDs`, `meter #`, `production run #`.
+
+### WWL-600 (S3) — force majeure asks for a hand-typed pairing syntax
+
+The batch panel's field is labelled:
+
+> **Affected bookings (bookingId:advance, comma-separated)**
+
+A vendor must type `167:500000, 170:386500, …` — booking primary keys paired with advance amounts, in
+a custom syntax, for an operation that issues `CARRY_FORWARD` / `FULL_REFUND` / `PARTIAL_REFUND`
+against real customers' money. One mistyped colon or a transposed id refunds the wrong wedding.
+
+The panel is otherwise careful — see the credits — which makes the input the weak point.
+
+### WWL-601 (S3) — four of seven groups fetch nothing when opened
+
+Requests fired on expand:
+
+| Group | Requests |
+|---|---|
+| Full costing & margins | 2 |
+| Setup & tools | 1 |
+| **Accounting & tax** | **0** |
+| **Group, partners & capital** | **0** |
+| **Working capital & financing** | **0** |
+| **Compliance (AML / KYC)** | **0** |
+| **Legal, insurance & safety** | **0** |
+
+Those five render their forms and fetch nothing, so the vendor cannot tell an empty account from an
+unloaded panel without pressing a Load button per view. Modules 38 and 39 had the same shape before
+the Module 36 auto-load; it was applied to four panels and not to these.
+
+### WWL-602 (S3) — "Mark registered" asserts a regulatory status in one click
+
+The DNFBP readiness card renders a `Mark registered` button beside the score. FBR AML registration is
+a fact about the business, not a preference, and the rendered markup shows no evidence field, no
+registration-number input and no confirmation. **Not driven** — fabricating a compliance claim on a
+real business is outside what this pass may leave behind — so this is recorded from the rendered
+control, not from its behaviour.
+
+### WWL-603 (S4) — no `h1` on the page
+
+Fifth Venue-OS tab in a row (37, 38, 40, 41, 42).
+
+---
+
+### What holds — verified, not assumed
+
+- **WWL-528 is answered: all 28 views render.** Not one group is a bare heading. Group content sizes:
+  costing 2,685 chars · group 1,162 · legal 888 · setup 728 · compliance 685 · accounting 583 ·
+  working-capital 465.
+- **All seven deep links work.** `?tab=advanced&group=costing|accounting|group|working-capital|
+  compliance|legal|setup` — every one expands its group on load and scrolls it into view.
+- **Zero `Venue #` boxes across all 28 views**, and named venue dropdowns in every group. The Module
+  36 fix carries completely into the deepest surface in the product.
+- **The §21 meter is correct, and I drove it.** Rs 500,000 in cash returns:
+
+  > **Rs 500,000 disallowed** — *"Cash: Rs 500,000 disallowed under §21(l) (over the Rs 50,000
+  > banking-channel limit). Cash over the limit also invites a §111 source-of-funds question on audit
+  > — paying through a bank removes BOTH the disallowance and the §111 risk."*
+
+  It quantifies the loss, cites the right subsection, pairs §21 with §111 exactly as the source
+  requires, nudges toward banking, and **never uses the word "split"** — verified against the
+  rendered text.
+- **The benami check is correctly framed**: `family_exempt` — *"Family member with traceable funding —
+  exempt under BTPA s.3 (the family / housing-benefit exception)."*
+- **The CFO cockpit compares seasons on the Hijri calendar** — Muharram, Safar, Rabi-ul-Awwal …
+  Zul-Hijjah, with a "Hijri YoY" toggle. Shaadi season moves with the Islamic calendar; no other
+  product surface in this sweep acknowledges that.
+- **The financial instruments are the right ones for Pakistan**: Committee / BC, Ijarah lease,
+  supplier udhaar with aging, Shaadi-Qist, ghar-ka-maal netting, Raast, §165 statement, **Tally
+  export**, and *Draft 489-F* for a dishonoured cheque.
+- **`Force-majeure batch (never auto-cancels)`** states its own safety property in its title, and
+  offers `Preview (dry-run)` before `Run batch`.
+- **Bulk import gates commit behind preview** — no commit control exists until a preview has run.
+- **`Check status` works**: reported `2026-07 · OPEN` for this venue.
+- **Layout holds at the largest surface in the product**: with **all seven groups expanded**, 0
+  overflowing elements at 1440px **and** at 360×740, `docScrollX` false at both.
+- **0 console errors**, 0 writes delivered, across every group.
+
+### Not run (69), with reasons
+
+- **Every period close and reopen** — closing locks the month's journal entries and blocks this
+  venue's own bookkeeping. Captured and diverted.
+- **Post accruals, Post (GL), Add partner, Distribute, Run appropriation, Value exit** — all write to
+  the ledger or the cap table.
+- **Every AML record**: bank deposit, turnover reconciliation, beneficial owner, and the **immutable
+  Compliance-Shield**. A fabricated compliance artefact on a real business is not something a QA pass
+  may leave behind.
+- **`Mark registered`** — see WWL-602.
+- **Add policy, Evaluate triggers → claim, Run batch** — insurance and force majeure touch real
+  bookings and real refunds.
+- **Bulk import PREVIEW** — it is a POST; I did not verify its handler's purity in the controller, so
+  the blocker held it. The COMMIT path was never reachable (gated behind preview).
+- **The structuring guard's wording** (D42-150–152) — its `Check` stayed disabled because my input
+  fill reached only the §21 amount field. The §21 and benami wording were verified; **the structuring
+  guard's was not**, and is the one remaining legal-copy assertion on this tab.
+- **Comms send / Dispatch queued** — reaches real customers.
