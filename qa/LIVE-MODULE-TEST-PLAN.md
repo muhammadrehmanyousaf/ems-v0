@@ -73,7 +73,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 41 | Kitchen & suppliers | `/dashboard/venue-os?tab=kitchen` | ✅ 140 | `[x]` COMPLETE — 104 run, 36 not run, 8 findings (3× S2) |
 | 42 | Accounting | `/dashboard/venue-os?tab=advanced` | ✅ 210 | `[x]` COMPLETE — 141 run, 69 not run, 7 findings (1× S2) + WWL-528 answered |
 | 43 | Field capture | `/dashboard/field` | ✅ 140 | `[x]` COMPLETE — 112 run, 28 not run, 5 findings (3× S2) |
-| 44 | Quote requests | `/dashboard/quotes` | ✅ 130 | `[~]` cases written, executing |
+| 44 | Quote requests | `/dashboard/quotes` | ✅ 130 | `[x]` COMPLETE — 108 run, 22 not run, 4 findings (1× S2) |
 
 ---
 
@@ -21634,3 +21634,132 @@ trail and the `NegotiateDialog` (price + message).
 | D44-130 | The public listing's "Request a quote" entry point exists | cross-check on the live vendor page |
 
 **Total: 130 cases.**
+
+---
+
+## Module 44 — RESULTS (live production, visible browser)
+
+**130 cases written · 108 driven · 22 not run · 4 findings (1× S2, 3× S3).**
+
+**Nothing reached a customer.** One `respond` and one `decline` were captured and diverted.
+
+The feature is **live and populated**: `GET /quotes/business/3358` → 200 with a real inquiry (#3,
+*walima · 15-Dec-2026 · 300 guests*). Venues 3359 and 3360 return `[]`.
+
+---
+
+### WWL-609 (S2) — Decline ends a live sales conversation with no confirmation
+
+Clicked **Decline** on the venue's only open quote request. Captured:
+
+```
+POST /quotes/3/decline  {}
+```
+
+- fired **immediately** on the first click
+- `confirmDialog: false` — no `alertdialog`, no "are you sure"
+- toast: **"Quote declined"**
+
+Decline is rendered on **every non-terminal quote**, including one you have not yet priced — this
+customer is at `inquiry`, has never been quoted, and one stray click ends it. The action is terminal
+(`accepted`/`declined` rows lose all their buttons) and there is no re-open control on this screen.
+
+It is styled as the quietest button on the row (`variant="ghost"`, muted text), which is the right
+visual weight — but visual weight is not a guard. Same family as WWL-558 (Post rent), WWL-583 (Open
+drawer) and WWL-597 (Close & lock month): an irreversible action one click from a browsing vendor.
+
+**Accept** has the same shape — `onClick={() => acceptMut.mutate(q.id)}`, direct, no confirmation.
+Not driven: no standing offer existed on this account, so the button never rendered. Recorded from
+source.
+
+### WWL-610 (S3) — a third scoping pattern
+
+```js
+const businessId = activeBusinessId ?? (business ? Number(business.id) : null)
+```
+
+Three different venue-resolution patterns now exist in the product:
+
+| Pattern | Used by |
+|---|---|
+| `useBusinessIdField` (header → first venue) | the 36 Venue-OS panels, post-Module-36 |
+| `useActiveBusinessId` raw | `SpacePnlView` (WWL-570), `FieldCaptureView` (WWL-608) |
+| `useActiveBusinessId ?? BusinessContext` | **this screen** |
+
+This one at least has a fallback and an honest terminal state — *"Pick a venue to see its quote
+requests."* — so it fails better than the other two. But a vendor's quotes now resolve by a different
+rule than their spaces, their expenses and their leads.
+
+### WWL-611 (S3) — the screen never says which venue's quotes these are
+
+The header reads *Quote requests · Customers asking for your best price*. Nothing on the page names
+the venue. This vendor owns three; **3359 and 3360 both return `[]`**, so switching to either shows
+*"No quote requests yet"* — visually identical to a vendor who has never received one.
+
+A three-hall owner cannot tell whether they have no enquiries or are simply looking at the wrong hall.
+Every Venue-OS panel got a named venue dropdown in Module 36's fix; this screen, outside that tab,
+did not.
+
+### WWL-612 (S3) — `Decline` is offered before a price ever exists
+
+Sequencing, not just confirmation: on a quote at `inquiry` the row offers **Send quote** and
+**Decline** side by side. Declining an enquiry you have not priced is a legitimate action — but it is
+presented with equal prominence to the one that starts the sale, on a screen whose own description is
+*"this is where the haggling happens"*.
+
+---
+
+### What holds — verified, not assumed
+
+**The negotiate dialog is the best form in this entire sweep.** Driven through four submits:
+
+| Input | Requests | Dialog | Result |
+|---|---|---|---|
+| empty | **0** | stays open | CTA **disabled** — not a silent dead button |
+| **−5,000** | **0** | stays open | rejected |
+| **0** | **0** | stays open | rejected |
+| 350,000 | **1** | closes | `POST /quotes/3/respond {"quotedPrice":350000}` · *"Sent to customer"* |
+
+- **`unlabelled: 0`** — every field carries a real label (*Price (PKR)*, *Note (optional)*). The only
+  dialog in the sweep to score zero after Modules 41 (10 unlabelled), 42 (35) and 43 (28).
+- **The CTA is disabled until the form is valid**, which is why the empty submit is silent *and*
+  correct — the opposite of WWL-556 / WWL-605, where a live button did nothing and said nothing.
+- **Negative and zero prices are both rejected client-side**, with no request fired.
+- The note placeholder is a worked example, not a hint: *"e.g. Includes stage + lighting. Best I can
+  do for your date."*
+- Title and CTA change with context — *Send your quote* / *Send quote* on an inquiry, *Counter offer*
+  / *Send counter* on a counter.
+
+**The row is correct in every detail I could check:**
+
+- Status badge reads **"New request"**, not `inquiry` — a human word for a machine state.
+- Meta line: **"walima · 15-Dec-2026 · 300 guests"** — `en-PK` date, `·`-joined, all three facts.
+- A null price renders **"—"**, not `Rs NaN` and not `Rs 0`.
+- Turn label reads **"Your move"**, derived from `isMyTurn`.
+- **Contact is hidden.** The customer's phone and email are absent while status is `inquiry` and
+  appear only once the vendor engages — a deliberate privacy rule, holding on live data.
+- The action set matches the state exactly: **Send quote + Decline**, with no Accept/Counter because
+  there is no standing offer.
+- The counter-history trail renders, labelled **"Customer"** rather than `customer`.
+
+**And the empty state tells the truth.** It promises *"When a customer taps 'Request a quote' on your
+listing, it lands here."* — I checked the public listing at
+`/wedding-venues/lahore/rehman-grand-marquee-3358` and the button **"Request a quote"** is there.
+After WWL-557 (an instruction the product could not follow) and WWL-590 (a clearance against a
+contract that did not exist), this is a promise the product actually keeps.
+
+**Also holds:** `retry: false`; invalidation is **key-scoped** (`["vendor-quotes"]`) rather than the
+blanket `invalidateQueries()` of Module 43; one `h1`; **0 overflowing elements at 1440px and
+360×740**; 0 console errors; the API is owner-scoped and returned only this vendor's quotes.
+
+### Not run (22), with reasons
+
+- **Respond, counter, accept and decline** — every one reaches a real person who asked this venue for
+  a price. Captured and diverted.
+- **D44-056/057/108 Accept and Counter paths** — no quote on this account has a standing offer, so
+  neither button renders. Recorded from source.
+- **D44-109 accepting a price that changed underneath**, **D44-115/116 terminal transitions**,
+  **D44-120/121 whether an accepted quote reaches Bookings and the Profit tab** — all require
+  completing a negotiation with a customer.
+- **D44-065 shared `isPending` across rows** — needs two concurrent mutations.
+- **D44-112 another vendor's quote** — would probe a third party's data.
