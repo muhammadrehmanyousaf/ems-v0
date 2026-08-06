@@ -73,7 +73,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 41 | Kitchen & suppliers | `/dashboard/venue-os?tab=kitchen` | ✅ 140 | `[x]` COMPLETE — 104 run, 36 not run, 8 findings (3× S2) |
 | 42 | Accounting | `/dashboard/venue-os?tab=advanced` | ✅ 210 | `[x]` COMPLETE — 141 run, 69 not run, 7 findings (1× S2) + WWL-528 answered |
 | 43 | Field capture | `/dashboard/field` | ✅ 140 | `[x]` COMPLETE — 112 run, 28 not run, 5 findings (3× S2) |
-| 44 | Quote requests | `/dashboard/quotes` | — | `[ ]` |
+| 44 | Quote requests | `/dashboard/quotes` | ✅ 130 | `[~]` cases written, executing |
 
 ---
 
@@ -21462,3 +21462,175 @@ the shared `useBusinessIdField` that the Module 36 fix put everywhere else.
   submit.
 - **D43-046/047** whether `isOutboxEnabled()` is on for this deployment — determinable only by
   queueing something.
+
+---
+
+# Module 44 — Quote requests (`/dashboard/quotes`)
+
+**Surface.** The vendor side of the haggle loop — customer quote-requests for the active venue, with
+four actions: **Send quote** (respond), **Counter**, **Accept**, **Decline**, plus a counter-history
+trail and the `NegotiateDialog` (price + message).
+
+**Self-imposed limits for this module, each with its reason:**
+
+- **Nothing is sent to a customer.** Respond, counter, accept and decline all reach a real person
+  who asked this venue for a price. Every one is captured and diverted.
+- **No quote is accepted.** Accepting commits this venue to the customer's number.
+- **No quote is declined.** Decline ends a live sales conversation and is not undoable from this
+  screen.
+- Listing, scoping, the history trail, turn logic, contact-reveal rules, the dialog's fields and
+  validation, empty/error states, layout and mobile are driven in full.
+
+---
+
+## D44-A · Arrival, scope, states (cases 1–30)
+
+| # | Case | Expected |
+|---|---|---|
+| D44-001 | `/dashboard/quotes` loads | 200, renders |
+| D44-002 | Title is *Quote requests* | `PageHeader` |
+| D44-003 | Eyebrow reads *Sales* | copy |
+| D44-004 | Description names the haggle | *"this is where the haggling happens"* |
+| D44-005 | Exactly one `h1` | recorded |
+| D44-006 | No console error on arrival | 0 |
+| D44-007 | No mutating request on arrival | 0 |
+| D44-008 | The list request is scoped to a venue | `listForBusiness(businessId)` |
+| D44-009 | **Scope falls back to `BusinessContext`, not `useBusinessIdField`** | inconsistent with the Module 36 fix — record |
+| D44-010 | Under "All venues" the screen still resolves a venue | the fallback |
+| D44-011 | If no venue resolves, the empty state is honest | *"Pick a venue to see its quote requests."* |
+| D44-012 | Loading state shows a spinner | *"Loading…"* |
+| D44-013 | `retry: false` honoured | one request on failure |
+| D44-014 | Error state reads as flag-dark, not broken | *"Quote requests aren't enabled for your account yet."* |
+| D44-015 | **Is the feature actually enabled?** | probe the endpoint |
+| D44-016 | If the API 404s, the error copy is accurate | the claim must match the cause |
+| D44-017 | Empty state when enabled with no quotes | *"No quote requests yet"* |
+| D44-018 | The empty state explains where quotes come from | *"When a customer taps 'Request a quote' on your listing"* |
+| D44-019 | **Does the public listing actually offer "Request a quote"?** | cross-check the vendor page |
+| D44-020 | Switching venue re-queries | query key includes businessId |
+| D44-021 | Switching venue does not show the previous venue's quotes | driven |
+| D44-022 | No horizontal overflow at 1440px | 0 elements |
+| D44-023 | No horizontal overflow at 360px | 0 elements |
+| D44-024 | The page is width-capped | `max-w-3xl` |
+| D44-025 | Focus ring visible on every control | check |
+| D44-026 | Keyboard reachable throughout | check |
+| D44-027 | The page needs no venue picker of its own | header owns scope |
+| D44-028 | Nothing on the page is a raw id | check |
+| D44-029 | Nothing renders `Rs NaN` | sanity |
+| D44-030 | Nothing renders `undefined` / `null` | sanity |
+
+## D44-B · The quote row (cases 31–70)
+
+| # | Case | Expected |
+|---|---|---|
+| D44-031 | Each row names the customer | `customer.fullName` |
+| D44-032 | A missing name falls back to *"Customer"* | not blank |
+| D44-033 | Each row shows a status badge | `QuoteStatusBadge` |
+| D44-034 | Badge text matches the status | inquiry / quoted / countered / accepted / declined |
+| D44-035 | The meta line joins event type · date · guests | `·`-separated |
+| D44-036 | A row with none of those reads *"Quote request"* | fallback |
+| D44-037 | The date is formatted `02 Aug 2026` | `en-PK` |
+| D44-038 | An invalid date falls back to the raw string, not `Invalid Date` | the guard is present |
+| D44-039 | Guest count is pluralised sensibly | *"250 guests"* |
+| D44-040 | The customer's note renders in quotes | italic |
+| D44-041 | **Contact is hidden while status is `inquiry`** | the privacy rule |
+| D44-042 | Contact appears once engaged | any non-inquiry state |
+| D44-043 | Contact prefers phone over email | `phoneNumber \|\| email` |
+| D44-044 | The price renders large and `tabular-nums` | check |
+| D44-045 | A null price renders sensibly | not `Rs NaN` |
+| D44-046 | **"Your move" vs "Waiting for customer"** is correct | `isMyTurn` |
+| D44-047 | Terminal quotes show no turn label | accepted / declined |
+| D44-048 | Terminal quotes show no action buttons | check |
+| D44-049 | The history trail renders when present | `counterHistory` |
+| D44-050 | Trail entries label *You* vs *Customer* | not `vendor`/`customer` |
+| D44-051 | Trail prices are `tabular-nums` | check |
+| D44-052 | Trail messages render in quotes | italic |
+| D44-053 | An empty trail renders nothing | not an empty box |
+| D44-054 | Trail order is chronological | check |
+| D44-055 | **Send quote appears only on `inquiry` and only on your turn** | check |
+| D44-056 | **Accept + Counter appear only with a standing offer** | `hasStandingOffer` |
+| D44-057 | Accept names the price it accepts | *"Accept Rs 350,000"* |
+| D44-058 | **Decline is available on every non-terminal quote** | including before you have quoted |
+| D44-059 | **Decline has no confirmation** | flag |
+| D44-060 | Decline is styled as the quietest action | `variant="ghost"` |
+| D44-061 | Accept has no confirmation | flag |
+| D44-062 | Accept is captured and diverted | 0 delivered |
+| D44-063 | Decline is captured and diverted | 0 delivered |
+| D44-064 | Buttons disable while their mutation is pending | `isPending` |
+| D44-065 | **A pending accept does not disable the OTHER rows' buttons** | `isPending` is shared across rows — flag if so |
+| D44-066 | One click → one request | not two |
+| D44-067 | The row is not a link to anything | record |
+| D44-068 | Nothing on the row opens the customer's chat | record |
+| D44-069 | Rows at 360px do not clip the price | check |
+| D44-070 | Long customer names truncate | `min-w-0` |
+
+## D44-C · The negotiate dialog (cases 71–104)
+
+| # | Case | Expected |
+|---|---|---|
+| D44-071 | *Send quote* opens the dialog | driven |
+| D44-072 | Title reads *"Send your quote"* on an inquiry | check |
+| D44-073 | Title reads *"Counter offer"* on a counter | check |
+| D44-074 | CTA reads *"Send quote"* / *"Send counter"* accordingly | check |
+| D44-075 | Description explains the loop | *"The customer can accept it or counter back."* |
+| D44-076 | Price is pre-filled from the standing offer | `initialPrice` |
+| D44-077 | Pre-filling the customer's own number is sensible for a counter | record |
+| D44-078 | **Pre-filling on a fresh inquiry would quote their asking price** | check what happens when `quotedPrice` is null |
+| D44-079 | Every field is labelled | count unlabelled |
+| D44-080 | Price is required | driven |
+| D44-081 | A zero price is rejected | driven |
+| D44-082 | A negative price is rejected | driven |
+| D44-083 | A non-numeric price is rejected | driven |
+| D44-084 | An absurdly large price is handled | driven |
+| D44-085 | The message is optional | check |
+| D44-086 | Message length is bounded | driven |
+| D44-087 | **Submitting empty shows validation** | the WWL-556 family — re-check here |
+| D44-088 | Validation is visible, not silent | check |
+| D44-089 | Submit is captured and diverted | 0 delivered |
+| D44-090 | The captured body carries price and message | check |
+| D44-091 | The captured path differs for respond vs counter | two endpoints |
+| D44-092 | **The success toast fires only on a real success** | WWL-606 family — the code toasts after `await`, check the response is validated |
+| D44-093 | Cancel closes without sending | 0 |
+| D44-094 | Escape closes the dialog | driven |
+| D44-095 | Focus is trapped | check |
+| D44-096 | Focus returns to the trigger | check |
+| D44-097 | The dialog is usable at 360px | driven |
+| D44-098 | Price input uses a numeric keypad | `inputMode` |
+| D44-099 | Currency is shown as Rs | check |
+| D44-100 | One submit → one request | not two |
+| D44-101 | Double-submit guarded | check |
+| D44-102 | An error surfaces honestly | driven |
+| D44-103 | No SQL or internal names leak | check |
+| D44-104 | The dialog closes after a send | check |
+
+## D44-D · Turn logic, integrity and the customer's side (cases 105–130)
+
+| # | Case | Expected |
+|---|---|---|
+| D44-105 | `isMyTurn` is derived, not stored | check the helper |
+| D44-106 | A quote awaiting the customer offers no Send/Counter | check |
+| D44-107 | A quote awaiting you offers exactly the right actions | check |
+| D44-108 | `hasStandingOffer` gates Accept correctly | check |
+| D44-109 | Accepting a quote whose price changed underneath is handled | reasoned |
+| D44-110 | Two vendors cannot both accept | owner-scoped |
+| D44-111 | The backend is owner-scoped | *"only quotes for a business you own"* |
+| D44-112 | Another vendor's quote is not fetchable | reasoned from the scoping |
+| D44-113 | The list refreshes after an action | `invalidateQueries` |
+| D44-114 | The invalidation is key-scoped, not blanket | `["vendor-quotes"]` — better than Module 43's |
+| D44-115 | An accepted quote becomes terminal | check |
+| D44-116 | A declined quote becomes terminal | check |
+| D44-117 | A terminal quote cannot be re-opened here | record |
+| D44-118 | Nothing tells the customer more than it should | privacy |
+| D44-119 | The quoted price matches what the customer would see | cross-check if reachable |
+| D44-120 | An accepted quote reaches Bookings | cross-check or record as unlinked |
+| D44-121 | An accepted quote reaches the Profit tab | cross-check or record |
+| D44-122 | Nothing here writes money directly | check |
+| D44-123 | The screen states the venue it is showing | flag if absent |
+| D44-124 | A multi-venue vendor can tell which venue a quote is for | the ambiguity case |
+| D44-125 | Numbers are PKR-formatted throughout | check |
+| D44-126 | Dates are `en-PK` throughout | check |
+| D44-127 | Zero console errors | 0 |
+| D44-128 | Zero mutating requests delivered | headline safety assertion |
+| D44-129 | Hard reload re-verifies the list unchanged | driven |
+| D44-130 | The public listing's "Request a quote" entry point exists | cross-check on the live vendor page |
+
+**Total: 130 cases.**
