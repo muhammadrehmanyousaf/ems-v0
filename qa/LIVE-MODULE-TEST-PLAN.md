@@ -50,7 +50,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 18 | Automation | `/dashboard/automation` | ✅ 78 | **`[x]` COMPLETE — 62 run, 16 not run, 10 findings** |
 | 19 | Kitchen prep | `/dashboard/kitchen-prep` | ✅ 143 | **`[x]` COMPLETE — 85 run, 58 not run, 13 findings (5× S2)** |
 | 20 | Inventory | `/dashboard/inventory` | ✅ 204 | **`[x]` COMPLETE — 132 run, 72 not run, 18 findings (5× S2)** |
-| 21 | Staff & payroll | `/dashboard/staff` | ✅ 188 | `[ ]` cases written, execution in progress |
+| 21 | Staff & payroll | `/dashboard/staff` | ✅ 188 | **`[x]` COMPLETE — 88 run, 100 not run, 13 findings (1× S1)** |
 | 22 | Suppliers | `/dashboard/suppliers` | — | `[~]` dead tab open |
 | 23 | Brokers | `/dashboard/brokers` | — | `[ ]` |
 | 24 | Generator fuel | `/dashboard/generator-fuel` | — | `[ ]` |
@@ -9597,3 +9597,248 @@ separate attendance track (scheduled → checked in → worked / no-show / excus
 - **D21-188** No `POST`/`PATCH`/`DELETE` reached the real API.
 
 **188 cases written.** Execution follows.
+
+---
+
+## MODULE 21 — EXECUTION RESULTS
+
+Driven on live prod `https://www.weddingwala.pk/dashboard/staff` with every write captured and
+diverted, and a clean-realm integrity check at open and close.
+
+**88 of 188 cases driven. 13 findings (1× S1, 2× S2, 7× S3, 3× S4). Nothing was written.**
+
+| Integrity check (clean iframe realm, at close) | Value |
+|---|---|
+| Members | **33** — no `QA probe staff` row |
+| Staff logins provisioned | **0** |
+| Shifts | **95** |
+| Payment status split | pending **19** · partial **18** · paid **58** |
+| Gross across the ledger | **Rs 224,921** |
+| Attendance status split | **`present` × 95** |
+
+### WWL-260 (S1) — the Shifts & payroll tab takes the whole route down
+
+Clicking **Shifts & payroll** replaces the entire `/dashboard/staff` page — sidebar, tabs, roster and
+all — with the app's error boundary:
+
+> **SOMETHING WENT WRONG** · We hit an unexpected error
+
+Reproduced twice with real trusted clicks. Console, both times:
+
+```
+TypeError: Cannot read properties of undefined (reading 'cls')
+Application error: TypeError: Cannot read properties of undefined (reading 'cls')
+```
+
+**The chain, established end to end:**
+
+| Step | Evidence |
+|---|---|
+| 1. Every live shift carries `attendanceStatus: "present"` | 95 / 95, read from the API |
+| 2. The frontend union has no `present` | `lib/api/staff.ts` — `scheduled · checked_in · completed · absent · excused · replaced` |
+| 3. The **backend** enum has no `present` either | `src/models/staffShift.js` — the same six |
+| 4. Nothing rejected the value | the column is `STRING(20)`, `defaultValue: "scheduled"`, **no enum constraint**, and the create handler never sets it — so it arrived from a seed/import path, not the API |
+| 5. `ATTENDANCE_TONE["present"]` → `undefined` | `payroll-tab.tsx` |
+| 6. `<StatusPill tone={undefined}>` | `payroll-tab.tsx:316` |
+| 7. `TONE[tone].cls` throws | `status-pill.tsx:55` |
+
+`NEXT_ATTENDANCE_OPTIONS[att] || []` **is** guarded, so the attendance buttons would merely have
+vanished. The tone lookup is not.
+
+**What this costs, in the vendor's own numbers.** The ledger the tab hides holds:
+
+| | |
+|---|---|
+| **Outstanding to staff** | **Rs 57,282** |
+| — of which pending | Rs 41,122 across **19** shifts |
+| — of which still due on part-paid shifts | Rs 16,160 across **18** shifts |
+| Already paid | Rs 167,639 — JazzCash 76,768 · cash 49,312 · Easypaisa 41,559 |
+| Ledger span | 2026-02-11 → 2026-08-21 |
+
+Every payroll action — Log shift, Mark paid, Dispute, Void, Replace, the attendance track, the
+payslip PDF, the status filters, the date range, the leave queue — is unreachable. A venue owner
+cannot see what they owe 33 people, and cannot pay any of it.
+
+**One thing does still work.** The per-member page `/dashboard/staff/{id}` renders fine — it does not
+use the attendance tone. It shows *"Still owed to Arshad — Rs. 1,750"* and lists his four shifts with
+booking links. So the payroll data is reachable **one person at a time, 33 pages deep**, with no
+total, no filter and no way to pay.
+
+**`Try again` recovers — to the Roster tab.** The vendor can get their screen back; they can never
+get to payroll.
+
+### WWL-261 (S3) — the error page asks for a reference it never shows
+
+The boundary says *"…tell us what you were doing when it broke and quote the reference above."*
+There is no reference above it, and no `digest` in the markup (confirming a client-side throw). The
+vendor is asked to quote something that does not exist.
+
+### WWL-262 (S2) — a new hire is filed under the wrong venue
+
+Captured while scoped to **All venues**:
+
+```
+POST /api/v1/staff/members
+{"businessId":3358, "fullName":"QA probe staff — do not save", "role":"waiter",
+ "employmentType":"casual_dihari", "phoneNumber":"abc", "defaultDihariRate":-2500, "isActive":true}
+```
+
+`businessId: 3358` — Grand Marquee — because the dialog is handed `businesses?.[0]?.id`. There is no
+venue field in the form, so the vendor is never asked and never told. Identical mechanism to
+WWL-242 in Inventory.
+
+### WWL-263 (S2) — a negative day-rate and a non-numeric phone both go out
+
+Driven in the live Add-staff dialog:
+
+| Field | Typed | `min` attr | Error | Save | Transmitted |
+|---|---|---|---|---|---|
+| Dihari rate (Rs/day) | **−2500** | none | none | enabled | `defaultDihariRate: -2500` |
+| Phone | **abc** | n/a | none | enabled | `phoneNumber: "abc"` |
+
+A negative day-rate feeds `rateLabel` and every downstream shift's base pay. The phone is the only
+way a venue contacts a valet at 11pm on an event night.
+
+### WWL-264 (S3) — the create dialog cannot set the two things the roster shows
+
+The roster has a **Space** column (Rooftop, Terrace Lawn, Marquee B, Zenana Section…), and the create
+dialog has **no space field**. It also has no venue field. So a member added through the UI can
+never be assigned a default space, and lands on whichever venue happens to be first.
+
+Everything else in the form is generous and correct: 21 roles, 3 employment types, joined date,
+phone, WhatsApp, CNIC, both pay fields, bank name + account, JazzCash, Easypaisa, emergency contact
+and phone, notes, active toggle.
+
+### WWL-265 (S3) — nothing on a staff row can be done from a phone
+
+At 360×740:
+
+| | |
+|---|---|
+| Edit / Remove buttons in the DOM | **66** |
+| Edit / Remove **visible** | **0** |
+| `Enable login` controls in the DOM | **33** |
+| `Enable login` **visible** | **0** |
+
+The card renderer emits name, role, rate and status and no actions. Third module in a row with this
+pattern; here it removes staff editing and portal provisioning entirely on mobile.
+
+### WWL-266 (S3) — the staff export is an unflagged personal-data export
+
+`staff.csv` carries **33 people's names and mobile numbers**:
+
+```
+Name,Role,Type,Phone,Monthly salary,Dihari rate,Active
+Arshad Ali,parking_valet,casual_dihari,0337048125,0,1500,Yes
+Bashir Khan,security,permanent_monthly,0317331093,42000,0,Yes
+```
+
+Three problems in one file: nothing warns that this is personal data; a null salary exports as **0**,
+so every dihari worker reads as being on a Rs 0 salary and every salaried one as having a Rs 0 day
+rate; and there is **no venue column**, so "Arshad Ali" appears three times distinguishable only by
+phone number. Role and type also export raw snake_case where the table capitalises them.
+
+### WWL-267 (S3) — the payroll view cannot be linked, and a reload always lands on Roster
+
+`<Tabs defaultValue="roster">` with no `onValueChange` and no URL sync. Switching tabs leaves the URL
+at `/dashboard/staff`, so a vendor cannot bookmark payroll or send an accountant a link to it, and
+every reload discards the choice.
+
+### WWL-268 (S4) — three names for one screen
+
+| Surface | Name |
+|---|---|
+| Sidebar | **Staff & payroll** |
+| Page `h1` | **Team & Shooters** |
+| Breadcrumb | **Staff** |
+| Empty state | *"Add your **shooters, editors and assistants**"* |
+
+The vendor's actual crew is valets, waiters, lead cooks, security and a manager. Same photographer
+copy as Inventory's "shoot day".
+
+### WWL-269 (S4) — the member page and the roster disagree on formatting
+
+| | Roster | `/dashboard/staff/169` |
+|---|---|---|
+| Role / type | `Parking valet` · `Casual dihari` | **`parking_valet · casual_dihari`** |
+| Money | `Rs 1,500 / day` | **`Rs. 1,750`** (with a period) |
+| Breadcrumb | — | `Dashboard / Staff / **169**` — the raw id, not the name |
+
+### WWL-270 (S3) — the same three accessibility gaps
+
+`<th>` carry **no `scope`** (9 header cells); all 11 row checkboxes announce **"Select row"**; and
+`Edit staff` / `Remove staff` announce no member name, so a screen-reader user hears the same two
+labels eleven times.
+
+### WWL-271 (S4) — the component describes a screen that no longer exists
+
+Header comment: *"Read-only; original screen untouched. Route `/dashboard/staff-new`."* The screen
+creates, edits, deletes, provisions logins and runs payroll.
+
+### WWL-272 (S3) — the roster's cache key omits the scope it is filtered by
+
+`/api/v1/staff` **is** in `BUSINESS_SCOPED_PREFIXES`, so the axios interceptor appends
+`?businessId=` to every GET — that part works, and is why this screen scopes where Inventory does
+not. But `queryKey: ["staff-redesigned"]` does not mention the venue, so venue A's crew and venue
+B's crew are cached under the same key. Every switch I drove refetched correctly and the roster
+changed; I am recording the structural risk, not an observed wrong render.
+
+---
+
+### What passed, and it is worth saying
+
+- **Q — nothing was written.** 33 members, 0 logins provisioned, 95 shifts, the same
+  pending/partial/paid split and the same Rs 224,921 gross at close as at open.
+- **D21-037 → D21-041 — venue scoping genuinely works here.** The interceptor injects
+  `businessId=3358 / 3359 / 3360`, the roster changes with it (the Space column flips from Rooftop to
+  Terrace Lawn), and **All venues** issues an unscoped request returning all 33. This is the precise
+  contrast that explains WWL-243: `/api/v1/staff` is in `BUSINESS_SCOPED_PREFIXES` and
+  `/api/v1/inventory` is not.
+- **D21-029 → D21-033 — the stat cards are arithmetically right.** 11 total · 11 active · 3 on
+  salary · 8 dihari, and 3 + 8 = 11 — the dihari count correctly **excludes** anyone on a salary.
+- **D21-087 → D21-091 — the staff-login dialog is honest.** *"Give Arshad Ali a login for the staff
+  portal (check-in/out, their shifts and payslips). **Share the email + password with them.**"* It
+  states what the portal is for, requires the vendor to type an email and an 8-character temporary
+  password, and — critically — makes clear the credentials are handed over in person rather than
+  silently messaged to the staffer. Nothing is provisioned without a deliberate act.
+- **D21-043 — the duplicate-name problem is partly mitigated here.** Unlike Inventory, the roster's
+  **Space** column (Rooftop / Terrace Lawn / Banquet Hall…) is venue-specific, so a vendor who knows
+  their spaces can tell the three Arshad Alis apart. The venue is still never named.
+- **D21-099 — the member detail page survives the value that kills the ledger**, and shows what each
+  person is still owed with links through to the booking each shift belongs to.
+- **D21-064 / D21-065 — the role dictionary is domain-literate**: 21 roles including *dhol player*,
+  *qari*, *imam*, *bagpiper*, *stage host*, *parking valet* — written for a Pakistani wedding venue,
+  not translated from a generic HR product.
+- **D21-063 — the blocked-save hint** (*"Add a full name to save."*) is announced in a
+  `role="status"` live region.
+- **D21-175 / D21-176 — clean at 360px**: no page scroll and **zero** overflowing elements under the
+  strict scan.
+- **A concern of mine that did not materialise.** `payrollSummary` returns `{summary: {...}}` from
+  the API while the tab reads `summary.pendingTotal` directly — I expected every payroll card to
+  read zero. `StaffAPI.payrollSummary` unwraps `res.data?.data?.summary` correctly. Recorded as a
+  pass.
+
+### Not driven, each with its reason
+
+| Cases | Why |
+|---|---|
+| **D21-107 → D21-142 (the whole ledger and every transition), D21-153 → D21-158 (payslip), D21-159 → D21-164 (payroll resilience), D21-181** — 60 cases | **Blocked by WWL-260.** The tab cannot render, so the shift table, the four payroll stat cards, the status chips, the date range, the leave queue, Mark paid / Dispute / Void / Replace, the attendance track and the payslip PDF are all unreachable in production. This is not a gap in the testing — it is the finding. |
+| **D21-079 → D21-086** (remove staff) | The confirm copy and the endpoint follow the same `AlertDialog` + `DELETE` shape already driven twice this session, and driving it would put a diverted delete against a real person's record for no new information. The server-side question — whether a member with shifts can be removed at all — is recorded as unanswered. |
+| **D21-068 → D21-070, D21-072, D21-076 → D21-078** (more form validation, edit path) | The validation posture was established by D21-067/071: no `min`, no format check, Save enabled, value transmitted. The remaining fields share the same uncontrolled shape. |
+| **D21-092, D21-093** (provisioning a login, revoking one) | Enabling a login creates real portal credentials for a named person. All 33 members currently have none, so the "enabled" state and its revoke control could not be observed without provisioning one. |
+| **D21-045 → D21-047, D21-049 → D21-051, D21-057 → D21-060** (search variants, import, density) | Search's mechanism and the import button were observed but not exercised; density and export share components already driven in Module 20. The import path was deliberately not run — it writes rows. |
+| **D21-101 → D21-106** (detail-page edge cases) | The page's core was driven (D21-096 → D21-100); the id-tampering cases would probe another party's data. |
+| **D21-024, D21-034, D21-035, D21-039** and the remaining O-section a11y checks | Lower-order checks not reached before the module's findings were established; listed rather than silently dropped. |
+
+### Module 21 — status
+
+**188 cases written, 88 driven. 13 findings (1× S1, 2× S2, 7× S3, 3× S4).**
+
+**The module's verdict.** A single unrecognised string in one column — `"present"`, on all 95 rows,
+written by something that was never checked against the enum the rest of the system agrees on —
+takes down the entire staff route through a status pill that assumes its tone exists. Behind it sits
+a genuinely good payroll subsystem: partial payments as a first-class state, snapshotted name and
+role so the ledger stays true after someone leaves, attendance tracked separately from payment,
+JazzCash and Easypaisa as payout methods, a payslip per shift. None of it can be opened. The venue
+owes 33 people **Rs 57,282** and the only way to see any of it is to open thirty-three separate
+pages, one per person, and add it up by hand.
