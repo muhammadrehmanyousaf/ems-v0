@@ -60,7 +60,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 28 | Notifications | `/dashboard/notifications` | ✅ 258 | **`[x]` COMPLETE — 195 run, 63 not run, 20 findings (5× S2)** |
 | 29 | Promote | `/dashboard/promote` | ✅ 222 | **`[x]` COMPLETE — 150 run, 72 not run, 22 findings (4× S2)** |
 | 30 | Plan & billing | `/dashboard/billing` | ✅ 216 | **`[x]` COMPLETE — 155 run, 61 not run, 20 findings (4× S2)** |
-| 31 | Collaborations | `/dashboard/collaborations` | ✅ 238 | `[~]` cases written — execution in progress |
+| 31 | Collaborations | `/dashboard/collaborations` | ✅ 238 | **`[x]` COMPLETE — 165 run, 73 not run, 22 findings (4× S2)** |
 | 32 | Business Settings | `/dashboard/settings` | — | `[~]` 11 tabs done earlier |
 | 33 | Availability | `/dashboard/settings?tab=availability` | — | `[ ]` |
 | 34 | Cancellation policy | `/dashboard/settings?tab=policy` | — | `[ ]` |
@@ -15550,3 +15550,404 @@ Established from source and a live probe:
 - **D31-236** Confirm no `SubcontractInvite` row exists with this user as sender.
 - **D31-237** Confirm the self-invite probe created nothing (it was refused with a 400 before create).
 - **D31-238** No storage keys left behind.
+
+---
+
+## MODULE 31 — EXECUTION RESULTS
+
+Driven on live prod `https://www.weddingwala.pk/dashboard/collaborations` as user **3351**, on
+Playwright, with the write blocker armed for the entire module and a Node-side integrity check that
+never executes page JS.
+
+**165 of 238 cases driven. 22 findings (4× S2, 14× S3, 4× S4). Nothing was written, and no third
+party was contacted.**
+
+| Integrity (Node-side oracle) | At open | At close |
+|---|---|---|
+| Incoming invites | **0** | **0** |
+| Outgoing invites | **0** | **0** |
+| Notifications total / unread (Module 28 baseline) | 61 / 60 | **61 / 60** |
+| Promotion requests (Module 29) | 0 | **0** |
+| Subscription tier / pendingUpgradeTier (Module 30) | free / null | **free / null** |
+| Diverted writes | — | **3**, all `POST /collaborations` |
+| Console errors | — | **none** |
+
+This is the one module in the sweep where a leaked write reaches **another person** — `send` matches
+the contact against real Wedding Wala accounts and notifies them. The contacts used were a reserved
+`.invalid` domain with **no phone**, so even an escaped request could not have bound to a real
+vendor; and the notification totals above confirm nothing fired.
+
+The register is empty in production — zero invites in either direction.
+
+### WWL-450 (S2) — "Invite sent" for an invite nobody will ever see
+
+The server distinguishes two outcomes and says so plainly:
+
+| Match | Server message |
+|---|---|
+| matched | *"Invite sent"* |
+| **not matched** | *"Invite saved — that vendor isn't on Wedding Wala yet, so they won't be notified in-app"* |
+
+The client discards that message and picks its own from `res?.matched`:
+
+```js
+showSuccessToast(res?.matched ? "Invite sent — vendor matched!" : "Invite sent")
+```
+
+So the **unmatched** branch — the case the server went out of its way to explain — is reported to the
+vendor as **"Invite sent"**.
+
+Established what an unmatched invite actually does: `send` fires `NotificationService.send` only
+`if (matched?.id)`. There is no email dispatch, no SMS, no WhatsApp hand-off on that path. The row is
+written and nothing leaves the building.
+
+Driven live with the write diverted, the same string appears for a third reason — a response that
+never arrived:
+
+| | |
+|---|---|
+| Captured | `POST /api/v1/collaborations {"toName":"QA PROBE…","toEmail":"…@example.invalid","eventLabel":"QA PROBE event","scope":"QA PROBE scope","agreedAmount":-5000}` |
+| Toast | **"Invite sent"** |
+| Tab counts after refetch | **Invites you sent 0** |
+| Empty state | still *"No invites sent yet"* |
+
+So *"Invite sent"* covers: sent and delivered, saved and never delivered, and not saved at all.
+
+### WWL-451 (S2) — one click, two invites, two notifications
+
+Driven under injected network failure: **one click produced two `POST /api/v1/collaborations`**.
+Global `mutations: { retry: 1 }` again (WWL-411, WWL-432).
+
+What makes it worse here than in the two previous modules is what the handler does on the second
+attempt. Promote's create refuses a duplicate with a pending check; Billing's is an idempotent
+single-column update. **`send` has no guard of any kind** — no uniqueness check on
+(fromUserId, toUserId), no recent-duplicate window, nothing. It creates a row and, on a match, fires
+a notification.
+
+So a retried invite writes **two `SubcontractInvite` rows** and sends **two notifications** to the
+same vendor, each independently acceptable. Established from source; deliberately not driven, because
+driving it means contacting a real vendor twice.
+
+### WWL-452 (S2) — the decline reason cannot be given
+
+The whole chain exists:
+
+| Layer | Supports a reason |
+|---|---|
+| `SubcontractInvite.declineReason` column | ✓ |
+| `POST /:id/decline` — `req.body.reason`, trimmed, capped at 1000 | ✓ |
+| `CollaborationsAPI.decline(id, reason?)` | ✓ |
+| The sender's notification — *"…declined your invite: {reason}"* | ✓ |
+| **A control that collects it** | **none** |
+
+`declineMut` calls `CollaborationsAPI.decline(id)` with one argument. There is no dialog, no prompt
+and no textarea anywhere in the module, so `declineReason` can never be non-null through this UI and
+the sender's notification always ends with a full stop.
+
+`declineReason` is not a column in the table either, so even a reason set by another client would be
+invisible.
+
+**Third module in a row with this shape**: Reviews' retract endpoint has no client (WWL-361),
+Promote's cancel endpoint has no button (WWL-408), and here the parameter has no input. In each case
+the backend work is finished and the surface was never built.
+
+A subcontract declined with no reason gives the lead vendor nothing to act on — and there is no link
+from a collaboration to chat, so the two vendors have no way to discuss it inside the feature.
+
+### WWL-453 (S2) — the two consequential actions have no confirmation, and one blocks all the others
+
+| Action | Confirmation |
+|---|---|
+| **Accept** — commits to a job at an agreed amount | **none** — one click |
+| **Decline** — refuses a peer's job, irreversibly | **none** — one click on an unlabelled icon |
+| **Cancel** — withdraws your own unanswered invite | **a full `AlertDialog`** naming the counterpart and the event |
+
+The least consequential of the three is the only one that asks.
+
+Separately, `acceptMut.isPending` and `declineMut.isPending` are **single mutation objects shared
+across every row** — the buttons are rendered with `disabled={acceptMut.isPending}`. So accepting one
+invite disables **Accept on every row in the table** until it resolves. Established from source; not
+observable live with an empty register.
+
+### WWL-454 (S3) — two lines of copy in one dialog state different rules
+
+| Line | Rule stated |
+|---|---|
+| Blocked hint (footer) | *"Add a name, **a phone and an email** to save."* |
+| Helper text (above it) | *"Provide a phone **or** email so we can match the vendor."* |
+| `canSave` (the actual rule) | `toName && (toPhone \|\| toEmail)` |
+
+Driven live:
+
+| Fields filled | Save |
+|---|---|
+| empty | disabled — hint shown |
+| whitespace-only name | disabled — hint shown |
+| phone only, no name | disabled — hint shown |
+| **name + phone** | **enabled** |
+| **name + email** | **enabled** |
+| name + malformed email (`not-an-email`) | **enabled** |
+
+The hint demands three fields for a form that needs two, and the correct rule is printed three lines
+above it.
+
+### WWL-455 (S3) — three invalid amounts, three silent outcomes, no message
+
+The **Agreed amount (Rs)** input is `type="number"` with **no `min`** and no `step`.
+
+| Entered | Client | Server |
+|---|---|---|
+| **−5000** | accepted, Save **enabled**, no warning — **transmitted** (captured above) | `Math.max(0, …)` → stored as **0** |
+| **99999999999999** | accepted, Save **enabled**, no warning | over the `DECIMAL(12,2)` ceiling → stored as **null** (WW-146) |
+| non-numeric | — | `Number.isFinite` fails → **null** |
+
+A vendor who types a negative amount is silently agreed to zero; one who fat-fingers an extra digit
+has the amount silently dropped. Neither is told.
+
+### WWL-456 (S3) — the email field is a text box
+
+`<input class={inputCls}>` with no `type="email"`, no pattern and no client validation; the server
+lower-cases and stores whatever arrives. Driven: `not-an-email` left Save enabled. Since the email is
+one of the two keys used to match a real vendor account, a typo produces a permanently unmatched
+invite that WWL-450 will report as *sent*.
+
+### WWL-457 (S3) — a raw Postgres error is returned to the client
+
+Probed Node-side:
+
+```
+POST /api/v1/collaborations/abc/accept
+→ 500  {"status":false,"message":"Invalid input syntax for type integer: \"abc\"","data":null}
+```
+
+`_respond` and `cancel` pass `req.params.id` straight into `findByPk` with no validation, and the
+catch returns `err.message` verbatim — so the database's own error text becomes the API's `message`.
+The frontend's `onError` renders `response.data.message` in a toast, which is what makes this more
+than cosmetic: the pattern is designed to surface server strings to vendors.
+
+`reviewRouter` (WW-280) and `promotionRouter` both carry an id validator; this router has none. Same
+family as WWL-395 in Notifications, which at least returned a generic message.
+
+In practice the ids come from the API, so this is an API-surface defect rather than a UI-reachable
+one — stated so the severity is not overclaimed.
+
+### WWL-458 (S3) — the withdrawn invitee is never told
+
+`accept` and `decline` both notify the other party. **`cancel` notifies nobody.**
+
+So a vendor who received an invite, was notified about it, and left it pending finds that the Accept
+button has simply stopped working — the server answers `409 Already cancelled` — with no message
+explaining that the lead vendor withdrew it.
+
+### WWL-459 (S3) — nothing can be actioned on a phone
+
+`renderCard`, the mobile row, renders the event, the counterpart, the amount and a status pill. It
+contains **no Accept, no Decline and no Cancel** — the `actions` column exists only in the desktop
+table.
+
+Established from source (the register is empty, so no card could be rendered live). On a screen whose
+entire purpose is answering another vendor's offer, a phone can read invites and not respond to them.
+
+### WWL-460 (S3) — the stat cards add up two different things
+
+`allInvites = [...incoming, ...outgoing]`, and all four cards read from it.
+
+- **Pending** counts invites *waiting on me* together with invites *waiting on someone else* — two
+  different obligations under one number.
+- **Agreed value** sums money I would **receive** with money I would **pay**, and includes
+  **declined** and **cancelled** rows.
+
+So the headline money figure is neither owed, nor earned, nor committed. Same family as WWL-418
+(Promote) and WWL-342 (Drone NOC). No card separates the directions, and neither declined nor
+cancelled has a count of its own.
+
+### WWL-461 (S3) — two of the four trend indicators are hard-coded
+
+```jsx
+<StatCard label="Pending"  value={pending}  trend="flat" />
+<StatCard label="Accepted" value={accepted} trend="up" />
+```
+
+Neither is computed. Verified live with **zero** accepted invites: the Accepted card still renders its
+upward indicator. Promote at least made its trend conditional on the count (`pending > 0`); here the
+arrows are decoration in a position that reads as data.
+
+### WWL-462 (S3) — five captured fields are displayed nowhere, and one field means three things
+
+| Field | On the model | A column? | In the export? |
+|---|---|---|---|
+| `declineReason` | ✓ | **no** | **no** |
+| `respondedAt` | ✓ | **no** | **no** |
+| `functionSheetId` | ✓ | **no** | **no** |
+| `toPhone` / `toEmail` | ✓ | only as a **name fallback** | **no** |
+
+`respondedAt` is stamped by accept, by decline **and** by cancel, so one column carries "accepted at",
+"declined at" and "withdrawn at" under a single name — and none of them is shown.
+
+`functionSheetId` cannot be set by the dialog either, so the link between a collaboration and the
+event it belongs to is unreachable from both ends.
+
+And because `counterpartName` falls back through `toNameSnapshot → toPhone → toEmail`, an invite sent
+without a name prints the invitee's **raw phone number or email address** in the grid.
+
+### WWL-463 (S3) — "accepted" is where the feature stops
+
+Accepting changes a status and sends a notification. Established what it does **not** do: no booking,
+no function-sheet line, no supplier record, no expense, no payable on the sender's side and no
+receivable on the invitee's. Searched for a consumer of `SubcontractInvite` outside this module and
+found none.
+
+After acceptance the row's actions become `—`. There is no "delivered", no "paid", no dispute path, no
+way to un-accept and no way to renegotiate. The module's own comment is honest about this — *"Amounts
+are tracked, not collected (payment mediation = later layer)"* — but nothing on the screen tells the
+vendor that the agreed amount will never appear in their Khata.
+
+### WWL-464 (S3) — an invite with no amount reads as Rs 0
+
+`<MoneyCell amount={num(c.agreedAmount)} />`, and `num()` coerces null to **0**. The amount field is
+optional in the dialog, so this is reachable — and "we didn't agree a price" renders identically to
+"we agreed on nothing". Promote passes `null` through to the same primitive deliberately
+(`r.priceQuoted == null ? null : num(...)`), so the two screens treat the same component differently.
+
+### WWL-465 (S3) — one failed direction hides the other
+
+```js
+queryFn: async () => {
+  const [incoming, outgoing] = await Promise.all([
+    CollaborationsAPI.incoming(), CollaborationsAPI.outgoing(),
+  ])
+  return { incoming, outgoing }
+}
+```
+
+`Promise.all` rejects on the first failure, so a failing **outgoing** request takes down a perfectly
+good **incoming** list, and the whole screen renders *"Couldn't load collaborations."* — including the
+tab a vendor may urgently need in order to answer someone.
+
+### WWL-466 (S3) — the direction is not in the URL, and the search survives the switch
+
+Verified live: switching to **Invites you sent** leaves the URL at `/dashboard/collaborations`. A
+reload returns to Incoming, the back button does not walk the tabs, and a filtered view cannot be
+linked or bookmarked.
+
+The search box is **not** cleared on a tab change (the selection is), so a query typed against
+incoming invites silently filters the outgoing list.
+
+### WWL-467 (S3) — the accessibility floor
+
+| Check | Result |
+|---|---|
+| `h1` | **1** ✓ |
+| All six dialog labels | `htmlFor` **null**; no input carries an `id` |
+| Search input | no `aria-label`, no `id`, no `<label>` — placeholder only |
+| Direction tabs | `aria-pressed` buttons, **`role: null`** — not a tablist |
+| Tab height at 360px | **32px** ×2, below the 44px minimum |
+| Dialog controls at 360px | **36px** ×8 |
+| Decline control | **icon only**, named solely by `aria-label="Decline"` — while Accept beside it has visible text |
+| `aria-current="page"` | **3 elements at once** (consistent with WWL-423, WWL-446) |
+
+### WWL-468 (S4) — `cap()` is applied to a free-text field, and the date format drifts
+
+`Scope` is rendered through `cap()`, which upper-cases the first letter **and replaces every
+underscore with a space**. On a user-typed field, a scope written *"drone_coverage"* silently becomes
+*"Drone coverage"* — a transformation borrowed from enum formatting and applied to prose.
+
+The `Sent` column uses `day: "numeric"` where Promote's identical column uses `day: "2-digit"`, so two
+screens in the same redesign track render the same kind of date differently.
+
+### WWL-469 (S4) — two different exports share one filename
+
+The export writes `collaborations.csv` with no direction and no date, while its **second column
+header changes with the active tab** (`From` on incoming, `To` on outgoing). Two files downloaded a
+minute apart are indistinguishable by name and differ by a header.
+
+### WWL-470 (S4) — the fourth stale Track-C header in a row
+
+```
+Collaborations — redesigned (Track C). … Original screen untouched.
+Route /dashboard/collaborations-new.
+```
+
+Mounted at `/dashboard/collaborations`. Following Drone NOC, Promote (WWL-428) and Billing
+(WWL-447), this is a pattern across the whole redesign track rather than four separate slips.
+
+### WWL-471 (S4) — the density toggle disappears at 360px
+
+Found on desktop (**Comfortable** / **Compact**) and absent at 360×740, where the same lookup returns
+nothing. Minor — density is a comfort control — but it is a second toolbar control that mobile loses
+silently, after the Export/column-menu case in Module 27.
+
+---
+
+### What passed, and it is worth saying
+
+- **L — nothing was written and nobody was contacted.** 0 invites in either direction at open and at
+  close, and the notification totals for this account are unchanged (61 / 60). Three diverted writes,
+  all listed. The contacts used were a reserved `.invalid` domain with no phone, so no request could
+  have bound to a real vendor even if one had escaped.
+- **D31-193 — the self-invite guard works and refuses before creating.** `POST /collaborations` with
+  this account's own email → **400 "That's you — pick another vendor"**, and no row.
+- **D31-197 → D31-199 — the phone matcher is the best in the sweep.** WW-076 / WW-266 replaced a
+  `LIKE %nat%` substring match — which could bind an invite to the wrong vendor — with
+  `right(regexp_replace(phoneNumber, '\D', '', 'g'), 10) = nat`, and `_nat` normalises `0092…`, a
+  `92…` country code and a leading `0` on an 11-digit number.
+
+  This is the **direct counter-example to WWL-378**: the Reviews automation card's own normaliser
+  turns `00923045379512` into `920923045379512` and drops the WhatsApp link. Same product, same
+  problem, solved properly here.
+- **D31-200 — WW-146's ceiling prevents a raw numeric-overflow 500.** The coercion is silent
+  (WWL-455), but the crash it was written to stop is genuinely stopped.
+- **D31-165 / D31-166 — the cancel confirmation is the best destructive copy in the sweep.** It names
+  **both** the counterpart and the event — *"The invite to {name} for "{event}" will be withdrawn.
+  This can't be undone."* — against WWL-316 (Generator fuel names nothing) and WWL-382 (Reviews names
+  only the reviewer). And the buttons read **Keep invite** / **Cancel invite** rather than a bare
+  Cancel/OK, on a screen where "Cancel" is also the name of the action.
+- **D31-167 / D31-170 — the cancel dialog behaves.** `e.preventDefault()` keeps it open while the
+  mutation runs, both controls disable, the label becomes *"Cancelling…"*, and on failure the dialog
+  **stays open** — unlike the create dialogs, which close regardless.
+- **D31-044 / D31-045 — someone anticipated a real bug.** `useEffect(() => setSelected(new Set()),
+  [tab])` exists because row ids are not unique across the two directions; without it an export could
+  mix incoming and outgoing rows.
+- **D31-042 / D31-043 — the empty states are direction-aware and specific**, not the generic copy that
+  misfired in Modules 20–22. Both strings verified live.
+- **D31-036 — the tab count pills render at zero**, so a vendor can tell "none" from "not loaded" —
+  the opposite of Module 28, where a zero count hid the pill and produced WWL-389.
+- **D31-080 — the export writes `createdAt` raw**, an ISO string a spreadsheet can sort, rather than
+  the display string that broke Halal certs (WWL-329) and Promote (WWL-427).
+- **D31-061 / D31-062 — the "· not on Wedding Wala yet" marker is right.** The table does tell the
+  vendor an invite will not be delivered in-app; it is only the toast that overstates (WWL-450).
+- **D31-067 — immune to the Module 21 crash.** `STATUS_TONE[c.status] ?? "neutral"`.
+- **D31-219 — 0 overflow at 360×740**, and **Export stays reachable** there.
+- **D31-126 — reopening the dialog resets all six fields.** Verified live.
+- Console clean throughout; no unhandled rejection.
+
+### Not driven, each with its reason
+
+| Cases | Why |
+|---|---|
+| **D31-055 → D31-090** (columns, tones, fallbacks, row rendering) | **The register is empty in production.** Creating a row means sending a real invitation to another vendor, which the module's own safety note forbids. Column definitions, the `counterpartName` fallback chain, the `cap()` treatment and the export shape were read from source. |
+| **D31-135 → D31-162** (Accept / Decline) | Both require an invite addressed to this account, which only another vendor can create. The shared-mutation disable, the missing confirmations, the 409/403 guards and the notification types were established from source; the 404 path was probed live. |
+| **D31-163 → D31-178** (Cancel) | Requires a pending outgoing invite. The `AlertDialog` copy, the `preventDefault`, the guard order and the **absence of a notification on cancel** were read from source. |
+| **D31-125** (a retry creating two rows) | Driving it means contacting a real vendor twice. The absence of any idempotency guard in `send` is established from the controller, and the doubled request was measured on the wire (WWL-451). |
+| **D31-085 / D31-222 / D31-223** (mobile row actions) | No rows exist to render a card from; `renderCard`'s contents were read from source (WWL-459). |
+| **D31-201 / D31-202** (`functionSheetId` ownership) | The field is accepted from the body with no ownership check, but nothing reads it, so there is no observable impact to drive. Recorded as latent. |
+| **D31-152 / D31-153** (does an accepted collaboration reach the Khata) | Answered by searching for consumers of `SubcontractInvite` outside this module — there are none — rather than by accepting an invite. |
+| **D31-194** (self-invite by an unregistered phone) | The guard only fires on a **matched** user, so self-inviting an unregistered number of your own would pass. Establishing it live means creating a row. Recorded from source as latent. |
+| **D31-086** (error + retry) | The `DataTable` error state needs the paired query to fail; with it already resolved there is no control on the page that refetches. Same primitive driven in Modules 20–26. |
+
+### Module 31 — status
+
+**238 cases written, 165 driven. 22 findings (4× S2, 14× S3, 4× S4).**
+
+**The module's verdict.** The care in this module is real and specific — a phone matcher that
+normalises every Pakistani dialling form and matches on the last ten digits rather than a substring,
+a cancel dialog that names both the vendor and the event before withdrawing anything, a selection
+that resets between directions because someone noticed row ids collide, and empty states written for
+each direction separately. Then the screen tells a vendor **"Invite sent"** for an invite the server
+explicitly said was only *saved* and will never be delivered, because the recipient is not on the
+platform and nothing emails them. It lets a peer's offer be accepted or refused with one unconfirmed
+click while reserving its only confirmation dialog for withdrawing your own message. It collects a
+decline with no reason, on a column, an endpoint, an API method and a notification template all built
+to carry one. It transmits a **negative agreed amount** without a murmur, to be silently stored as
+zero. And on a flaky connection the invite goes twice — two rows, two notifications — because this is
+the one create endpoint in the last three modules with no idempotency guard at all.
