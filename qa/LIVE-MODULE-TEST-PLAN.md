@@ -52,7 +52,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 20 | Inventory | `/dashboard/inventory` | ✅ 204 | **`[x]` COMPLETE — 132 run, 72 not run, 18 findings (5× S2)** |
 | 21 | Staff & payroll | `/dashboard/staff` | ✅ 188 | **`[x]` COMPLETE — 88 run, 100 not run, 13 findings (1× S1)** |
 | 22 | Suppliers | `/dashboard/suppliers` | ✅ 194 | **`[x]` COMPLETE — 95 run, 99 not run, 13 findings (3× S2)** |
-| 23 | Brokers | `/dashboard/brokers` | ✅ 164 | `[ ]` cases written, execution in progress |
+| 23 | Brokers | `/dashboard/brokers` | ✅ 164 | **`[x]` COMPLETE — 95 run, 69 not run, 16 findings (4× S2)** |
 | 24 | Generator fuel | `/dashboard/generator-fuel` | — | `[ ]` |
 | 25 | Halal certs | `/dashboard/halal-certs` | — | `[ ]` |
 | 26 | Drone NOC | `/dashboard/drone-noc` | — | `[ ]` |
@@ -10650,3 +10650,216 @@ void it, edit it or remove it.
 - **D23-164** No `POST`/`PATCH`/`DELETE` reached the real API.
 
 **164 cases written.** Execution follows.
+
+---
+
+## MODULE 23 — EXECUTION RESULTS
+
+Driven on live prod `https://www.weddingwala.pk/dashboard/brokers` with every write captured and
+diverted, and a clean-realm integrity check at open and close.
+
+**95 of 164 cases driven. 16 findings (4× S2, 8× S3, 4× S4). Nothing was written.**
+
+| Integrity check (clean iframe realm, at close) | Value |
+|---|---|
+| Commissions | **9** — no `QA probe` row |
+| Brokers | **12** |
+| Status split | pending **5** · partially_paid **3** · paid **1** |
+| `totalCommission` / `totalPaid` / `totalOutstanding` | Rs 667,000 / Rs 226,250 / **Rs 440,750** |
+| Commission 31 after a diverted Rs 999,999 payment | `amountPaid: 64750.00`, still `partially_paid` |
+
+### WWL-286 (S2) — the Overdue card reads 0 while Rs 138,750 is up to 122 days late
+
+`overdueCount = all.filter((c) => c.status === "overdue").length`, and **no commission in production
+ever carries that status** — nothing recomputes it against the due date.
+
+| Broker | Commission | Outstanding | Due | Days late | Status shown |
+|---|---|---|---|---|---|
+| Pearl Continental Concierge | Rs 129,500 | Rs 64,750 | 1 Jul 2026 | **36** | Partially paid |
+| Ch. Nazeer Ahmed | Rs 81,500 | Rs 40,750 | 13 May 2026 | **85** | Partially paid |
+| Pearl Continental Concierge | Rs 66,500 | Rs 33,250 | 6 Apr 2026 | **122** | Partially paid |
+| | | **Rs 138,750** | | | **Overdue card: 0** |
+
+Same root cause as WWL-273 in Suppliers — a stored status nobody recomputes — but here it produces a
+flat zero rather than a wrong set, which is harder to notice.
+
+### WWL-287 (S2) — there is no Due column
+
+Columns are **Broker · Type · Event · Commission · Paid · Accrued · Status**. Every row carries a
+`dueDate` and the CSV export writes it — but on screen the vendor sees only the **accrual** date. So
+the three late commissions read `17-May-2026`, `29-Mar-2026` and `20-Feb-2026`, and nothing anywhere
+in the interface says the money was due on 1 Jul, 13 May and 6 Apr. The one field that would make
+WWL-286 visible is exported and never displayed.
+
+### WWL-288 (S2) — no status filter of any kind
+
+No chips, no dropdown, no clickable card. The **Overdue** stat card is inert. So even if the count
+were right, there is no path from *"something is late"* to *"which ones"* — the vendor must export
+the CSV and open it in a spreadsheet to see a due date.
+
+### WWL-289 (S2) — a commission cannot be attached to a broker or to the event that earned it
+
+The form's **Broker name is a free text box**, not a picker — while the same screen already fetches
+all 12 broker records from `GET /api/v1/brokers`. And there is **no booking picker at all**. The
+captured create body:
+
+```
+POST /api/v1/brokers/commissions
+{"businessId":3358, "brokerNameSnapshot":"QA probe broker — do not save",
+ "brokerTypeSnapshot":"rishta", "commissionType":"percentage", "commissionPct":5,
+ "bookingAmountSnapshot":100000, "accruedDate":"2026-08-06"}
+```
+
+No `brokerId`, no `bookingId`. The seeded rows link through to a real function sheet
+(`/dashboard/function-sheets/88`), so the Event column works — but nothing created through the UI
+can ever populate it, and every broker's name is retyped by hand each time.
+
+### WWL-290 (S3) — the disabled-Save hint names the wrong fields
+
+Driven precisely:
+
+| State | Save | Hint |
+|---|---|---|
+| Broker name **filled**, accrued date **2026-08-06**, `Commission % = -5` | **disabled** | *"Add a broker name and the date it accrued to save."* |
+| Same, `Commission % = 5` | **enabled** | *(none)* |
+
+The negative percentage is what blocks it, and the hint blames two fields that are demonstrably
+filled. There is no `min` on the input and no message beside it. This is a regression against the
+BUG-057 pattern — *"a disabled button is not feedback, say what it is waiting for"* — that the rest
+of the app implements correctly.
+
+### WWL-291 (S3) — a raw JavaScript error is shown to the vendor
+
+With the payment write diverted, the toast read verbatim:
+
+> **Cannot read properties of undefined (reading 'result')**
+
+`onSuccess` dereferences `res.result.newStatus` before checking it exists, and
+`errMsg = e?.response?.data?.message || e?.message || fallback` prefers `e.message` over the
+human fallback. The sibling Suppliers dialog has the identical dereference but ignores `e.message`,
+so it shows *"Could not record payment"*. Same bug, two error handlers, one leaks the stack.
+
+### WWL-292 (S3) — the two dialogs on one screen disagree about failure
+
+| Dialog | Diverted write | Result |
+|---|---|---|
+| **Record payment** | ✗ never arrived | dialog **stays open**, error toast — correct |
+| **Add commission** | ✗ never arrived | toast **"Commission added"**, dialog closes — false |
+
+### WWL-293 (S3) — a new commission is filed under the wrong venue
+
+`businessId: 3358` in the captured body while the UI was scoped to **All venues**, from
+`businesses?.[0]?.id`. There is no venue field in the form. Fourth module in a row with this exact
+mechanism (WWL-242 Inventory, WWL-262 Staff, D22-135 Suppliers, here).
+
+### WWL-294 (S3) — Rs 0 paid is coloured as a success
+
+The **Paid** column is toned `success` unconditionally, so five pending commissions where **nothing
+has been paid** render `Rs 0` in emerald green (`rgb(5, 150, 105)`) — the same colour used for a
+settled amount.
+
+### WWL-295 (S3) — the broker directory exists in the API and nowhere in the product
+
+`GET /api/v1/brokers` returns 12 full records, and the page **already fetches them**:
+
+| Field on every broker record | Rendered anywhere? |
+|---|---|
+| name · brokerType · phoneNumber | only as a snapshot string on a commission |
+| agencyName · contactPerson · whatsappNumber · address | **no** |
+| **NTN · CNIC** | **no** |
+| bankName · bankAccountNumber · jazzcashNumber · easypaisaNumber | **no** — the payment dialog does not offer them |
+| `defaultCommissionPct` (5.00%) | **no** — it does not pre-fill the form |
+| `business: {id, name}` | **no** — the venue is never named |
+
+**4 of the 12 brokers have no commission at all**, so they appear nowhere in the interface. Compare
+Suppliers, which gives its trading partners a directory tab.
+
+### WWL-296 (S3) — no row actions on a phone
+
+At 360×740: **43** row-action buttons in the DOM, **0 visible**. No commission can be paid, disputed,
+voided, edited or removed from a phone. Fourth consecutive module.
+
+### WWL-297 (S3) — the same three accessibility gaps
+
+`<th>` carry **no `scope`**; all nine row checkboxes announce **"Select row"**; and the five row
+actions announce "Record payment" / "Dispute commission" / "Void commission" / "Edit commission" /
+"Remove commission" with **no broker name and no amount** — forty-five identical labels on a
+nine-row table.
+
+### WWL-298 (S4) — two rows render a blank Event cell
+
+Where a booking has no linked function sheet the badge renders **nothing at all** — not a dash, not
+a placeholder — leaving an empty cell that reads as missing data.
+
+### WWL-299 (S4) — the headline includes money not yet earned
+
+**Total commission Rs 667,000** includes two commissions that accrue in the **future** — Rs 117,000
+on 24 Aug and Rs 50,000 on 22 Sep — so **Rs 167,000** of the headline is not yet owed to anyone.
+
+### WWL-300 (S4) — the payment-date default is UTC, not PKT
+
+`const today = () => new Date().toISOString().slice(0, 10)`. It read `2026-08-06` correctly during
+this run, but between 00:00 and 05:00 PKT it defaults a broker payment to **yesterday**. Sixth
+instance of the WWL-112 family.
+
+### WWL-301 (S4) — three names again
+
+Browser title **"Dashboard : Broker Commissions"** · page `h1` **"Brokers"** · sidebar **"Brokers"**.
+
+---
+
+### What passed, and it is worth saying
+
+- **O — nothing was written.** 9 commissions, 12 brokers, the same 5/3/1 split, Rs 667,000 /
+  Rs 226,250 / Rs 440,750 unchanged, and commission 31 still at `amountPaid 64750.00` after the
+  diverted Rs 999,999 payment.
+- **D23-042 — this screen is structurally immune to the crash that killed Module 21.**
+  `statusTone = (s) => (s && STATUS_TONE[s]) || "neutral"` and `statusLabel = (s) =>
+  COMMISSION_STATUS_LABELS[s] || cap(s)`. An unknown status degrades to a neutral pill with a
+  capitalised label instead of throwing inside `StatusPill`. This is the exact defensive shape the
+  Staff payroll tab is missing, written by the same team on the same primitive.
+- **The Record-payment dialog is a close second to Suppliers'.** It names the broker, states
+  *"Outstanding Rs 64,750 of Rs 129,500 total."*, pre-fills the amount to the outstanding, offers ten
+  Pakistani methods (Cash · JazzCash · Easypaisa · Raast · IBFT · Bank transfer · SadaPay · NayaPay ·
+  Cheque · Other), defaults the payment date to today — and **refuses to claim a false success**.
+- **The commission form models how the deal is actually struck.** Percentage **or** flat amount, with
+  *"Booking amount (Rs) — required · needed to compute %"* — a rishta commission is a cut of the
+  booking, and the form knows that.
+- **The broker-type list is domain-literate**: rishta broker / matchmaker · hall / banquet broker ·
+  wedding planner · hotel concierge · decor referral · photographer referral · caterer referral ·
+  transport referral · social influencer · other.
+- **The Event column is a real link** to `/dashboard/function-sheets/{id}`, showing the event by name
+  and host — *"Barat — Salman Rauf"*, *"Mehndi — Ahmed Raza"*.
+- **The delete confirm names its target** — *"The commission for Pearl Continental Concierge will be
+  removed"* — unlike the Suppliers invoice delete, which names nothing (WWL-278).
+- **The arithmetic reconciles**: 667,000 − 226,250 = 440,750, matching `summary.totalOutstanding`
+  exactly.
+- **D23-151 / D23-152 — clean at 360px**: no page scroll, **zero** overflowing elements.
+- **Row-action permissions are correct**: Record payment and Void hide on paid and void, Dispute
+  hides only on void.
+
+### Not driven, each with its reason
+
+| Cases | Why |
+|---|---|
+| **D23-109 → D23-112, D23-114 → D23-118** (partial→paid, dispute, void) | Each moves real money owed to a named intermediary who sends this venue customers. Disputing a commission is a statement to a business partner. The payment path was driven end to end and captured; Dispute and Void share the same `transitionCommission` shape. |
+| **D23-100 → D23-104** (edit path) | Editing a live commission's amount changes what a broker is owed. Create was driven and captured; edit uses the same dialog and mutation. |
+| **D23-121 → D23-126** (remove) | Would delete a real accrual. The confirm copy was read and its target-naming verified by inspection. |
+| **D23-092 → D23-095** (amount caps, date ordering) | The validation posture was established by D23-090's negative-percentage case: no `min`, no field error, and a hint that names the wrong cause. |
+| **D23-127 → D23-134** (venue scoping) | The interceptor was confirmed on the wire — `/brokers/commissions?businessId=3358/3359/3360` returns 2/4/3 and unscoped returns 9 — but the per-venue stat-card reconciliation was not re-driven for each venue. |
+| **D23-135 → D23-141** (resilience) | The `DataTable` error + Retry shape is the same primitive already driven in Modules 20–22. D23-141 was answered by inspection: the `|| "neutral"` fallback makes the unknown-status crash impossible. |
+| **D23-049, D23-050** (void / disputed effect on totals) | No `void` or `disputed` commission exists in production to observe, and creating one is a write. |
+| **D23-143 → D23-150, D23-157** (remaining a11y, dialogs at 360) | Partly covered by D23-297's findings; the rest not reached before the module's findings were established. |
+
+### Module 23 — status
+
+**164 cases written, 95 driven. 16 findings (4× S2, 8× S3, 4× S4).**
+
+**The module's verdict.** Four commissions are late — one by four months — and the screen says
+**Overdue: 0**. It says that because the status is a stored word nobody rechecks, because the due
+date is exported to CSV but never shown in the table, and because there is no filter to ask the
+question with. The ledger itself is sound and the arithmetic reconciles to the rupee; the payment
+dialog is one of the two good write forms in the sweep and correctly refuses a write that did not
+land. But the form beside it retypes a broker's name into a free text box while twelve full broker
+records — with their CNIC, their NTN and their JazzCash number — sit fetched and unused, and it
+cannot attach the commission to the wedding that earned it.
