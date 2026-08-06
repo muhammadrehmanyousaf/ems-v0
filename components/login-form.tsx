@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Heart, Mail, Lock, Eye, EyeOff, ShieldCheck } from "lucide-react"
 
 import { Phone, KeyRound } from "lucide-react"
@@ -16,6 +16,7 @@ import { useUser } from "@/context/UserContext"
 import { loginErrorMessage, loginErrorCode, requestPhoneOtp, verifyPhoneOtp } from "@/lib/api/auth"
 // FEAT_PHONE_OTP — additional phone+OTP sign-in path (email/password unchanged).
 import { PHONE_OTP_ENABLED } from "@/lib/payment-flags"
+import { safeRedirect } from "@/lib/auth/safe-redirect"
 
 import { BridalButton } from "@/components/bridal/bridal-button"
 import { BridalField, BridalInput } from "@/components/bridal/bridal-input"
@@ -55,9 +56,15 @@ export function LoginForm() {
   const [phoneBusy, setPhoneBusy] = useState(false)
   const { login } = useUser()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  // Honour ?redirect= when it is a safe same-origin path. middleware.ts has
+  // always set it; nothing read it until now, so booking intent was dropped at
+  // the login screen. See lib/auth/safe-redirect.
+  const nextPath = safeRedirect(searchParams?.get("redirect"))
 
   // Shared post-login routing (used by both email + phone flows).
   const routeAfterLogin = (user: any) => {
+    if (nextPath) { router.push(nextPath); return }
     const isAdmin = user?.roles?.some(
       (role: any) =>
         role.id === 1 ||
@@ -160,7 +167,9 @@ export function LoginForm() {
               role.id === 2 || role.name?.toLowerCase() === "vendor"
           )
 
-        if (isAdmin || isVendor) {
+        if (nextPath) {
+          router.push(nextPath)
+        } else if (isAdmin || isVendor) {
           router.push("/dashboard")
         } else {
           router.push("/")

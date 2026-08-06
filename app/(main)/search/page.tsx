@@ -127,12 +127,34 @@ function SearchContent() {
     let filtered = [...allVendors]
 
     if (filters.search.trim()) {
-      const s = filters.search.toLowerCase().trim()
-      filtered = filtered.filter(v =>
-        [v.name, v.location, v.city, v.type, v.subBusinessType].some(
-          field => txt(field).includes(s)
-        )
-      )
+      /*
+       * Match on WORDS, not on one contiguous phrase.
+       *
+       * This used to be `[...fields].some(f => txt(f).includes(s))`, i.e. the
+       * entire query had to appear verbatim inside a single field. Measured live:
+       * `?q=wedding hall lahore` returned "0 vendors found" out of 3,272, because
+       * no listing stores that exact string anywhere — the words are spread across
+       * `type` ("Wedding Venue") and `city` ("Lahore"). Every natural multi-word
+       * query a person actually types died the same way, on a marketplace whose
+       * entire job is to find vendors.
+       *
+       * Now the fields are flattened into one haystack and every word must appear
+       * somewhere in it. If that is too strict to return anything, fall back to
+       * "any word matches" rather than showing an empty page — a ranked-ish list
+       * of near misses beats a dead end.
+       */
+      const words = filters.search.toLowerCase().trim().split(/\s+/).filter(Boolean)
+      const hay = (v: Vendor) =>
+        [v.name, v.location, v.city, v.type, v.subBusinessType]
+          .map(txt)
+          .join(" ")
+          // "wedding-venue" / "wedding_venue" should match the word "wedding".
+          .replace(/[_-]+/g, " ")
+
+      const all = filtered.filter(v => { const h = hay(v); return words.every(w => h.includes(w)) })
+      filtered = all.length
+        ? all
+        : filtered.filter(v => { const h = hay(v); return words.some(w => h.includes(w)) })
     }
 
     if (filters.category && filters.category !== "all") {

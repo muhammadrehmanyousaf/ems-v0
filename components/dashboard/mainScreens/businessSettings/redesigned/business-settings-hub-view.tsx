@@ -215,11 +215,24 @@ export function BusinessSettingsHubView() {
     const el = saveBarRef.current
     const root = document.documentElement
     if (!el) { root.style.removeProperty("--ww-bottom-bar"); return }
-    const publish = () => root.style.setProperty("--ww-bottom-bar", `${Math.round(el.getBoundingClientRect().height)}px`)
+    // Publish the whole strip this bar occupies measured up from the viewport
+    // bottom, not just its own height — on mobile the bar now sits ABOVE the
+    // bottom nav, so height alone would under-report and put the prompt back on
+    // top of Save.
+    const publish = () =>
+      root.style.setProperty(
+        "--ww-bottom-bar",
+        `${Math.max(0, Math.round(window.innerHeight - el.getBoundingClientRect().top))}px`,
+      )
     publish()
     const ro = new ResizeObserver(publish)
     ro.observe(el)
-    return () => { ro.disconnect(); root.style.removeProperty("--ww-bottom-bar") }
+    window.addEventListener("resize", publish)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener("resize", publish)
+      root.style.removeProperty("--ww-bottom-bar")
+    }
   })
 
   const saveMut = useMutation({
@@ -462,7 +475,8 @@ export function BusinessSettingsHubView() {
       {tab.wired && (
         <div
           ref={saveBarRef}
-          className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 backdrop-blur md:left-[var(--sidebar-width,0)]"
+          style={{ bottom: "var(--ww-mobile-nav, 0px)" }}
+          className="fixed inset-x-0 z-20 border-t border-border bg-background/95 backdrop-blur md:left-[var(--sidebar-width,0)]"
         >
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 md:px-6">
             {/* A disabled Save must say WHY, or it reads as a broken button. */}

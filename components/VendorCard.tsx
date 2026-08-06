@@ -93,6 +93,8 @@ export default function VendorCard({
     return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`
   })()
   const [openAlert, setOpenAlert] = useState(false)
+  // Where the visitor was heading when we interrupted them to sign in.
+  const [pendingPath, setPendingPath] = useState<string | null>(null)
   const router = useRouter()
 
   // Issue #61 — "bootstrap" the card visual when the vendor's image
@@ -179,6 +181,9 @@ export default function VendorCard({
       // Route to the main booking page
       router.push(`/${id}/booking`)
     } else {
+      // Remember WHERE they were going, so signing in resumes the booking
+      // instead of dumping them on the homepage to find this venue again.
+      setPendingPath(`/${id}/booking`)
       setOpenAlert(true)
     }
   }
@@ -195,6 +200,8 @@ export default function VendorCard({
         // favorite toggle failed silently
       }
     } else {
+      // Favouriting is a "stay where I am" action — come back to this listing.
+      setPendingPath(typeof window !== 'undefined' ? window.location.pathname + window.location.search : null)
       setOpenAlert(true)
     }
   }
@@ -516,7 +523,13 @@ export default function VendorCard({
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => router.push("/login")}
+              onClick={() =>
+                router.push(
+                  pendingPath
+                    ? `/login?redirect=${encodeURIComponent(pendingPath)}`
+                    : "/login"
+                )
+              }
               className="rounded-[4px] bg-bridal-gold hover:bg-bridal-gold-dark text-bridal-charcoal hover:text-bridal-ivory font-bridal uppercase tracking-[0.22em] text-[11px]"
             >
               Login

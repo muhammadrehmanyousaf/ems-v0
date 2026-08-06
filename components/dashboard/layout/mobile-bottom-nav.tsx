@@ -80,6 +80,36 @@ export function MobileBottomNav() {
   const { persona } = useNavPersona()
   const [open, setOpen] = React.useState(false)
 
+  // Publish this bar's height as --ww-mobile-nav.
+  //
+  // This nav is `fixed inset-x-0 bottom-0` at z-40. Every dashboard save bar is
+  // `fixed inset-x-0 bottom-0` at z-20 — the same 64px strip, and the nav wins.
+  // Measured live on production at 360px: nav 676–740, save bar 679–740, save
+  // button 692–728, and 0 of 304 sampled points inside the button were the
+  // topmost element. Playwright refused the click with "<a href='/dashboard/money'>
+  // from <nav …> subtree intercepts pointer events" — so a vendor on a phone who
+  // tapped "Save changes" was navigated to Khata and LOST the edit.
+  //
+  // Bars anchor to this value instead of bottom-0. It reads 0 when the nav is
+  // hidden (md and up, or a non-vendor role), so desktop is unchanged.
+  const navRef = React.useRef<HTMLElement | null>(null)
+  React.useLayoutEffect(() => {
+    const root = document.documentElement
+    const publish = () => {
+      const el = navRef.current
+      root.style.setProperty("--ww-mobile-nav", el ? `${Math.round(el.getBoundingClientRect().height)}px` : "0px")
+    }
+    publish()
+    const ro = new ResizeObserver(publish)
+    if (navRef.current) ro.observe(navRef.current)
+    window.addEventListener("resize", publish)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener("resize", publish)
+      root.style.removeProperty("--ww-mobile-nav")
+    }
+  })
+
   if (getDashboardRole(user) !== "vendor") return null
 
   const isActive = (href: string) =>
@@ -90,7 +120,7 @@ export function MobileBottomNav() {
       {/* Spacer so the fixed bar never covers page content. */}
       <div className="h-16 md:hidden" aria-hidden />
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex h-16 items-stretch border-t border-sidebar-border bg-background md:hidden">
+      <nav ref={navRef} className="fixed inset-x-0 bottom-0 z-40 flex h-16 items-stretch border-t border-sidebar-border bg-background md:hidden">
         {TABS.map((t) => {
           const Icon = t.icon
           const active = isActive(t.href)
