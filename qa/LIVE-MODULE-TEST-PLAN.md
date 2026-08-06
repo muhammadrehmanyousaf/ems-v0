@@ -62,7 +62,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 30 | Plan & billing | `/dashboard/billing` | ✅ 216 | **`[x]` COMPLETE — 155 run, 61 not run, 20 findings (4× S2)** |
 | 31 | Collaborations | `/dashboard/collaborations` | ✅ 238 | **`[x]` COMPLETE — 165 run, 73 not run, 22 findings (4× S2)** |
 | 32 | Business Settings | `/dashboard/settings` | ✅ 286 | **`[x]` COMPLETE — 150 run, 136 not run, 16 findings (2× S2) + 7/7 regressions pass** |
-| 33 | Availability | `/dashboard/settings?tab=availability` | — | `[ ]` |
+| 33 | Availability | `/dashboard/settings?tab=availability` | ✅ 152 | `[~]` cases written — execution in progress |
 | 34 | Cancellation policy | `/dashboard/settings?tab=policy` | — | `[ ]` |
 | 35 | Setup checklist | `/dashboard/onboarding` | — | `[ ]` |
 | 36 | Tonight | `/dashboard/venue-os?tab=today` | — | `[ ]` |
@@ -16662,3 +16662,200 @@ amenities as `false` and invented a *"Percentage"* advance type for a venue that
 afterwards the bar settled to **"All changes saved"** over a write that never left the browser.
 Beneath all of it sit three approved, publicly listed wedding venues with one photograph between
 them and not one line of cancellation policy.
+
+---
+
+## MODULE 33 — TEST CASES
+
+Route `/dashboard/settings?tab=availability`. One manager (96 lines), three endpoints
+(`GET/POST/DELETE /api/v1/bookings/blocked-dates`). Blocking a date removes it from what couples can
+book, so every write here has an immediate public consequence.
+
+Driven in a **visible** browser this time, at 1440×900 with `slowMo`, so the run can be watched.
+
+Live state probed before any case ran — and it is not empty:
+
+| id | Business | Blocked date | Reason |
+|---|---|---|---|
+| 6 | 3358 Rehman Grand Marquee | **2026-08-06** | `[QA] duplicate test` |
+| 7 | 3359 Rehman Banquet & Lawn | **2026-08-06** | `hi` |
+| 8 | 3360 Rehman Marquee Bahria | **2026-08-06** | `hi` |
+
+**All three venues are blocked today**, one row each, same date. Two carry the reason `hi`; one is a
+leftover QA marker. `?month=2026-09` returns zero, so these are the only blocked dates on the account.
+
+### A. Route and entry (D33-001 → D33-014)
+
+- **D33-001** `/dashboard/settings?tab=availability` opens the Availability tab directly.
+- **D33-002** `PARAM_TO_TAB` maps `availability` → `availability`. Verify against the Module 32 finding that `policy` is absent.
+- **D33-003** The tab is reachable from the rail as the eleventh entry.
+- **D33-004** At 360px the rail must be scrolled ~1,200px to reach it (WWL-482). Re-verify.
+- **D33-005** The panel header reads **Availability** with the description *"Block dates you're unavailable so couples can't book them."*
+- **D33-006** The hub's sticky save bar is **absent** on this tab (`wired: false`). Verify.
+- **D33-007** So the vendor gets no "unsaved changes" signal here — establish that every action is immediate.
+- **D33-008** Reload on the deep link returns to the same tab.
+- **D33-009** Switching business re-scopes the list. Drive all three.
+- **D33-010** The query key is `["blocked-dates", businessId]` — verify a switch refetches rather than reusing.
+- **D33-011** Establish what the list shows when no business is resolved (`businessId ?? "all"`).
+- **D33-012** Console clean on the tab.
+- **D33-013** No leaks after leaving.
+- **D33-014** The tab renders inside the hub, so the business switcher sits above it — verify both are usable together.
+
+### B. The live blocked-date data (D33-015 → D33-038)
+
+- **D33-015** Confirm the three rows render, one per venue, under the correct business.
+- **D33-016** Under **3358**: one row, `2026-08-06`, reason `[QA] duplicate test`.
+- **D33-017** Under **3359**: one row, `2026-08-06`, reason `hi`.
+- **D33-018** Under **3360**: one row, `2026-08-06`, reason `hi`.
+- **D33-019** **Establish that all three venues are blocked on the same date — today.**
+- **D33-020** Establish the public consequence: can a couple book any of the three venues for 2026-08-06?
+- **D33-021** Cross-check against the Calendar module and the public availability check.
+- **D33-022** Establish whether an existing booking exists on that date for any venue, and what a block does to it.
+- **D33-023** The reason `[QA] duplicate test` is a **test artefact left in production**. Establish when it was created if the row carries timestamps.
+- **D33-024** The two `hi` rows are identical in date and reason across two different venues. Establish whether that is consistent with the **pre-fix** behaviour recorded in `availability-manager.tsx`: *"blocking a date hit every venue the vendor owned — one click created rows on both business 3361 and 3362."*
+- **D33-025** …and therefore whether these rows are **residue of the bug that was fixed**, rather than deliberate blocks.
+- **D33-026** Establish that the fix prevents new occurrences but performs **no cleanup** of rows the bug already created.
+- **D33-027** Establish whether anything in the product would ever surface these to the vendor as anomalous.
+- **D33-028** `fmt` renders `en-PK` with weekday, `2-digit` day, long month, numeric year. Verify the exact rendered string for 2026-08-06.
+- **D33-029** Establish whether the year is shown (it is in the format string) and whether that helps or clutters.
+- **D33-030** The reason renders under the date in muted text with `truncate`. Establish the truncation width.
+- **D33-031** A row with **no** reason renders the date alone. Establish (none live).
+- **D33-032** The list is sorted ascending by `blockedDate` via `localeCompare` on the string. Verify.
+- **D33-033** …and establish that a string sort is correct here **only** because the dates are ISO. Confirm the format returned by the API.
+- **D33-034** Each row carries a calendar icon, the date, the reason and a **Free** button.
+- **D33-035** There is **no business name on the row**, so under a single-venue scope the list is unambiguous but the `?? "all"` fallback would be ambiguous. Establish.
+- **D33-036** There is no created-at, no created-by and no source on a row.
+- **D33-037** So a vendor looking at `[QA] duplicate test` has no way to learn where it came from.
+- **D33-038** Establish whether blocked dates appear anywhere else in the vendor portal.
+
+### C. Blocking a date (D33-039 → D33-078)
+
+- **D33-039** The block form has three controls: **Date** (`type="date"`), **Reason (optional)**, **Block date**.
+- **D33-040** Both inputs carry `id` **and** `aria-label` **and** a `<label htmlFor>` — verify all three, and credit it against the Profile tab's five unlabelled fields (WWL-480).
+- **D33-041** `Block date` is disabled until a date is chosen. Verify.
+- **D33-042** Whitespace in the reason alone does not enable it (the guard is on `date`). Verify.
+- **D33-043** The date input has **no `min`** — establish that a **past** date can be selected.
+- **D33-044** Drive a past date and establish whether the client blocks it, the server blocks it, or neither.
+- **D33-045** Establish what blocking a past date means operationally.
+- **D33-046** The date input has **no `max`** — drive a date decades out.
+- **D33-047** Establish whether there is any horizon limit at all.
+- **D33-048** Drive a date **already blocked** for that venue and establish the duplicate behaviour.
+- **D33-049** …the reason `[QA] duplicate test` on row 6 suggests this was tested before. Establish what the server does now: does it 409, upsert, or create a second row?
+- **D33-050** Establish whether a duplicate would render as two identical rows with two **Free** buttons.
+- **D33-051** The reason field has **no `maxLength`** — establish the server's cap.
+- **D33-052** Drive a long reason and establish whether it is truncated silently.
+- **D33-053** **There is no confirmation** on Block date. Establish that one click removes a date from public availability.
+- **D33-054** Drive the block with the write blocker armed and capture the body.
+- **D33-055** Confirm the body carries `businessId` — the WW fix that scoped this per venue.
+- **D33-056** Confirm it carries `blockedDate` and `reason` (or `null`).
+- **D33-057** Establish the false-success behaviour on a diverted write.
+- **D33-058** `onSuccess` clears both fields and invalidates. Verify the form resets.
+- **D33-059** …and establish that the reset happens even when nothing was written.
+- **D33-060** `onError` reads `response.data.message` first. Drive a failure and record the string.
+- **D33-061** Global `mutations: { retry: 1 }` — count the requests on a failed block.
+- **D33-062** Establish whether a duplicate block is harmful, given D33-048.
+- **D33-063** Rapid double-click on **Block date** — confirm the `isPending` guard holds.
+- **D33-064** The button shows a spinner while pending.
+- **D33-065** Establish whether blocking a date that has a **confirmed booking** on it is refused, warned about, or silently allowed.
+- **D33-066** …and if allowed, what the couple sees.
+- **D33-067** Establish whether the block is per-venue or per-slot — the controller writes `slotTemplateId: null`.
+- **D33-068** So establish whether a venue with multiple halls blocks all of them at once.
+- **D33-069** Cross-check against the Venue-OS "Halls & spaces" model, where a venue has partitions.
+- **D33-070** There is **no date-range control** — a vendor closing for a week must block seven times.
+- **D33-071** …and for Muharram or Ramadan, thirty times. Establish the gap on a Pakistani wedding platform.
+- **D33-072** There is no recurring rule (every Monday, every Friday).
+- **D33-073** There is no bulk import and no copy-from-another-venue.
+- **D33-074** Establish whether the API supports a range even though the UI does not.
+- **D33-075** There is no calendar picker — only a native `type="date"` input.
+- **D33-076** Establish how that renders on a phone versus desktop.
+- **D33-077** The blocked dates are not shown on a calendar anywhere in this tab — only as a list.
+- **D33-078** Establish whether the Calendar module shows them, and whether a vendor can block from there.
+
+### D. Freeing a date (D33-079 → D33-100)
+
+- **D33-079** Each row has a **Free** button with a trash icon.
+- **D33-080** **There is no confirmation.** One click restores public availability.
+- **D33-081** Establish the asymmetry with Collaborations, where withdrawing your own invite takes a full dialog.
+- **D33-082** `unblockMut` takes `b.blockedDate` — the **date string**, not the row id. Establish.
+- **D33-083** So the DELETE is `/blocked-dates/{date}?businessId=` — keyed by date, not by row.
+- **D33-084** Establish what that does if two rows exist for the same date on the same venue (D33-048).
+- **D33-085** …and whether freeing removes both.
+- **D33-086** Drive a free with the blocker armed and capture the request, including the `businessId` query param.
+- **D33-087** Confirm the row returns after a refetch, proving nothing was written.
+- **D33-088** `onSuccess` toasts *"Date freed"* and invalidates.
+- **D33-089** `onError` holds the toast for **8000ms** — establish why this one is longer than the block path's default.
+- **D33-090** Drive a failure and record the string.
+- **D33-091** All **Free** buttons share one `unblockMut.isPending`, so freeing one row disables every row's button. Establish, as in Collaborations (WWL-453).
+- **D33-092** There is no undo, though `showSuccessToast` is the undo-capable helper.
+- **D33-093** Establish whether freeing a date that has since been booked is possible or meaningful.
+- **D33-094** Establish whether the DELETE is scoped to the vendor — probe another business's date.
+- **D33-095** Probe a malformed date in the path and record the status (the WW-280 class).
+- **D33-096** Probe a date that is not blocked and record the status.
+- **D33-097** Establish whether freeing is idempotent.
+- **D33-098** There is no bulk free.
+- **D33-099** …so clearing the three leftover rows takes three clicks across three venue switches.
+- **D33-100** Establish whether the vendor would even know to do that.
+
+### E. Scoping — the fix this module exists to protect (D33-101 → D33-120)
+
+- **D33-101** **Regression target.** The manager previously took no `businessId`, so a block hit every venue. Verify it now receives `businessId={biz.id}`.
+- **D33-102** Verify `BlockedDatesAPI.getAll(undefined, businessId)` sends `?businessId=`.
+- **D33-103** Verify `BlockedDatesAPI.block(date, reason, businessId)` sends it in the body.
+- **D33-104** Verify `BlockedDatesAPI.unblock(date, businessId)` sends it as a query param.
+- **D33-105** Confirm on the wire that all three carry the id.
+- **D33-106** Switch to each venue in turn and confirm the list shows only that venue's row.
+- **D33-107** Confirm the query key changes with the business, so the previous venue's list is not reused.
+- **D33-108** Establish what happens when `businessId` is omitted — the API's own default.
+- **D33-109** …the controller returns *"No businesses found"* with an empty list when the user owns none. Establish the owned-business path.
+- **D33-110** Probe `GET /blocked-dates` with **no** businessId and confirm it returns **all three** rows.
+- **D33-111** So establish that the unscoped read is still reachable, and what the UI would show if `biz` were undefined.
+- **D33-112** Probe `POST` with a `businessId` the vendor does **not** own and record the status.
+- **D33-113** Probe `DELETE` likewise.
+- **D33-114** Establish whether the server validates ownership on all three verbs.
+- **D33-115** Probe `?month=2026-08` and confirm the three rows appear.
+- **D33-116** Probe `?month=2026-09` and confirm zero — verified live.
+- **D33-117** Establish whether the UI ever uses the `month` parameter (it passes `undefined`).
+- **D33-118** …so the list is unbounded: every blocked date the venue has ever had, forever, with no pagination.
+- **D33-119** Establish the render cost for a venue that blocks weekly for a year.
+- **D33-120** Establish whether past blocked dates are ever pruned.
+
+### F. Accessibility (D33-121 → D33-132)
+
+- **D33-121** Both inputs have `id`, `htmlFor` **and** `aria-label`. Verify all three and establish whether the doubled naming causes a conflict.
+- **D33-122** …specifically: `aria-label="Block date"` overrides the visible label *"Date"*. Establish which a screen reader announces.
+- **D33-123** The panel heading is `h2`.
+- **D33-124** The **Free** buttons all share the accessible name *"Free"* with no row context — establish the count and the ambiguity.
+- **D33-125** The empty state is announced.
+- **D33-126** Focus order: date → reason → Block date → each Free.
+- **D33-127** Keyboard: the native date input's picker.
+- **D33-128** The spinner during a mutation.
+- **D33-129** Colour contrast of the muted reason text.
+- **D33-130** `prefers-reduced-motion`.
+- **D33-131** The trash icon's `hover:text-destructive` — establish it is decorative and the label carries the meaning.
+- **D33-132** Establish whether a destructive action is conveyed as destructive to a non-visual user.
+
+### G. Mobile 360×740 (D33-133 → D33-142)
+
+- **D33-133** No horizontal overflow: `scrollWidth === clientWidth` **and** an element-level right-edge count.
+- **D33-134** The block form's `sm:grid-cols-[180px_1fr_auto]` collapses to one column.
+- **D33-135** The native date input at 360px.
+- **D33-136** Tap targets on **Block date** and each **Free**.
+- **D33-137** The row layout: icon, date, reason, Free.
+- **D33-138** The reason's `truncate` at 360px.
+- **D33-139** The empty state at 360px.
+- **D33-140** Under `hover: none`, confirm no control here depends on hover.
+- **D33-141** Reaching the tab at 360px (the rail scroll, WWL-482).
+- **D33-142** The business switcher above the panel at 360px.
+
+### H. Integrity (D33-143 → D33-152)
+
+- **D33-143** Console clean.
+- **D33-144** No unhandled rejection.
+- **D33-145** Clean-realm inventory at open: all blocked dates, all venues, with ids and reasons.
+- **D33-146** Every write attempted, listed with its captured body.
+- **D33-147** **Confirm the three existing rows are untouched** — same ids, same dates, same reasons.
+- **D33-148** Confirm no new blocked date was created on any venue.
+- **D33-149** Confirm no date was freed.
+- **D33-150** Cross-check the Module 28 notification count — unchanged.
+- **D33-151** Confirm nothing was written to the businesses themselves.
+- **D33-152** No storage keys left behind.
