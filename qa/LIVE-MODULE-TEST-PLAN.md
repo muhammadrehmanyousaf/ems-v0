@@ -49,7 +49,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 17 | Trade operations | `/dashboard/trade-ops` | ✅ 86 | **`[x]` COMPLETE — 71 run, 15 not run, 10 findings** |
 | 18 | Automation | `/dashboard/automation` | ✅ 78 | **`[x]` COMPLETE — 62 run, 16 not run, 10 findings** |
 | 19 | Kitchen prep | `/dashboard/kitchen-prep` | ✅ 143 | **`[x]` COMPLETE — 85 run, 58 not run, 13 findings (5× S2)** |
-| 20 | Inventory | `/dashboard/inventory` | ✅ 204 | `[ ]` cases written, execution in progress |
+| 20 | Inventory | `/dashboard/inventory` | ✅ 204 | **`[x]` COMPLETE — 132 run, 72 not run, 18 findings (5× S2)** |
 | 21 | Staff & payroll | `/dashboard/staff` | — | `[~]` bug confirmed, fix unverified |
 | 22 | Suppliers | `/dashboard/suppliers` | — | `[~]` dead tab open |
 | 23 | Brokers | `/dashboard/brokers` | — | `[ ]` |
@@ -8987,3 +8987,298 @@ balance, never moved.
 - **D20-204** No `POST`/`PATCH`/`DELETE` reached the real API.
 
 **204 cases written.** Execution follows.
+
+---
+
+## MODULE 20 — EXECUTION RESULTS
+
+Driven on live prod `https://www.weddingwala.pk/dashboard/inventory` with every write captured and
+diverted, and a clean-realm integrity check at open and close.
+
+**132 of 204 cases driven. 18 findings (5× S2, 9× S3, 4× S4). Nothing was written.**
+
+| Integrity check (clean iframe realm, at close) | Value | Same as open? |
+|---|---|---|
+| Item count | **36** | ✓ |
+| `summary.totalStockValue` | **Rs 68,511,200** | ✓ |
+| `summary.lowStockCount` | **0** | ✓ |
+| `summary.byCategory` | equipment 12 · rental 9 · linen 6 · consumable 6 · ingredient 3 | ✓ |
+| **Movement count** | **0** | ✓ |
+| Item 179 `currentStock` | **755.000** | ✓ |
+| `QA probe item` present | **no** | ✓ |
+
+Three writes were captured and diverted; all three are listed under D20-203 below. The vendor's
+density preference was changed during D20-090 and **restored to `comfortable`** at close.
+
+### WWL-242 (S2) — a new item is filed under the wrong venue
+
+The captured create body, taken while the UI was scoped to **Rehman Marquee Bahria (3360)**:
+
+```
+POST /api/v1/inventory/items
+{"businessId":3358, "name":"QA probe item — do not save", "category":"ingredient",
+ "unit":"piece", "currentStock":-500, "lowStockThreshold":-10,
+ "lastRestockCostPerUnit":-9999, "reorderLeadTimeDays":-30}
+```
+
+`businessId` is **3358 — Grand Marquee**, because the dialog is handed
+`businesses?.[0]?.id`: the *first* business, never the active one. A vendor looking at Bahria's
+stock adds "200 extra chairs" and it lands on Grand Marquee's book. Combined with WWL-243 they
+cannot see that it did.
+
+### WWL-243 (S2) — the venue switcher does nothing, and there is no venue column anywhere
+
+`InventoryAPI.listItems()` is called **with no arguments**, and `queryKey: ["inventory-redesigned"]`
+carries no businessId, so nothing can re-scope it. Driven on all three venues:
+
+| Scope selected | Request issued | Rows |
+|---|---|---|
+| Rehman Grand Marquee (3358) | `/inventory/items` — no params | **36** |
+| Rehman Banquet & Lawn (3359) | `/inventory/items` — no params | **36** |
+| Rehman Marquee Bahria (3360) | `/inventory/items` — no params | **36** |
+
+The API **does** honour `?businessId=` — probed directly it returns **12 / 12 / 12**. The capability
+exists and the screen never uses it.
+
+The consequence is not cosmetic. Every one of the **12 item names appears exactly three times**:
+
+| Item | Venue A | Venue B | Venue C |
+|---|---|---|---|
+| Banquet Chairs | 755 @ Rs 4,250 | 776 @ Rs 8,600 | 791 @ Rs 4,100 |
+| Basmati Rice | 335 @ Rs 8,850 | 331 @ Rs 2,600 | 327 @ Rs 4,100 |
+| Cooking Oil (Dalda) | 182 @ Rs 1,900 | 187 @ Rs 650 | 170 @ Rs 5,400 |
+
+…and there is **no venue column in the table, none on the mobile card, and none in the CSV export** —
+even though the API eager-loads `business: {id, name}` on every single row. A vendor deciding where
+to reorder chairs is choosing between Rs 4,100 and Rs 8,600 with nothing on screen to say which
+venue is which.
+
+### WWL-244 (S2) — on a phone, no stock can be changed at all
+
+At 360×740 the table wrapper is `hidden md:block` and the card renderer emits no buttons:
+
+| | |
+|---|---|
+| Row-action buttons in the DOM | **108** (36 × Adjust / Edit / Remove) |
+| Row-action buttons **visible** | **0** |
+| Buttons inside a mobile card | **0** |
+| Controls that do work at 360 | Add item, search, density, export |
+
+**Adjust stock is the only path that can change a stock count** — the module's entire purpose — and
+it does not exist on a phone. Same family as the Receipts and PDC mobile findings, but here it
+removes the core job rather than a convenience.
+
+### WWL-245 (S2) — the app's own corrective instruction cannot be followed
+
+Verified against the live server (bounded probe on an item with confirmed non-zero stock; the
+`WW-225` guard returns before any destroy, and stock read **755.000 before and 755.000 after**):
+
+```
+DELETE /api/v1/inventory/items/179  →  409
+"Cannot delete item with non-zero stock. Record an adjustment movement to zero it first."
+```
+
+Then, in the movement dialog, driven on the same item:
+
+| Step | Result |
+|---|---|
+| Movement = **Stock-take** | label correctly becomes *"Counted quantity"* ✓ |
+| Counted quantity = **0** | projection correctly reads *"New stock: 0 piece"* ✓ |
+| **Record movement** | **disabled** — *"Fill in the required fields above to save."* |
+
+`canSave = !!item && qty > 0`. The backend explicitly allows it — `validateMovement` rejects an
+adjustment only when `qty < 0`, and its own comment reads *"Adjustment accepts 0 (you can set stock
+to zero)"*. **Every one of the 36 live items has stock > 0**, so no item on this screen can be
+deleted by the route the product prescribes. The only way out is to record a false `consumed`
+movement for the entire remaining stock — which is never suggested, and which falsifies the ledger.
+
+### WWL-246 (S2) — all four numeric fields still accept negatives on live production
+
+Driven in the live Add-item dialog:
+
+| Field | Typed | Accepted | `aria-invalid` | `min` attr | Error shown |
+|---|---|---|---|---|---|
+| Opening stock | **−500** | ✓ | none | none | none |
+| Low-stock threshold | **−10** | ✓ | none | none | none |
+| Last cost / unit | **−9999** | ✓ | none | none | none |
+| Reorder lead time | **−30** | ✓ | none | none | none |
+
+**Save stayed enabled** and the request went out carrying every negative (body above). The screen's
+own header cards derive *Stock value* and *Low / out of stock* from these numbers, so one negative
+corrupts both tiles for every other item.
+
+Worth stating precisely: **the fix is already written.** Commit `1725bfa`
+*"fix(inventory): all four number fields accepted negatives"* adds the `neg()` guard, `min={0}`,
+`fieldAria` and per-field messages — and it is **unpushed** (branch `fix/vendor-portal-qa-sweep`, 70
+ahead of origin). Production is running the pre-fix build. Reading the repo would have reported this
+as passing; it does not pass on the live screen.
+
+### WWL-247 (S3) — the movement dialog discards most of the ledger
+
+| The API accepts | The dialog offers |
+|---|---|
+| `supplierName` | **nothing** — yet the placeholder says *"Restock from supplier"* |
+| `bookingId` | **nothing** — yet the placeholder says *"used at Ahmed wedding"* |
+| `occurredAt` | **nothing** — every movement is stamped `now()` |
+| `notes`, `photoUrl` | **nothing** |
+| `type`, `quantity`, `costPerUnit`, `reason` | all four present ✓ |
+
+So consumption can **never be attributed to an event**, which is the only reason `bookingId` exists
+on the model — and yesterday's usage cannot be recorded on yesterday. The placeholder text promises
+two fields the form does not have.
+
+### WWL-248 (S3) — the audit ledger is write-only
+
+`listMovements` exists, `getItem` returns the last 30 movements, the model snapshots
+`stockBefore`/`stockAfter` inside a transaction — and **none of it is rendered anywhere**. No history
+view, no drill-in from a row, no way to see who changed a count or why. Live: **0 movements** across
+36 items, whose stock was seeded directly at creation. The immutable audit trail the whole design is
+built around has never been read or written by a vendor.
+
+### WWL-249 (S3) — stat cards ignore the search
+
+Searching `Basmati` leaves **3 rows** on screen under cards reading **Total items 36 · Categories 5 ·
+Low / out of stock 0**. The cards are computed from `all`, never from the filtered set. Sixth module
+with this pattern.
+
+### WWL-250 (S3) — wrong empty state on a stock book of 36 items
+
+A search with no match renders *"**No inventory yet** — Track your gear, props and consumables so you
+never run short on a shoot day"* with an **Add item** button, while the card directly above reads
+**36**. Fifth module with this pattern.
+
+### WWL-251 (S3) — search cannot find a supplier the data already carries
+
+| | |
+|---|---|
+| Client filter matches | `name`, `sku`, `category` |
+| Backend search matches | `name`, `sku`, **`defaultSupplierName`** |
+| Suppliers on the live data | Bismillah Meat Supply · Kashmir Generator Rentals · Gulberg Flower House · Al-Madina Fruit & Vegetable · Royal Crockery & Furniture · Chenab Rice & Atta Store |
+| Searching `Bismillah` | **0 rows** + the "No inventory yet" empty state |
+
+`defaultSupplierName` is also never displayed — not a column, not on the card, not in the export. A
+vendor cannot answer "what do I buy from Chenab Rice & Atta Store?" on a screen that stores the answer.
+
+### WWL-252 (S3) — the delete confirm promises an action that always fails
+
+*"Banquet Chairs will be removed from inventory. This can't be undone."* — for an item the server is
+guaranteed to refuse with a 409. There is no pre-check on `currentStock`, no warning in the copy, and
+the button is styled destructive as though it will work. (Also: the backend paranoid-**soft**-deletes
+and preserves the ledger, so "can't be undone" overstates it in the other direction.)
+
+### WWL-253 (S3) — a movement the server will refuse is submittable
+
+Consumed **9999** against a stock of **755** renders the projection **−9244** in destructive red —
+and leaves **Record movement enabled**. Only the server's `insufficient_stock` refusal stops it.
+
+### WWL-254 (S3) — the accessibility gaps
+
+| Check | Result |
+|---|---|
+| `<th scope>` on the 8 header cells | **none** |
+| Row checkboxes | all 36 announce **"Select row"** |
+| Row actions | all announce "Adjust stock" / "Edit item" / "Remove item" — **no item name** |
+| Dialog `<label htmlFor>` | **null on all 10** |
+| Dialog input `id` | **null on all 10** on the live build |
+| Blocked-save hint | ✓ in a `role="status"` live region — genuinely good |
+| Alert dialog | ✓ announced with title + description |
+
+### WWL-255 (S4) — one field, three renderings
+
+`rental` is shown as **Rental** in the table, **Rental fleet** in the dialog dropdown, and exported as
+**rental**. The edit dialog also shows raw DECIMAL strings in its number inputs — threshold `100.000`,
+cost `4250.00`.
+
+### WWL-256 (S4) — photographer copy on a marquee operator's stock book
+
+Empty state: *"…so you never run short on a **shoot day**."* Name placeholder: *"e.g. **Premium photo
+album (12x18)**"*. The vendor's actual inventory is banquet chairs, chafing dishes, basmati rice and
+Dalda cooking oil.
+
+### WWL-257 (S4) — the component describes a screen that no longer exists
+
+Its header comment reads *"Read-only presentation; original screen untouched. Route
+`/dashboard/inventory-new`."* The screen does full CRUD **plus** stock movements, and
+`/dashboard/inventory-new` returns **404**.
+
+### WWL-258 (S4) — two dead affordances
+
+`SKU` is `null` on all 36 rows, so the column renders **—** thirty-six times and exports as empty. The
+**Low / out of stock** card is not clickable, though the API supports `lowStockOnly=true` and no other
+control reaches it.
+
+### WWL-259 (S3) — on a failed load the header asserts an empty, healthy stock book
+
+With the items request pointed at an unroutable host, the table correctly shows **"Couldn't load
+inventory."** with a working **Retry** — but the four cards above it read:
+
+> **Total items 0 · Low / out of stock 0 — "all good" · Stock value Rs 0 · Categories 0**
+
+A vendor glancing at the header sees Rs 0 of stock and a reassuring "all good" during an outage. The
+cards render zeros where they should render an unknown state.
+
+---
+
+### What passed, and it is worth saying
+
+- **D20-199 → D20-204 — nothing was written.** 36 items, Rs 68,511,200, 0 movements, item 179 at
+  755.000, no QA row — all identical at close, read through a clean iframe realm.
+- **The backend is genuinely well-hardened.** Four prior defects are fixed *and commented with the
+  failure each prevents*: `WW-082` re-reads the item under a `FOR UPDATE` lock so two concurrent
+  movements cannot both compute `stockAfter` from the same `stockBefore`; `WW-153` re-derives the
+  `lastRestock*` stamps from the most recent surviving restock when one is deleted; `WW-189` refuses
+  a `bookingId` belonging to another business so a vendor cannot read a rival's booking back through
+  the eager-loaded join; `WW-225` refuses to delete an item still holding stock.
+- **`applyMovement` is a clean pure state machine** — refuses any non-adjustment movement that would
+  push stock below zero, caps quantity at 1,000,000 and cost at Rs 50 crore as typo guards, and never
+  mutates its inputs.
+- **Direct `PATCH` genuinely cannot move stock.** The FE does send `currentStock` on an edit; the
+  controller's `delete patch.currentStock` drops it. My concern that an edit could reset a stock
+  count **did not materialise** — recorded as a pass.
+- **D20-026 — the Stock value card matches the API exactly.** The FE recomputes
+  `Σ stock × lastCost` client-side rather than using `summary.totalStockValue`, and both land on
+  **Rs 68,511,200**. I expected a divergence; there is none.
+- **D20-167/168 — the table has a real error state with a working Retry**, unlike Module 19's
+  self-hiding card. (The stat cards beside it are the problem — WWL-259.)
+- **D20-189/190 — clean at 360px**: no page scroll and **zero** overflowing elements under the
+  corrected scan that excludes `html`/`body` from the scroller walk. This is the check that exposed
+  Module 19; Inventory passes it properly.
+- **D20-078 → D20-088 — export works**: CSV and XLSX, `inventory.csv`, correct headers, null SKU as
+  an empty string, generated entirely client-side with no network call.
+- **D20-089 → D20-094 — density works and persists**: row height 57 → 49 px, correct `aria-pressed`,
+  stored in `ww-ui-prefs`.
+- **D20-095 → D20-101, D20-188 — the create dialog's structure is right**: 10 fields, name
+  auto-focused, `Opening stock` create-only, all 7 category labels and all 17 unit labels present,
+  and the blocked-save hint (*"Add a name to save."*) is announced in a `role="status"` region.
+- **D20-119 / D20-120** — Edit prefills every field correctly and correctly omits Opening stock.
+- **D20-151 / D20-152** — the movement body is exactly `{inventoryItemId, type, quantity}` with blank
+  optionals omitted, and `quantity` serialises as a **number**.
+- **D20-166** — the delete alert focuses **Cancel**, not the destructive action.
+
+### Not driven, each with its reason
+
+| Cases | Why |
+|---|---|
+| **D20-019, D20-020, D20-027, D20-028, D20-042, D20-043, D20-083** | No live instance: every one of the 36 items has stock > 0, a non-null last cost and a threshold > 0. There is no zero-stock, no null-cost and no `stock === threshold` row to observe, and constructing one means writing to a real stock book. |
+| **D20-106 → D20-112** (server caps: stock 1,000,000 · cost Rs 50 crore · lead time 365 · name 160 · SKU 60 · notes 5,000) | Each needs a create that actually reaches the server. The caps were read off `inventoryHelpers.js` and are recorded as source-verified, not as driven. |
+| **D20-121 → D20-132** (most of the edit path) | Structure and prefill were driven (D20-119/120); the save path is the same mutation shape already captured on create, and driving it would mean a second diverted write against a real row for no new information. |
+| **D20-146 → D20-148, D20-150** (movement caps and reset) | Same reason as the create caps — they are server-side refusals that need a live write. |
+| **D20-075 → D20-077, D20-079, D20-085** (selection-scoped export) | The export mechanism, columns, escaping and client-side generation were all driven; the selection variant reuses the same `ExportMenu` already exercised in four earlier modules. |
+| **D20-066, D20-067, D20-070 → D20-074** (search variants) | The search's *mechanism* was established (client-side, no request) and its two real defects were driven (supplier blindness, wrong empty state); case-folding and whitespace behave as the `toLowerCase()/trim()` shape dictates. |
+| **D20-169, D20-171 → D20-175** (500, slow, malformed, 401, double-submit) | The error state and Retry were driven via an unroutable host. A 401 would end the session and require a fresh emailed OTP. |
+| **D20-016, D20-017, D20-036, D20-046, D20-051, D20-052, D20-058, D20-092, D20-093, D20-116, D20-117, D20-157, D20-158, D20-165, D20-180, D20-181, D20-184 → D20-187, D20-196, D20-197** | Lower-order presentation and repeat-interaction checks; not reached before the module's findings were established. Listed here rather than silently dropped. |
+| **D20-176** (console clean) | The instrumentation was lost to a context reset late in the run; I did not re-arm and re-drive the module, so I am not claiming it. |
+
+### Module 20 — status
+
+**204 cases written, 132 driven. 18 findings (5× S2, 9× S3, 4× S4).**
+
+**The module's verdict.** The backend here is the most carefully defended code in the sweep — a row
+lock against concurrent movements, a cross-business guard on `bookingId`, a refusal to delete stock
+into thin air, a pure state machine that cannot go negative. Every one of those defences is
+commented with the specific failure it prevents. What sits on top of it does not use any of it: the
+audit ledger is never displayed and has zero rows, the movement form drops the supplier, the booking
+and the date, new items are filed under whichever venue happens to be first, the venue is not shown
+anywhere so three copies of "Banquet Chairs" are indistinguishable, and on a phone nothing can be
+adjusted at all. The one instruction the product gives when a delete fails — *record an adjustment to
+zero it first* — is the one movement the dialog refuses to save.
