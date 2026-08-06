@@ -70,7 +70,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 38 | Venue money | `/dashboard/venue-os?tab=money` | ✅ 200 | `[x]` COMPLETE — 138 run, 62 not run, 14 findings (4× S2) |
 | 39 | Halls & spaces | `/dashboard/venue-os?tab=spaces` | ✅ 170 | `[x]` COMPLETE — 124 run, 46 not run, 10 findings (1× S1, 3× S2) |
 | 40 | Cash & cheques | `/dashboard/venue-os?tab=cash` | ✅ 140 | `[x]` COMPLETE — 108 run, 32 not run, 10 findings (4× S2) |
-| 41 | Kitchen & suppliers | `/dashboard/venue-os?tab=kitchen` | ✅ 140 | `[~]` cases written, executing |
+| 41 | Kitchen & suppliers | `/dashboard/venue-os?tab=kitchen` | ✅ 140 | `[x]` COMPLETE — 104 run, 36 not run, 8 findings (3× S2) |
 | 42 | Accounting | `/dashboard/venue-os?tab=advanced` | — | `[ ]` |
 | 43 | Field capture | `/dashboard/field` | — | `[ ]` |
 | 44 | Quote requests | `/dashboard/quotes` | — | `[ ]` |
@@ -20532,3 +20532,151 @@ the API response.)
 | D41-140 | **Zero journal entries and zero supplier records created across the module** | headline safety assertion |
 
 **Total: 140 cases.**
+
+---
+
+## Module 41 — RESULTS (live production, visible browser)
+
+**140 cases written · 104 driven · 36 not run · 8 findings (3× S2, 4× S3, 1× S4).**
+
+**Nothing was written.** The one purchase-order POST was captured and diverted. The over-billing
+check was allowed through only after verifying `checkGrnContractHandler` calls
+`rateContract.checkGrnLines` and returns — no database write.
+
+Every dataset on this tab is empty: `recipe-boms` `[]`, `rate-contracts` `[]`, `purchase-orders` `[]`.
+
+---
+
+### WWL-589 (S2) — the purchase-order form is pre-loaded and one click from firing
+
+Captured on arrival, before typing anything:
+
+```
+POST /venue-os/purchase-orders
+{"businessId":3358,"lines":[{"descr":"Chicken","qtyOrdered":100,"unit":"kg","ratePkr":500}]}
+```
+
+All four fields ship **pre-filled** — `Chicken`, `100`, `kg`, `500` — and `Raise PO` is **enabled on
+arrival** (`disabled={!businessId || !qty || !rate}`, and qty and rate are both populated by default).
+
+A vendor opening the Kitchen tab to look around is one click from creating a real purchase order for
+**100 kg of chicken at Rs 500/kg — Rs 50,000** that they never typed, against a supplier they never
+chose. There is no confirmation step.
+
+The values are seeded as `useState` defaults rather than `placeholder` attributes, so they are real
+form state and are transmitted. Module 38 found the same pattern with `"Main"` / `"Main LESCO"`
+(WWL-566); here it is attached to a button that creates a financial commitment.
+
+### WWL-590 (S2) — the over-billing check clears lines it never checked
+
+Driven in the browser: item `Chicken`, billed rate `900`, qty `50`. On screen, in **green**:
+
+> No contracts yet.
+> Check a GRN line …
+> **Within contract — no over-billing.**
+
+Two lines above the verdict, the same card says *"No contracts yet."* There is no contract for
+chicken — or for anything — and the panel reports the line as within contract.
+
+The API response explains it:
+
+```
+POST .../rate-contracts/check-grn  {"lines":[{"itemNameSnapshot":"Chicken","ratePkr":900,"qty":50}]}
+→ {"checkedLines":0,"flagCount":0,"totalShortfallPkr":0,"flags":[]}
+```
+
+**`checkedLines: 0`** — one line was submitted, zero were checked. An item with no contract is skipped
+silently rather than reported as uncovered, and the response is byte-identical to sending
+`lines: []`. The component then renders on `flagCount === 0`:
+
+```jsx
+{check.flagCount === 0 ? <p className="text-emerald-600">Within contract — no over-billing.</p> : …}
+```
+
+Probed four ways — a normal line, an empty list, zero qty, and a **negative** rate — and all four
+return the same `checkedLines: 0, flags: []`. Every input produces the green all-clear.
+
+This is the panel a hall owner would use to catch a supplier overcharging them. It currently cannot
+say "I have no contract for this item", which is the honest answer and the useful one.
+
+### WWL-591 (S2) — the GRN step defaults to "no discrepancy"
+
+On creating a PO the component sets:
+
+```js
+setQtyAccepted(qty);      // accepted := ordered
+setActualRate(rate);      // actual   := agreed
+```
+
+The three-way-match exists to surface short delivery and over-rate. Both are pre-filled to the values
+that produce **zero** of each, so the default state of the discrepancy finder is "nothing wrong".
+(Recorded from source — raising a PO is a write and was not driven.)
+
+### WWL-592 (S3) — `production run #` is a raw id with no source
+
+The yield check asks for a production-run primary key. There is no run picker on the page, no run
+list anywhere in the product, and nothing that says where a run id comes from. Same family as
+`Event night #` (Module 36), `Card IDs` (Module 37) and `meter #` (Module 38).
+
+Driven with `999999`, `0` and `-5` — all three return a clean **404 `Production run not found`**,
+rendered honestly on screen.
+
+### WWL-593 (S3) — every input on the tab is placeholder-only
+
+Ten inputs across three panels; **zero** have a `<label>`. `production run #`, `item`, `qty`, `unit`,
+`rate`, `rate/unit`, `tol %`, `billed rate`, `qty`, `item`. The placeholder disappears the moment
+anything is typed, so a half-filled form has no field names at all — and two different fields are both
+labelled `item` and both `qty`.
+
+### WWL-594 (S3) — the supplier-udhaar panel has no supplier field
+
+The panel's purpose, from its own header comment, is *"posts the accepted NET value to the GL as a
+SUPPLIER_INVOICE (supplier udhaar)"*. The form collects item, qty, unit and rate. **There is no
+supplier name, no supplier picker and no supplier list** — so the udhaar cannot be attributed to
+anyone, and the panel cannot answer "who do I owe?".
+
+`createRateContract` accepts `supplierNameSnapshot`; the procurement form has no equivalent.
+
+### WWL-595 (S3) — Accept and Settle post to the ledger with no confirmation
+
+`accept` posts a `SUPPLIER_INVOICE` journal entry and `settle` pays it down. Same shape as WWL-558 on
+the Money tab: ledger-writing buttons sitting inline with read actions, no confirmation dialog, no
+"this writes to your ledger" copy. (Not driven — captured at the PO step before either could be
+reached.)
+
+### WWL-596 (S4) — no `h1` on the page
+
+Fourth Venue-OS tab in a row (37, 38, 40, 41).
+
+---
+
+### What holds — verified, not assumed
+
+- **The Module 36 auto-load works.** Two GETs fire on arrival with no click —
+  `recipe-boms` and `rate-contracts` — and both render **honest empty states**: *"No recipe BOMs
+  yet."* and *"No contracts yet."* That is exactly what Modules 38 and 39 were missing.
+- **Scope is clean.** Three named venue dropdowns, all reading 3358, **zero `Venue #` boxes**. Every
+  request carried `businessId=3358`.
+- **The yield-variance 404 is exemplary** — the same clean `Production run not found` for a huge id,
+  zero and a negative, surfaced verbatim on screen with no stack trace and no SQL.
+- **Button gating is correct** where the fields are empty: `Add contract` and `Check` both start
+  disabled and `Check` enables only once item and billed rate exist. (My first pass reported `Check`
+  as unreachable — that was my selector filling the *procurement* item field instead of the check
+  panel's. Corrected and driven.)
+- **Layout is clean at both widths** — 0 overflowing elements at 1440px **and** at 360×740,
+  `docScrollX` false. Second Venue-OS tab in a row to pass mobile with nothing to fix.
+- **Zero writes delivered.** One PO POST captured and diverted; the only request allowed through was
+  the verified-pure contract check.
+
+### Not run (36), with reasons
+
+- **The whole procurement lifecycle** — raise PO, receive GRN, accept, settle. Accept posts a
+  `SUPPLIER_INVOICE` to the general ledger and settle pays it down; both change what this venue owes
+  and what every event's fully-costed P&L reports. Captured at the first step.
+- **D41-074–077 short-delivery and over-rate arithmetic** — requires a live PO and GRN.
+- **D41-113–117 Add contract** — a rate contract is the reference price every future GRN is judged
+  against.
+- **D41-019–027, 038–049 recipe costs and degh-yield** — the venue has no recipe BOMs and no
+  production runs, so standard cost per plate, ghee-over-standard and the rupee shortfall have no
+  data to compute from.
+- **D41-120–123 a rate above tolerance** — needs a contract on file to exceed.
