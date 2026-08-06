@@ -72,7 +72,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 40 | Cash & cheques | `/dashboard/venue-os?tab=cash` | ✅ 140 | `[x]` COMPLETE — 108 run, 32 not run, 10 findings (4× S2) |
 | 41 | Kitchen & suppliers | `/dashboard/venue-os?tab=kitchen` | ✅ 140 | `[x]` COMPLETE — 104 run, 36 not run, 8 findings (3× S2) |
 | 42 | Accounting | `/dashboard/venue-os?tab=advanced` | ✅ 210 | `[x]` COMPLETE — 141 run, 69 not run, 7 findings (1× S2) + WWL-528 answered |
-| 43 | Field capture | `/dashboard/field` | — | `[ ]` |
+| 43 | Field capture | `/dashboard/field` | ✅ 140 | `[~]` cases written, executing |
 | 44 | Quote requests | `/dashboard/quotes` | — | `[ ]` |
 
 ---
@@ -21125,3 +21125,201 @@ Fifth Venue-OS tab in a row (37, 38, 40, 41, 42).
   fill reached only the §21 amount field. The §21 and benami wording were verified; **the structuring
   guard's was not**, and is the one remaining legal-copy assertion on this tab.
 - **Comms send / Dispatch queued** — reaches real customers.
+
+---
+
+# Module 43 — Field capture (`/dashboard/field`)
+
+**Surface.** One offline-first screen for a vendor working a bridal expo with dead signal:
+
+| Card | Dialog | Writes |
+|---|---|---|
+| Capture a lead | `LeadFormDialog` | a lead row |
+| Record a payment | `ReceiptFormDialog` | **money against a real booking** |
+| Log an expense | `ExpenseFormDialog` | the vendor's ledger |
+| Hold a date | `HoldDateDialog` | **blocks a date on a live, publicly-listed venue** |
+
+Plus `OutboxStatus` (online / pending), the online-offline banner, and `OutboxConflicts` with
+Re-enter.
+
+**Self-imposed limits for this module, each with its reason:**
+
+- **Nothing is submitted.** All four dialogs are opened, inspected and validated; every submit is
+  captured by the write blocker and diverted. Two of the four are money (a receipt against a real
+  customer's booking) and availability (a hold on an approved venue that customers can see).
+- **The offline queue is never populated.** `lib/outbox` writes the op to **IndexedDB** and
+  `outbox-sync` flushes it to the backend on reconnect. A queued op survives in the browser profile
+  and would sync later, outside this session's control — so I go offline to observe the **banner and
+  status only**, and never submit while offline.
+- **No conflict is re-entered.** Re-enter replays a rejected op.
+- Everything else — layout, copy, dialog fields, validation, offline detection, keyboard, mobile — is
+  driven in full.
+
+---
+
+## D43-A · Arrival, layout, copy (cases 1–26)
+
+| # | Case | Expected |
+|---|---|---|
+| D43-001 | `/dashboard/field` loads | 200, renders |
+| D43-002 | Page title is *Field capture* | `PageHeader` |
+| D43-003 | Eyebrow reads *On the floor* | copy |
+| D43-004 | Description explains offline behaviour | *"saves instantly and syncs when you're back online"* |
+| D43-005 | Exactly one `h1` | recorded |
+| D43-006 | All four capture cards render | 4 |
+| D43-007 | Each card has an icon, title and subtitle | 4×3 |
+| D43-008 | Subtitles are situational, not generic | *"Walk-in at the expo"*, *"Cash paid out on-site"* |
+| D43-009 | Each card is a real `<button>` | keyboard reachable |
+| D43-010 | Cards have a visible focus ring | check |
+| D43-011 | Cards are large enough to tap | ≥44px on the short side at 360px |
+| D43-012 | The four tone colours are distinct | violet / emerald / rose / blue |
+| D43-013 | Colour is not the only differentiator | icon + title too |
+| D43-014 | The online banner renders | emerald when online |
+| D43-015 | The banner states the sync position | *"Everything's in sync."* |
+| D43-016 | `OutboxStatus` renders in the header | present |
+| D43-017 | The conflict panel renders or is correctly absent | 0 conflicts expected |
+| D43-018 | No console error on arrival | 0 |
+| D43-019 | No mutating request on arrival | 0 |
+| D43-020 | No horizontal overflow at 1440px | 0 elements |
+| D43-021 | No horizontal overflow at 360px | 0 elements |
+| D43-022 | The layout is a single column at 360px | `grid-cols-1` |
+| D43-023 | Two columns at ≥640px | `sm:grid-cols-2` |
+| D43-024 | The page is width-capped for one-handed use | `max-w-2xl` |
+| D43-025 | Nothing on the page requires a venue to be selected to render | check |
+| D43-026 | **`businessId` is `undefined` under "All venues"** | `useActiveBusinessId() ?? undefined` — same family as WWL-570 |
+
+## D43-B · Offline detection and the outbox banner (cases 27–52)
+
+| # | Case | Expected |
+|---|---|---|
+| D43-027 | Online: banner is emerald with a Wifi icon | driven |
+| D43-028 | Online: copy reads *"You're online — captures save immediately."* | verbatim |
+| D43-029 | **Go offline: the banner flips to amber** | driven via CDP |
+| D43-030 | Offline: icon changes to WifiOff | driven |
+| D43-031 | Offline: copy reads *"You're offline — capture anyway."* | verbatim |
+| D43-032 | Offline sub-copy promises device-local saving | *"Saved on this device … syncs the moment you reconnect."* |
+| D43-033 | The flip happens without a reload | live event |
+| D43-034 | Coming back online flips it back | driven |
+| D43-035 | Pending count renders when > 0 | 0 expected — record |
+| D43-036 | Pending pluralisation is correct | *"1 item"* vs *"N items"* |
+| D43-037 | With 0 pending, online copy says *"Everything's in sync."* | verbatim |
+| D43-038 | The banner is readable at 360px | check |
+| D43-039 | The banner does not overflow at 360px | check |
+| D43-040 | Colour contrast is adequate in both states | check |
+| D43-041 | The status is announced to assistive tech | `role="status"` or similar — flag if absent |
+| D43-042 | `OutboxStatus` in the header agrees with the banner | consistency |
+| D43-043 | Offline: the four cards remain clickable | the whole premise |
+| D43-044 | Offline: dialogs still open | driven |
+| D43-045 | Offline: nothing is submitted by me | safety |
+| D43-046 | **Is the outbox flag actually on?** | `isOutboxEnabled()` — the source says dark by default |
+| D43-047 | If dark, the dialogs post online instead of queueing | the documented fallback |
+| D43-048 | If dark, the offline banner still promises device-local saving | **a promise the code cannot keep** — the key case |
+| D43-049 | Nothing claims a capture was saved when it was not | the integrity case |
+| D43-050 | IndexedDB `ww-outbox` presence checked, not populated | read-only |
+| D43-051 | No sync fires while I am offline | 0 |
+| D43-052 | No sync fires when I reconnect | 0 — nothing was queued |
+
+## D43-C · Capture a lead (cases 53–80)
+
+| # | Case | Expected |
+|---|---|---|
+| D43-053 | The dialog opens from the card | driven |
+| D43-054 | The dialog has a title | check |
+| D43-055 | Every field is labelled | count unlabelled |
+| D43-056 | Required fields are marked | check |
+| D43-057 | Name is required | driven |
+| D43-058 | Phone is required | driven — a lead with no contact is useless (WWL from Module 38's family) |
+| D43-059 | Phone accepts a Pakistani mobile format | `03xx-xxxxxxx` |
+| D43-060 | Phone rejects nonsense | driven |
+| D43-061 | An event date can be captured | check |
+| D43-062 | A date in the past is handled | driven |
+| D43-063 | Guest count is numeric | check |
+| D43-064 | The venue is pre-scoped or pickable by name | `businessId` prop |
+| D43-065 | **Under "All venues" the venue is `undefined`** | what does the lead attach to? |
+| D43-066 | Submitting empty shows validation | driven |
+| D43-067 | Validation messages are visible | not silent (WWL-556's family) |
+| D43-068 | Submit is captured and diverted | 0 delivered |
+| D43-069 | The captured body carries the typed values | check |
+| D43-070 | The captured body carries an idempotency key | outbox `key` |
+| D43-071 | Cancel closes without writing | 0 |
+| D43-072 | Escape closes the dialog | driven |
+| D43-073 | Focus is trapped in the dialog | check |
+| D43-074 | Focus returns to the card on close | check |
+| D43-075 | The dialog is usable at 360px | driven |
+| D43-076 | The dialog scrolls if taller than the viewport | check |
+| D43-077 | Opening a second dialog closes the first | single `active` state |
+| D43-078 | One submit → one request | not two |
+| D43-079 | Double-submit is guarded | check |
+| D43-080 | No SQL or internal names leak on error | check |
+
+## D43-D · Record a payment (cases 81–104)
+
+| # | Case | Expected |
+|---|---|---|
+| D43-081 | The dialog opens | driven |
+| D43-082 | It asks which booking the payment is for | by name, not id |
+| D43-083 | **Is the booking picker by name?** | flag if raw id |
+| D43-084 | Amount is required | driven |
+| D43-085 | A zero amount is rejected | driven |
+| D43-086 | A negative amount is rejected | driven |
+| D43-087 | An amount above the outstanding balance is flagged | driven |
+| D43-088 | Payment method offers PK rails | Cash, Bank, Cheque, Jazzcash, Easypaisa, Raast |
+| D43-089 | Cash is a first-class option | the expo reality |
+| D43-090 | A receipt number can be captured | check |
+| D43-091 | The date defaults to today | check |
+| D43-092 | Every field is labelled | count |
+| D43-093 | Submitting empty shows validation | driven |
+| D43-094 | **Submit is captured and diverted** | this is real money |
+| D43-095 | The captured body names the booking and amount | check |
+| D43-096 | The captured body carries an idempotency key | replay safety |
+| D43-097 | Cancel writes nothing | 0 |
+| D43-098 | The dialog is usable at 360px | driven |
+| D43-099 | Amount input uses a numeric keypad on mobile | `inputMode` — check |
+| D43-100 | Currency is shown as Rs | check |
+| D43-101 | Nothing claims the payment was banked | wording |
+| D43-102 | One submit → one request | not two |
+| D43-103 | Focus trapped and returned | check |
+| D43-104 | No leak on error | check |
+
+## D43-E · Log an expense + Hold a date (cases 105–140)
+
+| # | Case | Expected |
+|---|---|---|
+| D43-105 | The expense dialog opens | driven |
+| D43-106 | It is the same dialog as the Money tab's | reuse — check |
+| D43-107 | The booking picker offers *"Recurring overhead"* first | the Module 38 credit |
+| D43-108 | Category list matches the Money tab | consistency |
+| D43-109 | Amount required | driven |
+| D43-110 | **Submitting empty shows validation** | Module 38 found this silent (WWL-556) — re-check here |
+| D43-111 | Whether WWL-556 reproduces on this route | cross-check |
+| D43-112 | Submit captured and diverted | 0 delivered |
+| D43-113 | Receipt-photo capture offered | *"Photograph the parchi"* |
+| D43-114 | Camera capture works on mobile | `capture` attribute — check |
+| D43-115 | Cancel writes nothing | 0 |
+| D43-116 | Usable at 360px | driven |
+| D43-117 | The hold dialog opens | driven |
+| D43-118 | It asks for a date | check |
+| D43-119 | It asks which venue | by name |
+| D43-120 | **Under "All venues", which venue does the hold apply to?** | the ambiguity case |
+| D43-121 | A past date is rejected | driven |
+| D43-122 | An already-booked date is flagged | **cross-check WWL-569** — the engine says every date is free |
+| D43-123 | The hold has an expiry | `DateHold` expires every 2 min per app.js |
+| D43-124 | The expiry is stated to the vendor | flag if absent |
+| D43-125 | The hold is described as tentative | *"Tentative reservation"* on the card |
+| D43-126 | Submit captured and diverted | 0 delivered — a hold blocks a live venue |
+| D43-127 | The captured body names the venue and date | check |
+| D43-128 | Cancel writes nothing | 0 |
+| D43-129 | Usable at 360px | driven |
+| D43-130 | The conflict panel accepts Re-enter for all four op types | prop check |
+| D43-131 | With no conflicts the panel renders nothing | check |
+| D43-132 | Re-enter is not driven | it replays a rejected op |
+| D43-133 | `onSaved` invalidates every query | `qc.invalidateQueries()` with no key — record the breadth |
+| D43-134 | That blanket invalidation is not wasteful on a slow expo connection | record |
+| D43-135 | All four dialogs share one `active` state | no two open at once |
+| D43-136 | Every dialog is reachable by keyboard | driven |
+| D43-137 | Every dialog closes on Escape | driven |
+| D43-138 | No dialog leaves the page scrolled or locked | check |
+| D43-139 | Zero console errors across the module | 0 |
+| D43-140 | **Zero writes delivered across the entire module** | headline safety assertion |
+
+**Total: 140 cases.**
