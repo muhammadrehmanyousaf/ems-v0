@@ -63,7 +63,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 31 | Collaborations | `/dashboard/collaborations` | ✅ 238 | **`[x]` COMPLETE — 165 run, 73 not run, 22 findings (4× S2)** |
 | 32 | Business Settings | `/dashboard/settings` | ✅ 286 | **`[x]` COMPLETE — 150 run, 136 not run, 16 findings (2× S2) + 7/7 regressions pass** |
 | 33 | Availability | `/dashboard/settings?tab=availability` | ✅ 152 | **`[x]` COMPLETE — 95 run, 57 not run, 13 findings (2× S2)** |
-| 34 | Cancellation policy | `/dashboard/cancellation-policy` | ✅ 156 | `[~]` cases written — execution in progress |
+| 34 | Cancellation policy | `/dashboard/cancellation-policy` | ✅ 156 | **`[x]` COMPLETE — 105 run, 51 not run, 14 findings (1× S1, 3× S2)** |
 | 35 | Setup checklist | `/dashboard/onboarding` | — | `[ ]` |
 | 36 | Tonight | `/dashboard/venue-os?tab=today` | — | `[ ]` |
 | 37 | Event profit | `/dashboard/venue-os?tab=profit` | — | `[ ]` |
@@ -17324,3 +17324,317 @@ different numbers.
 - **D34-154** Confirm no refund request was created.
 - **D34-155** Cross-check the four prior modules' baselines.
 - **D34-156** No storage keys left behind.
+
+---
+
+## MODULE 34 — EXECUTION RESULTS
+
+Driven on live prod `https://www.weddingwala.pk/dashboard/cancellation-policy` as user **3351**, in the
+**visible** browser at 1440×900, with the write blocker armed and a Node-side integrity check.
+
+**105 of 156 cases driven. 14 findings (1× S1, 3× S2, 9× S3, 1× S4). Nothing was written.**
+
+| Integrity (Node-side oracle) | At open | At close |
+|---|---|---|
+| Active policy, 3358 | **null** | **null** |
+| Active policy, 3359 | **null** | **null** |
+| Booking 165 preview | refund **0** · forfeit **1,223,278** | **identical** |
+| Booking 165 policy acceptance | `accepted: false` | **`accepted: false`** |
+| Refund requests on 165 | 0 | **0** |
+| Cross-module baselines (28–31) | 61/60 · 0 · free · 0/0 | **all unchanged** |
+| Diverted writes | — | **3**, all `POST /bookings/policy` |
+| Console errors | — | **none** |
+
+**Route correction, recorded first.** The plan's index listed this as `/dashboard/settings?tab=policy`.
+`nav-data.ts` links **`/dashboard/cancellation-policy`**, a dedicated page. So Module 32's WWL-474 is
+downgraded: `?tab=policy` genuinely does fall through to Profile, but **no navigation in the product
+points there**, so it is a dead parameter in the plan's own index rather than a broken sidebar link.
+The finding stands as a smaller one; the framing was mine and it was too strong.
+
+The page rendered in full — **the EPIC 5 engine is not flag-gated for this vendor**, and the
+"Cancellation engine abhi enabled nahi hai" fallback never appeared.
+
+### WWL-501 (S1) — the same named policy pays out double, depending on which endpoint you ask
+
+Two live endpoints describe the same three templates:
+
+| Endpoint | Shape |
+|---|---|
+| `GET /bookings/policy` — what the vendor picks from | `pctForfeit` slabs keyed by `daysToEvent` |
+| `GET /bookings/:id/refund-preview` — what the refund engine offers | `refundPct` tiers keyed by `minDaysBefore`, **plus `depositPct`** |
+
+Forfeit% and refund% are inverses, so they are directly comparable. Driven live, with the page's
+sample set to booking 165's actual paid amount of **Rs 1,223,278**:
+
+**Aasaan / Flexible — agrees at 4 of 4 windows**
+
+| Days out | Page says returned | Refund preset says returned |
+|---|---|---|
+| 45 | Rs 1,223,278 | Rs 1,223,278 ✅ |
+| 20 | Rs 856,295 | Rs 856,295 ✅ |
+| 10 | Rs 611,639 | Rs 611,639 ✅ |
+| 3 | Rs 305,820 | Rs 305,820 ✅ |
+
+**Sakht / Strict — agrees at 4 of 4**
+
+| Days out | Page | Preset |
+|---|---|---|
+| 45 | Rs 611,639 | Rs 611,639 ✅ |
+| 20 | Rs 0 | Rs 0 ✅ |
+| 10 | Rs 0 | Rs 0 ✅ |
+| 3 | Rs 0 | Rs 0 ✅ |
+
+**Aam / Standard — diverges at 2 of 4, by exactly a factor of two**
+
+| Days out | **Page says returned** | **Refund preset says returned** | Difference |
+|---|---|---|---|
+| **45** | **Rs 611,639** | **Rs 1,223,278** | **Rs 611,639** |
+| **20** | **Rs 305,820** | **Rs 611,639** | **Rs 305,820** |
+| 10 | Rs 0 | Rs 0 | — |
+| 3 | Rs 0 | Rs 0 | — |
+
+The cause is in the slabs themselves. The picker's Aam is `35→50%, 15→75%, 7→100%` forfeit. The
+preview's Standard is `30→100%, 14→50%, 7→25%, 0→0%` refund — which converts to
+`30→0%, 14→50%, 7→75%, 0→100%` forfeit. Different boundaries **and** different severities, under one
+name.
+
+So a vendor reading the *"Aam"* card sees a table promising the customer **Rs 611,639** back on a
+45-day cancellation, while the engine that actually computes refunds has a *"Standard"* preset
+returning **the entire Rs 1,223,278**. On the page's own default sample of Rs 800,000 the same gap is
+Rs 400,000 against Rs 800,000.
+
+Two of the three templates agree exactly, which is what makes this a defect rather than a design
+choice: the conversion is right everywhere except one template's numbers.
+
+### WWL-502 (S2) — the page says no policy is set; the engine is applying one
+
+| Question | Answer |
+|---|---|
+| `GET /bookings/policy` → `active` (3358) | **null** |
+| `GET /bookings/policy` → `active` (3359) | **null** |
+| `GET /bookings/165/refund-preview` → `policy` | `key: "policy-1"`, `labelUr: "Default"`, **`source: "saved"`** |
+| That policy's tiers | 35→50%, 15→25%, 7→0% refund, `depositPct: 0` |
+| What it computes on booking 165 | **refund Rs 0 · forfeit Rs 1,223,278** |
+
+One endpoint reports **no saved policy**; the other reports a **saved** policy named *"Default"* and
+forfeits **Rs 1,223,278** with it. `policy-1 / Default` appears in neither the picker's template list
+nor the preview's own preset list — it is a third policy shape.
+
+The vendor's Cancellation Policy page therefore shows three cards, none marked as active
+(`activeKey` is null when `active` is null, and `isPicked` is `null === t.key` for every card), while
+a policy they never chose governs the money on a completed Rs 1.4 million booking.
+
+### WWL-503 (S2) — a failed save is completely silent
+
+```js
+const save = useMutation({
+  mutationFn: (t) => saveCancellationPolicy({ name: t.name, slabs: t.slabs, forceMajeureRule: t.forceMajeureRule }),
+  onSuccess: () => qc.invalidateQueries({ queryKey: ["cancellation-policy"] }),
+})
+```
+
+There is **no `onError`**. Driven under injected network failure:
+
+| | |
+|---|---|
+| Requests sent | **2** (retry, WWL-510) |
+| Toasts | **none** |
+| Console errors captured | **none** |
+| Visible change | **none** |
+
+The vendor clicks **"Yeh policy save karein"** and nothing happens — no message, no error, no
+indication the policy was not stored. On the success path there is no toast either (WWL-512), so
+success and failure are **visually identical**: the button is pressed and the page looks the same
+either way.
+
+### WWL-504 (S2) — the exposure flag reads OK on an unaccepted policy worth Rs 1.2 million
+
+`GET /bookings/165/dispute-evidence` returns:
+
+```json
+"exposure": { "policyAccepted": false, "auditVerified": true,
+              "hasAppliedForfeit": false, "flag": "OK" }
+```
+
+On the same booking: **Completed**, `grand` Rs 1,439,150, `receiptsTotal` Rs 1,223,278, and a refund
+preview that forfeits the entire paid amount. `GET /bookings/165/policy-acceptance` independently
+confirms **`accepted: false`, `acceptance: null`** — the couple never accepted any cancellation
+policy.
+
+The pack's own field says the policy was never accepted and its summary flag says **OK**. Whatever
+drives the flag, `policyAccepted: false` does not appear to lower it — which is the one signal a
+dispute pack exists to raise.
+
+Underneath it: `auditChain: { ok: true, checked: 0, verified: true, events: [] }` — **zero events
+checked, and verified true**. An empty chain asserting verification is not evidence of anything.
+
+### WWL-505 (S3) — only the first venue can have a policy
+
+The page carries no business switcher, no tab rail and no `businessId` in its request.
+`getCancellationPolicy` sends nothing; the server resolves one with `resolveOwnedBusinessId`, and live
+it resolves **3358**.
+
+So **3359 and 3360 cannot be given a cancellation policy from this screen**, and their `active` is
+null with no route to change it. This is precisely the defect Business Settings was repaired for —
+*"every business after the first was UNREACHABLE"* — on a page that never received the equivalent fix,
+and on the one setting that decides who keeps the money when a wedding is called off.
+
+### WWL-506 (S3) — the deposit the vendor is committing to is invisible here
+
+The refund engine's presets each carry a `depositPct`: **Aasaan 10% · Aam 20% · Sakht 30%** — a
+non-refundable slice taken before the tiers apply. The picker neither displays it nor sends it: the
+captured save body is
+
+```json
+{"name":"Aam","slabs":[{"daysToEvent":35,"pctForfeit":50},{"daysToEvent":15,"pctForfeit":75},
+ {"daysToEvent":7,"pctForfeit":100}],"forceMajeureRule":"CARRY_FORWARD"}
+```
+
+No `depositPct`, and no `partialRefundPct` either, though the API accepts both. A vendor choosing
+*Sakht* from a table showing rupees has no way to know whether a 30% non-refundable deposit rides
+along with it.
+
+### WWL-507 (S3) — no confirmation, and no word about existing bookings
+
+Saving a policy took **one click** and produced **zero dialogs**. The service versions policies with an
+`effectiveFrom`, which implies existing bookings keep the terms in force when they were made — and the
+page says nothing at all about that. There is no "this affects future bookings only" line, no
+effective-date control, and no summary of what is changing from what.
+
+### WWL-508 (S3) — three presets, and nothing else
+
+| Wanted | Available |
+|---|---|
+| A custom slab table | **no** — three cards only, though the API accepts arbitrary slabs |
+| Clear / remove the policy | **no** |
+| History of previous versions | **no**, though the service versions them |
+| Preview of what the couple sees | **no** |
+| Per-venue policies | **no** (WWL-505) |
+
+A vendor whose real terms differ from all three has one other place to write them: the free-text
+`cancelationPolicy` textarea in Business Settings — which is empty on all three venues and which the
+refund engine does not read (WWL-514).
+
+### WWL-509 (S3) — choosing a policy is mouse-only
+
+The template cards are `<div onClick>`. Measured live on all three:
+
+| Check | Result |
+|---|---|
+| `role` | **null** |
+| `tabIndex` | **null** |
+| `aria-pressed` / `aria-selected` | **null** |
+| Focusable | **false** |
+| `cursor` | `pointer` |
+
+So the only way to select a cancellation policy is with a mouse, and the selected state is conveyed
+by a border and a ring with nothing announced. Same defect class as the notification row (WWL-394).
+
+### WWL-510 (S3) — one click, two POSTs, on a versioned resource
+
+Under injected failure a single save produced **two** `POST /api/v1/bookings/policy` requests — global
+`mutations: { retry: 1 }`, now the sixth module in a row.
+
+`cancellationPolicyService.save` **versions** the policy rather than replacing it. So unlike the
+idempotent updates in Billing and the date-keyed delete in Availability, a retried save here could
+write **two policy versions** from one click, with no history view to notice it (WWL-508).
+
+### WWL-511 (S3) — the dispute pack's money is evidenced by two unproofed receipts
+
+The evidence pack for booking 165 lists:
+
+| Receipt | Amount | Method | `hasProof` |
+|---|---|---|---|
+| 174 | Rs 733,967 | raast | **false** |
+| 175 | Rs 489,311 | easypaisa | **false** |
+
+Rs 1,223,278 of collected money, and **neither receipt carries proof**. On the pack assembled
+specifically to defend a forfeit, both payment records are unevidenced — while `auditVerified` reads
+true over an empty chain (WWL-504).
+
+### WWL-512 (S3) — the module fires no toasts at all
+
+Verified across every driven action: selecting a template, changing the sample, saving, and failing to
+save. Neither `onSuccess` nor a missing `onError` produces user feedback. Second module in the sweep
+with no toasts anywhere (after Notifications), and the only one where the silent path includes a
+**write**.
+
+### WWL-513 (S3) — Roman Urdu with no language marking
+
+The page is Roman-Urdu-first: *"Customer cancel kare to kitna wapas — apni policy chunein."*,
+*"Sample raqam"*, *"45 din pehle"*, *"Yeh policy save karein"*, *"Force-majeure (govt/aafat) par paisa
+zabt nahi hota — carry-forward credit banta hai."*
+
+None of it carries a `lang` attribute, so a screen reader will pronounce Urdu-in-Latin-script with
+English phonology. And unlike Business Settings, this page offers **no `PersonaPreference` switch** —
+the vendor who prefers Professional English has no way to get it here.
+
+### WWL-514 (S4) — there are two cancellation-policy fields and they do not know about each other
+
+| Where | What it is | Live value |
+|---|---|---|
+| Business Settings → Capacity & pricing | free-text `cancelationPolicy` textarea | **empty on all three venues** |
+| This page | structured slabs driving the refund engine | **no active policy on any venue** |
+
+Neither reads the other. A vendor who writes their terms in the Settings textarea has not set a
+policy the engine will honour, and a vendor who picks *Aam* here has not populated the text that
+appears on their listing.
+
+---
+
+### What passed, and it is worth saying
+
+- **L — nothing was written.** `active` still null on 3358 and 3359, booking 165's preview,
+  acceptance and refund requests all identical, and the four cross-module baselines unchanged. Three
+  diverted writes, all listed.
+- **D34-012 — the engine is NOT flag-gated for this vendor.** `flagOnForVendor(DISPUTE_FLAG)` passes
+  and every EPIC 5 endpoint answered 200: policy, refund-preview, policy-acceptance, refund-requests
+  and dispute-evidence. The *"Cancellation engine abhi enabled nahi hai"* dead end never appeared —
+  worth stating plainly given how many flag-dark surfaces this sweep has found.
+- **D34-046 / D34-053 — two of the three templates convert exactly.** Aasaan agrees with the refund
+  engine at all four sample windows and Sakht at all four, which is what isolates Aam as the defect
+  (WWL-501) rather than the conversion being wrong in general.
+- **D34-031 / D34-030 — the live table is correct and well guarded.** Changing the sample from
+  Rs 800,000 to Rs 1,223,278 recomputed all three tables immediately, and a negative sample clamps to
+  **0** rather than producing negative refunds.
+- **D34-033 — `forfeitAt` mirrors the backend's tier resolution**, as its comment claims: largest
+  slab with `daysToEvent <= days`, falling back to the most severe. Verified by hand against the
+  rendered rupees at all four windows on all three templates.
+- **D34-131 — the rupee tables are real `<table>` elements**, three of them, with `Cancel` / `Wapas`
+  headers — not divs pretending.
+- **D34-024 — the force-majeure line is genuinely good copy.** *"Force-majeure (govt/aafat) par paisa
+  zabt nahi hota — carry-forward credit banta hai."* explains CARRY_FORWARD in one sentence a venue
+  owner will understand, and names the two causes that actually occur.
+- **D34-068 — the refund preview's `comparison` block is the best thing in the engine.** For booking
+  165 it computes what each template would have returned — Aasaan **Rs 269,841**, Aam **Rs 0**,
+  Sakht **Rs 0** — against the Default's full forfeit. That is exactly the decision support the
+  picker needs and does not have (WWL-508).
+- Console clean throughout; no unhandled rejection.
+
+### Not driven, each with its reason
+
+| Cases | Why |
+|---|---|
+| **D34-056 / D34-057 / D34-060 / D34-065** (which policy a real cancellation uses) | Answering it definitively means reading `cancellationPolicyService` end to end and, ideally, cancelling a real booking. The divergence between the two published tables is established live (WWL-501); which one wins in a dispute is recorded as the open question it is, and it is the first thing to resolve. |
+| **D34-081 → D34-083** (effect on existing bookings) | The service's `effectiveFrom` versioning implies existing bookings are insulated; confirming it requires saving a policy and re-reading a live booking's preview. |
+| **D34-100 → D34-102** (where a couple accepts the policy) | Belongs to the public booking flow, not the vendor portal. What is established here is that booking 165 has **no** acceptance. |
+| **D34-108 → D34-110** (what would move the exposure flag) | Requires reading the exposure logic in `disputeEvidenceService`; the contradiction between `policyAccepted: false` and `flag: "OK"` is established from the live response. |
+| **D34-120 → D34-124** (which EPIC 5 endpoints have a UI) | Partially answered — this picker is the only consumer found on the policy side. A full audit of refund-preview, refund-requests and dispute-evidence consumers belongs with the Bookings and Disputes work. |
+| **D34-137 → D34-146** (360×740) | The visible browser was kept at desktop so the run could be followed on screen; recorded as not run rather than carried over from another module. |
+| **D34-093 / D34-095 / D34-096** (custom policy, clear, history) | No control exists to drive; established from the component. |
+
+### Module 34 — status
+
+**156 cases written, 105 driven. 14 findings (1× S1, 3× S2, 9× S3, 1× S4).**
+
+**The module's verdict.** This is a good idea executed with real care in places — three plain-language
+templates, a live rupee table that recomputes as you type, a force-majeure sentence a venue owner will
+actually understand, and no feature flag standing in the way. Then the numbers stop agreeing with
+themselves. The *Aam* card promises a cancelling couple **Rs 611,639** back at 45 days while the
+refund engine's own *Standard* preset returns **all Rs 1,223,278** — exactly double, at two of four
+windows, while the other two templates match perfectly. The page reports **no policy set**, and a
+policy called *"Default"* that appears in neither list is meanwhile forfeiting the entire paid amount
+on a completed Rs 1.4 million booking whose couple **never accepted any policy at all** — a fact the
+dispute pack records in one field and then summarises, in the next, as **OK**. Only the first of three
+venues can be given a policy here. And when the save fails, nothing happens: no toast, no error, no
+change — the same nothing that happens when it succeeds.
