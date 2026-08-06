@@ -67,7 +67,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 35 | Setup checklist | `/dashboard/onboarding` | ✅ 158 | **`[x]` COMPLETE — 110 run, 48 not run, 12 findings (3× S2)** |
 | 36 | Tonight | `/dashboard/venue-os?tab=today` | ✅ 150 | **`[x]` COMPLETE — 100 run, 50 not run, 12 findings (3× S2)** |
 | 37 | Event profit | `/dashboard/venue-os?tab=profit` | ✅ 170 | `[x]` COMPLETE — 121 run, 49 not run, 15 findings (1× S1, 5× S2) |
-| 38 | Venue money | `/dashboard/venue-os?tab=money` | — | `[ ]` |
+| 38 | Venue money | `/dashboard/venue-os?tab=money` | ✅ 200 | `[~]` cases written, executing |
 | 39 | Halls & spaces | `/dashboard/venue-os?tab=spaces` | — | `[ ]` |
 | 40 | Cash & cheques | `/dashboard/venue-os?tab=cash` | — | `[ ]` |
 | 41 | Kitchen & suppliers | `/dashboard/venue-os?tab=kitchen` | — | `[ ]` |
@@ -19056,3 +19056,282 @@ in the Booked tile and in net profit. Defensible, but undisclosed.
 - **D37-133/138/139 the underwater alert** — needs a deg-rate-card that exists; the panel 400s before
   any id is evaluated (WWL-540), so no path reaches the alert.
 - **D37-160 full rate audit** — one jurisdiction pair spot-checked, not all five.
+
+---
+
+# Module 38 — Venue money (`/dashboard/venue-os?tab=money`)
+
+**Surface.** Seven panels — the widest money surface in the product:
+
+| # | Component | What it does | Writes? |
+|---|---|---|---|
+| 1 | `ExpenseCockpit` | day/month/year/all spend, by category, cost per function | Add expense |
+| 2 | `WageCostingView` | per-event dihari labour register → GL `EXPENSE_DIHARI` | Record shift, Post to GL |
+| 3 | `VenueLeaseView` | rent + pagri + deposit + escalation, monthly accrual | Add lease, **Post rent** |
+| 4 | `GensetSkimView` | diesel tank-dip vs hour-meter → skim % | measurement only |
+| 5 | `UtilityAllocationView` | shared bill → per-event share, cascade basis | Add meter, Record bill, **Post** |
+| 6 | `DepreciationView` | fixed assets, straight-line monthly | Add asset, **Post** |
+| 7 | `TariffEstimatorView` | DISCO slab engine → computed bill | pure computation |
+
+**Self-imposed limits for this module, each with its reason:**
+
+This tab posts **double-entry journal entries to a live vendor's general ledger**. Rent, pagri,
+depreciation and utility allocation all land in `JournalEntry` and change what every event's
+fully-costed P&L reports. So:
+
+- **Nothing is posted.** Every `Post` / `Add` / `Record` button is driven with the write blocker
+  armed; the request is captured and diverted, never delivered.
+- **Preview is not clicked through to the network either.** `Preview` and `Post` share one endpoint
+  and differ only by `dryRun` in the body, and the XHR blocker decides at `open()` — before a body
+  exists — so it cannot tell them apart. Instead the Preview click is captured and its **body is read
+  from the blocker's own record**, which proves what the button would have sent without sending it.
+- **The dry-run engine is driven Node-side instead**, with `dryRun: true` set explicitly by me.
+  Verified safe first: `txPostingEngine.postEvent` returns at the `if (dryRun)` guard **before any
+  database write**, and every posting path in this module goes through it;
+  `utilityAllocationService.runAllocation` returns even earlier.
+- **The tariff estimator is driven for real** — `estimateBillHandler` computes and returns, no write.
+- **No expense row is created, edited or deleted** on a real vendor's books.
+
+---
+
+## D38-A · Arrival, scope, layout (cases 1–20)
+
+| # | Case | Expected |
+|---|---|---|
+| D38-001 | `?tab=money` opens on Money & Expenses | tab active from URL |
+| D38-002 | Reload holds the tab | still money |
+| D38-003 | All seven panels render | 7 card titles |
+| D38-004 | Section hint describes the tab | *"Every rupee out…"* |
+| D38-005 | **No `Venue #` raw number box anywhere** | 0 — the Module 36 fix |
+| D38-006 | Venue dropdowns name the venues | *"Rehman Grand Marquee · Lahore"* |
+| D38-007 | How many venue dropdowns on the tab | count |
+| D38-008 | Every venue dropdown shows the SAME venue | they must not disagree |
+| D38-009 | Changing one dropdown does not desync the others | record actual behaviour |
+| D38-010 | No console error on arrival | 0 |
+| D38-011 | No mutating request on arrival | 0 |
+| D38-012 | No horizontal overflow at 1440px | 0 elements |
+| D38-013 | No horizontal overflow at 360px | 0, or inside a scroller |
+| D38-014 | Wide tables have their own `overflow-x` scroller | check each |
+| D38-015 | Panel order matches the hint's promise | rent & overheads included |
+| D38-016 | Every panel has a heading a vendor can read | no internal jargon-only titles |
+| D38-017 | Focus ring visible on every control | check |
+| D38-018 | Tab is keyboard reachable | check |
+| D38-019 | Number inputs are labelled | every `input[type=number]` has a label |
+| D38-020 | Count remaining unanswerable-id boxes | e.g. `meter #`, `production run #` |
+
+## D38-B · Expense cockpit (cases 21–58)
+
+| # | Case | Expected |
+|---|---|---|
+| D38-021 | Day / Month / Year / All range buttons present | 4 |
+| D38-022 | Month is the default | check |
+| D38-023 | Switching range re-queries | request per switch |
+| D38-024 | Switching range changes the totals | not decorative |
+| D38-025 | The range is NOT in the URL | flag if so |
+| D38-026 | "Today" shortcut sets the period | check |
+| D38-027 | `Spent · month` matches the sum of the category rows | exact |
+| D38-028 | Category percentages sum to ~100% | ±1 rounding |
+| D38-029 | `Fixed overheads` + `Event / function costs` = total | exact |
+| D38-030 | **`Fixed overheads` reads Rs 0 while rent/utilities panels exist below** | flag if so |
+| D38-031 | `Biggest category` matches the top category row | consistent |
+| D38-032 | `-21% vs last month` is arithmetically right | verify against the previous month |
+| D38-033 | The comparison names which month it compares to | wording |
+| D38-034 | Category list is sorted by amount descending | check |
+| D38-035 | A `FIXED` badge appears on fixed categories | present |
+| D38-036 | Cost-per-function table lists only tagged expenses | wording says so |
+| D38-037 | Cost per function net = revenue − spent | arithmetic on every row |
+| D38-038 | Cost-per-function revenue matches the Profit tab for the same booking | cross-tab |
+| D38-039 | Cost-per-function spend matches the Profit tab's Spent column | cross-tab |
+| D38-040 | `4 events` count matches the visible rows | consistent |
+| D38-041 | Expenses with no booking are excluded here and disclosed | check |
+| D38-042 | Total spend on this tab equals `Spent (tagged)` on the Profit tab | **or the difference is explained** |
+| D38-043 | Rows link to the booking | expected 0 — flag |
+| D38-044 | Rows link to the expense | expected 0 — flag |
+| D38-045 | "Add expense" opens a form | check |
+| D38-046 | The form validates a missing amount | driven, not submitted |
+| D38-047 | The form validates a missing category | driven, not submitted |
+| D38-048 | The form lets an expense be tagged to a booking by NAME | not a raw id |
+| D38-049 | Cancelling the form writes nothing | 0 |
+| D38-050 | The form's submit is captured by the blocker | body recorded, not delivered |
+| D38-051 | The captured body carries the venue's businessId | check |
+| D38-052 | Empty state when a range has no expenses | copy |
+| D38-053 | Loading state while the range re-queries | present |
+| D38-054 | Currency formatting consistent | `Rs 1,234,567` |
+| D38-055 | No `NaN` / `Infinity` in any tile | sanity |
+| D38-056 | Percentages render as integers | check |
+| D38-057 | The cockpit at 360px | usable |
+| D38-058 | Range switch fires exactly one request | not two |
+
+## D38-C · Wage costing / dihari labour (cases 59–82)
+
+| # | Case | Expected |
+|---|---|---|
+| D38-059 | Panel titled for a vendor, not an accountant | *"Per-event dihari labour"* |
+| D38-060 | Rate and Paid are labelled number fields | check |
+| D38-061 | The event is picked by NAME, not a booking id | check — flag if raw |
+| D38-062 | "Record shift" is disabled until required fields are set | check |
+| D38-063 | A below-min-wage rate raises the floor warning | driven |
+| D38-064 | The warning names the actual minimum wage figure | wording |
+| D38-065 | The warning does not block recording | record behaviour |
+| D38-066 | "Record shift" body is captured, not delivered | blocker |
+| D38-067 | The captured body carries businessId + bookingId | check |
+| D38-068 | "Labour by event" is a read | GET |
+| D38-069 | "Labour by event" returns this venue's data only | scoped |
+| D38-070 | Labour totals reconcile with the Profit tab's Spent | cross-check or explain |
+| D38-071 | The wage register is described as immutable | wording present |
+| D38-072 | Nothing offers to delete a recorded shift | check |
+| D38-073 | Post-to-GL is a separate, explicit action | check |
+| D38-074 | Post-to-GL is captured, not delivered | blocker |
+| D38-075 | A shift with Paid > Rate × days is flagged | driven or reasoned |
+| D38-076 | Negative rate rejected | driven |
+| D38-077 | Zero rate handled | driven |
+| D38-078 | Error copy is human | check |
+| D38-079 | Error copy leaks no SQL | check |
+| D38-080 | Panel loads on arrival where it can | check |
+| D38-081 | Panel at 360px | usable |
+| D38-082 | One click → one request | not two |
+
+## D38-D · Venue lease — rent, pagri, deposit (cases 83–112)
+
+| # | Case | Expected |
+|---|---|---|
+| D38-083 | "Load leases" returns this venue's leases | driven |
+| D38-084 | Empty state when the venue owns its hall | most PK halls are owned — copy check |
+| D38-085 | Term defaults to 36 months | check |
+| D38-086 | Escalation defaults to 10%/yr | check |
+| D38-087 | Both defaults are labelled, not bare numbers | check |
+| D38-088 | Rent/mo, Pagri, Deposit are separate fields | 3 |
+| D38-089 | Pagri is explained as key money somewhere | wording |
+| D38-090 | "Add lease" is captured, not delivered | blocker |
+| D38-091 | The captured body carries every field entered | check |
+| D38-092 | **"Preview" and "Post rent" hit the same endpoint** | confirm from the captured bodies |
+| D38-093 | **Preview's captured body carries `dryRun: true`** | the safety contract |
+| D38-094 | **"Post rent"'s captured body does NOT carry dryRun** | it would really post |
+| D38-095 | Nothing warns that Post rent writes to the ledger | flag if absent |
+| D38-096 | Post rent has no confirmation step | flag if absent |
+| D38-097 | The period field is required | backend 400s without it |
+| D38-098 | An invalid period shape is rejected | `YYYY-MM` |
+| D38-099 | Dry-run accrual returns a preview Node-side | driven with `dryRun:true` |
+| D38-100 | The dry-run response is marked `dryRun: true` | check |
+| D38-101 | The dry-run response posts no journal | `journalEntry` has no id |
+| D38-102 | With no active leases the response says so | *"no active leases"* |
+| D38-103 | Remaining commitment = future rent + remaining pagri | arithmetic |
+| D38-104 | Escalation is applied per elapsed year | reasoned from `rentForPeriod` |
+| D38-105 | A lease not yet started is skipped as `not_started` | driven |
+| D38-106 | An expired lease is skipped as `expired` | driven |
+| D38-107 | Security deposit is NOT expensed | it is refundable |
+| D38-108 | Posting twice is idempotent | `sourceRefType` includes the period |
+| D38-109 | Error copy is human | check |
+| D38-110 | Panel at 360px | usable |
+| D38-111 | Lease rows link to nothing | record |
+| D38-112 | Rent flows into the Profit tab's cost | cross-check or record as unlinked |
+
+## D38-E · Genset skim (cases 113–130)
+
+| # | Case | Expected |
+|---|---|---|
+| D38-113 | Panel explains tank-dip vs hour-meter | wording |
+| D38-114 | kVA is labelled | check |
+| D38-115 | The calibration banner is present | *"Estimate, not measured"* |
+| D38-116 | The banner says how many clean events are needed | N≥5 per the source |
+| D38-117 | The banner flips wording once measured | reasoned |
+| D38-118 | The estimate chip is visually prominent | check |
+| D38-119 | "Reconcile event" picks the event by name | flag if raw id |
+| D38-120 | Skim % is computed, not typed | check |
+| D38-121 | Three flags are surfaced | per the source |
+| D38-122 | **Skim posts no journal entry** | the source says measurement only — verify 0 writes |
+| D38-123 | A dip larger than the tank is rejected | driven |
+| D38-124 | Negative consumption is rejected | driven |
+| D38-125 | Zero run-hours handled | driven |
+| D38-126 | "Summary" is a read | GET |
+| D38-127 | Summary scoped to the venue | check |
+| D38-128 | Error copy is human | check |
+| D38-129 | Panel at 360px | usable |
+| D38-130 | One click → one request | not two |
+
+## D38-F · Utility allocation (cases 131–158)
+
+| # | Case | Expected |
+|---|---|---|
+| D38-131 | **The panel asks for `meter #`** | flag if it is a raw id |
+| D38-132 | "Add" creates a meter — captured, not delivered | blocker |
+| D38-133 | "List" is a read | GET |
+| D38-134 | Meters listed by name, not id | check |
+| D38-135 | "Record bill" is captured, not delivered | blocker |
+| D38-136 | The bill body carries `total payable` and the meter | check |
+| D38-137 | The basis cascade is named on screen | SUBMETER→LOAD_HOURS→GUESTS→REVENUE→MANUAL |
+| D38-138 | The basis actually used is shown per run | per the source |
+| D38-139 | **Preview's captured body carries `dryRun: true`** | safety contract |
+| D38-140 | **Post's captured body does not** | it would really post |
+| D38-141 | Dry-run allocation driven Node-side returns a preview | `dryRun: true` in the response |
+| D38-142 | The dry run returns `run: null` | no row created |
+| D38-143 | The dry run reports `journalCount` without posting | check |
+| D38-144 | Per-event shares sum to the allocatable total | arithmetic |
+| D38-145 | The unallocatable remainder is named | `UTIL_GRID_COMMON` |
+| D38-146 | The remainder is described in plain words on screen | flag if only the code shows |
+| D38-147 | A re-run reverses the prior posted run | documented — not driven |
+| D38-148 | Nothing warns that a re-run reverses | flag if absent |
+| D38-149 | `residual %` defaults to 0 and is labelled | check |
+| D38-150 | A bill with no events in the month is handled | driven |
+| D38-151 | A zero bill is handled | driven |
+| D38-152 | A negative bill is rejected | driven |
+| D38-153 | Off-season accrual is a separate action | check |
+| D38-154 | Error copy is human | check |
+| D38-155 | Error copy leaks no SQL | check |
+| D38-156 | Panel at 360px | usable |
+| D38-157 | One click → one request | not two |
+| D38-158 | Allocated cost reaches the Profit tab | cross-check or record as unlinked |
+
+## D38-G · Depreciation (cases 159–182)
+
+| # | Case | Expected |
+|---|---|---|
+| D38-159 | "Load assets" is a read | GET |
+| D38-160 | Assets listed by name | check |
+| D38-161 | `Life (months)` defaults to 60 | check |
+| D38-162 | `residual %` defaults to 0 | check |
+| D38-163 | Both defaults are labelled | check |
+| D38-164 | Cost is a required field | check |
+| D38-165 | "Add asset" is captured, not delivered | blocker |
+| D38-166 | **Preview's captured body carries `dryRun: true`** | safety contract |
+| D38-167 | **Post's captured body does not** | it would really post |
+| D38-168 | Dry-run depreciation driven Node-side | `dryRun:true` |
+| D38-169 | The dry run marks each result `dryRun: true` | check |
+| D38-170 | With no assets the message says so | *"no depreciable assets"* |
+| D38-171 | Period is required | 400 without it |
+| D38-172 | Straight-line = (cost − residual) ÷ life | arithmetic |
+| D38-173 | A fully-depreciated asset is skipped | reasoned |
+| D38-174 | Posting is idempotent per asset+period | check |
+| D38-175 | Nothing warns that Post writes to the ledger | flag if absent |
+| D38-176 | A negative cost is rejected | driven |
+| D38-177 | A zero life is rejected | driven — divide-by-zero |
+| D38-178 | Error copy is human | check |
+| D38-179 | Panel at 360px | usable |
+| D38-180 | One click → one request | not two |
+| D38-181 | Depreciation reaches the Profit tab's overhead | cross-check or record as unlinked |
+| D38-182 | The panel says depreciation is an estimate of wear | wording |
+
+## D38-H · Tariff estimator (cases 183–200)
+
+| # | Case | Expected |
+|---|---|---|
+| D38-183 | Units (kWh) and kVA are labelled | check |
+| D38-184 | "Estimate" is a pure computation | 0 writes — verified in the controller |
+| D38-185 | The estimate is driven for real and returns a bill | live |
+| D38-186 | The breakdown names block slabs | per the source |
+| D38-187 | The breakdown names fixed-per-kVA | present |
+| D38-188 | The breakdown names surcharge | present |
+| D38-189 | The breakdown names electricity duty | present |
+| D38-190 | The breakdown names GST | present |
+| D38-191 | **An unverified tariff is flagged as an estimate** | rate-as-data promise |
+| D38-192 | The effective date of the tariff is shown | check |
+| D38-193 | Zero units returns zero, not an error | driven |
+| D38-194 | Negative units rejected | driven |
+| D38-195 | A very large consumption does not overflow | driven |
+| D38-196 | The estimate feeds the allocation panel | or is standalone — record |
+| D38-197 | Error copy is human | check |
+| D38-198 | Panel at 360px | usable |
+| D38-199 | One click → one request | not two |
+| D38-200 | **Zero journal entries posted across the entire module** | the headline safety assertion |
+
+**Total: 200 cases.**
