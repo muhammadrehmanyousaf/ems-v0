@@ -55,7 +55,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 23 | Brokers | `/dashboard/brokers` | ✅ 164 | **`[x]` COMPLETE — 95 run, 69 not run, 16 findings (4× S2)** |
 | 24 | Generator fuel | `/dashboard/generator-fuel` | ✅ 132 | **`[x]` COMPLETE — 62 run, 70 not run, 18 findings (5× S2)** |
 | 25 | Halal certs | `/dashboard/halal-certs` | ✅ 138 | **`[x]` COMPLETE — 58 run, 80 not run, 19 findings (3× S2)** |
-| 26 | Drone NOC | `/dashboard/drone-noc` | — | `[ ]` |
+| 26 | Drone NOC | `/dashboard/drone-noc` | ✅ 138 | `[ ]` cases written, execution in progress |
 | 27 | Reviews | `/dashboard/reviews` | — | `[ ]` |
 | 28 | Notifications | `/dashboard/notifications` | — | `[ ]` |
 | 29 | Promote | `/dashboard/promote` | — | `[ ]` |
@@ -11780,3 +11780,233 @@ a certificate that expired **six years before it was issued**, offers no way to 
 certificate, and the renewal flow will mark a lapsed certificate **active** without asking for a new
 number or a new date. And the register is empty: on a venue serving meat to hundreds of guests
 across three sites, this system knows of **no halal certificate at all**.
+
+---
+
+# MODULE 26 — DRONE NOC PERMITS (`/dashboard/drone-noc`)
+
+**What the screen is for.** Flying a drone over a Pakistani wedding needs a No-Objection Certificate
+— from the **Pakistan Civil Aviation Authority**, and usually a **Home Department** clearance and a
+**police intimation** as well. This screen tracks each permit: reference number, issuing authority,
+validity window, the drone and its registration, the pilot and their licence, the fee paid — and
+moves it through **pending → approved / rejected → cancelled**, with resubmission.
+
+**Source read before writing these cases**
+- `app/(dashboard)/dashboard/drone-noc/page.tsx` — renders `<DroneNocRedesignedView />` **with no props**
+- `components/.../drone-noc/redesigned/drone-noc-redesigned-view.tsx` — table, cards, gating
+- `components/.../drone-noc/redesigned/permit-form-dialog.tsx` — 12-field create/edit
+- `components/.../drone-noc/redesigned/permit-status-dialog.tsx` — the four transitions + `canApprove` etc.
+- `lib/api/droneNoc.ts` — `PermitStatus`, type/authority dictionaries
+- `src/controllers/droneNocController.js` — `transitionPermit`, `_findScoped`, `_refreshStatusOnRows`
+
+**Pre-flight state, read off live prod before any case was written**
+
+| Fact | Value |
+|---|---|
+| `GET /drone-noc` | **0 permits** |
+| Per venue — 3358 / 3359 / 3360 | **0 / 0 / 0** |
+| `summary` | `byStatus {}` · `byType {}` |
+| `GET /drone-noc/upcoming` | **0** |
+
+**The whole Compliance rail is empty in production** — Generator fuel 0 entries, Halal certificates
+0, Drone NOC 0. Three screens, three registers, nothing recorded in any of them.
+
+**Element inventory (12 interactive)**
+
+| # | Element | Where |
+|---|---|---|
+| 1 | Sidebar `Drone NOC` link | Compliance rail |
+| 2 | `Add permit` | PageHeader action |
+| 3–6 | Stat cards: Total permits · Approved · Needs attention · Fees paid | header grid |
+| 7 | `Search permits…` | toolbar |
+| 8–9 | Density toggle · Export | toolbar |
+| 10 | Select-all + row checkboxes | table |
+| 11–16 | Row actions: **Approve** · **Reject** · Resubmit · Cancel · Edit · Remove | rows |
+| — | Permit form (12 fields) · Approve confirm · Reject reason · Cancel reason · Resubmit confirm · Remove confirm | modals |
+
+**Safety limits for this module, each with its reason**
+
+| Limit | Reason |
+|---|---|
+| **No permit is created, approved, rejected, cancelled, resubmitted, edited or removed.** | A drone NOC record asserts a regulator's decision. Marking one *approved* fabricates a PCAA clearance; marking one *rejected* fabricates a refusal. Every write is captured and diverted. |
+| **Reads may hit the live API freely.** | GETs are side-effect free. |
+
+---
+
+## MODULE 26 — TEST CASES
+
+### A. Route, navigation and access (D26-001 → D26-009)
+
+- **D26-001** Sidebar → **Drone NOC** navigates to `/dashboard/drone-noc`.
+- **D26-002** `document.title` versus the page `h1` versus the breadcrumb versus the nav label.
+- **D26-003** The rail entry is `aria-current="page"`.
+- **D26-004** Breadcrumb renders and links home.
+- **D26-005** Direct URL loads with no client-side error.
+- **D26-006** `/dashboard/drone-noc-new` — the route in the component's header comment — resolves to what?
+- **D26-007** The comment claims *"Read-only; original screen untouched"* — check against a screen that approves permits.
+- **D26-008** The eyebrow reads **Compliance**.
+- **D26-009** The page metadata describes *"PCAA + Home Department + police-intimation permits with auto-status"* — check "auto-status" against what the backend actually does.
+
+### B. The self-approval problem (D26-010 → D26-024)
+
+- **D26-010** `DroneNocRedesignedView` declares `adminCapable = true` as its **default** prop.
+- **D26-011** `page.tsx` renders `<DroneNocRedesignedView />` with **no prop**, so the vendor screen is admin-capable.
+- **D26-012** The transition-dialog file's own header says *"Approve / Reject → from status 'pending' (**admin-capable screens only**)"* — establish the contradiction.
+- **D26-013** So a **vendor sees an "Approve permit" button on their own PCAA application.**
+- **D26-014** …and a **"Reject permit"** button, which is the Home Department's decision to make.
+- **D26-015** The approve dialog's copy reads *"Marking #REF as approved. PCAA reference + cert dates should already be filled in."*
+- **D26-016** Establish whether the **backend** refuses the transition for a non-admin: read `transitionPermit`'s authorisation.
+- **D26-017** `_findScoped` passes on `createdByUserId === userId` **or** business ownership — with **no admin check** on the `approved` target. Confirm.
+- **D26-018** So the applicant can set their own permit to `approved`, and the server stamps `approvedAt`.
+- **D26-019** Is there any audit of **who** approved it, distinguishable from a real regulator decision?
+- **D26-020** `statusReason` is captured on reject and cancel but **not** on approve — so an approval carries no evidence at all.
+- **D26-021** Is there any document upload for the actual NOC certificate?
+- **D26-022** Does anything downstream (a booking, a function sheet, an event checklist) consume the `approved` status?
+- **D26-023** If so, establish what an unverified self-approval would unlock.
+- **D26-024** Judge the severity against the fact that flying without a valid NOC is an offence, not a policy breach.
+
+### C. Empty state and first paint (D26-025 → D26-034)
+
+- **D26-025** `h1` **Drone NOC permits**, description *"Aerial-shoot No-Objection Certificates, authorities and validity."*
+- **D26-026** With zero permits the empty state reads *"No permits yet"* with an **Add permit** CTA — correct for a genuinely empty register.
+- **D26-027** No table renders when empty.
+- **D26-028** All four stat cards read 0 / Rs 0.
+- **D26-029** The Export control renders on an empty register.
+- **D26-030** Loading skeleton before data arrives.
+- **D26-031** Console clean on first paint.
+- **D26-032** Only `GET /drone-noc` fires on mount — `GET /drone-noc/upcoming` exists and is **not** called by this screen. Confirm.
+- **D26-033** …so the "pending + expiring-soon + booking-linked windows" endpoint has no consumer here.
+- **D26-034** Judge the wider fact: **all three Compliance registers are empty** in production.
+
+### D. Stat cards (D26-035 → D26-042)
+
+- **D26-035** **Total permits** equals the row count.
+- **D26-036** **Approved** counts `status === "approved"`.
+- **D26-037** **Needs attention** merges `pending` **and** `expiring_soon` into one number — two very different situations.
+- **D26-038** **Fees paid** sums `feePaid` across **every** permit including `rejected` and `cancelled` ones — so money spent on refused applications is counted as fees paid.
+- **D26-039** The **Approved** card is hard-coded `trend="up"`.
+- **D26-040** No card is clickable; there is no status filter anywhere on the screen.
+- **D26-041** Cards are computed from `all`, not the search-filtered rows.
+- **D26-042** Cards during a failed load — zeros or dashes?
+
+### E. Status computation (D26-043 → D26-050)
+
+- **D26-043** The backend has `computePermitStatus` and calls `_refreshStatusOnRows` — so status **is** recomputed from dates, unlike Suppliers, Brokers and Halal certs. Confirm on the list path.
+- **D26-044** Establish whether `expiring_soon` and `expired` are therefore always truthful here.
+- **D26-045** If so, this is the one compliance module in the sweep whose status cannot go stale — record it as the counter-example to WWL-273 / WWL-286.
+- **D26-046** `STATUS_TONE[p.status] ?? "neutral"` — confirm immunity to the Module 21 crash.
+- **D26-047** `statusLabel` falls back to `cap(s)`.
+- **D26-048** All six statuses have a tone and a label.
+- **D26-049** A permit whose `validUntil` has passed shows `expired` without any user action.
+- **D26-050** Does the recomputation persist, or is it display-only?
+
+### F. The table (D26-051 → D26-062)
+
+- **D26-051** Columns: Reference (+ type beneath) · Authority · Pilot · Valid until · Fee paid · Status · actions.
+- **D26-052** **There is no `Valid from` column**, though the form captures it and the export writes it.
+- **D26-053** **There is no drone registration column**, though the form captures it and the search matches it.
+- **D26-054** …so searching a drone reg number filters to rows that never show it.
+- **D26-055** **There is no pilot-licence column**, though the form captures it — the one field that proves the pilot is qualified.
+- **D26-056** **There is no venue/area column**, though the search matches `venueAddress`.
+- **D26-057** `Fee paid` checks for null and renders an em-dash.
+- **D26-058** `Valid until` formats `en-PK` as `dd MMM yyyy`.
+- **D26-059** `<th scope>` on the header cells.
+- **D26-060** Row checkboxes have per-row accessible names.
+- **D26-061** Up to **six** icon buttons in one action cell — measure the crowding.
+- **D26-062** Row actions announce which permit they act on, or not.
+
+### G. Row-action gating (D26-063 → D26-072)
+
+- **D26-063** `canApprove` and `canReject` are true only from `pending`.
+- **D26-064** `canResubmit` is true from `rejected` or `cancelled`.
+- **D26-065** `canCancel` is true from `approved`, `expiring_soon` or `expired`.
+- **D26-066** On a `pending` permit: Approve, Reject, Edit, Remove.
+- **D26-067** On an `approved` permit: Cancel, Edit, Remove.
+- **D26-068** On a `rejected` permit: Resubmit, Edit, Remove.
+- **D26-069** `Edit` and `Remove` render on **every** status including approved — so an approved permit's reference number and dates remain editable after the fact.
+- **D26-070** Establish whether the backend refuses an edit on an approved permit (`delete patch.status` is there — is anything else protected?).
+- **D26-071** Can a rejected permit be edited and then resubmitted without any trace of what changed?
+- **D26-072** Row actions at 360px.
+
+### H. The permit form (D26-073 → D26-092)
+
+- **D26-073** `Add permit` opens the dialog; twelve fields render.
+- **D26-074** Reference number is `autoFocus`.
+- **D26-075** The permit-type list — are the real Pakistani categories present?
+- **D26-076** The issuing-authority list — PCAA, Home Department, police?
+- **D26-077** `canSave` requires **only** reference number, valid-from and valid-until.
+- **D26-078** So a permit can be saved with **no pilot, no licence, no drone registration and no authority fee** — establish this.
+- **D26-079** A `validUntil` **before** `validFrom` — is it refused?
+- **D26-080** A validity window entirely in the past.
+- **D26-081** A negative fee.
+- **D26-082** A fee above any sane cap.
+- **D26-083** The blocked hint names all three required fields regardless of which is missing.
+- **D26-084** `today()` is `new Date().toISOString().slice(0,10)` — UTC, not PKT.
+- **D26-085** There is **no file upload** for the NOC document itself.
+- **D26-086** There is **no booking picker**, though the model carries `bookingId` and the `/upcoming` endpoint speaks of "booking-linked windows".
+- **D26-087** There is **no venue field** — which venue does a new permit land on?
+- **D26-088** There is no status field — what status does a new permit get?
+- **D26-089** The captured create body and endpoint.
+- **D26-090** `businessId` in the captured body.
+- **D26-091** Edit prefills every field.
+- **D26-092** With the write diverted, does the dialog claim success?
+
+### I. The four transition dialogs (D26-093 → D26-110)
+
+- **D26-093** **Approve** is an `AlertDialog` confirmation with no reason field.
+- **D26-094** Its body is `{to: "approved"}` — no evidence, no reference, no document.
+- **D26-095** The captured approve payload.
+- **D26-096** **Reject** captures a reason and it is **required**.
+- **D26-097** …enforced by an **error toast on submit** (*"Reason required"*), not a disabled button — the same BUG-057 inconsistency as Halal certs.
+- **D26-098** The reject placeholder is domain-literate: *"Drone weight exceeds permitted 7 kg threshold"*.
+- **D26-099** The captured reject payload: `{to: "rejected", statusReason}`.
+- **D26-100** **Cancel** captures a reason, also required, with placeholder *"Wedding cancelled by customer"*.
+- **D26-101** The captured cancel payload.
+- **D26-102** **Resubmit** is a reason-less confirmation to `pending`.
+- **D26-103** Its success toast reads *"Marked pending — resubmit"*.
+- **D26-104** The captured resubmit payload.
+- **D26-105** Whitespace-only reasons are treated as empty.
+- **D26-106** Reasons reset between permits.
+- **D26-107** The dialogs cannot be dismissed while a mutation is pending (`!mut.isPending && onOpenChange(v)`).
+- **D26-108** The backend refuses an illegal transition with `Transition refused: <reason>` and a typed code — drive one.
+- **D26-109** A no-op transition (already in that status) returns 200 *"Already in that status"*.
+- **D26-110** With writes diverted, do these dialogs claim success?
+
+### J. Search, export, density (D26-111 → D26-120)
+
+- **D26-111** Search matches reference, pilot name, drone reg and venue address, client-side.
+- **D26-112** Search is case-insensitive and trims.
+- **D26-113** A no-match search shows the empty state.
+- **D26-114** Export offers CSV and XLSX, filename `drone-noc-permits`.
+- **D26-115** Export columns: Reference · Type · Authority · Pilot · Drone reg # · Valid from · Valid until · Fee paid · Status.
+- **D26-116** Dates export as **raw ISO** here (`p.validFrom ?? ""`), unlike Halal certs which export display strings. Confirm the contrast.
+- **D26-117** Pilot licence is **not** exported, though it is captured.
+- **D26-118** No venue column in the export.
+- **D26-119** Export respects the selection.
+- **D26-120** Density toggle changes row height and persists.
+
+### K. Venue scoping, resilience, a11y (D26-121 → D26-130)
+
+- **D26-121** Is `/api/v1/drone-noc` in `BUSINESS_SCOPED_PREFIXES`? Confirm on the wire.
+- **D26-122** If not, the venue switcher does nothing — same as Inventory and Halal certs.
+- **D26-123** `queryKey: ["drone-noc-redesigned"]` carries no businessId.
+- **D26-124** Offline → the table shows its error state with Retry.
+- **D26-125** The error text is *"Couldn't load permits."*
+- **D26-126** An unknown status from the API — confirmed safe by `?? "neutral"`; drive it.
+- **D26-127** Console clean across the module.
+- **D26-128** Dialog labels are programmatically associated.
+- **D26-129** Alert dialogs announce title + description and focus Cancel.
+- **D26-130** Heading order and focus rings.
+
+### L. Mobile and integrity close-out (D26-131 → D26-138)
+
+- **D26-131** No horizontal page scroll at 360×740.
+- **D26-132** **And** zero clipped elements outside deliberate scroll containers.
+- **D26-133** The table switches to the card renderer; are the six row actions reachable?
+- **D26-134** Four stat cards reflow to 2 columns.
+- **D26-135** Permit count still 0 at close, via a clean iframe realm.
+- **D26-136** `summary.byStatus` and `byType` still empty.
+- **D26-137** Every diverted write listed with method, URL and body.
+- **D26-138** No `POST`/`PATCH`/`DELETE` reached the real API.
+
+**138 cases written.** Execution follows.
