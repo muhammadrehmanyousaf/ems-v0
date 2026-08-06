@@ -66,7 +66,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 34 | Cancellation policy | `/dashboard/cancellation-policy` | ✅ 156 | **`[x]` COMPLETE — 105 run, 51 not run, 14 findings (1× S1, 3× S2)** |
 | 35 | Setup checklist | `/dashboard/onboarding` | ✅ 158 | **`[x]` COMPLETE — 110 run, 48 not run, 12 findings (3× S2)** |
 | 36 | Tonight | `/dashboard/venue-os?tab=today` | ✅ 150 | **`[x]` COMPLETE — 100 run, 50 not run, 12 findings (3× S2)** |
-| 37 | Event profit | `/dashboard/venue-os?tab=profit` | ✅ 170 | `[~]` cases written, executing |
+| 37 | Event profit | `/dashboard/venue-os?tab=profit` | ✅ 170 | `[x]` COMPLETE — 121 run, 49 not run, 15 findings (1× S1, 5× S2) |
 | 38 | Venue money | `/dashboard/venue-os?tab=money` | — | `[ ]` |
 | 39 | Halls & spaces | `/dashboard/venue-os?tab=spaces` | — | `[ ]` |
 | 40 | Cash & cheques | `/dashboard/venue-os?tab=cash` | — | `[ ]` |
@@ -18811,3 +18811,248 @@ a refinement of the first.
 | D37-170 | Nothing on this tab writes to the ledger | 0 mutations across the whole module |
 
 **Total: 170 cases.**
+
+---
+
+## Module 37 — RESULTS (live production, visible browser)
+
+**170 cases written · 121 driven · 49 not run · 15 findings (1× S1, 5× S2, 8× S3, 1× S4).**
+
+Writes: **2 POSTs, both verified pure computations** before being allowed through the blocker —
+`taxComputeHandler` (returns `taxCalc.computeBookingTax`) and `cateringRecostHandler` (returns
+`catering.costMenuByCardIds`). Neither touches the database. Every other write stayed diverted.
+**Nothing on this tab was persisted.**
+
+### The screen, as measured
+
+| Panel | State |
+|---|---|
+| `EventProfitBoard` | 22 rows, 5 tiles, all arithmetic exact |
+| `EventPnlView` | renders **Rs 0** for every line, on a Rs 2,292,300 wedding |
+| `CateringRecost` | **400 on every click** — cannot ever return a result |
+| `VenueOsInsights` | **works, and the rates are right** |
+
+---
+
+### WWL-539 (S1) — two engines, one screen, Rs 2,292,300 apart
+
+Picked *Salman Rauf & Kinza Salman* in the per-event P&L. Exactly one request went out:
+
+```
+GET /api/v1/venue-os/bookings/168/pnl?isDeclared=MANAGEMENT_ONLY   → 200
+{"revenue":0,"cogs":0,"opex":0,"grossProfit":0,"netProfit":0,"byType":{}}
+```
+
+Rendered on screen:
+
+> Revenue **Rs 0** · Food / COGS **Rs 0** · Overheads **Rs 0** · Gross profit **Rs 0** · Net profit **Rs 0**
+
+Two hundred pixels above it, in the same panel, the same wedding:
+
+> Salman Rauf & Kinza Salman · 21-Aug-2026 · Confirmed — Revenue **Rs 2,292,300**, Received
+> **Rs 1,146,150**, Spent **Rs 745,200**, Net **Rs 1,547,100**, Margin **67%**
+
+Both are titled as profit for one function. Neither says where its number comes from. The board reads
+bookings and tagged expenses; the P&L reads the double-entry GL, and this vendor has **no GL postings
+at all** — so the ledger honestly has nothing, and reports that as `Rs 0` instead of *"nothing has
+been posted to the ledger for this function"*.
+
+A vendor scrolling down sees the second panel as the authoritative refinement of the first — it is
+literally subtitled *"off the ledger"*. Read that way, the screen says this wedding earned nothing.
+
+`byType:{}` is the proof the data is absent rather than zero, and it is discarded before render.
+
+### WWL-540 (S2) — Menu re-cost cannot work, and says so in the server's words
+
+The panel sends:
+
+```js
+venueOsApi.recostMenu({ cardIds: ids, quotedPerHead: quoted ? Number(quoted) : undefined })
+```
+
+The handler requires a business:
+
+```js
+if (!businessId) return apiResponse(res, 400, false, "businessId is required", null);
+```
+
+Verified from Node, against production, with the same token:
+
+| Body sent | Result |
+|---|---|
+| `{cardIds:[12,14,19], quotedPerHead:1500}` — **what the FE sends** | **400** `BusinessId is required` |
+| `{cardIds:[12,14,19], quotedPerHead:1500, businessId:3358}` | **200** `{"costPerHead":0,"dishes":[],…}` |
+
+And on screen, after a real click with real ids:
+
+> Menu re-cost (deg-rate-card) | Card IDs | Quoted / head | Re-cost | **BusinessId is required**
+
+The vendor is shown a server-side field name for a field the form never had. Every other Venue-OS
+panel was given `useBusinessIdField`; this one was missed. It has **never** returned a cost.
+
+### WWL-541 (S2) — Rs 25,508,850 "net profit" includes Rs 13,417,229 nobody has paid
+
+The tiles reconcile exactly with the table — I summed all 22 rows:
+
+| Tile | Shown | Column sum | Δ |
+|---|---|---|---|
+| Booked | Rs 33,493,850 | Rs 33,493,850 | 0 |
+| Received | Rs 20,076,621 | Rs 20,076,621 | 0 |
+| Spent (tagged) | Rs 7,985,000 | Rs 7,985,000 | 0 |
+| Net profit | Rs 25,508,850 | Rs 25,508,850 | 0 |
+
+The arithmetic is right. The definition is the problem:
+
+```js
+const net = booked - spent;   // NOT received - spent
+```
+
+`Net profit Rs 25,508,850 · 76% margin` sits three tiles along from `Outstanding Rs 13,417,229 ·
+to collect`. **53% of the declared profit has not arrived**, including Rs 2,596,400 from a booking
+still marked *Pending* and Rs 1,673,250 from one *Awaiting Payment*, both at Rs 0 received.
+
+Nothing on the tile says "booked", and a hall owner deciding whether they can afford a new genset is
+reading the largest, greenest number on the screen.
+
+### WWL-542 (S2) — seven weddings at 100% margin
+
+Seven of 22 rows show a margin of exactly **100%**, every one of them because no expense is tagged:
+
+| Function | Revenue | Spent | Net | Margin |
+|---|---|---|---|---|
+| Rizwan Anjum & Momina Rizwan | Rs 2,596,400 | — | Rs 2,596,400 | 100% |
+| Ahmed Raza & Sanam Ahmed | Rs 1,673,250 | — | Rs 1,673,250 | 100% |
+| Imran Shafi & Hafsa Imran | Rs 1,546,000 | — | Rs 1,546,000 | 100% |
+| Asad Jameel & Alishba Asad | Rs 1,460,600 | — | Rs 1,460,600 | 100% |
+| Bilal Hussain & Ayesha Bilal | Rs 1,411,500 | — | Rs 1,411,500 | 100% |
+| Muhammad Rehman Yousaf | Rs 665,000 | — | Rs 665,000 | 100% |
+| Waheed Jutt | Rs 350,000 | — | Rs 350,000 | 100% |
+
+**Rs 9,702,750 — 38% of the reported net profit — is revenue with no recorded cost, presented as
+pure profit.** No wedding has a 100% margin. The other fifteen rows, which do have tagged expenses,
+land between 64% and 68% — so the true figure for these seven is knowable within a few percent and
+the screen does not say so.
+
+The subtitle does warn *"Tag expenses to a booking to see the spend side fill in"*, and the column
+prints an em-dash rather than `Rs 0`. But the **Margin column still prints `100%`** and the Net
+column still prints the full revenue in emerald — the two places a vendor actually looks.
+
+### WWL-543 (S2) — the Management / Tax (declared) toggle cannot be told apart
+
+Both buttons fire correctly and distinctly:
+
+```
+GET /venue-os/bookings/168/pnl?isDeclared=MANAGEMENT_ONLY  → all zeros
+GET /venue-os/bookings/168/pnl?isDeclared=DECLARED         → all zeros
+```
+
+Identical output. The toggle exists to separate what the venue really earned from what it declares —
+the single most consequential distinction on a Pakistani venue's books — and on this account it is
+indistinguishable from a decorative pair of buttons. Downstream of WWL-539: with no GL postings,
+neither view can differ.
+
+### WWL-544 (S3) — 22 rows, 0 links
+
+Counted: `panel.querySelectorAll('a')` inside the table = **0**. Same family as WWL-534 on the Today
+board (now fixed there). Every row names a real customer and a real amount and opens nothing.
+
+### WWL-545 (S3) — "Card IDs · e.g. 12, 14, 19"
+
+A free-text box asking for a comma-separated list of deg-rate-card primary keys. Confirmed on the
+live page: **no card picker anywhere in the panel**, and no text telling the vendor where a card id
+could be found. Same family as the `Event night #` / `Sub-venue #` finding in Module 36.
+
+### WWL-546 (S3) — letters enable the button and fire a request
+
+`disabled={!cardIds}` tests the raw string, not the parsed ids. Typing `abc`:
+
+- button **enables** (`disabledWithLetters: false`)
+- clicking fires **1 request** with `cardIds: []`
+- backend returns `{"costPerHead":0,"dishes":[],"missingRates":[],"alert":null}`
+- the panel shows **nothing at all** — no result, no error, no "no cards matched"
+
+### WWL-547 (S3) — the sort is not in the URL
+
+All three sorts work, are monotonic and cost **zero requests** (verified client-side). But
+`location.search` stays `?tab=profit` under every one of them. The hub's own comment celebrates
+fixing exactly this for tabs — *"a vendor could not bookmark Money & Expenses"* — and the sort
+inside the tab was left behind. "Most profit" is the view an owner actually wants to reopen.
+
+### WWL-548 (S3) — the page has no `h1`
+
+`document.querySelectorAll('h1').length` = **0** on `/dashboard/venue-os`. Headings start at `h3`.
+
+### WWL-549 (S3) — table headers carry no `scope`
+
+6 `<th>` in the per-function table, **0** with a `scope` attribute. A screen reader cannot associate
+`Rs 745,200` with *Spent*.
+
+### WWL-550 (S3) — a Rs 0 bill is rejected as a missing field
+
+```
+POST /venue-os/tax/compute {"baseAmount":0,"jurisdiction":"PRA","filerStatus":"FILER"}
+→ 400 {"message":"BaseAmount and jurisdiction are required"}
+```
+
+`if (!baseAmount)` treats `0` as absent. A zero bill is a legitimate question and the error names the
+wrong problem.
+
+### WWL-551 (S3) — a negative bill computes a negative tax
+
+```
+POST /venue-os/tax/compute {"baseAmount":-500000,…}
+→ 200 {"baseAmount":-500000,"wht236cb":{"taxAmount":-50000,…}}
+```
+
+Rs −50,000 of withholding tax. Neither rejected nor flagged.
+
+### WWL-552 (S3) — the calculator never offers the amounts sitting above it
+
+The bill field is hardcoded to **1,000,000** and the vendor retypes their real figure. Twenty-two
+real booking totals are on the same screen, in the same panel, and the calculator cannot see any of
+them. Filer status defaults to **Non-filer** (the higher rate) with nothing explaining the choice.
+
+### WWL-553 (S4) — unconfirmed bookings are counted as "Booked"
+
+`Pending` (Rs 2,596,400, Rs 0 received) and `Awaiting Payment` (Rs 1,673,250, Rs 0 received) are both
+in the Booked tile and in net profit. Defensible, but undisclosed.
+
+---
+
+### What holds — verified, not assumed
+
+- **Every row's arithmetic is exact.** Checked `net === revenue − spent` and
+  `margin === round(net/revenue)` on all 22 rows: **0 discrepancies**.
+- **Tiles reconcile to the column sums to the rupee** on all four money tiles.
+- **The cancelled-booking fix holds.** Three cancelled bookings worth Rs 3,855,050 — including
+  *Usman Tariq & Hira Usman* at Rs 2,742,400, which the source records as previously ranking #1 under
+  both "Most profit" and "Biggest" — are now absent from all 22 rows, and the #1 slots are held by
+  live bookings under both sorts.
+- **Sorts are correct and free.** "Most profit" and "Biggest" verified monotonic on the rendered
+  rows; **0 network requests** across all three.
+- **The tax engine is real and jurisdiction-sensitive**, matching published rates:
+
+  | Jurisdiction | Provincial | 236CB (non-filer) | Total |
+  |---|---|---|---|
+  | PRA | 5% → Rs 50,000 | 20% → Rs 200,000 | **Rs 250,000** |
+  | SRB | 15% → Rs 150,000 | 20% → Rs 200,000 | **Rs 350,000** |
+
+  Filer 10% vs non-filer 20% confirmed on the same base (`sourceRuleId` 12 vs 13). This is the best
+  panel on the tab.
+- **Layout is clean.** 0 overflowing elements at **1440px** and at **360×740** with real device
+  emulation; `docScrollX` false at both. The wide table sits in its own `overflow-x: auto` scroller
+  (720px content, 326px viewport) — the correct pattern, and the one the Today board was missing.
+- **The P&L picker is by name and date**, fires exactly one request, and `retry: false` holds.
+- **No `Venue #` box anywhere on this tab** — the Module 36 fix carries.
+
+### Not run (49), with reasons
+
+- **D37-064–066 full spot-check against `/dashboard/bookings/{id}`** — three rows were reconciled
+  against the Money tab; opening each booking page for all 22 was not driven.
+- **D37-075/076 forced query failure** — would require blocking a GET the whole dashboard shares.
+- **D37-009/010/089/090 per-venue re-scope of the board** — the board is venue-agnostic by
+  construction (it reads `/bookings` unscoped); driving the header switch three times was not done.
+- **D37-116 cross-venue booking in the P&L** — would probe another venue's ledger.
+- **D37-133/138/139 the underwater alert** — needs a deg-rate-card that exists; the panel 400s before
+  any id is evaluated (WWL-540), so no path reaches the alert.
+- **D37-160 full rate audit** — one jurisdiction pair spot-checked, not all five.
