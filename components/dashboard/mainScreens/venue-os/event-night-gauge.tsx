@@ -15,6 +15,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BookingPicker } from "@/components/dashboard/shared/booking-picker";
+import { useVendorBookings } from "@/hooks/use-vendor-bookings";
+import { useEventNightScope } from "./event-night-context";
 
 function readErr(e: unknown, fallback: string): string {
   return (e as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
@@ -27,6 +29,10 @@ export function EventNightGauge(): React.ReactElement | null {
   const [live, setLive] = React.useState<HeadcountResult | null>(null);
   const [busy, setBusy] = React.useState<boolean>(false);
   const [err, setErr] = React.useState<string | null>(null);
+  // Publish the night to the console and the guest list — they have no other way
+  // to learn the id (see event-night-context).
+  const scope = useEventNightScope();
+  const { data: bookings } = useVendorBookings();
 
   async function open(): Promise<void> {
     setBusy(true);
@@ -35,6 +41,9 @@ export function EventNightGauge(): React.ReactElement | null {
       const n = await venueOsApi.openEventNight({ bookingId: Number(bookingId), safeCapacity: Number(safeCap) });
       setNight(n);
       setLive({ liveHeadcount: n.liveHeadcount, peakHeadcount: n.peakHeadcount, safeCapacity: n.safeCapacity, overCapFlag: n.overCapFlag });
+      scope.setNightId(n.id);
+      const b = (bookings ?? []).find((x) => x.id === Number(bookingId));
+      scope.setLabel(b?.customerName || `Booking #${bookingId}`);
     } catch (e: unknown) {
       setErr(readErr(e, "Couldn't load eventNight gauge."));
     } finally {

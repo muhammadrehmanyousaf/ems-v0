@@ -18330,34 +18330,39 @@ written.**
 | Cross-module baselines (28–35) | **all unchanged** |
 | Console errors | **none** |
 
-### WWL-527 (S2) — the section describes four things and shows none of them
+### WWL-527 — CORRECTED, then re-raised (S2)
 
-The Tonight section's hint, rendered on screen:
+**My first reading was wrong and is withdrawn.** I reported that the four panels the Tonight hint
+names all self-gate away and render nothing. They render. Re-driven with a card-title selector
+instead of a heading-tag selector, the live panel contains all five:
 
-> *"What's happening at your hall right now — **headcount vs safe capacity**, **valet & incidents**,
-> **RSVPs**, and **is-this-slot-free**."*
-
-The tab composes five components. Only one rendered:
-
-| Component | Provides | Rendered |
+| Component | Card title on screen | Rendered |
 |---|---|---|
-| `TodayBoard` | upcoming events + unpaid balances | ✅ |
-| `EventNightGauge` | headcount vs safe capacity | ❌ |
-| `EventNightConsoleView` | valet & incidents | ❌ |
-| `GuestListView` | RSVPs | ❌ |
-| `SchedulingCheck` | is-this-slot-free | ❌ |
+| `TodayBoard` | *What needs you* | ✅ |
+| `EventNightGauge` | *EventNight — live headcount gauge* | ✅ |
+| `EventNightConsoleView` | *EventNight console (valet · lost-found · incident · complaint)* | ✅ |
+| `GuestListView` | *Guest list & headcount reconciliation* | ✅ |
+| `SchedulingCheck` | *Sub-venue availability check* | ✅ |
 
-Measured on the live panel: the only headings present are *Tonight · What needs you · Upcoming events
-· Who to chase*. **Every one of the four things the hint names comes from a component that self-gated
-away**, and the one thing actually on screen is not mentioned in the hint at all.
+The `NEXT_PUBLIC_*` gates were removed on 2026-07-11 and each file says so. My selector read `h2/h3/h4`
+and these panels title themselves with `CardTitle`. The hint is accurate about what is on the page.
 
-Nothing explains the absence. There is no *"not enabled"* message, no locked state and no upgrade
-prompt — the four panels return null and the hint above them keeps describing them.
+**What is actually broken is worse.** Three of the four ask for a database primary key the vendor has
+no way of knowing, and stay inert until one is typed:
 
-`TodayBoard`'s own comment records why it exists: *"The live EventNight/console/guest-list panels
-self-gate on their pilot flags, so the Today tab was empty for a normal vendor. This works for EVERY
-vendor off the booking list alone."* A flag-free fifth panel was added so the tab would not be blank;
-the sentence above it was never updated.
+| Panel | Asks for | Where a vendor could find it |
+|---|---|---|
+| `EventNightConsoleView` | `Event night #` | nowhere — created seconds earlier by the gauge, never displayed |
+| `GuestListView` | `Event night #` | nowhere — same id, and there is no list endpoint to recover it |
+| `SchedulingCheck` | `Sub-venue #` | nowhere — the spaces the owner built are named, never numbered on screen |
+
+Every action button is `disabled={!nightId}`. So the valet board, the incident hash-chain, the
+Clean Night Score, the RSVP reconciliation and the availability probe are all **unreachable**, not
+absent. The panels render, look ready, and cannot be operated.
+
+`TodayBoard`'s comment still describes the old world — *"the live EventNight/console/guest-list panels
+self-gate on their pilot flags, so the Today tab was empty"* — which is what led me to the wrong
+conclusion in the first place.
 
 ### WWL-528 (S2) — four of the seven Venue-OS tabs render only a heading
 
@@ -18380,6 +18385,20 @@ stop.
 
 The hub's own comment describes the scale: *"the door to 179 endpoints across 46 views"*. On this
 production account, most of that door opens onto a heading.
+
+**Root cause, found while fixing it.** The panels are not missing — they render their shells and
+then load nothing, because every one of them scopes on a `businessId` that resolves to empty:
+
+- `useBusinessIdField` pre-fills from the dashboard header's active venue.
+- The header's persisted default is **"All venues"**, where `activeBusinessId` is `null`.
+- `BusinessScopeField` then rendered `<input type="number">` labelled **"Venue #"**, placeholder
+  *"pick a venue in the header"*.
+- Every action is `disabled={!businessId}`.
+
+So under the shipped default, 36 panels across Spaces, Cash & Cheques, Kitchen and half of Money &
+Expenses ask the owner of *Rehman Grand Marquee* to type **3358**. Counted on the live page: **22
+`Venue #` boxes on Money & Expenses alone**, five on Spaces, four on Cash, three on Kitchen — every
+one of them empty. That is the whole of WWL-528: not unbuilt features, an unanswerable question.
 
 ### WWL-529 (S2) — a Completed booking dated five weeks in the future, still 75% unpaid
 

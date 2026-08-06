@@ -15,6 +15,7 @@ import { venueOsApi, type ValetTicket, type IncidentResult, type ComplaintResult
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { EventNightField } from "./event-night-field";
 
 function readErr(e: unknown, fallback: string): string {
   return (e as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
@@ -69,10 +70,7 @@ export function EventNightConsoleView(): React.ReactElement | null {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2 text-sm">
-          <label>
-            Event night #
-            <input type="number" value={nightId} onChange={(e) => setNightId(e.target.value)} className="ml-2 w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-          </label>
+          <EventNightField value={nightId} onChange={setNightId} />
           <Button size="sm" variant="outline" onClick={() => void guard(async () => setScore(await venueOsApi.cleanNightScore(nid)))} disabled={!nightId || busy}>
             Clean night score
           </Button>

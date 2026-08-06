@@ -48,6 +48,13 @@ export function RateContractView(): React.ReactElement | null {
 
   const bid = Number(businessId);
 
+  // Load on arrival — see kitchen-bom-view; the whole Kitchen tab was inert.
+  React.useEffect(() => {
+    if (!businessId) return;
+    void guard(async () => setContracts(await venueOsApi.listRateContracts(Number(businessId))));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId]);
+
   return (
     <Card>
       <CardHeader>

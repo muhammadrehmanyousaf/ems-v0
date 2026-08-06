@@ -45,6 +45,14 @@ export function KitchenBomView(): React.ReactElement | null {
 
   const bid = Number(businessId);
 
+  // Load on arrival — the Kitchen tab opened as a heading and three empty boxes
+  // because nothing fetched until "Load recipes" was pressed.
+  React.useEffect(() => {
+    if (!businessId) return;
+    void guard(async () => setBoms(await venueOsApi.listRecipeBoms(Number(businessId))));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId]);
+
   return (
     <Card>
       <CardHeader>
