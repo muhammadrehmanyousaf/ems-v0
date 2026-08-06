@@ -52,7 +52,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 20 | Inventory | `/dashboard/inventory` | ✅ 204 | **`[x]` COMPLETE — 132 run, 72 not run, 18 findings (5× S2)** |
 | 21 | Staff & payroll | `/dashboard/staff` | ✅ 188 | **`[x]` COMPLETE — 88 run, 100 not run, 13 findings (1× S1)** |
 | 22 | Suppliers | `/dashboard/suppliers` | ✅ 194 | **`[x]` COMPLETE — 95 run, 99 not run, 13 findings (3× S2)** |
-| 23 | Brokers | `/dashboard/brokers` | — | `[ ]` |
+| 23 | Brokers | `/dashboard/brokers` | ✅ 164 | `[ ]` cases written, execution in progress |
 | 24 | Generator fuel | `/dashboard/generator-fuel` | — | `[ ]` |
 | 25 | Halal certs | `/dashboard/halal-certs` | — | `[ ]` |
 | 26 | Drone NOC | `/dashboard/drone-noc` | — | `[ ]` |
@@ -10379,3 +10379,274 @@ of drawn credit back into "Credit available" and calls it Rs 8.8m. The one thing
 better than anything else in the sweep is the payment dialog: it explains itself, it speaks Raast and
 JazzCash, it labels its fields properly, and it is the only form in twenty-two modules that says
 *"Could not record payment"* when the payment could not be recorded.
+
+---
+
+# MODULE 23 — BROKERS (`/dashboard/brokers`)
+
+**What the screen is for.** The commission ledger for the people who bring the venue business — hall
+brokers, hotel concierges, rishta aunties and wedding planners. Each row is one commission accrued
+against one booking: how much is owed, how much has been paid, when it accrued, and its status
+(pending → partially paid → paid, or disputed / void). Row actions record a payment, dispute it,
+void it, edit it or remove it.
+
+**Source read before writing these cases**
+- `app/(dashboard)/dashboard/brokers/page.tsx`
+- `components/.../brokers/redesigned/brokers-redesigned-view.tsx` — the whole screen
+- `components/.../brokers/redesigned/commission-form-dialog.tsx` — create/edit
+- `components/.../brokers/redesigned/commission-action-dialogs.tsx` — Pay / Dispute / Void
+- `lib/api/brokers.ts` — `CommissionStatus`, `BROKER_TYPE_LABELS`, `COMMISSION_STATUS_LABELS`
+- `lib/axiosConfig.js` — `/api/v1/brokers` **is** in `BUSINESS_SCOPED_PREFIXES`
+
+**Pre-flight state, read off live prod before any case was written**
+
+| Fact | Value |
+|---|---|
+| `GET /brokers` | **12 brokers** — 4 per venue × 3 |
+| Broker types | `hall_broker` · `hotel_concierge` · `rishta` · `wedding_planner` |
+| Brokers with **no** commission | **4 of 12** |
+| `GET /brokers/commissions` | **9 commissions** |
+| Per venue | 3358 → 2 · 3359 → 4 · 3360 → 3 |
+| Status split | pending **5** · partially_paid **3** · paid **1** |
+| `status === "overdue"` | **0** |
+| Total commission / paid / **outstanding** | Rs 667,000 / Rs 226,250 / **Rs 440,750** |
+| Commissions **past their due date** | **3** — 36d, 85d and **122d** late, Rs 138,750 outstanding, all filed `partially_paid` |
+| Commissions accruing in the **future** | 2 — 24 Aug and 22 Sep 2026 |
+| Broker record carries | agencyName · contactPerson · whatsapp · address · **NTN · CNIC** · bank · JazzCash · Easypaisa · `defaultCommissionPct` |
+
+**Element inventory (14 interactive)**
+
+| # | Element | Where |
+|---|---|---|
+| 1 | Sidebar `Brokers` link | Money rail |
+| 2 | `Add commission` | PageHeader action |
+| 3–6 | Stat cards: Commissions · Total commission · Outstanding · Overdue | header grid |
+| 7 | `Search brokers…` | toolbar |
+| 8–9 | Density toggle · Export | toolbar |
+| 10 | Select-all + row checkboxes | table |
+| 11–15 | Row actions: Record payment · Dispute · Void · Edit · Remove | rows |
+| 16 | Linked-function-sheet badge (Event column) | rows |
+| — | Commission form dialog · Pay · Dispute · Void · Remove confirm | modals |
+
+**Safety limits for this module, each with its reason**
+
+| Limit | Reason |
+|---|---|
+| **No commission is created, paid, disputed, voided, edited or removed.** | This is a real commission ledger: **Rs 440,750** genuinely owed to four named intermediaries against nine real bookings. Recording a payment is a money write; disputing one is a statement to a business partner who sends the venue customers. |
+| **No broker record is touched.** | Real people, with **CNIC and NTN** on file. |
+| **Reads may hit the live API freely.** | GETs are side-effect free. |
+
+---
+
+## MODULE 23 — TEST CASES
+
+### A. Route, navigation and access (D23-001 → D23-010)
+
+- **D23-001** Sidebar → **Brokers** navigates to `/dashboard/brokers`.
+- **D23-002** `document.title` versus the page `h1` versus the nav label.
+- **D23-003** The rail entry is `aria-current="page"`.
+- **D23-004** Breadcrumb renders and links home.
+- **D23-005** Direct URL loads with no client-side error.
+- **D23-006** `/dashboard/brokers-new` — the route in the component's header comment — resolves to what?
+- **D23-007** The comment claims *"Read-only; original screen untouched"* — check against a screen that pays and voids commissions.
+- **D23-008** The eyebrow reads `Money` — confirm it is grouped with the money modules, not Operate.
+- **D23-009** Browser Back leaves cleanly.
+- **D23-010** Uppercase and trailing-slash URLs normalise.
+
+### B. First paint and the table (D23-011 → D23-026)
+
+- **D23-011** `h1` **Brokers**, description *"Broker commission ledger — accruals, payments and outstanding."*
+- **D23-012** The table paints 9 rows (or the venue-scoped subset).
+- **D23-013** Columns: Broker · Type · Event · Commission · Paid · Accrued · Status · actions.
+- **D23-014** **There is no Due column.** The data carries `dueDate` on every row and the export writes it. Confirm it appears nowhere on screen.
+- **D23-015** The broker cell shows the **snapshot** name with an initials avatar.
+- **D23-016** `Type` maps through `BROKER_TYPE_LABELS` — check all four live types render a human label.
+- **D23-017** An unknown broker type falls back to `cap(t)`, not a crash.
+- **D23-018** `Event` renders the linked-function-sheet badge for the booking.
+- **D23-019** A commission with a null `bookingId` — what does the badge render?
+- **D23-020** `Commission` and `Paid` are right-aligned and tabular.
+- **D23-021** `Paid` is toned success even when it is **Rs 0** — check whether zero reads as "paid".
+- **D23-022** `Accrued` formats `en-PK` as `dd MMM yyyy`.
+- **D23-023** An invalid date renders `—`, not `Invalid Date`.
+- **D23-024** Rows are ordered most-recent-accrual first.
+- **D23-025** `<th scope>` on the header cells.
+- **D23-026** Row checkboxes have per-row accessible names.
+
+### C. Stat cards (D23-027 → D23-040)
+
+- **D23-027** **Commissions** equals the row count (9).
+- **D23-028** **Total commission** equals Rs 667,000.
+- **D23-029** **Outstanding** = total − paid = Rs 440,750, and matches the API's `summary.totalOutstanding`.
+- **D23-030** **Overdue** counts `status === "overdue"` — currently **0**.
+- **D23-031** …but **3 commissions are past their due date** by 36, 85 and 122 days, carrying **Rs 138,750**. Establish what the card tells the vendor.
+- **D23-032** Nothing on the screen surfaces those three — no Due column, no filter, no badge. Confirm.
+- **D23-033** The `Outstanding` card carries `trend="up"` when money is owed. Establish what arrow and colour that renders for a debt.
+- **D23-034** Compare with the Suppliers module, where the equivalent used `trend="down"`.
+- **D23-035** **Total commission** includes 2 commissions that accrue in the **future** (24 Aug, 22 Sep). Quantify how much of the headline is not yet earned.
+- **D23-036** Cards are computed from `all`, not the search-filtered rows — type a search and check.
+- **D23-037** Cards during the loading state.
+- **D23-038** Cards during a failed load — zeros or dashes?
+- **D23-039** `formatPkr` is applied without `Math.round` here — check for a decimal leaking into a card.
+- **D23-040** Card labels read as label + value.
+
+### D. Status handling (D23-041 → D23-050)
+
+- **D23-041** All six `CommissionStatus` values have a tone and a label.
+- **D23-042** `statusTone` has an `|| "neutral"` fallback — confirm an unknown status **cannot** reproduce the Module 21 `StatusPill` crash.
+- **D23-043** `statusLabel` falls back to `cap(s)` for an unknown value.
+- **D23-044** The live statuses render: Pending (5) · Partially paid (3) · Paid (1).
+- **D23-045** There is **no status filter** anywhere on the screen — no chips, no dropdown. Confirm.
+- **D23-046** So the **Overdue** card is not clickable and nothing can filter to overdue.
+- **D23-047** The status pill is not colour-only.
+- **D23-048** `partially_paid` is toned **warning**, `pending` **info** — check that reads correctly against the amounts.
+- **D23-049** A `void` commission still shows its amount in the totals — or is it excluded?
+- **D23-050** A `disputed` commission's effect on Outstanding.
+
+### E. Search, selection, export, density (D23-051 → D23-064)
+
+- **D23-051** Search matches broker name, description and the **type label**, client-side.
+- **D23-052** Searching `rishta` finds the Rishta Aunty Network rows via the type label.
+- **D23-053** Search is case-insensitive and trims.
+- **D23-054** A no-match search shows *"No commissions yet"* + an **Add commission** CTA on a populated ledger.
+- **D23-055** Clearing the search restores all rows.
+- **D23-056** Search is not in the URL and is lost on reload.
+- **D23-057** Export offers CSV and XLSX, filename `broker-commissions`.
+- **D23-058** Export columns: Broker · Type · Commission · Paid · Accrued · **Due** · Status.
+- **D23-059** The export is the **only** place the due date appears — confirm.
+- **D23-060** Status exports the label, not the raw enum.
+- **D23-061** No venue column in the export, though three venues merge at All-venues scope.
+- **D23-062** Export respects the selection.
+- **D23-063** Density toggle changes row height and persists.
+- **D23-064** Export generates client-side with no network call.
+
+### F. Row actions and permissions (D23-065 → D23-076)
+
+- **D23-065** `Record payment` renders unless status is paid or void.
+- **D23-066** `Dispute` renders unless status is void.
+- **D23-067** `Void` renders unless status is paid or void.
+- **D23-068** `Edit` and `Remove` render on **every** row including paid and void — confirm and judge.
+- **D23-069** On the one `paid` commission, which actions remain?
+- **D23-070** Each action has both `aria-label` and `title`.
+- **D23-071** …but neither names the broker or the amount — confirm the labels are identical across rows.
+- **D23-072** Icon-only actions are ≥ 24×24 px.
+- **D23-073** Five icon buttons in one cell — measure the total width and check they do not crowd the row.
+- **D23-074** Clicking a row itself does nothing — there is no drill-in.
+- **D23-075** Nothing links to the broker's own record, though `/brokers` returns 12 of them.
+- **D23-076** Row actions at 360px.
+
+### G. The brokers behind the commissions (D23-077 → D23-086)
+
+- **D23-077** `GET /api/v1/brokers` returns **12** broker records with name, type, phone, and a default commission percentage.
+- **D23-078** Is there **any** UI in the product that lists brokers?
+- **D23-079** Is there any UI that creates or edits a broker?
+- **D23-080** **4 of the 12 brokers have no commission at all** — establish whether they are visible anywhere.
+- **D23-081** The broker record carries **CNIC and NTN** — check whether either is ever displayed.
+- **D23-082** It carries bank, JazzCash and Easypaisa payout details — are they shown when recording a payment?
+- **D23-083** It carries `defaultCommissionPct` (5.00%) — is it used to pre-fill a new commission?
+- **D23-084** `business: {id, name}` is eager-loaded on every broker — is the venue ever named?
+- **D23-085** The commission rows carry a `brokerId` — is it used for anything?
+- **D23-086** Compare with Suppliers, which has a directory tab for exactly this.
+
+### H. The commission form dialog (D23-087 → D23-104)
+
+- **D23-087** `Add commission` opens the dialog; enumerate its fields.
+- **D23-088** Is there a broker picker, and is it fed from the 12 live brokers?
+- **D23-089** Is there a booking picker, and is it scoped to this venue's bookings?
+- **D23-090** Is there a venue field, or does `businesses?.[0]?.id` decide?
+- **D23-091** Required-field blocking and the blocked-save hint.
+- **D23-092** A negative commission amount.
+- **D23-093** A commission amount above any sane cap.
+- **D23-094** A due date **before** the accrual date.
+- **D23-095** An accrual date far in the future.
+- **D23-096** Percentage vs flat commission — does the form support both, as the broker record does?
+- **D23-097** If a percentage is offered, is it applied to the booking value automatically?
+- **D23-098** The captured create body and endpoint.
+- **D23-099** `businessId` in the captured body.
+- **D23-100** Edit prefills every field.
+- **D23-101** Edit sends `PATCH` to the commission id.
+- **D23-102** Editing a **paid** commission's amount — allowed?
+- **D23-103** Cancel and Escape discard without a request.
+- **D23-104** With the write diverted, does the dialog claim success?
+
+### I. Pay / Dispute / Void dialogs (D23-105 → D23-120)
+
+- **D23-105** `Record payment` opens naming the broker and showing what is outstanding.
+- **D23-106** The amount pre-fills to the outstanding.
+- **D23-107** The payment-method list — does it match the Suppliers set (Raast, JazzCash, Easypaisa…)?
+- **D23-108** Does it offer the broker's own stored JazzCash / Easypaisa number?
+- **D23-109** Paying **less** than outstanding → `partially_paid`.
+- **D23-110** Paying **more** than outstanding — blocked client-side?
+- **D23-111** A zero or negative payment.
+- **D23-112** A payment dated in the future.
+- **D23-113** The captured payment body and endpoint.
+- **D23-114** `Dispute` captures a reason, and it is required.
+- **D23-115** The captured dispute body.
+- **D23-116** `Void` captures a reason.
+- **D23-117** Void on a partially-paid commission — what happens to the money already paid?
+- **D23-118** The captured void body.
+- **D23-119** Each dialog resets between rows.
+- **D23-120** With writes diverted, do these dialogs claim success — or refuse, as the Suppliers payment dialog did?
+
+### J. Remove (D23-121 → D23-126)
+
+- **D23-121** `Remove commission` opens an alert **naming the broker** — confirm.
+- **D23-122** The copy says *"This can't be undone."* — check against the backend's delete semantics.
+- **D23-123** Cancel and Escape close without a request.
+- **D23-124** Remove issues `DELETE` to the commission id.
+- **D23-125** Is removing a **paid** commission refused?
+- **D23-126** With the write diverted, does the toast claim **"Commission removed"**, and does the row return on reload?
+
+### K. Venue scoping (D23-127 → D23-134)
+
+- **D23-127** `/api/v1/brokers` is in `BUSINESS_SCOPED_PREFIXES` — confirm `businessId` on the wire.
+- **D23-128** Switch to 3358 → 2 commissions.
+- **D23-129** Switch to 3359 → 4.
+- **D23-130** Switch to 3360 → 3.
+- **D23-131** All venues → 9.
+- **D23-132** The stat cards re-scope with the venue.
+- **D23-133** `queryKey: ["brokers-redesigned"]` carries no businessId — the same structural risk as Modules 21 and 22.
+- **D23-134** At All venues, `Ch. Nazeer Ahmed` exists on all three venues with different phone numbers — is the venue named anywhere?
+
+### L. Resilience (D23-135 → D23-142)
+
+- **D23-135** Offline → the table shows its error state with Retry.
+- **D23-136** Unroutable host → same; Retry re-issues.
+- **D23-137** The error text is *"Couldn't load broker commissions."*
+- **D23-138** The stat cards during a failed load — do they assert Rs 0, as Inventory's did?
+- **D23-139** Slow network → skeleton, no flash of empty.
+- **D23-140** Malformed response does not white-screen.
+- **D23-141** An unknown status from the API — confirmed safe by the `|| "neutral"` fallback; drive it.
+- **D23-142** Console clean across the module.
+
+### M. Accessibility (D23-143 → D23-150)
+
+- **D23-143** Row actions announce which broker they act on.
+- **D23-144** Dialog labels are programmatically associated.
+- **D23-145** Status pills are not colour-only.
+- **D23-146** The alert dialog announces title + description and focuses Cancel.
+- **D23-147** Focus rings on all controls.
+- **D23-148** Heading order.
+- **D23-149** The search input has an accessible name.
+- **D23-150** The linked-function-sheet badge is reachable by keyboard.
+
+### N. Mobile — 360×740 (D23-151 → D23-158)
+
+- **D23-151** No horizontal page scroll.
+- **D23-152** **And** zero clipped elements outside deliberate scroll containers.
+- **D23-153** The table switches to the card renderer.
+- **D23-154** The card shows broker, type, amount and status — are the five row actions reachable?
+- **D23-155** Four stat cards reflow to 2 columns without clipping the rupee values.
+- **D23-156** The toolbar fits.
+- **D23-157** Dialogs are usable at 360.
+- **D23-158** Touch targets ≥ 24×24.
+
+### O. Integrity close-out (D23-159 → D23-164)
+
+- **D23-159** Commission count still 9 at close, via a clean iframe realm.
+- **D23-160** The status split unchanged (5 / 3 / 1).
+- **D23-161** `totalCommission` still Rs 667,000 and `totalOutstanding` still Rs 440,750.
+- **D23-162** Broker count still 12.
+- **D23-163** Every diverted write listed with method, URL and body.
+- **D23-164** No `POST`/`PATCH`/`DELETE` reached the real API.
+
+**164 cases written.** Execution follows.
