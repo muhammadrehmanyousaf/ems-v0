@@ -64,7 +64,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 32 | Business Settings | `/dashboard/settings` | ✅ 286 | **`[x]` COMPLETE — 150 run, 136 not run, 16 findings (2× S2) + 7/7 regressions pass** |
 | 33 | Availability | `/dashboard/settings?tab=availability` | ✅ 152 | **`[x]` COMPLETE — 95 run, 57 not run, 13 findings (2× S2)** |
 | 34 | Cancellation policy | `/dashboard/cancellation-policy` | ✅ 156 | **`[x]` COMPLETE — 105 run, 51 not run, 14 findings (1× S1, 3× S2)** |
-| 35 | Setup checklist | `/dashboard/onboarding` | — | `[ ]` |
+| 35 | Setup checklist | `/dashboard/onboarding` | ✅ 158 | `[~]` cases written — execution in progress |
 | 36 | Tonight | `/dashboard/venue-os?tab=today` | — | `[ ]` |
 | 37 | Event profit | `/dashboard/venue-os?tab=profit` | — | `[ ]` |
 | 38 | Venue money | `/dashboard/venue-os?tab=money` | — | `[ ]` |
@@ -17638,3 +17638,216 @@ on a completed Rs 1.4 million booking whose couple **never accepted any policy a
 dispute pack records in one field and then summarises, in the next, as **OK**. Only the first of three
 venues can be given a policy here. And when the save fails, nothing happens: no toast, no error, no
 change — the same nothing that happens when it succeeds.
+
+---
+
+## MODULE 35 — TEST CASES
+
+Route `/dashboard/onboarding`. Two components: `GettingStartedMigration` (flag-aware CSV-import
+prompt) and `OnboardingChecklistView` — one card per owned business with a 0–100 completeness score,
+six weighted categories, per-item fix links and an activation panel.
+
+One endpoint: `GET /api/v1/businesses/my-completeness`. **Read-only — this module writes nothing**,
+which makes it the first in the sweep where the risk is being wrong about what it says rather than
+what it changes.
+
+Probed live before any case ran:
+
+| Business | Score | Tier band | Activation |
+|---|---|---|---|
+| 3358 Rehman Grand Marquee | **44** | *Getting there* | 8 bookings · 1 future · 4 baaqi · **shield ON** |
+| 3359 Rehman Banquet & Lawn | **52** | *Solid start* | 8 bookings · 4 future · 7 baaqi · **shield ON** |
+| 3360 Rehman Marquee Bahria | — | — | — |
+
+3358's category breakdown: Core 22/35 · Photos **3/15** · Pricing & terms 15/20 · Trust **0/15** ·
+Specialty 4/10 · Verification **0/5**.
+
+### A. Route and shell (D35-001 → D35-014)
+
+- **D35-001** Sidebar → **Setup checklist** navigates to `/dashboard/onboarding`.
+- **D35-002** `document.title` (*"Dashboard : Onboarding"*) vs the page heading (*"Onboarding checklist"*) vs the nav label (**Setup checklist**).
+- **D35-003** The page metadata promises *"climb search ranking and unlock trust badges"* — establish whether either claim is substantiated anywhere.
+- **D35-004** `aria-current="page"` element count.
+- **D35-005** `GettingStartedMigration` renders **above** the checklist and is *"flag-aware, dismissible — renders nothing if both import flags are off."* Establish which it does live.
+- **D35-006** If it renders, establish what the two import flags are and whether they are on for this vendor.
+- **D35-007** If it is dismissible, establish where the dismissal is stored and whether it survives a reload.
+- **D35-008** Loading renders two skeletons (`h-32`, `h-96`).
+- **D35-009** A failed fetch toasts `response.data.message` or *"Failed to load onboarding checklist"* and leaves `data` empty → the **"No businesses yet"** card. Establish that a fetch failure is indistinguishable from having no business.
+- **D35-010** One card per owned business — verify **three** render.
+- **D35-011** Establish the card order and whether it matches the business list elsewhere.
+- **D35-012** Reload → identical scores.
+- **D35-013** The page is not venue-scoped; it shows all three at once. Establish that this is correct here and contrast with Module 34, where only the first venue is reachable.
+- **D35-014** Console clean.
+
+### B. The score and its tiers (D35-015 → D35-038)
+
+- **D35-015** Each card shows the business name, a tier badge, a large score and *"N pts on the table"*.
+- **D35-016** Verify 3358 renders **44 / 100** and 3359 renders **52 / 100**.
+- **D35-017** Verify 3360's score.
+- **D35-018** `tierFor` bands: ≥90 *Polished* · ≥70 *Well-rounded* · ≥50 *Solid start* · ≥25 *Getting there* · else *Just started*. Verify each business lands in the right band.
+- **D35-019** 3358 at 44 → **Getting there**; 3359 at 52 → **Solid start**. Verify on screen.
+- **D35-020** `remaining = 100 - score` renders as *"56 pts on the table"* for 3358. Verify.
+- **D35-021** At 100 it reads *"Maxed out"*. Establish the branch.
+- **D35-022** Sum each business's `earned` across the six categories and confirm it equals the headline score.
+- **D35-023** Sum each business's `max` and confirm it equals **100**.
+- **D35-024** For 3358: 35 + 15 + 20 + 15 + 10 + 5 = 100. Verify the per-category maxima.
+- **D35-025** For 3358: 22 + 3 + 15 + 0 + 4 + 0 = 44. Verify against the headline.
+- **D35-026** Sum the weights of the **undone** items in each category and confirm `earned + undone = max`.
+- **D35-027** Establish whether every item's weight is an integer and whether the weights within a category sum to its max.
+- **D35-028** The dashboard home shows *"44 OF 100 · PROFILE COMPLETION · Rehman Grand Marquee · weakest of 3"*. Cross-check that this page agrees.
+- **D35-029** …and establish that "weakest of 3" is correct given 44 < 52.
+- **D35-030** Each category shows `earned / max pts` and a `Progress` bar at `Math.round((earned/max)*100)`.
+- **D35-031** Verify the bar for **Trust signals** at 0/15 renders empty, and **Verification** at 0/5.
+- **D35-032** `cat.max > 0` guards the divide. Establish whether any category can have max 0.
+- **D35-033** The `Progress` bar is `h-1` — establish whether a 1px bar conveys anything at a glance.
+- **D35-034** The bars carry no accessible value. Verify.
+- **D35-035** Establish whether the score is used anywhere else in the product — search ranking, badges, admin.
+- **D35-036** …because the page's own metadata claims it drives search ranking. Establish whether it does.
+- **D35-037** Establish whether the vendor can see how the score compares to other vendors.
+- **D35-038** Establish whether a score ever expires or decays.
+
+### C. The fix links — does the checklist name the right fix? (D35-039 → D35-084)
+
+This is the heart of the module. The component's own comment sets the standard:
+
+> *"Each row is a link to the field that fixes it… A checklist that names a gap without naming its
+> fix is a scoreboard, not a checklist."*
+
+Every undone item on 3358 carries an `href`. Each is followed to its destination and checked for the
+field it claims to fix.
+
+- **D35-039** Enumerate every undone item on 3358 with its `href`.
+- **D35-040** `ownerName` → `/dashboard/settings?tab=profile`. Open it and look for an owner-name field.
+- **D35-041** `whatsappNumber` → `?tab=profile`. Look for a WhatsApp field.
+- **D35-042** `languagesSpoken` → `?tab=profile`. Look for a languages field.
+- **D35-043** `yearsInBusiness` → `?tab=profile`. Look for it.
+- **D35-044** `weddingsCompleted` → `?tab=profile`. Look for it.
+- **D35-045** `ownerBio` → `?tab=profile`. Look for it.
+- **D35-046** **Establish what the Profile tab actually contains.** Module 32 measured five fields: Business name · Description · City · Area / locality · Brand logo URL.
+- **D35-047** So establish how many of the six `?tab=profile` items have their field on that tab.
+- **D35-048** …and where those fields actually live — most likely `ProfileContentManager` on the **Listing content** tab.
+- **D35-049** `brandLogo` → `/dashboard/settings?tab=images`. Open Images and look for a brand-logo control.
+- **D35-050** …against Module 32's finding that **Brand logo URL is a text field on the Profile tab**, and Images is a gallery uploader.
+- **D35-051** So establish that `brandLogo` and the six identity items have their destinations **swapped**.
+- **D35-052** `imageMin5` and `imageMin10` → `?tab=images`. Verify that one is correct.
+- **D35-053** `cancellation` → `/dashboard/settings?tab=listing`. Open it and look for a cancellation-policy control.
+- **D35-054** …against Module 32, where the cancellation textarea is on **Capacity & pricing** (`?tab=pricing`), and Module 34, where the structured policy lives at `/dashboard/cancellation-policy`.
+- **D35-055** So establish that the one item worth 5 points and named *"The one thing that protects you when a family postpones"* links to neither place that sets it.
+- **D35-056** `references` and `pressOrAwards` → `?tab=listing`. Verify the Listing content tab carries them.
+- **D35-057** `socials` → `/dashboard/profile` — a different page entirely. Resolve it and establish what it is.
+- **D35-058** `amenities3` and `parking` → `?tab=amenities`. Verify the amenity switches are there.
+- **D35-059** …and specifically that a **Parking** switch exists, which Module 32 confirmed.
+- **D35-060** The five verification items → `/dashboard/business-documents`. **Resolve that route** and establish whether it exists.
+- **D35-061** If it 404s, establish that all five Verification points are unreachable.
+- **D35-062** Tally: how many of 3358's undone items link to a page that contains their fix?
+- **D35-063** Establish the consequence for a vendor working the list top to bottom.
+- **D35-064** …specifically: a vendor clicking *"Owner name"* lands on a tab with no owner-name field and no indication of where to go next.
+- **D35-065** Establish whether the destination tab even scrolls to or highlights the field.
+- **D35-066** Done items are deliberately **unlinked** — *"there is nothing to act on."* Verify no `<a>` wraps a done row, and credit the reasoning.
+- **D35-067** The `why` line renders **only** on undone rows. Verify.
+- **D35-068** Establish that the weight chip shows `✓` when done and `+N` when not.
+- **D35-069** Verify the chip colours: emerald for done, neutral for not.
+- **D35-070** Read every `why` string on 3358 and assess whether each states a real consequence rather than a restatement.
+- **D35-071** Quote the strongest three.
+- **D35-072** Establish whether any `why` is missing on an undone item.
+- **D35-073** The `href` and `why` are both optional in the interface — *"so the screen still renders against an older backend."* Establish whether any live item lacks either.
+- **D35-074** The **suggestions** block lists the top three highest-impact items as plain strings.
+- **D35-075** Verify 3358's: *Owner name · WhatsApp number · Cancellation policy set*.
+- **D35-076** Verify 3359's: *Advance / down-payment configured · Cancellation policy set · At least 5 photos*.
+- **D35-077** Establish that the suggestions are **strings only** — no href — while the same items in the list below **do** carry links.
+- **D35-078** So the highest-impact block is the one place a vendor cannot click through from. Establish.
+- **D35-079** The block's single link is *"Edit business profile"* → `/dashboard/business/{id}`. Resolve that route.
+- **D35-080** Establish whether it exists and what it is, given Business Settings lives at `/dashboard/settings`.
+- **D35-081** Cross-check the suggestions against the highest-weight undone items and establish whether "highest-impact" is accurate.
+- **D35-082** For 3358, the highest weights undone are ownerName (5), whatsappNumber (5), cancellation (5). Verify the suggestions match.
+- **D35-083** Establish the tie-breaking when several items share a weight.
+- **D35-084** Establish whether suggestions ever include something already done.
+
+### D. The activation panel (D35-085 → D35-106)
+
+- **D35-085** The panel renders when `biz.activation` is present. Verify on all three.
+- **D35-086** Header reads *"Booking shield ON"* or *"Booking shield off — add your future dates"*.
+- **D35-087** Live both 3358 and 3359 have `shieldOn: true`. Verify the ON copy and the emerald icon.
+- **D35-088** Establish what the booking shield actually is and what turns it on.
+- **D35-089** Three counters render: **bookings logged · future dates locked · baaqi tracked**.
+- **D35-090** Verify 3358: 8 / 1 / 4. Verify 3359: 8 / 4 / 7.
+- **D35-091** Cross-check `bookings` against the Bookings module.
+- **D35-092** Cross-check `baaqiTracked` against the Khata / receivables modules.
+- **D35-093** **The API returns five more activation fields the UI never renders**: `leadsTotal`, `leadsAwaitingReply`, `leadsWorked`, `receipts`, `functionSheets`. Establish.
+- **D35-094** Live on 3358 those are 28 / **10** / 18 / 15 / 6. Verify from the response.
+- **D35-095** **`leadsAwaitingReply: 10`** is the most actionable number on the payload and is displayed nowhere. Establish.
+- **D35-096** …and cross-check it against the Lead inbox and the `lead_stale_48h` notifications from Module 28.
+- **D35-097** The comment says the panel exists to *"reward a WORKING venue, not photos"* — assess whether three of eight fields achieves that.
+- **D35-098** When the shield is off, a link renders: *"Switch on the shield"* → `/dashboard/migrate`. Resolve that route.
+- **D35-099** Establish what `/dashboard/migrate` is and whether it switches on a shield.
+- **D35-100** Not reachable live (both shields are on) — establish from source.
+- **D35-101** The counters are `tabular-nums`. Verify.
+- **D35-102** The counter labels are `text-[10px]`. Measure.
+- **D35-103** Establish whether the activation panel contributes to the score at all, or is purely informational.
+- **D35-104** …i.e. whether a venue with 8 bookings scores higher than one with none.
+- **D35-105** Establish the tension: the panel says activation matters, and the score is driven entirely by profile fields.
+- **D35-106** Establish whether 3358 (44) or 3359 (52) is the more *active* venue, and whether the score reflects it.
+
+### E. What the checklist asks for versus what exists (D35-107 → D35-128)
+
+- **D35-107** **Photos: 3/15 on 3358.** Module 32 established 3358 has **1** image and 3359 and 3360 have **0**.
+- **D35-108** So verify 3359 and 3360's Photos category and whether they score 0.
+- **D35-109** Establish that `imageMin5` and `imageMin10` are both undone on a venue with one photograph.
+- **D35-110** **Trust signals: 0/15 on 3358** — all six items undone. Verify.
+- **D35-111** Establish whether any of the six trust fields is settable anywhere in the product.
+- **D35-112** **Verification: 0/5** — all five undone, all pointing at `/dashboard/business-documents`.
+- **D35-113** Establish whether NTN and CNIC can be submitted at all.
+- **D35-114** …and that two of the five (`ntnVerified`, `cnicVerified`) are *"We check this — nothing for you to do once submitted"* — so 2 of the 5 points are not the vendor's to earn.
+- **D35-115** Establish the same for `visited`: *"A visited badge is the strongest trust signal on the platform"* — a badge only the platform can grant.
+- **D35-116** So establish how many of the 100 points are actually within the vendor's control.
+- **D35-117** **Cancellation (5 pts) is undone on 3358** — consistent with Module 32 (empty textarea) and Module 34 (no active policy).
+- **D35-118** Establish which of the two the checklist is testing.
+- **D35-119** …by checking whether 3359, which also has neither, is likewise marked undone.
+- **D35-120** `Advance / down-payment configured` appears in 3359's suggestions — consistent with Module 32, where `downPaymentType` and `downPayment` are both **null** on 3359 and 3360.
+- **D35-121** Verify 3358 does **not** carry that suggestion, since it has Percentage / 10.
+- **D35-122** …and credit the checklist for detecting a real gap that the Settings screen displays as *"Percentage"* by default (WWL-472).
+- **D35-123** Establish whether the checklist would notice the amenity `null` → `false` conversion from WWL-472.
+- **D35-124** `amenities3` requires three amenities; 3358 has **catering** only among the ten. Verify it is undone.
+- **D35-125** `parking` is undone on 3358 (parking is `false`) and should be **done** on 3359 and 3360 (parking is `true`). Verify.
+- **D35-126** Establish whether the checklist reads the same columns Settings writes.
+- **D35-127** Establish whether a `null` amenity counts as not-done, and whether saving from Settings (converting null→false) would change any score.
+- **D35-128** Compute what 3358's score would become if the three suggestions were completed: 44 + 5 + 5 + 5 = **59**.
+
+### F. Accessibility (D35-129 → D35-140)
+
+- **D35-129** `h1` on the page — note the business cards use `h2`.
+- **D35-130** The `Progress` bars carry no `role="progressbar"` value or accessible text. Verify.
+- **D35-131** The done/undone state is conveyed by an icon (`CheckCircle2` vs `Circle`) and colour. Establish whether it is announced.
+- **D35-132** The weight chip renders a bare `✓` glyph for done. Establish how that reads.
+- **D35-133** Linked rows are real `<Link>` elements — verify they are focusable and have a discernible name.
+- **D35-134** …and that the name includes the item label and not just the icon.
+- **D35-135** Unlinked (done) rows are `<div>` — verify they are not in the tab order.
+- **D35-136** The tier badge conveys the band by text as well as colour.
+- **D35-137** Colour contrast of the five tier tones.
+- **D35-138** Focus order through a card.
+- **D35-139** `prefers-reduced-motion` against the skeletons.
+- **D35-140** Establish whether the score is announced as a number with its denominator.
+
+### G. Mobile 360×740 (D35-141 → D35-150)
+
+- **D35-141** No horizontal overflow: `scrollWidth === clientWidth` and an element-level right-edge count.
+- **D35-142** The header's `flex-wrap` — name and badge against the large score.
+- **D35-143** The activation panel's `grid-cols-3` at 360px.
+- **D35-144** Item rows: label, `why` line and weight chip within 360px.
+- **D35-145** The `why` text at `text-[11px]` — measure.
+- **D35-146** Tap targets on the linked rows.
+- **D35-147** The whole-page height for three business cards.
+- **D35-148** Establish how far a vendor scrolls to see their third venue's score.
+- **D35-149** Under `hover: none`, the row hover styling.
+- **D35-150** The suggestions block at 360px.
+
+### H. Integrity (D35-151 → D35-158)
+
+- **D35-151** Console clean.
+- **D35-152** No unhandled rejection.
+- **D35-153** **This module writes nothing** — confirm zero mutating requests across the whole run.
+- **D35-154** Confirm the three scores are identical at close.
+- **D35-155** Confirm no business field changed (cross-check Module 32's baseline).
+- **D35-156** Confirm the cross-module baselines (28–34) are unchanged.
+- **D35-157** Confirm following a fix link does not itself write.
+- **D35-158** No storage keys left behind.
