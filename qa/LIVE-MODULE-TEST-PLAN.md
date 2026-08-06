@@ -72,7 +72,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 40 | Cash & cheques | `/dashboard/venue-os?tab=cash` | ✅ 140 | `[x]` COMPLETE — 108 run, 32 not run, 10 findings (4× S2) |
 | 41 | Kitchen & suppliers | `/dashboard/venue-os?tab=kitchen` | ✅ 140 | `[x]` COMPLETE — 104 run, 36 not run, 8 findings (3× S2) |
 | 42 | Accounting | `/dashboard/venue-os?tab=advanced` | ✅ 210 | `[x]` COMPLETE — 141 run, 69 not run, 7 findings (1× S2) + WWL-528 answered |
-| 43 | Field capture | `/dashboard/field` | ✅ 140 | `[~]` cases written, executing |
+| 43 | Field capture | `/dashboard/field` | ✅ 140 | `[x]` COMPLETE — 112 run, 28 not run, 5 findings (3× S2) |
 | 44 | Quote requests | `/dashboard/quotes` | — | `[ ]` |
 
 ---
@@ -21323,3 +21323,142 @@ Re-enter.
 | D43-140 | **Zero writes delivered across the entire module** | headline safety assertion |
 
 **Total: 140 cases.**
+
+---
+
+## Module 43 — RESULTS (live production, visible browser)
+
+**140 cases written · 112 driven · 28 not run · 5 findings (3× S2, 2× S3).**
+
+**Nothing was written.** One `POST /vendor-holds` was captured and diverted; the other three dialogs
+never reached the network. The offline queue was **never populated** — I went offline to observe the
+banner and reconnect behaviour, and submitted nothing while offline.
+
+---
+
+### WWL-604 (S2) — "Hold a date" holds a date on an untouched form
+
+Opened the dialog and clicked **Hold date** without typing anything. Captured:
+
+```
+POST /vendor-holds  {"holdDate":"2026-08-06","holdTime":"Evening"}
+```
+
+Today's date and the first slot — **both defaults, neither chosen**. The dialog closed and a toast
+said **"Date held."**
+
+The form has **two fields and zero required**. On a live, publicly-listed venue a hold blocks a real
+date on a real calendar, and the card's own subtitle is *"Tentative reservation"* — a vendor tapping
+it to see what it does has already made one.
+
+It compounds **WWL-569**: the availability engine reports every date free regardless, so a stray hold
+would not appear on the space calendar or the public page either. Nothing on any screen would show
+it.
+
+### WWL-605 (S2) — the other three dialogs are silent dead ends
+
+Same test, same page, three other dialogs:
+
+| Dialog | Requests | Visible errors | Toasts | Dialog |
+|---|---|---|---|---|
+| Capture a lead | **0** | **0** | **0** | stays open |
+| Record a payment | **0** | **0** | **0** | stays open |
+| Log an expense | **0** | **0** | **0** | stays open |
+| **Hold a date** | 1 | 0 | *"Date held"* | **closes** |
+
+Clicking Save on an empty lead, receipt or expense form does nothing and says nothing. This is
+**WWL-556 reproducing three more times** — the Money tab's Add-expense form had exactly this
+behaviour, and the same dialog is reused here.
+
+Four capture dialogs on one screen, and they fail in **two opposite directions**: three refuse
+silently, one succeeds without being filled in.
+
+### WWL-606 (S2) — the success toast does not check what came back
+
+The diverted hold request returned **HTTP 200** carrying the API's root banner
+(`{"message":"Event Planner API is running"}`) — a response containing no hold, no id, no date. The
+client still closed the dialog and toasted **"Date held."**
+
+Any 200 is treated as success without validating the payload. On a bridal-expo connection — the exact
+scenario this screen is built for — a captive portal, a proxy or a stale service worker returning 200
+with an unrelated body would tell the vendor a date is held when nothing was recorded.
+
+Same family as the false-success finding recorded earlier in the sweep, here on the operation that
+decides whether a hall is sellable.
+
+### WWL-607 (S3) — 28 fields, 28 unlabelled, 0 required
+
+| Dialog | Fields | Without a programmatic label | Marked required |
+|---|---|---|---|
+| Capture a lead | 11 | **11** | 0 |
+| Log an expense | 9 | **9** | 0 |
+| Record a payment | 6 | **6** | 0 |
+| Hold a date | 2 | **2** | 0 |
+
+Visible label text *is* rendered (*Contact name*, *Phone*, *Amount (Rs)*, *Method*, *Linked
+booking*), but none of it is associated with its input — no wrapping `<label>`, no `for`, no
+`aria-label`. A screen reader announces an unnamed text box, and no field is marked required in the
+markup, which is also why the browser contributes nothing when three of the four submit empty.
+
+Same shape as WWL-593 (Kitchen, 10 unlabelled) and WWL-598 (Advanced, 35 unlabelled).
+
+### WWL-608 (S3) — a lead captured at an expo attaches to no venue
+
+```js
+const businessId = useActiveBusinessId() ?? undefined
+```
+
+Under the header's persisted default — **"All venues"** — `businessId` is `undefined` and is passed
+that way to `LeadFormDialog`. The vendor owns three venues. The **Hold a date** dialog has no venue
+control at all: two fields, date and slot, and nothing that says *which* hall is being held.
+
+Same root as WWL-570 (`SpacePnlView`) — a component reading `useActiveBusinessId` directly instead of
+the shared `useBusinessIdField` that the Module 36 fix put everywhere else.
+
+---
+
+### What holds — verified, not assumed
+
+- **The offline story works, and I flipped the network for real.** With CDP
+  `Network.emulateNetworkConditions {offline: true}`:
+
+  > *"You're offline — capture anyway."*
+  > *"Saved on this device — syncs the moment you reconnect."*
+
+  Banner turns amber, the icon becomes `WifiOff`, `navigator.onLine` reads **false**, the four cards
+  stay clickable, dialogs still open, and **zero sync requests fire while offline**. Reconnecting
+  flips it straight back to *"You're online — captures save immediately. · Everything's in sync."* —
+  no reload needed.
+- **This page has a proper `h1`** — *Field capture*. The first page in five Venue-OS tabs to have one.
+- **The hold dialog states its own expiry**: *"A tentative reservation on your calendar. **It expires
+  on its own if you don't confirm a booking.**"* That is the `DateHold` sweeper in `app.js` explained
+  to a vendor in one sentence.
+- **Every dialog is Pakistani-native.** Phone fields carry `inputmode="tel"` and an `03xx-xxxxxxx`
+  placeholder, **WhatsApp is its own field** beside phone, lead sources are *Manual Walkin ·
+  Whatsapp · Instagram*, functions are *Mehndi · Nikah · Baraat · Walima*, payment methods are *Cash ·
+  JazzCash · Easypaisa · Raast · Bank IBFT*, and hold slots are *Morning · Afternoon · Evening · Full
+  day* alongside *Mehndi · Baraat · Walima · Custom*.
+- **The receipt picker lists bookings by name and date** — *"Ahmed Raza & Sanam Ahmed · 2026-10-22"* —
+  and the amount field uses `inputmode="decimal"`.
+- **The expense dialog is the Money tab's**, carrying its best asset: *"Recurring overhead — not tied
+  to one function (rent, utilities, salary)"* as the first booking option, plus parchi photo capture.
+- **The card copy is situational, not generic**: *"Walk-in at the expo"*, *"Cash paid out on-site"*,
+  *"Advance or booking money"*.
+- **Layout is clean at both widths** — 0 overflowing elements at 1440px and 360×740, `docScrollX`
+  false. Cards measure **328×82** at 360px, comfortably above any tap-target threshold, and the page
+  is capped at `max-w-2xl` for one-handed use.
+
+### Not run (28), with reasons
+
+- **Every submit.** A receipt writes money against a real customer's booking; a hold blocks a date on
+  an approved, publicly-listed venue; a lead and an expense write to live records. Captured and
+  diverted.
+- **The offline queue was never populated.** `lib/outbox` writes ops to **IndexedDB** and
+  `outbox-sync` flushes them to the backend on reconnect — a queued op would survive in the browser
+  profile and sync outside this session's control. So the queue-then-sync path, the pending counter
+  above zero, and the idempotency key on replay are **not verified**.
+- **No conflict was re-entered** — Re-enter replays a rejected op.
+- **D43-087 over-payment flagging** and **D43-122 holding an already-booked date** — both need a real
+  submit.
+- **D43-046/047** whether `isOutboxEnabled()` is on for this deployment — determinable only by
+  queueing something.
