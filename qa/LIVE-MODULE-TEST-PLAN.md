@@ -56,7 +56,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 24 | Generator fuel | `/dashboard/generator-fuel` | ✅ 132 | **`[x]` COMPLETE — 62 run, 70 not run, 18 findings (5× S2)** |
 | 25 | Halal certs | `/dashboard/halal-certs` | ✅ 138 | **`[x]` COMPLETE — 58 run, 80 not run, 19 findings (3× S2)** |
 | 26 | Drone NOC | `/dashboard/drone-noc` | ✅ 138 | **`[x]` COMPLETE — 60 run, 78 not run, 17 findings (3× S2)** |
-| 27 | Reviews | `/dashboard/reviews` | — | `[ ]` |
+| 27 | Reviews | `/dashboard/reviews` | ✅ 310 | `[~]` cases written — execution in progress |
 | 28 | Notifications | `/dashboard/notifications` | — | `[ ]` |
 | 29 | Promote | `/dashboard/promote` | — | `[ ]` |
 | 30 | Plan & billing | `/dashboard/billing` | — | `[ ]` |
@@ -12231,3 +12231,379 @@ record — no reason captured, no document attached, no approver named. Beneath 
 a permit that expires six years before it starts, with no pilot, no licence and no drone
 registration. All three compliance registers — fuel, halal, drone — are empty in production, so
 nothing has yet been recorded wrongly. The machinery to record it wrongly is in place.
+
+---
+
+## MODULE 27 — TEST CASES
+
+Route `/dashboard/reviews`. Four stacked surfaces on one page, each with its own data source:
+**ReputationPanel** (`GET /analytics/reputation`), **ReviewAutomationStatsCard**
+(`GET /reviews/automation-stats`), **AiReviewSummaryCard** (`POST /ai/businesses/:id/review-summary`)
+and **ReviewsTable** (`GET /analytics/reviews`). This is the first module in nine with a **populated**
+dataset, so the arithmetic cases are all drivable.
+
+Live baseline established before writing (clean fetch, no hooks):
+
+| Source | Value |
+|---|---|
+| Reviews (all venues) | **8** — ids 23–30, ratings 5·4·4·3·5·5·5·4 |
+| Per venue — 3358 / 3359 / 3360 | **3 / 2 / 3** |
+| Reputation | avg **4.4**, replied **8/8 = 100%**, benchmark **4.7** (15 reviews, 728 businesses) |
+| Automation | prompted **11**, responded **8**, silent **3**, rate **73%**, avg **4.4** |
+| AI | `configured: true`, `reviewSummary: true` |
+| Reply edit window | **30 min** (`replyEditWindowMinutes`) — every one of the 8 replies is months old |
+
+### A. Route, shell and load (D27-001 → D27-012)
+
+- **D27-001** Sidebar → **Reviews** navigates to `/dashboard/reviews`.
+- **D27-002** `document.title` (*"Dashboard : Reviews"*) vs the page `h1` vs the breadcrumb vs the nav label.
+- **D27-003** The rail entry is `aria-current="page"`.
+- **D27-004** Direct URL loads with no client-side error and no console error.
+- **D27-005** The `Heading` renders **Reviews** with no description — check against every other module, which carries a subtitle.
+- **D27-006** Four surfaces mount in a fixed order: Reputation → Automation → AI → Table. Confirm on the live DOM.
+- **D27-007** Each surface fetches independently; count the network requests on a cold load.
+- **D27-008** The table's own skeleton (`h-10 w-60` + `h-[400px]`) shows while loading, and the panels show `Skeleton h-64` / `h-44` — do they resolve at different times, and does the page reflow?
+- **D27-009** `PageContainer` scrollable region — the page has four cards; check total scroll height and that nothing is cut off.
+- **D27-010** Hard reload → identical content, identical counts.
+- **D27-011** Client-side nav away and back → all four surfaces refetch (they are `useEffect`-on-mount, not TanStack Query — so no cache).
+- **D27-012** No `<style>` or listener leaks after leaving the route.
+
+### B. Reputation panel — headline and benchmark (D27-013 → D27-036)
+
+- **D27-013** The panel renders at all: `if (!data || !data.hasData) return null` — with 8 reviews `hasData` is true.
+- **D27-014** Headline average reads **4.4** and is `tabular-nums`.
+- **D27-015** `data.average.toFixed(1)` — server already rounds to 1dp; check for a double-rounding drift against the raw AVG.
+- **D27-016** The star row beside it uses `Math.round(4.4)` = **4 filled stars** — so a 4.4 and a 3.5 both draw 4 stars. Compare with the table's `StartComponent`, which draws **halves**. Two star renderers on one page with different rounding.
+- **D27-017** `{data.total} review{s}` pluralisation — 8 → "8 reviews". Check the `=== 1` branch.
+- **D27-018** **Category avg 4.7** renders.
+- **D27-019** The `vs peers` badge reads **−0.3** and is styled amber (below peers).
+- **D27-020** `vsBenchmark = Math.round((4.4 − 4.7) * 10) / 10` — check the floating-point result is exactly −0.3, not −0.30000000000000004.
+- **D27-021** The `>= 0` branch prepends `+`. Establish the styling fork (emerald vs amber).
+- **D27-022** **The benchmark's sample size is returned and never rendered.** `categoryBenchmark.reviewCount` = **15**, `businessCount` = **728**. The vendor is told they are below their category on the strength of 15 reviews spread over 728 businesses, and is not told either number.
+- **D27-023** Compute the peer average by hand from the API and confirm it is 15 reviews, not 15 businesses.
+- **D27-024** **The benchmark excludes only the *scoped* business, not all of the vendor's businesses.** `ownIds = new Set(bizIds)` where `bizIds = [scopedBid]` when a venue is active. Establish that scoping to one venue puts the vendor's *other two venues* into their own peer pool.
+- **D27-025** Prove it with live arithmetic: benchmark unscoped = **4.7**; scoped to 3359 = **4.6**. The 0.1 drop is the vendor's own 3358 (4.3) and 3360 (4.0) entering the peer set.
+- **D27-026** Scoped to 3358 and to 3360 the benchmark stays 4.7 — establish why (their own remaining venues do not move a 15-review pool far enough to round differently) and confirm the mechanism is the same.
+- **D27-027** `vendorType` comes from `User.vendorType` = **Wedding venue**. Check the label rendered — the panel prints only the number, never the category name.
+- **D27-028** A vendor with `vendorType = null` gets `categoryBenchmark = null` and the whole comparison silently disappears. Establish from source.
+- **D27-029** The peer query pulls **every** business of that vendorType (728) and averages **all** their reviews with no minimum-review floor, no recency window and no city filter — a Karachi hall is benchmarked against a Quetta lawn.
+- **D27-030** Response line: *"Replied to **100%** (8/8)"* renders.
+- **D27-031** `repliedCount` counts `vendorReply != null` — an **empty-string** reply would count as replied. Establish from source.
+- **D27-032** `responseRate: total > 0 ? … : null` — the `null` branch hides the line entirely rather than showing 0%.
+- **D27-033** **Two different "response rates" are stacked on the same page**: this one (replies / reviews = 100%) and the automation card's (reviews / prompts = 73%). Establish the visual adjacency and the wording of each.
+- **D27-034** The headline block has no venue name on it — with three venues merged into one 4.4, which venue is 4.4?
+- **D27-035** Panel `CardTitle` is **Reputation**; the subtitle promises *"your best review ready to share"* — check that promise against the `rating >= 4` gate below.
+- **D27-036** `AnalyticsAPI.getReputation()` `.catch(() => setData(null))` → on a 500 the entire panel vanishes with no error state and no retry.
+
+### C. Reputation panel — distribution and trend (D27-037 → D27-056)
+
+- **D27-037** Distribution renders five rows, 5★ down to 1★, in that order.
+- **D27-038** Live values: 5★=4, 4★=3, 3★=1, 2★=0, 1★=0. Verify each against the table.
+- **D27-039** The counts sum to 8 = `data.total`.
+- **D27-040** Bar width = `(count / maxDist) * 100` where `maxDist = Math.max(1, …)`. The 5★ bar (4) is full width; the 3★ bar (1) is 25%.
+- **D27-041** A zero-count row renders a **0-width bar** — is the row still legible, or does it look like a rendering failure?
+- **D27-042** `maxDist` guards against divide-by-zero with `Math.max(1, …)`. Confirm.
+- **D27-043** The distribution rows are not clickable — establish that there is **no way to filter the table to the 1★ reviews** from the one control that shows you have them.
+- **D27-044** The bars carry no `title`, no `aria-label` and no accessible number beyond the trailing count. Check with a screen-reader tree.
+- **D27-045** 6-month trend renders six columns: Mar Apr May Jun Jul Aug.
+- **D27-046** Live values: Mar 5 (1), Apr 5 (2), May 3 (1), Jun 4 (1), Jul 4 (1), Aug 5 (1). Verify each against the table's dates.
+- **D27-047** Bar height = `(average / 5) * 100` of a 56px box. A 5.0 month is full height, a 3.0 month is 60%.
+- **D27-048** **The trend's y-axis starts at zero and is never labelled** — a 4.0 and a 5.0 differ by 20% of bar height with no gridline, no axis and no scale.
+- **D27-049** A month with **no reviews** renders a 4px `bg-muted` stub. Establish what that reads as beside a real bar.
+- **D27-050** The `title` attribute carries `"May: 3 (1)"` — the only place the month's review **count** appears. Hover to confirm, and note it is unreachable on touch.
+- **D27-051** Trend months are bucketed **server-side** with `new Date(now.getFullYear(), now.getMonth() - i, 1)` — server-local time. Establish the server's timezone and whether a review created at 23:30 PKT on the last of a month lands in the right bucket.
+- **D27-052** `sixMonthsAgo.setMonth(getMonth() - 5); setDate(1)` — check the boundary: a review from exactly 2026-03-01 is included.
+- **D27-053** The trend is an **average**, not a volume — a month with one 5★ looks identical to a month with fifty 5★.
+- **D27-054** Cross-check: the trend's six months hold 7 reviews; the total is 8. Find the eighth (2026-02-13) and confirm it is correctly outside the window.
+- **D27-055** `t.label` is generated with `toLocaleString("en-US", …)` on the **server**. Confirm the month names are English regardless of the browser.
+- **D27-056** The trend has no year on it — Aug 2026 and Aug 2025 would render identically if the window ever spanned a year boundary.
+
+### D. Reputation panel — share, PNG and keywords (D27-057 → D27-082)
+
+- **D27-057** The shareable block renders only when `topReview && topReview.rating >= 4`. Live top review is 5★ → renders.
+- **D27-058** **If the vendor's best review is 3★ the entire share block disappears with no explanation** — establish from source and check whether any copy warns of it.
+- **D27-059** `topReview` ordering is `isPinned DESC, rating DESC, createdAt DESC`. Live: no review is pinned, so the newest 5★ (id 30, Zeeshan Akram) wins. Verify.
+- **D27-060** The quote renders `line-clamp-3` — a long review is visually truncated but the **full** text is what gets shared. Confirm the divergence.
+- **D27-061** Attribution: `— Zeeshan Akram · Rehman Banquet & Lawn`.
+- **D27-062** The reviewer's **full name is published** into a shareable card and a PNG with no consent affordance and no way to anonymise. `"— Verified customer"` is the fallback only when the name is missing.
+- **D27-063** **Share** button — hook `window.open`, click, and read the URL without opening it.
+- **D27-064** The share URL is `https://wa.me/?text=…` with **no recipient** — a share sheet, not a send. Confirm it cannot message a customer.
+- **D27-065** The share text composes `★★★★★ (5/5)`, the quoted comment, the reviewer name, the business name and `reviewed on Wedding Wala`. Verify the exact assembled string.
+- **D27-066** **The share text contains no link back to the business.** A recipient who reads it cannot reach the listing.
+- **D27-067** `encodeURIComponent` handles the newlines and the `&` in *"Rehman Banquet & Lawn"*. Verify the encoded form.
+- **D27-068** **Copy** button → `navigator.clipboard.writeText`, then read the clipboard back and compare byte-for-byte with the share text.
+- **D27-069** The success toast reads *"Review copied"*; the failure path toasts *"Could not copy"*. Drive the success path.
+- **D27-070** `navigator.clipboard?.writeText` — optional-chained, so on an insecure context the call silently no-ops with **neither** toast. Establish.
+- **D27-071** **PNG** button → hook `URL.createObjectURL` and `HTMLAnchorElement.click`, press it, and capture the blob without downloading.
+- **D27-072** The blob is `image/png`, 1080×1080. Verify dimensions by decoding.
+- **D27-073** The canvas draws: cream background, two gold rules, the star row at 72px, the quote wrapped at `S-200`, the attribution, the business name and *"reviewed on Wedding Wala"*.
+- **D27-074** The quote is capped at **9 lines** with an ellipsis on the 9th. Establish what a 400-character review looks like.
+- **D27-075** `ctx.fillText(r.businessName, S/2, S-110)` — the business name is drawn with **no width measurement**, so a long venue name overflows the canvas edge. Establish from source and measure with the live name.
+- **D27-076** Same for the star row and the attribution — only the quote is wrapped.
+- **D27-077** The filename is `wedding-wala-review-{id}.png`. Verify.
+- **D27-078** `URL.revokeObjectURL(url)` is called **synchronously after `a.click()`** — establish whether the download can lose the blob in a slow browser.
+- **D27-079** The toast reads *"Review card downloaded"* — fired unconditionally after `toBlob`, whether or not the browser accepted the download.
+- **D27-080** Keyword tally renders: hall 4, food 3, issue 3, cool 3, marquee 2, area 2, management 2, personally 2, supervised 2.
+- **D27-081** **The tally cannot tell praise from complaint** — *"issue"* (3) and *"cool"* (3) sit in identical neutral badges. Read the three reviews containing "issue" and establish what the vendor is being shown.
+- **D27-082** The regex is `[a-z]{3,}` — **Urdu-script comments produce zero keywords**, and Roman-Urdu words survive but are absent from the stopword list (*"bohat"*, *"shandar"*). Establish both against the live corpus.
+
+### E. Automation card — the four stats (D27-083 → D27-104)
+
+- **D27-083** The card renders (prompted = 11 > 0), not the empty branch.
+- **D27-084** Header reads *"Review automation — last **180** days"*.
+- **D27-085** **Prompted 11** — verify against the API and against Bookings: Completed, `bookingDate` between −180d and −3d, `customerEmail` not null, not dismissed.
+- **D27-086** **Responded 8** — equals the total review count. Verify the identity is a coincidence of this dataset, not a computation.
+- **D27-087** **Silent 3** — 11 − 8. Verify.
+- **D27-088** **Response rate 73%** — `Math.round(8/11*100)` = 73. Verify.
+- **D27-089** Sub-label *"Avg 4.4 / 5"* under Response rate — this is `avgRating` over the **reviews on those bookings**, and it sits under a card labelled *Response rate*. Establish the mismatch.
+- **D27-090** **The word "prompted" is a claim about emails that were sent.** The count is derived purely from booking shape — it never checks that an email was actually dispatched. Establish against the outbox/email tables.
+- **D27-091** The empty-state copy promises *"the auto-prompt cron will email the customer"* once a booking is Completed and 3+ days old. Establish whether that cron exists and runs.
+- **D27-092** **This card is not venue-scoped.** `/api/v1/reviews` is absent from `BUSINESS_SCOPED_PREFIXES`, so no `businessId` is appended; and the controller scopes bookings by `vendorIds contains userId`, ignoring `req.query.businessId` entirely. Prove both.
+- **D27-093** So on one page the **Reputation panel and the table are venue-scoped and the automation card is not**. Switch venues and watch three numbers change and four not.
+- **D27-094** Send `?businessId=3359` to `automation-stats` directly and confirm the response is byte-identical to the unscoped one.
+- **D27-095** The 180-day window is hard-coded server-side; the card has no date control.
+- **D27-096** `limit: 500` on the prompted query — a venue with more than 500 completed bookings in 180 days silently truncates, and the response rate is computed on the truncated set. Establish.
+- **D27-097** **Refresh** button — click it, confirm a fresh `GET /automation-stats`, and confirm the numbers re-render.
+- **D27-098** Refresh sets `loading` true → the whole card is replaced by a skeleton, so the numbers disappear on every refresh.
+- **D27-099** `.catch(() => setData(null))` → a failed refresh silently drops the card into the *"No post-event review prompts have been sent yet"* empty state, which is a **false statement** about the vendor's data.
+- **D27-100** The four `Stat` tiles carry an icon, a label and a value; the value is not `tabular-nums`.
+- **D27-101** The grid is `grid-cols-2 md:grid-cols-4` — check the 2-column wrap at narrow widths.
+- **D27-102** WW-161's fix is visible: only `Completed` bookings count. Confirm no `Confirmed` booking is in the 11.
+- **D27-103** WW-025's fix is visible: reviews are scoped to the vendor's own businesses before the responded set is built. Confirm from source and by arithmetic.
+- **D27-104** Cross-check the two averages on the page: reputation `average` 4.4 (all 8 reviews) and automation `avgRating` 4.4 (reviews on prompted bookings). Establish whether they can ever legitimately differ, and whether the page explains that they are different populations.
+
+### F. Automation card — silent list and its actions (D27-105 → D27-134)
+
+- **D27-105** The silent list renders three rows: Junaid Farooq & Maryam Junaid (#164, 14 Jul), Shahzad Butt & Iqra Shahzad (#162, 16 Jun), Kamran Sheikh & Zoya Kamran (#159, 28 Apr).
+- **D27-106** Heading reads *"Silent customers — nudge them on WhatsApp"*.
+- **D27-107** `silentRecent` is capped at **20** server-side with no "and N more" affordance. Establish.
+- **D27-108** The rows are ordered `bookingDate DESC` — the most recent silence first.
+- **D27-109** `fmtDate` uses `en-PK` → *"Jul 14, 2026"*. Verify the rendered form.
+- **D27-110** Each row shows *"Booking #164"* — check the link: **is the booking id clickable?**
+- **D27-111** **The silent list gives you a name, a phone and a date and no way to open the booking**, on a screen whose whole purpose is following up on it.
+- **D27-112** **Call** pill renders `tel:0304537951`. Read the href; do not dial.
+- **D27-113** The `tel:` href uses the **raw** stored phone, un-normalised — establish what happens with a number stored as `+92 304 537951` or with spaces.
+- **D27-114** **WhatsApp** pill: `isValidWaTarget` normalises `0304537951` → `92304537951` — that is **11 digits**, and the guard demands `/^923\d{9}$/` = 12. Compute for all three live numbers.
+- **D27-115** So establish live: **does the WhatsApp pill render for any of the three silent customers?** Count the pills in the DOM.
+- **D27-116** If it does not: the three phone numbers stored on these bookings are **10 digits** (`0304537951`), one short of a Pakistani mobile (`03045379512`). Determine whether the data is truncated or the guard is wrong — read the same customers' numbers elsewhere in the product (Bookings, Customers) and compare.
+- **D27-117** Establish the consequence either way: a real Pakistani mobile `03001234567` normalises to `923001234567`, passes; a landline `0512345678` fails. Verify the predicate against a table of forms: `03…`, `+923…`, `923…`, `92 3…`, `0092 3…`, `3001234567`.
+- **D27-118** `0092…` — a very common Pakistani entry form — normalises to `0092…` → **fails**, because the `startsWith("0")` branch strips only **one** leading zero and prepends `92`, producing `92092…`. Verify by computation.
+- **D27-119** `waLink` returns `'#'` for an invalid number, and the anchor is only rendered when `isValidWaTarget` passes — so the `'#'` is dead code. Confirm the two guards agree.
+- **D27-120** The WhatsApp message body is *"Assalam-o-Alaikum {name} — hope your event went well. Could you take a moment to leave us a review? Shukria!"*. Read it from the composed href.
+- **D27-121** `${name || ''}` — with a null name the greeting becomes *"Assalam-o-Alaikum  — hope…"* with a double space. Verify by composition.
+- **D27-122** The message contains **no link to leave the review**. The customer is asked for a review and given no destination.
+- **D27-123** **This is the one control on the page that contacts a customer.** It is an `<a target="_blank">`, so a click opens WhatsApp Web with the message pre-filled — it does not send. Establish that, and do not click it.
+- **D27-124** The **X / "Not on WhatsApp"** button writes `ww:notOnWa:v1` into `localStorage`. Snapshot the key first, drive it, verify the write, then **restore the original value**.
+- **D27-125** Verify the stored form is the normalised `92…` string, so `0304…` and `+92 304…` collapse to one entry.
+- **D27-126** Verify the pill disappears for that number without a reload (`setNotOnWa(getNotOnWa())`).
+- **D27-127** **The mark is one-way in the UI** — there is no "actually it is on WhatsApp" control. Establish that the only undo is clearing browser storage.
+- **D27-128** The flag is per-**browser**, not per-vendor-account: `ww:notOnWa:v1` has no user id in the key. Two vendors sharing a machine share the list, and the same vendor on a phone sees none of it.
+- **D27-129** The X button's `aria-label` is *"Not on WhatsApp"* and its `title` is *"Mark this number as not on WhatsApp"* — but its visible content is a bare `X` icon sitting immediately beside a second `X` icon labelled **Dismiss**. Establish the confusion.
+- **D27-130** **Dismiss** button → `POST /reviews/automation/{id}/dismiss`. Arm the write blocker, click, capture the body `{action:"dismiss"}`.
+- **D27-131** The optimistic update decrements **both** `silent` and `prompted`. Decrementing `prompted` is wrong — the prompt was still sent. Watch the four stat tiles during the diverted click.
+- **D27-132** `responseRate` is **not** recomputed optimistically, so after a dismiss the card shows a rate that does not match its own numerator and denominator. Verify live: 11/8/3/73% → 10/8/2/73%, when 8/10 is 80%.
+- **D27-133** On failure the code toasts and calls `load()` to restore. With the blocker armed, confirm the row returns and the numbers revert.
+- **D27-134** The backend supports `action: 'restore'` and the UI never sends it — **a dismissed customer cannot be un-dismissed from any screen**. Establish from source and from the route table.
+
+### G. AI review summary card (D27-135 → D27-152)
+
+- **D27-135** The card renders: `AiAPI.status()` returns `configured: true`, `features.reviewSummary: true`.
+- **D27-136** `businesses.length === 0` also hides it — confirm the vendor's three businesses load from `/businesses/user-business`.
+- **D27-137** With 3 businesses the picker renders (`businesses.length > 1`).
+- **D27-138** **The picker defaults to `opts[0].id` = 3358, ignoring the active venue.** Scope the session to 3359 and confirm the AI card still offers 3358 first. Eighth module in this sweep with the `businesses[0]` default.
+- **D27-139** The picker lists all three by name; verify the labels.
+- **D27-140** `name || \`Business #${id}\`` fallback — establish from source.
+- **D27-141** **Run summary** → `POST /ai/businesses/3358/review-summary`. This endpoint **persists nothing** (verified in `aiController.reviewSummary`: read 50 reviews, call the model, return text). Drive it exactly once with the blocker's allowlist opened for this one path, and record the response.
+- **D27-142** Button label cycles *Run summary* → *Analysing…* → *Re-run*. Verify all three.
+- **D27-143** The spinner replaces the sparkle icon while busy.
+- **D27-144** The summary renders inside a gold-bordered box with `whitespace-pre-line`.
+- **D27-145** Footer reads *"Based on N recent reviews"* — verify N against the venue's actual review count (3358 has **3**).
+- **D27-146** The copy promises *"Pulls up to 50 most-recent reviews per business"*; verify the backend's `limit: 50`.
+- **D27-147** **A business with zero reviews returns `200 {summary: null, reviewCount: 0}`** — the FE's `if (!r)` guard does not catch it (the object is truthy), so `setSummary(null)` renders nothing and **no toast fires**. Pressing the button does nothing visible. Establish from source; all three live venues have reviews.
+- **D27-148** A 503 returns `null` from `AiAPI` → toast *"AI not configured"*. Establish the path.
+- **D27-149** A 502 (`AI failed`) throws → `toast.error(e.response.data.message)`. Establish.
+- **D27-150** `aiLimiter` rate-limits the route. Establish its window and what the UI shows when it trips.
+- **D27-151** **The summary is not stored and not dated.** Re-running produces a different text with no record of the previous one and no timestamp on screen.
+- **D27-152** The card sits **above** the reviews table, so the AI reads reviews the vendor has not yet scrolled to.
+
+### H. Reviews table — toolbar, search, export (D27-153 → D27-178)
+
+- **D27-153** Toolbar renders a search input, an **Export** button and a column-view menu.
+- **D27-154** Search placeholder reads *"Search Review…"*.
+- **D27-155** **The search filters `reviewerName` only.** Type a word that appears in a review body (*"food"*, *"shandar"*) and confirm zero rows.
+- **D27-156** Type a reviewer name (*"Hamza"*) and confirm exactly one row.
+- **D27-157** Search is case-insensitive (TanStack's default `includesString`). Verify with `hamza` and `HAMZA`.
+- **D27-158** Search is client-side over the 100 already fetched — confirm no network request fires.
+- **D27-159** Clearing the box restores 8 rows.
+- **D27-160** There is **no rating filter, no replied/unreplied filter, no pinned filter and no date filter** on a reputation screen. Enumerate what the toolbar does not offer.
+- **D27-161** **Export** → hook `createObjectURL` + anchor click, capture the CSV without downloading.
+- **D27-162** Verify the header row: Full Name, Phone Number, Booking Id, Business, Rating, Date.
+- **D27-163** **`exportTableToCSV` reads `row.getValue(col.id)`.** The `businessName`, `rating` and `createdAt` columns are declared with an `id` and a `cell` renderer and **no `accessorKey`**, so `getValue` has no accessor to call. Predict from source, then confirm in the captured file.
+- **D27-164** So establish exactly which columns carry data in the export and which are blank.
+- **D27-165** **A reviews export with an empty Rating column** is the single thing that file exists to carry. State the consequence.
+- **D27-166** The export contains no review text, no vendor reply and no pinned flag — none of which are columns.
+- **D27-167** The export respects the current filter (`getFilteredRowModel`) — filter to "Hamza" and confirm one data row.
+- **D27-168** The export respects column visibility — hide Phone Number and confirm the column leaves the file.
+- **D27-169** CSV quoting: the business name *"Rehman Banquet & Lawn"* has no comma; force a quoted field by filtering to a row whose reviewer name contains a comma, or establish the escape path from source.
+- **D27-170** The filename is `reviews.csv`, with **no date and no venue** in it.
+- **D27-171** The Export button and the column menu are inside `hidden lg:flex` — **both disappear below the `lg` breakpoint**. Establish the width at which they vanish.
+- **D27-172** Column-view menu: open it, confirm it lists the hideable columns by `formatColumnId`.
+- **D27-173** Toggle a column off, then hard-reload — confirm the choice is **not** persisted.
+- **D27-174** `select` and `actions` are `enableHiding: false`; confirm they are absent from the menu.
+- **D27-175** The column menu labels derive from `formatColumnId(col.id)` for non-string headers — check what **rating** and **createdAt** are called there versus in the table header.
+- **D27-176** Search + column-hide + export composed together: filter, hide two columns, export, and verify the file matches the visible grid exactly.
+- **D27-177** Row selection: select-all checkbox, then confirm **nothing on the toolbar acts on a selection** — there is no bulk delete, no bulk export-selected, no bulk reply.
+- **D27-178** So the select column exists on every row for no purpose. Confirm by enumerating every consumer of `table.getSelectedRowModel()` on this screen.
+
+### I. Reviews table — columns and rendering (D27-179 → D27-206)
+
+- **D27-179** Eight rows render for eight reviews.
+- **D27-180** Column set: select · Full Name · Phone Number · Booking Id · Business · Rating · Date · actions.
+- **D27-181** **Full Name** renders an avatar with the first initial plus the name and the email beneath.
+- **D27-182** `reviewerName?.charAt(0).toLocaleUpperCase()` — verify against a name starting with a non-Latin character.
+- **D27-183** The reviewer's **email** is printed in the grid: `zeeshan.akram@demo.weddingwala.pk`. Establish that the customer's email and phone are both on screen by default with no masking.
+- **D27-184** **Phone Number** renders `0335755699` raw.
+- **D27-185** **Booking Id** — the backend returns `bookingId: "#165"` (already prefixed) and the cell renders `` id ? `#${id}` : "—" ``. Predict `##165`, then read the live DOM.
+- **D27-186** Confirm the `—` fallback is therefore **unreachable**: a null `bookingId` arrives as the string `"#null"`, which is truthy, so it renders `##null`.
+- **D27-187** Establish which is on screen for all 8 rows and count the double hashes.
+- **D27-188** The booking id is **not a link** — you cannot open the booking a review is about.
+- **D27-189** **Business** renders the venue name; verify all three appear across the 8 rows.
+- **D27-190** **Rating** renders `StartComponent` — 5 icons, filled / half / outline, clamped to 0–5.
+- **D27-191** `aria-label="{v} out of 5 stars"` is on the wrapper. Verify it is read as a single node.
+- **D27-192** The rating has **no numeral** anywhere in the row — the vendor counts pixels to tell a 4 from a 5.
+- **D27-193** Half-star path: `v - full >= 0.5`. Ratings are integers server-side (`rating: DataTypes.INTEGER`), so the half branch is unreachable in this module. Confirm.
+- **D27-194** **Date** renders `formatDateTime` → `01/08/2026, 05:00 am`. Verify the exact string.
+- **D27-195** `formatDateTime` uses **browser-local** getters on a UTC-midnight timestamp — establish what a `2026-08-01T00:00:00.000Z` review renders as in PKT (+5) and whether the *date* shifts.
+- **D27-196** The Date column shows a **time** on a date-only value — every row will read `05:00 am`. Confirm across all 8 and establish the noise.
+- **D27-197** **No column shows the review text.** The whole reason the row exists is behind a dropdown → View.
+- **D27-198** **No column shows whether you replied.** The reputation panel says 100% replied; the table gives no per-row indicator, so a vendor at 40% cannot find the 60%.
+- **D27-199** **No column shows the pinned state**, though pinning is a row action and pinned reviews surface first publicly.
+- **D27-200** **No column is sortable.** All headers are plain strings; `getSortedRowModel` is wired in `useDataTable` and no header exposes a control. Verify by clicking each header.
+- **D27-201** So on a reviews screen you cannot sort by rating or by date.
+- **D27-202** Pagination: `useDataTable` defaults `limit=10` via `nuqs`; with 8 rows there is one page. Verify the footer.
+- **D27-203** **`ReviewsAPI.getAll(1, 100)` is hard-coded** and `totalItems: data.length` — the server's `pagination.total` is discarded. Establish that a vendor with 101+ reviews sees 100, is told "100", and has no page 2.
+- **D27-204** `limit` is capped server-side at 100 (`Math.min(100, …)`), so the client's 100 is the ceiling. Confirm the two agree.
+- **D27-205** Change `?page=2&limit=5` in the URL and confirm the table re-pages client-side without refetching.
+- **D27-206** `history: "push"` on the nuqs setters — every page change pushes a history entry. Verify the back button walks pagination rather than leaving the page.
+
+### J. Row actions — View and Reply (D27-207 → D27-236)
+
+- **D27-207** The row-action trigger has `aria-label="Open actions"` and an `sr-only` *"Open menu"* — two names on one control. Verify the accessible name that wins.
+- **D27-208** The menu lists **View · Reply/Edit Reply · Pin/Unpin · Delete**, with Delete separated and destructive-styled.
+- **D27-209** The Reply item's label switches to **Edit Reply** when `vendorReply` is set. All 8 live rows are replied → all 8 should read "Edit Reply". Verify.
+- **D27-210** **View** opens the dialog.
+- **D27-211** The dialog's `DialogHeader` contains **only the star row — there is no `DialogTitle`**. Radix requires one; check the console for the warning and check the accessible name of the dialog.
+- **D27-212** The review text renders inside a `DialogDescription`, which Radix wires as `aria-describedby` — so the *body of the review* is the dialog's description. Establish.
+- **D27-213** `'No review text provided.'` fallback — establish from source.
+- **D27-214** Business line renders *"Business: Rehman Banquet & Lawn"*.
+- **D27-215** The vendor reply renders in a cream box headed **Your Reply** with its date.
+- **D27-216** The reply date is `toLocaleDateString('en-GB')` → `31/07/2026`; the review date beside it is also `en-GB` → `01/08/2026`. **The reply is dated the day before the review.** Verify on screen.
+- **D27-217** Do the same for review 25 (Usman Tariq): created 01/04/2026, replied 26/03/2026 — **six days before**. Verify on screen.
+- **D27-218** Establish that nothing in `replyToReview` constrains `vendorReplyDate` to be after `createdAt`, and that the dialog prints both without comment.
+- **D27-219** The dialog shows name, email, review text, business, reply and date — and **not** the phone, **not** the booking, **not** the rating as a number, **not** the pinned state.
+- **D27-220** **The dialog shows no review photos.** `Review.photosJson` exists, `POST /reviews/:id/photos` and `DELETE /reviews/:id/photos/:filename` exist, and the public review page uploads them. Establish that there is **no consumer of review photos anywhere in the vendor dashboard**.
+- **D27-221** So a customer who photographs a problem has documented it somewhere the vendor cannot see.
+- **D27-222** The dialog has no action buttons — no Reply from inside View, no Pin, no Delete. Closing and reopening the dropdown is the only route.
+- **D27-223** `setOpen` is `(v) => !v && setViewReview(null)` — verify Esc and overlay-click both close.
+- **D27-224** **Reply** opens the reply dialog with the existing reply pre-filled from `review.vendorReply`.
+- **D27-225** The quoted review block above the textarea shows the reviewer, the stars and the comment.
+- **D27-226** The label *"Your Reply"* has **no `htmlFor`** and the textarea has no `id`.
+- **D27-227** The submit button is **disabled** while `!reply.trim()` — the correct pattern, and worth crediting against WWL-327 and WWL-346.
+- **D27-228** Clear the textarea and confirm the button disables; type a space only and confirm it stays disabled.
+- **D27-229** The button label is **Update Reply** when a reply exists, **Post Reply** when not. Verify.
+- **D27-230** **The textarea has no `maxLength`.** The backend rejects over **1500** characters with a 400. Paste 1600 characters and confirm the UI shows no counter, no warning and no cap.
+- **D27-231** **`replyEditWindowMinutes` is returned by the list endpoint precisely so the client can hide "Edit reply" once the window has closed — and the client discards it.** `ReviewsAPI.getAll` returns the whole payload; `ReviewsTable` reads `result.reviews` only. Establish.
+- **D27-232** So every one of the 8 live replies — all months old — offers an **Edit Reply** action that the server will answer with a **409 `vendor_reply_already_exists`**.
+- **D27-233** The dialog's error handler is a bare `catch { toast.error('Failed to post reply') }` — it reads neither `code` nor `message`. So a 409 lock, a 400 too-long, a 403 and a network failure all produce the **same six words**.
+- **D27-234** Drive it: with the write blocker armed, submit a reply edit and confirm the toast is exactly *"Failed to post reply"* — the same string the vendor would get from the real 409.
+- **D27-235** Confirm the dialog **stays open** on failure and the text is preserved (the `finally` only clears `loading`).
+- **D27-236** **`DELETE /api/v1/reviews/:reviewId/reply` exists, is owner-scoped, is idempotent, and is documented as a de-escalation path deliberately exempt from the edit lock — and no screen in the product calls it.** Prove there is no consumer, and state the consequence: a reply posted 31 minutes ago can be neither edited nor retracted.
+
+### K. Row actions — Pin and Delete (D27-237 → D27-262)
+
+- **D27-237** The Pin item reads **Pin (showcase)** when unpinned and **Unpin** when pinned. All 8 live rows are unpinned.
+- **D27-238** Pin → `PATCH /reviews/{id}/pin` with `{isPinned: true}`. Arm the blocker, click, capture the body.
+- **D27-239** The toast reads *"Review pinned — it'll showcase first"* / *"Review unpinned"*, driven by `res?.isPinned`.
+- **D27-240** **With the write diverted, `res` is undefined → `res?.isPinned` is falsy → the vendor is told "Review unpinned" after pressing Pin.** Verify the exact toast on the diverted click.
+- **D27-241** So the success message is derived from a response the code does not verify arrived.
+- **D27-242** After the diverted pin, `fetchData()` refetches and the row stays unpinned — the screen self-corrects while the toast says otherwise. Verify.
+- **D27-243** **There is no pinned indicator in the grid**, so after a real pin the only feedback is a toast that vanishes.
+- **D27-244** Establish what pinning actually does: `topReview` ordering puts `isPinned DESC` first, and the public listing surfaces pinned reviews. Confirm from source.
+- **D27-245** **There is no cap on how many reviews can be pinned.** Pin all 8 and the ordering degenerates. Establish from `togglePinReview`.
+- **D27-246** The pin endpoint accepts `{isPinned}` **or** toggles on absence — the client always sends the explicit value, so a stale row cannot flip the wrong way. Credit if true.
+- **D27-247** **Delete** opens `ConfirmDeleteDialog`.
+- **D27-248** The copy reads *"Are you sure you want to delete this review by "Zeeshan Akram"? This action cannot be undone."* Verify the exact string and that it names the reviewer.
+- **D27-249** **It does not name the rating, the date, the venue or the review text** — the vendor is asked to confirm deleting "a review by Zeeshan Akram" with no way to see which one from inside the confirm.
+- **D27-250** **The business owner can delete any review on their own business.** `deleteReview` allows super-admin **or** author **or** `review.business.userId === req.user.id`. Establish from source.
+- **D27-251** **`Review` is not paranoid, so `destroy()` is a hard delete.** The row, the rating and the vendor reply are gone from the table. Establish from the model.
+- **D27-252** Establish the consequence on the numbers the public sees: the reputation average, the distribution, the trend and the listing all recompute from the surviving rows. A 1★ deleted is a 1★ that never existed.
+- **D27-253** The deletion is written to the audit log **best-effort** inside a `try/catch (_)` that swallows — so a logging failure loses the trail and the delete still proceeds. Establish.
+- **D27-254** The audit snapshot captures rating, comment, vendorReply and isPinned. Confirm the field list.
+- **D27-255** **No reason is captured on delete**, and the customer is not notified.
+- **D27-256** Establish whether the vendor dashboard exposes the audit log to anyone — if not, the trail is invisible to the party that needs it.
+- **D27-257** Drive the delete with the blocker armed: capture `DELETE /api/v1/reviews/30`, confirm the toast, confirm the row returns on refetch.
+- **D27-258** The failure path toasts *"Failed to delete review"* — again with no server message. Confirm on the diverted call.
+- **D27-259** `handleDelete` returns early when `deleteReview` is null; the dialog closes on confirm regardless of outcome. Verify the ordering.
+- **D27-260** **The author can also delete a review the vendor has already replied to**, taking the vendor's public reply with it. Establish from the same authorisation block.
+- **D27-261** WW-280's fix is visible: a non-numeric `:reviewId` is rejected by `param().isInt({min:1})` before `findByPk`. Probe `/api/v1/reviews/abc/pin` and confirm a 400, not a 500.
+- **D27-262** WW-026's constraint is live: one review per `(bookingId, businessId)`. Establish from the model's partial unique index.
+
+### L. Venue scoping (D27-263 → D27-274)
+
+- **D27-263** Session opens at **All venues**: the table shows 8, the reputation panel shows 4.4/8.
+- **D27-264** Switch to **Rehman Grand Marquee (3358)** → table 3 rows, reputation avg **4.3**.
+- **D27-265** Switch to **Rehman Banquet & Lawn (3359)** → table 2 rows, reputation avg **5.0**.
+- **D27-266** Switch to **Rehman Marquee Bahria (3360)** → table 3 rows, reputation avg **4.0**.
+- **D27-267** Confirm `?businessId=` is appended by the axios interceptor on `/analytics/reviews` and `/analytics/reputation` (both match the `/analytics/` prefix).
+- **D27-268** Confirm it is **not** appended on `/reviews/automation-stats`, and that the automation card's four numbers are identical under all four scopes.
+- **D27-269** Confirm the AI card's picker does **not** follow the switch.
+- **D27-270** So one page holds three different opinions of "which venue am I looking at". Enumerate them.
+- **D27-271** The benchmark moves with the scope (4.7 → 4.6 → 4.7) because the vendor's other venues enter their own peer pool. Re-verify D27-024 through the UI rather than the API.
+- **D27-272** Hard-reload under a venue scope and confirm the scope survives and the counts are stable.
+- **D27-273** The table has a **Business** column even when scoped to one venue, where every value is identical.
+- **D27-274** Sum the three scoped counts (3+2+3) and confirm it equals the unscoped 8 — no review is orphaned or double-counted.
+
+### M. Accessibility (D27-275 → D27-288)
+
+- **D27-275** `<th scope="col">` on the table headers.
+- **D27-276** Every row's select checkbox is labelled *"Select row"* — eight identical accessible names.
+- **D27-277** The header checkbox carries `aria-checked="mixed"` when partially selected. Drive a partial selection and verify.
+- **D27-278** Every row's action trigger is named *"Open actions"* — eight identical names, no row context.
+- **D27-279** The View dialog has **no `DialogTitle`** — check the accessible name and the Radix console warning.
+- **D27-280** The Reply dialog's label is not associated with its textarea.
+- **D27-281** Keyboard: Tab to the row action, Enter to open, arrow to Reply, Enter — verify the whole flow without a mouse.
+- **D27-282** Focus returns to the trigger when a dialog closes.
+- **D27-283** Focus is trapped inside the reply dialog while open.
+- **D27-284** The star rows carry `aria-label`; the reputation panel's `Stars` component carries **none**. Verify the difference.
+- **D27-285** The distribution bars and the trend bars have no accessible values.
+- **D27-286** Colour contrast of the amber `vs peers` badge and the `text-[9px]` trend labels.
+- **D27-287** The `text-[10px]` / `text-[11px]` type scale across the reputation panel — measure the computed sizes.
+- **D27-288** `prefers-reduced-motion` against the spinner and the dialog transitions.
+
+### N. Mobile 360×740 (D27-289 → D27-298)
+
+- **D27-289** No horizontal overflow: `scrollWidth === clientWidth` **and** an element-level right-edge count, with the ancestor walk stopping before `<body>`.
+- **D27-290** The reputation panel's `lg:grid-cols-3` stacks; the trend's six bars stay legible at 360px.
+- **D27-291** The automation card's `grid-cols-2` holds four stats in two rows.
+- **D27-292** The silent-customer row's action pills (Call · WhatsApp · X · Dismiss) at 360px — count how many are reachable.
+- **D27-293** **Export and the column menu are `hidden lg:flex`** — confirm both are absent at 360px.
+- **D27-294** The table's row actions at 360px — count the visible triggers.
+- **D27-295** The share/copy/PNG button stack at 360px.
+- **D27-296** Both dialogs at 360px: `sm:max-w-[500px]` and `max-w-md`.
+- **D27-297** Tap targets ≥ 44px on the pills and the row triggers.
+- **D27-298** The search input is `w-[250px]` fixed — check it does not push the toolbar wide at 360px.
+
+### O. Resilience and integrity (D27-299 → D27-310)
+
+- **D27-299** Console clean across the whole module.
+- **D27-300** No unhandled promise rejection from any of the four surfaces.
+- **D27-301** Table load failure → `toast.error('Failed to load reviews')` and `setData([])`, which renders the **empty table**, not an error state. Establish.
+- **D27-302** Reputation failure → the panel vanishes entirely (`setData(null)`).
+- **D27-303** Automation failure → the **false** empty-state sentence. Establish.
+- **D27-304** AI status failure → the card vanishes.
+- **D27-305** So **three of the four surfaces fail silently and invisibly**, and the fourth fails to an empty table. Enumerate.
+- **D27-306** Rapid double-click on Refresh, on Run summary and on a row action — check for duplicate requests.
+- **D27-307** Open the reply dialog, switch venue underneath it, then submit — establish what the review id refers to.
+- **D27-308** Every write attempted in this module, listed with its captured body.
+- **D27-309** Clean-realm integrity check at close: review count, per-venue counts, every rating, every `vendorReply`, every `vendorReplyDate`, every `isPinned`, and the automation `silentRecent` ids — all compared against the values recorded at open.
+- **D27-310** `localStorage` restored: `ww:notOnWa:v1` returned to its pre-test value.
