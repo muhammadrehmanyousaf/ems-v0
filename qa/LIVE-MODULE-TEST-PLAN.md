@@ -54,7 +54,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 22 | Suppliers | `/dashboard/suppliers` | ✅ 194 | **`[x]` COMPLETE — 95 run, 99 not run, 13 findings (3× S2)** |
 | 23 | Brokers | `/dashboard/brokers` | ✅ 164 | **`[x]` COMPLETE — 95 run, 69 not run, 16 findings (4× S2)** |
 | 24 | Generator fuel | `/dashboard/generator-fuel` | ✅ 132 | **`[x]` COMPLETE — 62 run, 70 not run, 18 findings (5× S2)** |
-| 25 | Halal certs | `/dashboard/halal-certs` | — | `[ ]` |
+| 25 | Halal certs | `/dashboard/halal-certs` | ✅ 138 | `[ ]` cases written, execution in progress |
 | 26 | Drone NOC | `/dashboard/drone-noc` | — | `[ ]` |
 | 27 | Reviews | `/dashboard/reviews` | — | `[ ]` |
 | 28 | Notifications | `/dashboard/notifications` | — | `[ ]` |
@@ -11319,3 +11319,238 @@ with no tank column, no consumed-litres total, no date filter and no per-generat
 one question a fuel log answers — *did we burn what we bought* — cannot be asked here. The form
 below it offers **Maintenance** as an entry type and will not save one, refuses to record an empty
 tank, and accepts a cost per litre of **minus ninety-nine rupees** without a murmur.
+
+---
+
+# MODULE 25 — HALAL CERTIFICATES (`/dashboard/halal-certs`)
+
+**What the screen is for.** A Pakistani wedding venue serves meat to hundreds of guests, and the
+halal status of that supply is both a religious obligation and a licensing one. This screen tracks
+each supplier's halal certificate — the number, the issuing authority, what it covers, when it was
+issued and when it expires — and moves it through a lifecycle: **active → expiring soon →
+pending renewal → active**, or **revoked**.
+
+**Source read before writing these cases**
+- `app/(dashboard)/dashboard/halal-certs/page.tsx`
+- `components/.../halal-certs/redesigned/halal-certs-redesigned-view.tsx` — table, cards, expiry banner
+- `components/.../halal-certs/redesigned/halal-cert-form-dialog.tsx` — create/edit
+- `components/.../halal-certs/redesigned/halal-cert-transition-dialogs.tsx` — Revoke / Renew
+- `lib/api/halalCerts.ts` — `CertStatus`, `ISSUING_AUTHORITY_LABELS`, `list`, `expiring`, `transition`
+
+**Pre-flight state, read off live prod before any case was written**
+
+| Fact | Value |
+|---|---|
+| `GET /halal-certs` | **0 certificates** |
+| Per venue — 3358 / 3359 / 3360 | **0 / 0 / 0** |
+| `summary` | `byStatus {}` · `byAuthority {}` |
+| `GET /halal-certs/expiring` | **0** |
+
+**The register is empty in production.** Every meat, poultry and dairy supplier the venue buys from
+is uncertified as far as this system knows. The screen is therefore judged on its empty state, its
+forms, its lifecycle logic and its API surface.
+
+**Element inventory (11 interactive)**
+
+| # | Element | Where |
+|---|---|---|
+| 1 | Sidebar `Halal certs` link | Compliance rail |
+| 2 | `Add certificate` | PageHeader action |
+| 3–6 | Stat cards: Total · Active · Expiring soon · Expired / revoked | header grid |
+| 7 | Expiring banner with up to **6** clickable cert tiles | conditional |
+| 8 | `Search certificates…` | toolbar |
+| 9–10 | Density toggle · Export | toolbar |
+| 11 | Select-all + row checkboxes | table |
+| 12–16 | Row actions: Renewal received · Mark pending renewal · Revoke · Edit · Remove | rows |
+| — | Cert form (8 fields) · Revoke dialog · Renew dialog · Remove confirm | modals |
+
+**Safety limits for this module, each with its reason**
+
+| Limit | Reason |
+|---|---|
+| **No certificate is created, edited, revoked, renewed or removed.** | A halal certificate record is a compliance artefact. Fabricating one asserts that a supplier is certified when nobody has checked; revoking one asserts the opposite about a real trading partner. Every write is captured and diverted. |
+| **Reads may hit the live API freely.** | GETs are side-effect free. |
+| **No document is uploaded.** | The model carries `documentUrl`; nothing is attached. |
+
+---
+
+## MODULE 25 — TEST CASES
+
+### A. Route, navigation and access (D25-001 → D25-009)
+
+- **D25-001** Sidebar → **Halal certs** navigates to `/dashboard/halal-certs`.
+- **D25-002** `document.title` versus the page `h1` versus the breadcrumb versus the nav label.
+- **D25-003** The rail entry is `aria-current="page"`.
+- **D25-004** Breadcrumb renders and links home.
+- **D25-005** Direct URL loads with no client-side error.
+- **D25-006** `/dashboard/halal-certs-new` — the route in the component's header comment — resolves to what?
+- **D25-007** The comment claims *"Read-only; original screen untouched"* — check against a screen that revokes certificates.
+- **D25-008** The eyebrow reads **Compliance**.
+- **D25-009** Browser Back leaves cleanly.
+
+### B. Empty state and first paint (D25-010 → D25-020)
+
+- **D25-010** `h1` **Halal certificates**, description *"Supplier halal certificates, authorities and expiry tracking."*
+- **D25-011** With zero certs the empty state reads *"No certificates yet"* with an **Add certificate** CTA — correct for a genuinely empty register.
+- **D25-012** No table renders when empty.
+- **D25-013** All four stat cards read 0.
+- **D25-014** The expiring banner does **not** render when `expiring.length === 0`.
+- **D25-015** The Export control renders on an empty register.
+- **D25-016** Loading skeleton before data arrives.
+- **D25-017** Console clean on first paint.
+- **D25-018** `GET /halal-certs` and `GET /halal-certs/expiring` both fire on mount — two queries.
+- **D25-019** The `expiring` query is separate from `list` — confirm it is not just a client-side filter.
+- **D25-020** Judge the wider fact: **the halal register is empty** while the venue has 18 suppliers including `Bismillah Meat Supply` on all three venues.
+
+### C. Stat cards (D25-021 → D25-030)
+
+- **D25-021** **Total certificates** equals the row count.
+- **D25-022** **Active** counts `status === "active"`.
+- **D25-023** **Expiring soon** counts `status === "expiring_soon"` — a **stored** status, not a date computation.
+- **D25-024** …so establish whether a certificate whose expiry has passed but whose status was never recomputed is counted. Compare with WWL-273 and WWL-286.
+- **D25-025** **Expired / revoked** counts two statuses in one card — so a revoked certificate and a lapsed one are indistinguishable from the header.
+- **D25-026** The **Active** card is hard-coded `trend="up"` regardless of the number.
+- **D25-027** The **Expiring soon** card is not clickable; there is no status filter anywhere.
+- **D25-028** Cards are computed from `all`, not the search-filtered rows.
+- **D25-029** Cards during a failed load — zeros or dashes?
+- **D25-030** The cards use `all` while the banner uses a **separate query** — establish whether the two can disagree.
+
+### D. The expiring banner (D25-031 → D25-040)
+
+- **D25-031** With expiring certs the banner renders *"N certificates expiring soon or already expired"* and pluralises correctly.
+- **D25-032** Each tile shows the item description (falling back to the cert number) and the authority.
+- **D25-033** Each tile shows `Nd` remaining, or `Nd overdue` in red once past.
+- **D25-034** `daysFromNow` uses `today.setHours(0,0,0,0)` — **local** midnight, not UTC. Confirm this is the correct PKT-safe form, in contrast with the Suppliers module.
+- **D25-035** The banner renders at most **6** tiles (`expiring.slice(0, 6)`) — with more than six, is there any "and N more" affordance?
+- **D25-036** …and does the heading count still tell the truth about the total?
+- **D25-037** Clicking a tile opens the **Renew** dialog for that certificate.
+- **D25-038** A tile for an **already expired** cert opens "Mark pending renewal", not "Renewal received" — confirm the branch on `status`.
+- **D25-039** The tiles are `<button>`s — keyboard reachable and focusable.
+- **D25-040** The amber banner's information is not conveyed by colour alone.
+
+### E. The table (D25-041 → D25-052)
+
+- **D25-041** Columns: Cert # · Supplier · Item · Authority · Expires · Status · actions.
+- **D25-042** `supplierName` prefers the joined `supplier.name` and falls back to `supplierNameSnapshot`, then `—`.
+- **D25-043** `authorityLabel` maps through `ISSUING_AUTHORITY_LABELS` with a `cap()` fallback.
+- **D25-044** `Expires` formats **`en-GB`** as `dd MMM yyyy` — every other screen in this sweep uses `en-PK`. Confirm the inconsistency.
+- **D25-045** An invalid or null expiry renders `—`.
+- **D25-046** **There is no `Issued` column**, though the form captures it and the export writes it.
+- **D25-047** **There is no renewal-lead-days column**, though the form captures it.
+- **D25-048** **There is no document link**, though the model carries `documentUrl` — so the certificate scan itself is unreachable.
+- **D25-049** `statusTone` has a `?? "neutral"` fallback — confirm immunity to the Module 21 crash.
+- **D25-050** `<th scope>` on the header cells.
+- **D25-051** Row checkboxes have per-row accessible names.
+- **D25-052** Rows are ordered by expiry, or by id?
+
+### F. Row actions (D25-053 → D25-064)
+
+- **D25-053** `Renewal received` renders **only** when status is `pending_renewal`.
+- **D25-054** `Mark pending renewal` renders when status is neither `revoked` nor `pending_renewal`.
+- **D25-055** `Revoke` renders unless already revoked.
+- **D25-056** `Edit` and `Remove` render on every row including revoked.
+- **D25-057** **Both renewal buttons call the same handler** (`setRenewing(c)`) and the dialog branches internally on `status`. Confirm the two labels cannot both appear at once.
+- **D25-058** On a revoked certificate, which actions remain?
+- **D25-059** Each action has `aria-label` and `title`.
+- **D25-060** …but none names the certificate — confirm labels are identical across rows.
+- **D25-061** Icon-only actions are ≥ 24×24 px.
+- **D25-062** Five icon buttons in one cell — measure the crowding.
+- **D25-063** Clicking a row itself does nothing; there is no drill-in.
+- **D25-064** Row actions at 360px.
+
+### G. The certificate form (D25-065 → D25-084)
+
+- **D25-065** `Add certificate` opens the dialog; eight fields render.
+- **D25-066** Certificate number is `autoFocus`.
+- **D25-067** The issuing-authority select lists every entry in `ISSUING_AUTHORITY_LABELS`.
+- **D25-068** Are the authorities the real Pakistani ones (PHA, SMIIC, JAKIM…)?
+- **D25-069** **Supplier is a free text box**, not a picker — while the product holds 18 supplier records and the cert model has a `supplier` relation. Confirm.
+- **D25-070** **There is no document upload**, though the model carries `documentUrl`. A halal certificate *is* a document; establish whether the scan can be attached anywhere.
+- **D25-071** `canSave` requires cert number, item description, issued date and expiry date.
+- **D25-072** The blocked hint names all four regardless of which is missing.
+- **D25-073** An expiry date **before** the issued date — is it refused?
+- **D25-074** An expiry date already in the past — accepted, and with what status?
+- **D25-075** A negative renewal-lead-days.
+- **D25-076** A renewal lead longer than the certificate's own validity period.
+- **D25-077** `today()` is `new Date().toISOString().slice(0,10)` — UTC, not PKT. Establish the drift.
+- **D25-078** There is **no venue field** — which venue does a new certificate land on?
+- **D25-079** There is no status field — what status does a new certificate get?
+- **D25-080** The captured create body and endpoint.
+- **D25-081** `businessId` in the captured body.
+- **D25-082** Edit prefills every field.
+- **D25-083** Cancel and Escape discard without a request.
+- **D25-084** With the write diverted, does the dialog claim success?
+
+### H. Revoke dialog (D25-085 → D25-092)
+
+- **D25-085** `Revoke certificate` opens naming the item it covers.
+- **D25-086** The copy states *"Revoking is terminal. The certificate stays in your ledger but you'll need to add a new one for fresh supply."*
+- **D25-087** A reason is **required** — but enforced by an **error toast on submit**, not by disabling the button with a hint. Confirm the inconsistency with the BUG-057 pattern used in every other form.
+- **D25-088** Submitting with an empty reason shows *"Revoke reason required"* and issues **no request**.
+- **D25-089** Whitespace-only reason is treated as empty.
+- **D25-090** The captured transition body: `{to: "revoked", revokedReason}`.
+- **D25-091** The reason resets between certificates.
+- **D25-092** With the write diverted, does the dialog claim **"Certificate revoked"**?
+
+### I. Renew dialog (D25-093 → D25-104)
+
+- **D25-093** For a non-pending cert the title is **"Mark pending renewal"** and no fields render.
+- **D25-094** Its copy explains *"the old cert keeps its dates until you update"*.
+- **D25-095** The captured body is `{to: "pending_renewal"}`.
+- **D25-096** For a `pending_renewal` cert the title becomes **"Renewal received"** with new cert # and new expiry fields.
+- **D25-097** **Both fields are optional** — `newCertNumber || undefined`, `newExpiryDate || undefined`.
+- **D25-098** So a certificate can be **reactivated with no new number and no new expiry**, flipping the status to `active` while it still carries the old, expired date. Establish this from the code path and judge it as a compliance hole.
+- **D25-099** If a new expiry is supplied, is it validated to be in the future?
+- **D25-100** A new expiry **earlier** than the current one.
+- **D25-101** The captured body: `{to: "active", newCertNumber?, newExpiryDate?}`.
+- **D25-102** The fields reset between certificates.
+- **D25-103** With the write diverted, does it claim **"Certificate reactivated"**?
+- **D25-104** Does the toast wording differ correctly between the two branches?
+
+### J. Search, export, density (D25-105 → D25-114)
+
+- **D25-105** Search matches cert number, item description and supplier name, client-side.
+- **D25-106** Search is case-insensitive and trims.
+- **D25-107** A no-match search shows the empty state.
+- **D25-108** Search is lost on reload.
+- **D25-109** Export offers CSV and XLSX, filename `halal-certs`.
+- **D25-110** Export columns: Cert # · Supplier · Item · Authority · Issued · Expires · Status.
+- **D25-111** **Issued and Expires are exported through `fmtDate`** — i.e. as the display string `"06 Aug 2026"`, not an ISO date. Establish whether that breaks sorting and filtering in a spreadsheet, and contrast with Brokers and Suppliers, which export raw ISO dates.
+- **D25-112** No venue column in the export.
+- **D25-113** Export respects the selection.
+- **D25-114** Density toggle changes row height and persists.
+
+### K. Venue scoping (D25-115 → D25-120)
+
+- **D25-115** `/api/v1/halal-certs` — is it in `BUSINESS_SCOPED_PREFIXES`? Confirm on the wire.
+- **D25-116** If it is not, does the venue switcher change anything?
+- **D25-117** Switch to each venue and record the count.
+- **D25-118** All venues → the merged set.
+- **D25-119** `queryKey: ["halal-certs-redesigned"]` carries no businessId.
+- **D25-120** At All venues, is the venue named anywhere on a row?
+
+### L. Resilience and accessibility (D25-121 → D25-130)
+
+- **D25-121** Offline → the table shows its error state with Retry.
+- **D25-122** The error text is *"Couldn't load halal certificates."*
+- **D25-123** A failed `expiring` query with a working `list` query — does the banner vanish silently?
+- **D25-124** Malformed response does not white-screen.
+- **D25-125** An unknown status from the API — confirmed safe by the `?? "neutral"` fallback; drive it.
+- **D25-126** Console clean across the module.
+- **D25-127** Dialog labels are programmatically associated.
+- **D25-128** Row actions announce which certificate they act on.
+- **D25-129** Alert dialogs announce title + description and focus Cancel.
+- **D25-130** Heading order and focus rings.
+
+### M. Mobile and integrity close-out (D25-131 → D25-138)
+
+- **D25-131** No horizontal page scroll at 360×740.
+- **D25-132** **And** zero clipped elements outside deliberate scroll containers.
+- **D25-133** The table switches to the card renderer; are the five row actions reachable?
+- **D25-134** The expiring banner's tiles reflow at 360.
+- **D25-135** Certificate count still 0 at close, via a clean iframe realm.
+- **D25-136** `summary.byStatus` and `byAuthority` still empty.
+- **D25-137** Every diverted write listed with method, URL and body.
+- **D25-138** No `POST`/`PATCH`/`DELETE` reached the real API.
+
+**138 cases written.** Execution follows.
