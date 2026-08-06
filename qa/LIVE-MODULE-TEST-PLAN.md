@@ -63,7 +63,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 31 | Collaborations | `/dashboard/collaborations` | ✅ 238 | **`[x]` COMPLETE — 165 run, 73 not run, 22 findings (4× S2)** |
 | 32 | Business Settings | `/dashboard/settings` | ✅ 286 | **`[x]` COMPLETE — 150 run, 136 not run, 16 findings (2× S2) + 7/7 regressions pass** |
 | 33 | Availability | `/dashboard/settings?tab=availability` | ✅ 152 | **`[x]` COMPLETE — 95 run, 57 not run, 13 findings (2× S2)** |
-| 34 | Cancellation policy | `/dashboard/settings?tab=policy` | — | `[ ]` |
+| 34 | Cancellation policy | `/dashboard/cancellation-policy` | ✅ 156 | `[~]` cases written — execution in progress |
 | 35 | Setup checklist | `/dashboard/onboarding` | — | `[ ]` |
 | 36 | Tonight | `/dashboard/venue-os?tab=today` | — | `[ ]` |
 | 37 | Event profit | `/dashboard/venue-os?tab=profit` | — | `[ ]` |
@@ -17115,3 +17115,212 @@ the screen will happily block the same date twice with no warning, delete by dat
 so the second one cannot be told from the first, accept a block dated 2020, free a date with no
 confirmation at all, and — on a platform whose vendors close for Muharram and Ramadan — offer no way
 to block more than one day at a time.
+
+---
+
+## MODULE 34 — TEST CASES
+
+**Route correction first.** The module index listed this as `/dashboard/settings?tab=policy`. That is
+wrong: `nav-data.ts` links **Cancellation policy → `/dashboard/cancellation-policy`**, a dedicated
+page rendering `PolicyTemplatePicker`. The `?tab=policy` param is simply not a thing the product
+navigates to — which downgrades the Module 32 note (WWL-474) from "the sidebar lands on the wrong
+tab" to "a param in the plan's own index does not exist". Corrected in the results below.
+
+The picker sits on top of the **EPIC 5 cancellation/refund engine**. Probed live before any case ran,
+and the results reframe the module:
+
+| Probe | Result |
+|---|---|
+| `GET /bookings/policy` | **200** — *not* flag-gated for this vendor |
+| `active` policy, business 3358 | **null** |
+| `active` policy, business 3359 | **null** |
+| Templates offered | **Aasaan** (flexible) · **Aam** (standard) · **Sakht** (strict) |
+| `GET /bookings/165/refund-preview` | **200**, and it resolves a policy named **"Default" / `policy-1`** with `source: "saved"` |
+| `GET /bookings/165/policy-acceptance` | **`accepted: false`, `acceptance: null`** |
+| `GET /bookings/165/dispute-evidence` | **200** — `exposure.flag: "OK"` |
+
+Booking 165 is a **Completed** engagement: `grand` **Rs 1,439,150**, paid **Rs 1,223,278**, event
+2026-07-25. Its live refund preview computes **refund Rs 0 / forfeit Rs 1,223,278**.
+
+### A. Route, shell and gating (D34-001 → D34-018)
+
+- **D34-001** Sidebar → **Cancellation policy** navigates to `/dashboard/cancellation-policy`.
+- **D34-002** Confirm from `nav-data.ts` that this is the only navigation entry, and that `?tab=policy` is not linked anywhere.
+- **D34-003** `document.title` (*"Dashboard : Cancellation Policy"*) vs the page `h1` (*"Cancellation Policy"*).
+- **D34-004** The subtitle is Roman Urdu: *"Customer cancel kare to kitna wapas — apni policy chunein."* Verify it renders.
+- **D34-005** Establish whether the page respects the `PersonaPreference` (Aasaan Roman-Urdu ⇄ Professional English) switch that Business Settings offers, or is Roman-Urdu only.
+- **D34-006** The page is **not** inside the settings hub — no tab rail, no business switcher, no save bar. Verify.
+- **D34-007** …so establish how a three-venue vendor chooses **which venue** this policy applies to.
+- **D34-008** `getCancellationPolicy` sends no `businessId`; the server resolves one with `resolveOwnedBusinessId`. Establish which venue that picks.
+- **D34-009** Live it resolves **3358**. Verify, and establish that 3359 and 3360 are unreachable from this page.
+- **D34-010** …which is the same defect Business Settings was fixed for (venues past the first unreachable). Establish that this page never got the equivalent fix.
+- **D34-011** The backend gates the whole engine on `DISPUTE_FLAG` via `flagOnForVendor`, returning **404 "The cancellation/refund engine is not enabled for your account"** when off.
+- **D34-012** Verify live that it is **on** for this vendor — the probe returned 200.
+- **D34-013** Establish whether it is on for *all* vendors or only this one, as far as can be told from the response.
+- **D34-014** The component *"self-hides on 404"*: `if (!data) return "Cancellation engine abhi enabled nahi hai."` Establish what a gated vendor sees.
+- **D34-015** …and that this is a **feature-flag-gated dead end**, against the standing position that flags are what makes the portal feel empty.
+- **D34-016** Establish whether the sidebar entry is hidden for a gated vendor, or whether they navigate to a dead page.
+- **D34-017** Loading renders a centred spinner and *"Loading…"*.
+- **D34-018** Console clean.
+
+### B. The three templates as offered (D34-019 → D34-042)
+
+- **D34-019** Three cards render: **Aasaan** · **Aam** · **Sakht**, with English labels Flexible / Standard / Strict — Peak.
+- **D34-020** Verify Aasaan's slabs: 30d→**0%** forfeit · 14d→**30%** · 7d→**50%** · 0d→**75%**.
+- **D34-021** Verify Aam's slabs: 35d→**50%** · 15d→**75%** · 7d→**100%**.
+- **D34-022** Verify Sakht's slabs: 60d→**25%** · 30d→**50%** · 14d→**100%**.
+- **D34-023** All three carry `forceMajeureRule: "CARRY_FORWARD"`. Verify it is displayed, and that the vendor cannot change it.
+- **D34-024** Establish what CARRY_FORWARD means to a couple, and whether the page explains it.
+- **D34-025** **Aam forfeits 50% at 35 days out** — five weeks before the event, before most costs are committed. Establish whether the page gives the vendor any sense of what that means commercially.
+- **D34-026** **Aam reaches 100% forfeit at 7 days**, and **Sakht at 14 days**. Establish that Sakht is *more* severe than Aam at 14 days but *less* at 35.
+- **D34-027** …so establish whether the three templates are actually ordered by severity, or cross over.
+- **D34-028** Compute the forfeit each template produces at 45, 20, 10 and 3 days — the four sample windows the UI itself uses — and check the ordering at each.
+- **D34-029** The sample amount defaults to **Rs 800,000** and is editable.
+- **D34-030** `setSample(Math.max(0, Number(e.target.value) || 0))` — verify a negative clamps to 0 and a non-number becomes 0.
+- **D34-031** Verify the live rupee table recomputes as the sample changes.
+- **D34-032** Verify `rs()` renders `en-PK` with rounding.
+- **D34-033** `forfeitAt` picks the **largest** slab with `daysToEvent <= days`, falling back to the most severe. Verify against the backend's `resolveTier`, which the comment says it mirrors.
+- **D34-034** Compute `forfeitAt(Aam, 20)` by hand and check it against what the UI renders.
+- **D34-035** Establish what the table shows for a cancellation **on the day** (0 days) and **after** the event (negative days, if reachable).
+- **D34-036** The card is a `<div onClick>` — establish whether it is keyboard-selectable.
+- **D34-037** Selecting a card sets `picked` but does **not** save. Verify.
+- **D34-038** `activeKey` matches the saved policy against the templates by slab equality, falling back to `"custom"`. Establish what a custom policy renders as.
+- **D34-039** Live `active` is **null**, so `activeKey` is null and **no card is marked active**. Verify on screen.
+- **D34-040** `isPicked = (picked ?? activeKey) === t.key` — with both null, establish that **no card is highlighted on first load**.
+- **D34-041** So establish what the vendor's current policy is, according to this page.
+- **D34-042** …and cross-check against Business Settings, where the free-text `cancelationPolicy` field is **also empty** on all three venues (Module 32).
+
+### C. The numbers do not agree between two endpoints (D34-043 → D34-072)
+
+This is the heart of the module. Two live endpoints describe the same three named policies with
+different numbers.
+
+- **D34-043** `GET /bookings/policy` returns templates with **`pctForfeit`** slabs keyed by `daysToEvent`.
+- **D34-044** `GET /bookings/:id/refund-preview` returns presets with **`refundPct`** tiers keyed by `minDaysBefore`, **plus a `depositPct`**.
+- **D34-045** Establish that forfeit% and refund% are inverses, so the two are directly comparable.
+- **D34-046** **Aasaan / flexible.** Picker: 30→0, 14→30, 7→50, 0→75 forfeit. Preview: 30→100, 14→70, 7→50, 0→25 refund. Convert and compare each tier.
+- **D34-047** …establish they **agree** at all four points.
+- **D34-048** **Aam / standard.** Picker: 35→50, 15→75, 7→100 forfeit. Preview: 30→100, 14→50, 7→25, 0→0 refund → 30→0, 14→50, 7→75, 0→100 forfeit.
+- **D34-049** Compare tier by tier and establish that they **do not agree**.
+- **D34-050** Compute the forfeit at **20 days before the event** under each: the picker resolves the 15-day slab → **75%**; the preview resolves the 14-day tier → **50%**.
+- **D34-051** Express that in rupees on the page's own default sample of Rs 800,000: **Rs 600,000 vs Rs 400,000**.
+- **D34-052** …and on booking 165's actual paid amount of Rs 1,223,278.
+- **D34-053** **Sakht / strict.** Picker: 60→25, 30→50, 14→100 forfeit. Preview: 60→100, 30→50, 14→0, 0→0 refund → 60→0, 30→50, 14→100, 0→100 forfeit.
+- **D34-054** Compare and establish where they diverge — specifically at 60 days.
+- **D34-055** …the picker forfeits **25%** at 60 days out; the preview forfeits **0%**.
+- **D34-056** Establish which of the two a real cancellation would actually use.
+- **D34-057** …by reading `cancellationPolicyService` and the refund engine's tier resolution.
+- **D34-058** **`depositPct` exists only on the preview side** — 10 / 20 / 30 for the three presets. Establish that the picker cannot set it and does not show it.
+- **D34-059** So a vendor choosing **Sakht** in this UI is unaware they may also be committing to a **30% non-refundable deposit**.
+- **D34-060** Establish whether `depositPct` is applied when a policy is saved through this picker.
+- **D34-061** The live preview on booking 165 shows `depositPct: 0` on its resolved policy — establish which path produced that.
+- **D34-062** **A third policy shape exists.** The preview's resolved policy is `key: "policy-1"`, `labelUr: "Default"`, `source: "saved"` — a name that appears in neither template list.
+- **D34-063** …while `GET /bookings/policy` reports `active: null` for the same business.
+- **D34-064** Establish the contradiction: one endpoint says no policy is saved, the other says a **saved** policy is being applied.
+- **D34-065** Establish where `policy-1 / Default` comes from — a service default, a seeded row, or a fallback.
+- **D34-066** Establish which policy would govern a real dispute today.
+- **D34-067** …and what the vendor's Cancellation Policy page would tell them it is (nothing — no card is active).
+- **D34-068** Compute what each of the three named templates would refund on booking 165, and compare with the `comparison` block the preview already returns: Aasaan **Rs 269,841** refund, Aam **Rs 0**, Sakht **Rs 0**.
+- **D34-069** Establish that the currently-applied Default forfeits the **full Rs 1,223,278**.
+- **D34-070** …so establish the spread between the most and least generous option on one real booking: **Rs 269,841**.
+- **D34-071** Establish whether the vendor can see that comparison anywhere in the UI.
+- **D34-072** Establish whether the **couple** can see any of it.
+
+### D. Saving a policy (D34-073 → D34-098)
+
+- **D34-073** Selecting a card and confirming calls `saveCancellationPolicy({name, slabs, forceMajeureRule})`.
+- **D34-074** **The `key` is not sent** — only the display `name` (Aasaan / Aam / Sakht) and the slabs. Establish.
+- **D34-075** …so the saved row's identity is its Urdu display name. Establish how `activeKey` then matches it back (by slab equality, not name).
+- **D34-076** Drive the save with the write blocker armed and capture the body.
+- **D34-077** Confirm no `businessId` is sent, so the server picks one (D34-008).
+- **D34-078** Confirm `depositPct` is absent from the body (D34-058).
+- **D34-079** Confirm `partialRefundPct` is absent, though the API accepts it.
+- **D34-080** **There is no confirmation step** before committing a policy that governs refunds on live bookings. Establish.
+- **D34-081** Establish whether the page warns that saving affects **existing** bookings, or only future ones.
+- **D34-082** `cancellationPolicyService.save` is described as **versioning** the policy with an `effectiveFrom`. Establish whether an existing booking keeps the policy in force when it was made.
+- **D34-083** …and whether the UI says so.
+- **D34-084** `saveCancellationPolicy` returns 201 with the new row. `onSuccess` invalidates and nothing else — establish that there is **no success toast**.
+- **D34-085** Establish that this module fires **no toasts at all** — compare with Module 28, which also fires none.
+- **D34-086** `save` has **no `onError`**. Establish what the vendor sees when a save fails.
+- **D34-087** …specifically: an unhandled mutation error with no toast, no message and no field state. Establish.
+- **D34-088** Establish the false-success behaviour on a diverted write.
+- **D34-089** Global `mutations: { retry: 1 }` — count the requests on a failed save.
+- **D34-090** …and establish whether a duplicate save creates **two policy versions**.
+- **D34-091** Verify the button's pending state.
+- **D34-092** Rapid double-click.
+- **D34-093** There is **no way to write a custom policy** — only the three presets. Establish, and note the API accepts arbitrary slabs.
+- **D34-094** …so a vendor whose real terms differ from all three has no route to express them, other than the free-text field in Business Settings that nothing reads.
+- **D34-095** There is no way to **clear** a policy once set.
+- **D34-096** There is no history view, though the service versions.
+- **D34-097** There is no preview of what the couple will see.
+- **D34-098** Establish whether the chosen policy appears anywhere on the public listing or in the booking flow.
+
+### E. Policy acceptance and the exposure flag (D34-099 → D34-124)
+
+- **D34-099** `GET /bookings/165/policy-acceptance` returns **`accepted: false`, `acceptance: null`**. Verify.
+- **D34-100** Establish what `recordPolicyAcceptance` writes and who can call it.
+- **D34-101** Establish where in the booking flow a couple would accept a cancellation policy.
+- **D34-102** …and whether they ever did on booking 165.
+- **D34-103** Booking 165 is **Completed** with Rs 1,223,278 collected. Establish that no policy was accepted at any point.
+- **D34-104** The refund preview nonetheless computes a **full forfeit of Rs 1,223,278** against it.
+- **D34-105** Establish what legal or dispute weight a forfeit carries when the policy was never accepted.
+- **D34-106** `disputeEvidence.exposure` reads `policyAccepted: false`, `auditVerified: true`, `hasAppliedForfeit: false`, **`flag: "OK"`**.
+- **D34-107** **Establish the contradiction: the engine's own exposure assessment reads OK on a booking where its own field says the policy was never accepted.**
+- **D34-108** Establish what would make the flag read something other than OK — read the exposure logic.
+- **D34-109** …specifically whether `policyAccepted: false` contributes to the flag at all.
+- **D34-110** Establish whether `hasAppliedForfeit: false` is what keeps it OK, and what the flag would read if a forfeit had been applied without acceptance.
+- **D34-111** `auditChain` reads `{ok: true, checked: 0, verified: true, events: []}`. Establish that **zero events were checked**.
+- **D34-112** …so `verified: true` over an empty chain. Establish whether that is a meaningful assertion.
+- **D34-113** Establish whether an empty audit chain should verify.
+- **D34-114** The evidence pack assembles the booking, order lines, receipts, refund requests and the audit chain. Verify each section against the live data.
+- **D34-115** Verify the two receipts: Rs 733,967 by **raast** and Rs 489,311 by **easypaisa**, both `hasProof: false`.
+- **D34-116** **Neither receipt has proof attached.** Establish what that means for a dispute pack.
+- **D34-117** Verify the order lines total against `grand`: hall 250,000 + catering 411 × 2,650 + decor 60,000 + sound 40,000.
+- **D34-118** Compute that sum and compare with `grand: 1,439,150`.
+- **D34-119** Establish the `balance: 215,872` against `grand − receiptsTotal`.
+- **D34-120** Establish whether the evidence pack is reachable from any vendor screen.
+- **D34-121** …and whether the Cancellation Policy page links to it.
+- **D34-122** `refundRequests` is empty on 165. Establish where a refund request would be raised.
+- **D34-123** Establish whether any of the EPIC 5 surfaces — refund preview, refund requests, dispute evidence — has a UI at all.
+- **D34-124** Enumerate which of the seven EPIC 5 endpoints have a consumer in the frontend.
+
+### F. Accessibility (D34-125 → D34-136)
+
+- **D34-125** `h1` on the page.
+- **D34-126** The template cards are `<div onClick>` with no `role`, no `tabIndex` and no keyboard handler. Verify.
+- **D34-127** …so establish that choosing a policy is **mouse-only** — the same defect as the notification row (WWL-394).
+- **D34-128** The selected card is indicated by a border and ring only — establish whether anything is announced.
+- **D34-129** …and whether `aria-pressed` or `aria-selected` is used anywhere.
+- **D34-130** The **Sample raqam** input is inside a `<label>`; verify the association.
+- **D34-131** The rupee table's structure — establish whether it is a real `<table>` with headers.
+- **D34-132** Colour contrast of the muted text and the ring.
+- **D34-133** Focus order across the three cards.
+- **D34-134** `prefers-reduced-motion` against the spinner.
+- **D34-135** Establish whether the Roman-Urdu copy is marked with a `lang` attribute.
+- **D34-136** …and what a screen reader does with *"Customer cancel kare to kitna wapas"* under `lang="en"`.
+
+### G. Mobile 360×740 (D34-137 → D34-146)
+
+- **D34-137** No horizontal overflow: `scrollWidth === clientWidth` and an element-level right-edge count.
+- **D34-138** The `md:grid-cols-3` card grid stacks.
+- **D34-139** The header's `flex-wrap` with the sample input.
+- **D34-140** The rupee table at 360px — establish whether it scrolls or compresses.
+- **D34-141** Tap targets on the three cards and the save control.
+- **D34-142** The sample input's width at 360px (`w-32`).
+- **D34-143** Under `hover: none`, the card hover styling.
+- **D34-144** The page's `max-w-4xl mx-auto` at 360px.
+- **D34-145** Reaching the page from the sidebar at 360px.
+- **D34-146** The whole-page height and how much scrolling comparing three templates costs.
+
+### H. Integrity (D34-147 → D34-156)
+
+- **D34-147** Console clean.
+- **D34-148** No unhandled rejection — note `save` has no `onError`, so a real failure would surface here.
+- **D34-149** Clean-realm inventory at open: `active` policy per business, and booking 165's preview, acceptance and evidence.
+- **D34-150** Every write attempted, listed with its captured body.
+- **D34-151** **Confirm no policy was saved** — `active` still null on 3358 and 3359.
+- **D34-152** Confirm booking 165's refund preview is unchanged.
+- **D34-153** Confirm `policy-acceptance` is still `accepted: false`.
+- **D34-154** Confirm no refund request was created.
+- **D34-155** Cross-check the four prior modules' baselines.
+- **D34-156** No storage keys left behind.
