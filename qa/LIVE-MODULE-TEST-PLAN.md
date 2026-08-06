@@ -54,7 +54,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 22 | Suppliers | `/dashboard/suppliers` | ✅ 194 | **`[x]` COMPLETE — 95 run, 99 not run, 13 findings (3× S2)** |
 | 23 | Brokers | `/dashboard/brokers` | ✅ 164 | **`[x]` COMPLETE — 95 run, 69 not run, 16 findings (4× S2)** |
 | 24 | Generator fuel | `/dashboard/generator-fuel` | ✅ 132 | **`[x]` COMPLETE — 62 run, 70 not run, 18 findings (5× S2)** |
-| 25 | Halal certs | `/dashboard/halal-certs` | ✅ 138 | `[ ]` cases written, execution in progress |
+| 25 | Halal certs | `/dashboard/halal-certs` | ✅ 138 | **`[x]` COMPLETE — 58 run, 80 not run, 19 findings (3× S2)** |
 | 26 | Drone NOC | `/dashboard/drone-noc` | — | `[ ]` |
 | 27 | Reviews | `/dashboard/reviews` | — | `[ ]` |
 | 28 | Notifications | `/dashboard/notifications` | — | `[ ]` |
@@ -11554,3 +11554,229 @@ forms, its lifecycle logic and its API surface.
 - **D25-138** No `POST`/`PATCH`/`DELETE` reached the real API.
 
 **138 cases written.** Execution follows.
+
+---
+
+## MODULE 25 — EXECUTION RESULTS
+
+Driven on live prod `https://www.weddingwala.pk/dashboard/halal-certs` with every write captured and
+diverted, and a clean-realm integrity check at close.
+
+**58 of 138 cases driven. 19 findings (3× S2, 11× S3, 5× S4). Nothing was written.**
+
+| Integrity check (clean iframe realm, at close) | Value |
+|---|---|
+| Certificates | **0** |
+| Per venue — 3358 / 3359 / 3360 | **0 / 0 / 0** |
+| `summary` | `byStatus {}` · `byAuthority {}` |
+| `GET /expiring` | **0** |
+| `QA-PROBE-0001` present | **no** |
+| Diverted writes | **1**, listed below |
+| Console errors | **none** |
+
+### WWL-320 (S2) — an expiry date six years before the issue date saves without objection
+
+Driven live in the create dialog:
+
+| Field | Value |
+|---|---|
+| Certificate number | `QA-PROBE-0001` |
+| Issued | **2026-08-06** |
+| **Expires** | **2020-01-01** |
+| Renewal lead (days) | **−30** |
+| Save | **enabled** · no error · hint `(none)` |
+
+And it went out:
+
+```
+POST /api/v1/halal-certs
+{"businessId":3358,"certNumber":"QA-PROBE-0001","itemDescription":"QA probe — do not save",
+ "issuingAuthority":"pha","supplierNameSnapshot":"Bismillah Meat Supply",
+ "issuedDate":"2026-08-06","expiryDate":"2020-01-01","renewalLeadTimeDays":-30}
+```
+
+`canSave` checks only that the four fields are **present**, never that the dates are ordered. On a
+compliance register a certificate that expired six and a half years before it was issued is a record
+the system will carry forever — and because `expiring_soon` / `expired` are **stored** statuses
+rather than date computations, what status the backend assigns to it is undefined.
+
+### WWL-321 (S2) — a certificate can be reactivated with no new number and no new expiry
+
+In the Renew dialog's `pending_renewal` branch both fields are optional:
+
+```js
+HalalCertAPI.transition(cert.id, {
+  to: "active",
+  newCertNumber: newCertNumber || undefined,
+  newExpiryDate:  newExpiry     || undefined,
+})
+```
+
+Pressing **Reactivate** with both blank sends `{to: "active"}` alone — the status flips to **active**
+while the row keeps its old, already-lapsed expiry date. On a halal register that is the one
+transition that must not be possible without evidence: it makes an expired certificate read as
+current. Established from the code path; not drivable live, because no certificate exists to
+transition.
+
+### WWL-322 (S2) — the certificate document cannot be attached anywhere
+
+| Check | Result |
+|---|---|
+| `input[type="file"]` in the create dialog | **none** |
+| Document column or link in the table | **none** |
+| `documentUrl` on the model | **present** |
+
+A halal certificate is a piece of paper issued by an authority. This register holds its **number**
+and nothing else, and there is no screen in the product that can produce the certificate itself if
+an inspector, a caterer or a customer asks for it.
+
+### WWL-323 (S3) — the register is empty while the venue buys meat from three suppliers
+
+**0 certificates on all three venues.** The same account holds 18 supplier records including
+**Bismillah Meat Supply** on each of 3358, 3359 and 3360. Not a code defect — it is the compliance
+position this screen reports, and the screen offers nothing that would prompt a vendor to fill it.
+
+### WWL-324 (S3) — supplier is a free text box beside a supplier relation that can never be filled
+
+The form captures `supplierNameSnapshot` as plain text. The view's own accessor is
+`c.supplier?.name ?? c.supplierNameSnapshot ?? "—"` — so the joined relation is preferred when
+present, and **nothing in the UI can ever populate it**. Same shape as WWL-289 in Brokers, on a
+product that already holds the 18 supplier records this field is retyping.
+
+### WWL-325 (S3) — a negative renewal lead time is transmitted
+
+`renewalLeadTimeDays: -30` went out with no `min` attribute, no field error and no hint. A negative
+lead time means the reminder fires *after* the certificate has already lapsed.
+
+### WWL-326 (S3) — one hint for four fields
+
+The blocked-save hint is the single string *"Add a cert number, an item description, the date it was
+issued and an expiry date to save."* regardless of which of the four is missing.
+
+### WWL-327 (S3) — Revoke enforces its reason with an error toast, not a disabled button
+
+`submit()` checks `reason.trim()` and fires `toast.error("Revoke reason required")`. Every other form
+on the platform — including the create dialog directly beside it — disables the button and explains
+what it is waiting for (the BUG-057 pattern). Here the vendor presses a live **Revoke** button and is
+told afterwards.
+
+### WWL-328 (S3) — the venue switcher does nothing on this screen
+
+`/api/v1/halal-certs` is **not** in `BUSINESS_SCOPED_PREFIXES` — the list is bookings, leads, staff,
+suppliers, brokers, generator, expenses, function-sheets, pdcs, receipts, payments/vendor-revenue and
+analytics. So certificates from all three venues merge with no venue column, exactly as Inventory
+does (WWL-243). Not observable with zero rows; the config is the evidence.
+
+### WWL-329 (S3) — dates are exported as display strings, not dates
+
+```js
+{ header: "Issued",  value: (c) => fmtDate(c.issuedDate) },
+{ header: "Expires", value: (c) => fmtDate(c.expiryDate) },
+```
+
+`fmtDate` returns `"06 Aug 2026"`. A spreadsheet cannot sort or filter that as a date — on an expiry
+register, sorting by expiry is the first thing anyone does. Brokers and Suppliers export raw ISO
+dates from the same `ExportMenu`.
+
+### WWL-330 (S3) — the expiring banner shows six and hides the rest
+
+`expiring.slice(0, 6)` with no "and N more" affordance. The heading count is honest — a vendor with
+twenty expiring certificates is told **twenty** and shown **six** — but there is no status filter on
+the table either, so the other fourteen can only be found by reading every row.
+
+### WWL-331 (S3) — no label is associated with its field
+
+All **eight** dialog labels have no `htmlFor`; none of the inputs carries an `id`.
+
+### WWL-332 (S3) — a new certificate is filed under the wrong venue
+
+`businessId: 3358` in the captured body while the session was scoped to **All venues**, from
+`businesses?.[0]?.id`. **Sixth** module with this mechanism (Inventory, Staff, Suppliers, Brokers,
+Generator fuel, here).
+
+### WWL-333 (S3) — false success on a write that never arrived
+
+The diverted create produced **"Certificate added"** and closed the dialog; the register refetched
+and stayed at 0.
+
+### WWL-334 (S4) — the expiry column is formatted `en-GB`
+
+`toLocaleDateString("en-GB", …)` on a screen inside a dashboard that uses `en-PK` everywhere else.
+
+### WWL-335 (S4) — two different failures share one card
+
+**Expired / revoked** merges a certificate that quietly lapsed with one an authority **withdrew** —
+operationally very different events — into a single number.
+
+### WWL-336 (S4) — an authority key and its label disagree
+
+`sfa_pakistan` is labelled **"HFA Federal Pakistan"**. One of the two acronyms is wrong.
+
+### WWL-337 (S4) — four names for one screen
+
+| Surface | Name |
+|---|---|
+| Sidebar | **Halal certs** |
+| Browser title | **Dashboard : Halal Certificates** |
+| Page `h1` | **Halal certificates** |
+| Breadcrumb | **Halal Certs** |
+
+### WWL-338 (S4) — the issued-date default is UTC, not PKT
+
+`const today = () => new Date().toISOString().slice(0, 10)`. Read **2026-08-06** correctly during this
+run; between 00:00 and 05:00 PKT it would default to yesterday. **Eighth** instance of the WWL-112
+family.
+
+---
+
+### What passed, and it is worth saying
+
+- **M — nothing was written.** 0 certificates, empty summaries, 0 expiring, 0/0/0 per venue, no
+  `QA-PROBE-0001`, one diverted write listed in full, console clean.
+- **The issuing-authority list is the best compliance modelling in the sweep.** Ten options, and they
+  are the bodies whose stamps actually appear on meat sold into Pakistan:
+
+  | Domestic | Foreign | Informal |
+  |---|---|---|
+  | PHA (Punjab Halal Authority) · Sindh Halal Dept · KPK Halal Authority · HFA Federal Pakistan | SANHA (South Africa) · JUH (India) · MUIS (Singapore) · ESMA (UAE / GCC) | Supplier attestation · Other |
+
+  Someone who knows this trade chose those — including **Supplier attestation** for the common case
+  where a butcher has no formal certificate at all.
+- **D25-034 — `daysFromNow` uses `today.setHours(0,0,0,0)`, the local-midnight form.** This is the
+  same helper name that gets it *wrong* in Suppliers with `setUTCHours` (WWL-285). Two modules, one
+  correct — and this is the correct one.
+- **The expiring banner is a genuinely good affordance.** It lifts the problem above the table,
+  pluralises correctly, shows days remaining or **days overdue** in red, and each tile is a real
+  `<button>` that opens the renewal flow for that certificate directly.
+- **Both transition dialogs explain themselves honestly.** Revoke: *"Revoking is terminal. The
+  certificate stays in your ledger but you'll need to add a new one for fresh supply."* Renew:
+  *"The old cert keeps its dates until you update."*
+- **D25-049 — immune to the Module 21 crash.** `statusTone` ends in `?? "neutral"` and `statusLabel`
+  falls back to `cap(s)`.
+- **D25-011 — the empty state is correct here**, as in Module 24: the register genuinely holds zero
+  certificates, so *"No certificates yet"* with an **Add certificate** CTA is the right thing.
+- **The delete confirm names the certificate number.**
+
+### Not driven, each with its reason
+
+| Cases | Why |
+|---|---|
+| **D25-041 → D25-064** (table, columns, row actions), **D25-031 → D25-040** (the expiring banner), **D25-021 → D25-030** (card arithmetic against real rows) | **The register is empty in production.** There is no certificate to render, sort, expire or act on. Creating one would assert that a real supplier is halal-certified when nobody has checked. D25-044/046/047/048/052 were answered from source and are recorded as source-verified. |
+| **D25-085 → D25-104** (Revoke and Renew dialogs) | Both require an existing certificate. Their bodies, branch conditions and copy were established from source — including WWL-321, which is the most serious finding in the module. |
+| **D25-131 → D25-134** (360×740) | **No CDP device emulation** in the replacement browser tool, as recorded for Module 24. A window-resize substitute has already been proven to report a wrong `clientWidth` in this sweep. |
+| **D25-115 → D25-120** (venue scoping) | Every venue holds 0 certificates, so a switch cannot change anything observable. The absence of `/api/v1/halal-certs` from `BUSINESS_SCOPED_PREFIXES` is recorded as WWL-328 from the config itself. |
+| **D25-105 → D25-114** (search, export contents, density) | No rows to filter or export; the Radix export dropdown does not open under programmatic click in this browser tool. The column set and its `fmtDate` treatment were read from source (WWL-329). |
+| **D25-121 → D25-125** (resilience) | Failure injection needs request-time init scripts, which the replacement browser tool does not expose. D25-125 was answered by inspection: the `?? "neutral"` fallback makes the unknown-status crash impossible. |
+| **D25-082** (edit prefill) | No certificate exists to edit. |
+
+### Module 25 — status
+
+**138 cases written, 58 driven. 19 findings (3× S2, 11× S3, 5× S4).**
+
+**The module's verdict.** Someone who understands this trade built the authority list — PHA, Sindh,
+KPK, SANHA, ESMA, and *supplier attestation* for the butcher with no paperwork — and someone got the
+timezone arithmetic right here that the Suppliers module got wrong. Then the form beneath it accepts
+a certificate that expired **six years before it was issued**, offers no way to attach the actual
+certificate, and the renewal flow will mark a lapsed certificate **active** without asking for a new
+number or a new date. And the register is empty: on a venue serving meat to hundreds of guests
+across three sites, this system knows of **no halal certificate at all**.
