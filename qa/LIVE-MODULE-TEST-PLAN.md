@@ -58,7 +58,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 26 | Drone NOC | `/dashboard/drone-noc` | ✅ 138 | **`[x]` COMPLETE — 60 run, 78 not run, 17 findings (3× S2)** |
 | 27 | Reviews | `/dashboard/reviews` | ✅ 310 | **`[x]` COMPLETE — 218 run, 92 not run, 26 findings (1× S1, 6× S2)** |
 | 28 | Notifications | `/dashboard/notifications` | ✅ 258 | **`[x]` COMPLETE — 195 run, 63 not run, 20 findings (5× S2)** |
-| 29 | Promote | `/dashboard/promote` | ✅ 222 | `[~]` cases written — execution in progress |
+| 29 | Promote | `/dashboard/promote` | ✅ 222 | **`[x]` COMPLETE — 150 run, 72 not run, 22 findings (4× S2)** |
 | 30 | Plan & billing | `/dashboard/billing` | — | `[ ]` |
 | 31 | Collaborations | `/dashboard/collaborations` | — | `[ ]` |
 | 32 | Business Settings | `/dashboard/settings` | — | `[~]` 11 tabs done earlier |
@@ -14212,3 +14212,415 @@ Established from source and from a live probe taken before any case ran:
 - **D29-220** Confirm no notification was generated (the approve/reject paths send them; the create path does not — verify).
 - **D29-221** Confirm the notification total from Module 28 is unchanged, as a cross-check that nothing fired.
 - **D29-222** No storage keys left behind.
+
+---
+
+## MODULE 29 — EXECUTION RESULTS
+
+Driven on live prod `https://www.weddingwala.pk/dashboard/promote` as user **3351**, on Playwright,
+with every write captured and diverted and a Node-side integrity check that never executes page JS.
+
+**150 of 222 cases driven. 22 findings (4× S2, 14× S3, 4× S4). Nothing was written.**
+
+| Integrity (Node-side oracle) | At open | At close |
+|---|---|---|
+| Promotion requests | **0** | **0** |
+| 3358 / 3359 / 3360 `sponsored` | false / false / false | **unchanged** |
+| 3358 / 3359 / 3360 `promotionStatus` | none / none / none | **unchanged** |
+| `promotionEndsAt` | null ×3 | **null ×3** |
+| Notification unread count | 60 | **60** — nothing fired |
+| Diverted writes | — | **3**, listed below |
+| Console errors | — | **none** |
+
+```
+POST /api/v1/promotions  {"businessId":3358,"placement":"search","windowDays":30,"note":"QA PROBE — do not action. xxx…"}
+POST /api/v1/promotions  {"businessId":3358,"placement":"homepage","windowDays":7}     ← one click
+POST /api/v1/promotions  {"businessId":3358,"placement":"homepage","windowDays":7}     ← same click, see WWL-411
+```
+
+The register is **empty in production** — zero requests, all three venues unsponsored — so the screen
+is judged on its empty state, its form, its arithmetic and its API surface rather than on rows.
+
+### WWL-408 (S2) — the fix for "no way to retract" shipped without the button
+
+`POST /api/v1/promotions/:id/cancel` is live, owner-scoped, transactional, and guarded to `pending`
+only. Its own comment states the problem it was written for:
+
+> *"WW-079 — let a vendor withdraw their own PENDING promotion request. The model has a 'cancelled'
+> status but no endpoint exposed it, so a vendor who filed a request by mistake had no way to retract
+> it (and createPromotionRequest then blocked them with 'a request is already pending')."*
+
+Every word of that is still true on the vendor's screen:
+
+| | |
+|---|---|
+| `PromotionsAPI.cancel` | **does not exist** — the class has `getPricing`, `listMine`, `create`, `queue`, `approve`, `reject` |
+| Any component calling the cancel route | **none** — searched the whole frontend |
+| Row actions on the table | **none at all** — six read-only columns |
+
+So the trap is intact end to end. File a request by mistake, and `createPromotionRequest` answers the
+next attempt with **409 "A request is already pending for this business"** — verified by reading the
+guard — and there is no surface anywhere in the product that reaches the endpoint written to release
+it. The vendor waits for an admin to decide on a request they no longer want.
+
+The backend was fixed. The button was never built.
+
+### WWL-409 (S2) — the "Active" card counts promotions that finished
+
+`Active` is `all.filter((r) => r.status === "approved").length`. It never looks at `endsAt`.
+
+The status can never become anything else, either. `PromotionRequest.STATUSES` declares `expired` —
+and **nothing in the backend ever writes it**. The expiry sweeper (`vrSweepers.js` §10) updates the
+*business*:
+
+```js
+await Business.update(
+  { sponsored: false, promotionStatus: "expired" },
+  { where: { sponsored: true, promotionEndsAt: { [Op.lt]: new Date() } } },
+);
+```
+
+…and leaves the request row on `approved` forever. So once a window closes there are two records with
+two answers: `Business.promotionStatus` says **expired**, and the vendor's own Promote screen says
+**Active** — permanently, and cumulatively, one for every placement they have ever run.
+
+The same codebase knows how to do this correctly twelve lines away. WW-150's stacking guard is
+time-based:
+
+```js
+const activeApproved = await PromotionRequest.findOne({
+  where: { businessId, status: "approved", endsAt: { [Op.gt]: new Date() } },
+});
+```
+
+The backend compares `endsAt` to now. The card above it does not. Same family as WWL-273 (Suppliers)
+and WWL-286 (Brokers).
+
+### WWL-410 (S2) — only the first venue can ever be promoted
+
+`const businessId = businesses?.[0]?.id`, passed straight to the dialog, which has **no business
+picker and never names the business it is about to promote**.
+
+Captured from a live send:
+
+```
+{"businessId":3358,"placement":"search","windowDays":30,…}
+```
+
+3358 is *Rehman Grand Marquee*, the first business, regardless of which venue the switcher shows.
+This is the **ninth** module in the sweep with this mechanism, and the sharpest instance of it: the
+table has a **Business** column, so once a request lands it will display a venue name the vendor did
+not choose.
+
+A vendor who wants to promote *Rehman Banquet & Lawn* has no route to it from this screen.
+
+### WWL-411 (S2) — one click sends the paid request twice
+
+Captured on a single click of **Request placement** with the network failing:
+
+```
+POST /api/v1/promotions  {"businessId":3358,"placement":"homepage","windowDays":7}
+POST /api/v1/promotions  {"businessId":3358,"placement":"homepage","windowDays":7}
+```
+
+The cause is global, in `lib/providers/query-provider.tsx`:
+
+```js
+mutations: {
+  retry: 1,
+  retryDelay: 1000,
+},
+```
+
+**Every mutation in the dashboard retries once**, including this one. Here the damage is contained by
+luck rather than design: `createPromotionRequest`'s own `existingPending` check answers the retry
+with a 409, because the first attempt already created the pending row. That is an idempotency guard
+this endpoint happens to have for a different reason.
+
+The setting is not scoped to this module, and the exposure of every other mutating endpoint depends
+on whether it has a comparable guard.
+
+### WWL-412 (S3) — the price is presented as firm and the code calls it a placeholder
+
+The controller's own header:
+
+> *"Pricing is placeholder PKR (D7 — structure locked, numbers TBD with real vendors). **The FE labels
+> them 'indicative'.**"*
+
+Searched the frontend. The word **"indicative" appears nowhere in the Promote UI** — only in a code
+comment inside `lib/api/promotions.ts`, which no vendor reads.
+
+What the vendor is shown instead, verified live:
+
+| Surface | Text |
+|---|---|
+| Dialog panel | **Quoted price — Rs 5,000** |
+| Duration options | *7 days — Rs 5,000* · *15 days — Rs 10,000* · *30 days — Rs 17,500* |
+| Stat card | **Quoted (total)** |
+| Table column | **Quoted** |
+
+Four surfaces calling it a quote, and no hedge anywhere. There is also no VAT line, no PRA/FBR
+treatment and no total-payable on a screen that names prices up to Rs 17,500.
+
+### WWL-413 (S3) — two clicks from the dashboard to a filed Rs 5,000 request
+
+`canSave = !!placement && !!windowDays && businessId != null`. Both selects are pre-populated on open,
+so the send button is **enabled the instant the dialog appears** — verified live, `disabled: false`
+with nothing touched.
+
+The pre-selection is `pricing[0]` for placement and `prices[0]` for duration, which resolves to
+**Homepage hero, 7 days, Rs 5,000** — the most expensive placement in the catalog.
+
+There is no confirmation step, no review screen and no "you will be invoiced" line. Open the dialog,
+press the button, and a Rs 5,000 request is filed against a venue the vendor was never shown.
+
+### WWL-414 (S3) — the blocked-state hint can never appear
+
+`FormBlockedHint` renders *"Fill in the required fields above to save."* when `canSave` is false. Given
+D29-106 — both selects always carry a value from the moment the dialog opens — the only way to reach
+that state is `businessId == null`, which happens for a vendor with no business at all. Verified live:
+the hint's text is absent from the dialog in every state driven.
+
+The BUG-057 pattern was applied to a form that cannot be blocked.
+
+### WWL-415 (S3) — the note is silently truncated
+
+The textarea has **`maxLength: -1`** — no cap, no counter, no warning. The server does:
+
+```js
+const note = (req.body.note || "").toString().trim().slice(0, 1000) || null;
+```
+
+Driven live: **1,226 characters transmitted**, no warning shown at any point. 226 characters are
+dropped server-side with no error and no acknowledgement, on the one free-text field a vendor has to
+explain their request to an admin.
+
+### WWL-416 (S3) — false success on a write that never arrived
+
+The diverted create produced **"Placement requested"**, closed the dialog, invalidated the query — and
+the register refetched to **zero rows with the empty state still showing**. The screen ends up
+contradicting its own toast.
+
+`showSuccessToast` is the undo-capable helper used elsewhere in the product; no undo is offered here,
+and none could work, because the cancel endpoint has no client (WWL-408).
+
+### WWL-417 (S3) — five fields are fetched and none is displayed
+
+| Field | On the row | A column? |
+|---|---|---|
+| `startsAt` | ✓ | **no** |
+| `endsAt` | ✓ | **no** |
+| `rejectionReason` | ✓ | **no** |
+| `decidedAt` / `decidedByUserId` | ✓ | **no** |
+| `business.sponsored` / `business.promotionEndsAt` | fetched by the list endpoint | **no** |
+
+Two consequences follow directly. A **rejected** request renders the word *Rejected* and nothing
+else — the admin's reason is stored, and sent in a notification, and is unreachable from the screen
+that shows the rejection. And a vendor with an **approved** placement cannot see when it starts, when
+it ends, or whether they are featured right now; the only place the end date appears is the approval
+notification, which arrives wearing a grey SYSTEM pill (WWL-422).
+
+### WWL-418 (S3) — "Quoted (total)" sums rejections and cancellations
+
+```js
+const quotedTotal = all.reduce((sum, r) => sum + num(r.priceQuoted), 0)
+```
+
+Every row, every status. A request an admin refused, a request the vendor withdrew, and a placement
+that ran three months ago all add to the same number. It is not spend, not commitment and not owed —
+same shape as WWL-342 (Drone NOC fees) and the Generator fuel total.
+
+### WWL-419 (S3) — nothing on this screen says whether a placement worked
+
+No impressions, no clicks, no enquiries attributed, no before/after. A vendor deciding whether to
+spend Rs 17,500 on a second homepage window has, from this screen, only the fact that they spent it
+once before — and not even the dates (WWL-417).
+
+### WWL-420 (S3) — approval flips `sponsored: true` with no money recorded anywhere
+
+`approvePromotion` updates the request row and the business inside a transaction and stops there. No
+invoice, no receipt, no payment reference, no ledger entry, and nothing links a promotion to the
+Khata or receipts modules. There is no payment control anywhere on the Promote screen.
+
+So the marketplace's paid-placement feature has a price, a quote and an approval — and no point at
+which anyone is asked to pay.
+
+### WWL-421 (S3) — the venue switcher does nothing here, and the dialog ignores it too
+
+`/api/v1/promotions` is absent from `BUSINESS_SCOPED_PREFIXES`, and `listMyPromotions` ignores
+`req.query.businessId` entirely — it scopes to *all* the vendor's businesses. The TanStack key is
+`["promote-redesigned"]` with no business in it, so nothing would refetch on a switch anyway.
+
+Merging all three venues into one table with a **Business** column is a defensible choice. Pairing it
+with a create dialog hard-wired to `businesses[0]` (WWL-410) is not: scoping to venue 3360 and
+pressing *Request placement* files against 3358.
+
+### WWL-422 (S3) — both decisions notify as type `system`
+
+`approvePromotion` and `rejectPromotion` each call `NotificationService.send({ type: "system", … })`.
+Per WWL-388, `system` renders a grey `Info` disc and the pill **SYSTEM** in the vendor's feed — where
+85% of rows already look like that.
+
+So *"Promotion approved — you're featured"*, the one message carrying the end date that appears
+nowhere else in the product (WWL-417), arrives indistinguishable from a platform announcement.
+
+### WWL-423 (S3) — the accessibility floor
+
+| Check | Result |
+|---|---|
+| Search input | **no `aria-label`, no `id`, no `<label>`** — a placeholder only |
+| The three dialog labels | `htmlFor` **null** on all three; no input carries an `id` |
+| The quoted-price panel | not associated with the duration select, so a screen-reader user is not told the price changed |
+| `aria-current="page"` | **3 elements at once** — `/dashboard/settings`, `/dashboard/promote`, and the breadcrumb span |
+| `h1` | **1** ✓ |
+
+The `aria-current` result is consistent with Modules 27 and 28, and now precise: the sidebar's
+**section** link keeps `aria-current="page"` alongside the page's own link, so assistive technology is
+always told the user is on two pages.
+
+### WWL-424 (S3) — a refusal and a finished placement look the same
+
+`STATUS_TONE` maps **`rejected: "error"`** and **`expired: "error"`**. An admin declining a paid
+request and a placement that simply ran its course render in the same red. The text distinguishes
+them; nothing else does. (In practice `expired` is unreachable on the row — see WWL-409 — so today
+every red pill is a refusal.)
+
+### WWL-425 (S3) — a network failure surfaces axios's own English
+
+`onError: (e) => toast.error(e?.response?.data?.message || e?.message || "Couldn't request placement")`.
+
+Driven under injected failure, the toast read **"Network Error"** — the raw axios string, not the
+module's own fallback, because `e.message` is populated. The chain is right in priority order and
+wrong in its middle term: a server message would surface correctly (better than Modules 27 and 28,
+which swallowed it), but a transport failure shows the library's internals.
+
+### WWL-426 (S4) — the 400s leak internal field names
+
+Probed live:
+
+| Request | Response |
+|---|---|
+| `windowDays: 60` | 400 — **"WindowDays must be 7, 15, or 30"** |
+| `windowDays: 0` | 400 — same |
+| `placement: "footer"` | 400 — "Invalid placement" |
+| no `businessId` | 400 — **"BusinessId required"** |
+
+`onError` surfaces `response.data.message` first, so these are vendor-facing strings. *"WindowDays"*
+and *"BusinessId"* are variable names.
+
+### WWL-427 (S4) — Export renders over an empty register
+
+The Export control is present with zero rows and produces a header-only file. Captured without
+downloading:
+
+```
+promotions.csv
+Business,Placement,Window (days),Quoted,Status,Requested,Note
+```
+
+The column set also writes `fmtDate(createdAt)` — the display string *"06 Aug 2026"* — rather than an
+ISO date, so a spreadsheet cannot sort the file by when a request was made. Same defect as WWL-329.
+
+### WWL-428 (S4) — the component's own header describes a different screen
+
+```
+Promote — redesigned (Track C). … Read-only; original screen untouched.
+Route /dashboard/promote-new.
+```
+
+It is mounted at `/dashboard/promote`, and it is not read-only — it files paid requests.
+
+### WWL-429 (S4) — 36px controls in the dialog at 360px
+
+Measured under true touch emulation: both selects and both footer buttons render at **36px** high,
+below the 44px minimum. The dialog itself fits (360×558, no overflow).
+
+---
+
+### What passed, and it is worth saying
+
+- **L — nothing was written.** 0 requests at open and at close; all three venues still
+  `sponsored: false, promotionStatus: "none", promotionEndsAt: null`; the Module 28 notification
+  count still **60**, confirming no decision notification fired. Three diverted writes, listed in
+  full. Verified Node-side, where no page hook can reach.
+- **D29-169 → D29-172 — the admin boundary holds, and this is the counter-example to WWL-339.**
+  Probed live as the vendor:
+
+  | Endpoint | Result |
+  |---|---|
+  | `GET /promotions/admin/queue` | **403** |
+  | `POST /promotions/admin/:id/approve` | **403** |
+  | `POST /promotions/admin/:id/reject` | **403** |
+
+  Drone NOC let the applicant approve their own PCAA permit. Promote — same product, same sweep —
+  puts the decision behind `superAdminMiddleware()` and refuses cleanly. This is how that module
+  should have looked.
+- **D29-139 → D29-142 — every create guard is correct**: bad window 400, bad placement 400, missing
+  businessId 400, and a business the vendor does not own **404 "Business not found or not yours"** —
+  no leak of whether the id exists.
+- **D29-179 — `cancel` validates its id.** `POST /promotions/abc/cancel` → **400 "Invalid request
+  id"**, and a missing id → 404. That is exactly the guard `notificationRouter` lacks (WWL-395), in
+  the same codebase.
+- **D29-143 / D29-144 — the price is computed server-side and the client's number is never trusted.**
+  `priceQuoted` is derived from `quotePrice(placement, windowDays)` and is not read from the request
+  body, on a screen that displays a price to the user.
+- **D29-097 — all twelve price points verified live** against `BASE_PRICE_7D × WINDOW_MULT`, and the
+  per-day rate falls monotonically with the window (7d dearest, 30d cheapest) — the discount is real:
+
+  | | 7 days | 15 days | 30 days |
+  |---|---|---|---|
+  | Homepage hero | 5,000 | 10,000 | 17,500 |
+  | Category top | 3,000 | 6,000 | 10,500 |
+  | City top | 2,500 | 5,000 | 8,750 |
+  | Search boost | 2,000 | 4,000 | 7,000 |
+
+- **D29-048 — immune to the Module 21 crash.** `statusTone` ends in `|| "neutral"` and all five
+  statuses are mapped.
+- **D29-053 — the selection column has a consumer.** `selectedIds` feeds `ExportMenu`, unlike
+  Module 27 where every row carried a checkbox that nothing read.
+- **D29-037 / D29-038 — the empty state is correct here.** The register genuinely holds zero, so
+  *"No placement requests yet"* with a CTA is the right thing — the same primitive that fired over
+  populated data in Modules 20–22.
+- **D29-160 — WW-150's stacking lock is time-based** (`endsAt > now`) and therefore self-clearing,
+  and WW-224 stops a rejection from downgrading a business that has another live promotion. Both are
+  careful fixes.
+- **D29-092 — changing placement correctly resets the duration** to that placement's first price, and
+  the quoted panel follows. Driven across all four placements.
+- **D29-122 — reopening the dialog resets everything** — placement, duration and note — verified from
+  the second captured body, which carried no note and had reverted to homepage/7.
+- **D29-203 / D29-208 — 0 overflow at 360×740**, and **Export is still reachable there**, unlike
+  Module 27 where the toolbar controls sat behind `hidden lg:flex`.
+- **D29-113 / D29-114 — `onError` reads `response.data.message` first**, so a real server refusal
+  would reach the vendor verbatim. Modules 27 and 28 discarded it.
+- Console clean throughout.
+
+### Not driven, each with its reason
+
+| Cases | Why |
+|---|---|
+| **D29-039 → D29-055, D29-071 → D29-086** (columns, tones, row rendering) | **The register is empty in production.** There is no request to render, sort or search. Creating one files a real paid placement against the vendor's live listing and locks them out of filing another (WWL-408). Column definitions, tone mapping and the missing fields were read from source and are recorded as source-verified. |
+| **D29-057 → D29-060** (search behaviour) | Nothing to filter. The four searched fields were read from the `useMemo`. |
+| **D29-061 / D29-062** (density toggle) | **Not driven and not concluded.** My text lookup for *Comfortable* / *Compact* matched nothing on desktop either, so the control's real markup was not identified — an earlier "absent at 360px" reading was a selector artefact and is discarded rather than reported. |
+| **D29-070** (error + retry) | The `DataTable` error state needs the list query to fail; with the query already resolved there is no control on the page that refetches, so failure injection could not be aimed at it. The primitive is the same one driven in Modules 20–26. |
+| **D29-145** (a price change between request and approval) | Requires an admin decision on a real request. |
+| **D29-148 → D29-150** (payment reconciliation) | Established by reading `approvePromotion` and by searching the product for a promotion payment surface; there is none to drive. |
+| **D29-157 → D29-164** (the pending lock, the cancel trap) | Establishing the 409 live means filing a real request and then filing a second one. The guards, the messages and the absence of any cancel client were established from source and from the route table. |
+| **D29-162** (super-admin cancelling for a vendor) | This account is not a super-admin; the admin queue correctly refuses it. |
+| **D29-176 → D29-178** (decision paths) | Require super-admin. Read from source; the `type: "system"` consequence is cross-checked against Module 28's live histogram. |
+| **D29-195** (screen-reader announcement of a price change) | Needs a screen reader; the DOM fact — no association between the select and the price panel — is recorded under WWL-423. |
+
+### Module 29 — status
+
+**222 cases written, 150 driven. 22 findings (4× S2, 14× S3, 4× S4).**
+
+**The module's verdict.** This is the best-guarded backend in the sweep — every create parameter
+validated, ownership checked with no id leak, the price computed server-side and never taken from the
+client, all three admin endpoints behind `superAdminMiddleware` and answering a vendor with a clean
+403. It is the module Drone NOC should have been. Then the screen in front of it opens a dialog
+pre-loaded with the most expensive placement in the catalogue, enables the send button before the
+vendor has chosen anything, files the request against a venue they were never shown, and — if the
+network hiccups — sends it twice. Afterwards there is no way to withdraw it, because the endpoint
+written for exactly that has no button; no way to see when an approved placement runs or why a
+rejected one was refused, because five fetched fields are displayed nowhere; and no way to tell
+whether the last one worked, because nothing measures it. The "Active" card will keep counting a
+placement long after the sweeper has switched it off. And at no point does anyone ask to be paid.
