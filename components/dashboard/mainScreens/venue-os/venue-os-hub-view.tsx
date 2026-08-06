@@ -70,6 +70,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { ExpenseCockpit } from "@/components/dashboard/mainScreens/expenses/expense-cockpit";
 import { EventProfitBoard } from "./event-profit-board";
 import { TodayBoard } from "./today-board";
+import { EventNightProvider } from "./event-night-context";
 import { Icon, type IconName } from "@/components/dashboard/shared/icon";
 
 // Everyday tabs a normal hall owner needs; the accountant/CFO tools live under
@@ -210,12 +211,16 @@ export function VenueOsHubView(): React.ReactElement {
         </div>
 
         <TabsContent value="today" className="mt-5">
-          <Section title="Tonight" hint="What's happening at your hall right now — headcount vs safe capacity, valet & incidents, RSVPs, and is-this-slot-free.">
-            <TodayBoard />
-            <EventNightGauge />
-            <EventNightConsoleView />
-            <GuestListView />
-            <SchedulingCheck />
+          <Section title="Tonight" hint="What's coming up and who owes you — then, once you open tonight's night, headcount vs safe capacity, valet & incidents, and RSVPs.">
+            {/* The gauge opens the night; the console and the guest list read the
+                id from here instead of asking the owner to type it. */}
+            <EventNightProvider>
+              <TodayBoard />
+              <EventNightGauge />
+              <EventNightConsoleView />
+              <GuestListView />
+              <SchedulingCheck />
+            </EventNightProvider>
           </Section>
         </TabsContent>
 

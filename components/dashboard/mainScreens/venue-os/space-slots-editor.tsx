@@ -61,6 +61,18 @@ export function SpaceSlotsEditor(): React.ReactElement | null {
     setSlots(r.slots);
   }
 
+  // Load the space list on arrival — otherwise this panel shows a lone "Load
+  // spaces" button with nothing to pick from.
+  React.useEffect(() => {
+    if (!businessId) return;
+    void guard(async () => {
+      setNodes(flatten((await venueSpacesApi.getTree(Number(businessId))).tree));
+      setSpaceId(null);
+      setSlots([]);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId]);
+
 
   return (
     <Card>

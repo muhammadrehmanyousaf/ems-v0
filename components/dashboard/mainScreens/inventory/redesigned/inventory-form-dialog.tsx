@@ -15,7 +15,7 @@ import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
+import { FormBlockedHint, FieldError, fieldAria, ERROR_INPUT_CLS } from "@/components/dashboard/primitives/field-error"
 
 const CATEGORIES = Object.keys(INVENTORY_CATEGORY_LABELS) as InventoryCategory[]
 const UNITS = Object.keys(INVENTORY_UNIT_LABELS) as InventoryUnit[]
@@ -89,11 +89,35 @@ export function InventoryFormDialog({
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save item"),
   })
 
-  const canSave = form.name.trim() && (isEdit || businessId != null)
+  /*
+   * All four number fields accepted negatives. Verified live: opening stock
+   * -500, low-stock threshold -10, last cost -9999 and reorder lead time -30
+   * were all accepted with Save enabled, no error, no aria-invalid and no min
+   * attribute on any input.
+   *
+   * Negative stock is not a typo you can shrug off here — the list header
+   * derives "Stock value" and the "Low / out of stock" count from these, so one
+   * negative quantity silently corrupts both tiles for every other item too.
+   */
+  const neg = (v: string) => String(v ?? "").trim() !== "" && Number(v) < 0
+  const numErrs = {
+    currentStock: neg(form.currentStock) ? "Opening stock can't be negative." : undefined,
+    lowStockThreshold: neg(form.lowStockThreshold) ? "Threshold can't be negative." : undefined,
+    lastRestockCostPerUnit: neg(form.lastRestockCostPerUnit) ? "Cost can't be negative." : undefined,
+    reorderLeadTimeDays: neg(form.reorderLeadTimeDays) ? "Lead time can't be negative." : undefined,
+  }
+  const hasNumErr = Object.values(numErrs).some(Boolean)
+  const canSave = form.name.trim() && !hasNumErr && (isEdit || businessId != null)
 
 
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
-  const blockedReason = canSave ? undefined : "Add a name to save."
+  const blockedReason = canSave
+    ? undefined
+    : !form.name.trim()
+      ? "Add a name to save."
+      : hasNumErr
+        ? "Fix the highlighted fields to save."
+        : "This item needs a business before it can be saved."
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -117,10 +141,36 @@ export function InventoryFormDialog({
               </select>
             </Field>
             <Field label="SKU"><input className={inputCls} value={form.sku} onChange={(e) => set("sku", e.target.value)} /></Field>
-            {!isEdit && <Field label="Opening stock"><input type="number" className={cn(inputCls, "tabular-nums")} value={form.currentStock} onChange={(e) => set("currentStock", e.target.value)} /></Field>}
-            <Field label="Low-stock threshold"><input type="number" className={cn(inputCls, "tabular-nums")} value={form.lowStockThreshold} onChange={(e) => set("lowStockThreshold", e.target.value)} /></Field>
-            <Field label="Last cost / unit (Rs)"><input type="number" className={cn(inputCls, "tabular-nums")} value={form.lastRestockCostPerUnit} onChange={(e) => set("lastRestockCostPerUnit", e.target.value)} /></Field>
-            <Field label="Reorder lead time (days)"><input type="number" className={cn(inputCls, "tabular-nums")} value={form.reorderLeadTimeDays} onChange={(e) => set("reorderLeadTimeDays", e.target.value)} /></Field>
+            {!isEdit && (
+              <Field label="Opening stock">
+                <input id="inv-stock" type="number" min={0} step="any" inputMode="decimal"
+                  className={cn(inputCls, "tabular-nums", numErrs.currentStock && ERROR_INPUT_CLS)}
+                  value={form.currentStock} onChange={(e) => set("currentStock", e.target.value)}
+                  {...fieldAria("inv-stock", numErrs.currentStock)} />
+                <FieldError id="inv-stock" message={numErrs.currentStock} />
+              </Field>
+            )}
+            <Field label="Low-stock threshold">
+              <input id="inv-thresh" type="number" min={0} step="any" inputMode="decimal"
+                className={cn(inputCls, "tabular-nums", numErrs.lowStockThreshold && ERROR_INPUT_CLS)}
+                value={form.lowStockThreshold} onChange={(e) => set("lowStockThreshold", e.target.value)}
+                {...fieldAria("inv-thresh", numErrs.lowStockThreshold)} />
+              <FieldError id="inv-thresh" message={numErrs.lowStockThreshold} />
+            </Field>
+            <Field label="Last cost / unit (Rs)">
+              <input id="inv-cost" type="number" min={0} step="0.01" inputMode="decimal"
+                className={cn(inputCls, "tabular-nums", numErrs.lastRestockCostPerUnit && ERROR_INPUT_CLS)}
+                value={form.lastRestockCostPerUnit} onChange={(e) => set("lastRestockCostPerUnit", e.target.value)}
+                {...fieldAria("inv-cost", numErrs.lastRestockCostPerUnit)} />
+              <FieldError id="inv-cost" message={numErrs.lastRestockCostPerUnit} />
+            </Field>
+            <Field label="Reorder lead time (days)">
+              <input id="inv-lead" type="number" min={0} step={1} inputMode="numeric"
+                className={cn(inputCls, "tabular-nums", numErrs.reorderLeadTimeDays && ERROR_INPUT_CLS)}
+                value={form.reorderLeadTimeDays} onChange={(e) => set("reorderLeadTimeDays", e.target.value)}
+                {...fieldAria("inv-lead", numErrs.reorderLeadTimeDays)} />
+              <FieldError id="inv-lead" message={numErrs.reorderLeadTimeDays} />
+            </Field>
             <Field label="Default supplier"><input className={inputCls} value={form.defaultSupplierName} onChange={(e) => set("defaultSupplierName", e.target.value)} /></Field>
           </div>
           <Field label="Notes"><textarea className={cn(inputCls, "h-20 resize-y py-2")} value={form.notes} onChange={(e) => set("notes", e.target.value)} /></Field>

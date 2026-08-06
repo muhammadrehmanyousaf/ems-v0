@@ -96,7 +96,10 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
   const removeMut = useMutation({
     mutationFn: (id: number) => ExpensesAPI.remove(id),
     onSuccess: () => { showSuccessToast("Expense removed"); setDeleting(null); invalidate() },
-    onError: (e: any) => toast.error(e?.message || "Couldn't remove expense"),
+    onError: (e: any) => toast.error(
+        e?.response?.data?.message || e?.message || "Couldn't remove expense",
+        { duration: 8000 },
+      ),
   })
 
   const all = data?.expenses ?? []

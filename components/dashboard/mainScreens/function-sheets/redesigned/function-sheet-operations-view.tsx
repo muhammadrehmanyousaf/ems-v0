@@ -85,7 +85,10 @@ export function FunctionSheetOperationsView() {
         deliverablesJson: { items: deliverables.map((d) => ({ ...stripRid(d), qty: Number(d.qty) || 0 })) },
       } as any),
     onSuccess: () => { showSuccessToast("Operations saved"); setDirty(false); qc.invalidateQueries({ queryKey: ["fs-operations"] }) },
-    onError: (e: any) => toast.error(e?.message || "Save failed"),
+    onError: (e: any) => toast.error(
+        e?.response?.data?.message || e?.message || "Save failed",
+        { duration: 8000 },
+      ),
   })
 
   if (isLoading) return <div className="p-4 md:p-6"><DetailSkeleton /></div>

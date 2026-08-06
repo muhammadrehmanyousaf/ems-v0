@@ -11,6 +11,10 @@ export interface VendorBookingLite {
   totalAmount?: number | string | null;
   downPayment?: number | string | null;
   status?: string | null;
+  // Present on every row `GET /api/v1/bookings` returns (bookingAttributes in
+  // bookingController) — just never typed, so no caller could reach it. The
+  // Today board needs it to turn "chase this customer" into a phone call.
+  customerPhone?: string | null;
 }
 
 /**

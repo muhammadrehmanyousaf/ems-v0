@@ -68,7 +68,10 @@ export function MenusManager({ businessId }: { businessId: number }) {
   const removeMut = useMutation({
     mutationFn: (id: number) => MenusAPI.delete(id),
     onSuccess: () => { showSuccessToast("Menu removed"); invalidate() },
-    onError: (e: any) => toast.error(e?.message || "Couldn't remove menu"),
+    onError: (e: any) => toast.error(
+        e?.response?.data?.message || e?.message || "Couldn't remove menu",
+        { duration: 8000 },
+      ),
   })
   // Per-head pricing is the whole basis of a Pakistani catering quote, so a Rs 0
   // menu is the "bookable at Rs 0" hole rather than a real free service.

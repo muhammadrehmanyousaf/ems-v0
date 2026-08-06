@@ -73,6 +73,15 @@ export function VenueSpacesManagerView(): React.ReactElement | null {
     setGroups(g.groups);
   }
 
+  // Load on arrival. Now that the venue resolves without being typed, waiting
+  // behind a "Load spaces" click just meant the Spaces tab still opened as a
+  // heading and four empty boxes.
+  React.useEffect(() => {
+    if (!businessId) return;
+    void guard(reload);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId]);
+
   const flat = flatten(tree);
 
   return (

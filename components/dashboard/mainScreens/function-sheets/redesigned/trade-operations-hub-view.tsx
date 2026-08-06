@@ -102,7 +102,10 @@ export function TradeOperationsHubView() {
       setDirty((d) => { const n = new Set(d); n.delete(active); return n })
       qc.invalidateQueries({ queryKey: ["trade-ops-hub"] })
     },
-    onError: (e: any) => toast.error(e?.message || "Save failed"),
+    onError: (e: any) => toast.error(
+        e?.response?.data?.message || e?.message || "Save failed",
+        { duration: 8000 },
+      ),
   })
 
   if (!TRADE_OPS.length) return <div className="p-4 md:p-6"><EmptyState icon="ClipboardList" title="No trades configured" description="The trade operations registry is empty." /></div>

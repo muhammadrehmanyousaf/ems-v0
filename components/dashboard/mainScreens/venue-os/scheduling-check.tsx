@@ -12,6 +12,7 @@ import { venueOsApi, type AvailabilityResult } from "@/lib/api/venueOs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { SubVenueField } from "./sub-venue-field";
 
 function readErr(e: unknown, fallback: string): string {
   return (e as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
@@ -54,10 +55,7 @@ export function SchedulingCheck(): React.ReactElement | null {
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-end gap-3">
-          <label className="text-sm">
-            Sub-venue #
-            <input type="number" value={subVenueId} onChange={(e) => setSubVenueId(e.target.value)} className="ml-2 w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-          </label>
+          <SubVenueField value={subVenueId} onChange={setSubVenueId} />
           <label className="text-sm">
             Start
             <input type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} className="ml-2 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />

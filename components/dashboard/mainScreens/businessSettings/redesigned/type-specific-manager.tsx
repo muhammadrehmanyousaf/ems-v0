@@ -177,8 +177,17 @@ export function TypeSpecificManager({ business, config, onSaved }: Props) {
           <div key={field.key} className="space-y-1.5">
             <label className={labelCls}>{field.label}</label>
             {field.description && <p className="text-xs text-muted-foreground">{field.description}</p>}
+            {/* Every number field in the type-specific registry is a
+                non-negative quantity — capacities, starting prices, hours,
+                camera/dholi counts, KVA. None of them can legitimately be
+                below zero, and without a floor the browser's own spinner
+                stepped happily into negatives. The API rejects those, so the
+                vendor's only feedback was a round-trip and a toast. */}
             <input
               type="number"
+              min={0}
+              step={1}
+              inputMode="numeric"
               className={cn(inputCls, "tabular-nums")}
               value={val?.toString() || ""}
               onChange={(e) => setValue(field.key, e.target.value)}

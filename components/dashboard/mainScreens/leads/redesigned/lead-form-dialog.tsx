@@ -16,7 +16,15 @@ import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { enqueue as outboxEnqueue, isOutboxEnabled, isOffline } from "@/lib/outbox"
-import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
+import {
+  FormBlockedHint,
+  FieldError,
+  fieldAria,
+  ERROR_INPUT_CLS,
+  validatePkPhone,
+  validateEmail,
+  validateOptionalText,
+} from "@/components/dashboard/primitives/field-error"
 
 const STATUSES: LeadStatus[] = ["new", "contacted", "qualified", "quoted", "booked", "lost", "archived"]
 const SOURCES: LeadSource[] = ["manual_phone", "manual_walkin", "whatsapp", "instagram", "referral", "form_inquiry", "in_app_chat", "other"]
@@ -59,7 +67,9 @@ export function LeadFormDialog({
     const k = open ? (lead?.id != null ? `l${lead.id}` : prefill ? `p${JSON.stringify(prefill)}` : "new") : null
     if (open) { if (loaded.current !== k) { setForm(blank(lead, prefill)); loaded.current = k } } else { loaded.current = null }
   }, [open, lead, prefill])
-  const set = (k: keyof FormState, v: string) => setForm((f) => ({ ...f, [k]: v }))
+  const [touched, setTouched] = React.useState<Record<string, boolean>>({})
+  const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }))
+  const set = (k: keyof FormState, v: string) => { setForm((f) => ({ ...f, [k]: v })); touch(String(k)) }
 
   const saveMut = useMutation({
     mutationFn: async () => {
@@ -96,10 +106,49 @@ export function LeadFormDialog({
     },
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save lead"),
   })
-  const canSave = form.contactName.trim() && (isEdit || businessId != null)
+  /*
+   * Every field except the contact name accepted anything at all.
+   *
+   * Verified live on production: phone "abc-not-phone", WhatsApp "!!!", email
+   * "bad-email", budget -5000, guests -10 and an event date of 2020-01-01 were
+   * ALL accepted — aria-invalid was null on every one, no error rendered, and
+   * Save unlocked the moment a name was typed. A lead whose phone cannot be
+   * rung is a lead the vendor cannot convert, which is the whole point of the
+   * inbox; a negative budget and a wedding six years in the past are simply
+   * typos nobody caught.
+   *
+   * Same rules the public enquiry form and the customer dialog already use, so
+   * the portal validates a phone number the same way everywhere.
+   */
+  const errs = {
+    contactPhone: validatePkPhone(form.contactPhone, { label: "Phone", required: false }),
+    contactWhatsapp: validatePkPhone(form.contactWhatsapp, { label: "WhatsApp", required: false }),
+    contactEmail: validateEmail(form.contactEmail, { required: false }),
+    estimatedBudget: numOrU(form.estimatedBudget) != null && Number(form.estimatedBudget) < 0
+      ? "Budget can't be negative."
+      : undefined,
+    estimatedGuests: numOrU(form.estimatedGuests) != null && Number(form.estimatedGuests) < 0
+      ? "Guests can't be negative."
+      : undefined,
+    inquiry: validateOptionalText(form.inquiry, { label: "Inquiry / notes", max: 2000 }),
+  }
+  // Errors only after a field is touched, so opening the dialog doesn't flag
+  // the empty phone the vendor is about to type.
+  const shown = Object.fromEntries(
+    Object.entries(errs).map(([k, v]) => [k, touched[k] ? v : undefined]),
+  ) as Record<string, string | undefined>
+
+  const hasError = Object.values(errs).some(Boolean)
+  const canSave = form.contactName.trim() && !hasError && (isEdit || businessId != null)
 
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
-  const blockedReason = canSave ? undefined : "Add a contact name to save."
+  const blockedReason = canSave
+    ? undefined
+    : !form.contactName.trim()
+      ? "Add a contact name to save."
+      : hasError
+        ? "Fix the highlighted fields to save."
+        : "This lead needs a business before it can be saved."
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -108,9 +157,24 @@ export function LeadFormDialog({
         <div className="space-y-4 py-1">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Contact name"><input className={inputCls} value={form.contactName} onChange={(e) => set("contactName", e.target.value)} autoFocus /></Field>
-            <Field label="Phone"><input className={inputCls} value={form.contactPhone} onChange={(e) => set("contactPhone", e.target.value)} placeholder="03xx-xxxxxxx" /></Field>
-            <Field label="WhatsApp"><input className={inputCls} value={form.contactWhatsapp} onChange={(e) => set("contactWhatsapp", e.target.value)} /></Field>
-            <Field label="Email"><input className={inputCls} value={form.contactEmail} onChange={(e) => set("contactEmail", e.target.value)} /></Field>
+            <Field label="Phone">
+              <input id="lead-phone" className={cn(inputCls, shown.contactPhone && ERROR_INPUT_CLS)} value={form.contactPhone}
+                onChange={(e) => set("contactPhone", e.target.value)} onBlur={() => touch("contactPhone")}
+                placeholder="03xx-xxxxxxx" inputMode="tel" {...fieldAria("lead-phone", shown.contactPhone)} />
+              <FieldError id="lead-phone" message={shown.contactPhone} />
+            </Field>
+            <Field label="WhatsApp">
+              <input id="lead-wa" className={cn(inputCls, shown.contactWhatsapp && ERROR_INPUT_CLS)} value={form.contactWhatsapp}
+                onChange={(e) => set("contactWhatsapp", e.target.value)} onBlur={() => touch("contactWhatsapp")}
+                placeholder="03xx-xxxxxxx" inputMode="tel" {...fieldAria("lead-wa", shown.contactWhatsapp)} />
+              <FieldError id="lead-wa" message={shown.contactWhatsapp} />
+            </Field>
+            <Field label="Email">
+              <input id="lead-email" type="email" className={cn(inputCls, shown.contactEmail && ERROR_INPUT_CLS)} value={form.contactEmail}
+                onChange={(e) => set("contactEmail", e.target.value)} onBlur={() => touch("contactEmail")}
+                {...fieldAria("lead-email", shown.contactEmail)} />
+              <FieldError id="lead-email" message={shown.contactEmail} />
+            </Field>
             <Field label="Source">
               <select className={inputCls} value={form.source} onChange={(e) => set("source", e.target.value as LeadSource)}>{SOURCES.map((s) => <option key={s} value={s}>{lbl(s)}</option>)}</select>
             </Field>
@@ -121,10 +185,27 @@ export function LeadFormDialog({
               <select className={inputCls} value={form.eventType} onChange={(e) => set("eventType", e.target.value as LeadEventType)}>{EVENTS.map((s) => <option key={s} value={s}>{lbl(s)}</option>)}</select>
             </Field>
             <Field label="Event date"><input type="date" className={inputCls} value={form.eventDate} onChange={(e) => set("eventDate", e.target.value)} /></Field>
-            <Field label="Budget (Rs)"><input type="number" className={cn(inputCls, "tabular-nums")} value={form.estimatedBudget} onChange={(e) => set("estimatedBudget", e.target.value)} /></Field>
-            <Field label="Guests"><input type="number" className={cn(inputCls, "tabular-nums")} value={form.estimatedGuests} onChange={(e) => set("estimatedGuests", e.target.value)} /></Field>
+            <Field label="Budget (Rs)">
+              <input id="lead-budget" type="number" min={0} step={1} inputMode="numeric"
+                className={cn(inputCls, "tabular-nums", shown.estimatedBudget && ERROR_INPUT_CLS)} value={form.estimatedBudget}
+                onChange={(e) => set("estimatedBudget", e.target.value)} onBlur={() => touch("estimatedBudget")}
+                {...fieldAria("lead-budget", shown.estimatedBudget)} />
+              <FieldError id="lead-budget" message={shown.estimatedBudget} />
+            </Field>
+            <Field label="Guests">
+              <input id="lead-guests" type="number" min={0} step={1} inputMode="numeric"
+                className={cn(inputCls, "tabular-nums", shown.estimatedGuests && ERROR_INPUT_CLS)} value={form.estimatedGuests}
+                onChange={(e) => set("estimatedGuests", e.target.value)} onBlur={() => touch("estimatedGuests")}
+                {...fieldAria("lead-guests", shown.estimatedGuests)} />
+              <FieldError id="lead-guests" message={shown.estimatedGuests} />
+            </Field>
           </div>
-          <Field label="Inquiry / notes"><textarea className={cn(inputCls, "h-20 resize-y py-2")} value={form.inquiry} onChange={(e) => set("inquiry", e.target.value)} placeholder="What are they asking for?" /></Field>
+          <Field label="Inquiry / notes">
+            <textarea id="lead-inq" className={cn(inputCls, "h-20 resize-y py-2", shown.inquiry && ERROR_INPUT_CLS)} value={form.inquiry}
+              onChange={(e) => set("inquiry", e.target.value)} onBlur={() => touch("inquiry")}
+              placeholder="What are they asking for?" {...fieldAria("lead-inq", shown.inquiry)} />
+            <FieldError id="lead-inq" message={shown.inquiry} />
+          </Field>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
