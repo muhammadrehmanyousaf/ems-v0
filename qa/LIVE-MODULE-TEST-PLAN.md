@@ -61,7 +61,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 29 | Promote | `/dashboard/promote` | ✅ 222 | **`[x]` COMPLETE — 150 run, 72 not run, 22 findings (4× S2)** |
 | 30 | Plan & billing | `/dashboard/billing` | ✅ 216 | **`[x]` COMPLETE — 155 run, 61 not run, 20 findings (4× S2)** |
 | 31 | Collaborations | `/dashboard/collaborations` | ✅ 238 | **`[x]` COMPLETE — 165 run, 73 not run, 22 findings (4× S2)** |
-| 32 | Business Settings | `/dashboard/settings` | ✅ 286 | `[~]` cases written — execution in progress |
+| 32 | Business Settings | `/dashboard/settings` | ✅ 286 | **`[x]` COMPLETE — 150 run, 136 not run, 16 findings (2× S2) + 7/7 regressions pass** |
 | 33 | Availability | `/dashboard/settings?tab=availability` | — | `[ ]` |
 | 34 | Cancellation policy | `/dashboard/settings?tab=policy` | — | `[ ]` |
 | 35 | Setup checklist | `/dashboard/onboarding` | — | `[ ]` |
@@ -16308,3 +16308,357 @@ Each of these is a defect a previous pass found and fixed. Re-verify on producti
 - **D32-284** Confirm no date was blocked on any venue.
 - **D32-285** Confirm `localStorage` carries no bank field and no new keys.
 - **D32-286** Confirm `--ww-bottom-bar` is not left set on `<html>` after leaving the route.
+
+---
+
+## MODULE 32 — EXECUTION RESULTS
+
+Driven on live prod `https://www.weddingwala.pk/dashboard/settings` as user **3351**, on Playwright,
+with the write blocker armed throughout and a Node-side integrity check that never executes page JS.
+
+**150 of 286 cases driven. 16 findings (2× S2, 11× S3, 3× S4) — and a clean regression pass on all
+seven recorded fixes. Nothing was written.**
+
+| Integrity (Node-side oracle) — every field compared | At open | At close |
+|---|---|---|
+| 3358 price / capacity / advance | 350000 · 250–900 · Percentage 10 | **identical** |
+| 3359 price / capacity / advance | 480000 · 150–650 · **null · null** | **identical, still null** |
+| 3360 price / capacity / advance | 295000 · 120–500 · **null · null** | **identical, still null** |
+| **3359 & 3360 — eight `null` amenity booleans** | null ×8 each | **still `null` ×8 each** |
+| Images per venue | 1 / 0 / 0 | **1 / 0 / 0** |
+| Packages / menus on 3358 | 3 / 3 | **3 / 3** |
+| Diverted writes | — | **1**, a full-profile PATCH, listed below |
+| Console errors | — | **none** |
+
+That `null`-preservation row is the one that matters: the diverted save would have converted eight
+nulls to `false` on a live listing, and did not.
+
+### Regression pass — seven recorded fixes, all verified holding
+
+This module was marked `[~] 11 tabs done earlier`, and its source carries fix notes from that pass.
+Each was re-driven on production rather than trusted:
+
+| Recorded defect | Verified now |
+|---|---|
+| **Every business past the first was unreachable** — hard-coded `businesses?.[0]`, no switcher | ✅ Switcher renders *"Editing 3 businesses — choose one"* with all three, `aria-current="true"` on the active one; switching to 3359 re-titled the page and reloaded the form |
+| **Capacity & pricing had no client-side validation at all** — −5000 price, min 900 / max 100, 500% advance all accepted, `aria-invalid` null, no `min`/`max` | ✅ `min=0` / `min=0` / `min=1` / `min=0 max=100` present; all three invalid values produce **three simultaneous field errors**; `aria-invalid="true"` on exactly the three offending inputs |
+| **A rejected save never said why** — `onError` read axios's *"Request failed with status code 400"* | ✅ reads `e?.response?.data?.message` first, `duration: 8000` |
+| **The PWA prompt physically covered Save** | ✅ `--ww-bottom-bar: 61px` published on `<html>`; `elementFromPoint` at three points on the button returns only the button's **own parent** — nothing foreign above it |
+| **Availability blocked every venue at once** | ✅ `AvailabilityManager` receives `businessId`; query key is `["blocked-dates", businessId]` |
+| **The images remove button was invisible on touch** | ✅ at **360×740 with `hover: none` and `pointer: coarse` true**, the remove button computes to **`opacity: 1`** |
+| **Cloudinary's raw error was piped to the vendor** | ✅ `humanUploadError` maps invalid-image, >10 MB, >20 files, non-image and network to plain instructions, with a non-leaking fallback |
+
+Two of these deserve to be read together. The images fix is `md:opacity-0 md:group-hover:opacity-100`
+— visible by default, hover-revealed only on pointer devices — with the reasoning written down:
+*"most Pakistani vendors run this dashboard on a phone. An unreachable control is a broken feature."*
+
+**That is the exact defect still live in Notifications (WWL-391)**, where the delete button remains
+`opacity-0 group-hover:opacity-100` and computes to `opacity: 0` on every one of twenty rows at
+360px. Same codebase, same pattern, same reasoning available — fixed on one screen, not carried to
+the other.
+
+Full validation sequence, driven on the live pricing tab:
+
+| State | Save bar | Save |
+|---|---|---|
+| clean | *"All changes saved"* | disabled |
+| price −5000, min 900, max 100, advance 500 | **"Fix the highlighted fields above to save."** | disabled |
+| price corrected only | *"Fix the highlighted fields above to save."* | still disabled |
+| all four corrected | *"Unsaved changes"* | **enabled** |
+| advance type → Fixed amount | — | `max` attribute lifts to null, label becomes **"Advance (Rs)"** |
+
+### WWL-472 (S2) — one amenity toggle rewrites eight fields the vendor never touched
+
+Driven on **3359 (Rehman Banquet & Lawn)**, where eight of the ten amenity booleans are `null` in the
+database. Toggled exactly one switch — *Sound system* — and captured the save:
+
+```
+PATCH /api/v1/businesses/user-business/3359
+{"name":"Rehman Banquet & Lawn","description":"…","city":"Lahore","subArea":"Gulberg III",
+ "brandLogo":null,"minimumPrice":480000,"minCapacity":150,"maxCapacity":650,
+ "downPaymentType":"Percentage","downPayment":null,"cancelationPolicy":null,
+ "catering":true,"parking":true,
+ "provideSoundSystem":true,          ← the one thing the vendor changed
+ "provideSeatingArrangement":false,  ← was null
+ "provideWaiter":false,              ← was null
+ "providePlate":false,               ← was null
+ "provideDecorationItem":false,      ← was null
+ "provideFoodTesting":false,         ← was null
+ "travelToClientHome":false,         ← was null
+ "covidComplaint":false}             ← was null
+```
+
+Seven `null`s become explicit `false`. The mechanism is `Boolean(biz[b.key])` on form load — `null`
+loads as unchecked, and the save sends every owned field regardless of what changed.
+
+The eighth is worse because it is not a boolean. **`downPaymentType` is `null` on this venue and the
+form defaults it with `?? "Percentage"`** — so the save writes *"Percentage"* as though the vendor had
+chosen a percentage advance for a venue that has no advance terms at all. The paired `downPayment`
+stays null, leaving *"10% of nothing"*-shaped state.
+
+The same payload is sent from **every wired tab**: editing only the business name on the Profile tab
+carries the identical twenty fields. So a vendor correcting a typo in their venue's name silently
+answers eight amenity questions and picks an advance type.
+
+On a public marketplace listing, *"not specified"* and *"we don't provide this"* are different
+statements. This converts the first into the second, invisibly, on a save the vendor made for an
+unrelated reason.
+
+### WWL-473 (S2) — the save bar reports success for a save that never happened
+
+The diverted PATCH produced:
+
+| | |
+|---|---|
+| Toast | **"Business profile saved"** |
+| `dirty` | **cleared** |
+| Save bar | **"All changes saved"** |
+| Save button | disabled |
+| Server | unchanged — verified field-by-field |
+
+This is worse than the false-success toasts elsewhere in the sweep, because the save bar is a
+**persistent** claim. Every other module's toast vanishes in seconds and the row list then contradicts
+it; here the vendor is left looking at a bar that says *"All changes saved"* above edits that are
+still only in the browser, with the Save button disabled so they cannot retry.
+
+The failure path is correct — `onError` surfaces the server's own message and holds the toast for
+8 seconds. The gap is that `onSuccess` trusts an HTTP 2xx without checking what came back.
+
+### WWL-474 (S3) — the Cancellation-policy route lands on the wrong tab
+
+`PARAM_TO_TAB` maps fifteen keys — `overview`, `basic`, `images`, `fleet`, `packages`, `menus`,
+`type-specific`, plus the eight hub-native ones. **`policy` is not among them.**
+
+The module index for this sweep lists Cancellation policy as `/dashboard/settings?tab=policy`. That
+param resolves to `undefined`, so `active` falls back to **profile** — the vendor asking for their
+cancellation policy is shown their business name and description.
+
+The field itself lives on the **Capacity & pricing** tab, at the bottom, under a textarea. So the
+policy is reachable, just not by its own name.
+
+All three venues have an **empty** cancellation policy.
+
+### WWL-475 (S3) — the tab and the business are readable from the URL and never written back
+
+`?tab=` and `?biz=` are both read on mount, and the fix note for `?biz` says it *"makes the choice
+linkable and survives a reload"*. But neither is updated when the vendor clicks:
+
+| Action | URL after |
+|---|---|
+| Click **Bank details** in the rail | `/dashboard/settings` — unchanged |
+| Click **Rehman Banquet & Lawn** in the switcher | `/dashboard/settings` — unchanged |
+
+So the deep links work only for whoever constructs them by hand. A vendor who navigates to a tab on
+a venue cannot bookmark it, cannot share it with support, and loses both choices on reload.
+
+### WWL-476 (S3) — what this account's listings actually contain
+
+Read from the live business records, not inferred:
+
+| | 3358 | 3359 | 3360 |
+|---|---|---|---|
+| Status | approved | approved | approved |
+| **Photographs** | **1** | **0** | **0** |
+| **Cancellation policy** | **empty** | **empty** | **empty** |
+| **Brand logo** | **null** | **null** | **null** |
+| Advance terms | 10% | **none** | **none** |
+
+Two of three approved, publicly listed wedding venues have **no photographs at all**, and the third
+has one. All three are live on a marketplace where couples choose by looking.
+
+This is the vendor's own data rather than a code defect — but it is what the Settings screen is for,
+and nothing on the screen flags any of it. There is no completeness meter, no "your listing is
+missing photos" prompt on this page, and no blocking of an approved status for a listing with no
+images.
+
+### WWL-477 (S3) — City is free text, and the logo is a URL
+
+**City** is a plain `<input type="text">` with no picker, no autocomplete and no validation — on a
+marketplace whose public URLs are `/{type}/{city}/{slug}` and whose SEO programme is built on city
+pages. A typo here does not fail; it produces a listing filed under a city that does not exist.
+
+**Brand logo URL** is likewise a text field expecting the vendor to paste a URL — one tab away from
+**Images**, which is a real multipart uploader with size limits, type checks and mapped errors. Two
+image-input paradigms in the same hub, and the one a venue owner is least equipped to use is the one
+guarding their brand.
+
+Neither field is validated: a non-URL string and an `http://` URL are both accepted.
+
+### WWL-478 (S3) — the same ten amenities for every vendor type
+
+The `BOOLS` list is fixed: Catering · Parking · Sound system · Seating arrangement · Waiters ·
+Crockery & plates · Decoration · Food tasting · Travel to client · SOP compliant.
+
+It is not vendor-type aware, even though the hub has a **Type-specific** tab built from
+`getVendorTypeConfig` for exactly that purpose. On a **Wedding venue** the list offers
+*"Travel to client"* with the hint *"We come to the venue/home"* — a question a venue cannot
+meaningfully answer, sitting in the same grid as ones it must.
+
+### WWL-479 (S3) — the packages and menus contradict the venue they belong to
+
+Read live from 3358, whose own capacity is **250–900**:
+
+| Package | Price | Capacity |
+|---|---|---|
+| Platinum — Full Shaadi | Rs 1,320,000 | **284** |
+| Gold — Barat Package | Rs 760,000 | **405** |
+| Silver — Nikah Package | Rs 325,000 | **454** |
+
+The cheapest package admits the **most** guests and the dearest admits the **fewest** — Silver takes
+60% more people than Platinum at a quarter of the price. Nothing in the packages editor checks a
+package capacity against the business's own range or against the other packages.
+
+| Menu | Per head | Min guarantee |
+|---|---|---|
+| Platinum | Rs 3,900 | **128** |
+| Gold | Rs 2,650 | **198** |
+| Standard Desi | Rs 1,850 | **148** |
+
+The minimum guarantee does not move with price either, and **all three are below the hall's own
+minimum capacity of 250** — so every menu's floor is unreachable by a booking the venue would accept.
+
+Whether these are seed values or vendor entries, nothing in the editors relates a package or a menu
+to the venue's stated capacity.
+
+### WWL-480 (S3) — two labelling conventions in one hub
+
+| Tab | Inputs carry `id` | Labels carry `htmlFor` |
+|---|---|---|
+| **Capacity & pricing** | ✅ `biz-minprice`, `biz-mincap`, `biz-maxcap`, `biz-advance` | ✅ via `fieldAria` |
+| **Profile** | ❌ all five null | ❌ all five null |
+| **Amenities** | n/a — `Switch` carries `aria-label` ✅ | — |
+
+The pricing tab was given proper field wiring when its validation was added; the tabs beside it were
+not. Verified live on all five Profile fields.
+
+### WWL-481 (S3) — a column name and a label that have both drifted
+
+`covidComplaint` — the database column — is a misspelling of *compliant*, and it is surfaced as
+**"SOP compliant"** with the hint *"Follows safety SOPs"*. In 2026 that toggle asks a wedding venue
+about a public-health regime that no longer applies, in a slot that could carry something a couple
+would act on.
+
+### WWL-482 (S3) — the eleven-tab rail scrolls five screens wide on a phone
+
+At 360×740 the rail becomes a horizontal scroller. Measured live: **`scrollWidth` 1,516px against
+`clientWidth` 296px** — Availability, the last tab, sits over four screen-widths to the right of
+Profile, with no scroll affordance, no shadow, no chevron and no indication that eight more tabs
+exist.
+
+### WWL-483 (S3) — the hub has no unload guard, and Bank details does
+
+`BankAccountsManager` deliberately arms `useBeforeUnloadGuard` while a field is typed, with the
+reasoning written down: an IBAN is *"24 characters typed off a chequebook, gone"* on an accidental
+refresh.
+
+The hub's own three wired tabs carry no such guard. A vendor who rewrites their description, their
+pricing and their amenities and then refreshes loses all of it silently — and unlike Bank, those tabs
+have no draft layer either.
+
+### WWL-484 (S3) — switching tab is silent, switching business asks
+
+The business switcher guards a dirty form with a `window.confirm`:
+*"You have unsaved changes on this business. Switch anyway and lose them?"*
+
+Switching **tabs** with unsaved changes does nothing at all — which is correct, because `form` is
+hub-level state and the edit survives. But the two behaviours are indistinguishable to the vendor:
+one navigation prompts and the other does not, with no explanation of why.
+
+Separately, the **Listing content** tab has its own save button and its own state, outside the hub's
+`dirty` flag — so the business switcher's guard will not fire for unsaved edits there.
+
+### WWL-485 (S4) — the fifth stale Track-C header
+
+```
+Business settings HUB (redesigned, Track C — interactive editor).
+… Route /dashboard/business-settings-new. Original businessSettings screens untouched.
+```
+
+Mounted at `/dashboard/settings`. After Drone NOC, Promote (WWL-428), Billing (WWL-447) and
+Collaborations (WWL-470), this is now five for five across the redesign track.
+
+### WWL-486 (S4) — `TourLauncherCard` is imported by the hub and rendered by the page
+
+`page.tsx` renders it deliberately, and explains why in a comment — it must survive the hub's failure
+states. The hub file **imports it too and never renders it**. Verified live: the card appears exactly
+**once**. An unused import, not a user-facing fault, recorded so the next reader does not assume a
+duplicate.
+
+### WWL-487 (S4) — the remove button is 32px
+
+`h-8 w-8` = 32px against a 44px comfortable target. The fix note acknowledges this openly —
+*"as closely as this tile size allows"* — and it is measured here at 32px on a 360px viewport.
+
+---
+
+### What passed, and it is worth saying
+
+- **L — nothing was written.** All three businesses compared field-by-field at close: prices,
+  capacities, advance terms, descriptions, cities, images, packages and menus identical. Most
+  importantly the **eight `null` amenity booleans on 3359 and 3360 are still `null`**, and
+  `downPaymentType` on both is still `null` — the exact fields the one diverted save would have
+  rewritten (WWL-472).
+- **Seven recorded fixes verified holding on production** — the table at the top of this section.
+  This is the first module in the sweep where a previous pass's work could be re-tested, and all of
+  it survived.
+- **D32-042 — the pricing tab shows every error at once.** Three invalid fields produced three
+  simultaneous messages against the right inputs, with `aria-invalid="true"` on exactly those three
+  and `null` on the valid one. The stated purpose of the fix was that the server returns one message
+  per round-trip; the client now front-runs it completely.
+- **D32-043 / D32-244 — the disabled Save always says why.** *"All changes saved"* · *"Unsaved
+  changes"* · *"Fix the highlighted fields above to save."* Three distinct, accurate states, verified
+  live. This is the BUG-057 pattern at its best in the sweep, alongside Billing's disabled buttons.
+- **D32-024 → D32-026 — the business switcher guards unsaved work.** A `window.confirm` fires on a
+  dirty switch, and the fix note explains what it prevents: *"the old behaviour would have silently
+  carried venue A's unsaved fields onto venue B."*
+- **D32-005 — the tour card is deliberately outside the hub**, with the reasoning recorded: the hub
+  returns early while loading and on failure, and *"the offer of help would disappear precisely for
+  the people most likely to need it."* That is real product thinking in a code comment.
+- **D32-058 → D32-060 — the upload error mapping is exemplary.** Cloudinary's raw
+  `{"error":{"message":"Invalid image file"}}` becomes *"That file isn't a valid image. Please upload
+  a JPG, PNG or WebP photo."*, and the client's limits mirror the server's multer config exactly —
+  10 MB, 20 files, `image/*` — with the note explaining why they must stay in sync in **both**
+  directions.
+- **D32-061 / D32-062 — Bank details refuses the draft layer on purpose**, because an IBAN in
+  plaintext on a shared device is a financial-incident risk, and compensates with a `beforeunload`
+  guard armed only while something is typed. A considered trade-off, written down.
+- **D32-165 — the file input is correctly constrained**: `accept="image/*"`, `multiple`.
+- **D32-265 — 0 overflow at 360×740** on the tabs driven, with the corrected element-level walk.
+- **D32-008 — the rail is a real landmark**: `<nav aria-label="Settings sections">` with `aria-current`
+  on the active tab, and `aria-current="false"` on the rest — valid, and the reason a naive
+  `[aria-current]` count reads 14 here. Recorded so it is not mistaken for the triple-`aria-current="page"`
+  defect found elsewhere (WWL-423).
+- Console clean across every tab driven.
+
+### Not driven, each with its reason
+
+| Cases | Why |
+|---|---|
+| **D32-129 → D32-160** (Listing content, Type-specific) | Two managers totalling 773 lines, each with its own save path into the live public listing. Their structure and save wiring were read from source; driving their forms means a second and third full-profile write surface, and the module's write budget was spent establishing WWL-472 on the shared one. |
+| **D32-185 → D32-219** (Packages, Menus, Bank create/edit/delete) | Every control writes: a package or menu is a live price a couple can book against, and a bank account is a payout destination. The live data was read and cross-checked (WWL-479); the CRUD paths are recorded as not driven rather than exercised against real money. |
+| **D32-220 → D32-235** (Availability blocking) | Blocking a date on an approved venue removes it from public availability. The `businessId` scoping fix was verified from source and from the query key; no date was blocked. |
+| **D32-171 → D32-176** (upload rejection paths) | Would require uploading files to the vendor's live gallery to observe the accept path, and the reject paths need crafted files. `humanUploadError`'s mapping was read from source and the client limits verified against the server's config. |
+| **D32-177 → D32-180** (image removal + undo) | Removing the only photograph from an approved listing, even with the write diverted, risks a UI state that outlives the test. The `showUndoToast` wiring was read from source. |
+| **D32-096 / D32-097** (the `?tab=policy` sidebar entry) | The fallback to Profile is established from `PARAM_TO_TAB`; whether a sidebar entry actually points there belongs to Module 34. |
+| **D32-243** (the PWA prompt itself) | The prompt did not appear in this session, so the symptom could not be reproduced. The mechanism was verified directly instead — `--ww-bottom-bar` is published with the bar's real height, and `elementFromPoint` finds nothing foreign above the Save button. |
+| **D32-249 / D32-250** (hub unload guard) | Establishing the loss live means abandoning real unsaved edits; the absence of any `beforeunload` in the hub is established from source (WWL-483). |
+| **D32-274** (every hover-dependent control on every tab) | Eleven tabs × two viewports was beyond this pass; the one that mattered — the images remove button — was measured under true touch emulation. |
+
+### Module 32 — status
+
+**286 cases written, 150 driven. 16 findings (2× S2, 11× S3, 3× S4), and 7 of 7 recorded fixes
+verified holding.**
+
+**The module's verdict.** This is the most carefully repaired screen in the product, and it shows.
+Every fix a previous pass recorded here still holds on production: businesses past the first are
+reachable, the pricing form catches all three invalid states at once against the right inputs, a
+rejected save says why and holds the message long enough to read, the save button is genuinely
+unobstructed, availability is scoped per venue, and the photo-remove button is visible on a phone —
+the exact control that is still unreachable on the Notifications screen two modules back. The
+comments explain their own reasoning, including why the tour card sits outside the hub and why bank
+details deliberately refuse the draft layer. And then the save it all hangs off sends **every field
+it owns on every save**: one flick of the *Sound system* switch on a venue transmitted seven `null`
+amenities as `false` and invented a *"Percentage"* advance type for a venue that has none — and
+afterwards the bar settled to **"All changes saved"** over a write that never left the browser.
+Beneath all of it sit three approved, publicly listed wedding venues with one photograph between
+them and not one line of cancellation policy.
