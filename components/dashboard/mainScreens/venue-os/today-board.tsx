@@ -179,7 +179,12 @@ export function TodayBoard({ hideKpis = false }: { hideKpis?: boolean } = {}): R
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      {/* `grid` alone gives the single mobile column an `auto` track, which sizes
+          to the rows' max-content — measured at 360px: a 502.712px track inside a
+          328px container, so both boards were cut off at the right edge.
+          `grid-cols-1` emits `repeat(1, minmax(0, 1fr))`, which lets the track
+          shrink; `min-w-0` lets the cards inside it do the same. */}
+      <div className="grid grid-cols-1 gap-4 [&>*]:min-w-0 lg:grid-cols-2">
         {/* Upcoming events */}
         <div className="rounded-xl border border-border bg-card shadow-sm">
           <div className="border-b border-border px-4 py-3">
@@ -200,7 +205,7 @@ export function TodayBoard({ hideKpis = false }: { hideKpis?: boolean } = {}): R
                   <li key={r.id}>
                     <Link
                       href={`/dashboard/bookings/${r.id}`}
-                      className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none"
+                      className="flex min-w-0 items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none"
                     >
                       <Chip days={r.days} />
                       <div className="min-w-0 flex-1">
