@@ -70,7 +70,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 38 | Venue money | `/dashboard/venue-os?tab=money` | ✅ 200 | `[x]` COMPLETE — 138 run, 62 not run, 14 findings (4× S2) |
 | 39 | Halls & spaces | `/dashboard/venue-os?tab=spaces` | ✅ 170 | `[x]` COMPLETE — 124 run, 46 not run, 10 findings (1× S1, 3× S2) |
 | 40 | Cash & cheques | `/dashboard/venue-os?tab=cash` | ✅ 140 | `[x]` COMPLETE — 108 run, 32 not run, 10 findings (4× S2) |
-| 41 | Kitchen & suppliers | `/dashboard/venue-os?tab=kitchen` | — | `[ ]` |
+| 41 | Kitchen & suppliers | `/dashboard/venue-os?tab=kitchen` | ✅ 140 | `[~]` cases written, executing |
 | 42 | Accounting | `/dashboard/venue-os?tab=advanced` | — | `[ ]` |
 | 43 | Field capture | `/dashboard/field` | — | `[ ]` |
 | 44 | Quote requests | `/dashboard/quotes` | — | `[ ]` |
@@ -20343,3 +20343,192 @@ the API response.)
 - **D40-045/046 mark cleared / mark bounced** — no such control exists on this tab; not driven
   elsewhere.
 - **D40-055 cross-tenant isolation** — would require probing another vendor's cheques.
+
+---
+
+# Module 41 — Kitchen & suppliers (`/dashboard/venue-os?tab=kitchen`)
+
+**Surface.** Three panels:
+
+| # | Component | What it does | Writes |
+|---|---|---|---|
+| 1 | `KitchenBomView` | recipe BOMs, standard cost/plate, degh-yield variance ("prove your cook is honest") | none — two GETs |
+| 2 | `ProcurementView` | PO → GRN three-way-match → accept posts **SUPPLIER_INVOICE** to the GL → settle pays it down | Raise PO, Receive, Accept, Settle |
+| 3 | `RateContractView` | supplier rate contracts + over-billing check on a GRN line | Add contract; the check is a POST |
+
+**Self-imposed limits for this module, each with its reason:**
+
+- **No purchase order is raised.** `createPurchaseOrder` creates a real PO against a live vendor's
+  supplier records.
+- **No GRN is received, accepted or settled.** Accept posts a `SUPPLIER_INVOICE` (supplier udhaar) to
+  the general ledger and settle pays it down — both change what this venue owes and what every event's
+  fully-costed P&L reports.
+- **No rate contract is created.** A contract is the reference price every future GRN is judged
+  against.
+- **The over-billing check is driven only if the handler is verified pure** in the controller first,
+  the same rule applied in Modules 37, 38 and 40.
+- Recipe BOMs, standard cost, yield variance and contract listing are reads and are driven in full.
+
+---
+
+## D41-A · Arrival and scope (cases 1–18)
+
+| # | Case | Expected |
+|---|---|---|
+| D41-001 | `?tab=kitchen` opens on Kitchen | tab active from URL |
+| D41-002 | Reload holds the tab | still kitchen |
+| D41-003 | All three panels render | 3 card titles |
+| D41-004 | Section hint describes the tab | *"Recipe cost & theft check, purchase orders, and supplier rate contracts."* |
+| D41-005 | No `Venue #` raw box | 0 |
+| D41-006 | Venue dropdowns present and in agreement | count + values |
+| D41-007 | Recipes load on arrival | the Module 36 auto-load |
+| D41-008 | Rate contracts load on arrival | same |
+| D41-009 | No console error on arrival | 0 |
+| D41-010 | No mutating request on arrival | 0 |
+| D41-011 | No horizontal overflow at 1440px | 0 elements |
+| D41-012 | No horizontal overflow at 360px | 0, or inside a scroller |
+| D41-013 | Exactly one `h1` | recorded |
+| D41-014 | Focus ring visible on every control | check |
+| D41-015 | Every number input is labelled | count unlabelled |
+| D41-016 | Remaining raw-id boxes counted | `production run #` |
+| D41-017 | Switching venue re-scopes all three panels | driven |
+| D41-018 | Switching venue leaks nothing | driven |
+
+## D41-B · Recipe BOM & degh-yield variance (cases 19–56)
+
+| # | Case | Expected |
+|---|---|---|
+| D41-019 | The recipe list renders | probe the endpoint |
+| D41-020 | Recipes are named, not numbered | check |
+| D41-021 | Each recipe shows a standard cost per plate | check |
+| D41-022 | The cost is derived from BOM × latest ingredient rates | per the source |
+| D41-023 | The rate date used is shown | flag if absent |
+| D41-024 | An empty recipe list shows an honest empty state | copy |
+| D41-025 | **Are there any recipes on this account?** | probe |
+| D41-026 | If none, the panel says so rather than showing nothing | check |
+| D41-027 | "Load recipes" still works after the auto-load | one request |
+| D41-028 | **The yield check asks for `production run #`** | a raw id — flag |
+| D41-029 | There is no run picker anywhere on the page | confirm |
+| D41-030 | Nothing tells the vendor where to find a run id | confirm |
+| D41-031 | "Check variance" is disabled until a run id is typed | check |
+| D41-032 | A non-existent run id returns an honest error | driven |
+| D41-033 | The error copy is human | *"Couldn't load kitchen BOM."* |
+| D41-034 | The error copy leaks no SQL | check |
+| D41-035 | A negative run id is handled | driven |
+| D41-036 | A zero run id is handled | driven |
+| D41-037 | A huge run id is handled | driven |
+| D41-038 | Variance shows plates expected vs plates produced | per the type |
+| D41-039 | `yieldVariancePlates` rendered | check |
+| D41-040 | `yieldVariancePct` rendered | check |
+| D41-041 | A null variance pct renders without a stray `%` | check |
+| D41-042 | `yieldShortfall` is flagged visibly | the whole point |
+| D41-043 | The shortfall is stated in **rupees**, not just plates | *"flagged in rupees"* per the source |
+| D41-044 | Ghee over the standard bill is flagged | per the source |
+| D41-045 | The panel explains what a degh is | or assumes it — record |
+| D41-046 | The panel never accuses anyone | wording — "prove your cook is honest" is in the source, not the UI |
+| D41-047 | `stdCostPkr` rendered | check |
+| D41-048 | Numbers are PKR-formatted | check |
+| D41-049 | No `Rs NaN` | sanity |
+| D41-050 | One click → one request | not two |
+| D41-051 | Double-click does not double-fire | busy guard |
+| D41-052 | The panel writes nothing | 0 |
+| D41-053 | The panel at 360px | usable |
+| D41-054 | Long recipe names truncate | check |
+| D41-055 | The run id is not in the URL | record |
+| D41-056 | Recipe costs reconcile with the Money tab's Ingredients category | cross-check or record |
+
+## D41-C · Procurement — PO → GRN three-way-match (cases 57–104)
+
+| # | Case | Expected |
+|---|---|---|
+| D41-057 | The PO form has item, qty, unit, rate | 4 fields |
+| D41-058 | `qty` defaults to 100 | check |
+| D41-059 | `rate` defaults to 500 | check |
+| D41-060 | **Both defaults are pre-filled, not placeholders** | a vendor could raise a PO for 100 × Rs 500 by accident |
+| D41-061 | The item and unit fields are placeholder-only | `item`, `unit` — no labels |
+| D41-062 | "Raise PO" is disabled until qty and rate exist | they are pre-filled, so it is enabled on arrival — flag |
+| D41-063 | "Raise PO" is captured and diverted | 0 delivered |
+| D41-064 | The captured body carries businessId and one line | check |
+| D41-065 | The captured line carries descr, qtyOrdered, unit, ratePkr | check |
+| D41-066 | An empty item description is allowed | record |
+| D41-067 | A negative qty is rejected | driven against the captured body |
+| D41-068 | A negative rate is rejected | driven |
+| D41-069 | A zero qty is rejected | driven |
+| D41-070 | The PO renders after creation | not driven — write |
+| D41-071 | The GRN step pre-fills accepted qty from the PO | `setQtyAccepted(qty)` |
+| D41-072 | The GRN step pre-fills actual rate from the PO | `setActualRate(rate)` |
+| D41-073 | Pre-filling both means "no discrepancy" is the default | flag — the panel exists to find discrepancies |
+| D41-074 | Short delivery is computed as (ordered − accepted) × rate | reasoned |
+| D41-075 | Over-rate is computed as (actual − agreed) × accepted | reasoned |
+| D41-076 | The shortfall is shown in rupees | per the source |
+| D41-077 | The shortfall is shown in plain numbers | *"Urdu-ready"* per the source |
+| D41-078 | Accept posts SUPPLIER_INVOICE to the GL | **not driven** — captured |
+| D41-079 | Nothing warns that Accept posts to the ledger | flag if absent |
+| D41-080 | Accept has no confirmation step | flag if absent |
+| D41-081 | Settle pays down the udhaar | **not driven** — captured |
+| D41-082 | Settle has no confirmation | flag if absent |
+| D41-083 | The three-way-match is named on screen | PO vs GRN vs invoice |
+| D41-084 | A supplier can be named | check for a supplier field |
+| D41-085 | **Is there a supplier field at all?** | the panel is "supplier udhaar" |
+| D41-086 | Existing POs are listed | check |
+| D41-087 | Existing GRNs are listed | check |
+| D41-088 | Outstanding udhaar is totalled | check |
+| D41-089 | The panel shows what is owed to whom | the actual vendor need |
+| D41-090 | Error copy is human | *"Couldn't load procurement."* |
+| D41-091 | Error copy leaks no SQL | check |
+| D41-092 | One click → one request | not two |
+| D41-093 | Double-click does not double-fire | busy guard |
+| D41-094 | The panel at 360px | usable |
+| D41-095 | Fields do not overflow at 360px | fixed widths `w-28 w-20 w-16 w-24` |
+| D41-096 | Keyboard reachable | check |
+| D41-097 | Nothing links to the Money tab expense | record |
+| D41-098 | An accepted GRN would appear on the Money tab | reasoned |
+| D41-099 | The PO is not in the URL | record |
+| D41-100 | Switching venue clears an in-progress PO | driven |
+| D41-101 | Amounts are `tabular-nums` | check |
+| D41-102 | No `Rs NaN` | sanity |
+| D41-103 | The panel loads without a PO | no error |
+| D41-104 | Zero writes delivered from this panel | the safety assertion |
+
+## D41-D · Rate contracts & over-billing (cases 105–140)
+
+| # | Case | Expected |
+|---|---|---|
+| D41-105 | Contracts load on arrival | auto-load |
+| D41-106 | **Are there any contracts on this account?** | probe |
+| D41-107 | Contracts listed by item name | not ids |
+| D41-108 | Contracted rate shown | PKR |
+| D41-109 | Tolerance % shown | default 5 |
+| D41-110 | Effective-from date shown | check |
+| D41-111 | Supplier name shown | check |
+| D41-112 | An expired contract is distinguishable | record |
+| D41-113 | "Add contract" is captured and diverted | 0 delivered |
+| D41-114 | The captured body carries item, rate, effectiveFrom | check |
+| D41-115 | `tolerancePct` defaults to 5 in the body | check |
+| D41-116 | A contract with no effective date is rejected | driven |
+| D41-117 | A negative rate is rejected | driven |
+| D41-118 | The over-billing check is a POST — is it pure? | verify in the controller |
+| D41-119 | If pure, drive it for real | live |
+| D41-120 | A billed rate inside tolerance passes | driven |
+| D41-121 | A billed rate above tolerance is flagged | driven |
+| D41-122 | The flag names the rupee overcharge | check |
+| D41-123 | The flag names the contracted rate it compared against | check |
+| D41-124 | A line with no contract is reported as uncovered | driven |
+| D41-125 | An uncovered line is not silently passed | the important case |
+| D41-126 | Zero qty handled | driven |
+| D41-127 | Negative billed rate handled | driven |
+| D41-128 | The check runs with no contracts on file | driven — what does it say? |
+| D41-129 | The check writes nothing | 0 |
+| D41-130 | `onDate` is optional | check |
+| D41-131 | Error copy is human | check |
+| D41-132 | Error copy leaks no SQL | check |
+| D41-133 | One click → one request | not two |
+| D41-134 | The panel at 360px | usable |
+| D41-135 | Contract rows link to nothing | record |
+| D41-136 | Nothing here reaches the Money tab | record |
+| D41-137 | Contract list survives a hard reload | driven |
+| D41-138 | Amounts PKR-formatted | check |
+| D41-139 | Keyboard reachable | check |
+| D41-140 | **Zero journal entries and zero supplier records created across the module** | headline safety assertion |
+
+**Total: 140 cases.**
