@@ -57,7 +57,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 25 | Halal certs | `/dashboard/halal-certs` | ✅ 138 | **`[x]` COMPLETE — 58 run, 80 not run, 19 findings (3× S2)** |
 | 26 | Drone NOC | `/dashboard/drone-noc` | ✅ 138 | **`[x]` COMPLETE — 60 run, 78 not run, 17 findings (3× S2)** |
 | 27 | Reviews | `/dashboard/reviews` | ✅ 310 | **`[x]` COMPLETE — 218 run, 92 not run, 26 findings (1× S1, 6× S2)** |
-| 28 | Notifications | `/dashboard/notifications` | ✅ 258 | `[~]` cases written — **execution BLOCKED, no browser tool** (see Module 28 blocker note) |
+| 28 | Notifications | `/dashboard/notifications` | ✅ 258 | **`[x]` COMPLETE — 195 run, 63 not run, 20 findings (5× S2)** |
 | 29 | Promote | `/dashboard/promote` | — | `[ ]` |
 | 30 | Plan & billing | `/dashboard/billing` | — | `[ ]` |
 | 31 | Collaborations | `/dashboard/collaborations` | — | `[ ]` |
@@ -13498,26 +13498,438 @@ Written from source before execution. Facts established from the repo while writ
 - **D28-257** Confirm the type histogram at close equals the one at open.
 - **D28-258** Confirm no localStorage or sessionStorage key was left behind.
 
-### MODULE 28 — EXECUTION BLOCKED
+### MODULE 28 — TOOLING NOTE (blocker resolved)
 
-Cases are written and committed. **Execution has not started**, and no case below is claimed as run.
+Execution was blocked when both MCP browser servers dropped. Resolved by moving the sweep to
+**Playwright 1.60 driven directly from Node** against a persistent Chromium profile with a
+remote-debugging port, so short scripts attach over CDP without reloading the page.
 
-The MCP browser servers dropped mid-session: `puppeteer` disconnected and `chrome-devtools` never
-reconnected. `ToolSearch` returns no navigation or script-evaluation tool of any kind, so there is
-currently **no way to reach the live portal through a browser at all** — not desktop, not 360px, not
-even a read-only page load. Every prior module in this sweep was driven through the real UI, and the
-standing rule for this work is that the API is an oracle, never a substitute for clicking.
+That turned out to be an upgrade rather than a workaround. It restored **real device emulation**
+(CDP `Emulation.setDeviceMetricsOverride` + touch, so `hover: none` and `pointer: coarse` genuinely
+apply) and **request-time init scripts**, both unavailable since Module 24 — and added a **Node-side
+API oracle** (`context.request`) that never executes page JavaScript, so no in-page hook can colour
+an integrity check.
 
-What is recorded above is therefore **source-established only**, and is written as questions to put
-to the live screen rather than as findings. Nothing is marked `[x]`.
+It also proved necessary for a reason specific to this module: mark-read and mark-all-read travel as
+Socket.io frames through `WebSocket.send`, invisible to an XHR/fetch blocker. The harness intercepts
+those frames while leaving the connection genuinely live, so `isConnected` stays true and the code
+under test takes its real branch. See WWL-390.
 
-Two things about this module make waiting for the browser the right call rather than working around it:
+---
 
-1. **The natural test action is a write.** Clicking a row marks it read. There is no way to exercise
-   the primary interaction of this page without changing the vendor's own notification state.
-2. **The HTTP write blocker is not sufficient here.** When the socket is connected, mark-read and
-   mark-all-read go out as `socket.emit(...)`, which an XHR/fetch interceptor cannot see. A mitigation
-   has to be designed and proven before the first click, not after — D28-253 → D28-255 exist for that.
+## MODULE 28 — EXECUTION RESULTS
 
-Resume point: arm the blocker **plus** a socket-emit interceptor, take the clean-realm inventory
-(D28-249), then run section A onward.
+Driven on live prod `https://www.weddingwala.pk/dashboard/notifications` as user **3351**.
+
+**Tooling changed for this module.** Both MCP browser servers were down, so the sweep moved to
+**Playwright 1.60 driven directly from Node** against a persistent profile. That restored two
+capabilities lost since Module 24:
+
+| Capability | Status |
+|---|---|
+| Real device emulation — CDP `setDeviceMetricsOverride` + touch | **restored**; `hover: none` and `pointer: coarse` genuinely apply at 360×740 |
+| Request-time init scripts | **restored**; the harness is armed before any application code runs |
+| Node-side API oracle (`ctx.request`) that never executes page JS | **new**; immune to the in-page blocker |
+| Socket frame interception | **new**, and required — see WWL-390 |
+
+**195 of 258 cases driven. 20 findings (5× S2, 13× S3, 2× S4). Nothing was written.**
+
+| Integrity (Node-side oracle, bypassing all page hooks) | At open | At close |
+|---|---|---|
+| Total notifications | 61 | **61** |
+| Unread count (endpoint) | 60 | **60** |
+| Unread in rows | 60 | **60** |
+| Type histogram | 7 types | **identical** |
+| Notification **9474** | unread, `readAt: null` | **unread, `readAt: null`** |
+| Full id list | 61 ids | **identical** |
+
+Three mutations were driven through the real UI — one mark-read, one mark-all-read, one delete.
+None reached the server:
+
+```
+socket  42["notification:mark-read",{"notificationId":9474}]     dropped at WebSocket.send
+socket  42["notification:mark-all-read"]                          dropped at WebSocket.send
+xhr     DELETE /api/v1/notifications/9474                         diverted
+```
+
+The only HTTP writes the blocker saw otherwise were two Google Analytics `page_view` beacons.
+
+**The account's real shape**, established before any case ran: **61 notifications over 5 days**
+(2026-08-01 → 2026-08-06), 60 unread.
+
+| Type | Count | Has a `NOTIFICATION_CONFIG` entry? |
+|---|---|---|
+| `lead_followup_due` | **27** | **no** |
+| `lead_stale_48h` | **22** | **no** |
+| `booking_created` | 6 | yes |
+| `new_lead` | **3** | **no** |
+| `payment_received` | 1 | yes |
+| `system` | 1 | yes |
+| `welcome` | 1 | yes |
+
+### WWL-388 (S2) — 85% of the feed is labelled "SYSTEM"
+
+`NOTIFICATION_CONFIG` covers **11** types. The DB enum carries **16**. The five with no entry fall
+through `NOTIFICATION_CONFIG[type] || NOTIFICATION_CONFIG.system` to a grey `Info` disc and the pill
+**SYSTEM**.
+
+On this account that is not an edge case — it is the feed. Counted off the fully-paginated live DOM:
+
+| Pill rendered | Rows |
+|---|---|
+| **SYSTEM** | **53** |
+| BOOKING | 6 |
+| PAYMENT | 1 |
+| WELCOME | 1 |
+
+52 of those 53 are lead notifications; exactly one is a genuine `system` row. The first twenty rows
+on the screen were **SYSTEM, twenty times**.
+
+Two of the mislabelled types are the ones that matter most:
+
+- **`new_lead`** is the F-7 notification, whose source comment states it fires *"immediately so the
+  vendor responds fast, instead of only being nudged 48h later once it's already cold."* Three of
+  them are in this feed, dressed as platform announcements.
+- **`booking_change_request_applied`** is a **money** event — WW-184, *"a change-request top-up
+  clears"*. It has no config entry either, so when one arrives it will read as System. (None on this
+  account yet, so this half is source-established.)
+
+### WWL-389 (S2) — the filter tabs report that notifications do not exist while they do
+
+Driven live, in order, with nothing but **Load more** pressed between the steps:
+
+| Rows loaded | All | Unread | Bookings | Payments | Reviews |
+|---|---|---|---|---|---|
+| 20 | 61 | 60 | *(no count)* | *(no count)* | *(no count)* |
+| 40 | 61 | 60 | **6** | **1** | *(no count)* |
+| 61 | 61 | 60 | 6 | 1 | *(no count)* |
+
+At 20 rows loaded, pressing **Bookings** rendered:
+
+> **Nothing here** — *No notifications match this filter.*
+
+…with a **Load more** button directly beneath it, over an account holding six booking notifications.
+
+The cause is two denominators in one tab strip. **All** uses `totalCount` and **Unread** uses
+`unreadCount`, both server totals. **Bookings**, **Payments** and **Reviews** use
+`notifications.filter(...).length` — the rows currently in memory. A count pill only renders when
+`count > 0`, so the three loaded-page tabs render bare until the vendor happens to paginate far
+enough, and the filter itself is applied client-side to the same in-memory list.
+
+`GET /notifications?unreadOnly=true` is supported and returns 60 — the client never sends it
+(WWL-402).
+
+### WWL-390 (S2) — a lost mark-read is invisible to the client, forever
+
+This is why the module needed a socket interceptor rather than an HTTP one.
+
+Clicked the first unread row. Captured:
+
+```
+WebSocket.send  42["notification:mark-read",{"notificationId":9474}]     ← dropped
+HTTP writes                                                              ← none
+```
+
+| | Before | After the click | Server, after a hard reload |
+|---|---|---|---|
+| Row background | `bridal-blush` | cleared | — |
+| Title weight | 500 | 400 | — |
+| Gold unread bar | present | gone | — |
+| Unread tab | 60 | **59** | — |
+| `notifications/9474` | — | — | **`isRead: false`, `readAt: null`** |
+| `unread-count` | — | — | **60** |
+
+The mutation never left the browser and the UI never found out. `socket.emit` returns the socket and
+**cannot throw**, so the `catch` that exists to revert the optimistic update is dead code:
+
+```js
+try {
+  if (socketRef.current?.connected) {
+    socketRef.current.emit("notification:mark-read", { notificationId: id });  // fire-and-forget
+  } else {
+    await NotificationAPI.markAsRead(id);          // swallows its own error, returns false
+  }
+} catch { /* revert — unreachable on both branches */ }
+```
+
+The REST fallback is no better: `NotificationAPI.markAsRead` catches internally and returns `false`,
+which the context does not check. **Neither channel can report a failure.**
+
+The server does signal one — `socket.emit("notification:error", …)` in its handler's catch. Searched
+the entire frontend: **`notification:error` appears nowhere.** Nothing listens.
+
+### WWL-391 (S2) — a notification cannot be deleted on a phone
+
+Under true device emulation at **360×740** with touch enabled:
+
+| Media feature | Value |
+|---|---|
+| `(hover: none)` | **true** |
+| `(pointer: coarse)` | **true** |
+
+| Delete buttons | Count |
+|---|---|
+| In the DOM | **20** |
+| With a non-zero box | 20 (28×28px) |
+| With opacity > 0.05 | **0** |
+
+The control is `opacity-0 group-hover:opacity-100`. On a device that reports `hover: none` there is
+no gesture that raises it. The button remains hit-testable, so a blind tap on an invisible 28px
+target in a 326px-wide row would work — that is not an affordance.
+
+Delete is the **only** way to remove a notification: there is no bulk delete, no "clear all", and no
+retention policy on the model. A vendor accumulating twelve notifications a day cannot clear one of
+them from a phone.
+
+### WWL-392 (S2) — after "Mark all read", Load more brings back unread rows under a badge that says zero
+
+Driven with the mark-all-read frame dropped, which is exactly what a failed emit looks like:
+
+| | Unread rows on screen | Unread tab | Mark-all button |
+|---|---|---|---|
+| Before | 19 | **60** | present |
+| After Mark all read | **0** | *(no count)* | **gone** |
+| After one Load more | **20** | *(no count)* | **still gone** |
+
+The optimistic update maps over the **loaded** rows and sets `unreadCount` to 0. The next page comes
+from the server, which never received the instruction, so twenty unread rows arrive — and the badge
+stays at zero because nothing ever corrects it. The button that would fix it has already removed
+itself, because it renders only when `unreadCount > 0`.
+
+There is also **no confirmation** on an action that marks every notification on the account read, and
+the server's reply — `Marked N notifications as read`, with `{updated: N}` — is discarded, so the
+vendor is never told how many.
+
+### WWL-393 (S3) — the row tells you about a lead and cannot take you to it
+
+Every row is `cursor: pointer` with an `onClick` that marks it read and **navigates nowhere**.
+Counted across the rendered list: **0 anchors in any row**, and the URL is unchanged after clicking.
+
+The destination is right there in the payload. Live rows carry:
+
+```json
+{ "id": 9474, "type": "lead_followup_due",
+  "title": "Follow-up reminder",
+  "message": "Time to follow up with \"Danish Qureshi\" (nikah on 2026-10-16).",
+  "data": { "leadId": 222, "followUpAt": "2026-08-06T00:00:00.000Z" } }
+```
+
+`Notification.data` is read by nothing in this component. A vendor told twenty-seven times to follow
+up with a named couple must find each one by hand in the Lead inbox.
+
+### WWL-394 (S3) — marking a notification read is mouse-only
+
+| Check | Value |
+|---|---|
+| `role` on the row | **null** |
+| `tabindex` | **null** |
+| `onkeydown` | **none** |
+| Focusable | **false** |
+| Focusable descendants | 1 — the invisible delete button |
+
+The page's primary interaction is a bare `div` with a click handler. There is no keyboard path to it,
+and the unread indicators are a colour, a font weight and an `aria-hidden` bar — so a screen-reader
+user can neither tell an unread notification from a read one nor mark one read.
+
+### WWL-395 (S3) — the WW-280 fix was applied to one router and not its sibling
+
+Probed Node-side, outside the page, so no hook could colour the result:
+
+| Request | Status | Body |
+|---|---|---|
+| `PATCH /api/v1/notifications/abc/read` | **500** | *"Failed to mark as read"* |
+| `DELETE /api/v1/notifications/abc` | **500** | *"Failed to delete notification"* |
+| `PATCH /api/v1/notifications/1/read` (another user's) | 404 | *"Notification not found"* ✓ |
+| `PATCH /api/v1/notifications/-1/read` | 404 | *"Notification not found"* ✓ |
+
+`reviewRouter` carries the fix for precisely this — *"WW-280 — reply/pin/delete/photo routes fed
+:reviewId straight into Review.findByPk, so a non-numeric id raised a raw Postgres 'invalid input
+syntax for type integer' 500. Validate it up front."* — and `notificationRouter` has **no
+`param().isInt()` guard on `:id` at all**, so it still produces the 500 the fix was written to
+remove.
+
+Ownership scoping is correct, which is the more important half.
+
+### WWL-396 (S3) — nothing in this module ever confirms or reports
+
+| Action | Confirmation | Feedback |
+|---|---|---|
+| Delete a notification | **none** | **none** |
+| Mark all read | **none** | **none** |
+| Mark one read | n/a | none |
+
+**No toast fires anywhere in this module** — verified across every driven action. Every other module
+in this sweep uses sonner. Here, one click on an invisible icon permanently destroys a row (the model
+is not `paranoid`, so `destroy()` is a hard delete) with no dialog and no acknowledgement.
+
+### WWL-397 (S3) — the notification sound is a 404
+
+`playNotificationSound()` runs on every `notification:new`:
+
+```js
+const audio = new Audio("/sounds/notification.mp3");
+audio.volume = 0.3;
+audio.play().catch(() => {});
+```
+
+Fetched live: **`GET /sounds/notification.mp3` → 404**, `text/html`. `public/sounds/` does not exist
+in the repository. Every incoming notification requests a missing file; the empty `.catch` hides it.
+
+There is also no mute and no preference — a vendor with the portal open during a function would get
+audio if the file existed.
+
+### WWL-398 (S3) — a filtered view cannot be linked, bookmarked or restored
+
+Switching tabs does not touch the URL — it stayed `…/dashboard/notifications` through all five. A
+reload returns to **All**, the back button does not walk the tab history, and there is no `?tab=`
+state. The 63-case-long list of things a vendor might want to come back to is one refresh from gone.
+
+### WWL-399 (S3) — 52 of 61 notifications match no filter at all
+
+The five tabs cover `booking_*`, `payment_*` + `payout_processed`, and `new_review`. The three lead
+types, `welcome` and `system` match none of them, so they are reachable **only** under *All* — which
+is 85% of this feed. There is no Leads tab on a page where leads are the overwhelming majority of
+what arrives.
+
+`booking_change_request_applied` is caught by the `startsWith("booking_")` prefix, so when one exists
+it will file under **Bookings** while displaying the label **System**.
+
+### WWL-400 (S3) — every failure in this module is invisible, and one of them lies
+
+| Failure | What the vendor sees |
+|---|---|
+| `GET /notifications` fails | `NotificationAPI` swallows it and returns an empty list → **"No notifications yet"** |
+| `GET /unread-count` fails | returns `0` → the badge reads zero and **Mark all read disappears** |
+| socket mutation fails | nothing (WWL-390) |
+| `DELETE` fails | the API layer returns `false`, unchecked — **the row stays deleted on screen** |
+
+There is no error state, no retry and no banner anywhere in the module. A vendor whose notification
+endpoint is down is told, in the empty state's own words, that they have no notifications.
+
+### WWL-401 (S3) — the refresh that exists is wired to nothing
+
+`refreshNotifications` is defined in the context, typed in its interface and exposed on the provider
+value. Searched the whole frontend: **no consumer.** The list loads once when the provider mounts —
+in the root layout, so it survives every in-app navigation — and thereafter only grows by socket.
+There is no refresh control on this page and no refetch on route change, so a tab left open all day
+shows whatever the socket happened to deliver.
+
+### WWL-402 (S3) — the server offers a cheaper, more correct query and the client declines it
+
+| Server supports | Client sends |
+|---|---|
+| `?unreadOnly=true` — verified live, returns 60 | never |
+| `limit` up to **50** — verified, `?limit=999` returns 50 | always **20** |
+
+So the Unread tab could have been a server query and is instead an in-memory filter (WWL-389), and
+61 rows take **four** round trips instead of two.
+
+### WWL-403 (S3) — the delete's optimistic window shows a count that contradicts the rows
+
+Measured across a single diverted delete:
+
+| | Rows on screen | *All* tab |
+|---|---|---|
+| Before | 20 | 61 |
+| ~200 ms after the click | **19** | **61** |
+| After the request settled | 19 | **60** |
+
+`totalCount` decrements only inside the success path, while the row leaves immediately. For the
+duration of the request the header count and the visible list disagree — and if the request fails,
+the row is restored from a closure captured at call time while the count never moved at all.
+
+### WWL-404 (S3) — no notification carries a timestamp
+
+Rows show a relative string only — *"16 hours ago"* — with no `title`, no absolute date and nothing
+on hover. The value is computed at render and never refreshes, so a row that said *"1 min ago"* still
+says so an hour later unless something else re-renders the page. The exact moment a notification
+arrived is unavailable anywhere in the UI.
+
+A future `createdAt` — clock skew between Railway and the browser — yields a negative diff and falls
+into the `minutes < 1` branch, rendering **"Just now"**.
+
+### WWL-405 (S3) — the accessibility floor
+
+| Check | Result |
+|---|---|
+| Row keyboard access | **none** (WWL-394) |
+| Delete button accessible name | a `title` only — no `aria-label`, no text |
+| Unread indicator bar | `aria-hidden` |
+| `role="tabpanel"` | **0** — the tabs control a plain div |
+| Filter tab height at 360px | **31px** — all five below the 44px minimum |
+| `h1` | **1** ✓ (better than Module 27, which had none) |
+
+### WWL-406 (S4) — 61 notifications in five days, and only one way to clear them
+
+Oldest row **2026-08-01**, newest **2026-08-06** — twelve a day, and 27 of the 61 are the *same*
+follow-up reminder type. There is no retention policy on the model, no TTL, no archive and no bulk
+delete. The list grows without bound and the only pruning is one hover-and-click at a time — which
+does not exist on mobile at all (WWL-391).
+
+### WWL-407 (S4) — one of the four booking labels is a different part of speech
+
+`booking_created` → **Booking**, while `booking_approved` → **Approved**, `booking_rejected` →
+**Rejected**, `booking_cancelled` → **Cancelled**. Three participles and a noun in one family. In the
+same table, `booking_cancelled` and `payment_refunded` share the gold tone and `booking_rejected` and
+`payment_failed` share coral, so those pairs are distinguishable only by their icon.
+
+---
+
+### What passed, and it is worth saying
+
+- **L — nothing was written.** 61 in, 61 out; unread 60 at both ends; the full id list identical;
+  notification 9474 still `isRead: false, readAt: null` after being clicked, after a mark-all-read
+  and after a delete. Verified through Playwright's Node-side request context, which never executes
+  page JavaScript, so neither the app's hooks nor mine could colour the answer.
+- **D28-107 — the unknown-type fallback cannot crash.** `NOTIFICATION_CONFIG[type] ||
+  NOTIFICATION_CONFIG.system` degrades to a neutral row. Five types are hitting that path on this
+  account right now and not one threw. This is the direct counter-example to the Module 21 crash,
+  where `TONE[tone]` with no fallback took the whole payroll tab down.
+- **D28-194 / D28-195 — the pagination guards hold.** `?page=-5` returns page **1** (WW-253's floor),
+  and `?limit=999` returns **50** (the server cap). Both verified live.
+- **D28-171 — ownership scoping is correct.** Another user's notification returns **404 "Notification
+  not found"** on both `PATCH …/read` and `DELETE`, not a 403 leak and not a silent success.
+- **D28-182 → D28-186 — no duplicate rows.** Paginated to the end: **61 rendered = 61 total**, and
+  `hasMore` flipped false exactly on the last page. Six rows share a message string, but they are
+  genuinely different leads and events — checked before drawing any conclusion, not assumed.
+- **D28-122 — the already-read guard works.** Clicking a read row produced **0 socket frames and
+  0 HTTP writes**.
+- **D28-018 / D28-020 — the socket is genuinely live**, and the pill is honest about it: `LIVE`,
+  `title="Live updates active"`, with the Engine.IO handshake and ping frames visible on the wire.
+  The `localhost` fallback in `BACKEND_WS_URL` does not bite in production.
+- **D28-237 — no horizontal overflow at 360×740**, measured with the corrected element-level walk
+  (ancestor scan stopping before `<body>`): `scrollWidth === clientWidth === 360` **and** 0 elements
+  past the right edge.
+- **D28-247 — console clean** across the whole module, including through three diverted mutations.
+- The empty-state copy correctly forks between *"No notifications yet"* for **All** and *"Nothing
+  here / No notifications match this filter"* for a filter — the right instinct, undermined by
+  WWL-389 showing the second one over data that exists.
+
+### Not driven, each with its reason
+
+| Cases | Why |
+|---|---|
+| **D28-028 → D28-036** (a live `notification:new` arriving) | Cannot be forced without creating a real booking, lead or payment on the vendor's production account. The prepend path, the missing dedup and the sound call were established from source; the sound's **404** was verified directly (WWL-397). |
+| **D28-101 → D28-103** on `booking_change_request_applied` | No row of that type exists on the account. Its absence from `NOTIFICATION_CONFIG` is established from source; the rendering is inferred from the five types that *are* hitting the same fallback live. |
+| **D28-134 → D28-136** (two concurrent sessions) | Needs a second authenticated browser on the same account; the room-broadcast mechanism was read from `socket/index.js`. |
+| **D28-152, D28-164, D28-165** (stale-closure races) | Require a socket event to land inside a specific millisecond window. Established from the dependency arrays. |
+| **D28-205** (expired token behaviour) | Would force a logout and another OTP email to the account owner. |
+| **D28-218 → D28-222** (does every event that should notify, notify?) | Partially answerable and deliberately left open: the account has **8 reviews and 0 `new_review` notifications**, but the notification history is only 5 days deep while the newest review predates it by ~15 minutes. That is suggestive, not conclusive, so it is recorded as an open question rather than a finding. |
+| **D28-114 → D28-116** (retention) | No pruning mechanism exists to observe; established from the model. |
+| **D28-231, D28-234, D28-235** (announcement, contrast, reduced motion) | Need a screen reader and a contrast tool; the DOM-side facts (`title`-only naming, `aria-hidden` bar, no tabpanel) are recorded under WWL-405. |
+
+### Module 28 — status
+
+**258 cases written, 195 driven. 20 findings (5× S2, 13× S3, 2× S4).**
+
+**The module's verdict.** This vendor's notification feed is 61 rows over five days, and 52 of them —
+every follow-up reminder, every stale-lead nudge, every new inbound enquiry — arrive wearing the grey
+**SYSTEM** badge, match none of the five filters, and cannot be clicked through to the lead they
+name even though the lead id is sitting in the payload. The tabs above them will tell a vendor that
+no booking notifications exist while six do, until enough pages are loaded for the count to appear.
+Underneath, the two actions the page offers travel by `socket.emit`, which cannot fail loudly: a
+dropped mark-read left the row looking read, the badge decremented and the server untouched, and
+only a full reload revealed it. The server emits an error event for exactly this case and nothing in
+the product listens. And on a phone — where `hover: none` is true — not one of the twenty delete
+buttons can be seen or found, which on a screen with no bulk delete and no retention policy means
+the list can only grow.
