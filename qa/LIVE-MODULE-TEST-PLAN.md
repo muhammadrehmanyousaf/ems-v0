@@ -65,7 +65,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 33 | Availability | `/dashboard/settings?tab=availability` | ✅ 152 | **`[x]` COMPLETE — 95 run, 57 not run, 13 findings (2× S2)** |
 | 34 | Cancellation policy | `/dashboard/cancellation-policy` | ✅ 156 | **`[x]` COMPLETE — 105 run, 51 not run, 14 findings (1× S1, 3× S2)** |
 | 35 | Setup checklist | `/dashboard/onboarding` | ✅ 158 | **`[x]` COMPLETE — 110 run, 48 not run, 12 findings (3× S2)** |
-| 36 | Tonight | `/dashboard/venue-os?tab=today` | — | `[ ]` |
+| 36 | Tonight | `/dashboard/venue-os?tab=today` | ✅ 150 | `[~]` cases written — execution in progress |
 | 37 | Event profit | `/dashboard/venue-os?tab=profit` | — | `[ ]` |
 | 38 | Venue money | `/dashboard/venue-os?tab=money` | — | `[ ]` |
 | 39 | Halls & spaces | `/dashboard/venue-os?tab=spaces` | — | `[ ]` |
@@ -18110,3 +18110,206 @@ that set it, and the entire Verification category, along with the only link in *
 moves*, lands on a **404**. Beside all of it sits an activation panel that declares a working venue
 matters more than photos, holds twenty-two unanswered leads in its payload without showing them, and
 contributes nothing to the score it is printed next to.
+
+---
+
+## MODULE 36 — TEST CASES
+
+Route `/dashboard/venue-os?tab=today`. The first of seven Venue-OS tabs — **55 components and, by the
+hub's own comment, 179 endpoints across 46 views behind one menu item**.
+
+The Tonight tab composes **five** components:
+
+| # | Component | Gating |
+|---|---|---|
+| 1 | `TodayBoard` | **flag-free** — *"works for EVERY vendor off the booking list alone"* |
+| 2 | `EventNightGauge` | self-gates on a pilot flag |
+| 3 | `EventNightConsoleView` | self-gates |
+| 4 | `GuestListView` | self-gates |
+| 5 | `SchedulingCheck` | self-gates |
+
+Probed on screen before any case ran — **only `TodayBoard` renders**. Panel headings are *Tonight ·
+What needs you · Upcoming events · Who to chase* and nothing else.
+
+Live figures on the board:
+
+| KPI | Value |
+|---|---|
+| Events today | **0** |
+| Next 7 days | **2 events** |
+| To collect | **Rs 13,417,229** |
+| Overdue payments | **5** — event passed, unpaid |
+
+### A. Route, hub shell and tab addressing (D36-001 → D36-024)
+
+- **D36-001** Sidebar → **Tonight** navigates to `/dashboard/venue-os?tab=today`.
+- **D36-002** `document.title` (*"Dashboard : Venue-OS"*) vs the page heading (**Venue-OS**) vs the nav label (**Tonight**) vs the tab label (**Today**) vs the section title (**Tonight**). Enumerate all five.
+- **D36-003** **The seven sidebar entries and the seven tab labels disagree on every one.** Tabulate: Tonight/Today · Event profit/Bookings & Profit · Venue money/Money & Expenses · Halls & spaces/Spaces · Cash & cheques/Cash & Cheques · Kitchen/Kitchen · Accounting/Advanced.
+- **D36-004** Establish the consequence for a vendor told to "open Accounting" who is looking for a tab called Advanced.
+- **D36-005** **Regression target.** The hub's comment records the fix: *"With `defaultValue='today'` there was exactly ONE address for all of it: a vendor could not bookmark 'Money & Expenses', could not send a hall manager a link to Spaces, and lost their place on every refresh."* Verify the tab now lives in the URL.
+- **D36-006** Click each of the seven tabs and confirm `?tab=` updates via `router.replace`.
+- **D36-007** Confirm `scroll: false` — the page does not jump on a tab change.
+- **D36-008** Reload on `?tab=cash` and confirm it lands there.
+- **D36-009** An unknown `?tab=` falls back to **today**. Verify.
+- **D36-010** **Second regression target.** `?tab=advanced&group=<id>` addresses one of seven accordion groups directly — *"'?tab=advanced' alone still left 28 views behind 'click Advanced, then find and expand the right accordion'."* Verify the seven group ids resolve.
+- **D36-011** Verify the group auto-expands and `scrollIntoView` brings it into view.
+- **D36-012** Leaving Advanced deletes a stale `group` from the URL. Verify.
+- **D36-013** The sidebar's seven Advanced entries each carry `&group=`. Cross-check them against `VENUE_OS_ADVANCED_GROUPS`.
+- **D36-014** `useVenueOsFlags()` gates the whole hub with *"Loading your venue-OS workspace…"*. Verify it resolves.
+- **D36-015** Establish what a vendor with the hub flag off sees.
+- **D36-016** The command-centre blurb renders above the tabs — *"Run tonight's event, see whether each shaadi made money, track every expense, chase cheques, and manage your halls — all in one place."*
+- **D36-017** Assess that sentence against what the Tonight tab actually shows.
+- **D36-018** The tab strip is inside `overflow-x-auto`. Measure its scroll width against the viewport.
+- **D36-019** Verify the tab strip is a real `role="tablist"` with `role="tab"` and `role="tabpanel"` — and contrast with Module 31, where the direction tabs were `aria-pressed` buttons, and Module 28, where tabs had no panel.
+- **D36-020** Verify `data-state="active"` on exactly one tab.
+- **D36-021** Keyboard: arrow keys move between tabs.
+- **D36-022** The page metadata describes *"Multi-venue vendor-OS pilot"* — establish whether the word **pilot** appears anywhere the vendor can see.
+- **D36-023** Establish whether the hub is venue-scoped, and what the business switcher does to it.
+- **D36-024** Console clean.
+
+### B. Four of five panels do not render (D36-025 → D36-048)
+
+- **D36-025** The section hint promises: *"What's happening at your hall right now — **headcount vs safe capacity**, **valet & incidents**, **RSVPs**, and **is-this-slot-free**."*
+- **D36-026** Establish that **headcount vs safe capacity** comes from `EventNightGauge` — and is absent.
+- **D36-027** Establish that **valet & incidents** comes from `EventNightConsoleView` — and is absent.
+- **D36-028** Establish that **RSVPs** comes from `GuestListView` — and is absent.
+- **D36-029** Establish that **is-this-slot-free** comes from `SchedulingCheck` — and is absent.
+- **D36-030** So establish that **all four things the section describes are missing**, and the one thing present (upcoming events and unpaid balances) is not mentioned in the hint at all.
+- **D36-031** Confirm on screen: the rendered headings are *Tonight · What needs you · Upcoming events · Who to chase*.
+- **D36-032** Establish how each of the four self-gates — a flag check returning null, an empty state, or an error.
+- **D36-033** Establish whether any of them renders a *"not enabled"* message, or whether they vanish silently.
+- **D36-034** …live, no such message appears. Verify.
+- **D36-035** So a vendor reading the hint has no way to learn why the four are missing or how to get them.
+- **D36-036** `TodayBoard`'s own comment states the problem it was written for: *"The live EventNight/console/guest-list panels self-gate on their pilot flags, so the Today tab was empty for a normal vendor."*
+- **D36-037** Establish that the fix was to add a fifth, flag-free panel — and that the hint was never updated to match.
+- **D36-038** Establish which flags gate the four, and whether they are per-vendor or global.
+- **D36-039** Establish whether any vendor on production has them on.
+- **D36-040** Cross-check against the standing position that flags are what makes the portal feel empty.
+- **D36-041** Enumerate how many of the 55 Venue-OS components are flag-gated.
+- **D36-042** Establish the ratio for the Tonight tab specifically: 1 of 5 renders.
+- **D36-043** Establish whether the hub itself is flag-gated (`useVenueOsFlags`) and how this vendor passes.
+- **D36-044** Check the other six tabs for the same pattern — how many panels render versus how many are composed.
+- **D36-045** Record the count per tab.
+- **D36-046** Establish whether any tab renders **zero** panels.
+- **D36-047** …and what that tab shows in place of them.
+- **D36-048** Establish whether the sidebar advertises tabs that are entirely empty.
+
+### C. The KPI cards (D36-049 → D36-072)
+
+- **D36-049** Four cards render: **Events today · Next 7 days · To collect · Overdue payments**.
+- **D36-050** Verify **Events today = 0** against the booking list — no booking has today's date.
+- **D36-051** Verify **Next 7 days = 2 events** and identify them.
+- **D36-052** …live, two bookings sit on **Thu, 13 Aug**, which is exactly 7 days from 2026-08-06. Establish whether the window is inclusive.
+- **D36-053** Verify **To collect = Rs 13,417,229** by summing `outstanding` across open bookings.
+- **D36-054** Establish which statuses count as "open" — Cancelled is filtered out; establish whether Completed is included.
+- **D36-055** …a **Completed** booking appears in the Upcoming list (see D36-081), so establish whether its balance is in the To-collect figure.
+- **D36-056** Verify **Overdue payments = 5** against the "Who to chase" rows with a negative day count.
+- **D36-057** …live those are: Kamran Sheikh (100d), Shahzad Butt (51d), Zeeshan Akram (12d), Owais Siddiqui (1d), Waheed Jutt (1d). Confirm exactly five.
+- **D36-058** Sum those five balances and establish what proportion of the Rs 13.4m they are.
+- **D36-059** The card sub-labels read *"events"*, *"across open bookings"*, *"event passed, unpaid"*. Verify each.
+- **D36-060** Establish whether **Events today = 0** is consistent with Module 33, where **all three venues are blocked on today's date**.
+- **D36-061** …i.e. whether a blocked date and an empty day are the same thing here, and whether the board knows about blocks at all.
+- **D36-062** Establish whether the KPIs are venue-scoped or aggregate across all three.
+- **D36-063** Switch venue and confirm whether the numbers change.
+- **D36-064** `useVendorBookings()` — establish what it fetches and whether it is business-scoped.
+- **D36-065** Verify `hideKpis` prop exists and is false here.
+- **D36-066** Establish whether `TodayBoard` is reused elsewhere with `hideKpis` true.
+- **D36-067** Verify the KPI numbers are `tabular-nums`.
+- **D36-068** Verify `formatPkr` on the To-collect figure.
+- **D36-069** Establish whether Rs 13,417,229 is plausible against the Bookings module.
+- **D36-070** Establish what happens to the cards when there are no bookings at all.
+- **D36-071** Verify the loading state.
+- **D36-072** Verify the cards do not move when the lists below are scrolled.
+
+### D. Upcoming events (D36-073 → D36-096)
+
+- **D36-073** The list is headed *"Upcoming events — Soonest first."*
+- **D36-074** Verify ascending order by day count: 7, 7, 15, 23, 34, 48, 62, 77, 93.
+- **D36-075** Each row shows a day chip, the customer name, the date, the status and the amount.
+- **D36-076** `dayChip` bands: `<0` overdue · `0` Today · `1` Tomorrow · `≤7` in Nd · else in Nd. Verify each band is reachable.
+- **D36-077** …live only the *in Nd* band appears in Upcoming. Establish that Today, Tomorrow and overdue are unreachable here today.
+- **D36-078** Verify the chip tones: today primary · soon amber · future muted · overdue rose.
+- **D36-079** `fmtDate` is `en-PK` with weekday, `2-digit` day, short month — verify *"Thu, 13 Aug"*.
+- **D36-080** Establish that the **year is absent** from the row date, and whether that matters on a list spanning 93 days.
+- **D36-081** **A booking marked `Completed` sits 34 days in the future** — *"Imran Shafi & Hafsa Imran · Wed, 09 Sept · Completed · Rs 1,546,000"*. Establish it live.
+- **D36-082** Establish whether a future-dated Completed booking is a data error, a legitimate state, or a status the vendor set early.
+- **D36-083** Cross-check against the Bookings module and against Module 27, where the review-automation window counts only Completed bookings **in the past**.
+- **D36-084** Establish whether this booking is counted in the review-automation *prompted* figure.
+- **D36-085** Establish whether `TodayBoard` should list a Completed event under *Upcoming* at all.
+- **D36-086** Statuses seen live: **Confirmed · Completed · Pending · Awaiting Payment**. Enumerate the full set and establish which are filtered.
+- **D36-087** Only `cancelled` is filtered (case-insensitively). Verify from source.
+- **D36-088** So establish whether a **Pending** or **Awaiting Payment** booking belongs on a list of upcoming events the venue is committed to.
+- **D36-089** *"Rizwan Anjum & Momina Rizwan · Wed, 07 Oct · Pending · Rs 2,596,400"* — establish what Pending means and whether the hall is actually held.
+- **D36-090** Cross-check the Pending rows against Module 33's blocked dates and the Calendar.
+- **D36-091** **A booking's customer is the vendor themselves** — *"Muhammad Rehman Yousaf · Thu, 13 Aug · Confirmed · Rs 665,000 · 0% paid"*. Establish it live.
+- **D36-092** Establish whether that is a test booking on production, and whether it is counted in the KPIs.
+- **D36-093** …it appears in both **Next 7 days** and **Who to chase**, so establish its contribution to Rs 13,417,229.
+- **D36-094** Establish whether the list is capped, and at what.
+- **D36-095** Establish whether a row links to its booking.
+- **D36-096** Establish whether the list is venue-labelled — with three venues merged, which hall is each event in?
+
+### E. Who to chase (D36-097 → D36-118)
+
+- **D36-097** The list is headed *"Who to chase — Unpaid balances — collect before the event."*
+- **D36-098** Verify ordering: most urgent first — 100d overdue, 51d, 12d, 1d, 1d, then in 7d, in 7d, in 15d…
+- **D36-099** Each row shows the day chip, the name, the date, a **% paid** figure and the outstanding amount.
+- **D36-100** Verify the five overdue rows and their amounts: Rs 325,020 · Rs 540,075 · Rs 215,872 · Rs 757,350 · Rs 315,000.
+- **D36-101** Sum them and verify against the **Overdue payments** card's count of 5.
+- **D36-102** Establish that the card counts events, not rupees, and that no card totals the overdue money.
+- **D36-103** Verify the **% paid** figures: 80% · 75% · 85% · 40% · 10%.
+- **D36-104** Cross-check one row's percentage against `received / revenue` from the booking.
+- **D36-105** *"Kamran Sheikh & Zoya Kamran · Tue, 28 Apr · 80% paid · Rs 325,020"* — **100 days overdue**. Establish what the product has done about it in those 100 days.
+- **D36-106** Cross-check against Module 27: Kamran Sheikh is one of the three **silent customers** in the review-automation panel. Establish that the same booking is simultaneously chased for money and chased for a review.
+- **D36-107** …and against Module 28, where the notification feed carries `lead_followup_due` rows but nothing about an overdue balance.
+- **D36-108** Establish whether any notification fires for a 100-day overdue payment.
+- **D36-109** *"Waheed Jutt · Wed, 05 Aug · 10% paid · Rs 315,000"* — 1 day overdue at 10% paid. Establish whether the event went ahead.
+- **D36-110** Establish whether the list distinguishes "event passed, unpaid" from "event upcoming, unpaid" beyond the chip colour.
+- **D36-111** Establish whether a row offers any action — call, WhatsApp, record a payment, open the booking.
+- **D36-112** …live, establish the count of interactive elements per row.
+- **D36-113** So establish what a vendor does after reading *"Who to chase"*.
+- **D36-114** Compare with Module 27's silent-customer list, which at least offers `tel:` and a Dismiss.
+- **D36-115** Establish whether the list is capped.
+- **D36-116** Establish whether a fully-paid booking can appear here.
+- **D36-117** Establish the `outstanding` computation and whether it accounts for refunds.
+- **D36-118** Establish whether the venue is named on a row.
+
+### F. Accessibility (D36-119 → D36-130)
+
+- **D36-119** `h1` on the page — note the heading levels used by the hub and the section.
+- **D36-120** The tab strip's roles and `aria-selected`.
+- **D36-121** The KPI cards' accessible names.
+- **D36-122** The day chips convey urgency by colour and text — verify the text is present.
+- **D36-123** The **% paid** figure's association with its row.
+- **D36-124** Rows are `div`s — establish whether any is focusable or actionable.
+- **D36-125** Colour contrast of the four chip tones, especially rose-on-rose and amber.
+- **D36-126** The overflow-x tab strip and keyboard reachability of the last tab.
+- **D36-127** Focus order into the panel.
+- **D36-128** `prefers-reduced-motion` against the `scrollIntoView` smooth behaviour on group deep-links.
+- **D36-129** Establish whether the money figures are announced with a currency.
+- **D36-130** Establish whether "100d overdue" is announced usefully.
+
+### G. Mobile 360×740 (D36-131 → D36-140)
+
+- **D36-131** No horizontal overflow: `scrollWidth === clientWidth` and an element-level right-edge count.
+- **D36-132** The seven-tab strip at 360px — measure its scroll width and whether the active tab is in view.
+- **D36-133** The four KPI cards' grid at 360px.
+- **D36-134** An Upcoming row at 360px: chip, name, date, status, amount.
+- **D36-135** A Who-to-chase row at 360px with the extra % paid figure.
+- **D36-136** Tap targets on the tabs.
+- **D36-137** The command-centre blurb at 360px.
+- **D36-138** Page height and scroll cost to reach *Who to chase*.
+- **D36-139** Under `hover: none`, any hover-dependent control.
+- **D36-140** Establish whether the tab strip shows a scroll affordance.
+
+### H. Integrity (D36-141 → D36-150)
+
+- **D36-141** Console clean.
+- **D36-142** No unhandled rejection.
+- **D36-143** **This tab is read-only** — confirm zero mutating requests across the run.
+- **D36-144** Clean-realm inventory at open: booking count, statuses, outstanding total.
+- **D36-145** Confirm no booking changed.
+- **D36-146** Confirm no blocked date changed (Module 33 baseline).
+- **D36-147** Confirm the cross-module baselines (28–35) are unchanged.
+- **D36-148** Confirm switching tabs writes nothing.
+- **D36-149** Confirm the `?group=` deep links write nothing.
+- **D36-150** No storage keys left behind.
