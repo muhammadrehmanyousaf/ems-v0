@@ -55,7 +55,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 23 | Brokers | `/dashboard/brokers` | ✅ 164 | **`[x]` COMPLETE — 95 run, 69 not run, 16 findings (4× S2)** |
 | 24 | Generator fuel | `/dashboard/generator-fuel` | ✅ 132 | **`[x]` COMPLETE — 62 run, 70 not run, 18 findings (5× S2)** |
 | 25 | Halal certs | `/dashboard/halal-certs` | ✅ 138 | **`[x]` COMPLETE — 58 run, 80 not run, 19 findings (3× S2)** |
-| 26 | Drone NOC | `/dashboard/drone-noc` | ✅ 138 | `[ ]` cases written, execution in progress |
+| 26 | Drone NOC | `/dashboard/drone-noc` | ✅ 138 | **`[x]` COMPLETE — 60 run, 78 not run, 17 findings (3× S2)** |
 | 27 | Reviews | `/dashboard/reviews` | — | `[ ]` |
 | 28 | Notifications | `/dashboard/notifications` | — | `[ ]` |
 | 29 | Promote | `/dashboard/promote` | — | `[ ]` |
@@ -12010,3 +12010,224 @@ moves it through **pending → approved / rejected → cancelled**, with resubmi
 - **D26-138** No `POST`/`PATCH`/`DELETE` reached the real API.
 
 **138 cases written.** Execution follows.
+
+---
+
+## MODULE 26 — EXECUTION RESULTS
+
+Driven on live prod `https://www.weddingwala.pk/dashboard/drone-noc` with every write captured and
+diverted, and a clean-realm integrity check at close.
+
+**60 of 138 cases driven. 17 findings (3× S2, 11× S3, 3× S4). Nothing was written.**
+
+| Integrity check (clean iframe realm, at close) | Value |
+|---|---|
+| Permits | **0** |
+| Per venue — 3358 / 3359 / 3360 | **0 / 0 / 0** |
+| `summary` | `byStatus {}` · `byType {}` |
+| `QA-PROBE-NOC-001` present | **no** |
+| Diverted writes | **1**, listed below |
+| Console errors | **none** |
+
+### WWL-339 (S2) — the applicant can approve their own PCAA permit
+
+The chain, established end to end:
+
+| Step | Evidence |
+|---|---|
+| 1. The view declares `adminCapable = true` as its **default** | `DroneNocRedesignedView({ adminCapable = true })` |
+| 2. The page passes **no prop** | `page.tsx` → `<DroneNocRedesignedView />` |
+| 3. The dialog file's own header says otherwise | *"Approve / Reject → from status 'pending' (**admin-capable screens only**)"* |
+| 4. So the vendor screen renders **Approve permit** and **Reject permit** | `adminCapable && canApprove(p.status)` |
+| 5. The backend applies **no admin check** | `transitionPermit` → `_findScoped` passes on `createdByUserId === userId` **or** business ownership; `_isSuperAdmin` is only a third fallback, not a requirement |
+| 6. The server then stamps the approval | `if (to === "approved") patch.approvedAt = new Date()` |
+
+So the person applying for the No-Objection Certificate can mark it **approved**, and the record will
+carry an `approvedAt` timestamp indistinguishable from a real Civil Aviation Authority decision. The
+confirmation dialog even coaches them: *"Marking #REF as approved. PCAA reference + cert dates should
+already be filled in."*
+
+Three things make it worse than a mislabelled button:
+
+- **An approval carries no evidence.** `statusReason` is captured on **reject** and **cancel** and
+  **not** on approve — the body is `{to: "approved"}` and nothing else.
+- **The certificate cannot be attached.** No file input anywhere in the module (`hasFileInput: false`),
+  and no document column.
+- **Nothing records who approved it.** There is no approver field distinguishing a self-approval from
+  a regulator's.
+
+Flying a drone over a wedding without a valid NOC is an offence in Pakistan, not a policy breach.
+This screen lets the operator generate the paperwork that says they have one.
+
+### WWL-340 (S2) — a permit that expires six years before it becomes valid
+
+Driven live:
+
+| Field | Value |
+|---|---|
+| Reference | `QA-PROBE-NOC-001` |
+| Valid from | **2026-08-06** |
+| **Valid until** | **2020-01-01** |
+| Save | **enabled** · no error · hint `(none)` |
+
+```
+POST /api/v1/drone-noc
+{"businessId":3358,"referenceNumber":"QA-PROBE-NOC-001","permitType":"single_event",
+ "issuingAuthority":"pcaa","validFrom":"2026-08-06","validUntil":"2020-01-01","feePaid":-5000}
+```
+
+`canSave` checks that the reference and both dates are **present**, never that they are ordered —
+the same omission as WWL-320 in Halal certificates, in the same sweep, on the same kind of record.
+
+### WWL-341 (S2) — a PCAA permit saves with no pilot, no licence and no drone registration
+
+The same captured create had **`pilotName`, `pilotLicense` and `droneRegNumber` all blank** and Save
+was enabled. `canSave` requires only `referenceNumber`, `validFrom` and `validUntil`.
+
+The pilot licence is the single field that establishes the person flying is qualified; the drone
+registration is what a regulator matches against the airframe. Both are optional here.
+
+### WWL-342 (S3) — a negative fee, counted in a card that also counts refused applications
+
+`feePaid: -5000` transmitted with no `min`, no error and no hint. And the **Fees paid** card is
+`all.reduce((s, p) => s + num(p.feePaid), 0)` — every permit, including **rejected** and
+**cancelled** ones. So money spent on a refused application reads as a fee successfully paid, and a
+single negative row reduces the total.
+
+### WWL-343 (S3) — one card for two different problems
+
+**Needs attention** = `pending` + `expiring_soon`. An application sitting with a regulator and an
+approved permit about to lapse are different situations with different remedies, and the header
+gives one number for both.
+
+### WWL-344 (S3) — five captured fields are displayed nowhere
+
+| Field | Captured by the form | In the table |
+|---|---|---|
+| Valid **from** | ✓ | **no** |
+| Drone reg # | ✓ | **no** |
+| **Pilot licence** | ✓ | **no** |
+| Venue / area | ✓ | **no** |
+| Drone model | ✓ | **no** |
+
+The search matches `droneRegNumber` and `venueAddress`, so searching either filters the table to rows
+that never show the thing searched for.
+
+### WWL-345 (S3) — an approved permit stays editable
+
+`Edit` and `Remove` render on **every** status, including `approved`. The backend blocks only the
+status field (`delete patch.status`), so an approved permit's reference number and validity window
+can be rewritten afterwards with no trace of what changed.
+
+### WWL-346 (S3) — Reject and Cancel enforce their reason with a toast, not a disabled button
+
+`submit()` checks `reason.trim()` and fires `toast.error("Reason required")`. Every other form on the
+platform disables the button and says what it is waiting for. Same inconsistency as WWL-327.
+
+### WWL-347 (S3) — the `/upcoming` endpoint has no consumer here
+
+`GET /api/v1/drone-noc/upcoming` — documented in the controller as *"pending + expiring-soon +
+booking-linked windows"* — is live and returns cleanly. The app's own requests on this route are two
+bare `GET /drone-noc` calls and nothing else.
+
+### WWL-348 (S3) — a permit cannot be tied to the wedding it was obtained for
+
+No booking picker in the 12-field form, and no `bookingId` in the captured body — though the model
+carries one and the unused `/upcoming` endpoint is built around "booking-linked windows".
+
+### WWL-349 (S3) — no label is associated with its field
+
+All **twelve** dialog labels have no `htmlFor`; none of the inputs carries an `id`.
+
+### WWL-350 (S3) — a new permit is filed under the wrong venue
+
+`businessId: 3358` while scoped to **All venues**, from `businesses?.[0]?.id`, with no venue field in
+the form. **Seventh** module with this mechanism.
+
+### WWL-351 (S3) — false success on a write that never arrived
+
+**"Permit added"**, dialog closed; the register refetched and stayed at 0.
+
+### WWL-352 (S3) — the entire Compliance rail is empty in production
+
+| Register | Rows |
+|---|---|
+| Generator fuel log | **0** |
+| Halal certificates | **0** |
+| Drone NOC permits | **0** |
+
+Three compliance screens, built, live, venue-scoped where applicable — and not one record in any of
+them across three venues.
+
+### WWL-353 (S4) — the breadcrumb mangles the acronym
+
+It renders **"Drone Noc"** — sentence-cased from the URL slug — beside a page titled *Drone NOC
+permits*.
+
+### WWL-354 (S4) — the valid-from default is UTC, not PKT
+
+`const today = () => new Date().toISOString().slice(0, 10)`. **Ninth** instance of the WWL-112 family.
+
+### WWL-355 (S4) — the pilot licence is captured but not exported
+
+The CSV writes Reference · Type · Authority · Pilot · Drone reg # · Valid from · Valid until · Fee
+paid · Status. **Pilot licence is absent**, though drone registration is present.
+
+---
+
+### What passed, and it is worth saying
+
+- **L — nothing was written.** 0 permits, empty summaries, 0/0/0 per venue, no `QA-PROBE-NOC-001`,
+  one diverted write listed in full, console clean.
+- **The regulatory modelling is the best in this sweep.** It knows that flying a drone over a
+  Pakistani wedding is a three-body problem:
+
+  | Permit types | Issuing authorities |
+  |---|---|
+  | Single event · Blanket annual · Provincial Home Dept · **Police intimation** | **PCAA (Federal)** · Punjab Home Dept · Sindh Home Dept · KPK Home Dept · Balochistan Home Dept · **Local police station** · Other |
+
+  Province-by-province Home Departments *and* the local police intimation — that is what the process
+  actually requires, and someone who has been through it chose these.
+- **D26-043 → D26-045 — this is the one compliance module whose status cannot go stale.** The backend
+  has `computePermitStatus` and calls `_refreshStatusOnRows` on the read path, so `expiring_soon` and
+  `expired` are **derived from the dates** rather than stored. That is the direct counter-example to
+  WWL-273 (Suppliers' Overdue filter) and WWL-286 (Brokers' Overdue card reading 0) — the same
+  problem, solved properly, in the same codebase.
+- **The backend refuses illegal transitions properly** — `Transition refused: <reason>` with a typed
+  code and both `from` and `to` echoed back — and returns a clean 200 *"Already in that status"* for
+  a no-op rather than an error.
+- **The transition dialogs cannot be dismissed mid-flight** (`!mut.isPending && onOpenChange(v)`).
+- **The reject placeholder is domain-literate**: *"Drone weight exceeds permitted 7 kg threshold"* —
+  the actual PCAA weight class.
+- **D26-046 — immune to the Module 21 crash**: `STATUS_TONE[p.status] ?? "neutral"`.
+- **D26-116 — dates export as raw ISO here**, unlike Halal certificates which export display strings
+  (WWL-329). Same `ExportMenu`, and this module uses it correctly.
+- **D26-026 — the empty state is correct**, as in Modules 24 and 25.
+- **The delete confirm names the reference number.**
+
+### Not driven, each with its reason
+
+| Cases | Why |
+|---|---|
+| **D26-051 → D26-072** (table, columns, row-action gating), **D26-035 → D26-042** (card arithmetic against real rows), **D26-111 → D26-113** (search behaviour) | **The register is empty in production.** Nothing to render, gate or filter. D26-052 → D26-056, D26-069 and D26-038 were answered from source and are recorded as source-verified. |
+| **D26-093 → D26-110** (the four transition dialogs) | Every one needs an existing permit, and each asserts a regulator's decision — approving fabricates a PCAA clearance, rejecting fabricates a refusal. Their payloads, gating predicates and copy were established from source, including WWL-339, the module's headline. |
+| **D26-016 → D26-018** (backend authorisation) | Answered by reading `transitionPermit` and `_findScoped` rather than by sending an approval. Establishing it live would have required creating a permit and then approving it — the exact act the finding is about. |
+| **D26-131 → D26-134** (360×740) | **No CDP device emulation** in the replacement browser tool, as recorded for Modules 24 and 25. |
+| **D26-121 → D26-123** (venue scoping) | Every venue holds 0 permits, so a switch cannot change anything observable. |
+| **D26-114 → D26-120** (export contents) | No rows to export; the Radix dropdown does not open under programmatic click in this browser tool. The column set was read from source (WWL-355, D26-116). |
+| **D26-124 → D26-126** (resilience) | Failure injection needs request-time init scripts, which the replacement browser tool does not expose. D26-126 was answered by inspection. |
+| **D26-091** (edit prefill) | No permit exists to edit. |
+
+### Module 26 — status
+
+**138 cases written, 60 driven. 17 findings (3× S2, 11× S3, 3× S4).**
+
+**The module's verdict.** This is the most regulation-literate screen in the product — it knows about
+Punjab, Sindh, KPK and Balochistan Home Departments, about police intimation, about the 7 kg weight
+threshold, and it is the only compliance module in twenty-six that computes its expiry status from
+dates instead of trusting a stored word. And then it hands the applicant an **Approve** button for
+their own PCAA No-Objection Certificate, backed by a server that checks only that they own the
+record — no reason captured, no document attached, no approver named. Beneath it, the form will save
+a permit that expires six years before it starts, with no pilot, no licence and no drone
+registration. All three compliance registers — fuel, halal, drone — are empty in production, so
+nothing has yet been recorded wrongly. The machinery to record it wrongly is in place.
