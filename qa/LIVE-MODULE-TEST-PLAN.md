@@ -53,7 +53,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 21 | Staff & payroll | `/dashboard/staff` | ✅ 188 | **`[x]` COMPLETE — 88 run, 100 not run, 13 findings (1× S1)** |
 | 22 | Suppliers | `/dashboard/suppliers` | ✅ 194 | **`[x]` COMPLETE — 95 run, 99 not run, 13 findings (3× S2)** |
 | 23 | Brokers | `/dashboard/brokers` | ✅ 164 | **`[x]` COMPLETE — 95 run, 69 not run, 16 findings (4× S2)** |
-| 24 | Generator fuel | `/dashboard/generator-fuel` | — | `[ ]` |
+| 24 | Generator fuel | `/dashboard/generator-fuel` | ✅ 132 | `[~]` cases written; **execution blocked — session lost, login now needs an emailed OTP** |
 | 25 | Halal certs | `/dashboard/halal-certs` | — | `[ ]` |
 | 26 | Drone NOC | `/dashboard/drone-noc` | — | `[ ]` |
 | 27 | Reviews | `/dashboard/reviews` | — | `[ ]` |
@@ -10863,3 +10863,237 @@ dialog is one of the two good write forms in the sweep and correctly refuses a w
 land. But the form beside it retypes a broker's name into a free text box while twelve full broker
 records — with their CNIC, their NTN and their JazzCash number — sit fetched and unused, and it
 cannot attach the commission to the wedding that earned it.
+
+---
+
+# MODULE 24 — GENERATOR FUEL LOG (`/dashboard/generator-fuel`)
+
+**What the screen is for.** A Pakistani venue runs on generators, and diesel is one of the largest
+controllable costs and the easiest thing on site to steal. This log records four kinds of event
+against a named generator — a **delivery** in, **consumption** out, a **tank reading**, or
+**maintenance** — with litres, cost per litre, supplier and run hours, so the owner can reconcile
+what was bought against what was burned.
+
+**Source read before writing these cases**
+- `app/(dashboard)/dashboard/generator-fuel/page.tsx`
+- `components/.../generator-fuel/redesigned/generator-fuel-redesigned-view.tsx` — the whole screen
+- `components/.../generator-fuel/redesigned/fuel-entry-form-dialog.tsx` — create/edit
+- `lib/api/generatorFuel.ts` — `EntryType`, `FuelType`, `FuelEntry`, and **three endpoints**
+- `lib/axiosConfig.js` — `/api/v1/generator` **is** in `BUSINESS_SCOPED_PREFIXES`
+
+**What the API offers that the screen does not call** — established from source before execution:
+
+| Endpoint / field | What it gives | Used by the screen? |
+|---|---|---|
+| `GET /generator-fuel/tanks` | current tank status per generator | **no** |
+| `GET /generator-fuel/burn-rate` | litres per run-hour between two readings | **no** |
+| `summary.byType` · `totalDeliveredLitres` · `totalDeliveryCost` · `totalConsumedLitres` | server-computed totals | **no** — the view recomputes its own from `entries` |
+| `create()` → `result: {tankBefore, tankAfter, delta}` | the tank maths for the entry just logged | **no** — discarded |
+| `FuelEntry.tankBeforeLitres` / `tankAfterLitres` | the running tank balance on every row | **no** — not a column |
+| `list({type, from, to, generatorIdentifier})` | server-side filters | **no** — only a client-side text search |
+| `FuelEntry.bookingId` | ties fuel burn to an event | **no** — no column, no picker |
+| `runHours`, `costPerLitre`, `supplierName`, `deliveryRef` | captured by the form | only in the CSV export |
+
+**Element inventory (10 interactive)**
+
+| # | Element | Where |
+|---|---|---|
+| 1 | Sidebar `Generator fuel` link | Compliance rail |
+| 2 | `Log entry` | PageHeader action |
+| 3–6 | Stat cards: Total entries · Deliveries · Delivered litres · Total cost | header grid |
+| 7 | `Search fuel log…` | toolbar |
+| 8–9 | Density toggle · Export | toolbar |
+| 10 | Select-all + row checkboxes | table |
+| 11–12 | Row actions: Edit entry · Remove entry | rows |
+| — | Fuel-entry dialog (10 fields) · Remove confirm | modals |
+
+**Safety limits for this module, each with its reason**
+
+| Limit | Reason |
+|---|---|
+| **No fuel entry is created, edited or removed.** | The log is the venue's defence against diesel theft; a fabricated delivery or a deleted consumption row destroys exactly the reconciliation it exists for. Every write is captured and diverted. |
+| **Reads may hit the live API freely.** | GETs are side-effect free. |
+
+---
+
+## MODULE 24 — TEST CASES
+
+### A. Route, navigation and access (D24-001 → D24-010)
+
+- **D24-001** Sidebar → **Generator fuel** navigates to `/dashboard/generator-fuel`.
+- **D24-002** `document.title` versus the page `h1` versus the nav label.
+- **D24-003** The rail entry is `aria-current="page"`.
+- **D24-004** Breadcrumb renders and links home.
+- **D24-005** Direct URL loads with no client-side error.
+- **D24-006** `/dashboard/generator-fuel-new` — the route in the component's header comment — resolves to what?
+- **D24-007** The comment claims *"Read-only; original screen untouched"* — check against a screen that creates, edits and deletes.
+- **D24-008** The eyebrow reads **Compliance** — judge the grouping for what is primarily a cost and theft control.
+- **D24-009** Browser Back leaves cleanly.
+- **D24-010** Uppercase and trailing-slash URLs normalise.
+
+### B. First paint and the table (D24-011 → D24-026)
+
+- **D24-011** `h1` **Generator fuel log**, description *"Deliveries, consumption and tank readings."*
+- **D24-012** The table paints the venue-scoped row count.
+- **D24-013** Columns: Generator · Type · Fuel · Litres · Total cost · Occurred · actions.
+- **D24-014** **There is no tank-level column**, though every row carries `tankBeforeLitres` and `tankAfterLitres`. Confirm.
+- **D24-015** **There is no run-hours column**, though the form captures it and the export writes it.
+- **D24-016** **There is no supplier column**, though the form captures it and the search matches it.
+- **D24-017** So searching a supplier name filters to rows that never show which supplier they are. Confirm.
+- **D24-018** `Type` renders through `ENTRY_TYPE_LABELS` — all four types produce a human label.
+- **D24-019** An unknown type falls back to `cap(t)` and a neutral tone — confirm the Module 21 crash cannot recur.
+- **D24-020** `Litres` renders `num(e.litres).toLocaleString("en-PK")` — so a **null** litres renders **`0`**, not an em-dash. Check a maintenance or tank-reading row.
+- **D24-021** `Total cost` uses `MoneyCell` with an explicit null check, so a missing cost renders an em-dash — contrast with D24-020.
+- **D24-022** `Occurred` formats `en-PK` as `dd MMM yyyy`; an invalid date renders `—`.
+- **D24-023** Rows are ordered most-recent-first.
+- **D24-024** There is no pagination.
+- **D24-025** `<th scope>` on the header cells.
+- **D24-026** Row checkboxes have per-row accessible names.
+
+### C. Stat cards (D24-027 → D24-040)
+
+- **D24-027** **Total entries** equals the row count.
+- **D24-028** **Deliveries** counts `type === "delivery"`.
+- **D24-029** **Delivered litres** sums litres on delivery rows only.
+- **D24-030** **Total cost** sums `totalCost` across **every** entry type, not just deliveries. Establish what that mixes together.
+- **D24-031** If a consumption row carries a cost, does it double-count against the delivery that supplied it?
+- **D24-032** Compare all four cards against the API's own `summary` (`totalDeliveredLitres`, `totalDeliveryCost`, `totalConsumedLitres`, `byType`) — the screen recomputes rather than using it.
+- **D24-033** Quantify any divergence between the card and the server figure.
+- **D24-034** **There is no "consumed litres" card**, though the API returns `totalConsumedLitres` — so bought-versus-burned cannot be compared on this screen.
+- **D24-035** …which is the one comparison a fuel log exists to make. Establish whether any screen in the product shows it.
+- **D24-036** The **Deliveries** card is hard-coded `trend="up"` regardless of the number.
+- **D24-037** Cards are computed from `all`, not the search-filtered rows — type a search and check.
+- **D24-038** Cards during the loading state.
+- **D24-039** Cards during a failed load — zeros or dashes?
+- **D24-040** `formatPkr(totalCost)` without rounding — check for a decimal leaking into a card.
+
+### D. What the engine computes and the screen hides (D24-041 → D24-052)
+
+- **D24-041** `GET /generator-fuel/tanks` returns a tank-status row per generator. Call it and record what it gives.
+- **D24-042** Is tank status rendered anywhere in the product?
+- **D24-043** `GET /generator-fuel/burn-rate` computes litres per run-hour between two readings. Call it and record the shape.
+- **D24-044** Is burn rate rendered anywhere?
+- **D24-045** Burn rate is the number that exposes diesel theft — a generator burning 12 L/h that suddenly reads 19 L/h. Establish whether a vendor can ever see it.
+- **D24-046** `create()` returns `{tankBefore, tankAfter, delta}` and the dialog discards it — so after logging a delivery the vendor is never told the new tank level.
+- **D24-047** `tankBeforeLitres` / `tankAfterLitres` are on every row and in no column.
+- **D24-048** So a tank reading that contradicts the running balance is invisible. Confirm.
+- **D24-049** `list()` accepts `type`, `from`, `to` and `generatorIdentifier` filters — none is wired to a control.
+- **D24-050** So there is no date-range filter on a log whose whole purpose is period reconciliation.
+- **D24-051** And no per-generator filter, though a venue runs several.
+- **D24-052** `bookingId` exists on the model — is fuel burn ever attributable to an event?
+
+### E. Search, selection, export, density (D24-053 → D24-064)
+
+- **D24-053** Search matches `generatorIdentifier`, `supplierName` and `fuelType`, client-side.
+- **D24-054** Searching a fuel type (`diesel`) filters correctly.
+- **D24-055** Search is case-insensitive and trims.
+- **D24-056** A no-match search shows *"No fuel entries yet"* + a **Log entry** CTA on a populated log.
+- **D24-057** Clearing the search restores all rows.
+- **D24-058** Search is lost on reload.
+- **D24-059** Export offers CSV and XLSX, filename `generator-fuel`.
+- **D24-060** Export columns: Generator · Type · Fuel · Litres · **Cost per litre** · Total cost · **Supplier** · Occurred at.
+- **D24-061** Cost per litre and Supplier appear **only** in the export — confirm.
+- **D24-062** A null cost per litre exports as **0**, not blank.
+- **D24-063** No venue column in the export.
+- **D24-064** Density toggle changes row height and persists.
+
+### F. The fuel-entry dialog (D24-065 → D24-088)
+
+- **D24-065** `Log entry` opens **Log fuel entry** with ten fields.
+- **D24-066** Entry type offers all four; fuel type offers Diesel · Petrol · LPG · Other.
+- **D24-067** Litres is `autoFocus`.
+- **D24-068** The **Cost / litre** label gains a `*` when the type is **delivery**.
+- **D24-069** A delivery with no cost per litre is **blocked** — the deliberate guard against a Rs 0 fuel-spend dashboard.
+- **D24-070** Changing the type away from delivery removes that requirement.
+- **D24-071** `canSave` also requires `litres > 0` — so a **maintenance** entry, which has no litres, **cannot be saved**. Establish this.
+- **D24-072** …and a **tank reading of zero** (an empty tank) cannot be saved either.
+- **D24-073** The blocked hint is the single string *"Add the number of litres, a type and a cost per litre to save."* regardless of which field is missing — check it against a maintenance entry where litres is the only blocker.
+- **D24-074** A negative litres value.
+- **D24-075** A negative cost per litre.
+- **D24-076** Negative run hours.
+- **D24-077** Litres above any sane tank capacity.
+- **D24-078** `Number(form.litres) || 0` — a non-numeric litres becomes 0 and blocks save.
+- **D24-079** The date defaults to `new Date().toISOString().slice(0,10)` — **UTC**, not PKT. Establish the drift between 00:00 and 05:00 PKT.
+- **D24-080** A date in the future.
+- **D24-081** There is **no venue field** — which venue does a new entry land on while scoped to another?
+- **D24-082** There is **no booking picker**, though the model carries `bookingId`.
+- **D24-083** There is **no tank-before / tank-after field**, though the model carries both.
+- **D24-084** The captured create body and endpoint.
+- **D24-085** `businessId` in the captured body.
+- **D24-086** Edit prefills every field and hides nothing.
+- **D24-087** Edit sends `PATCH` to the entry id.
+- **D24-088** With the write diverted, does the dialog claim **"Entry logged"**?
+
+### G. Remove (D24-089 → D24-094)
+
+- **D24-089** `Remove entry` opens an alert reading *"This fuel entry will be removed. This can't be undone."*
+- **D24-090** The alert **names nothing** — no generator, no date, no litres. Confirm on a destructive action.
+- **D24-091** Cancel and Escape close without a request.
+- **D24-092** Remove issues `DELETE` to the entry id.
+- **D24-093** With the write diverted, does the toast claim **"Entry removed"**?
+- **D24-094** Does the row return after a hard reload?
+
+### H. Venue scoping (D24-095 → D24-102)
+
+- **D24-095** `/api/v1/generator` is in `BUSINESS_SCOPED_PREFIXES` — confirm `businessId` on the wire.
+- **D24-096** Switch to 3358 → the row count changes.
+- **D24-097** Switch to 3359 → same.
+- **D24-098** Switch to 3360 → same.
+- **D24-099** All venues → the merged set.
+- **D24-100** The stat cards re-scope with the venue.
+- **D24-101** `queryKey: ["generator-fuel-redesigned"]` carries no businessId — the same structural risk as Modules 21–23.
+- **D24-102** At All venues, is the venue named anywhere on a row?
+
+### I. Resilience (D24-103 → D24-110)
+
+- **D24-103** Offline → the table shows its error state with Retry.
+- **D24-104** Unroutable host → same; Retry re-issues.
+- **D24-105** The error text is *"Couldn't load fuel log."*
+- **D24-106** The stat cards during a failed load — do they assert `Rs 0` and `0 L`?
+- **D24-107** Slow network → skeleton, no flash of empty.
+- **D24-108** Malformed response does not white-screen.
+- **D24-109** An unknown entry type from the API — confirmed safe by the `default: "neutral"` branch; drive it.
+- **D24-110** Console clean across the module.
+
+### J. Accessibility (D24-111 → D24-118)
+
+- **D24-111** Row actions announce which entry they act on.
+- **D24-112** Dialog labels are programmatically associated.
+- **D24-113** Status pills are not colour-only.
+- **D24-114** The alert dialog announces title + description and focuses Cancel.
+- **D24-115** Focus rings on all controls.
+- **D24-116** Heading order.
+- **D24-117** The search input has an accessible name.
+- **D24-118** The blocked-save hint is announced.
+
+### K. Mobile — 360×740 (D24-119 → D24-126)
+
+- **D24-119** No horizontal page scroll.
+- **D24-120** **And** zero clipped elements outside deliberate scroll containers.
+- **D24-121** The table switches to the card renderer.
+- **D24-122** The card shows generator, fuel, litres and cost — are the row actions reachable?
+- **D24-123** Four stat cards reflow to 2 columns.
+- **D24-124** The toolbar fits.
+- **D24-125** The dialog is usable at 360.
+- **D24-126** Touch targets ≥ 24×24.
+
+### L. Integrity close-out (D24-127 → D24-132)
+
+- **D24-127** Entry count unchanged at close, via a clean iframe realm.
+- **D24-128** The per-type split unchanged.
+- **D24-129** Delivered litres and total cost unchanged.
+- **D24-130** Tank status unchanged.
+- **D24-131** Every diverted write listed with method, URL and body.
+- **D24-132** No `POST`/`PATCH`/`DELETE` reached the real API.
+
+**132 cases written.** Execution pending — see the note below.
+
+> **Execution blocked — 2026-08-06.** The browser holding the authenticated live-prod session was
+> lost when the chrome-devtools MCP server dropped mid-session. A fresh browser reaches
+> `/dashboard/generator-fuel` and is redirected to `/login`, and submitting the correct credentials
+> now returns **"We sent a 6-digit code to m****6@gmail.com. It expires in 10 minutes."** — the
+> emailed OTP gate. I cannot read that inbox, so no case in this module has been driven on live
+> production. The cases above were written from source only, and every one of them is recorded as
+> **not run**. Nothing was written to the vendor's account. One OTP email was sent to the account
+> owner by the login attempt.
+
