@@ -21763,3 +21763,89 @@ blanket `invalidateQueries()` of Module 43; one `h1`; **0 overflowing elements a
   completing a negotiation with a customer.
 - **D44-065 shared `isPending` across rows** — needs two concurrent mutations.
 - **D44-112 another vendor's quote** — would probe a third party's data.
+
+---
+
+# SWEEP COMPLETE — all 44 modules
+
+Every module of the vendor portal has been case-listed first and then driven on **live production**
+(`www.weddingwala.pk`) in a visible browser, against a real three-venue vendor account.
+
+## Modules 37–44 (this session)
+
+| # | Module | Cases | Driven | Findings |
+|---|---|---|---|---|
+| 37 | Event profit | 170 | 121 | 15 (1× S1, 5× S2) |
+| 38 | Venue money | 200 | 138 | 14 (4× S2) |
+| 39 | Halls & spaces | 170 | 124 | 10 (1× S1, 3× S2) |
+| 40 | Cash & cheques | 140 | 108 | 10 (4× S2) |
+| 41 | Kitchen & suppliers | 140 | 104 | 8 (3× S2) |
+| 42 | Accounting / Advanced | 210 | 141 | 7 (1× S2) |
+| 43 | Field capture | 140 | 112 | 5 (3× S2) |
+| 44 | Quote requests | 130 | 108 | 4 (1× S2) |
+| | **Total** | **1,300** | **956** | **73** |
+
+Findings numbered **WWL-539 → WWL-612**.
+
+## The two S1s
+
+**WWL-569 — the public page offers a hall that is already booked.** On
+`/wedding-venues/lahore/rehman-grand-marquee-3358`, picking 13 August 2026 shows all five spaces
+green and *Available* — a date carrying two Confirmed bookings. Reproduced **anonymously, with no
+Authorization header**, on 5, 13, 21 and 29 August. The vendor's own grid agrees: 155 of 155 August
+cells `AVAILABLE`. No booking is mapped to a sub-venue, so the tree-aware engine reads an empty
+resource table and answers "free" for everything.
+
+**WWL-539 — two profit engines, one screen, Rs 2,292,300 apart.** The per-event P&L renders
+`Rs 0` across all five lines for a wedding the table 200px above prices at Rs 2,292,300. Both are
+titled as profit for one function; the lower one is subtitled *"off the ledger"*, so it reads as the
+authoritative version.
+
+## The money picture, assembled across three modules
+
+The headline "Net profit **Rs 25,508,850 · 76% margin**" is wrong three independent ways:
+
+| | |
+|---|---|
+| WWL-541 | it is *booked* minus spent — **Rs 13,417,229 has not arrived** |
+| WWL-542 | seven functions show 100% margin because nothing is tagged — **Rs 9,702,750** of it has no recorded cost |
+| WWL-554 | it ignores the Money tab's **Rs 8,847,000** of fixed overheads entirely |
+
+Booked minus *all* recorded spend is **Rs 16,661,850**.
+
+## Recurring families
+
+| Family | Instances |
+|---|---|
+| **Irreversible action, one click, no confirmation** | Post rent · Post depreciation · Open drawer · Raise PO · Accept GRN · **Close & lock month** · Hold a date · Decline quote |
+| **A panel that asks for a primary key nobody can know** | `Event night #` · `Card IDs` · `meter #` · `production run #` · `Sub-venue #` · `Org #` · `partner #` · `Weather event #` · `Counterparty biz #` |
+| **A form that submits nothing and says nothing** | Add expense · Capture a lead · Record a payment · Log an expense |
+| **A false all-clear** | over-billing "Within contract" with no contract · liability calendar on a mistyped month · a 200 that produced *"Date held"* |
+| **The FE omits `businessId` and the handler requires it** | menu re-cost · PDC drawer |
+| **Raw Postgres text in a 500** | depreciation period · availability range · reversed range |
+| **Unlabelled inputs** | Kitchen 10 · Advanced 35 · Field capture 28 |
+
+## What the product does well
+
+- **The Module 36 venue fix carries everywhere.** Zero `Venue #` boxes across 36 panels, the 28
+  Advanced views included.
+- **The compliance copy is accurate and driven.** The §21 meter quantifies the loss, cites §21(l),
+  pairs it with §111, nudges to banking, and never says "split".
+- **It is genuinely Pakistani.** Hijri season comparison, Committee/BC, Ijarah, supplier udhaar,
+  Shaadi-Qist, ghar-ka-maal netting, Raast, §165, Tally export, Draft 489-F, parchi capture,
+  `03xx-xxxxxxx`, Mehndi/Nikah/Baraat/Walima.
+- **The negotiate dialog (Module 44)** is the reference implementation the rest of the product should
+  copy: every field labelled, CTA disabled until valid, negative and zero rejected client-side, one
+  request on success.
+- **The offline banner (Module 43)** works exactly as promised, verified by flipping the network.
+- **Advance float (Module 40)** names the trap that ruins Pakistani venues in nine words.
+
+## Safety
+
+Across all eight modules: **zero journal entries posted, zero money rows written, zero customers
+contacted, zero dates held, zero periods closed, zero compliance records created.**
+
+Six POSTs were allowed through the write blocker, each only after reading its handler and confirming
+it computes and returns without touching the database: `taxCompute`, `cateringRecost`, `estimateBill`,
+`liabilityCalendarPdc`, `committeePayoutOptimiser`, `checkGrnContract`, and the three `aml/*` checks.
+Everything else was captured — body recorded — and diverted.
