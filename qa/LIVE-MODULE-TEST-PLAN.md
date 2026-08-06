@@ -48,7 +48,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 16 | Reports | `/dashboard/reports` | ✅ 70 | **`[x]` COMPLETE — 60 run, 10 not run, 10 findings** |
 | 17 | Trade operations | `/dashboard/trade-ops` | ✅ 86 | **`[x]` COMPLETE — 71 run, 15 not run, 10 findings** |
 | 18 | Automation | `/dashboard/automation` | ✅ 78 | **`[x]` COMPLETE — 62 run, 16 not run, 10 findings** |
-| 19 | Kitchen prep | `/dashboard/kitchen-prep` | ✅ 143 | `[ ]` cases written, execution in progress |
+| 19 | Kitchen prep | `/dashboard/kitchen-prep` | ✅ 143 | **`[x]` COMPLETE — 85 run, 58 not run, 13 findings (5× S2)** |
 | 20 | Inventory | `/dashboard/inventory` | — | `[ ]` |
 | 21 | Staff & payroll | `/dashboard/staff` | — | `[~]` bug confirmed, fix unverified |
 | 22 | Suppliers | `/dashboard/suppliers` | — | `[~]` dead tab open |
@@ -65,14 +65,14 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 33 | Availability | `/dashboard/settings?tab=availability` | — | `[ ]` |
 | 34 | Cancellation policy | `/dashboard/settings?tab=policy` | — | `[ ]` |
 | 35 | Setup checklist | `/dashboard/onboarding` | — | `[ ]` |
-| 36 | Tonight | `/dashboard/tonight` | — | `[ ]` |
-| 37 | Event profit | `/dashboard/event-profit` | — | `[ ]` |
-| 38 | Venue money | `/dashboard/venue-money` | — | `[ ]` |
-| 39 | Halls & spaces | `/dashboard/halls` | — | `[ ]` |
-| 40 | Cash & cheques | `/dashboard/cash-cheques` | — | `[ ]` |
-| 41 | Kitchen | `/dashboard/kitchen-suppliers` | — | `[ ]` |
-| 42 | Accounting | `/dashboard/accounting` | — | `[ ]` |
-| 43 | Field capture | `/dashboard/field-capture` | — | `[ ]` |
+| 36 | Tonight | `/dashboard/venue-os?tab=today` | — | `[ ]` |
+| 37 | Event profit | `/dashboard/venue-os?tab=profit` | — | `[ ]` |
+| 38 | Venue money | `/dashboard/venue-os?tab=money` | — | `[ ]` |
+| 39 | Halls & spaces | `/dashboard/venue-os?tab=spaces` | — | `[ ]` |
+| 40 | Cash & cheques | `/dashboard/venue-os?tab=cash` | — | `[ ]` |
+| 41 | Kitchen & suppliers | `/dashboard/venue-os?tab=kitchen` | — | `[ ]` |
+| 42 | Accounting | `/dashboard/venue-os?tab=advanced` | — | `[ ]` |
+| 43 | Field capture | `/dashboard/field` | — | `[ ]` |
 | 44 | Quote requests | `/dashboard/quotes` | — | `[ ]` |
 
 ---
@@ -8418,3 +8418,252 @@ without writing to a live caterer's recipe master — see the safety limits. Ver
 - **D19-143** Console is free of uncaught errors across the whole module.
 
 **143 cases written.** Execution follows.
+
+---
+
+## MODULE 19 — EXECUTION RESULTS
+
+Driven on live prod `https://www.weddingwala.pk/dashboard/kitchen-prep` as
+`muhammadrehmanyousaf786@gmail.com`, with the write blocker armed (`kitchen-prep` allow-listed
+after verifying it read-only in source) and a clean-realm integrity check at open and close.
+
+**85 of 143 cases driven. 13 findings (5× S2, 5× S3, 3× S4). Nothing was written** — recipe-BOM
+count is **0 / 0 / 0** across venues 3358, 3359 and 3360 at close, read through a fresh iframe realm.
+
+### The finding that governs the module
+
+**WWL-229 (S2) — the entire screen is unreachable in production, for every vendor.**
+
+The Kitchen prep sheet cannot produce a sheet, because **nothing in the product creates a recipe**:
+
+| Evidence | Result |
+|---|---|
+| `createRecipeBom` callers in the whole frontend | **zero** — the function is defined in `lib/api/venueOs.ts:1750` and never called |
+| Any `CateringItem` create UI (the ingredient master the shopping list resolves names from) | **none anywhere** |
+| Venue-OS → **Kitchen** tab controls | `Load recipes`, `Check variance`, `Raise PO`, `Load contracts`, `Add contract`, `Check` — **no recipe creation** |
+| `GET /business/{3358,3359,3360}/recipe-boms` | `200` · `[]` on all three |
+| `ENABLE_KITCHEN_BOM` | **true** globally and on all three venues — the engine is live, not dark |
+
+So the dish `<select>` can only ever offer its placeholder, `dishes.length` is always 0, and Generate
+can only ever raise *"Add at least one dish with a guest count"*. Everything downstream — the degh
+plan, the consolidated shopping list, the unmatched banner, the printable sheet, the Print button —
+**cannot be rendered by any vendor on the platform.** A nav entry, a page, a print pipeline and a
+carefully-written backend service (unit-aware aggregation, wastage clamps, fold-before-ceil) all sit
+behind a door with no handle.
+
+### WWL-230 (S3) — the empty state points at a screen that does not exist
+
+The placeholder reads **"No recipes yet — add them in kitchen settings"**. There is no "kitchen
+settings" screen. The command palette knows nothing about it either — searching **"kitchen"**
+returns one unrelated result (*"Trade operations hub — all trades"*) and does not even return this
+page; searching **"recipe"** returns six unrelated entries. The unmatched-dish banner gives the same
+dead advice: *"add a recipe BOM so these are included"*.
+
+### WWL-231 (S2) — any network failure is reported as "feature not enabled"
+
+`bomsQ` has `retry: false`, and **any** rejection replaces the whole builder with:
+
+> *"The kitchen-BOM engine isn't enabled for your account yet."*
+
+Driven twice on live, both with venue 3358 selected and `ENABLE_KITCHEN_BOM` verified **true**:
+
+| Injected failure | What the vendor is told |
+|---|---|
+| Request rewritten to an unroutable host | *"The kitchen-BOM engine isn't enabled for your account yet."* |
+| Request rewritten to a URL that returns **HTTP 500** | *"The kitchen-BOM engine isn't enabled for your account yet."* |
+
+No error text, no Retry control, no way back except a manual reload. A vendor who hits one flaky
+moment concludes the feature is not part of their plan and never returns.
+
+### WWL-232 (S2) — unusable at 360px: three of the five controls are off-screen
+
+Measured at `360×740×3, mobile, touch`:
+
+| Measurement | Value |
+|---|---|
+| Viewport | **360** |
+| Width available to the builder row (page `p-4` + card `p-4`) | **296** |
+| Fixed controls (guests 112 + Remove 32 + 2 × 8 gap) | **160** |
+| Width left for the dish select | **136** |
+| Width the select actually takes | **342** |
+| Row right edge | **535** |
+| Elements overflowing the viewport | **22** |
+
+| Control | Position at 360px | Reachable? |
+|---|---|---|
+| Dish select | 33 → 375 | partly clipped |
+| **guests input** | **383 → 495** | **entirely off-screen** |
+| **Remove** | **503 → 535** | **entirely off-screen** |
+| **Generate prep sheet** | **376 → 535** | **entirely off-screen** |
+| Add dish | 33 → 145 | ✓ the only usable control |
+
+And it cannot be scrolled to: the nearest scrollable ancestor is `MAIN` with `overflow-x: hidden`
+(`scrollWidth 568 / clientWidth 360`); setting `scrollLeft = 9999` leaves it at **0**, and
+`window.scrollTo(9999, 0)` leaves `scrollX` at **0**. `document.elementFromPoint` at the Remove
+button's coordinates returns the `SELECT` — the button is not on screen at all.
+
+**Root cause, measured not guessed.** The dish `<select>` carries `flex-1` with **no `min-w-0`**, so
+its min-content width — set by the longest option label — drives the row. Swapping the option text
+in the live DOM as a diagnostic:
+
+| Option label | Chars | Row width | Fits in 296? |
+|---|---|---|---|
+| `Biryani` | 7 | 294 | ✓ just |
+| `Chicken Karahi` | 14 | 301 | ✗ |
+| `Chicken Biryani` | 15 | 304 | ✗ |
+| `Mutton Pulao Degh` | 17 | 327 | ✗ |
+| `Chicken Handi with Naan` | 23 | 366 | ✗ |
+| `No recipes yet — add them in kitchen settings` (today's state) | 44 | **502** | ✗ |
+
+So the breakage is not an edge case: **essentially every real Pakistani dish name overflows**, and
+today's empty-state string is the worst of them. A kitchen prep sheet is a phone-and-tablet screen
+by definition, and on a phone the vendor cannot enter a head count, remove a row, or press Generate.
+
+### WWL-233 (S2) — the default venue scope produces a 500
+
+`activeBusinessId` is `null` at the default **All venues** scope, and `venueOsApi.kitchenPrep` builds
+`/business/${businessId}/kitchen-prep` from it, so the URL is literally `/business/null/kitchen-prep`.
+Probed on live through a clean realm:
+
+| Path | Status | Message |
+|---|---|---|
+| `POST /business/null/kitchen-prep` | **500** | `Authorization check failed` |
+| `POST /business/undefined/kitchen-prep` | **500** | `Authorization check failed` |
+| `POST /business/abc/kitchen-prep` | **500** | `Authorization check failed` |
+| `GET /business/null/recipe-boms` | **500** | `Authorization check failed` |
+| `POST /business/0/kitchen-prep` | 403 | `You do not have access to this business` ✓ |
+| `POST /business/999999/kitchen-prep` | 403 | `You do not have access to this business` ✓ |
+
+A malformed path parameter should be a 400, not a server error. Today the 500 is masked only because
+no dish can be selected; the moment one recipe exists, a vendor on the default scope who presses
+Generate gets *"Authorization check failed"*. The list query escapes only because
+`enabled: businessId != null` stops it firing. No stack trace leaks — credit where due.
+
+### WWL-234 (S2) — rows are silently discarded
+
+`rows.filter((r) => r.dishName.trim() && Number(r.guests) > 0)` drops a row with **no warning**.
+Driven on the live input:
+
+| Typed head count | Input keeps | Row survives the filter? |
+|---|---|---|
+| *(blank)* | `""` | **dropped** |
+| `0` | `0` | **dropped** |
+| `-50` | `-50` (no `min` attribute) | **dropped** |
+| `abc` | `""` (browser clears it) | **dropped** |
+
+The unmatched-dish banner covers only dishes with **no recipe** — it says nothing about a dish
+dropped for a bad head count. So the printed sheet comes out missing a dish, and nothing on the page
+says so. On a cook sheet a silently missing dish means a dish never gets cooked.
+
+### WWL-235 (S3) — the printed head count silently excludes unmatched dishes
+
+`sheetGuests` sums only `sheet.dishes` (the **matched** ones), so *"Total heads across dishes"* can
+print lower than the numbers the vendor typed, with no note tying the difference to the amber banner.
+Code-verified; not runnable live for the reason in WWL-229.
+
+### WWL-236 (S3) — the validation error takes about a second, and appears in the corner
+
+Measured three times from click to the toast node existing: **1253 ms** cold, **1021 ms** warm,
+**~1250 ms** on a repeat. It is a corner toast, not a message beside the offending row — so a vendor
+who clicks Generate and watches the button sees nothing at all for over a second. It is delivered
+through the `aria-live="polite"` toaster region, so it is announced.
+
+### WWL-237 (S3) — the form has no accessible names
+
+| Control | Accessible name |
+|---|---|
+| Dish `<select>` | **none at all** — no `id`, no `name`, no `aria-label`, no `aria-labelledby` |
+| `Event (optional)` | `<label>` has **no `htmlFor`**, input has **no `id`** — not programmatically associated |
+| `guests` | placeholder only, which disappears once typed into |
+| `Remove` × N | every row carries the identical `aria-label="Remove"` |
+
+With five rows a screen-reader user hears "Remove" five times with nothing to tell the rows apart —
+the same defect pattern recorded in six earlier modules.
+
+### WWL-238 (S4) — Remove on the last row is a silent no-op
+
+The `r.length > 1` guard is correct, but the button is **not disabled**, has **no `aria-disabled`**,
+and produces **no message**. Driven: clicked Remove on the only remaining row — row count stayed 1,
+value stayed `33`, `disabled: false`, zero toasts.
+
+### WWL-239 (S4) — two different descriptions for the same page
+
+| State | Description shown |
+|---|---|
+| Normal | *"Pick the dishes and head counts — get deghs to cook and a consolidated shopping list."* |
+| Error card | *"Turn the menu into deghs to cook and a shopping list."* |
+
+### WWL-240 (S4) — no sanity ceiling on a head count
+
+`999999999` is accepted; **ArrowUp takes it to 1,000,000,000**. There is no `min`, `max`, or `step`
+attribute on the field. `1e3` is accepted and displayed to the vendor as `1e3` (worth 1,000 heads).
+`12.5` is sent as `12.5` and floored server-side to `12`. `0042` displays as `0042` and sends `42`.
+
+### WWL-241 (S3) — switching venue does not reset the builder
+
+Driven: guest count `33` typed at **All venues**, then switched to **3358 Grand Marquee** — the row
+and its value survived intact while the recipe list re-scoped underneath it. Once recipes exist, a
+dish selected for one venue will remain selected against another venue's recipe list.
+
+---
+
+### What passed, and it is worth saying
+
+- **D19-072 / D19-140 / D19-141 / D19-142 — nothing was written.** Recipe-BOM count `0 / 0 / 0` at
+  close through a clean iframe realm; `ENABLE_KITCHEN_BOM` still `true` on all three venues.
+- **The backend service is the best-written code I have read in this sweep.** `explodePrepSheet`
+  folds duplicate dishes **before** the ceil (`ceil(40/50) = 1` degh, not `ceil(20/50) × 2 = 2` — one
+  saved pot), aggregates ingredients by `(itemId, unit)` so kg and g are **never** silently summed,
+  re-merges buckets once an omitted unit resolves to the item's canonical one, and clamps negative
+  wastage and negative per-batch quantities to zero so a bad row can never *shrink* a shopping list.
+  Every one of those decisions is commented with the failure it prevents.
+- **D19-096 / D19-097 — dish de-duplication is exactly right.** `Chicken Biryani` + `chicken biryani`
+  + `  Chicken Biryani  ` collapse to **one** banner entry that preserves the vendor's original
+  casing, while matching stays case- and whitespace-insensitive.
+- **Cross-venue access is correctly refused** — `businessId` 0 and 999999 both return a clean 403
+  with no data leak.
+- **D19-023 / D19-024 / D19-025 / D19-026** — every venue switch issues its own scoped request, and
+  **All venues issues none at all**, so the `null` URL of WWL-233 is never reached by the list query.
+- **D19-037 / D19-038 — my index-key concern did not materialise.** Rows are keyed by array index,
+  but the inputs are controlled from state, so filling three rows `11 / 22 / 33` and removing the
+  **first** leaves exactly `22 / 33`. Recorded as a pass.
+- **D19-113 — my print-CSS leak concern did not materialise either.** The unscoped `@media print`
+  block is JSX-rendered, so it unmounts with the component: 1 style tag on the page, **0** after a
+  client-side navigation to `/dashboard/trade-ops`.
+- **D19-056** — typing `1,200` the way a Pakistani vendor writes it yields **1200**, not `1` or `NaN`.
+- **D19-127 / D19-128** — tab order matches visual order (Event → dish → guests → Remove → Add dish →
+  Generate) and every control has a visible focus ring.
+- **D19-007** — trailing-slash and uppercase URLs both redirect per the LOCKED rules; `/dashboard/kitchen`
+  is a clean 404 (the route in the old index row was wrong, now corrected).
+- **D19-143** — console clean, no uncaught errors across the whole module.
+
+### Not driven, each with its reason
+
+| Cases | Why |
+|---|---|
+| **D19-073 → D19-084** (all 12 degh-arithmetic cases) | Every one needs at least one `RecipeBom`, and creating one means `POST /recipe-boms` writing a fake dish onto a live caterer's recipe master. Verified against `kitchenPrepService.js` and recorded as source-verified, never `[x]`. |
+| **D19-085 → D19-094** (all 10 shopping-list cases) | Same — these additionally need `CateringItem` rows, and there is no UI for those either. |
+| **D19-100 → D19-108** (the printable sheet) and **D19-109 → D19-112, D19-114** (print behaviour) | The sheet cannot be rendered by any vendor (WWL-229), so there is nothing to print. `window.print()` was intercepted and never fired. |
+| **D19-115 → D19-119, D19-121** (Generate-path resilience) | The Generate request can never leave the client while the dish list is empty, so offline / 500 / malformed-JSON / stale-response cannot be exercised through the UI. The **list**-query equivalents were driven instead and produced WWL-231. |
+| **D19-030** (per-venue recipe isolation) | All three venues have zero recipes — there is nothing to prove isolation with. |
+| **D19-034, D19-044** (second dish, duplicate dish rows) | Only one option exists in the select, so no dish can be chosen at all. |
+| **D19-061, D19-062, D19-064, D19-065, D19-066** (pending state, double-submit, body shape via the UI) | All require a request the UI cannot issue. The body contract was established by direct API probe instead (D19-063 / D19-069). |
+| **D19-009** (logged-out redirect) | Logging out would end the session and require a fresh emailed OTP. The `/dashboard` middleware gate was driven in earlier modules and is unchanged. |
+| **D19-131, D19-136, D19-137, D19-139** (banner contrast, sheet columns, Print at 360) | All belong to the sheet, which cannot render. |
+| **D19-120** (401 force-logout) | Same reason as D19-009 — clearing the token ends the session. |
+| **D19-107** (sheet in dark theme) | No sheet to view. The `bg-white text-neutral-900` pair forces both colours together, so it cannot invert. |
+| **D19-122** (sheet survives client-side nav) | No sheet. The equivalent for the builder was driven: **D19-046** — a hard reload resets to one blank row. |
+
+### Module 19 — status
+
+**143 cases written, 85 driven. 13 findings (5× S2, 5× S3, 3× S4).**
+
+**The module's verdict.** This is the clearest example in the sweep of the gap the vendor research
+named: the engineering is *finished* and the product is *unreachable*. The backend does honest,
+domain-literate work — it knows a degh is the unit of production, that two seatings of one wedding
+are one pot not two, and that kilograms and grams must never be added together. The frontend prints
+a proper kitchen order ticket. And no vendor can get to a single line of it, because the one screen
+that would create a recipe was never built, and the empty state sends them to a "kitchen settings"
+page that does not exist. On a phone — where a cook would actually hold this — three of the five
+controls are off the edge of the screen and cannot be scrolled to. And on the day someone finally
+does load a recipe, the default venue scope will greet them with *"Authorization check failed"*.
