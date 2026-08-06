@@ -66,14 +66,14 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 34 | Cancellation policy | `/dashboard/cancellation-policy` | ✅ 156 | **`[x]` COMPLETE — 105 run, 51 not run, 14 findings (1× S1, 3× S2)** |
 | 35 | Setup checklist | `/dashboard/onboarding` | ✅ 158 | **`[x]` COMPLETE — 110 run, 48 not run, 12 findings (3× S2)** |
 | 36 | Tonight | `/dashboard/venue-os?tab=today` | ✅ 150 | **`[x]` COMPLETE — 100 run, 50 not run, 12 findings (3× S2)** |
-| 37 | Event profit | `/dashboard/venue-os?tab=profit` | — | `[ ]` |
-| 38 | Venue money | `/dashboard/venue-os?tab=money` | — | `[ ]` |
-| 39 | Halls & spaces | `/dashboard/venue-os?tab=spaces` | — | `[ ]` |
-| 40 | Cash & cheques | `/dashboard/venue-os?tab=cash` | — | `[ ]` |
-| 41 | Kitchen & suppliers | `/dashboard/venue-os?tab=kitchen` | — | `[ ]` |
-| 42 | Accounting | `/dashboard/venue-os?tab=advanced` | — | `[ ]` |
-| 43 | Field capture | `/dashboard/field` | — | `[ ]` |
-| 44 | Quote requests | `/dashboard/quotes` | — | `[ ]` |
+| 37 | Event profit | `/dashboard/venue-os?tab=profit` | ✅ 170 | `[x]` COMPLETE — 121 run, 49 not run, 15 findings (1× S1, 5× S2) |
+| 38 | Venue money | `/dashboard/venue-os?tab=money` | ✅ 200 | `[x]` COMPLETE — 138 run, 62 not run, 14 findings (4× S2) |
+| 39 | Halls & spaces | `/dashboard/venue-os?tab=spaces` | ✅ 170 | `[x]` COMPLETE — 124 run, 46 not run, 10 findings (1× S1, 3× S2) |
+| 40 | Cash & cheques | `/dashboard/venue-os?tab=cash` | ✅ 140 | `[x]` COMPLETE — 108 run, 32 not run, 10 findings (4× S2) |
+| 41 | Kitchen & suppliers | `/dashboard/venue-os?tab=kitchen` | ✅ 140 | `[x]` COMPLETE — 104 run, 36 not run, 8 findings (3× S2) |
+| 42 | Accounting | `/dashboard/venue-os?tab=advanced` | ✅ 210 | `[x]` COMPLETE — 141 run, 69 not run, 7 findings (1× S2) + WWL-528 answered |
+| 43 | Field capture | `/dashboard/field` | ✅ 140 | `[x]` COMPLETE — 112 run, 28 not run, 5 findings (3× S2) |
+| 44 | Quote requests | `/dashboard/quotes` | ✅ 130 | `[x]` COMPLETE — 108 run, 22 not run, 4 findings (1× S2) |
 
 ---
 
@@ -18579,3 +18579,3273 @@ gets is a genuinely useful list of who owes them money, on which nothing is clic
 one hundred days overdue, and not a button on the row**. Among the events it counts as upcoming are a
 booking that is 0% paid and still *Pending*, one whose customer is the vendor themselves, and one
 marked **Completed** whose wedding is five weeks away and three quarters unpaid.
+
+---
+
+# Module 37 — Event profit (`/dashboard/venue-os?tab=profit`)
+
+**Surface.** Four panels, in render order:
+
+| # | Component | What it claims | Data source |
+|---|---|---|---|
+| 1 | `EventProfitBoard` | *"Did each shaadi make money?"* — 5 KPI tiles + a per-function table | bookings × `VendorExpense.bookingId` — **no GL, no flag** |
+| 2 | `EventPnlView` | *"Per-event P&L (off the ledger)"* — revenue / COGS / opex / gross / net | `GET /venue-os/bookings/:id/pnl`, double-entry GL |
+| 3 | `CateringRecost` | *"Menu re-cost (deg-rate-card)"* — food cost/head at today's rates | `POST /venue-os/menu/recost` |
+| 4 | `VenueOsInsights` | feature status + 236CB / provincial wedding-tax calculator | `GET /venue-os/health`, `POST /venue-os/tax/compute` |
+
+**Two engines answer the same question on one screen.** Panel 1 computes profit from bookings and
+tagged expenses; panel 2 computes it from the general ledger. Nothing on the page says they are
+different numbers from different sources, and a vendor reading top-to-bottom will treat the second as
+a refinement of the first.
+
+**Self-imposed limits for this module, each with its reason:**
+
+- The **tax calculator is not saved or filed** — `POST /venue-os/tax/compute` is a pure computation,
+  so it is driven; nothing that writes a tax record is.
+- **No expense is created, re-tagged or deleted** to manufacture a spend figure. The spend side is a
+  real vendor's real ledger.
+- **No booking's status or amount is edited** to test the cancelled-row logic. Cancelled rows are read
+  from the three that already exist.
+- `CateringRecost` is driven **read-only**: a re-cost computes, it does not re-price a booking.
+
+---
+
+## D37-A · Arrival, scope and identity (cases 1–18)
+
+| # | Case | Expected |
+|---|---|---|
+| D37-001 | `?tab=profit` opens directly on Bookings & Profit, not Today | tab active from URL |
+| D37-002 | Reload holds the tab | still profit |
+| D37-003 | Back from another tab returns here | history honoured |
+| D37-004 | Exactly one `h1` on the page | 1 |
+| D37-005 | `aria-selected="true"` on exactly one tab | 1 |
+| D37-006 | The active tabpanel is the profit panel | `data-state="active"` |
+| D37-007 | Panel renders all four card titles | 4 |
+| D37-008 | Section hint names what the tab does | *"Did this shaadi make money — and what tax do you owe on it?"* |
+| D37-009 | Switching the header venue re-scopes the board | rows change or are proven venue-agnostic |
+| D37-010 | "All venues" shows every venue's functions | superset of any single venue |
+| D37-011 | No `Venue #` raw number box anywhere in the panel | 0 |
+| D37-012 | No console error on arrival | 0 |
+| D37-013 | No mutating request on arrival | 0 |
+| D37-014 | Panel does not overflow horizontally at 1440px | 0 elements past the viewport |
+| D37-015 | Panel does not overflow at 360px | 0, or inside its own scroller |
+| D37-016 | The per-function table has its own `overflow-x-auto` | present (`min-w-[720px]`) |
+| D37-017 | Tab strip reachable by keyboard | arrow keys move tabs |
+| D37-018 | Focus visible on every interactive control | ring present |
+
+## D37-B · The five KPI tiles — do the numbers reconcile? (cases 19–52)
+
+| # | Case | Expected |
+|---|---|---|
+| D37-019 | `Booked` equals the sum of the Revenue column | exact |
+| D37-020 | `Received` equals the sum of the Received column | exact |
+| D37-021 | `Spent (tagged)` equals the sum of the Spent column | exact |
+| D37-022 | `Net profit` equals `Booked − Spent` | exact, per the source |
+| D37-023 | **`Net profit` counts money not yet received** | Booked − Spent, NOT Received − Spent — flag if so |
+| D37-024 | `Outstanding` equals `Booked − Received` | exact |
+| D37-025 | `Outstanding` here equals `To collect` on the Today tab | the two tabs must agree |
+| D37-026 | `% collected` = Received ÷ Booked | rounded correctly |
+| D37-027 | `% margin` = Net ÷ Booked | rounded correctly |
+| D37-028 | Cancelled bookings contribute 0 revenue | per the fix already in this file |
+| D37-029 | Cancelled bookings still contribute their tagged spend | a real loss |
+| D37-030 | A cancelled row shows a NEGATIVE net | revenue 0 − spend |
+| D37-031 | Cancelled rows are not ranked #1 under "Most profit" | regression check |
+| D37-032 | Cancelled rows are not ranked #1 under "Biggest" | regression check |
+| D37-033 | `Outstanding` excludes cancelled bookings | not chasing a called-off wedding |
+| D37-034 | Refunded bookings treated as cancelled | the cancel/refund prefix test |
+| D37-035 | Rows with neither revenue nor spend are dropped | signal-only |
+| D37-036 | A booking with spend but no price still appears | revenue 0, spend > 0 |
+| D37-037 | Margin shows an em-dash when revenue is 0 | no divide-by-zero |
+| D37-038 | Margin of exactly 100% means zero tagged spend | flag as misleading if unlabelled |
+| D37-039 | How many rows show 100% margin | count |
+| D37-040 | Rs 0-priced bookings do not distort the totals | check |
+| D37-041 | Negative net renders in rose, positive in emerald | colour matches sign |
+| D37-042 | Tiles survive a hard reload unchanged | same numbers |
+| D37-043 | Tiles agree with the Money tab's "Cost per function" spend | cross-tab |
+| D37-044 | `Spent (tagged)` is labelled as tagged-only, not total spend | wording |
+| D37-045 | Untagged expenses are excluded and this is disclosed | check for a note |
+| D37-046 | Portfolio `Net profit` vs the Money tab's total spend | reconcile |
+| D37-047 | Numbers are `tabular-nums` and right-aligned | alignment |
+| D37-048 | PKR formatting is Rs 1,234,567 throughout | no bare numbers |
+| D37-049 | No tile reads NaN, Infinity or undefined | sanity |
+| D37-050 | Tiles at 360px stack without clipping | 2-col grid |
+| D37-051 | Tile labels are readable, not truncated mid-word | check |
+| D37-052 | A tile's `delta` line matches its value | e.g. 54% collected |
+
+## D37-C · The per-function table (cases 53–96)
+
+| # | Case | Expected |
+|---|---|---|
+| D37-053 | Sort "Recent" orders by booking date descending | verified against the dates |
+| D37-054 | Sort "Most profit" orders by net descending | verified |
+| D37-055 | Sort "Biggest" orders by revenue descending | verified |
+| D37-056 | The active sort button is visually distinct | `bg-primary` |
+| D37-057 | The sort control is a real button, keyboard reachable | yes |
+| D37-058 | Sort is NOT in the URL — a sorted view cannot be shared | flag if so |
+| D37-059 | Sort survives a tab switch away and back | state or reset, recorded |
+| D37-060 | Sort resets on hard reload | recorded |
+| D37-061 | Each row names the customer, not a booking id | real names |
+| D37-062 | Each row shows date · status | present |
+| D37-063 | **Is any row a link to its booking?** | expected: 0 — flag |
+| D37-064 | Revenue column matches the booking's total | spot-check 3 rows |
+| D37-065 | Received column matches the booking's down payment | spot-check |
+| D37-066 | Spent column matches the expenses tagged to that booking | spot-check against the Money tab |
+| D37-067 | Net = Revenue − Spent per row | arithmetic on every visible row |
+| D37-068 | Margin = Net ÷ Revenue per row | arithmetic |
+| D37-069 | An em-dash in Spent means no tagged expense, not zero spend | wording |
+| D37-070 | Row count ≤ 40 | `MAX_ROWS` |
+| D37-071 | When truncated, the "Showing 40 of N" line appears | disclosure |
+| D37-072 | That line points somewhere useful | is it a link? |
+| D37-073 | Empty state when no priced bookings | copy check |
+| D37-074 | Loading state while bookings/expenses resolve | *"Loading your bookings…"* |
+| D37-075 | Expense query failure degrades to spend em-dash, not a broken board | kill the request and observe |
+| D37-076 | Booking query failure shows a real error, not an empty board | observe |
+| D37-077 | Table has a `thead` with `th` headers | semantics |
+| D37-078 | Headers carry a scope | a11y |
+| D37-079 | Table scrolls horizontally inside its own container at 360px | `overflow-x-auto` |
+| D37-080 | The page itself does not scroll horizontally at 360px | `docScrollX` false |
+| D37-081 | A Completed booking dated in the future appears here too | cross-check WWL-529 |
+| D37-082 | A booking whose customer is the vendor appears | cross-check WWL-533 |
+| D37-083 | Statuses rendered verbatim from the API | no invented labels |
+| D37-084 | `Awaiting Payment` rows show Received Rs 0 | consistency |
+| D37-085 | `Pending` rows are counted in Booked | is an unconfirmed booking "booked"? — record |
+| D37-086 | Row hover gives feedback | recorded |
+| D37-087 | Row order stable across re-render | no jitter |
+| D37-088 | Same booking never appears twice | dedupe |
+| D37-089 | Multi-venue: rows from all three venues present under "All venues" | check |
+| D37-090 | Switching to one venue filters the table | or is proven not to — record |
+| D37-091 | Dates formatted consistently | no mixed formats |
+| D37-092 | Long customer names truncate rather than break the layout | check |
+| D37-093 | Currency never renders in a different unit | check |
+| D37-094 | Table re-sorts without a network request | client-side |
+| D37-095 | No mutating request from any sort click | 0 |
+| D37-096 | Sorting twice on the same key does not toggle direction silently | record |
+
+## D37-D · Per-event P&L, off the ledger (cases 97–124)
+
+| # | Case | Expected |
+|---|---|---|
+| D37-097 | The booking picker lists functions by name and date | not raw ids |
+| D37-098 | Picker placeholder reads *"Which function?"* | copy |
+| D37-099 | Picking a booking issues exactly ONE request | not two |
+| D37-100 | Management view is the default | `MANAGEMENT_ONLY` |
+| D37-101 | The Management / Tax toggle is a real pair of buttons | yes |
+| D37-102 | Switching to Tax (declared) re-queries | new request |
+| D37-103 | Tax and Management return DIFFERENT numbers | if identical, the toggle is decorative — flag |
+| D37-104 | Five stats render: Revenue, Food/COGS, Overheads, Gross, Net | 5 |
+| D37-105 | `Gross profit` = Revenue − COGS | arithmetic |
+| D37-106 | `Net profit` = Gross − Overheads | arithmetic |
+| D37-107 | Net renders emerald when ≥ 0, red when < 0 | colour |
+| D37-108 | **The GL Revenue matches the board's Revenue for the same booking** | the two engines must agree — flag if not |
+| D37-109 | The GL Net matches the board's Net for the same booking | flag if not |
+| D37-110 | A booking with no GL postings returns an honest empty, not zeros | observe |
+| D37-111 | Error copy on failure is *"Couldn't load per-event P&L."* | present |
+| D37-112 | That copy does not leak a Postgres/Sequelize string | check |
+| D37-113 | `retry: false` — a failure does not storm the backend | 1 request |
+| D37-114 | The panel is scoped by the active venue | `activeBusinessId` in the query key |
+| D37-115 | Switching venue with a booking picked re-queries | check |
+| D37-116 | Picking a booking from another venue is handled | 403/404 or empty, not a crash |
+| D37-117 | Loading state shows *"Loading…"* | present |
+| D37-118 | Clearing the picker clears the stats | no stale numbers |
+| D37-119 | The picked booking is NOT in the URL | flag — cannot be shared |
+| D37-120 | The panel does not write anything | 0 mutations |
+| D37-121 | Stats at 360px stack 2-wide | `grid-cols-2` |
+| D37-122 | Every stat is Rs-formatted | check |
+| D37-123 | Nothing renders Rs NaN | sanity |
+| D37-124 | The two profit panels are visually distinguishable | do they look like the same answer twice? |
+
+## D37-E · Menu re-cost (cases 125–146)
+
+| # | Case | Expected |
+|---|---|---|
+| D37-125 | **The panel asks for "Card IDs" as free text** | flag: unanswerable |
+| D37-126 | There is no picker for deg-rate-cards anywhere on the page | confirm |
+| D37-127 | Nothing on the page tells the vendor where to find a card id | confirm |
+| D37-128 | Re-cost is disabled until Card IDs is non-empty | `disabled` |
+| D37-129 | Typing letters produces an empty id list, not a crash | filtered |
+| D37-130 | An empty id list still fires a request | flag if it does |
+| D37-131 | Ids accept comma OR space separation | both |
+| D37-132 | Negative and zero ids are dropped | positive only |
+| D37-133 | A non-existent id returns an honest error | observe |
+| D37-134 | Error copy is *"Couldn't load catering re-cost."* | present |
+| D37-135 | Error copy does not leak internals | check |
+| D37-136 | `Quoted / head` is optional | request omits it when blank |
+| D37-137 | Food cost/head renders with 2-dp rounding | check |
+| D37-138 | The underwater alert appears when cost exceeds quoted | observe or reason |
+| D37-139 | The alert names the ingredient that moved | per the source comment |
+| D37-140 | Re-cost issues exactly one request per click | not two |
+| D37-141 | Double-clicking Re-cost does not double-fire | busy guard |
+| D37-142 | Busy state shows *"Costing…"* | present |
+| D37-143 | The result clears before a new request | no stale figure |
+| D37-144 | The panel writes nothing | recost is a computation |
+| D37-145 | Panel usable at 360px | check |
+| D37-146 | The quoted-per-head field accepts negatives | record |
+
+## D37-F · Tax calculator + status (cases 147–170)
+
+| # | Case | Expected |
+|---|---|---|
+| D37-147 | The status card lists which venue-OS features the account has | present |
+| D37-148 | Status is scoped to the ACTIVE venue | in the query key |
+| D37-149 | Status does not read as a list of internal flag names | wording |
+| D37-150 | Base amount defaults to 1,000,000 | check |
+| D37-151 | Five jurisdictions offered: PRA SRB KPRA BRA ICT | 5 |
+| D37-152 | The jurisdiction defaults to PRA | Punjab — matches two of three venues |
+| D37-153 | A Rawalpindi venue also defaults to PRA | correct (Punjab) |
+| D37-154 | Filer / Non-filer toggle present | 2 |
+| D37-155 | Non-filer is the default | record — is that the safe default? |
+| D37-156 | Compute returns a breakdown, not a single number | check |
+| D37-157 | 236CB advance tax appears in the breakdown | named |
+| D37-158 | Non-filer rate is higher than filer for the same base | arithmetic |
+| D37-159 | Changing jurisdiction changes the result | not decorative |
+| D37-160 | The rates match the published FBR/PRA rates | spot-check one |
+| D37-161 | Compute fires exactly one request | not two |
+| D37-162 | A zero base returns zero, not an error | observe |
+| D37-163 | A negative base is rejected or handled | record |
+| D37-164 | The result is NOT saved anywhere | read-only — confirm 0 writes |
+| D37-165 | Nothing claims the figure is filed with FBR | wording — this is a calculator |
+| D37-166 | The calculator does not use the booking's real amount | standalone — flag as a missed connection |
+| D37-167 | Error path shows honest copy | observe |
+| D37-168 | Panel usable at 360px | check |
+| D37-169 | The tax panel and the profit board do not disagree on revenue | cross-check |
+| D37-170 | Nothing on this tab writes to the ledger | 0 mutations across the whole module |
+
+**Total: 170 cases.**
+
+---
+
+## Module 37 — RESULTS (live production, visible browser)
+
+**170 cases written · 121 driven · 49 not run · 15 findings (1× S1, 5× S2, 8× S3, 1× S4).**
+
+Writes: **2 POSTs, both verified pure computations** before being allowed through the blocker —
+`taxComputeHandler` (returns `taxCalc.computeBookingTax`) and `cateringRecostHandler` (returns
+`catering.costMenuByCardIds`). Neither touches the database. Every other write stayed diverted.
+**Nothing on this tab was persisted.**
+
+### The screen, as measured
+
+| Panel | State |
+|---|---|
+| `EventProfitBoard` | 22 rows, 5 tiles, all arithmetic exact |
+| `EventPnlView` | renders **Rs 0** for every line, on a Rs 2,292,300 wedding |
+| `CateringRecost` | **400 on every click** — cannot ever return a result |
+| `VenueOsInsights` | **works, and the rates are right** |
+
+---
+
+### WWL-539 (S1) — two engines, one screen, Rs 2,292,300 apart
+
+Picked *Salman Rauf & Kinza Salman* in the per-event P&L. Exactly one request went out:
+
+```
+GET /api/v1/venue-os/bookings/168/pnl?isDeclared=MANAGEMENT_ONLY   → 200
+{"revenue":0,"cogs":0,"opex":0,"grossProfit":0,"netProfit":0,"byType":{}}
+```
+
+Rendered on screen:
+
+> Revenue **Rs 0** · Food / COGS **Rs 0** · Overheads **Rs 0** · Gross profit **Rs 0** · Net profit **Rs 0**
+
+Two hundred pixels above it, in the same panel, the same wedding:
+
+> Salman Rauf & Kinza Salman · 21-Aug-2026 · Confirmed — Revenue **Rs 2,292,300**, Received
+> **Rs 1,146,150**, Spent **Rs 745,200**, Net **Rs 1,547,100**, Margin **67%**
+
+Both are titled as profit for one function. Neither says where its number comes from. The board reads
+bookings and tagged expenses; the P&L reads the double-entry GL, and this vendor has **no GL postings
+at all** — so the ledger honestly has nothing, and reports that as `Rs 0` instead of *"nothing has
+been posted to the ledger for this function"*.
+
+A vendor scrolling down sees the second panel as the authoritative refinement of the first — it is
+literally subtitled *"off the ledger"*. Read that way, the screen says this wedding earned nothing.
+
+`byType:{}` is the proof the data is absent rather than zero, and it is discarded before render.
+
+### WWL-540 (S2) — Menu re-cost cannot work, and says so in the server's words
+
+The panel sends:
+
+```js
+venueOsApi.recostMenu({ cardIds: ids, quotedPerHead: quoted ? Number(quoted) : undefined })
+```
+
+The handler requires a business:
+
+```js
+if (!businessId) return apiResponse(res, 400, false, "businessId is required", null);
+```
+
+Verified from Node, against production, with the same token:
+
+| Body sent | Result |
+|---|---|
+| `{cardIds:[12,14,19], quotedPerHead:1500}` — **what the FE sends** | **400** `BusinessId is required` |
+| `{cardIds:[12,14,19], quotedPerHead:1500, businessId:3358}` | **200** `{"costPerHead":0,"dishes":[],…}` |
+
+And on screen, after a real click with real ids:
+
+> Menu re-cost (deg-rate-card) | Card IDs | Quoted / head | Re-cost | **BusinessId is required**
+
+The vendor is shown a server-side field name for a field the form never had. Every other Venue-OS
+panel was given `useBusinessIdField`; this one was missed. It has **never** returned a cost.
+
+### WWL-541 (S2) — Rs 25,508,850 "net profit" includes Rs 13,417,229 nobody has paid
+
+The tiles reconcile exactly with the table — I summed all 22 rows:
+
+| Tile | Shown | Column sum | Δ |
+|---|---|---|---|
+| Booked | Rs 33,493,850 | Rs 33,493,850 | 0 |
+| Received | Rs 20,076,621 | Rs 20,076,621 | 0 |
+| Spent (tagged) | Rs 7,985,000 | Rs 7,985,000 | 0 |
+| Net profit | Rs 25,508,850 | Rs 25,508,850 | 0 |
+
+The arithmetic is right. The definition is the problem:
+
+```js
+const net = booked - spent;   // NOT received - spent
+```
+
+`Net profit Rs 25,508,850 · 76% margin` sits three tiles along from `Outstanding Rs 13,417,229 ·
+to collect`. **53% of the declared profit has not arrived**, including Rs 2,596,400 from a booking
+still marked *Pending* and Rs 1,673,250 from one *Awaiting Payment*, both at Rs 0 received.
+
+Nothing on the tile says "booked", and a hall owner deciding whether they can afford a new genset is
+reading the largest, greenest number on the screen.
+
+### WWL-542 (S2) — seven weddings at 100% margin
+
+Seven of 22 rows show a margin of exactly **100%**, every one of them because no expense is tagged:
+
+| Function | Revenue | Spent | Net | Margin |
+|---|---|---|---|---|
+| Rizwan Anjum & Momina Rizwan | Rs 2,596,400 | — | Rs 2,596,400 | 100% |
+| Ahmed Raza & Sanam Ahmed | Rs 1,673,250 | — | Rs 1,673,250 | 100% |
+| Imran Shafi & Hafsa Imran | Rs 1,546,000 | — | Rs 1,546,000 | 100% |
+| Asad Jameel & Alishba Asad | Rs 1,460,600 | — | Rs 1,460,600 | 100% |
+| Bilal Hussain & Ayesha Bilal | Rs 1,411,500 | — | Rs 1,411,500 | 100% |
+| Muhammad Rehman Yousaf | Rs 665,000 | — | Rs 665,000 | 100% |
+| Waheed Jutt | Rs 350,000 | — | Rs 350,000 | 100% |
+
+**Rs 9,702,750 — 38% of the reported net profit — is revenue with no recorded cost, presented as
+pure profit.** No wedding has a 100% margin. The other fifteen rows, which do have tagged expenses,
+land between 64% and 68% — so the true figure for these seven is knowable within a few percent and
+the screen does not say so.
+
+The subtitle does warn *"Tag expenses to a booking to see the spend side fill in"*, and the column
+prints an em-dash rather than `Rs 0`. But the **Margin column still prints `100%`** and the Net
+column still prints the full revenue in emerald — the two places a vendor actually looks.
+
+### WWL-543 (S2) — the Management / Tax (declared) toggle cannot be told apart
+
+Both buttons fire correctly and distinctly:
+
+```
+GET /venue-os/bookings/168/pnl?isDeclared=MANAGEMENT_ONLY  → all zeros
+GET /venue-os/bookings/168/pnl?isDeclared=DECLARED         → all zeros
+```
+
+Identical output. The toggle exists to separate what the venue really earned from what it declares —
+the single most consequential distinction on a Pakistani venue's books — and on this account it is
+indistinguishable from a decorative pair of buttons. Downstream of WWL-539: with no GL postings,
+neither view can differ.
+
+### WWL-544 (S3) — 22 rows, 0 links
+
+Counted: `panel.querySelectorAll('a')` inside the table = **0**. Same family as WWL-534 on the Today
+board (now fixed there). Every row names a real customer and a real amount and opens nothing.
+
+### WWL-545 (S3) — "Card IDs · e.g. 12, 14, 19"
+
+A free-text box asking for a comma-separated list of deg-rate-card primary keys. Confirmed on the
+live page: **no card picker anywhere in the panel**, and no text telling the vendor where a card id
+could be found. Same family as the `Event night #` / `Sub-venue #` finding in Module 36.
+
+### WWL-546 (S3) — letters enable the button and fire a request
+
+`disabled={!cardIds}` tests the raw string, not the parsed ids. Typing `abc`:
+
+- button **enables** (`disabledWithLetters: false`)
+- clicking fires **1 request** with `cardIds: []`
+- backend returns `{"costPerHead":0,"dishes":[],"missingRates":[],"alert":null}`
+- the panel shows **nothing at all** — no result, no error, no "no cards matched"
+
+### WWL-547 (S3) — the sort is not in the URL
+
+All three sorts work, are monotonic and cost **zero requests** (verified client-side). But
+`location.search` stays `?tab=profit` under every one of them. The hub's own comment celebrates
+fixing exactly this for tabs — *"a vendor could not bookmark Money & Expenses"* — and the sort
+inside the tab was left behind. "Most profit" is the view an owner actually wants to reopen.
+
+### WWL-548 (S3) — the page has no `h1`
+
+`document.querySelectorAll('h1').length` = **0** on `/dashboard/venue-os`. Headings start at `h3`.
+
+### WWL-549 (S3) — table headers carry no `scope`
+
+6 `<th>` in the per-function table, **0** with a `scope` attribute. A screen reader cannot associate
+`Rs 745,200` with *Spent*.
+
+### WWL-550 (S3) — a Rs 0 bill is rejected as a missing field
+
+```
+POST /venue-os/tax/compute {"baseAmount":0,"jurisdiction":"PRA","filerStatus":"FILER"}
+→ 400 {"message":"BaseAmount and jurisdiction are required"}
+```
+
+`if (!baseAmount)` treats `0` as absent. A zero bill is a legitimate question and the error names the
+wrong problem.
+
+### WWL-551 (S3) — a negative bill computes a negative tax
+
+```
+POST /venue-os/tax/compute {"baseAmount":-500000,…}
+→ 200 {"baseAmount":-500000,"wht236cb":{"taxAmount":-50000,…}}
+```
+
+Rs −50,000 of withholding tax. Neither rejected nor flagged.
+
+### WWL-552 (S3) — the calculator never offers the amounts sitting above it
+
+The bill field is hardcoded to **1,000,000** and the vendor retypes their real figure. Twenty-two
+real booking totals are on the same screen, in the same panel, and the calculator cannot see any of
+them. Filer status defaults to **Non-filer** (the higher rate) with nothing explaining the choice.
+
+### WWL-553 (S4) — unconfirmed bookings are counted as "Booked"
+
+`Pending` (Rs 2,596,400, Rs 0 received) and `Awaiting Payment` (Rs 1,673,250, Rs 0 received) are both
+in the Booked tile and in net profit. Defensible, but undisclosed.
+
+---
+
+### What holds — verified, not assumed
+
+- **Every row's arithmetic is exact.** Checked `net === revenue − spent` and
+  `margin === round(net/revenue)` on all 22 rows: **0 discrepancies**.
+- **Tiles reconcile to the column sums to the rupee** on all four money tiles.
+- **The cancelled-booking fix holds.** Three cancelled bookings worth Rs 3,855,050 — including
+  *Usman Tariq & Hira Usman* at Rs 2,742,400, which the source records as previously ranking #1 under
+  both "Most profit" and "Biggest" — are now absent from all 22 rows, and the #1 slots are held by
+  live bookings under both sorts.
+- **Sorts are correct and free.** "Most profit" and "Biggest" verified monotonic on the rendered
+  rows; **0 network requests** across all three.
+- **The tax engine is real and jurisdiction-sensitive**, matching published rates:
+
+  | Jurisdiction | Provincial | 236CB (non-filer) | Total |
+  |---|---|---|---|
+  | PRA | 5% → Rs 50,000 | 20% → Rs 200,000 | **Rs 250,000** |
+  | SRB | 15% → Rs 150,000 | 20% → Rs 200,000 | **Rs 350,000** |
+
+  Filer 10% vs non-filer 20% confirmed on the same base (`sourceRuleId` 12 vs 13). This is the best
+  panel on the tab.
+- **Layout is clean.** 0 overflowing elements at **1440px** and at **360×740** with real device
+  emulation; `docScrollX` false at both. The wide table sits in its own `overflow-x: auto` scroller
+  (720px content, 326px viewport) — the correct pattern, and the one the Today board was missing.
+- **The P&L picker is by name and date**, fires exactly one request, and `retry: false` holds.
+- **No `Venue #` box anywhere on this tab** — the Module 36 fix carries.
+
+### Not run (49), with reasons
+
+- **D37-064–066 full spot-check against `/dashboard/bookings/{id}`** — three rows were reconciled
+  against the Money tab; opening each booking page for all 22 was not driven.
+- **D37-075/076 forced query failure** — would require blocking a GET the whole dashboard shares.
+- **D37-009/010/089/090 per-venue re-scope of the board** — the board is venue-agnostic by
+  construction (it reads `/bookings` unscoped); driving the header switch three times was not done.
+- **D37-116 cross-venue booking in the P&L** — would probe another venue's ledger.
+- **D37-133/138/139 the underwater alert** — needs a deg-rate-card that exists; the panel 400s before
+  any id is evaluated (WWL-540), so no path reaches the alert.
+- **D37-160 full rate audit** — one jurisdiction pair spot-checked, not all five.
+
+---
+
+# Module 38 — Venue money (`/dashboard/venue-os?tab=money`)
+
+**Surface.** Seven panels — the widest money surface in the product:
+
+| # | Component | What it does | Writes? |
+|---|---|---|---|
+| 1 | `ExpenseCockpit` | day/month/year/all spend, by category, cost per function | Add expense |
+| 2 | `WageCostingView` | per-event dihari labour register → GL `EXPENSE_DIHARI` | Record shift, Post to GL |
+| 3 | `VenueLeaseView` | rent + pagri + deposit + escalation, monthly accrual | Add lease, **Post rent** |
+| 4 | `GensetSkimView` | diesel tank-dip vs hour-meter → skim % | measurement only |
+| 5 | `UtilityAllocationView` | shared bill → per-event share, cascade basis | Add meter, Record bill, **Post** |
+| 6 | `DepreciationView` | fixed assets, straight-line monthly | Add asset, **Post** |
+| 7 | `TariffEstimatorView` | DISCO slab engine → computed bill | pure computation |
+
+**Self-imposed limits for this module, each with its reason:**
+
+This tab posts **double-entry journal entries to a live vendor's general ledger**. Rent, pagri,
+depreciation and utility allocation all land in `JournalEntry` and change what every event's
+fully-costed P&L reports. So:
+
+- **Nothing is posted.** Every `Post` / `Add` / `Record` button is driven with the write blocker
+  armed; the request is captured and diverted, never delivered.
+- **Preview is not clicked through to the network either.** `Preview` and `Post` share one endpoint
+  and differ only by `dryRun` in the body, and the XHR blocker decides at `open()` — before a body
+  exists — so it cannot tell them apart. Instead the Preview click is captured and its **body is read
+  from the blocker's own record**, which proves what the button would have sent without sending it.
+- **The dry-run engine is driven Node-side instead**, with `dryRun: true` set explicitly by me.
+  Verified safe first: `txPostingEngine.postEvent` returns at the `if (dryRun)` guard **before any
+  database write**, and every posting path in this module goes through it;
+  `utilityAllocationService.runAllocation` returns even earlier.
+- **The tariff estimator is driven for real** — `estimateBillHandler` computes and returns, no write.
+- **No expense row is created, edited or deleted** on a real vendor's books.
+
+---
+
+## D38-A · Arrival, scope, layout (cases 1–20)
+
+| # | Case | Expected |
+|---|---|---|
+| D38-001 | `?tab=money` opens on Money & Expenses | tab active from URL |
+| D38-002 | Reload holds the tab | still money |
+| D38-003 | All seven panels render | 7 card titles |
+| D38-004 | Section hint describes the tab | *"Every rupee out…"* |
+| D38-005 | **No `Venue #` raw number box anywhere** | 0 — the Module 36 fix |
+| D38-006 | Venue dropdowns name the venues | *"Rehman Grand Marquee · Lahore"* |
+| D38-007 | How many venue dropdowns on the tab | count |
+| D38-008 | Every venue dropdown shows the SAME venue | they must not disagree |
+| D38-009 | Changing one dropdown does not desync the others | record actual behaviour |
+| D38-010 | No console error on arrival | 0 |
+| D38-011 | No mutating request on arrival | 0 |
+| D38-012 | No horizontal overflow at 1440px | 0 elements |
+| D38-013 | No horizontal overflow at 360px | 0, or inside a scroller |
+| D38-014 | Wide tables have their own `overflow-x` scroller | check each |
+| D38-015 | Panel order matches the hint's promise | rent & overheads included |
+| D38-016 | Every panel has a heading a vendor can read | no internal jargon-only titles |
+| D38-017 | Focus ring visible on every control | check |
+| D38-018 | Tab is keyboard reachable | check |
+| D38-019 | Number inputs are labelled | every `input[type=number]` has a label |
+| D38-020 | Count remaining unanswerable-id boxes | e.g. `meter #`, `production run #` |
+
+## D38-B · Expense cockpit (cases 21–58)
+
+| # | Case | Expected |
+|---|---|---|
+| D38-021 | Day / Month / Year / All range buttons present | 4 |
+| D38-022 | Month is the default | check |
+| D38-023 | Switching range re-queries | request per switch |
+| D38-024 | Switching range changes the totals | not decorative |
+| D38-025 | The range is NOT in the URL | flag if so |
+| D38-026 | "Today" shortcut sets the period | check |
+| D38-027 | `Spent · month` matches the sum of the category rows | exact |
+| D38-028 | Category percentages sum to ~100% | ±1 rounding |
+| D38-029 | `Fixed overheads` + `Event / function costs` = total | exact |
+| D38-030 | **`Fixed overheads` reads Rs 0 while rent/utilities panels exist below** | flag if so |
+| D38-031 | `Biggest category` matches the top category row | consistent |
+| D38-032 | `-21% vs last month` is arithmetically right | verify against the previous month |
+| D38-033 | The comparison names which month it compares to | wording |
+| D38-034 | Category list is sorted by amount descending | check |
+| D38-035 | A `FIXED` badge appears on fixed categories | present |
+| D38-036 | Cost-per-function table lists only tagged expenses | wording says so |
+| D38-037 | Cost per function net = revenue − spent | arithmetic on every row |
+| D38-038 | Cost-per-function revenue matches the Profit tab for the same booking | cross-tab |
+| D38-039 | Cost-per-function spend matches the Profit tab's Spent column | cross-tab |
+| D38-040 | `4 events` count matches the visible rows | consistent |
+| D38-041 | Expenses with no booking are excluded here and disclosed | check |
+| D38-042 | Total spend on this tab equals `Spent (tagged)` on the Profit tab | **or the difference is explained** |
+| D38-043 | Rows link to the booking | expected 0 — flag |
+| D38-044 | Rows link to the expense | expected 0 — flag |
+| D38-045 | "Add expense" opens a form | check |
+| D38-046 | The form validates a missing amount | driven, not submitted |
+| D38-047 | The form validates a missing category | driven, not submitted |
+| D38-048 | The form lets an expense be tagged to a booking by NAME | not a raw id |
+| D38-049 | Cancelling the form writes nothing | 0 |
+| D38-050 | The form's submit is captured by the blocker | body recorded, not delivered |
+| D38-051 | The captured body carries the venue's businessId | check |
+| D38-052 | Empty state when a range has no expenses | copy |
+| D38-053 | Loading state while the range re-queries | present |
+| D38-054 | Currency formatting consistent | `Rs 1,234,567` |
+| D38-055 | No `NaN` / `Infinity` in any tile | sanity |
+| D38-056 | Percentages render as integers | check |
+| D38-057 | The cockpit at 360px | usable |
+| D38-058 | Range switch fires exactly one request | not two |
+
+## D38-C · Wage costing / dihari labour (cases 59–82)
+
+| # | Case | Expected |
+|---|---|---|
+| D38-059 | Panel titled for a vendor, not an accountant | *"Per-event dihari labour"* |
+| D38-060 | Rate and Paid are labelled number fields | check |
+| D38-061 | The event is picked by NAME, not a booking id | check — flag if raw |
+| D38-062 | "Record shift" is disabled until required fields are set | check |
+| D38-063 | A below-min-wage rate raises the floor warning | driven |
+| D38-064 | The warning names the actual minimum wage figure | wording |
+| D38-065 | The warning does not block recording | record behaviour |
+| D38-066 | "Record shift" body is captured, not delivered | blocker |
+| D38-067 | The captured body carries businessId + bookingId | check |
+| D38-068 | "Labour by event" is a read | GET |
+| D38-069 | "Labour by event" returns this venue's data only | scoped |
+| D38-070 | Labour totals reconcile with the Profit tab's Spent | cross-check or explain |
+| D38-071 | The wage register is described as immutable | wording present |
+| D38-072 | Nothing offers to delete a recorded shift | check |
+| D38-073 | Post-to-GL is a separate, explicit action | check |
+| D38-074 | Post-to-GL is captured, not delivered | blocker |
+| D38-075 | A shift with Paid > Rate × days is flagged | driven or reasoned |
+| D38-076 | Negative rate rejected | driven |
+| D38-077 | Zero rate handled | driven |
+| D38-078 | Error copy is human | check |
+| D38-079 | Error copy leaks no SQL | check |
+| D38-080 | Panel loads on arrival where it can | check |
+| D38-081 | Panel at 360px | usable |
+| D38-082 | One click → one request | not two |
+
+## D38-D · Venue lease — rent, pagri, deposit (cases 83–112)
+
+| # | Case | Expected |
+|---|---|---|
+| D38-083 | "Load leases" returns this venue's leases | driven |
+| D38-084 | Empty state when the venue owns its hall | most PK halls are owned — copy check |
+| D38-085 | Term defaults to 36 months | check |
+| D38-086 | Escalation defaults to 10%/yr | check |
+| D38-087 | Both defaults are labelled, not bare numbers | check |
+| D38-088 | Rent/mo, Pagri, Deposit are separate fields | 3 |
+| D38-089 | Pagri is explained as key money somewhere | wording |
+| D38-090 | "Add lease" is captured, not delivered | blocker |
+| D38-091 | The captured body carries every field entered | check |
+| D38-092 | **"Preview" and "Post rent" hit the same endpoint** | confirm from the captured bodies |
+| D38-093 | **Preview's captured body carries `dryRun: true`** | the safety contract |
+| D38-094 | **"Post rent"'s captured body does NOT carry dryRun** | it would really post |
+| D38-095 | Nothing warns that Post rent writes to the ledger | flag if absent |
+| D38-096 | Post rent has no confirmation step | flag if absent |
+| D38-097 | The period field is required | backend 400s without it |
+| D38-098 | An invalid period shape is rejected | `YYYY-MM` |
+| D38-099 | Dry-run accrual returns a preview Node-side | driven with `dryRun:true` |
+| D38-100 | The dry-run response is marked `dryRun: true` | check |
+| D38-101 | The dry-run response posts no journal | `journalEntry` has no id |
+| D38-102 | With no active leases the response says so | *"no active leases"* |
+| D38-103 | Remaining commitment = future rent + remaining pagri | arithmetic |
+| D38-104 | Escalation is applied per elapsed year | reasoned from `rentForPeriod` |
+| D38-105 | A lease not yet started is skipped as `not_started` | driven |
+| D38-106 | An expired lease is skipped as `expired` | driven |
+| D38-107 | Security deposit is NOT expensed | it is refundable |
+| D38-108 | Posting twice is idempotent | `sourceRefType` includes the period |
+| D38-109 | Error copy is human | check |
+| D38-110 | Panel at 360px | usable |
+| D38-111 | Lease rows link to nothing | record |
+| D38-112 | Rent flows into the Profit tab's cost | cross-check or record as unlinked |
+
+## D38-E · Genset skim (cases 113–130)
+
+| # | Case | Expected |
+|---|---|---|
+| D38-113 | Panel explains tank-dip vs hour-meter | wording |
+| D38-114 | kVA is labelled | check |
+| D38-115 | The calibration banner is present | *"Estimate, not measured"* |
+| D38-116 | The banner says how many clean events are needed | N≥5 per the source |
+| D38-117 | The banner flips wording once measured | reasoned |
+| D38-118 | The estimate chip is visually prominent | check |
+| D38-119 | "Reconcile event" picks the event by name | flag if raw id |
+| D38-120 | Skim % is computed, not typed | check |
+| D38-121 | Three flags are surfaced | per the source |
+| D38-122 | **Skim posts no journal entry** | the source says measurement only — verify 0 writes |
+| D38-123 | A dip larger than the tank is rejected | driven |
+| D38-124 | Negative consumption is rejected | driven |
+| D38-125 | Zero run-hours handled | driven |
+| D38-126 | "Summary" is a read | GET |
+| D38-127 | Summary scoped to the venue | check |
+| D38-128 | Error copy is human | check |
+| D38-129 | Panel at 360px | usable |
+| D38-130 | One click → one request | not two |
+
+## D38-F · Utility allocation (cases 131–158)
+
+| # | Case | Expected |
+|---|---|---|
+| D38-131 | **The panel asks for `meter #`** | flag if it is a raw id |
+| D38-132 | "Add" creates a meter — captured, not delivered | blocker |
+| D38-133 | "List" is a read | GET |
+| D38-134 | Meters listed by name, not id | check |
+| D38-135 | "Record bill" is captured, not delivered | blocker |
+| D38-136 | The bill body carries `total payable` and the meter | check |
+| D38-137 | The basis cascade is named on screen | SUBMETER→LOAD_HOURS→GUESTS→REVENUE→MANUAL |
+| D38-138 | The basis actually used is shown per run | per the source |
+| D38-139 | **Preview's captured body carries `dryRun: true`** | safety contract |
+| D38-140 | **Post's captured body does not** | it would really post |
+| D38-141 | Dry-run allocation driven Node-side returns a preview | `dryRun: true` in the response |
+| D38-142 | The dry run returns `run: null` | no row created |
+| D38-143 | The dry run reports `journalCount` without posting | check |
+| D38-144 | Per-event shares sum to the allocatable total | arithmetic |
+| D38-145 | The unallocatable remainder is named | `UTIL_GRID_COMMON` |
+| D38-146 | The remainder is described in plain words on screen | flag if only the code shows |
+| D38-147 | A re-run reverses the prior posted run | documented — not driven |
+| D38-148 | Nothing warns that a re-run reverses | flag if absent |
+| D38-149 | `residual %` defaults to 0 and is labelled | check |
+| D38-150 | A bill with no events in the month is handled | driven |
+| D38-151 | A zero bill is handled | driven |
+| D38-152 | A negative bill is rejected | driven |
+| D38-153 | Off-season accrual is a separate action | check |
+| D38-154 | Error copy is human | check |
+| D38-155 | Error copy leaks no SQL | check |
+| D38-156 | Panel at 360px | usable |
+| D38-157 | One click → one request | not two |
+| D38-158 | Allocated cost reaches the Profit tab | cross-check or record as unlinked |
+
+## D38-G · Depreciation (cases 159–182)
+
+| # | Case | Expected |
+|---|---|---|
+| D38-159 | "Load assets" is a read | GET |
+| D38-160 | Assets listed by name | check |
+| D38-161 | `Life (months)` defaults to 60 | check |
+| D38-162 | `residual %` defaults to 0 | check |
+| D38-163 | Both defaults are labelled | check |
+| D38-164 | Cost is a required field | check |
+| D38-165 | "Add asset" is captured, not delivered | blocker |
+| D38-166 | **Preview's captured body carries `dryRun: true`** | safety contract |
+| D38-167 | **Post's captured body does not** | it would really post |
+| D38-168 | Dry-run depreciation driven Node-side | `dryRun:true` |
+| D38-169 | The dry run marks each result `dryRun: true` | check |
+| D38-170 | With no assets the message says so | *"no depreciable assets"* |
+| D38-171 | Period is required | 400 without it |
+| D38-172 | Straight-line = (cost − residual) ÷ life | arithmetic |
+| D38-173 | A fully-depreciated asset is skipped | reasoned |
+| D38-174 | Posting is idempotent per asset+period | check |
+| D38-175 | Nothing warns that Post writes to the ledger | flag if absent |
+| D38-176 | A negative cost is rejected | driven |
+| D38-177 | A zero life is rejected | driven — divide-by-zero |
+| D38-178 | Error copy is human | check |
+| D38-179 | Panel at 360px | usable |
+| D38-180 | One click → one request | not two |
+| D38-181 | Depreciation reaches the Profit tab's overhead | cross-check or record as unlinked |
+| D38-182 | The panel says depreciation is an estimate of wear | wording |
+
+## D38-H · Tariff estimator (cases 183–200)
+
+| # | Case | Expected |
+|---|---|---|
+| D38-183 | Units (kWh) and kVA are labelled | check |
+| D38-184 | "Estimate" is a pure computation | 0 writes — verified in the controller |
+| D38-185 | The estimate is driven for real and returns a bill | live |
+| D38-186 | The breakdown names block slabs | per the source |
+| D38-187 | The breakdown names fixed-per-kVA | present |
+| D38-188 | The breakdown names surcharge | present |
+| D38-189 | The breakdown names electricity duty | present |
+| D38-190 | The breakdown names GST | present |
+| D38-191 | **An unverified tariff is flagged as an estimate** | rate-as-data promise |
+| D38-192 | The effective date of the tariff is shown | check |
+| D38-193 | Zero units returns zero, not an error | driven |
+| D38-194 | Negative units rejected | driven |
+| D38-195 | A very large consumption does not overflow | driven |
+| D38-196 | The estimate feeds the allocation panel | or is standalone — record |
+| D38-197 | Error copy is human | check |
+| D38-198 | Panel at 360px | usable |
+| D38-199 | One click → one request | not two |
+| D38-200 | **Zero journal entries posted across the entire module** | the headline safety assertion |
+
+**Total: 200 cases.**
+
+---
+
+## Module 38 — RESULTS (live production, visible browser)
+
+**200 cases written · 138 driven · 62 not run · 14 findings (4× S2, 8× S3, 2× S4).**
+
+**Zero journal entries posted.** Six Preview/Post clicks were captured and diverted; three dry-runs
+were driven Node-side with `dryRun: true` set by me, after verifying
+`txPostingEngine.postEvent` returns at its `if (dryRun)` guard **before any database write** (line
+187) and `utilityAllocationService.runAllocation` returns earlier still. One POST was allowed
+through — `estimateBillHandler`, a pure computation.
+
+---
+
+### WWL-554 (S2) — Rs 8,847,000 of real spending is invisible to per-event profit
+
+Same account, same year, two tabs:
+
+| | Money & Expenses (Year) | Bookings & Profit |
+|---|---|---|
+| Fixed overheads | **Rs 8,847,000** | *not represented* |
+| Event / function costs | Rs 7,985,000 | `Spent (tagged)` **Rs 7,985,000** |
+| **Total spend** | **Rs 16,832,000** | — |
+| Net profit | — | **Rs 25,508,850** |
+
+`8,847,000 + 7,985,000 = 16,832,000` — the Money tab's own arithmetic is exact. And its event half
+matches the Profit tab's Spent column **to the rupee**, which proves the two screens read the same
+ledger.
+
+The Profit tab then computes net profit from the event half **only**. Electricity Rs 3,938,000,
+Salary/payroll Rs 3,246,500 and the rest of the fixed pool never touch it. Booked Rs 33,493,850 minus
+*all* recorded spend is **Rs 16,661,850** — the screen says Rs 25,508,850, a **Rs 8.85m** overstatement,
+and nothing on either tab mentions the other.
+
+This compounds WWL-541 (net counts money not yet received) and WWL-542 (seven functions at 100%
+margin). The three together mean the headline profit figure is wrong in three independent ways.
+
+### WWL-555 (S2) — the FIXED badge and the Fixed-overheads tile contradict each other
+
+August 2026, one screen:
+
+> Fixed overheads **Rs 0** · *rent · utilities · salary*
+> Event / function costs **Rs 2,151,600** · 4 events
+>
+> By category — Rs 2,151,600 total
+> Ingredients Rs 1,405,000 · 65% · Casual labour Rs 270,400 · 13% ·
+> **Rentals** `FIXED` **Rs 196,000** · 9% · Other Rs 163,500 · 8% · Fuel Rs 116,700 · 5%
+
+A category is badged **FIXED** for Rs 196,000 while the Fixed-overheads tile directly above reads
+**Rs 0**, and that same Rs 196,000 is counted inside "Event / function costs". The badge describes the
+*category*; the tile counts *untagged* expenses. Both are labelled "fixed" and they disagree.
+
+The Year view has the same rows behaving correctly (Rs 8,847,000 fixed), so the vendor sees the
+classification flip depending on which range button they pressed.
+
+### WWL-556 (S2) — "Save expense" on an empty form does nothing, silently
+
+Opened *Add expense*, clicked **Save expense** with every field blank:
+
+- requests fired: **0**
+- dialog: **still open**
+- `.text-destructive` / `[role="alert"]` messages: **0**
+- toasts: **0**
+- full dialog text after submit: no validation copy anywhere
+
+Client-side validation blocks the submit and then says nothing. The button is indistinguishable from
+broken. All **nine** inputs also carry `required: false`, so the browser contributes no message either.
+
+### WWL-557 (S2) — the tariff estimator instructs the vendor to do something the product cannot do
+
+Driven live with 12,000 kWh @ 150 kVA, and Node-side with three payloads:
+
+```
+POST /venue-os/business/3358/tariff/estimate-bill  → 200
+{"status":"NO_TARIFF","note":"No tariff profile on file for GRID. Seed the DISCO tariff first."}
+```
+
+Identical for 12,000 units, 0 units and −5,000 units. `GET .../tariff-profiles` returns `[]`.
+
+`POST /venue-os/tariff-profiles` exists in the router. **The string `tariff-profiles` appears nowhere
+in the frontend** — not in `lib/api/venueOs.ts`, not in any component. There is no screen, dialog or
+button anywhere in the product that can seed a DISCO tariff.
+
+So the panel is permanently stuck on an instruction that cannot be followed, and the header comment's
+promise — *"the bill the allocation engine apportions is computed, not hand-typed"* — never happens.
+
+### WWL-558 (S2) — Post writes to the live ledger with no confirmation and no warning
+
+Captured from the live page, every request diverted before delivery:
+
+| Button | Endpoint | Body |
+|---|---|---|
+| Preview | `/business/3358/lease-accrual/run` | `{"period":"2026-07","dryRun":true}` |
+| **Post rent** | `/business/3358/lease-accrual/run` | `{"period":"2026-07","dryRun":false}` |
+| Preview | `/business/3358/utility-allocation/run` | `{"billingMonth":"2026-07","residualShare":0,"dryRun":true}` |
+| **Post** | `/business/3358/utility-allocation/run` | `{"billingMonth":"2026-07","residualShare":0}` |
+| Preview | `/business/3358/depreciation/run` | `{"period":"2026-07","dryRun":true}` |
+| **Post** | `/business/3358/depreciation/run` | `{"period":"2026-07","dryRun":false}` |
+
+The dry-run contract is honoured exactly — that part is right. But **Post sits directly beside
+Preview**, same size, same style, and fires a double-entry GL posting on a single click with no
+confirmation dialog, no "this writes to your ledger" copy, and no undo. The utility panel's own source
+notes that *"a re-run reverses the prior posted run"* — nothing on screen says so.
+
+### WWL-559 (S3) — five of seven panels have no data at all
+
+```
+GET .../venue-leases     → []      GET .../fixed-assets     → []
+GET .../utility-meters   → []      GET .../tariff-profiles  → []
+```
+
+Leases, assets, meters and tariffs are all empty, yet every panel renders its full form apparatus.
+Only the expense cockpit and the wage register have anything. No panel says "you haven't added any
+yet" except the tariff note.
+
+### WWL-560 (S3) — a malformed period 500s with an internal function name
+
+```
+POST /depreciation/run {"period":"07-2026","dryRun":true}
+→ 500 {"message":"RunDepreciation: period must be 'YYYY-MM', got \"07-2026\""}
+```
+
+A service-layer `throw` surfacing as a 500 with the function name in it. The lease endpoint returns a
+clean **400** `Period ('YYYY-MM') is required` for the same class of error. The UI mitigates this with
+`input[type=month]` on the depreciation panel — but the utility panel uses **free-text `YYYY-MM`
+boxes**, so a typo there is reachable from the keyboard.
+
+### WWL-561 (S3) — the depreciation dry-run response omits `dryRun`
+
+```
+lease  → {"...","dryRun":true,"results":[]}
+depr   → {"...","assetCount":0,"postedCount":0,"results":[]}      ← no dryRun field
+```
+
+A caller cannot tell a preview response from a real posting response.
+
+### WWL-562 (S3) — the range is not in the URL
+
+Day / Month / Year / All all work and change the data, but `location.search` stays `?tab=money`
+throughout. Same family as WWL-547.
+
+### WWL-563 (S3) — `meter #` is the last raw-id box on the tab
+
+Every `Venue #` box is gone. `meter #` remains — and `GET .../utility-meters` returns `[]`, so there
+is no id to type.
+
+### WWL-564 (S3) — three period fields, two different controls
+
+Lease and depreciation use `input[type="month"]`. The utility panel uses two `input[type="text"]` with
+a `YYYY-MM` placeholder. Same concept, same screen, two behaviours — and only the text one can be
+mistyped into WWL-560.
+
+### WWL-565 (S3) — the Add-expense form marks nothing required
+
+Nine inputs — amount, date, category, payment method, payee, subcategory, description, receipt,
+booking — **`required: false` on all nine**.
+
+### WWL-566 (S4) — two fields ship pre-filled
+
+A text input holds `"Main"` (placeholder `generator`) and another holds `"Main LESCO"` (placeholder
+`label`). A vendor who never touches them submits someone's seed values.
+
+### WWL-567 (S4) — the booking picker is inconsistent with the Profit tab
+
+Placeholder here is `"which function?"` (lowercase); the Profit tab uses `"Which function?"`. One of
+the two pickers on this tab has **no label at all**.
+
+### WWL-568 (S3) — the category percentages are cut off at 360px
+
+At 360×740 with real device emulation, six elements extend past the viewport with `docScrollX`
+**false**, so nothing reveals them:
+
+- two action buttons
+- **four `span.w-10 shrink-0 text-right`** — the `65%` / `13%` / `9%` / `8%` labels of the category
+  breakdown
+
+A fixed `w-10` right-aligned column in a row that cannot shrink. Same family as the Today-board
+overflow fixed in PR #185. The wide table on this tab is correctly wrapped in its own
+`overflow-x: auto` scroller (560px content in a 326px viewport) — the percentages are not.
+
+---
+
+### What holds — verified, not assumed
+
+- **The Module 36 venue fix carries.** **Zero `Venue #` number boxes** on the widest panel set in the
+  product; **six** named venue dropdowns, and all six read `3358` in agreement. (I first mis-read this
+  as "two empty" — those two are booking pickers whose option list contains the customer *Muhammad
+  Rehman Yousaf*, which my regex matched. Corrected.)
+- **Category arithmetic is exact.** August: `1,405,000 + 270,400 + 196,000 + 163,500 + 116,700 =
+  2,151,600` — matches the "By category total" and the "Spent · month" tile. Percentages sum to
+  **100**.
+- **`Fixed overheads + Event costs = total spend`** exactly, in both the Month and Year views.
+- **Cross-tab reconciliation is exact**: Year event costs Rs 7,985,000 = the Profit tab's
+  `Spent (tagged)` Rs 7,985,000.
+- **Cost-per-function rows are exact**: `net = revenue − spent` on all four rows, and the four spend
+  figures sum to Rs 2,151,600 — the month total.
+- **The dry-run safety contract is real**, proven by six captured request bodies.
+- **Validation works where it is wired**: missing period → clean `400 Period ('YYYY-MM') is required`
+  on both lease and depreciation.
+- **The Day empty state is the best in the sweep**: *"No expenses in this day yet. Add the first one"*
+  — states the fact and offers the fix.
+- **The Add-expense form is genuinely Pakistani-native.** Its booking picker's first option is the
+  clearest copy in the product: *"Recurring overhead — not tied to one function (rent, utilities,
+  salary)"* — the fixed/event distinction, in a vendor's words, at the moment it is decided. Receipt
+  capture reads *"Photograph the parchi and we'll fill in the amount, payee and date."* Payment
+  methods include **Jazzcash, Easypaisa, Raast and IBFT**.
+- **Layout is clean at 1440px** — 0 overflowing elements, table in its own scroller.
+- Every read was scoped to businessId 3358; nothing leaked across venues.
+
+### Not run (62), with reasons
+
+- **Every posting path** (Post rent, Post allocation, Post depreciation, Add lease, Add asset, Add
+  meter, Record bill, Record shift, Post-to-GL, Save expense) — these write double-entry journal
+  entries to a live vendor's general ledger and change what every event's costed P&L reports.
+  Captured and diverted instead; the bodies are recorded above.
+- **D38-103–108 lease maths** (remaining commitment, escalation, not_started/expired skips,
+  idempotency) — the venue owns its halls, so `venue-leases` is empty and there is nothing to compute.
+- **D38-144/145 allocation share arithmetic** — no utility bills exist for any month.
+- **D38-172/173 straight-line depreciation** — no fixed assets exist.
+- **D38-186–192 tariff breakdown** (slabs, per-kVA, surcharge, duty, GST, effective date) —
+  unreachable behind `NO_TARIFF` (WWL-557).
+- **D38-063–065 min-wage floor warning** — needs a recorded shift.
+- **D38-123–125 genset dip validation** — needs a reconciled event.
+
+---
+
+# Module 39 — Halls & spaces (`/dashboard/venue-os?tab=spaces`)
+
+**Surface.** Four panels:
+
+| # | Component | What it does | Scope hook |
+|---|---|---|---|
+| 1 | `VenueSpacesManagerView` | Hall → Floor → Partition tree, capacity warnings, merge packages | `useBusinessIdField` |
+| 2 | `SpaceSlotsEditor` | sellable slot templates per space | `useBusinessIdField` |
+| 3 | `SpaceCalendarView` | month grid, tree-aware availability colouring | `useBusinessIdField` |
+| 4 | `SpacePnlView` | which space earns most | **`useActiveBusinessId`** |
+
+Panel 4 is the odd one out and case D39-004 exists because of it.
+
+**Self-imposed limits for this module, each with its reason:**
+
+- **No space is created, renamed, re-parented or deleted.** These rows are the sellable structure of
+  three approved, publicly-listed venues; `deleteSubVenue` cascades (`{deleted, ids[]}`). Every
+  mutating click is captured and diverted.
+- **No merge package is created.** A merge group is a sellable product.
+- **No slot template is saved.** Slots decide what a customer can book.
+- **Nothing is booked from the calendar.** `venueSpacesApi.book` writes a real reservation.
+- Reads, tree walking, capacity arithmetic, the calendar grid and the P&L are driven in full.
+
+---
+
+## D39-A · Arrival, scope, the missing fourth panel (cases 1–24)
+
+| # | Case | Expected |
+|---|---|---|
+| D39-001 | `?tab=spaces` opens on Spaces | tab active from URL |
+| D39-002 | Reload holds the tab | still spaces |
+| D39-003 | Section hint names all four things | tree · slots · grid · which space earns most |
+| D39-004 | **Is the "which space earns most" panel on screen?** | the hint promises it |
+| D39-005 | Panel count rendered vs promised | 4 expected |
+| D39-006 | `SpacePnlView` under "All venues" | `useActiveBusinessId` is null → `return null` |
+| D39-007 | Nothing explains its absence | no message, no locked state |
+| D39-008 | Selecting a venue in the header makes it appear | proves the cause |
+| D39-009 | The other three panels work under "All venues" | they use the shared hook |
+| D39-010 | No `Venue #` raw box | 0 |
+| D39-011 | Venue dropdowns present and in agreement | count + values |
+| D39-012 | The tree loads on arrival | no "Load spaces" click needed |
+| D39-013 | Spaces render by name, not id | check |
+| D39-014 | No console error on arrival | 0 |
+| D39-015 | No mutating request on arrival | 0 |
+| D39-016 | No horizontal overflow at 1440px | 0 elements |
+| D39-017 | No horizontal overflow at 360px | 0, or inside a scroller |
+| D39-018 | The calendar grid has its own scroller | it is wide by nature |
+| D39-019 | Exactly one `h1` on the page | recorded (Module 37 found 0) |
+| D39-020 | Focus visible on every control | check |
+| D39-021 | Buttons enabled once the venue resolves | no dead disabled state |
+| D39-022 | Panel headings are vendor language | *"halls · floors · partitions"* |
+| D39-023 | Switching venue reloads the tree | driven |
+| D39-024 | Switching venue does not leak the previous tree | driven |
+
+## D39-B · The space tree (cases 25–70)
+
+| # | Case | Expected |
+|---|---|---|
+| D39-025 | The tree renders every space the venue owns | count vs API |
+| D39-026 | Each node shows its kind | HALL / FLOOR / SECTION / LAWN / ROOFTOP … |
+| D39-027 | Children are visually nested under their parent | indentation or hierarchy |
+| D39-028 | Depth is honest — a SECTION under a HALL reads as a child | check |
+| D39-029 | Capacity shown per node | check |
+| D39-030 | Price shown per node | `Rs` formatted or an em-dash |
+| D39-031 | An unpriced space shows an em-dash, not `Rs 0` | check |
+| D39-032 | Whole-day flag surfaced where set | check |
+| D39-033 | **Capacity warnings render when children exceed the parent** | the amber block |
+| D39-034 | The warning names the space, both numbers and the overage | *"children total X > capacity Y (over by Z)"* |
+| D39-035 | No warning when the tree is consistent | check current state |
+| D39-036 | The warning is computed server-side | `capacityWarnings` endpoint |
+| D39-037 | Warning count matches the API | exact |
+| D39-038 | The eight kinds are all offered when adding | HALL FLOOR SECTION LAWN MARQUEE BASEMENT ROOFTOP OTHER |
+| D39-039 | "Add space" is disabled until a name is entered | check |
+| D39-040 | Add is captured and diverted | 0 delivered |
+| D39-041 | The captured body carries businessId | check |
+| D39-042 | The captured body carries the chosen parent | nesting works |
+| D39-043 | A child can be added under any node | the UI offers it |
+| D39-044 | The parent picker names spaces, not ids | check |
+| D39-045 | Adding with capacity > parent capacity is allowed but warned | record |
+| D39-046 | Negative capacity rejected | driven |
+| D39-047 | Zero capacity handled | driven |
+| D39-048 | Negative price rejected | driven |
+| D39-049 | A very long name does not break the row | driven |
+| D39-050 | Duplicate names are permitted or rejected | record |
+| D39-051 | Edit is available per node | check |
+| D39-052 | Edit is captured and diverted | 0 delivered |
+| D39-053 | **Delete has a guard** | the source claims delete-with-guard |
+| D39-054 | The guard says what will be lost | cascade count |
+| D39-055 | Delete is captured and diverted | 0 delivered |
+| D39-056 | Deleting a parent warns about its children | `{deleted, ids[]}` is a cascade |
+| D39-057 | Nothing deletes a space that has bookings | reasoned or driven |
+| D39-058 | Merge packages section present | check |
+| D39-059 | Merge packages listed by name | check |
+| D39-060 | A merge package names its member spaces | check |
+| D39-061 | Merge price shown | check |
+| D39-062 | Creating a merge package requires ≥2 spaces | driven |
+| D39-063 | Merge creation is captured and diverted | 0 delivered |
+| D39-064 | Space picks for a merge are by name | not ids |
+| D39-065 | The same space twice in one package is prevented | driven |
+| D39-066 | Empty state when the venue has no spaces | copy check on a second venue |
+| D39-067 | Error copy is human | *"Hierarchical spaces are not enabled…"* |
+| D39-068 | Error copy leaks no SQL | check |
+| D39-069 | One click → one request | not two |
+| D39-070 | The tree survives a hard reload | same nodes |
+
+## D39-C · Slot templates (cases 71–104)
+
+| # | Case | Expected |
+|---|---|---|
+| D39-071 | The space list loads on arrival | no click needed |
+| D39-072 | Spaces are pickable by name | check |
+| D39-073 | Picking a space loads its slots | driven |
+| D39-074 | The scope of the returned slots is shown | `scope` field |
+| D39-075 | Venue-level vs space-level slots are distinguishable | check |
+| D39-076 | A space with no slots shows an empty state | copy |
+| D39-077 | Slot rows show start and end | check |
+| D39-078 | Slot rows show a label | e.g. lunch / dinner |
+| D39-079 | Slot rows show capacity | check |
+| D39-080 | Times render in a Pakistani-readable format | not raw ISO |
+| D39-081 | Overlapping slots are flagged | driven or reasoned |
+| D39-082 | Adding a slot is captured and diverted | 0 delivered |
+| D39-083 | The captured body carries the space id | check |
+| D39-084 | End before start is rejected | driven |
+| D39-085 | Equal start and end rejected | driven |
+| D39-086 | A slot crossing midnight is handled | driven — a shaadi runs past 12 |
+| D39-087 | Capacity defaults to 1 | check |
+| D39-088 | Capacity 0 rejected | driven |
+| D39-089 | Deleting a slot is captured and diverted | 0 delivered |
+| D39-090 | Turnaround/gap is expressible | check |
+| D39-091 | The editor explains what a slot sells | copy |
+| D39-092 | Switching space clears the previous slots | no stale rows |
+| D39-093 | Switching venue clears the space list | no cross-venue leak |
+| D39-094 | Error copy is human | check |
+| D39-095 | One click → one request | not two |
+| D39-096 | Slots are not in the URL | record |
+| D39-097 | The panel is usable at 360px | check |
+| D39-098 | Slot times are timezone-stable | Asia/Karachi |
+| D39-099 | A slot cannot be created for another venue's space | reasoned |
+| D39-100 | The slot list order is stable | no jitter |
+| D39-101 | Long slot labels truncate | check |
+| D39-102 | The panel loads without a slot chosen | no error |
+| D39-103 | Keyboard reachable throughout | check |
+| D39-104 | No mutating request from browsing | 0 |
+
+## D39-D · The availability calendar (cases 105–142)
+
+| # | Case | Expected |
+|---|---|---|
+| D39-105 | Month input present | check |
+| D39-106 | **The month defaults to something** | `useState("")` — flag if blank |
+| D39-107 | "Show" is disabled until a month is chosen | check |
+| D39-108 | Choosing the current month and showing renders a grid | driven |
+| D39-109 | The grid has a row per space | count matches the tree |
+| D39-110 | Rows are indented Hall → Floor → Partition | check |
+| D39-111 | The grid has a cell per day of that month | 31 for August |
+| D39-112 | Month bounds are computed correctly | last day of month |
+| D39-113 | February is handled | driven with `2026-02` |
+| D39-114 | A leap year is handled | driven with `2028-02` |
+| D39-115 | Three colours are used | AVAILABLE / PARTIAL / UNAVAILABLE |
+| D39-116 | A legend explains the three | *booked · partial · free* |
+| D39-117 | **`AVAILABLE` is `bg-white`** | invisible in dark mode — flag |
+| D39-118 | The legend colours match the cell colours | check |
+| D39-119 | Colour is not the ONLY signal | a11y — flag if it is |
+| D39-120 | Cells carry a title/aria description | check |
+| D39-121 | **Booking a parent marks every descendant unavailable** | the correctness the doc calls out |
+| D39-122 | A booked descendant marks the parent PARTIAL | the other direction |
+| D39-123 | The grid matches the bookings on the Today board | cross-check a known date |
+| D39-124 | A day with a confirmed booking is not shown free | the money-critical case |
+| D39-125 | Cancelled bookings do not block a day | driven or reasoned |
+| D39-126 | The grid is read-only | clicking a cell writes nothing |
+| D39-127 | Clicking a cell does something useful, or nothing | record |
+| D39-128 | A month with no bookings renders an all-free grid | driven |
+| D39-129 | A far-future month is handled | driven |
+| D39-130 | A past month is handled | driven |
+| D39-131 | An invalid month string is handled | driven |
+| D39-132 | The grid has its own horizontal scroller | 31 columns |
+| D39-133 | The space-name column is readable at 360px | check |
+| D39-134 | The month is not in the URL | record |
+| D39-135 | Switching venue clears the grid | no leak |
+| D39-136 | Error copy is *"Not enabled for this account yet."* | present |
+| D39-137 | That copy is wrong if the real cause is something else | check the status |
+| D39-138 | One click → one request | not two |
+| D39-139 | The grid survives a hard reload | re-driven |
+| D39-140 | Day numbers are labelled | check |
+| D39-141 | Weekends are distinguishable | shaadi season is weekend-heavy — record |
+| D39-142 | No mutating request across the whole calendar | 0 |
+
+## D39-E · Per-space P&L (cases 143–170)
+
+| # | Case | Expected |
+|---|---|---|
+| D39-143 | The panel renders once a venue is active | driven after switching |
+| D39-144 | Three totals: Revenue, Cost, Margin | 3 |
+| D39-145 | Margin shows both rupees and a percentage | check |
+| D39-146 | `Margin = Revenue − Cost` | arithmetic |
+| D39-147 | `marginPct = Margin ÷ Revenue` | arithmetic |
+| D39-148 | A null `marginPct` renders without a stray `·` | check |
+| D39-149 | The table lists every space | count vs the tree |
+| D39-150 | Per-row margin arithmetic | every row |
+| D39-151 | Row revenues sum to the Revenue total | exact |
+| D39-152 | Row costs sum to the Cost total | exact |
+| D39-153 | Revenue is folded up the tree | a parent includes its children |
+| D39-154 | A space with no bookings shows zero, not blank | check |
+| D39-155 | **Space revenue reconciles with the Profit tab** | Rs 33,493,850 booked — does it appear here? |
+| D39-156 | Space cost reconciles with the Money tab | cross-check |
+| D39-157 | An unmapped booking (no space) is disclosed | where does its revenue go? |
+| D39-158 | The table has a horizontal scroller | present |
+| D39-159 | Error copy is *"Per-space P&L isn't enabled for this venue yet."* | present |
+| D39-160 | That copy is accurate — is it a flag or empty data? | probe the endpoint |
+| D39-161 | `retry: false` honoured | 1 request on failure |
+| D39-162 | Loading state present | *"Loading…"* |
+| D39-163 | Rows link to the space | record |
+| D39-164 | Numbers are `tabular-nums` | check |
+| D39-165 | No `Rs NaN` | sanity |
+| D39-166 | Percentages are integers | check |
+| D39-167 | The panel is usable at 360px | check |
+| D39-168 | Switching venue re-queries | query key includes businessId |
+| D39-169 | The panel writes nothing | 0 |
+| D39-170 | **Zero mutating requests across the entire module** | the headline safety assertion |
+
+**Total: 170 cases.**
+
+---
+
+## Module 39 — RESULTS (live production, visible browser)
+
+**170 cases written · 124 driven · 46 not run · 10 findings (1× S1, 3× S2, 5× S3, 1× S4).**
+**Zero mutating requests.**
+
+---
+
+### WWL-569 (S1) — the public page offers a hall that is already booked
+
+Driven on the **customer-facing page**, not the dashboard:
+`https://www.weddingwala.pk/wedding-venues/lahore/rehman-grand-marquee-3358`
+
+Picked **13 August 2026** in *"Choose your space"*. What a couple sees:
+
+> **Main Hall** — HALL · PKR 340,000 · **Available**
+> **afsana** — ROOFTOP · PKR 500,000 · **Available** · whole-day
+> **Terrace Lawn** — LAWN · PKR 260,000 · **Available**
+> **Mardana Section** — SECTION · PKR 280,000 · **Available**
+> **Zenana Section** — SECTION · PKR 280,000 · **Available**
+
+13 August 2026 already carries **two Confirmed bookings** on this venue — *Danish Qureshi & Aiman
+Danish* (#167) and *Muhammad Rehman Yousaf* (#180).
+
+Confirmed at the API with **no Authorization header at all** — this is what an anonymous visitor gets:
+
+| Date | Bookings on that date | Public endpoint says |
+|---|---|---|
+| 2026-08-05 | Owais Siddiqui & Laiba Owais — **Confirmed** | all 5 spaces `AVAILABLE` |
+| 2026-08-13 | Danish Qureshi, Muhammad Rehman Yousaf — **Confirmed ×2** | all 5 spaces `AVAILABLE` |
+| 2026-08-21 | Salman Rauf & Kinza Salman — **Confirmed** | all 5 spaces `AVAILABLE` |
+| 2026-08-29 | Waqar Younis & Sana Waqar — **Confirmed** | all 5 spaces `AVAILABLE` |
+
+The vendor's own calendar agrees with the public one and is equally wrong: I counted every cell of the
+August grid — **5 spaces × 31 days = 155 cells, 155 `AVAILABLE`, zero blocked days.**
+
+The cause is visible in the data: no booking is mapped to a sub-venue. `space-pnl` reports
+`revenue: 0` for every space while the venue has booked Rs 33m. The bookings table holds the date; the
+tree-aware availability engine reads the resource mapping, which is empty, so it answers "free" for
+everything.
+
+The component's own header comment states the intent: *"colour-coded AVAILABLE / PARTIALLY-AVAILABLE /
+UNAVAILABLE (from the tree-aware availability engine)… uses the PUBLIC read endpoint (no login
+needed)."* It renders on the public vendor page at `vendor-detail-page.tsx:421`.
+
+A couple can pick a date, see green, and enquire for a hall that has a wedding in it. On a platform
+whose entire value is "is this venue free on my date", this is the worst possible wrong answer.
+
+### WWL-570 (S2) — the panel the hint promises is not on the page
+
+The section hint reads: *"Build your hall / floor / partition tree, set slots, see the availability
+grid, and **see which space earns most**."*
+
+Rendered card titles: *Venue spaces · Booking slots per space · Space calendar*. **Three of four.**
+
+`SpacePnlView` is the only panel on the tab that scopes with `useActiveBusinessId()` instead of
+`useBusinessIdField()`:
+
+```js
+const businessId = useActiveBusinessId();
+...
+if (businessId == null) return null;
+```
+
+The dashboard header's persisted default is **"All venues"**, where `activeBusinessId` is `null` — so
+under the shipped default the panel returns `null`. No heading, no empty state, no "pick a venue".
+Its three neighbours use the shared hook and work fine, which is why the absence looks like nothing at
+all rather than a scoping problem.
+
+### WWL-571 (S2) — per-space P&L computes the cost and then discards it
+
+`GET /venue-spaces/business/3358/space-pnl` → 200:
+
+| Space | `ownCost` | `cost` | `revenue` | `margin` | `marginPct` |
+|---|---|---|---|---|---|
+| Main Hall | **900,300** | 0 | 0 | 0 | null |
+| Zenana Section | **696,300** | 0 | 0 | 0 | null |
+| Mardana Section | **596,600** | 0 | 0 | 0 | null |
+| Terrace Lawn | **517,900** | 0 | 0 | 0 | null |
+| afsana | 0 | 0 | 0 | 0 | null |
+
+**Rs 2,711,100** of real tagged space cost exists in `ownCost`. The rolled-up `cost` — the field the UI
+table and the three totals actually render — is **0** for every row. So even once WWL-570 is fixed and
+the panel appears, it will report Revenue Rs 0, Cost Rs 0, Margin Rs 0 for a venue with Rs 2.7m of
+space costs and Rs 33m booked. The question *"which space earns the most"* cannot be answered.
+
+### WWL-572 (S2) — the availability grid 500s with raw Postgres text
+
+```
+GET .../availability-range?from=notadate&to=2026-08-31
+→ 500 "Invalid input syntax for type timestamp with time zone: \"notadateT00:00:00.000Z\""
+
+GET .../availability-range?from=2026-08-31&to=2026-08-01
+→ 500 "Range lower bound must be less than or equal to range upper bound"
+```
+
+Both are database errors surfaced verbatim as 500s where a 400 belongs — the third instance of this
+family in the sweep (WWL-560 depreciation, and the Module 32 notifications probe). The UI uses
+`input[type="month"]`, so a browser cannot reach the first one; a reversed range is reachable through
+the API only.
+
+### WWL-573 (S3) — nothing in the "tree" is nested
+
+Across all three venues, **every** node reports `parentSubVenueId: null` and `depth: 0`:
+
+- 3358 — Main Hall, afsana, Terrace Lawn, Mardana Section, Zenana Section (5)
+- 3359 — Banquet Hall, Open Lawn, Basement Hall (3)
+- 3360 — Marquee A, Marquee B, Rooftop (3)
+
+*Mardana Section* and *Zenana Section* are SECTIONs sitting beside Main Hall rather than inside it.
+The panel is titled *"halls · floors · partitions"* and the UI offers "+ child" on every row, but no
+child exists anywhere.
+
+Consequence: **capacity warnings can never fire.** The warning compares a parent's capacity to the sum
+of its children — with no children, `capacity-warnings` returns `[]` permanently, and the amber block
+is unreachable code for every venue on the account.
+
+### WWL-574 (S3) — `path` is populated for some nodes and not others
+
+```
+Main Hall   (seeded 00:12)  path: null      depth: 0
+afsana      (UI, 20:38)     path: "/3355/"  depth: 0
+```
+
+Same venue, same depth, one has a materialised path and one does not. Anything that resolves a subtree
+by `path` will silently skip the seeded rows.
+
+### WWL-575 (S3) — the calendar opens blank
+
+`const [month, setMonth] = React.useState<string>("")` — the month input starts empty, so "Show" is
+disabled and the grid is absent until the vendor picks a month by hand. The obvious default is the
+current month.
+
+### WWL-576 (S3) — the calendar's only signal is colour
+
+`CELL = { AVAILABLE: "bg-white", PARTIAL: "bg-amber-300", UNAVAILABLE: "bg-rose-500" }`. The legend
+reads *booked · partial · free*, but the cells carry no text, no title and no aria description — and
+`AVAILABLE` is plain white, which disappears against the card in dark mode.
+
+### WWL-577 (S3) — the slot templates cannot describe a shaadi
+
+The venue's two slots, both business-scoped (`subVenueId: null`):
+
+| Label | Start | End | Buffer after |
+|---|---|---|---|
+| Lunch event | 12:00 | 16:00 | **180 min** |
+| Dinner event | 19:00 | 23:00 | **0 min** |
+
+A dinner function ends at 23:00 with **zero turnaround** — the next booking can start immediately, with
+no cleanup gap, on the slot that actually needs one. And no slot can express a function running past
+midnight, which is the norm for a barat.
+
+### WWL-578 (S4) — a live listed venue has a space called "afsana"
+
+A `ROOFTOP` priced at Rs 500,000, whole-day, created through the UI on 2 Aug. It sits in the public
+space selector alongside Main Hall and Terrace Lawn.
+
+---
+
+### What holds — verified, not assumed
+
+- **The Module 36 fix carries.** The tree **loads on arrival** with no click; five spaces render by
+  name with capacity, price and booking mode — *Main Hall cap 510 · Rs 340,000 · session*. Three
+  venue dropdowns, all reading 3358, **zero `Venue #` boxes**.
+- **All eight space kinds** are offered when adding: HALL FLOOR SECTION LAWN MARQUEE BASEMENT ROOFTOP
+  OTHER.
+- **The merge-package builder lists spaces by name**, not ids, and "Create package" stays disabled
+  until a valid selection exists. "Add space" and "Show" are correctly disabled too — no dead-enabled
+  buttons on this tab.
+- **Month arithmetic is correct**: `2026-02` returned 28 days, `2028-02` returned **29**.
+- **Every read is venue-scoped** — three separate trees, no cross-venue leakage.
+- **The public page copy is the best writing in the product**: *"Booking early matters most during the
+  October–March peak season"*, *"so a 400-guest walima isn't squeezed into a 250-seat hall"*, *"Ask
+  whether outside catering and decorators are allowed"*. Genuinely Pakistani, genuinely useful — which
+  is what makes WWL-569 sit underneath it so badly.
+- **Zero mutating requests** across the whole module.
+
+### Not run (46), with reasons
+
+- **Every create / edit / delete** — add space, add child, rename, re-parent, delete, create merge
+  package, add/delete slot. These rows are the sellable structure of three approved, publicly-listed
+  venues and `deleteSubVenue` cascades. Captured and diverted.
+- **D39-121/122 parent/descendant availability propagation** — no node has a parent (WWL-573), so
+  there is no nesting to propagate through.
+- **D39-033/034 capacity warnings** — unreachable for the same reason.
+- **D39-062/065 merge validation** — creating a merge package is a sellable product.
+- **D39-126/127 calendar cell interaction** — `venueSpacesApi.book` writes a real reservation.
+- **D39-084–088 slot validation** (end before start, midnight crossing, capacity 0) — each requires
+  saving a slot that decides what a customer can book.
+
+---
+
+# Module 40 — Cash & cheques (`/dashboard/venue-os?tab=cash`)
+
+**Surface.** Four panels:
+
+| # | Component | What it does | Scope |
+|---|---|---|---|
+| 1 | `CashFloatClose` | open the galla, record collections/deposits, close with a counted amount → over/short | `useBusinessIdField` |
+| 2 | `PdcDrawer` | cheques clearing within N days, overdue flagged | **none — sends `businessId: undefined`** |
+| 3 | `LiabilityCalendarView` | bounce-risk timeline, month by month | `useBusinessIdField` |
+| 4 | `PdcStressOptimiserView` | bounce-stress + payout optimiser | `useBusinessIdField` |
+
+Panel 2 is why the tab shows *"Couldn't load PDC tracking."* on arrival — case D40-021 exists for it.
+
+**Self-imposed limits for this module, each with its reason:**
+
+- **No cash float is opened, recorded into, or closed.** `openCashFloat` / `recordToFloat` /
+  `closeCashFloat` create and mutate a real money row on a live vendor's daily galla, and the close
+  computes an over/short that becomes part of their cash history. Captured and diverted.
+- **`persist` is never set on the liability calendar.** The endpoint takes `persist?: boolean`;
+  every call I make omits it, so nothing is written.
+- **No cheque is marked cleared, bounced or re-presented.**
+- Reads, window switching, the over/short arithmetic (computed from captured inputs, not saved) and
+  every error path are driven in full.
+
+---
+
+## D40-A · Arrival and scope (cases 1–20)
+
+| # | Case | Expected |
+|---|---|---|
+| D40-001 | `?tab=cash` opens on Cash & Cheques | tab active from URL |
+| D40-002 | Reload holds the tab | still cash |
+| D40-003 | All four panels render | 4 card titles |
+| D40-004 | Section hint describes the tab | *"Close the daily galla… chase post-dated cheques"* |
+| D40-005 | No `Venue #` raw box | 0 |
+| D40-006 | Venue dropdowns present and in agreement | count + values |
+| D40-007 | **Does the PDC drawer have a venue control at all?** | it uses no scope hook |
+| D40-008 | No console error on arrival | 0 |
+| D40-009 | No mutating request on arrival | 0 |
+| D40-010 | No horizontal overflow at 1440px | 0 elements |
+| D40-011 | No horizontal overflow at 360px | 0, or inside a scroller |
+| D40-012 | Wide tables have their own scroller | check each |
+| D40-013 | Buttons enabled once the venue resolves | no dead disabled state |
+| D40-014 | Panel headings are vendor language | *galla*, *cheques* |
+| D40-015 | "galla" is explained or obvious in context | copy |
+| D40-016 | Focus ring visible on every control | check |
+| D40-017 | Exactly one `h1` | recorded |
+| D40-018 | Switching venue re-scopes each panel | driven |
+| D40-019 | Switching venue does not leak the previous venue's data | driven |
+| D40-020 | Panel order matches the hint | galla first, cheques second |
+
+## D40-B · The PDC drawer (cases 21–58)
+
+| # | Case | Expected |
+|---|---|---|
+| D40-021 | **The drawer errors on arrival** | *"Couldn't load PDC tracking."* |
+| D40-022 | The request omits `businessId` | `pdcAlerts(undefined, withinDays)` |
+| D40-023 | The backend requires `businessId` | 400 |
+| D40-024 | With `businessId` the endpoint returns data | probe Node-side |
+| D40-025 | So the panel can never show a cheque | the conclusion |
+| D40-026 | The error copy does not name the real cause | it says "couldn't load" |
+| D40-027 | The error copy leaks no internals | check |
+| D40-028 | Four window buttons: 3d 5d 7d 14d | 4 |
+| D40-029 | 5d is the default | check |
+| D40-030 | The active window is visually distinct | `variant="default"` |
+| D40-031 | Switching window re-queries | new request per switch |
+| D40-032 | Each switch fires exactly one request | not two |
+| D40-033 | Switching window while erroring re-errors | no stale state |
+| D40-034 | `retry: false` honoured | one request per failure |
+| D40-035 | The window is not in the URL | record |
+| D40-036 | The empty state names the window | *"in the next N days"* |
+| D40-037 | Loading state present | *"Loading…"* |
+| D40-038 | Table headers: Cheque # Booking Amount Clears Status | 5 |
+| D40-039 | **Cheque rows would show `#id` for the booking** | not a customer name — flag |
+| D40-040 | Amount is PKR-formatted | check |
+| D40-041 | "Clears" is a readable date | not raw ISO |
+| D40-042 | Overdue cheques are flagged | the panel's stated purpose |
+| D40-043 | An overdue cheque is visually distinct | badge/colour |
+| D40-044 | Rows link to the booking | expected 0 — record |
+| D40-045 | Nothing marks a cheque cleared from here | record |
+| D40-046 | Nothing marks a cheque bounced from here | record |
+| D40-047 | The panel is read-only | 0 writes |
+| D40-048 | Probe: are there any PDCs on this account? | Node-side |
+| D40-049 | If none, what would the panel show? | empty state |
+| D40-050 | The 14d window returns a superset of 3d | probe |
+| D40-051 | A 0-day window is handled | probe |
+| D40-052 | A negative window is handled | probe |
+| D40-053 | A huge window is handled | probe |
+| D40-054 | The endpoint is tenant-scoped | audit H3 says it now is — verify |
+| D40-055 | Another vendor's cheques are not returned | reasoned from the scoping |
+| D40-056 | Panel at 360px | usable |
+| D40-057 | Table scrolls inside its own container | present |
+| D40-058 | Keyboard reachable | check |
+
+## D40-C · Cash-float close / galla (cases 59–100)
+
+| # | Case | Expected |
+|---|---|---|
+| D40-059 | Opening float defaults to 0 | check |
+| D40-060 | "Open drawer" disabled until a venue resolves | check |
+| D40-061 | "Open drawer" is captured and diverted | 0 delivered |
+| D40-062 | The captured body carries businessId + openingFloat | check |
+| D40-063 | A negative opening float is rejected | driven |
+| D40-064 | A non-numeric opening float is handled | driven |
+| D40-065 | Collected / deposited fields appear only after opening | check |
+| D40-066 | "Advance float" / record is captured and diverted | 0 delivered |
+| D40-067 | The captured body carries collected + deposited | check |
+| D40-068 | Close requires a counted amount | check |
+| D40-069 | Close is captured and diverted | 0 delivered |
+| D40-070 | **Expected = opening + collected − deposited** | the panel's stated formula |
+| D40-071 | Over/short = counted − expected | arithmetic |
+| D40-072 | A short is shown in red | check |
+| D40-073 | An over is shown distinctly | check |
+| D40-074 | Exactly zero over/short is shown as balanced | check |
+| D40-075 | The over/short is stated in rupees, not a percentage | check |
+| D40-076 | Negative collected rejected | driven |
+| D40-077 | Negative deposited rejected | driven |
+| D40-078 | Deposited > collected + opening is flagged | driven |
+| D40-079 | A counted amount of 0 is a valid answer | driven |
+| D40-080 | Decimal paisa handled | driven |
+| D40-081 | Very large amounts do not overflow | driven |
+| D40-082 | The panel explains what a galla close is | copy |
+| D40-083 | Nothing claims the count was verified by anyone | wording |
+| D40-084 | A second open on the same day is prevented or flagged | reasoned |
+| D40-085 | Closing twice is prevented | reasoned |
+| D40-086 | The float is venue-scoped | businessId in body |
+| D40-087 | Switching venue clears an open float | driven |
+| D40-088 | Error copy is human | *"Couldn't load cash-float."* |
+| D40-089 | Error copy leaks no SQL | check |
+| D40-090 | One click → one request | not two |
+| D40-091 | Double-clicking Open does not double-fire | busy guard |
+| D40-092 | Busy state disables the buttons | check |
+| D40-093 | The panel at 360px | usable |
+| D40-094 | Amounts are `tabular-nums` | check |
+| D40-095 | No `Rs NaN` | sanity |
+| D40-096 | The close result names the drawer it closed | check |
+| D40-097 | Nothing prints or exports the close | record |
+| D40-098 | The close does not reach the Money tab as an expense | reasoned |
+| D40-099 | The float is not in the URL | record |
+| D40-100 | Keyboard reachable | check |
+
+## D40-D · Liability calendar + bounce-stress (cases 101–140)
+
+| # | Case | Expected |
+|---|---|---|
+| D40-101 | "Build calendar" disabled until a venue resolves | check |
+| D40-102 | From / To month fields present | 2 |
+| D40-103 | **Do they default to anything?** | flag if blank |
+| D40-104 | Building the calendar is a GET | read |
+| D40-105 | **`persist` is not sent** | it must stay a read |
+| D40-106 | The calendar returns month rows | probe |
+| D40-107 | Each month shows liabilities due | check |
+| D40-108 | Each month shows projected cash | check |
+| D40-109 | A shortfall month is flagged | the panel's purpose |
+| D40-110 | The flag names the amount short | check |
+| D40-111 | Bounce risk is explained in words | not just a number |
+| D40-112 | An empty range returns an honest empty | probe |
+| D40-113 | A reversed range is handled | probe — WWL-572 family |
+| D40-114 | An invalid month is handled | probe |
+| D40-115 | A 1-month range works | probe |
+| D40-116 | A 24-month range works | probe |
+| D40-117 | "Bounce-stress" is a POST — is it pure? | verify in the controller |
+| D40-118 | If it writes, it is captured and diverted | safety |
+| D40-119 | If pure, it is driven for real | live |
+| D40-120 | The stress result names which months are PDC-dependent | `pdcDependentMonths` |
+| D40-121 | `projectedCashWithPdc` vs `shortfallWithoutPdc` both shown | check |
+| D40-122 | The difference between them is explained | copy |
+| D40-123 | "Optimise payout" is a POST — is it pure? | verify |
+| D40-124 | If it writes, captured and diverted | safety |
+| D40-125 | The optimiser explains what it optimised | copy |
+| D40-126 | The optimiser does not actually pay anyone | verify |
+| D40-127 | Nothing on the panel moves money | 0 writes |
+| D40-128 | Error copy is human | check |
+| D40-129 | Error copy leaks no SQL | check |
+| D40-130 | One click → one request | not two |
+| D40-131 | The panel at 360px | usable |
+| D40-132 | Wide output scrolls in its own container | check |
+| D40-133 | Months render as `MMM YYYY`, not `2026-08` | check |
+| D40-134 | Amounts PKR-formatted | check |
+| D40-135 | The range is not in the URL | record |
+| D40-136 | Switching venue clears the calendar | driven |
+| D40-137 | The calendar reconciles with the Today board's "To collect" | cross-check |
+| D40-138 | The calendar reconciles with the PDC drawer | both are cheques |
+| D40-139 | Keyboard reachable | check |
+| D40-140 | **Zero mutating requests across the entire module** | headline safety assertion |
+
+**Total: 140 cases.**
+
+---
+
+## Module 40 — RESULTS (live production, visible browser)
+
+**140 cases written · 108 driven · 32 not run · 10 findings (4× S2, 5× S3, 1× S4).**
+
+**Nothing was written.** The one cash-float POST was captured and diverted. Two POSTs were allowed
+through after verifying both handlers in the controller — `liabilityCalendarPdcHandler` and
+`committeePayoutOptimiserHandler` persist only on an explicit `persist === true`, which was **never
+sent** (`persistEverSent: false`).
+
+---
+
+### WWL-579 (S2) — the cheque drawer asks the wrong question, four times
+
+Captured in the browser on arrival and on every window switch:
+
+```
+GET /api/v1/venue-os/pdc/alerts?withinDays=5     ← no businessId
+GET /api/v1/venue-os/pdc/alerts?withinDays=3
+GET /api/v1/venue-os/pdc/alerts?withinDays=7
+GET /api/v1/venue-os/pdc/alerts?withinDays=14
+```
+
+The component calls `venueOsApi.pdcAlerts(undefined, withinDays)`. The handler's second line:
+
+```js
+if (businessId == null) return apiResponse(res, 400, false, "businessId is required", null);
+```
+
+Verified both ways against production:
+
+| Request | Result |
+|---|---|
+| `?withinDays=5` — **what the FE sends** | **400** `BusinessId is required` |
+| `?businessId=3358&withinDays=5` | **200** |
+
+So the panel shows *"Couldn't load PDC tracking."* on arrival and after all four window clicks. It is
+the exact twin of WWL-540 (menu re-cost) — a panel that was never given the venue scope every other
+panel received.
+
+Unlike the tariff panel, this one is **not** short of data.
+
+### WWL-580 (S2) — there is a real Rs 695,700 cheque, and nothing on this tab can see it
+
+```
+GET /venue-os/pdc/alerts?businessId=3358&withinDays=99999
+→ [{"id":42,"bookingId":170,"amount":"695700.00","chequeDate":"2026-09-06","status":"held","overdue":false}]
+```
+
+Booking #170 is *Imran Shafi & Hafsa Imran* — Rs 1,546,000, dated 09-Sept-2026, marked **Completed**.
+(The same booking as WWL-529's completed-in-the-future anomaly and one of WWL-542's seven 100%-margin
+rows. It is now also the venue's only post-dated cheque.)
+
+All three panels that should surface it report nothing:
+
+| Panel | On 2026-09 | Reality |
+|---|---|---|
+| Cheques clearing soon | **400 error** | Rs 695,700 held |
+| Liability calendar — PDC column | **`—`** (rendered on screen) | Rs 695,700 due |
+| Bounce-stress — `pdcExpectedInflowPkr` | **0**, `totalPdcInflow: 0`, `pdcDependentMonths: []` | Rs 695,700 inflow |
+
+The tab's own hint is *"chase post-dated cheques before they clear or bounce."* The one cheque this
+venue holds is invisible in all three places.
+
+### WWL-581 (S2) — the widest window cannot reach the cheque
+
+Even with `businessId` fixed, the drawer offers **3d · 5d · 7d · 14d**. Today is 07-Aug-2026; the
+cheque clears **06-Sept-2026 — 30 days out**. Probed every window:
+
+| withinDays | Result |
+|---|---|
+| 0, 3, 5, 7, 14 | `[]` |
+| **99999** | the Rs 695,700 cheque |
+
+So repairing WWL-579 alone still leaves the cheque unreachable from the UI at every available setting.
+A post-dated cheque in Pakistan is routinely written 30–90 days out; a 14-day ceiling cannot see the
+instrument the panel is named after.
+
+### WWL-582 (S2) — a mistyped month gives a false all-clear on the bounce-risk screen
+
+Typed `notamonth` into the liability calendar's from-field and clicked Build. On screen:
+
+> Month · Committee · Ijarah · Udhaar · Bank · PDC · Total due · Proj. cash · Shortfall
+> *(header row, and nothing else)*
+
+```
+GET .../liability-calendar?from=notamonth&to=2027-01  → 200  {"months":[],"totalDue":0}
+```
+
+**HTTP 200, empty months, no error message anywhere.** A vendor who fat-fingers a month sees a
+bounce-risk timeline with no rows, which reads exactly like "you owe nothing this season". The
+endpoint validates presence (`from and to are required` → clean 400) but never validates shape.
+
+### WWL-583 (S3) — "Open drawer" opens a real galla on one click
+
+Enabled on arrival, no confirmation. Captured and diverted:
+
+```
+POST /venue-os/cash-float  {"businessId":3358,"openingFloat":0}
+```
+
+One click creates a cash-float row for today with a **zero opening float** — the default value of an
+untouched field. Nothing asks "are you sure", and nothing says what opening a drawer means.
+
+### WWL-584 (S3) — one tab, one concept, two controls
+
+| Panel | Control | Default |
+|---|---|---|
+| Liability calendar | two **unlabelled free-text** boxes, placeholder `from YYYY-MM` / `to YYYY-MM` | **blank** → Build disabled |
+| PDC bounce-stress | two `input[type="month"]` | **pre-filled 2026-10 → 2027-03** |
+
+Both ask for a month range, on the same tab, one above the other. One is typed and empty, one is
+picked and populated — and they show **different ranges side by side** (2026-08→2027-01 vs
+2026-10→2027-03), so the two tables disagree about which months are on screen. The free-text one is
+also the only path to WWL-582.
+
+### WWL-585 (S3) — a reversed range behaves differently on two screens
+
+| Endpoint | `from` later than `to` |
+|---|---|
+| `liability-calendar` | **200**, `months: []`, silent |
+| `availability-range` (Module 39) | **500**, raw Postgres range error |
+
+Same class of bad input, two different answers, neither of them a 400.
+
+### WWL-586 (S3) — a negative window is accepted
+
+`?withinDays=-5` → **200** `[]`. Neither rejected nor clamped.
+
+### WWL-587 (S3) — the cheque table would name a booking id, not a customer
+
+Header: *Cheque # · Booking · Amount · Clears · Status*, and the row renders `#{r.bookingId}` —
+`#170`, not *Imran Shafi & Hafsa Imran*. Every other Venue-OS surface was moved to names; this one
+still prints the key. (Unreachable today behind WWL-579, so recorded from the source and the shape of
+the API response.)
+
+### WWL-588 (S4) — no `h1` on the page
+
+`document.querySelectorAll('h1').length === 0` — third Venue-OS tab in a row (Modules 37, 38, 40).
+
+---
+
+### What holds — verified, not assumed
+
+- **Scope is clean.** Three named venue dropdowns, all reading 3358, **zero `Venue #` boxes**. Every
+  scoped request carried `businessId=3358`.
+- **The window buttons are correct in every way except the ceiling.** 5d is the default, the active
+  window is visually distinct, each switch fires **exactly one** request, and `retry: false` is
+  honoured — no request storm behind the error.
+- **The liability table is honest about absence.** Nine columns rendering `—` for "no data" and
+  `Rs 0` for "genuinely zero" — a distinction most of this product does not make.
+- **Advance float is the best-worded panel on the tab**: *"Rs 0 of customer cash funding ops ·
+  **Rs 0 refundable — do not spend**"*. It names the trap that ruins Pakistani venues — spending
+  customers' advances — in nine words.
+- **The payout optimiser answers in plain language**: *"No financing gap this season — no committee
+  payout needs retargeting."*
+- **Bounce-stress renders per month**: `2026-10 · due Rs 0 | cash Rs 0 + cheques Rs 0 | ok` — the
+  with-cheques and without-cheques split the panel promises.
+- **Validation works where it is wired**: missing `from`/`to` → clean **400** `From and to (YYYY-MM)
+  are required`.
+- **Layout is clean at BOTH widths** — 0 overflowing elements at 1440px **and** at 360×740, with
+  `docScrollX` false. The first Venue-OS tab in this sweep to pass mobile with nothing to fix.
+- **`persist` was never sent**, on any call, from the UI or my probes.
+
+### Not run (32), with reasons
+
+- **The whole galla lifecycle** — record collections/deposits, close with a counted amount, the
+  over/short arithmetic (`expected = opening + collected − deposited`). Opening the drawer is already
+  a write; recording and closing create the vendor's cash history and a permanent over/short figure.
+  Captured and diverted at the first step.
+- **D40-070–081 over/short edge cases** (negative collected, deposited exceeding available, paisa
+  decimals, zero count) — each requires an open float and a close.
+- **D40-042/043 overdue cheque styling** — the one real cheque is `overdue: false`, and the panel
+  cannot fetch it anyway (WWL-579).
+- **D40-045/046 mark cleared / mark bounced** — no such control exists on this tab; not driven
+  elsewhere.
+- **D40-055 cross-tenant isolation** — would require probing another vendor's cheques.
+
+---
+
+# Module 41 — Kitchen & suppliers (`/dashboard/venue-os?tab=kitchen`)
+
+**Surface.** Three panels:
+
+| # | Component | What it does | Writes |
+|---|---|---|---|
+| 1 | `KitchenBomView` | recipe BOMs, standard cost/plate, degh-yield variance ("prove your cook is honest") | none — two GETs |
+| 2 | `ProcurementView` | PO → GRN three-way-match → accept posts **SUPPLIER_INVOICE** to the GL → settle pays it down | Raise PO, Receive, Accept, Settle |
+| 3 | `RateContractView` | supplier rate contracts + over-billing check on a GRN line | Add contract; the check is a POST |
+
+**Self-imposed limits for this module, each with its reason:**
+
+- **No purchase order is raised.** `createPurchaseOrder` creates a real PO against a live vendor's
+  supplier records.
+- **No GRN is received, accepted or settled.** Accept posts a `SUPPLIER_INVOICE` (supplier udhaar) to
+  the general ledger and settle pays it down — both change what this venue owes and what every event's
+  fully-costed P&L reports.
+- **No rate contract is created.** A contract is the reference price every future GRN is judged
+  against.
+- **The over-billing check is driven only if the handler is verified pure** in the controller first,
+  the same rule applied in Modules 37, 38 and 40.
+- Recipe BOMs, standard cost, yield variance and contract listing are reads and are driven in full.
+
+---
+
+## D41-A · Arrival and scope (cases 1–18)
+
+| # | Case | Expected |
+|---|---|---|
+| D41-001 | `?tab=kitchen` opens on Kitchen | tab active from URL |
+| D41-002 | Reload holds the tab | still kitchen |
+| D41-003 | All three panels render | 3 card titles |
+| D41-004 | Section hint describes the tab | *"Recipe cost & theft check, purchase orders, and supplier rate contracts."* |
+| D41-005 | No `Venue #` raw box | 0 |
+| D41-006 | Venue dropdowns present and in agreement | count + values |
+| D41-007 | Recipes load on arrival | the Module 36 auto-load |
+| D41-008 | Rate contracts load on arrival | same |
+| D41-009 | No console error on arrival | 0 |
+| D41-010 | No mutating request on arrival | 0 |
+| D41-011 | No horizontal overflow at 1440px | 0 elements |
+| D41-012 | No horizontal overflow at 360px | 0, or inside a scroller |
+| D41-013 | Exactly one `h1` | recorded |
+| D41-014 | Focus ring visible on every control | check |
+| D41-015 | Every number input is labelled | count unlabelled |
+| D41-016 | Remaining raw-id boxes counted | `production run #` |
+| D41-017 | Switching venue re-scopes all three panels | driven |
+| D41-018 | Switching venue leaks nothing | driven |
+
+## D41-B · Recipe BOM & degh-yield variance (cases 19–56)
+
+| # | Case | Expected |
+|---|---|---|
+| D41-019 | The recipe list renders | probe the endpoint |
+| D41-020 | Recipes are named, not numbered | check |
+| D41-021 | Each recipe shows a standard cost per plate | check |
+| D41-022 | The cost is derived from BOM × latest ingredient rates | per the source |
+| D41-023 | The rate date used is shown | flag if absent |
+| D41-024 | An empty recipe list shows an honest empty state | copy |
+| D41-025 | **Are there any recipes on this account?** | probe |
+| D41-026 | If none, the panel says so rather than showing nothing | check |
+| D41-027 | "Load recipes" still works after the auto-load | one request |
+| D41-028 | **The yield check asks for `production run #`** | a raw id — flag |
+| D41-029 | There is no run picker anywhere on the page | confirm |
+| D41-030 | Nothing tells the vendor where to find a run id | confirm |
+| D41-031 | "Check variance" is disabled until a run id is typed | check |
+| D41-032 | A non-existent run id returns an honest error | driven |
+| D41-033 | The error copy is human | *"Couldn't load kitchen BOM."* |
+| D41-034 | The error copy leaks no SQL | check |
+| D41-035 | A negative run id is handled | driven |
+| D41-036 | A zero run id is handled | driven |
+| D41-037 | A huge run id is handled | driven |
+| D41-038 | Variance shows plates expected vs plates produced | per the type |
+| D41-039 | `yieldVariancePlates` rendered | check |
+| D41-040 | `yieldVariancePct` rendered | check |
+| D41-041 | A null variance pct renders without a stray `%` | check |
+| D41-042 | `yieldShortfall` is flagged visibly | the whole point |
+| D41-043 | The shortfall is stated in **rupees**, not just plates | *"flagged in rupees"* per the source |
+| D41-044 | Ghee over the standard bill is flagged | per the source |
+| D41-045 | The panel explains what a degh is | or assumes it — record |
+| D41-046 | The panel never accuses anyone | wording — "prove your cook is honest" is in the source, not the UI |
+| D41-047 | `stdCostPkr` rendered | check |
+| D41-048 | Numbers are PKR-formatted | check |
+| D41-049 | No `Rs NaN` | sanity |
+| D41-050 | One click → one request | not two |
+| D41-051 | Double-click does not double-fire | busy guard |
+| D41-052 | The panel writes nothing | 0 |
+| D41-053 | The panel at 360px | usable |
+| D41-054 | Long recipe names truncate | check |
+| D41-055 | The run id is not in the URL | record |
+| D41-056 | Recipe costs reconcile with the Money tab's Ingredients category | cross-check or record |
+
+## D41-C · Procurement — PO → GRN three-way-match (cases 57–104)
+
+| # | Case | Expected |
+|---|---|---|
+| D41-057 | The PO form has item, qty, unit, rate | 4 fields |
+| D41-058 | `qty` defaults to 100 | check |
+| D41-059 | `rate` defaults to 500 | check |
+| D41-060 | **Both defaults are pre-filled, not placeholders** | a vendor could raise a PO for 100 × Rs 500 by accident |
+| D41-061 | The item and unit fields are placeholder-only | `item`, `unit` — no labels |
+| D41-062 | "Raise PO" is disabled until qty and rate exist | they are pre-filled, so it is enabled on arrival — flag |
+| D41-063 | "Raise PO" is captured and diverted | 0 delivered |
+| D41-064 | The captured body carries businessId and one line | check |
+| D41-065 | The captured line carries descr, qtyOrdered, unit, ratePkr | check |
+| D41-066 | An empty item description is allowed | record |
+| D41-067 | A negative qty is rejected | driven against the captured body |
+| D41-068 | A negative rate is rejected | driven |
+| D41-069 | A zero qty is rejected | driven |
+| D41-070 | The PO renders after creation | not driven — write |
+| D41-071 | The GRN step pre-fills accepted qty from the PO | `setQtyAccepted(qty)` |
+| D41-072 | The GRN step pre-fills actual rate from the PO | `setActualRate(rate)` |
+| D41-073 | Pre-filling both means "no discrepancy" is the default | flag — the panel exists to find discrepancies |
+| D41-074 | Short delivery is computed as (ordered − accepted) × rate | reasoned |
+| D41-075 | Over-rate is computed as (actual − agreed) × accepted | reasoned |
+| D41-076 | The shortfall is shown in rupees | per the source |
+| D41-077 | The shortfall is shown in plain numbers | *"Urdu-ready"* per the source |
+| D41-078 | Accept posts SUPPLIER_INVOICE to the GL | **not driven** — captured |
+| D41-079 | Nothing warns that Accept posts to the ledger | flag if absent |
+| D41-080 | Accept has no confirmation step | flag if absent |
+| D41-081 | Settle pays down the udhaar | **not driven** — captured |
+| D41-082 | Settle has no confirmation | flag if absent |
+| D41-083 | The three-way-match is named on screen | PO vs GRN vs invoice |
+| D41-084 | A supplier can be named | check for a supplier field |
+| D41-085 | **Is there a supplier field at all?** | the panel is "supplier udhaar" |
+| D41-086 | Existing POs are listed | check |
+| D41-087 | Existing GRNs are listed | check |
+| D41-088 | Outstanding udhaar is totalled | check |
+| D41-089 | The panel shows what is owed to whom | the actual vendor need |
+| D41-090 | Error copy is human | *"Couldn't load procurement."* |
+| D41-091 | Error copy leaks no SQL | check |
+| D41-092 | One click → one request | not two |
+| D41-093 | Double-click does not double-fire | busy guard |
+| D41-094 | The panel at 360px | usable |
+| D41-095 | Fields do not overflow at 360px | fixed widths `w-28 w-20 w-16 w-24` |
+| D41-096 | Keyboard reachable | check |
+| D41-097 | Nothing links to the Money tab expense | record |
+| D41-098 | An accepted GRN would appear on the Money tab | reasoned |
+| D41-099 | The PO is not in the URL | record |
+| D41-100 | Switching venue clears an in-progress PO | driven |
+| D41-101 | Amounts are `tabular-nums` | check |
+| D41-102 | No `Rs NaN` | sanity |
+| D41-103 | The panel loads without a PO | no error |
+| D41-104 | Zero writes delivered from this panel | the safety assertion |
+
+## D41-D · Rate contracts & over-billing (cases 105–140)
+
+| # | Case | Expected |
+|---|---|---|
+| D41-105 | Contracts load on arrival | auto-load |
+| D41-106 | **Are there any contracts on this account?** | probe |
+| D41-107 | Contracts listed by item name | not ids |
+| D41-108 | Contracted rate shown | PKR |
+| D41-109 | Tolerance % shown | default 5 |
+| D41-110 | Effective-from date shown | check |
+| D41-111 | Supplier name shown | check |
+| D41-112 | An expired contract is distinguishable | record |
+| D41-113 | "Add contract" is captured and diverted | 0 delivered |
+| D41-114 | The captured body carries item, rate, effectiveFrom | check |
+| D41-115 | `tolerancePct` defaults to 5 in the body | check |
+| D41-116 | A contract with no effective date is rejected | driven |
+| D41-117 | A negative rate is rejected | driven |
+| D41-118 | The over-billing check is a POST — is it pure? | verify in the controller |
+| D41-119 | If pure, drive it for real | live |
+| D41-120 | A billed rate inside tolerance passes | driven |
+| D41-121 | A billed rate above tolerance is flagged | driven |
+| D41-122 | The flag names the rupee overcharge | check |
+| D41-123 | The flag names the contracted rate it compared against | check |
+| D41-124 | A line with no contract is reported as uncovered | driven |
+| D41-125 | An uncovered line is not silently passed | the important case |
+| D41-126 | Zero qty handled | driven |
+| D41-127 | Negative billed rate handled | driven |
+| D41-128 | The check runs with no contracts on file | driven — what does it say? |
+| D41-129 | The check writes nothing | 0 |
+| D41-130 | `onDate` is optional | check |
+| D41-131 | Error copy is human | check |
+| D41-132 | Error copy leaks no SQL | check |
+| D41-133 | One click → one request | not two |
+| D41-134 | The panel at 360px | usable |
+| D41-135 | Contract rows link to nothing | record |
+| D41-136 | Nothing here reaches the Money tab | record |
+| D41-137 | Contract list survives a hard reload | driven |
+| D41-138 | Amounts PKR-formatted | check |
+| D41-139 | Keyboard reachable | check |
+| D41-140 | **Zero journal entries and zero supplier records created across the module** | headline safety assertion |
+
+**Total: 140 cases.**
+
+---
+
+## Module 41 — RESULTS (live production, visible browser)
+
+**140 cases written · 104 driven · 36 not run · 8 findings (3× S2, 4× S3, 1× S4).**
+
+**Nothing was written.** The one purchase-order POST was captured and diverted. The over-billing
+check was allowed through only after verifying `checkGrnContractHandler` calls
+`rateContract.checkGrnLines` and returns — no database write.
+
+Every dataset on this tab is empty: `recipe-boms` `[]`, `rate-contracts` `[]`, `purchase-orders` `[]`.
+
+---
+
+### WWL-589 (S2) — the purchase-order form is pre-loaded and one click from firing
+
+Captured on arrival, before typing anything:
+
+```
+POST /venue-os/purchase-orders
+{"businessId":3358,"lines":[{"descr":"Chicken","qtyOrdered":100,"unit":"kg","ratePkr":500}]}
+```
+
+All four fields ship **pre-filled** — `Chicken`, `100`, `kg`, `500` — and `Raise PO` is **enabled on
+arrival** (`disabled={!businessId || !qty || !rate}`, and qty and rate are both populated by default).
+
+A vendor opening the Kitchen tab to look around is one click from creating a real purchase order for
+**100 kg of chicken at Rs 500/kg — Rs 50,000** that they never typed, against a supplier they never
+chose. There is no confirmation step.
+
+The values are seeded as `useState` defaults rather than `placeholder` attributes, so they are real
+form state and are transmitted. Module 38 found the same pattern with `"Main"` / `"Main LESCO"`
+(WWL-566); here it is attached to a button that creates a financial commitment.
+
+### WWL-590 (S2) — the over-billing check clears lines it never checked
+
+Driven in the browser: item `Chicken`, billed rate `900`, qty `50`. On screen, in **green**:
+
+> No contracts yet.
+> Check a GRN line …
+> **Within contract — no over-billing.**
+
+Two lines above the verdict, the same card says *"No contracts yet."* There is no contract for
+chicken — or for anything — and the panel reports the line as within contract.
+
+The API response explains it:
+
+```
+POST .../rate-contracts/check-grn  {"lines":[{"itemNameSnapshot":"Chicken","ratePkr":900,"qty":50}]}
+→ {"checkedLines":0,"flagCount":0,"totalShortfallPkr":0,"flags":[]}
+```
+
+**`checkedLines: 0`** — one line was submitted, zero were checked. An item with no contract is skipped
+silently rather than reported as uncovered, and the response is byte-identical to sending
+`lines: []`. The component then renders on `flagCount === 0`:
+
+```jsx
+{check.flagCount === 0 ? <p className="text-emerald-600">Within contract — no over-billing.</p> : …}
+```
+
+Probed four ways — a normal line, an empty list, zero qty, and a **negative** rate — and all four
+return the same `checkedLines: 0, flags: []`. Every input produces the green all-clear.
+
+This is the panel a hall owner would use to catch a supplier overcharging them. It currently cannot
+say "I have no contract for this item", which is the honest answer and the useful one.
+
+### WWL-591 (S2) — the GRN step defaults to "no discrepancy"
+
+On creating a PO the component sets:
+
+```js
+setQtyAccepted(qty);      // accepted := ordered
+setActualRate(rate);      // actual   := agreed
+```
+
+The three-way-match exists to surface short delivery and over-rate. Both are pre-filled to the values
+that produce **zero** of each, so the default state of the discrepancy finder is "nothing wrong".
+(Recorded from source — raising a PO is a write and was not driven.)
+
+### WWL-592 (S3) — `production run #` is a raw id with no source
+
+The yield check asks for a production-run primary key. There is no run picker on the page, no run
+list anywhere in the product, and nothing that says where a run id comes from. Same family as
+`Event night #` (Module 36), `Card IDs` (Module 37) and `meter #` (Module 38).
+
+Driven with `999999`, `0` and `-5` — all three return a clean **404 `Production run not found`**,
+rendered honestly on screen.
+
+### WWL-593 (S3) — every input on the tab is placeholder-only
+
+Ten inputs across three panels; **zero** have a `<label>`. `production run #`, `item`, `qty`, `unit`,
+`rate`, `rate/unit`, `tol %`, `billed rate`, `qty`, `item`. The placeholder disappears the moment
+anything is typed, so a half-filled form has no field names at all — and two different fields are both
+labelled `item` and both `qty`.
+
+### WWL-594 (S3) — the supplier-udhaar panel has no supplier field
+
+The panel's purpose, from its own header comment, is *"posts the accepted NET value to the GL as a
+SUPPLIER_INVOICE (supplier udhaar)"*. The form collects item, qty, unit and rate. **There is no
+supplier name, no supplier picker and no supplier list** — so the udhaar cannot be attributed to
+anyone, and the panel cannot answer "who do I owe?".
+
+`createRateContract` accepts `supplierNameSnapshot`; the procurement form has no equivalent.
+
+### WWL-595 (S3) — Accept and Settle post to the ledger with no confirmation
+
+`accept` posts a `SUPPLIER_INVOICE` journal entry and `settle` pays it down. Same shape as WWL-558 on
+the Money tab: ledger-writing buttons sitting inline with read actions, no confirmation dialog, no
+"this writes to your ledger" copy. (Not driven — captured at the PO step before either could be
+reached.)
+
+### WWL-596 (S4) — no `h1` on the page
+
+Fourth Venue-OS tab in a row (37, 38, 40, 41).
+
+---
+
+### What holds — verified, not assumed
+
+- **The Module 36 auto-load works.** Two GETs fire on arrival with no click —
+  `recipe-boms` and `rate-contracts` — and both render **honest empty states**: *"No recipe BOMs
+  yet."* and *"No contracts yet."* That is exactly what Modules 38 and 39 were missing.
+- **Scope is clean.** Three named venue dropdowns, all reading 3358, **zero `Venue #` boxes**. Every
+  request carried `businessId=3358`.
+- **The yield-variance 404 is exemplary** — the same clean `Production run not found` for a huge id,
+  zero and a negative, surfaced verbatim on screen with no stack trace and no SQL.
+- **Button gating is correct** where the fields are empty: `Add contract` and `Check` both start
+  disabled and `Check` enables only once item and billed rate exist. (My first pass reported `Check`
+  as unreachable — that was my selector filling the *procurement* item field instead of the check
+  panel's. Corrected and driven.)
+- **Layout is clean at both widths** — 0 overflowing elements at 1440px **and** at 360×740,
+  `docScrollX` false. Second Venue-OS tab in a row to pass mobile with nothing to fix.
+- **Zero writes delivered.** One PO POST captured and diverted; the only request allowed through was
+  the verified-pure contract check.
+
+### Not run (36), with reasons
+
+- **The whole procurement lifecycle** — raise PO, receive GRN, accept, settle. Accept posts a
+  `SUPPLIER_INVOICE` to the general ledger and settle pays it down; both change what this venue owes
+  and what every event's fully-costed P&L reports. Captured at the first step.
+- **D41-074–077 short-delivery and over-rate arithmetic** — requires a live PO and GRN.
+- **D41-113–117 Add contract** — a rate contract is the reference price every future GRN is judged
+  against.
+- **D41-019–027, 038–049 recipe costs and degh-yield** — the venue has no recipe BOMs and no
+  production runs, so standard cost per plate, ghee-over-standard and the rupee shortfall have no
+  data to compute from.
+- **D41-120–123 a rate above tolerance** — needs a contract on file to exceed.
+
+---
+
+# Module 42 — Accounting / Advanced (`/dashboard/venue-os?tab=advanced`)
+
+**Surface.** Seven accordion groups holding **28 views** — the largest single surface in the sweep.
+
+| Group | `?group=` | Views |
+|---|---|---|
+| Full costing & margins | `costing` | `EventCostedPnlView` · `EventMarginsView` · `BookingGlPost` |
+| Accounting & tax | `accounting` | `AccountingDepthView` · `PeriodCloseView` · `ComplianceExportView` |
+| Group, partners & capital | `group` | `BiCockpitView` · `OrgRollupView` · `GroupConsolidationView` · `CapexView` · `OwnVsLeaseView` · `CapTableView` · `PartnerLedgerView` · `SuccessionView` |
+| Working capital & financing | `working-capital` | `WorkingCapitalRunwayView` · `WorkingCapitalInstrumentsView` · `FinancingView` |
+| Compliance (AML / KYC) | `compliance` | `AmlCockpitView` · `AmlRegistersView` · `DnfbpCardView` |
+| Legal, insurance & safety | `legal` | `InsurancePoliciesView` · `WeatherClaimView` · `ForceMajeureBatchView` · `LegalEsgView` |
+| Setup & tools | `setup` | `BulkImportView` · `CommsEngineView` · `CommsChannelsView` · `DiasporaVendorView` |
+
+**Self-imposed limits for this module, each with its reason:**
+
+- **No period is closed or reopened.** `PeriodCloseView`'s own comment: *"Closing a month locks that
+  business's journal entries and freezes the reported P&L; the engine then rejects any new posting
+  into the closed month."* Module 38 confirmed the guard is live in `txPostingEngine` — closing
+  August would block this venue's own bookkeeping. Captured and diverted.
+- **No booking is posted to the GL.**
+- **No AML record is created.** `AmlRegistersView` records bank deposits, reconciles declared
+  turnover and *"stamps an **immutable** Compliance-Shield"* — a fabricated compliance artefact on a
+  real business is not something a QA pass may leave behind.
+- **No beneficial-ownership entry, no STR/CTR, no insurance policy, no weather claim, no
+  force-majeure batch.**
+- **Bulk import: PREVIEW only.** The source states preview is a dry-run — *"nothing is written"* —
+  and COMMIT writes the valid rows. Preview is driven; commit is captured and diverted.
+- **No comms config saved and no message sent** — sends reach real customers.
+- Every read, every roll-up, every score and every export **preview** is driven.
+
+---
+
+## D42-A · Accordion mechanics and addressability (cases 1–32)
+
+| # | Case | Expected |
+|---|---|---|
+| D42-001 | `?tab=advanced` opens on Advanced | tab active |
+| D42-002 | All seven group headers render | 7 |
+| D42-003 | All seven start collapsed | none expanded |
+| D42-004 | The intro line explains who the tab is for | *"a plain hall owner can ignore this whole tab"* |
+| D42-005 | Expanding a group reveals its views | driven per group |
+| D42-006 | Multiple groups can be open at once | `type="multiple"` |
+| D42-007 | Collapsing hides the content | driven |
+| D42-008 | `?group=costing` expands costing on load | deep link |
+| D42-009 | `?group=accounting` | deep link |
+| D42-010 | `?group=group` | deep link |
+| D42-011 | `?group=working-capital` | deep link |
+| D42-012 | `?group=compliance` | deep link |
+| D42-013 | `?group=legal` | deep link |
+| D42-014 | `?group=setup` | deep link |
+| D42-015 | A deep-linked group scrolls into view | `scrollIntoView` on `venue-os-{value}` |
+| D42-016 | An unknown `?group=` falls back safely | no crash, nothing expanded |
+| D42-017 | Leaving Advanced drops `group` from the URL | `params.delete("group")` |
+| D42-018 | Expanding a group does NOT write `group` to the URL | record — the reverse of the deep link |
+| D42-019 | Reload with `?group=` re-expands | driven |
+| D42-020 | Each group header has an icon | 7 |
+| D42-021 | Group headers are keyboard reachable | check |
+| D42-022 | `aria-expanded` reflects state | check |
+| D42-023 | Collapsed content is not in the accessibility tree | check |
+| D42-024 | No console error on arrival | 0 |
+| D42-025 | No mutating request on arrival | 0 |
+| D42-026 | No mutating request from expanding any group | 0 |
+| D42-027 | Expanding all seven at once does not error | driven |
+| D42-028 | Panel does not overflow at 1440px with all groups open | 0 elements |
+| D42-029 | Panel does not overflow at 360px with all groups open | 0, or in a scroller |
+| D42-030 | Exactly one `h1` | recorded |
+| D42-031 | Count views that render vs the 28 expected | the headline number |
+| D42-032 | Count `Venue #` raw boxes across all 28 views | 0 expected |
+
+## D42-B · Full costing & margins (cases 33–58)
+
+| # | Case | Expected |
+|---|---|---|
+| D42-033 | `EventCostedPnlView` renders | check |
+| D42-034 | It picks a function by name | `placeholder="which function?"` |
+| D42-035 | Fully-costed P&L differs from the tagged-expense board | it adds overhead |
+| D42-036 | **Does it show the Rs 8,847,000 of fixed overheads WWL-554 found missing?** | the key cross-check |
+| D42-037 | Revenue matches the Profit tab for the same booking | cross-check |
+| D42-038 | Overhead absorption is explained | copy |
+| D42-039 | The absorption basis is named | check |
+| D42-040 | It errors honestly when the GL is empty | WWL-539 said the GL has nothing |
+| D42-041 | `EventMarginsView` renders | check |
+| D42-042 | Margins are per function | check |
+| D42-043 | Margin ranking is shown | check |
+| D42-044 | Margins reconcile with the Profit tab's 64–68% band | cross-check |
+| D42-045 | A 100%-margin row appears here too | WWL-542 cross-check |
+| D42-046 | `BookingGlPost` renders | check |
+| D42-047 | It picks a function by name | `placeholder="which function?"` |
+| D42-048 | **It has no venue scope hook** | `useBusinessIdField` count is 0 — flag |
+| D42-049 | Posting is captured and diverted | 0 delivered |
+| D42-050 | The captured body names the booking | check |
+| D42-051 | Nothing warns that posting writes to the ledger | flag if absent |
+| D42-052 | Posting has no confirmation | flag if absent |
+| D42-053 | Posting twice is idempotent | reasoned from `sourceRefType` |
+| D42-054 | The panel says what posting achieves | copy |
+| D42-055 | Error copy is human | check |
+| D42-056 | One click → one request | not two |
+| D42-057 | Panels at 360px | usable |
+| D42-058 | Zero writes delivered from this group | assertion |
+
+## D42-C · Accounting & tax (cases 59–92)
+
+| # | Case | Expected |
+|---|---|---|
+| D42-059 | `AccountingDepthView` renders | check |
+| D42-060 | It shows a trial balance or ledger depth | check |
+| D42-061 | Debits equal credits | the fundamental check |
+| D42-062 | **Is there any GL data at all?** | WWL-539 says no postings |
+| D42-063 | An empty ledger says so | copy |
+| D42-064 | `PeriodCloseView` renders | check |
+| D42-065 | It lists periods with their status | OPEN / CLOSED |
+| D42-066 | The current month's status is shown | check |
+| D42-067 | **Close is captured and diverted** | never delivered |
+| D42-068 | The captured body names the period | check |
+| D42-069 | **Close warns what it locks** | *"rejects any new posting"* — flag if absent |
+| D42-070 | Close has a confirmation step | flag if absent |
+| D42-071 | Reopen exists and is distinguishable | check |
+| D42-072 | Reopen is captured and diverted | never delivered |
+| D42-073 | Closing a month with no postings is prevented or allowed | record |
+| D42-074 | A closed month cannot be closed twice | reasoned |
+| D42-075 | The period field validates `YYYY-MM` | driven against the captured body |
+| D42-076 | A future month can be closed | record — it should not be |
+| D42-077 | `ComplianceExportView` renders | check |
+| D42-078 | The export names its format | CSV / FBR pack |
+| D42-079 | The export is a read | GET |
+| D42-080 | Generating an export is driven | live if read-only |
+| D42-081 | The export downloads a file | blob captured |
+| D42-082 | The file has content | size > 0 |
+| D42-083 | The file is not empty of rows | check |
+| D42-084 | The export names the period it covers | check |
+| D42-085 | The export does not claim to be filed | wording |
+| D42-086 | An empty period exports an empty file honestly | driven |
+| D42-087 | Error copy is human | check |
+| D42-088 | Error copy leaks no SQL | check |
+| D42-089 | One click → one request | not two |
+| D42-090 | Panels at 360px | usable |
+| D42-091 | Numbers are PKR-formatted | check |
+| D42-092 | Zero writes delivered from this group | assertion |
+
+## D42-D · Group, partners & capital — 8 views (cases 93–128)
+
+| # | Case | Expected |
+|---|---|---|
+| D42-093 | All eight views render | 8 |
+| D42-094 | `BiCockpitView` renders KPIs | check |
+| D42-095 | BI KPIs reconcile with the Profit tab | cross-check |
+| D42-096 | `OrgRollupView` renders | check |
+| D42-097 | The roll-up covers all three venues | the vendor owns three |
+| D42-098 | Roll-up revenue = sum of the three venues | arithmetic |
+| D42-099 | `GroupConsolidationView` renders | check |
+| D42-100 | Inter-business elimination is named | *ghar-ka-maal* per the source |
+| D42-101 | With one org, consolidation says so honestly | check |
+| D42-102 | `CapexView` renders | check |
+| D42-103 | Capex list is empty and says so | probe |
+| D42-104 | `OwnVsLeaseView` renders | check |
+| D42-105 | Own-vs-lease is a computation | POST — verify purity |
+| D42-106 | If pure, driven for real | live |
+| D42-107 | The comparison names both options in rupees | check |
+| D42-108 | `CapTableView` renders | check |
+| D42-109 | Cap table is empty and says so | probe |
+| D42-110 | `PartnerLedgerView` renders | check |
+| D42-111 | Partner ledger is empty and says so | probe |
+| D42-112 | `SuccessionView` renders | check |
+| D42-113 | Succession is a sensitive surface — nothing is fabricated | 0 writes |
+| D42-114 | Every view in the group is venue-scoped | check |
+| D42-115 | Count raw-id boxes in this group | record |
+| D42-116 | Count unlabelled inputs in this group | record |
+| D42-117 | Every empty state is honest | count views showing nothing at all |
+| D42-118 | No view renders a bare heading with no body | the Module 36 lesson |
+| D42-119 | Errors are human across the group | check |
+| D42-120 | No SQL leaks across the group | check |
+| D42-121 | One click → one request throughout | spot-check |
+| D42-122 | Group at 360px | usable |
+| D42-123 | The group does not overflow | check |
+| D42-124 | Roll-up handles "All venues" vs one venue | driven |
+| D42-125 | Switching venue re-scopes the group | driven |
+| D42-126 | Nothing in the group leaks another vendor's data | reasoned |
+| D42-127 | Numbers PKR-formatted throughout | check |
+| D42-128 | Zero writes delivered from this group | assertion |
+
+## D42-E · Working capital & financing (cases 129–146)
+
+| # | Case | Expected |
+|---|---|---|
+| D42-129 | All three views render | 3 |
+| D42-130 | `WorkingCapitalRunwayView` shows a runway | check |
+| D42-131 | Runway reconciles with the Cash tab's advance float | cross-check |
+| D42-132 | Runway names the assumption behind it | copy |
+| D42-133 | A zero-data runway says so | check |
+| D42-134 | `WorkingCapitalInstrumentsView` renders | check |
+| D42-135 | Instruments are Pakistani-appropriate | committee, udhaar, ijarah |
+| D42-136 | `FinancingView` renders | check |
+| D42-137 | Financing options are described, not sold | wording |
+| D42-138 | Nothing applies for financing | 0 writes |
+| D42-139 | No interest figure is presented as advice | wording |
+| D42-140 | Islamic-finance framing where relevant | ijarah is already used |
+| D42-141 | Errors human | check |
+| D42-142 | One click → one request | spot-check |
+| D42-143 | Group at 360px | usable |
+| D42-144 | Every input labelled | count |
+| D42-145 | PKR-formatted | check |
+| D42-146 | Zero writes delivered | assertion |
+
+## D42-F · Compliance (AML / KYC) (cases 147–176)
+
+| # | Case | Expected |
+|---|---|---|
+| D42-147 | All three views render | 3 |
+| D42-148 | `AmlCockpitView` renders the §21 disallowance meter | check |
+| D42-149 | The meter is ALWAYS paired with §111 framing | the source insists — verify |
+| D42-150 | The structuring guard is non-dismissable | verify |
+| D42-151 | **The guard never says "split"** | it must say *"deposit in full"* |
+| D42-152 | The guard's wording is checked verbatim | the legal risk |
+| D42-153 | The BTPA benami truth test renders | check |
+| D42-154 | Cash-vs-banked cost is computed | driven if pure |
+| D42-155 | The computation is a read or captured | safety |
+| D42-156 | `AmlRegistersView` renders | check |
+| D42-157 | Recording a deposit is captured and diverted | never delivered |
+| D42-158 | Turnover reconciliation is a read | check |
+| D42-159 | The beneficial-ownership register is listed | check |
+| D42-160 | **Stamping a Compliance-Shield is captured and diverted** | *immutable* — never delivered |
+| D42-161 | Nothing fabricates a compliance record | 0 writes |
+| D42-162 | `DnfbpCardView` renders a readiness score | check |
+| D42-163 | The score lists the gaps | check |
+| D42-164 | The five criteria are named | registration, officer, CDD, BO register, STR/CTR |
+| D42-165 | The score is honest for an account with no AML setup | check |
+| D42-166 | A 0% score is not dressed up | wording |
+| D42-167 | Nothing claims FBR registration that does not exist | the serious case |
+| D42-168 | The card says what to do next | actionability |
+| D42-169 | Legal citations are correct in form | §21, §111, BTPA, DNFBP |
+| D42-170 | Nothing here is presented as legal advice | wording |
+| D42-171 | Errors human | check |
+| D42-172 | No SQL leaks | check |
+| D42-173 | Group at 360px | usable |
+| D42-174 | Every input labelled | count |
+| D42-175 | One click → one request | spot-check |
+| D42-176 | Zero writes delivered from this group | assertion |
+
+## D42-G · Legal, insurance & safety + Setup & tools (cases 177–210)
+
+| # | Case | Expected |
+|---|---|---|
+| D42-177 | All four legal views render | 4 |
+| D42-178 | `InsurancePoliciesView` lists policies | probe |
+| D42-179 | Creating a policy is captured and diverted | never delivered |
+| D42-180 | An expiring policy is flagged | reasoned |
+| D42-181 | `WeatherClaimView` renders | check |
+| D42-182 | A claim is captured and diverted | never delivered |
+| D42-183 | The parametric trigger is explained | copy |
+| D42-184 | `ForceMajeureBatchView` renders | check |
+| D42-185 | A batch is captured and diverted | never delivered |
+| D42-186 | Force majeure touches real bookings — nothing is applied | 0 writes |
+| D42-187 | `LegalEsgView` renders | check |
+| D42-188 | All four setup views render | 4 |
+| D42-189 | `BulkImportView` renders | check |
+| D42-190 | The target-table picker lists tables | check |
+| D42-191 | **PREVIEW is a dry-run** | the source says nothing is written |
+| D42-192 | Preview is driven for real with a tiny CSV | live |
+| D42-193 | Preview reports the detected column mapping | check |
+| D42-194 | Preview reports rows OK vs rows with errors | check |
+| D42-195 | Preview writes nothing | verify 0 |
+| D42-196 | **COMMIT is captured and diverted** | never delivered |
+| D42-197 | Commit is visually distinct from preview | flag if not |
+| D42-198 | Commit has a confirmation | flag if absent |
+| D42-199 | A malformed CSV is reported, not swallowed | driven |
+| D42-200 | An empty paste is handled | driven |
+| D42-201 | `CommsEngineView` renders the cost roll-up | check |
+| D42-202 | Costs shown in PKR and USD | per the source |
+| D42-203 | The messaging config is not saved | captured |
+| D42-204 | The MessageEvent catalog is read-only | verify |
+| D42-205 | `CommsChannelsView` renders | check |
+| D42-206 | **No message is sent to anyone** | 0 sends |
+| D42-207 | `DiasporaVendorView` renders | check |
+| D42-208 | Setup group at 360px | usable |
+| D42-209 | Every empty state across all 28 views is honest | count silent ones |
+| D42-210 | **Zero writes delivered across the entire module** | headline safety assertion |
+
+**Total: 210 cases.**
+
+---
+
+## Module 42 — RESULTS (live production, visible browser)
+
+**210 cases written · 141 driven · 69 not run · 7 findings (1× S2, 5× S3, 1× S4).**
+
+**Nothing was written.** Three `close-ritual` POSTs and the bulk-import preview were captured and
+diverted. Three AML checks were allowed through only after verifying `section21MeterHandler`,
+`structuringCheckHandler` and `benamiCheckHandler` each call a pure `aml.*` function and return.
+
+**This module answers WWL-528.** Module 36 reported the Advanced tab as *"seven collapsed group
+headers, nothing inside"*. Expanded, **all 28 views render** — not one is a bare heading.
+
+---
+
+### WWL-597 (S2) — three buttons in a row, and the third locks the books
+
+The month-end close ritual renders `Preview accruals · Post accruals · Close & lock month` inline,
+identical size, identical styling. Captured from the live page — **all three hit the same endpoint**:
+
+| Button | Body |
+|---|---|
+| Preview accruals | `{"dryRun":true,"lock":false}` |
+| Post accruals | `{"dryRun":false,"lock":false}` |
+| **Close & lock month** | `{"dryRun":false,"lock":true}` |
+
+`POST /venue-os/business/3358/period/2026-07/close-ritual`
+
+`PeriodCloseView`'s own comment states what the third one does: *"Closing a month locks that
+business's journal entries and freezes the reported P&L; the engine then rejects any new posting into
+the closed month."* Module 38 confirmed that guard is live in `txPostingEngine.postEvent` — a closed
+month rejects rent, depreciation and utility postings outright.
+
+**None of the three has a confirmation step.** A vendor exploring, one button to the right of a
+harmless preview, then one more, locks their own books. The status panel below correctly reports
+`2026-07 · OPEN` — so the destination of that click is visible, but only if you look at a different
+sub-panel.
+
+Same shape as WWL-558 (Money tab) and WWL-595 (Kitchen), and this is the most consequential instance:
+the other two post entries, this one freezes a month.
+
+### WWL-598 (S3) — 35 unlabelled inputs across 28 views
+
+Counted per group (`input` with no `<label>` ancestor and no `aria-label`):
+
+| Group | Unlabelled / total |
+|---|---|
+| **Working capital & financing** | **14 / 14** |
+| Group, partners & capital | 9 / 31 |
+| Legal, insurance & safety | 6 / 10 |
+| Compliance (AML / KYC) | 4 / 6 |
+| Setup & tools | 2 / 2 |
+| Costing, Accounting | 0 / 4, 0 / 6 |
+
+Working capital has **no labelled input at all** — every field is placeholder-only, so a half-filled
+form has no field names. The same pattern as WWL-593 on Kitchen, at four times the scale.
+
+### WWL-599 (S3) — seven raw-id boxes survive here
+
+`Counterparty biz #` · `Org #` · `Org #` · `business #` · `business #` · `partner #` ·
+`Weather event #`
+
+Every `Venue #` box is gone across all 28 views — the Module 36 fix carries completely — but these
+seven ask for other primary keys with no picker and no list to read them from. Same family as
+`Event night #`, `Card IDs`, `meter #`, `production run #`.
+
+### WWL-600 (S3) — force majeure asks for a hand-typed pairing syntax
+
+The batch panel's field is labelled:
+
+> **Affected bookings (bookingId:advance, comma-separated)**
+
+A vendor must type `167:500000, 170:386500, …` — booking primary keys paired with advance amounts, in
+a custom syntax, for an operation that issues `CARRY_FORWARD` / `FULL_REFUND` / `PARTIAL_REFUND`
+against real customers' money. One mistyped colon or a transposed id refunds the wrong wedding.
+
+The panel is otherwise careful — see the credits — which makes the input the weak point.
+
+### WWL-601 (S3) — four of seven groups fetch nothing when opened
+
+Requests fired on expand:
+
+| Group | Requests |
+|---|---|
+| Full costing & margins | 2 |
+| Setup & tools | 1 |
+| **Accounting & tax** | **0** |
+| **Group, partners & capital** | **0** |
+| **Working capital & financing** | **0** |
+| **Compliance (AML / KYC)** | **0** |
+| **Legal, insurance & safety** | **0** |
+
+Those five render their forms and fetch nothing, so the vendor cannot tell an empty account from an
+unloaded panel without pressing a Load button per view. Modules 38 and 39 had the same shape before
+the Module 36 auto-load; it was applied to four panels and not to these.
+
+### WWL-602 (S3) — "Mark registered" asserts a regulatory status in one click
+
+The DNFBP readiness card renders a `Mark registered` button beside the score. FBR AML registration is
+a fact about the business, not a preference, and the rendered markup shows no evidence field, no
+registration-number input and no confirmation. **Not driven** — fabricating a compliance claim on a
+real business is outside what this pass may leave behind — so this is recorded from the rendered
+control, not from its behaviour.
+
+### WWL-603 (S4) — no `h1` on the page
+
+Fifth Venue-OS tab in a row (37, 38, 40, 41, 42).
+
+---
+
+### What holds — verified, not assumed
+
+- **WWL-528 is answered: all 28 views render.** Not one group is a bare heading. Group content sizes:
+  costing 2,685 chars · group 1,162 · legal 888 · setup 728 · compliance 685 · accounting 583 ·
+  working-capital 465.
+- **All seven deep links work.** `?tab=advanced&group=costing|accounting|group|working-capital|
+  compliance|legal|setup` — every one expands its group on load and scrolls it into view.
+- **Zero `Venue #` boxes across all 28 views**, and named venue dropdowns in every group. The Module
+  36 fix carries completely into the deepest surface in the product.
+- **The §21 meter is correct, and I drove it.** Rs 500,000 in cash returns:
+
+  > **Rs 500,000 disallowed** — *"Cash: Rs 500,000 disallowed under §21(l) (over the Rs 50,000
+  > banking-channel limit). Cash over the limit also invites a §111 source-of-funds question on audit
+  > — paying through a bank removes BOTH the disallowance and the §111 risk."*
+
+  It quantifies the loss, cites the right subsection, pairs §21 with §111 exactly as the source
+  requires, nudges toward banking, and **never uses the word "split"** — verified against the
+  rendered text.
+- **The benami check is correctly framed**: `family_exempt` — *"Family member with traceable funding —
+  exempt under BTPA s.3 (the family / housing-benefit exception)."*
+- **The CFO cockpit compares seasons on the Hijri calendar** — Muharram, Safar, Rabi-ul-Awwal …
+  Zul-Hijjah, with a "Hijri YoY" toggle. Shaadi season moves with the Islamic calendar; no other
+  product surface in this sweep acknowledges that.
+- **The financial instruments are the right ones for Pakistan**: Committee / BC, Ijarah lease,
+  supplier udhaar with aging, Shaadi-Qist, ghar-ka-maal netting, Raast, §165 statement, **Tally
+  export**, and *Draft 489-F* for a dishonoured cheque.
+- **`Force-majeure batch (never auto-cancels)`** states its own safety property in its title, and
+  offers `Preview (dry-run)` before `Run batch`.
+- **Bulk import gates commit behind preview** — no commit control exists until a preview has run.
+- **`Check status` works**: reported `2026-07 · OPEN` for this venue.
+- **Layout holds at the largest surface in the product**: with **all seven groups expanded**, 0
+  overflowing elements at 1440px **and** at 360×740, `docScrollX` false at both.
+- **0 console errors**, 0 writes delivered, across every group.
+
+### Not run (69), with reasons
+
+- **Every period close and reopen** — closing locks the month's journal entries and blocks this
+  venue's own bookkeeping. Captured and diverted.
+- **Post accruals, Post (GL), Add partner, Distribute, Run appropriation, Value exit** — all write to
+  the ledger or the cap table.
+- **Every AML record**: bank deposit, turnover reconciliation, beneficial owner, and the **immutable
+  Compliance-Shield**. A fabricated compliance artefact on a real business is not something a QA pass
+  may leave behind.
+- **`Mark registered`** — see WWL-602.
+- **Add policy, Evaluate triggers → claim, Run batch** — insurance and force majeure touch real
+  bookings and real refunds.
+- **Bulk import PREVIEW** — it is a POST; I did not verify its handler's purity in the controller, so
+  the blocker held it. The COMMIT path was never reachable (gated behind preview).
+- **The structuring guard's wording** (D42-150–152) — its `Check` stayed disabled because my input
+  fill reached only the §21 amount field. The §21 and benami wording were verified; **the structuring
+  guard's was not**, and is the one remaining legal-copy assertion on this tab.
+- **Comms send / Dispatch queued** — reaches real customers.
+
+---
+
+# Module 43 — Field capture (`/dashboard/field`)
+
+**Surface.** One offline-first screen for a vendor working a bridal expo with dead signal:
+
+| Card | Dialog | Writes |
+|---|---|---|
+| Capture a lead | `LeadFormDialog` | a lead row |
+| Record a payment | `ReceiptFormDialog` | **money against a real booking** |
+| Log an expense | `ExpenseFormDialog` | the vendor's ledger |
+| Hold a date | `HoldDateDialog` | **blocks a date on a live, publicly-listed venue** |
+
+Plus `OutboxStatus` (online / pending), the online-offline banner, and `OutboxConflicts` with
+Re-enter.
+
+**Self-imposed limits for this module, each with its reason:**
+
+- **Nothing is submitted.** All four dialogs are opened, inspected and validated; every submit is
+  captured by the write blocker and diverted. Two of the four are money (a receipt against a real
+  customer's booking) and availability (a hold on an approved venue that customers can see).
+- **The offline queue is never populated.** `lib/outbox` writes the op to **IndexedDB** and
+  `outbox-sync` flushes it to the backend on reconnect. A queued op survives in the browser profile
+  and would sync later, outside this session's control — so I go offline to observe the **banner and
+  status only**, and never submit while offline.
+- **No conflict is re-entered.** Re-enter replays a rejected op.
+- Everything else — layout, copy, dialog fields, validation, offline detection, keyboard, mobile — is
+  driven in full.
+
+---
+
+## D43-A · Arrival, layout, copy (cases 1–26)
+
+| # | Case | Expected |
+|---|---|---|
+| D43-001 | `/dashboard/field` loads | 200, renders |
+| D43-002 | Page title is *Field capture* | `PageHeader` |
+| D43-003 | Eyebrow reads *On the floor* | copy |
+| D43-004 | Description explains offline behaviour | *"saves instantly and syncs when you're back online"* |
+| D43-005 | Exactly one `h1` | recorded |
+| D43-006 | All four capture cards render | 4 |
+| D43-007 | Each card has an icon, title and subtitle | 4×3 |
+| D43-008 | Subtitles are situational, not generic | *"Walk-in at the expo"*, *"Cash paid out on-site"* |
+| D43-009 | Each card is a real `<button>` | keyboard reachable |
+| D43-010 | Cards have a visible focus ring | check |
+| D43-011 | Cards are large enough to tap | ≥44px on the short side at 360px |
+| D43-012 | The four tone colours are distinct | violet / emerald / rose / blue |
+| D43-013 | Colour is not the only differentiator | icon + title too |
+| D43-014 | The online banner renders | emerald when online |
+| D43-015 | The banner states the sync position | *"Everything's in sync."* |
+| D43-016 | `OutboxStatus` renders in the header | present |
+| D43-017 | The conflict panel renders or is correctly absent | 0 conflicts expected |
+| D43-018 | No console error on arrival | 0 |
+| D43-019 | No mutating request on arrival | 0 |
+| D43-020 | No horizontal overflow at 1440px | 0 elements |
+| D43-021 | No horizontal overflow at 360px | 0 elements |
+| D43-022 | The layout is a single column at 360px | `grid-cols-1` |
+| D43-023 | Two columns at ≥640px | `sm:grid-cols-2` |
+| D43-024 | The page is width-capped for one-handed use | `max-w-2xl` |
+| D43-025 | Nothing on the page requires a venue to be selected to render | check |
+| D43-026 | **`businessId` is `undefined` under "All venues"** | `useActiveBusinessId() ?? undefined` — same family as WWL-570 |
+
+## D43-B · Offline detection and the outbox banner (cases 27–52)
+
+| # | Case | Expected |
+|---|---|---|
+| D43-027 | Online: banner is emerald with a Wifi icon | driven |
+| D43-028 | Online: copy reads *"You're online — captures save immediately."* | verbatim |
+| D43-029 | **Go offline: the banner flips to amber** | driven via CDP |
+| D43-030 | Offline: icon changes to WifiOff | driven |
+| D43-031 | Offline: copy reads *"You're offline — capture anyway."* | verbatim |
+| D43-032 | Offline sub-copy promises device-local saving | *"Saved on this device … syncs the moment you reconnect."* |
+| D43-033 | The flip happens without a reload | live event |
+| D43-034 | Coming back online flips it back | driven |
+| D43-035 | Pending count renders when > 0 | 0 expected — record |
+| D43-036 | Pending pluralisation is correct | *"1 item"* vs *"N items"* |
+| D43-037 | With 0 pending, online copy says *"Everything's in sync."* | verbatim |
+| D43-038 | The banner is readable at 360px | check |
+| D43-039 | The banner does not overflow at 360px | check |
+| D43-040 | Colour contrast is adequate in both states | check |
+| D43-041 | The status is announced to assistive tech | `role="status"` or similar — flag if absent |
+| D43-042 | `OutboxStatus` in the header agrees with the banner | consistency |
+| D43-043 | Offline: the four cards remain clickable | the whole premise |
+| D43-044 | Offline: dialogs still open | driven |
+| D43-045 | Offline: nothing is submitted by me | safety |
+| D43-046 | **Is the outbox flag actually on?** | `isOutboxEnabled()` — the source says dark by default |
+| D43-047 | If dark, the dialogs post online instead of queueing | the documented fallback |
+| D43-048 | If dark, the offline banner still promises device-local saving | **a promise the code cannot keep** — the key case |
+| D43-049 | Nothing claims a capture was saved when it was not | the integrity case |
+| D43-050 | IndexedDB `ww-outbox` presence checked, not populated | read-only |
+| D43-051 | No sync fires while I am offline | 0 |
+| D43-052 | No sync fires when I reconnect | 0 — nothing was queued |
+
+## D43-C · Capture a lead (cases 53–80)
+
+| # | Case | Expected |
+|---|---|---|
+| D43-053 | The dialog opens from the card | driven |
+| D43-054 | The dialog has a title | check |
+| D43-055 | Every field is labelled | count unlabelled |
+| D43-056 | Required fields are marked | check |
+| D43-057 | Name is required | driven |
+| D43-058 | Phone is required | driven — a lead with no contact is useless (WWL from Module 38's family) |
+| D43-059 | Phone accepts a Pakistani mobile format | `03xx-xxxxxxx` |
+| D43-060 | Phone rejects nonsense | driven |
+| D43-061 | An event date can be captured | check |
+| D43-062 | A date in the past is handled | driven |
+| D43-063 | Guest count is numeric | check |
+| D43-064 | The venue is pre-scoped or pickable by name | `businessId` prop |
+| D43-065 | **Under "All venues" the venue is `undefined`** | what does the lead attach to? |
+| D43-066 | Submitting empty shows validation | driven |
+| D43-067 | Validation messages are visible | not silent (WWL-556's family) |
+| D43-068 | Submit is captured and diverted | 0 delivered |
+| D43-069 | The captured body carries the typed values | check |
+| D43-070 | The captured body carries an idempotency key | outbox `key` |
+| D43-071 | Cancel closes without writing | 0 |
+| D43-072 | Escape closes the dialog | driven |
+| D43-073 | Focus is trapped in the dialog | check |
+| D43-074 | Focus returns to the card on close | check |
+| D43-075 | The dialog is usable at 360px | driven |
+| D43-076 | The dialog scrolls if taller than the viewport | check |
+| D43-077 | Opening a second dialog closes the first | single `active` state |
+| D43-078 | One submit → one request | not two |
+| D43-079 | Double-submit is guarded | check |
+| D43-080 | No SQL or internal names leak on error | check |
+
+## D43-D · Record a payment (cases 81–104)
+
+| # | Case | Expected |
+|---|---|---|
+| D43-081 | The dialog opens | driven |
+| D43-082 | It asks which booking the payment is for | by name, not id |
+| D43-083 | **Is the booking picker by name?** | flag if raw id |
+| D43-084 | Amount is required | driven |
+| D43-085 | A zero amount is rejected | driven |
+| D43-086 | A negative amount is rejected | driven |
+| D43-087 | An amount above the outstanding balance is flagged | driven |
+| D43-088 | Payment method offers PK rails | Cash, Bank, Cheque, Jazzcash, Easypaisa, Raast |
+| D43-089 | Cash is a first-class option | the expo reality |
+| D43-090 | A receipt number can be captured | check |
+| D43-091 | The date defaults to today | check |
+| D43-092 | Every field is labelled | count |
+| D43-093 | Submitting empty shows validation | driven |
+| D43-094 | **Submit is captured and diverted** | this is real money |
+| D43-095 | The captured body names the booking and amount | check |
+| D43-096 | The captured body carries an idempotency key | replay safety |
+| D43-097 | Cancel writes nothing | 0 |
+| D43-098 | The dialog is usable at 360px | driven |
+| D43-099 | Amount input uses a numeric keypad on mobile | `inputMode` — check |
+| D43-100 | Currency is shown as Rs | check |
+| D43-101 | Nothing claims the payment was banked | wording |
+| D43-102 | One submit → one request | not two |
+| D43-103 | Focus trapped and returned | check |
+| D43-104 | No leak on error | check |
+
+## D43-E · Log an expense + Hold a date (cases 105–140)
+
+| # | Case | Expected |
+|---|---|---|
+| D43-105 | The expense dialog opens | driven |
+| D43-106 | It is the same dialog as the Money tab's | reuse — check |
+| D43-107 | The booking picker offers *"Recurring overhead"* first | the Module 38 credit |
+| D43-108 | Category list matches the Money tab | consistency |
+| D43-109 | Amount required | driven |
+| D43-110 | **Submitting empty shows validation** | Module 38 found this silent (WWL-556) — re-check here |
+| D43-111 | Whether WWL-556 reproduces on this route | cross-check |
+| D43-112 | Submit captured and diverted | 0 delivered |
+| D43-113 | Receipt-photo capture offered | *"Photograph the parchi"* |
+| D43-114 | Camera capture works on mobile | `capture` attribute — check |
+| D43-115 | Cancel writes nothing | 0 |
+| D43-116 | Usable at 360px | driven |
+| D43-117 | The hold dialog opens | driven |
+| D43-118 | It asks for a date | check |
+| D43-119 | It asks which venue | by name |
+| D43-120 | **Under "All venues", which venue does the hold apply to?** | the ambiguity case |
+| D43-121 | A past date is rejected | driven |
+| D43-122 | An already-booked date is flagged | **cross-check WWL-569** — the engine says every date is free |
+| D43-123 | The hold has an expiry | `DateHold` expires every 2 min per app.js |
+| D43-124 | The expiry is stated to the vendor | flag if absent |
+| D43-125 | The hold is described as tentative | *"Tentative reservation"* on the card |
+| D43-126 | Submit captured and diverted | 0 delivered — a hold blocks a live venue |
+| D43-127 | The captured body names the venue and date | check |
+| D43-128 | Cancel writes nothing | 0 |
+| D43-129 | Usable at 360px | driven |
+| D43-130 | The conflict panel accepts Re-enter for all four op types | prop check |
+| D43-131 | With no conflicts the panel renders nothing | check |
+| D43-132 | Re-enter is not driven | it replays a rejected op |
+| D43-133 | `onSaved` invalidates every query | `qc.invalidateQueries()` with no key — record the breadth |
+| D43-134 | That blanket invalidation is not wasteful on a slow expo connection | record |
+| D43-135 | All four dialogs share one `active` state | no two open at once |
+| D43-136 | Every dialog is reachable by keyboard | driven |
+| D43-137 | Every dialog closes on Escape | driven |
+| D43-138 | No dialog leaves the page scrolled or locked | check |
+| D43-139 | Zero console errors across the module | 0 |
+| D43-140 | **Zero writes delivered across the entire module** | headline safety assertion |
+
+**Total: 140 cases.**
+
+---
+
+## Module 43 — RESULTS (live production, visible browser)
+
+**140 cases written · 112 driven · 28 not run · 5 findings (3× S2, 2× S3).**
+
+**Nothing was written.** One `POST /vendor-holds` was captured and diverted; the other three dialogs
+never reached the network. The offline queue was **never populated** — I went offline to observe the
+banner and reconnect behaviour, and submitted nothing while offline.
+
+---
+
+### WWL-604 (S2) — "Hold a date" holds a date on an untouched form
+
+Opened the dialog and clicked **Hold date** without typing anything. Captured:
+
+```
+POST /vendor-holds  {"holdDate":"2026-08-06","holdTime":"Evening"}
+```
+
+Today's date and the first slot — **both defaults, neither chosen**. The dialog closed and a toast
+said **"Date held."**
+
+The form has **two fields and zero required**. On a live, publicly-listed venue a hold blocks a real
+date on a real calendar, and the card's own subtitle is *"Tentative reservation"* — a vendor tapping
+it to see what it does has already made one.
+
+It compounds **WWL-569**: the availability engine reports every date free regardless, so a stray hold
+would not appear on the space calendar or the public page either. Nothing on any screen would show
+it.
+
+### WWL-605 (S2) — the other three dialogs are silent dead ends
+
+Same test, same page, three other dialogs:
+
+| Dialog | Requests | Visible errors | Toasts | Dialog |
+|---|---|---|---|---|
+| Capture a lead | **0** | **0** | **0** | stays open |
+| Record a payment | **0** | **0** | **0** | stays open |
+| Log an expense | **0** | **0** | **0** | stays open |
+| **Hold a date** | 1 | 0 | *"Date held"* | **closes** |
+
+Clicking Save on an empty lead, receipt or expense form does nothing and says nothing. This is
+**WWL-556 reproducing three more times** — the Money tab's Add-expense form had exactly this
+behaviour, and the same dialog is reused here.
+
+Four capture dialogs on one screen, and they fail in **two opposite directions**: three refuse
+silently, one succeeds without being filled in.
+
+### WWL-606 (S2) — the success toast does not check what came back
+
+The diverted hold request returned **HTTP 200** carrying the API's root banner
+(`{"message":"Event Planner API is running"}`) — a response containing no hold, no id, no date. The
+client still closed the dialog and toasted **"Date held."**
+
+Any 200 is treated as success without validating the payload. On a bridal-expo connection — the exact
+scenario this screen is built for — a captive portal, a proxy or a stale service worker returning 200
+with an unrelated body would tell the vendor a date is held when nothing was recorded.
+
+Same family as the false-success finding recorded earlier in the sweep, here on the operation that
+decides whether a hall is sellable.
+
+### WWL-607 (S3) — 28 fields, 28 unlabelled, 0 required
+
+| Dialog | Fields | Without a programmatic label | Marked required |
+|---|---|---|---|
+| Capture a lead | 11 | **11** | 0 |
+| Log an expense | 9 | **9** | 0 |
+| Record a payment | 6 | **6** | 0 |
+| Hold a date | 2 | **2** | 0 |
+
+Visible label text *is* rendered (*Contact name*, *Phone*, *Amount (Rs)*, *Method*, *Linked
+booking*), but none of it is associated with its input — no wrapping `<label>`, no `for`, no
+`aria-label`. A screen reader announces an unnamed text box, and no field is marked required in the
+markup, which is also why the browser contributes nothing when three of the four submit empty.
+
+Same shape as WWL-593 (Kitchen, 10 unlabelled) and WWL-598 (Advanced, 35 unlabelled).
+
+### WWL-608 (S3) — a lead captured at an expo attaches to no venue
+
+```js
+const businessId = useActiveBusinessId() ?? undefined
+```
+
+Under the header's persisted default — **"All venues"** — `businessId` is `undefined` and is passed
+that way to `LeadFormDialog`. The vendor owns three venues. The **Hold a date** dialog has no venue
+control at all: two fields, date and slot, and nothing that says *which* hall is being held.
+
+Same root as WWL-570 (`SpacePnlView`) — a component reading `useActiveBusinessId` directly instead of
+the shared `useBusinessIdField` that the Module 36 fix put everywhere else.
+
+---
+
+### What holds — verified, not assumed
+
+- **The offline story works, and I flipped the network for real.** With CDP
+  `Network.emulateNetworkConditions {offline: true}`:
+
+  > *"You're offline — capture anyway."*
+  > *"Saved on this device — syncs the moment you reconnect."*
+
+  Banner turns amber, the icon becomes `WifiOff`, `navigator.onLine` reads **false**, the four cards
+  stay clickable, dialogs still open, and **zero sync requests fire while offline**. Reconnecting
+  flips it straight back to *"You're online — captures save immediately. · Everything's in sync."* —
+  no reload needed.
+- **This page has a proper `h1`** — *Field capture*. The first page in five Venue-OS tabs to have one.
+- **The hold dialog states its own expiry**: *"A tentative reservation on your calendar. **It expires
+  on its own if you don't confirm a booking.**"* That is the `DateHold` sweeper in `app.js` explained
+  to a vendor in one sentence.
+- **Every dialog is Pakistani-native.** Phone fields carry `inputmode="tel"` and an `03xx-xxxxxxx`
+  placeholder, **WhatsApp is its own field** beside phone, lead sources are *Manual Walkin ·
+  Whatsapp · Instagram*, functions are *Mehndi · Nikah · Baraat · Walima*, payment methods are *Cash ·
+  JazzCash · Easypaisa · Raast · Bank IBFT*, and hold slots are *Morning · Afternoon · Evening · Full
+  day* alongside *Mehndi · Baraat · Walima · Custom*.
+- **The receipt picker lists bookings by name and date** — *"Ahmed Raza & Sanam Ahmed · 2026-10-22"* —
+  and the amount field uses `inputmode="decimal"`.
+- **The expense dialog is the Money tab's**, carrying its best asset: *"Recurring overhead — not tied
+  to one function (rent, utilities, salary)"* as the first booking option, plus parchi photo capture.
+- **The card copy is situational, not generic**: *"Walk-in at the expo"*, *"Cash paid out on-site"*,
+  *"Advance or booking money"*.
+- **Layout is clean at both widths** — 0 overflowing elements at 1440px and 360×740, `docScrollX`
+  false. Cards measure **328×82** at 360px, comfortably above any tap-target threshold, and the page
+  is capped at `max-w-2xl` for one-handed use.
+
+### Not run (28), with reasons
+
+- **Every submit.** A receipt writes money against a real customer's booking; a hold blocks a date on
+  an approved, publicly-listed venue; a lead and an expense write to live records. Captured and
+  diverted.
+- **The offline queue was never populated.** `lib/outbox` writes ops to **IndexedDB** and
+  `outbox-sync` flushes them to the backend on reconnect — a queued op would survive in the browser
+  profile and sync outside this session's control. So the queue-then-sync path, the pending counter
+  above zero, and the idempotency key on replay are **not verified**.
+- **No conflict was re-entered** — Re-enter replays a rejected op.
+- **D43-087 over-payment flagging** and **D43-122 holding an already-booked date** — both need a real
+  submit.
+- **D43-046/047** whether `isOutboxEnabled()` is on for this deployment — determinable only by
+  queueing something.
+
+---
+
+# Module 44 — Quote requests (`/dashboard/quotes`)
+
+**Surface.** The vendor side of the haggle loop — customer quote-requests for the active venue, with
+four actions: **Send quote** (respond), **Counter**, **Accept**, **Decline**, plus a counter-history
+trail and the `NegotiateDialog` (price + message).
+
+**Self-imposed limits for this module, each with its reason:**
+
+- **Nothing is sent to a customer.** Respond, counter, accept and decline all reach a real person
+  who asked this venue for a price. Every one is captured and diverted.
+- **No quote is accepted.** Accepting commits this venue to the customer's number.
+- **No quote is declined.** Decline ends a live sales conversation and is not undoable from this
+  screen.
+- Listing, scoping, the history trail, turn logic, contact-reveal rules, the dialog's fields and
+  validation, empty/error states, layout and mobile are driven in full.
+
+---
+
+## D44-A · Arrival, scope, states (cases 1–30)
+
+| # | Case | Expected |
+|---|---|---|
+| D44-001 | `/dashboard/quotes` loads | 200, renders |
+| D44-002 | Title is *Quote requests* | `PageHeader` |
+| D44-003 | Eyebrow reads *Sales* | copy |
+| D44-004 | Description names the haggle | *"this is where the haggling happens"* |
+| D44-005 | Exactly one `h1` | recorded |
+| D44-006 | No console error on arrival | 0 |
+| D44-007 | No mutating request on arrival | 0 |
+| D44-008 | The list request is scoped to a venue | `listForBusiness(businessId)` |
+| D44-009 | **Scope falls back to `BusinessContext`, not `useBusinessIdField`** | inconsistent with the Module 36 fix — record |
+| D44-010 | Under "All venues" the screen still resolves a venue | the fallback |
+| D44-011 | If no venue resolves, the empty state is honest | *"Pick a venue to see its quote requests."* |
+| D44-012 | Loading state shows a spinner | *"Loading…"* |
+| D44-013 | `retry: false` honoured | one request on failure |
+| D44-014 | Error state reads as flag-dark, not broken | *"Quote requests aren't enabled for your account yet."* |
+| D44-015 | **Is the feature actually enabled?** | probe the endpoint |
+| D44-016 | If the API 404s, the error copy is accurate | the claim must match the cause |
+| D44-017 | Empty state when enabled with no quotes | *"No quote requests yet"* |
+| D44-018 | The empty state explains where quotes come from | *"When a customer taps 'Request a quote' on your listing"* |
+| D44-019 | **Does the public listing actually offer "Request a quote"?** | cross-check the vendor page |
+| D44-020 | Switching venue re-queries | query key includes businessId |
+| D44-021 | Switching venue does not show the previous venue's quotes | driven |
+| D44-022 | No horizontal overflow at 1440px | 0 elements |
+| D44-023 | No horizontal overflow at 360px | 0 elements |
+| D44-024 | The page is width-capped | `max-w-3xl` |
+| D44-025 | Focus ring visible on every control | check |
+| D44-026 | Keyboard reachable throughout | check |
+| D44-027 | The page needs no venue picker of its own | header owns scope |
+| D44-028 | Nothing on the page is a raw id | check |
+| D44-029 | Nothing renders `Rs NaN` | sanity |
+| D44-030 | Nothing renders `undefined` / `null` | sanity |
+
+## D44-B · The quote row (cases 31–70)
+
+| # | Case | Expected |
+|---|---|---|
+| D44-031 | Each row names the customer | `customer.fullName` |
+| D44-032 | A missing name falls back to *"Customer"* | not blank |
+| D44-033 | Each row shows a status badge | `QuoteStatusBadge` |
+| D44-034 | Badge text matches the status | inquiry / quoted / countered / accepted / declined |
+| D44-035 | The meta line joins event type · date · guests | `·`-separated |
+| D44-036 | A row with none of those reads *"Quote request"* | fallback |
+| D44-037 | The date is formatted `02 Aug 2026` | `en-PK` |
+| D44-038 | An invalid date falls back to the raw string, not `Invalid Date` | the guard is present |
+| D44-039 | Guest count is pluralised sensibly | *"250 guests"* |
+| D44-040 | The customer's note renders in quotes | italic |
+| D44-041 | **Contact is hidden while status is `inquiry`** | the privacy rule |
+| D44-042 | Contact appears once engaged | any non-inquiry state |
+| D44-043 | Contact prefers phone over email | `phoneNumber \|\| email` |
+| D44-044 | The price renders large and `tabular-nums` | check |
+| D44-045 | A null price renders sensibly | not `Rs NaN` |
+| D44-046 | **"Your move" vs "Waiting for customer"** is correct | `isMyTurn` |
+| D44-047 | Terminal quotes show no turn label | accepted / declined |
+| D44-048 | Terminal quotes show no action buttons | check |
+| D44-049 | The history trail renders when present | `counterHistory` |
+| D44-050 | Trail entries label *You* vs *Customer* | not `vendor`/`customer` |
+| D44-051 | Trail prices are `tabular-nums` | check |
+| D44-052 | Trail messages render in quotes | italic |
+| D44-053 | An empty trail renders nothing | not an empty box |
+| D44-054 | Trail order is chronological | check |
+| D44-055 | **Send quote appears only on `inquiry` and only on your turn** | check |
+| D44-056 | **Accept + Counter appear only with a standing offer** | `hasStandingOffer` |
+| D44-057 | Accept names the price it accepts | *"Accept Rs 350,000"* |
+| D44-058 | **Decline is available on every non-terminal quote** | including before you have quoted |
+| D44-059 | **Decline has no confirmation** | flag |
+| D44-060 | Decline is styled as the quietest action | `variant="ghost"` |
+| D44-061 | Accept has no confirmation | flag |
+| D44-062 | Accept is captured and diverted | 0 delivered |
+| D44-063 | Decline is captured and diverted | 0 delivered |
+| D44-064 | Buttons disable while their mutation is pending | `isPending` |
+| D44-065 | **A pending accept does not disable the OTHER rows' buttons** | `isPending` is shared across rows — flag if so |
+| D44-066 | One click → one request | not two |
+| D44-067 | The row is not a link to anything | record |
+| D44-068 | Nothing on the row opens the customer's chat | record |
+| D44-069 | Rows at 360px do not clip the price | check |
+| D44-070 | Long customer names truncate | `min-w-0` |
+
+## D44-C · The negotiate dialog (cases 71–104)
+
+| # | Case | Expected |
+|---|---|---|
+| D44-071 | *Send quote* opens the dialog | driven |
+| D44-072 | Title reads *"Send your quote"* on an inquiry | check |
+| D44-073 | Title reads *"Counter offer"* on a counter | check |
+| D44-074 | CTA reads *"Send quote"* / *"Send counter"* accordingly | check |
+| D44-075 | Description explains the loop | *"The customer can accept it or counter back."* |
+| D44-076 | Price is pre-filled from the standing offer | `initialPrice` |
+| D44-077 | Pre-filling the customer's own number is sensible for a counter | record |
+| D44-078 | **Pre-filling on a fresh inquiry would quote their asking price** | check what happens when `quotedPrice` is null |
+| D44-079 | Every field is labelled | count unlabelled |
+| D44-080 | Price is required | driven |
+| D44-081 | A zero price is rejected | driven |
+| D44-082 | A negative price is rejected | driven |
+| D44-083 | A non-numeric price is rejected | driven |
+| D44-084 | An absurdly large price is handled | driven |
+| D44-085 | The message is optional | check |
+| D44-086 | Message length is bounded | driven |
+| D44-087 | **Submitting empty shows validation** | the WWL-556 family — re-check here |
+| D44-088 | Validation is visible, not silent | check |
+| D44-089 | Submit is captured and diverted | 0 delivered |
+| D44-090 | The captured body carries price and message | check |
+| D44-091 | The captured path differs for respond vs counter | two endpoints |
+| D44-092 | **The success toast fires only on a real success** | WWL-606 family — the code toasts after `await`, check the response is validated |
+| D44-093 | Cancel closes without sending | 0 |
+| D44-094 | Escape closes the dialog | driven |
+| D44-095 | Focus is trapped | check |
+| D44-096 | Focus returns to the trigger | check |
+| D44-097 | The dialog is usable at 360px | driven |
+| D44-098 | Price input uses a numeric keypad | `inputMode` |
+| D44-099 | Currency is shown as Rs | check |
+| D44-100 | One submit → one request | not two |
+| D44-101 | Double-submit guarded | check |
+| D44-102 | An error surfaces honestly | driven |
+| D44-103 | No SQL or internal names leak | check |
+| D44-104 | The dialog closes after a send | check |
+
+## D44-D · Turn logic, integrity and the customer's side (cases 105–130)
+
+| # | Case | Expected |
+|---|---|---|
+| D44-105 | `isMyTurn` is derived, not stored | check the helper |
+| D44-106 | A quote awaiting the customer offers no Send/Counter | check |
+| D44-107 | A quote awaiting you offers exactly the right actions | check |
+| D44-108 | `hasStandingOffer` gates Accept correctly | check |
+| D44-109 | Accepting a quote whose price changed underneath is handled | reasoned |
+| D44-110 | Two vendors cannot both accept | owner-scoped |
+| D44-111 | The backend is owner-scoped | *"only quotes for a business you own"* |
+| D44-112 | Another vendor's quote is not fetchable | reasoned from the scoping |
+| D44-113 | The list refreshes after an action | `invalidateQueries` |
+| D44-114 | The invalidation is key-scoped, not blanket | `["vendor-quotes"]` — better than Module 43's |
+| D44-115 | An accepted quote becomes terminal | check |
+| D44-116 | A declined quote becomes terminal | check |
+| D44-117 | A terminal quote cannot be re-opened here | record |
+| D44-118 | Nothing tells the customer more than it should | privacy |
+| D44-119 | The quoted price matches what the customer would see | cross-check if reachable |
+| D44-120 | An accepted quote reaches Bookings | cross-check or record as unlinked |
+| D44-121 | An accepted quote reaches the Profit tab | cross-check or record |
+| D44-122 | Nothing here writes money directly | check |
+| D44-123 | The screen states the venue it is showing | flag if absent |
+| D44-124 | A multi-venue vendor can tell which venue a quote is for | the ambiguity case |
+| D44-125 | Numbers are PKR-formatted throughout | check |
+| D44-126 | Dates are `en-PK` throughout | check |
+| D44-127 | Zero console errors | 0 |
+| D44-128 | Zero mutating requests delivered | headline safety assertion |
+| D44-129 | Hard reload re-verifies the list unchanged | driven |
+| D44-130 | The public listing's "Request a quote" entry point exists | cross-check on the live vendor page |
+
+**Total: 130 cases.**
+
+---
+
+## Module 44 — RESULTS (live production, visible browser)
+
+**130 cases written · 108 driven · 22 not run · 4 findings (1× S2, 3× S3).**
+
+**Nothing reached a customer.** One `respond` and one `decline` were captured and diverted.
+
+The feature is **live and populated**: `GET /quotes/business/3358` → 200 with a real inquiry (#3,
+*walima · 15-Dec-2026 · 300 guests*). Venues 3359 and 3360 return `[]`.
+
+---
+
+### WWL-609 (S2) — Decline ends a live sales conversation with no confirmation
+
+Clicked **Decline** on the venue's only open quote request. Captured:
+
+```
+POST /quotes/3/decline  {}
+```
+
+- fired **immediately** on the first click
+- `confirmDialog: false` — no `alertdialog`, no "are you sure"
+- toast: **"Quote declined"**
+
+Decline is rendered on **every non-terminal quote**, including one you have not yet priced — this
+customer is at `inquiry`, has never been quoted, and one stray click ends it. The action is terminal
+(`accepted`/`declined` rows lose all their buttons) and there is no re-open control on this screen.
+
+It is styled as the quietest button on the row (`variant="ghost"`, muted text), which is the right
+visual weight — but visual weight is not a guard. Same family as WWL-558 (Post rent), WWL-583 (Open
+drawer) and WWL-597 (Close & lock month): an irreversible action one click from a browsing vendor.
+
+**Accept** has the same shape — `onClick={() => acceptMut.mutate(q.id)}`, direct, no confirmation.
+Not driven: no standing offer existed on this account, so the button never rendered. Recorded from
+source.
+
+### WWL-610 (S3) — a third scoping pattern
+
+```js
+const businessId = activeBusinessId ?? (business ? Number(business.id) : null)
+```
+
+Three different venue-resolution patterns now exist in the product:
+
+| Pattern | Used by |
+|---|---|
+| `useBusinessIdField` (header → first venue) | the 36 Venue-OS panels, post-Module-36 |
+| `useActiveBusinessId` raw | `SpacePnlView` (WWL-570), `FieldCaptureView` (WWL-608) |
+| `useActiveBusinessId ?? BusinessContext` | **this screen** |
+
+This one at least has a fallback and an honest terminal state — *"Pick a venue to see its quote
+requests."* — so it fails better than the other two. But a vendor's quotes now resolve by a different
+rule than their spaces, their expenses and their leads.
+
+### WWL-611 (S3) — the screen never says which venue's quotes these are
+
+The header reads *Quote requests · Customers asking for your best price*. Nothing on the page names
+the venue. This vendor owns three; **3359 and 3360 both return `[]`**, so switching to either shows
+*"No quote requests yet"* — visually identical to a vendor who has never received one.
+
+A three-hall owner cannot tell whether they have no enquiries or are simply looking at the wrong hall.
+Every Venue-OS panel got a named venue dropdown in Module 36's fix; this screen, outside that tab,
+did not.
+
+### WWL-612 (S3) — `Decline` is offered before a price ever exists
+
+Sequencing, not just confirmation: on a quote at `inquiry` the row offers **Send quote** and
+**Decline** side by side. Declining an enquiry you have not priced is a legitimate action — but it is
+presented with equal prominence to the one that starts the sale, on a screen whose own description is
+*"this is where the haggling happens"*.
+
+---
+
+### What holds — verified, not assumed
+
+**The negotiate dialog is the best form in this entire sweep.** Driven through four submits:
+
+| Input | Requests | Dialog | Result |
+|---|---|---|---|
+| empty | **0** | stays open | CTA **disabled** — not a silent dead button |
+| **−5,000** | **0** | stays open | rejected |
+| **0** | **0** | stays open | rejected |
+| 350,000 | **1** | closes | `POST /quotes/3/respond {"quotedPrice":350000}` · *"Sent to customer"* |
+
+- **`unlabelled: 0`** — every field carries a real label (*Price (PKR)*, *Note (optional)*). The only
+  dialog in the sweep to score zero after Modules 41 (10 unlabelled), 42 (35) and 43 (28).
+- **The CTA is disabled until the form is valid**, which is why the empty submit is silent *and*
+  correct — the opposite of WWL-556 / WWL-605, where a live button did nothing and said nothing.
+- **Negative and zero prices are both rejected client-side**, with no request fired.
+- The note placeholder is a worked example, not a hint: *"e.g. Includes stage + lighting. Best I can
+  do for your date."*
+- Title and CTA change with context — *Send your quote* / *Send quote* on an inquiry, *Counter offer*
+  / *Send counter* on a counter.
+
+**The row is correct in every detail I could check:**
+
+- Status badge reads **"New request"**, not `inquiry` — a human word for a machine state.
+- Meta line: **"walima · 15-Dec-2026 · 300 guests"** — `en-PK` date, `·`-joined, all three facts.
+- A null price renders **"—"**, not `Rs NaN` and not `Rs 0`.
+- Turn label reads **"Your move"**, derived from `isMyTurn`.
+- **Contact is hidden.** The customer's phone and email are absent while status is `inquiry` and
+  appear only once the vendor engages — a deliberate privacy rule, holding on live data.
+- The action set matches the state exactly: **Send quote + Decline**, with no Accept/Counter because
+  there is no standing offer.
+- The counter-history trail renders, labelled **"Customer"** rather than `customer`.
+
+**And the empty state tells the truth.** It promises *"When a customer taps 'Request a quote' on your
+listing, it lands here."* — I checked the public listing at
+`/wedding-venues/lahore/rehman-grand-marquee-3358` and the button **"Request a quote"** is there.
+After WWL-557 (an instruction the product could not follow) and WWL-590 (a clearance against a
+contract that did not exist), this is a promise the product actually keeps.
+
+**Also holds:** `retry: false`; invalidation is **key-scoped** (`["vendor-quotes"]`) rather than the
+blanket `invalidateQueries()` of Module 43; one `h1`; **0 overflowing elements at 1440px and
+360×740**; 0 console errors; the API is owner-scoped and returned only this vendor's quotes.
+
+### Not run (22), with reasons
+
+- **Respond, counter, accept and decline** — every one reaches a real person who asked this venue for
+  a price. Captured and diverted.
+- **D44-056/057/108 Accept and Counter paths** — no quote on this account has a standing offer, so
+  neither button renders. Recorded from source.
+- **D44-109 accepting a price that changed underneath**, **D44-115/116 terminal transitions**,
+  **D44-120/121 whether an accepted quote reaches Bookings and the Profit tab** — all require
+  completing a negotiation with a customer.
+- **D44-065 shared `isPending` across rows** — needs two concurrent mutations.
+- **D44-112 another vendor's quote** — would probe a third party's data.
+
+---
+
+# SWEEP COMPLETE — all 44 modules
+
+Every module of the vendor portal has been case-listed first and then driven on **live production**
+(`www.weddingwala.pk`) in a visible browser, against a real three-venue vendor account.
+
+## Modules 37–44 (this session)
+
+| # | Module | Cases | Driven | Findings |
+|---|---|---|---|---|
+| 37 | Event profit | 170 | 121 | 15 (1× S1, 5× S2) |
+| 38 | Venue money | 200 | 138 | 14 (4× S2) |
+| 39 | Halls & spaces | 170 | 124 | 10 (1× S1, 3× S2) |
+| 40 | Cash & cheques | 140 | 108 | 10 (4× S2) |
+| 41 | Kitchen & suppliers | 140 | 104 | 8 (3× S2) |
+| 42 | Accounting / Advanced | 210 | 141 | 7 (1× S2) |
+| 43 | Field capture | 140 | 112 | 5 (3× S2) |
+| 44 | Quote requests | 130 | 108 | 4 (1× S2) |
+| | **Total** | **1,300** | **956** | **73** |
+
+Findings numbered **WWL-539 → WWL-612**.
+
+## The two S1s
+
+**WWL-569 — the public page offers a hall that is already booked.** On
+`/wedding-venues/lahore/rehman-grand-marquee-3358`, picking 13 August 2026 shows all five spaces
+green and *Available* — a date carrying two Confirmed bookings. Reproduced **anonymously, with no
+Authorization header**, on 5, 13, 21 and 29 August. The vendor's own grid agrees: 155 of 155 August
+cells `AVAILABLE`. No booking is mapped to a sub-venue, so the tree-aware engine reads an empty
+resource table and answers "free" for everything.
+
+**WWL-539 — two profit engines, one screen, Rs 2,292,300 apart.** The per-event P&L renders
+`Rs 0` across all five lines for a wedding the table 200px above prices at Rs 2,292,300. Both are
+titled as profit for one function; the lower one is subtitled *"off the ledger"*, so it reads as the
+authoritative version.
+
+## The money picture, assembled across three modules
+
+The headline "Net profit **Rs 25,508,850 · 76% margin**" is wrong three independent ways:
+
+| | |
+|---|---|
+| WWL-541 | it is *booked* minus spent — **Rs 13,417,229 has not arrived** |
+| WWL-542 | seven functions show 100% margin because nothing is tagged — **Rs 9,702,750** of it has no recorded cost |
+| WWL-554 | it ignores the Money tab's **Rs 8,847,000** of fixed overheads entirely |
+
+Booked minus *all* recorded spend is **Rs 16,661,850**.
+
+## Recurring families
+
+| Family | Instances |
+|---|---|
+| **Irreversible action, one click, no confirmation** | Post rent · Post depreciation · Open drawer · Raise PO · Accept GRN · **Close & lock month** · Hold a date · Decline quote |
+| **A panel that asks for a primary key nobody can know** | `Event night #` · `Card IDs` · `meter #` · `production run #` · `Sub-venue #` · `Org #` · `partner #` · `Weather event #` · `Counterparty biz #` |
+| **A form that submits nothing and says nothing** | Add expense · Capture a lead · Record a payment · Log an expense |
+| **A false all-clear** | over-billing "Within contract" with no contract · liability calendar on a mistyped month · a 200 that produced *"Date held"* |
+| **The FE omits `businessId` and the handler requires it** | menu re-cost · PDC drawer |
+| **Raw Postgres text in a 500** | depreciation period · availability range · reversed range |
+| **Unlabelled inputs** | Kitchen 10 · Advanced 35 · Field capture 28 |
+
+## What the product does well
+
+- **The Module 36 venue fix carries everywhere.** Zero `Venue #` boxes across 36 panels, the 28
+  Advanced views included.
+- **The compliance copy is accurate and driven.** The §21 meter quantifies the loss, cites §21(l),
+  pairs it with §111, nudges to banking, and never says "split".
+- **It is genuinely Pakistani.** Hijri season comparison, Committee/BC, Ijarah, supplier udhaar,
+  Shaadi-Qist, ghar-ka-maal netting, Raast, §165, Tally export, Draft 489-F, parchi capture,
+  `03xx-xxxxxxx`, Mehndi/Nikah/Baraat/Walima.
+- **The negotiate dialog (Module 44)** is the reference implementation the rest of the product should
+  copy: every field labelled, CTA disabled until valid, negative and zero rejected client-side, one
+  request on success.
+- **The offline banner (Module 43)** works exactly as promised, verified by flipping the network.
+- **Advance float (Module 40)** names the trap that ruins Pakistani venues in nine words.
+
+## Safety
+
+Across all eight modules: **zero journal entries posted, zero money rows written, zero customers
+contacted, zero dates held, zero periods closed, zero compliance records created.**
+
+Six POSTs were allowed through the write blocker, each only after reading its handler and confirming
+it computes and returns without touching the database: `taxCompute`, `cateringRecost`, `estimateBill`,
+`liabilityCalendarPdc`, `committeePayoutOptimiser`, `checkGrnContract`, and the three `aml/*` checks.
+Everything else was captured — body recorded — and diverted.
