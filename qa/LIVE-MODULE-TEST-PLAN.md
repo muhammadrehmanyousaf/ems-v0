@@ -61,7 +61,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 29 | Promote | `/dashboard/promote` | ✅ 222 | **`[x]` COMPLETE — 150 run, 72 not run, 22 findings (4× S2)** |
 | 30 | Plan & billing | `/dashboard/billing` | ✅ 216 | **`[x]` COMPLETE — 155 run, 61 not run, 20 findings (4× S2)** |
 | 31 | Collaborations | `/dashboard/collaborations` | ✅ 238 | **`[x]` COMPLETE — 165 run, 73 not run, 22 findings (4× S2)** |
-| 32 | Business Settings | `/dashboard/settings` | — | `[~]` 11 tabs done earlier |
+| 32 | Business Settings | `/dashboard/settings` | ✅ 286 | `[~]` cases written — execution in progress |
 | 33 | Availability | `/dashboard/settings?tab=availability` | — | `[ ]` |
 | 34 | Cancellation policy | `/dashboard/settings?tab=policy` | — | `[ ]` |
 | 35 | Setup checklist | `/dashboard/onboarding` | — | `[ ]` |
@@ -15951,3 +15951,360 @@ decline with no reason, on a column, an endpoint, an API method and a notificati
 to carry one. It transmits a **negative agreed amount** without a murmur, to be silently stored as
 zero. And on a flaky connection the invite goes twice — two rows, two notifications — because this is
 the one create endpoint in the last three modules with no idempotency guard at all.
+
+---
+
+## MODULE 32 — TEST CASES
+
+Route `/dashboard/settings`. The largest surface in the sweep: an eleven-tab hub over the business
+profile — 8 components, ~2,150 lines — three tabs wired to a shared dirty-tracked save bar, the rest
+self-contained editors with their own mutations.
+
+**This module was marked `[~] 11 tabs done earlier`.** The source carries a dense set of fix notes
+from that earlier work, several of them recording live-production verification. Those fixes are
+therefore **regression targets first**: each is re-checked against production here rather than taken
+on trust. Section B exists for exactly that.
+
+**Safety.** Every wired tab writes to the live public listing of a real business. The write blocker
+stays armed for the whole module; no save is permitted on any tab.
+
+Established from a live probe before any case ran:
+
+| Business | 3358 Rehman Grand Marquee | 3359 Rehman Banquet & Lawn | 3360 Rehman Marquee Bahria |
+|---|---|---|---|
+| City / area | Lahore · Johar Town | Lahore · Gulberg III | Rawalpindi · Bahria Town Phase 4 |
+| Starting price | 350,000 | 480,000 | 295,000 |
+| Guests | 250–900 | 150–650 | 120–500 |
+| Advance | Percentage · 10 | **null · null** | **null · null** |
+| Cancellation policy | **empty** | **empty** | **empty** |
+| Brand logo | **null** | **null** | **null** |
+| Images | **1** | **0** | **0** |
+| Amenity booleans | 2 set, 8 explicit `false` | 2 set, **8 `null`** | 2 set, **8 `null`** |
+| Packages / menus | 3 / 3 | — | — |
+
+### A. Route, shell, deep links and business resolution (D32-001 → D32-030)
+
+- **D32-001** Sidebar → **Set up** navigates to `/dashboard/settings`.
+- **D32-002** `document.title` (*"Dashboard : Settings"*) vs the page title (the **business name**) vs the eyebrow (*"Settings · Business"*) vs the nav label (**Set up**).
+- **D32-003** The page title is the business name, not the page's name — establish what that does to orientation when the vendor switches business.
+- **D32-004** `aria-current="page"` element count.
+- **D32-005** `TourLauncherCard` renders **above** the hub and outside it. Establish the reasoning recorded in `page.tsx` — the offer of help must survive the hub's failure states — and verify it holds when the business query fails.
+- **D32-006** …and note the same card is imported *inside* the hub file too. Establish whether it renders twice.
+- **D32-007** Eleven tabs render in the rail: Profile · Capacity & pricing · Amenities & services · Listing content · Type-specific · Images · Packages · Menus · Bank details · Team members · Availability.
+- **D32-008** The rail is `<nav aria-label="Settings sections">` with `aria-current` on the active tab.
+- **D32-009** `aria-current={active === t.key}` is a **boolean**, not a token. Establish what it renders as and whether that is valid.
+- **D32-010** Only **Team members** carries an `href`; it renders an `ExternalLink` icon and a "dedicated screen" card pointing at `/dashboard/staff`.
+- **D32-011** Establish that every other unwired tab renders its own manager inline, so the "dedicated screen" card appears exactly once.
+- **D32-012** Deep link `?tab=pricing` opens Capacity & pricing.
+- **D32-013** `PARAM_TO_TAB` maps the sidebar's own ids: `overview`/`basic` → profile, `fleet` → type-specific, plus the hub-native keys. Verify each of the 15 mappings resolves.
+- **D32-014** An unknown `?tab=` value falls back to **profile**. Verify.
+- **D32-015** The tab is **not** written back to the URL when clicked — only read. Establish that a tab chosen by hand cannot be linked.
+- **D32-016** Reload on `?tab=bank` returns to Bank details. Verify the deep link survives.
+- **D32-017** `?biz=<id>` selects the business. Verify with 3359 and 3360.
+- **D32-018** …and that it survives a reload.
+- **D32-019** An unknown `?biz=` falls back to the first business. Verify.
+- **D32-020** **Regression target.** The recorded fix says the hub was hard-coded to `businesses?.[0]` with no switcher, making every business after the first unreachable — *"they could not add photos, packages, amenities, availability or bank details to it, ever."* Verify the switcher exists now.
+- **D32-021** The switcher renders only when `businesses.length > 1`. Establish.
+- **D32-022** It lists all three with name, city and status. Verify the labels against the live data.
+- **D32-023** The active business is marked `aria-current="true"` and styled.
+- **D32-024** **Switching while dirty prompts** `window.confirm("You have unsaved changes on this business. Switch anyway and lose them?")`. Drive it: make a change, switch, and confirm the prompt.
+- **D32-025** Cancel the prompt → the business does **not** change and the edit survives. Verify.
+- **D32-026** Accept the prompt → the form reloads from the new business and `dirty` clears. Verify.
+- **D32-027** Establish that `?biz` is not updated when the switcher is used — so the chosen business, like the chosen tab, cannot be linked.
+- **D32-028** `loadedId` ref guards the form reset, so re-renders do not clobber typing. Establish.
+- **D32-029** Loading renders `DetailSkeleton`; a failure or no business renders *"No business found — Create your business profile first."*
+- **D32-030** Establish that an API failure and a genuinely business-less account produce the **same** empty state.
+
+### B. Regression targets — the fixes recorded in this module's own source (D32-031 → D32-062)
+
+Each of these is a defect a previous pass found and fixed. Re-verify on production.
+
+- **D32-031** *Business unreachable past the first* — covered by D32-020 → D32-027.
+- **D32-032** *Capacity & pricing had no client-side validation at all.* The note records live production behaviour: a starting price of **−5000**, min guests **900** with max **100**, and a **500%** advance were all accepted, Save stayed enabled, `aria-invalid` was null and the number inputs had no `min`/`max`.
+- **D32-033** Verify `min={0}` on Starting price.
+- **D32-034** Verify `min={0}` on Min guests.
+- **D32-035** Verify `min={1}` on Max guests.
+- **D32-036** Verify `min={0}` on Advance, and `max={100}` **only** when the type is Percentage.
+- **D32-037** Drive a **negative starting price** and confirm the field error *"Starting price can't be negative."* appears against the right input.
+- **D32-038** Drive **min 900 / max 100** and confirm *"Maximum guests can't be less than minimum guests."*
+- **D32-039** Drive a **500% advance** and confirm *"A percentage advance can't be more than 100%."*
+- **D32-040** Switch the advance type to **Fixed amount** and confirm the 100 cap lifts and the label changes to *"Advance (Rs)"*.
+- **D32-041** Confirm `aria-invalid` is now set on the offending input (`fieldAria`).
+- **D32-042** Confirm all three errors can be shown **simultaneously** — the stated purpose of the fix was that the server returns one message per round-trip.
+- **D32-043** Confirm the save bar reads *"Fix the highlighted fields above to save."* and the button is disabled while any error stands.
+- **D32-044** Confirm the errors clear as each field is corrected.
+- **D32-045** *A rejected save must say why.* The note records that `onError` read `e?.message` — axios's *"Request failed with status code 400"* — while the server's actual reason (*"Minimum price must be a positive number"*) was never shown, producing the *"not a single patch is going"* complaint. Verify `onError` now reads `e?.response?.data?.message` first.
+- **D32-046** …and that the toast duration is **8000ms**, so a validation message can be read.
+- **D32-047** Drive a network failure and record which string appears.
+- **D32-048** *The PWA install prompt covered the Save button.* The note records `elementFromPoint` verification at 360px and 1440px. Verify `--ww-bottom-bar` is published on `documentElement` while a wired tab is active.
+- **D32-049** …and that it carries the save bar's real height.
+- **D32-050** …and that it is **removed** when an unwired tab is active or the component unmounts.
+- **D32-051** Verify with `document.elementFromPoint` that the **Save changes** button is the topmost element at its own centre, at 1440px.
+- **D32-052** …and at 360px.
+- **D32-053** *Availability blocked every venue at once.* The note records that the manager took no `businessId`, so one click created rows on both 3361 and 3362 and the list showed the same date twice with no way to release one. Verify `AvailabilityManager` now receives `businessId={biz.id}`.
+- **D32-054** …and that the query key is `["blocked-dates", businessId]`, so switching venue refetches rather than reusing.
+- **D32-055** *The images remove button was invisible on touch.* The note records `opacity-0 group-hover:opacity-100` with the reasoning *"most Pakistani vendors run this dashboard on a phone."* Verify the class is now `md:opacity-0 md:group-hover:opacity-100`.
+- **D32-056** …and confirm under **true touch emulation** that the remove button is visible at 360px. This is the exact defect still live in Notifications (WWL-391) — establish that one module fixed it and the other did not.
+- **D32-057** Verify the button is 32px (`h-8 w-8`), and record it against the 44px target the note itself acknowledges it cannot reach.
+- **D32-058** *Cloudinary's error was piped to the vendor.* The note records the raw string `Cloudinary 400: {"error":{"message":"Invalid image file"}}`. Verify `humanUploadError` maps the known causes and falls back generically.
+- **D32-059** Verify each mapped case: invalid image, >10 MB, >20 files, non-image, network.
+- **D32-060** Establish that the client's limits mirror the server's multer config exactly — 10 MB, 20 files, `image/*`.
+- **D32-061** *Bank details deliberately skip the draft layer.* The note reasons that an IBAN in plaintext on a shared device is a financial-incident risk, and adds a `beforeunload` guard instead. Verify the guard arms **only** while something is typed.
+- **D32-062** …and that no bank field is written to `localStorage`. Check the storage keys before and after typing.
+
+### C. Profile tab (D32-063 → D32-086)
+
+- **D32-063** Five fields: Business name · Description · City · Area / locality · Brand logo URL.
+- **D32-064** All five prefill from the live business. Verify each against 3358's known values.
+- **D32-065** Editing any field sets `dirty` and the save bar changes to *"Unsaved changes"*.
+- **D32-066** The save bar reads *"All changes saved"* when clean.
+- **D32-067** **Business name has no `maxLength` and no required marker.** Clear it entirely and establish whether Save stays enabled.
+- **D32-068** …and what the server does with an empty name. Probe the guard.
+- **D32-069** Description is a textarea with no counter and no cap. Establish the server's limit.
+- **D32-070** **City is a free-text input, not a picker** — on a marketplace whose URLs are `/{type}/{city}/{slug}` and whose SEO depends on city pages. Establish the consequence of a typo.
+- **D32-071** Establish whether the product has a canonical city list anywhere, and whether this field is validated against it.
+- **D32-072** **Brand logo is a URL text field, not an upload** — while Images, one tab away, is a real uploader. Establish the inconsistency.
+- **D32-073** Enter a non-URL string and establish that nothing validates it.
+- **D32-074** Enter an `http://` URL and establish whether a mixed-content image would be blocked on the public listing.
+- **D32-075** All five labels are `<label>` with **no `htmlFor`**; the inputs have no `id`. Verify.
+- **D32-076** …except the pricing tab's inputs, which **do** carry ids (`biz-minprice` etc.) for `fieldAria`. Establish the inconsistency between two tabs of the same hub.
+- **D32-077** Drive a save with the blocker armed and capture the body.
+- **D32-078** Confirm the payload sends **every** owned field, not just the changed one.
+- **D32-079** …so establish that editing the business name also rewrites the ten amenity booleans, the pricing fields and the cancellation policy in the same request.
+- **D32-080** On 3359 and 3360, eight amenity booleans are **`null`** in the database. `Boolean(null)` is `false`, so establish that any save from any wired tab converts those nulls to explicit `false`.
+- **D32-081** Establish whether `null` and `false` are distinguishable on the public listing — "not specified" versus "not provided".
+- **D32-082** Confirm the false-success behaviour on a diverted save.
+- **D32-083** Confirm `dirty` clears on the diverted save's success path even though nothing was written.
+- **D32-084** …so the save bar reads *"All changes saved"* over unsaved edits. Establish.
+- **D32-085** Global `mutations: { retry: 1 }` — count the requests on a failed save.
+- **D32-086** Establish whether a duplicate `BusinessesAPI.update` is harmful (idempotent PATCH — confirm).
+
+### D. Capacity & pricing tab (D32-087 → D32-110)
+
+- **D32-087** Six controls: Starting price · Min guests · Max guests · Advance type · Advance · Cancellation policy.
+- **D32-088** Prefill against 3358: 350000 / 250 / 900 / Percentage / 10.
+- **D32-089** On 3359 and 3360 the advance type and amount are **null**; establish what the form shows (`?? "Percentage"` and `?? ""`).
+- **D32-090** So a venue with no advance terms displays **Percentage** as though it were set. Establish.
+- **D32-091** …and that saving anything from this tab writes `downPaymentType: "Percentage"` for a venue that never had one.
+- **D32-092** The advance label switches between *"Advance (%)"* and *"Advance (Rs)"* with the type. Verify.
+- **D32-093** The `max` attribute lifts on Fixed amount. Verify.
+- **D32-094** A fixed-amount advance is **not** checked against the starting price — establish that an advance larger than the total is accepted.
+- **D32-095** **Cancellation policy is a free-text textarea here**, while Module 34 is a dedicated Cancellation-policy screen at `/dashboard/settings?tab=policy`. Resolve that route.
+- **D32-096** `PARAM_TO_TAB` has **no `policy` key**, so `?tab=policy` falls back to **profile**. Verify live.
+- **D32-097** So the sidebar entry for Cancellation policy — if one exists — lands on the wrong tab. Establish.
+- **D32-098** Establish which is authoritative: this textarea or the dedicated screen.
+- **D32-099** All three venues have an **empty** cancellation policy. Establish what the public listing shows in its place.
+- **D32-100** Establish whether a booking can be taken with no cancellation policy, and what the couple agrees to.
+- **D32-101** Drive the negative-price error and read the message.
+- **D32-102** Drive the min>max error and read the message.
+- **D32-103** Drive the >100% advance error and read the message.
+- **D32-104** Drive all three at once and confirm three simultaneous field errors.
+- **D32-105** Confirm the save bar's disabled reason changes to the destructive string.
+- **D32-106** Clear a field entirely → `numOrNull` sends **null**. Establish what the server does with a null price.
+- **D32-107** Enter a decimal price and establish the rounding.
+- **D32-108** Enter a decimal guest count and establish whether `step="1"` blocks it.
+- **D32-109** Paste a value larger than `DECIMAL(12,2)` into Starting price and establish the behaviour (compare with WW-146 in Collaborations).
+- **D32-110** Confirm the pricing errors are recomputed on every render and never stale.
+
+### E. Amenities & services tab (D32-111 → D32-128)
+
+- **D32-111** Ten switches render: Catering · Parking · Sound system · Seating arrangement · Waiters · Crockery & plates · Decoration · Food tasting · Travel to client · SOP compliant.
+- **D32-112** Each has a label, a hint and `aria-label` on the `Switch`. Verify.
+- **D32-113** The whole row is a `<label>`, so tapping anywhere toggles. Verify.
+- **D32-114** Prefill against 3358: catering **on**, everything else **off**.
+- **D32-115** Prefill against 3359: catering and parking **on**, eight `null` → rendered **off**.
+- **D32-116** Toggling one switch sets `dirty`.
+- **D32-117** Drive a toggle with the blocker armed and capture the body — confirm **all ten** booleans are sent.
+- **D32-118** …so one toggle rewrites nine other fields (D32-079/D32-080).
+- **D32-119** Establish whether the ten booleans are the complete amenity set, or whether the model carries more that this tab cannot reach.
+- **D32-120** *"SOP compliant"* maps to a column named `covidComplaint` — establish the naming drift and whether the label still makes sense in 2026.
+- **D32-121** …and note the column name itself is a misspelling of *compliant*.
+- **D32-122** *"Travel to client"* maps to `travelToClientHome` — establish whether the hint *"We come to the venue/home"* is right for a **wedding venue**, which by definition cannot travel.
+- **D32-123** So establish whether the amenity list is vendor-type aware at all, or the same ten for every category.
+- **D32-124** Cross-check against `getVendorTypeConfig` and the Type-specific tab, which exists precisely for per-category fields.
+- **D32-125** Keyboard: Tab to each switch, Space to toggle.
+- **D32-126** Screen-reader: the `Switch` has `aria-label`; establish whether the hint is announced.
+- **D32-127** The grid is `sm:grid-cols-2`; check at 360px.
+- **D32-128** Establish whether an amenity set to false is hidden or shown-as-absent on the public listing.
+
+### F. Listing content tab (D32-129 → D32-146)
+
+- **D32-129** The tab renders `ProfileContentManager` inline with its **own** save button, and the hub's sticky save bar is **absent** (`wired: false`, no `href`). Verify.
+- **D32-130** Establish the inconsistency: three tabs use a sticky bar, this one uses an inline button, and the vendor gets no signal about which is which.
+- **D32-131** Enumerate the fields this manager owns (382 lines) and verify each prefills.
+- **D32-132** Establish whether it has its own dirty tracking, and whether switching tabs with unsaved changes warns.
+- **D32-133** …specifically: the hub's `dirty` flag does **not** cover this tab, so the business switcher's confirm guard (D32-024) will not fire for it. Establish.
+- **D32-134** Drive a save with the blocker armed and capture the body.
+- **D32-135** Establish the false-success behaviour.
+- **D32-136** Verify its field-level validation, if any.
+- **D32-137** Verify its labels carry `htmlFor`.
+- **D32-138** Establish whether it writes through `BusinessesAPI.update` (the same endpoint as the hub) or its own.
+- **D32-139** …and if the same, whether a save here would clobber unsaved hub edits on another tab.
+- **D32-140** Verify `onSaved` invalidates `["biz-settings-hub"]`.
+- **D32-141** Establish which of these fields appear on the public listing.
+- **D32-142** Cross-check against the VR-050 rich-listing work: which fields are editable app, web and backend.
+- **D32-143** Establish whether any field here duplicates one on the Profile tab.
+- **D32-144** …and if so, which one wins.
+- **D32-145** Check the tab at 360px.
+- **D32-146** Console clean on this tab.
+
+### G. Type-specific tab (D32-147 → D32-160)
+
+- **D32-147** The tab renders `TypeSpecificManager` with `getVendorTypeConfig(biz.vendor?.vendorType)`.
+- **D32-148** This account is **Wedding venue** — establish which fields that config produces.
+- **D32-149** The fallback config is `{ displayName: vendorType || "This", typeSpecificFields: [] }` — establish what the tab renders for an unknown vendor type.
+- **D32-150** …specifically whether an empty field list produces a usable empty state or a blank panel.
+- **D32-151** Verify each type-specific field prefills from the business.
+- **D32-152** Drive a save with the blocker armed and capture the body.
+- **D32-153** Establish whether these fields are stored as columns or in a JSON blob.
+- **D32-154** Establish whether changing the vendor type elsewhere orphans data written here.
+- **D32-155** Verify validation on any numeric or enumerated field.
+- **D32-156** Verify labels and `htmlFor`.
+- **D32-157** The tab hint reads *"Settings unique to your vendor category."* — verify it is accurate for a wedding venue.
+- **D32-158** Cross-check the 23 vendor types against this config: how many have type-specific fields defined?
+- **D32-159** Establish what a vendor type with no config sees.
+- **D32-160** Check at 360px.
+
+### H. Images tab (D32-161 → D32-184)
+
+- **D32-161** The tab renders `ImagesManager` with the business's current images.
+- **D32-162** Live: 3358 has **1** image; 3359 and 3360 have **0**. Verify each.
+- **D32-163** Establish what the empty state says for a venue with no photos.
+- **D32-164** …and establish the commercial position: two of three live, approved venue listings on a wedding marketplace have **no photographs**.
+- **D32-165** The uploader accepts multiple files; verify the input's `accept` and `multiple` attributes.
+- **D32-166** **Regression target (D32-055).** Verify `REMOVE_BTN_CLASS` is `md:opacity-0 md:group-hover:opacity-100` — visible by default, hover-revealed only from `md` up.
+- **D32-167** Under **true touch emulation at 360px**, confirm the remove button is visible on the existing photo.
+- **D32-168** …and measure its computed opacity, not just its presence.
+- **D32-169** Establish the contrast with WWL-391 (Notifications), where the identical pattern is still `opacity-0 group-hover:opacity-100` and the control is unreachable on touch. Same codebase, one fixed and one not.
+- **D32-170** Verify the client-side size limit is 10 MB and the count limit 20, matching the server's multer config.
+- **D32-171** Attempt an oversized file and confirm the client refuses it **before** the request.
+- **D32-172** Attempt a non-image and confirm the same.
+- **D32-173** Attempt 21 files and confirm the count limit.
+- **D32-174** **Regression target (D32-058).** Verify `humanUploadError` maps Cloudinary's raw message to *"That file isn't a valid image. Please upload a JPG, PNG or WebP photo."*
+- **D32-175** Verify the size, count, type and network branches each map to their own plain-language string.
+- **D32-176** Verify the fallback does **not** echo internals.
+- **D32-177** Removal uses `showUndoToast` — establish whether an undo is genuinely offered and whether it restores.
+- **D32-178** Establish whether removal is immediate or deferred behind the undo window.
+- **D32-179** Drive a removal with the blocker armed and capture the request.
+- **D32-180** Confirm the photo returns after a refetch, proving nothing was written.
+- **D32-181** Establish whether images can be reordered — the tab hint says *"Upload & reorder gallery photos."*
+- **D32-182** …and if not, establish that the hint promises a capability the tab does not have.
+- **D32-183** Establish which image becomes the listing's cover.
+- **D32-184** Check the grid at 360px.
+
+### I. Packages, Menus, Bank, Team, Availability tabs (D32-185 → D32-236)
+
+- **D32-185** **Packages** renders `PackagesManager` with `businessId`. Live: 3 packages on 3358.
+- **D32-186** Verify each renders: Platinum Rs 1,320,000 · Gold Rs 760,000 · Silver Rs 325,000, with capacities 284 / 405 / 454.
+- **D32-187** Establish that **capacity 454 on the cheapest package exceeds the venue's own max of 900** — check each package's capacity against the business's `maxCapacity`.
+- **D32-188** …and that Silver (454) admits more guests than Platinum (284), which costs four times as much. Establish whether anything validates that.
+- **D32-189** Verify the `features` arrays render as lists.
+- **D32-190** `description` is **null** on all three; establish what the UI shows.
+- **D32-191** Verify create / edit / delete controls and drive each with the blocker armed.
+- **D32-192** Establish whether a package price is validated against the business's starting price.
+- **D32-193** Switch business and confirm the package list refetches per venue.
+- **D32-194** Establish what 3359 and 3360 show — verify they have no packages.
+- **D32-195** **Menus** renders `MenusManager` with `businessId`. Live: 3 menus on 3358.
+- **D32-196** Verify Platinum Rs 3,900 · Gold Rs 2,650 · Standard Desi Rs 1,850, all `per_head`.
+- **D32-197** Verify `minGuaranteeCount`: 128 / 198 / 148.
+- **D32-198** Establish that the **cheapest** menu carries a higher minimum guarantee (148) than the dearest (128). Check whether anything validates the relationship.
+- **D32-199** …and that Gold's 198 exceeds both. Establish whether these numbers are coherent.
+- **D32-200** Cross-check each `minGuaranteeCount` against the venue's `minCapacity` of 250 — establish that **all three** menu minimums are below the hall's own minimum.
+- **D32-201** Verify the `items` arrays render.
+- **D32-202** Verify `pricingUnit` is displayed, and what other units exist.
+- **D32-203** Verify create / edit / delete and drive each with the blocker armed.
+- **D32-204** **Bank details** renders `BankAccountsManager` — note it takes **no `businessId`** and lists the vendor's accounts.
+- **D32-205** Establish that payout accounts are therefore **user-scoped, not per-venue**, and whether that is right for a three-venue vendor.
+- **D32-206** Verify account numbers are **masked on read** by the backend, as the header claims.
+- **D32-207** Verify the validators: `validateName`, `validatePkIban`, `validateAccountNumber`.
+- **D32-208** Drive a Pakistani IBAN and confirm the format check (PK + 2 check digits + 4 bank code + 16).
+- **D32-209** Drive an invalid IBAN and confirm the field error.
+- **D32-210** Errors surface only after `touched` — verify an untouched empty IBAN is not flagged on open.
+- **D32-211** **Regression target (D32-061).** Verify `useBeforeUnloadGuard` arms only while a field is non-empty.
+- **D32-212** …and confirm **no bank field is persisted to localStorage** — snapshot the keys before and after typing.
+- **D32-213** Verify `setActive` marks one account active and the others inactive.
+- **D32-214** Verify removal, and whether the active account can be removed.
+- **D32-215** Drive create / setActive / remove with the blocker armed and capture each body.
+- **D32-216** Establish whether an IBAN is ever displayed in full after saving.
+- **D32-217** **Team members** is the only `href` tab; verify the "dedicated screen" card and that the link opens `/dashboard/staff`.
+- **D32-218** Establish why one tab links out while ten render inline.
+- **D32-219** …and that the tab's own hint (*"Staff & roles."*) is the only content it has.
+- **D32-220** **Availability** renders `AvailabilityManager` with `businessId`.
+- **D32-221** **Regression target (D32-053).** Verify the query key includes the business id.
+- **D32-222** Verify blocking is scoped: switch venue and confirm the list changes.
+- **D32-223** Verify the live blocked-date list for each of the three venues.
+- **D32-224** Drive a block with the blocker armed and capture the body — confirm `businessId` is present.
+- **D32-225** Drive an unblock and capture the body.
+- **D32-226** Verify the date input rejects nothing — establish whether a past date can be blocked.
+- **D32-227** …and whether a date already blocked can be blocked twice.
+- **D32-228** Verify the reason field is optional and its cap.
+- **D32-229** `fmt` renders `en-PK` with weekday, `2-digit` day, long month. Verify.
+- **D32-230** Establish whether a blocked date is reflected in Calendar, Bookings and the public availability check.
+- **D32-231** Establish what happens if a date with an existing booking is blocked.
+- **D32-232** Verify the sort is ascending by date.
+- **D32-233** Establish whether there is any bulk block (a range, a weekday rule, a season).
+- **D32-234** …on a product whose vendors close for Muharram and Ramadan. Establish the gap.
+- **D32-235** Verify the empty state.
+- **D32-236** Check each of the five tabs at 360px.
+
+### J. The save bar (D32-237 → D32-252)
+
+- **D32-237** The bar renders **only** on the three wired tabs. Verify it is absent on the other eight.
+- **D32-238** It is `fixed inset-x-0 bottom-0 z-20` and offsets by `--sidebar-width` from `md` up. Verify at 1440px.
+- **D32-239** **Regression target (D32-048).** Verify `--ww-bottom-bar` is set on `<html>` while a wired tab is active, and carries the bar's measured height.
+- **D32-240** Verify it is removed on unmount and on an unwired tab.
+- **D32-241** Verify with `elementFromPoint` that **Save changes** is the topmost element at its centre, at 1440px.
+- **D32-242** …and at 360px.
+- **D32-243** Establish whether the PWA install prompt is present in this session at all; if not, verify the offset mechanism directly rather than the symptom.
+- **D32-244** The disabled Save states its reason: *"All changes saved"*, *"Unsaved changes"*, or the destructive *"Fix the highlighted fields above to save."* Verify all three.
+- **D32-245** Credit that against every bare disabled button in the sweep.
+- **D32-246** The button shows a spinner and *"Saving…"* while pending.
+- **D32-247** `pb-24` on the page bottom clears the bar. Verify nothing is occluded at the end of a long tab.
+- **D32-248** Verify the bar at 360px does not cover the last form field.
+- **D32-249** Establish whether a `beforeunload` guard protects unsaved hub edits (Bank has one; does the hub?).
+- **D32-250** Navigate away with unsaved changes and establish whether anything warns.
+- **D32-251** …and switch tabs with unsaved changes — establish that the edit survives, since `form` is hub-level state.
+- **D32-252** …but switching **business** while dirty prompts (D32-024). Establish the asymmetry: tab switches are silent, business switches are guarded.
+
+### K. Accessibility (D32-253 → D32-264)
+
+- **D32-253** `h1` on the page — and note the section headings are `h2`.
+- **D32-254** The tab rail is a `<nav>` of buttons, not a tablist. Establish how it is announced.
+- **D32-255** `aria-current` on the active tab is the boolean `true`. Verify what is rendered.
+- **D32-256** Profile / Amenities labels have no `htmlFor`; pricing inputs **do** have ids. Verify the split.
+- **D32-257** `FieldError` + `fieldAria` wire `aria-invalid` and `aria-describedby` on the pricing inputs. Verify.
+- **D32-258** The amenity switches carry `aria-label`.
+- **D32-259** The business switcher buttons carry `aria-current="true"`.
+- **D32-260** Focus order through the rail and into the panel.
+- **D32-261** The sticky save bar is at the end of the DOM — establish where it lands in the tab order.
+- **D32-262** Colour contrast of the amber *"Unsaved changes"* and the destructive hint.
+- **D32-263** `prefers-reduced-motion` against the spinner.
+- **D32-264** `window.confirm` for the business switch — establish that a native dialog is the only guard, and whether it is accessible.
+
+### L. Mobile 360×740 (D32-265 → D32-274)
+
+- **D32-265** No horizontal overflow on **each** of the eleven tabs: `scrollWidth === clientWidth` and an element-level right-edge count, ancestor walk stopping before `<body>`.
+- **D32-266** The tab rail becomes a horizontal scroller (`overflow-x-auto`) below `lg`. Verify it scrolls and that all eleven are reachable.
+- **D32-267** …and that the active tab is scrolled into view on load from a deep link.
+- **D32-268** The business switcher's three buttons wrap.
+- **D32-269** The save bar spans full width with no sidebar offset below `md`.
+- **D32-270** Tap targets on the rail, the switches and the save button.
+- **D32-271** The images remove button under touch (D32-167).
+- **D32-272** The amenity grid collapses to one column.
+- **D32-273** The pricing grid collapses from three columns.
+- **D32-274** Under `hover: none`, enumerate every control on every tab that depends on hover.
+
+### M. Integrity (D32-275 → D32-286)
+
+- **D32-275** Console clean on every tab.
+- **D32-276** No unhandled rejection.
+- **D32-277** Clean-realm inventory at open: all three businesses' full field sets.
+- **D32-278** Every write attempted, listed with its captured body and its tab.
+- **D32-279** Confirm **no business field changed** — compare all three businesses field-by-field at close.
+- **D32-280** Specifically confirm the eight `null` amenity booleans on 3359 and 3360 are **still null**, not `false`.
+- **D32-281** Confirm image counts are unchanged: 1 / 0 / 0.
+- **D32-282** Confirm package and menu counts are unchanged.
+- **D32-283** Confirm no bank account was created or made active.
+- **D32-284** Confirm no date was blocked on any venue.
+- **D32-285** Confirm `localStorage` carries no bank field and no new keys.
+- **D32-286** Confirm `--ww-bottom-bar` is not left set on `<html>` after leaving the route.
