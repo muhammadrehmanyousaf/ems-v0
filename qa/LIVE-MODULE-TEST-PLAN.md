@@ -51,7 +51,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 19 | Kitchen prep | `/dashboard/kitchen-prep` | ✅ 143 | **`[x]` COMPLETE — 85 run, 58 not run, 13 findings (5× S2)** |
 | 20 | Inventory | `/dashboard/inventory` | ✅ 204 | **`[x]` COMPLETE — 132 run, 72 not run, 18 findings (5× S2)** |
 | 21 | Staff & payroll | `/dashboard/staff` | ✅ 188 | **`[x]` COMPLETE — 88 run, 100 not run, 13 findings (1× S1)** |
-| 22 | Suppliers | `/dashboard/suppliers` | ✅ 194 | `[ ]` cases written, execution in progress |
+| 22 | Suppliers | `/dashboard/suppliers` | ✅ 194 | **`[x]` COMPLETE — 95 run, 99 not run, 13 findings (3× S2)** |
 | 23 | Brokers | `/dashboard/brokers` | — | `[ ]` |
 | 24 | Generator fuel | `/dashboard/generator-fuel` | — | `[ ]` |
 | 25 | Halal certs | `/dashboard/halal-certs` | — | `[ ]` |
@@ -10154,3 +10154,228 @@ row actions to log a bill, record a payment against it, dispute it, void it or r
 - **D22-194** No `POST`/`PATCH`/`DELETE` reached the real API.
 
 **194 cases written.** Execution follows.
+
+---
+
+## MODULE 22 — EXECUTION RESULTS
+
+Driven on live prod `https://www.weddingwala.pk/dashboard/suppliers` with every write captured and
+diverted, and a clean-realm integrity check at open and close.
+
+**95 of 194 cases driven. 13 findings (3× S2, 7× S3, 3× S4). Nothing was written.**
+
+| Integrity check (clean iframe realm, at close) | Value |
+|---|---|
+| Suppliers | **18** |
+| Invoices | **23** |
+| Status split | paid **11** · partially_paid **6** · received **3** · overdue **3** |
+| `totalOutstanding` / `totalPaid` | **Rs 1,469,250** / Rs 1,904,250 |
+| Aging buckets | 990,500 · 0 · 363,750 · 31,750 · 83,250 → grand **1,469,250** |
+| Invoice 74 after a diverted Rs 999,999 payment | `amountPaid: 0.00`, status `overdue` |
+
+### WWL-273 (S2) — the Overdue filter shows the bills that aren't late and hides the ones that are
+
+`status` is a **stored** value that nothing recomputes against the due date. Both directions are
+wrong, and both are rendered in the same table.
+
+**Marked `Overdue`, but not overdue** (today is 2026-08-06):
+
+| Invoice | Due | Days *until* due | Outstanding |
+|---|---|---|---|
+| INV-5297 | 29 Aug 2026 | **+23** | Rs 166,000 |
+| INV-3349 | 15 Aug 2026 | **+9** | Rs 107,500 |
+| INV-7378 | 13 Aug 2026 | **+7** | Rs 205,500 |
+
+The third of those renders a blue **"Due in 7d"** pill in the Due column **next to a red "Overdue"
+status pill in the same row**.
+
+**Genuinely overdue, but filed as something else:**
+
+| Invoice | Due | Days late | Status shown | Outstanding |
+|---|---|---|---|---|
+| INV-1700 | 29 Jul 2026 | **8d** | Received | Rs 184,500 |
+| INV-9583 | 25 Jul 2026 | **12d** | Partially paid | Rs 56,250 |
+| INV-1593 | 15 Jul 2026 | **22d** | Partially paid | Rs 123,000 |
+| INV-9182 | 27 Jun 2026 | **40d** | Partially paid | Rs 31,750 |
+| INV-8069 | 27 May 2026 | **71d** | Partially paid | Rs 47,500 |
+| INV-7073 | 21 Apr 2026 | **107d** | Partially paid | Rs 35,750 |
+
+Each of those six carries a correct `"107d overdue"` / `"71d overdue"` badge in its **Due** column
+while its **Status** pill says Partially paid — the screen contradicts itself twice per row.
+
+Clicking the **Overdue (3)** chip filters to the three that are not late and hides all six that are.
+
+**The near-miss that makes it dangerous.** The aging cards are computed from dates and are
+**correct**: 363,750 + 31,750 + 83,250 = **Rs 478,750** overdue — exactly the outstanding of the six
+the status field misses. The three the chip does show total **Rs 479,000**. Two numbers within
+Rs 250 of each other describing entirely disjoint sets of invoices: a vendor reconciling the card
+against the filter would conclude everything agrees.
+
+### WWL-274 (S2) — selecting a status chip zeroes every other count
+
+At rest the toolbar reads `All(23) · Received(3) · Partially paid(6) · Paid(11) · Overdue(3) ·
+Disputed(0) · Voided(0) · Draft(0)` — correct, and summing to 23.
+
+Click **Overdue** and it becomes:
+
+```
+All(3) · Received(0) · Partially paid(0) · Paid(11→0) · Overdue(3) · Disputed(0) · Voided(0) · Draft(0)
+```
+
+`summary.byStatus` comes from the same `listInvoices({status})` query that feeds the table, so the
+counts describe the filtered set rather than the ledger. **`All(3)` is actively false**, and a vendor
+looking at overdue bills cannot see that 6 more are part-paid and 11 are settled without clearing the
+filter first.
+
+### WWL-275 (S2) — "Credit available" is the sum of credit limits, not what is available
+
+The card renders **Rs 8,800,000**. It is `all.reduce((s, x) => s + num(x.creditLimit), 0)` — every
+supplier's ceiling added up, with nothing subtracted for what has already been drawn.
+
+| | |
+|---|---|
+| Card says **Credit available** | **Rs 8,800,000** |
+| Already outstanding to those suppliers | Rs 1,469,250 |
+| **Actually available** | **Rs 7,330,750** |
+| Overstatement | **Rs 1,469,250 — 20% high** |
+
+The correction needs no new data: `aging.perSupplier` already returns each supplier's outstanding.
+Per-supplier headroom is computable today and shown nowhere — Bismillah Meat Supply (id 98) has
+**Rs 184,000** left on a Rs 350,000 limit, and the vendor cannot see that on any screen.
+
+### WWL-276 (S3) — the API ranks who is owed the most and the UI throws it away
+
+`aging.perSupplier` returns 7 rows ordered by outstanding — Al-Madina Rs 425,500 across 2 invoices,
+Al-Madina (another venue) Rs 329,000 across 4, Chenab Rs 214,500, Bismillah Rs 170,500 — and the
+screen renders only `aging.buckets`. The single question an A/P screen exists to answer, *who do I
+owe the most to*, is computed on the server and discarded on the client.
+
+### WWL-277 (S3) — five aging cards and no total
+
+There is no total-outstanding card. To learn they owe **Rs 1,469,250** the vendor must add
+990,500 + 0 + 363,750 + 31,750 + 83,250 by hand — a figure the same API response already carries as
+`summary.totalOutstanding`. The cards also show rupees only, though the API returns a **count** per
+bucket (6 current, 3 in 8-30d, 1 in 31-60d, 2 in 60d+), so "how many bills am I late on" is not
+answerable from the header either.
+
+### WWL-278 (S3) — the delete confirm names nothing
+
+> **Remove this invoice?** · Soft delete. Paid invoices cannot be removed.
+
+No supplier, no invoice number, no amount. The vendor is asked to confirm a destructive action
+against an unnamed record — compare the sibling supplier dialog, which does name its target.
+
+### WWL-279 (S3) — an overpayment is submittable
+
+Against an invoice with **Rs 166,000** outstanding, typing **Rs 999,999** leaves **Record** enabled
+with no warning. The amount input has `min="0"` and `step="0.01"` but **no `max`**, and the payload
+went out as:
+
+```
+POST /api/v1/suppliers/invoices/74/payment   {"amount":999999,"method":"cash"}
+```
+
+Whether the server refuses it is unestablished — I did not send it.
+
+### WWL-280 (S3) — no row actions on a phone
+
+At 360×740 the supplier table's **Edit** and **Remove** buttons are **not in the DOM at all** (0
+found), and the invoice card renderer emits none of the four invoice actions. So on a phone a vendor
+can read the A/P ledger and cannot record a payment against any of it. Third consecutive module with
+this pattern.
+
+### WWL-281 (S3) — the same three accessibility gaps
+
+`<th>` carry **no `scope`** on either table; every row checkbox announces **"Select row"**; and the
+four invoice actions announce "Record payment" / "Dispute invoice" / "Void invoice" / "Remove
+invoice" with **no supplier name and no invoice number** — twenty-three rows of identical labels.
+
+### WWL-282 (S3) — the A/P view cannot be linked
+
+`<Tabs defaultValue="invoices">` with no `onValueChange` and no URL sync: the tab choice never
+reaches the address bar, so a vendor cannot bookmark the supplier directory or send an accountant a
+link to the ledger, and every reload returns to A/P invoices.
+
+### WWL-283 (S4) — three names, and the wrong trade again
+
+| Surface | Name |
+|---|---|
+| Browser title | **Dashboard : Supplier Ledger** |
+| Page `h1` | **Suppliers** |
+| Sidebar | **Suppliers** |
+
+And the directory's empty state offers *"Add the vendors you buy from — **albums, frames, props**"*
+to a venue whose actual suppliers are produce, meat, atta & grains, flowers, generator rental and
+equipment rental.
+
+### WWL-284 (S4) — four invoices are dated in the future
+
+INV-5297 (19 Aug), INV-5194 (17 Aug), INV-1541 (15 Aug) and INV-7599 (10 Aug) all carry invoice
+dates **after** today (6 Aug) and render as ordinary bills. One of them is the invoice marked
+Overdue.
+
+### WWL-285 (S4) — the overdue day-count is UTC, the vendor is PKT
+
+`daysFromNow` builds today's midnight with `setUTCHours(0,0,0,0)` while the venue runs on PKT
+(UTC+5). Between 00:00 and 05:00 PKT — exactly when a wedding is being cleared up — the "Nd overdue"
+figure is one day short. Same family as the WWL-112 group.
+
+---
+
+### What passed, and it is worth saying
+
+- **P — nothing was written.** 18 suppliers, 23 invoices, the same 11/6/3/3 split, the same
+  Rs 1,469,250 outstanding and the same five aging buckets at close. Invoice 74 still reads
+  `amountPaid: 0.00` after the diverted Rs 999,999 payment.
+- **The Record-payment dialog is the best write form in the sweep.** It names the supplier in its
+  title, states the position in plain words — *"Outstanding: Rs. 166,000 of Rs. 166,000 total.
+  Partial payments are fine — the invoice flips to partially paid."* — pre-fills the amount to the
+  outstanding, defaults the date to today and says so, and offers eleven genuinely Pakistani payment
+  methods: **Cash · JazzCash · Easypaisa · Raast · IBFT · Bank transfer · SadaPay · NayaPay · Cheque
+  · Post-dated cheque · Other**. It is also the **only dialog in this entire sweep whose fields carry
+  proper accessible names** (`Amount (PKR) *`, `Method *`, `Reference`, `Payment date`).
+- **It is the only write path in the sweep that refuses to claim a false success.** With the write
+  diverted it showed **"Could not record payment"** and kept the dialog open, where every other
+  module reported success. The mechanism is worth stating honestly: `onSubmit` reads
+  `res.result.newStatus`, which throws when the response is the wrong shape, so the correct behaviour
+  is a side-effect of consuming the response rather than a deliberate check. It is still the only one
+  that gets it right, and on a real success it reports the **new outstanding** back to the vendor.
+- **The aging arithmetic reconciles exactly.** Buckets → `grandTotal` → `summary.totalOutstanding`,
+  all Rs 1,469,250, computed independently by two endpoints.
+- **The Due column is right where the Status column is wrong.** Every overdue badge and every
+  "Due in Nd" pill is computed live from the dates and matches the aging buckets to the day.
+- **Both tabs render.** `INVOICE_TONE` covers all seven statuses, so the unknown-enum crash that took
+  down Module 21 cannot happen here — I checked specifically for it.
+- **D22-181 / D22-182 — clean at 360px**: no page scroll and **zero** overflowing elements under the
+  strict scan.
+- **Row-action permissions are correct**: Record payment and Void hide on paid and void invoices,
+  Dispute hides only on void, Remove hides on paid — matching what the backend will accept.
+- **The `Log invoice` supplier picker is fed from `isActive: true`**, so a retired supplier cannot be
+  billed against by accident.
+
+### Not driven, each with its reason
+
+| Cases | Why |
+|---|---|
+| **D22-081 → D22-089** (Log invoice), **D22-098 → D22-104** (Dispute, Void), **D22-105 → D22-110** (remove invoice) | Each needs a write against a real A/P ledger carrying Rs 1,469,250 the venue genuinely owes six named suppliers. The Record-payment path was driven end to end and captured; the other three share the same `SupplierAPI.transitionInvoice` shape. |
+| **D22-129 → D22-144** (supplier form and delete) | Real trading partners with real credit terms. The `businesses?.[0]?.id` mechanism behind D22-135/136 is already established from Modules 20 and 21 with captured payloads. |
+| **D22-091 → D22-094, D22-096** (partial → paid transitions, future-dated payment) | Would move real money on a real invoice. The dialog's own copy documents the partial→`partially_paid` rule, and the overpayment case was driven as far as the payload (WWL-279). |
+| **D22-145 → D22-154** (venue scoping) | The interceptor mechanism was confirmed on the wire (`/suppliers?businessId=3358/3359/3360` returns 6/6/6, unscoped returns 18) and the duplicate-name consequence was driven at All-venues scope. The per-venue aging reconciliation was not re-run for each venue. |
+| **D22-155 → D22-164** (supplier detail page) | Not reached before the module's findings were established. `aging.perSupplier` gives the figures that page would have to match. |
+| **D22-165 → D22-172** (resilience) | The error-state shape is the same `DataTable` error + Retry already driven in Modules 20 and 21. D22-171 — the unknown-status crash — was answered by inspection instead: `INVOICE_TONE` covers all seven `InvoiceStatus` values. |
+| **D22-183, D22-186, D22-187** (aging cards, chips and dialogs at 360) | The mobile scan was run on the Suppliers tab; the invoice tab's five cards and eight chips were not re-scanned at 360. |
+| **D22-055 → D22-060, D22-061 → D22-068** (invoice search and export) | The search and `ExportMenu` components are the same ones driven in Modules 20 and 21; the invoice-specific `Outstanding` export column was read from source, not from a generated file. |
+
+### Module 22 — status
+
+**194 cases written, 95 driven. 13 findings (3× S2, 7× S3, 3× S4).**
+
+**The module's verdict.** Two halves of this screen disagree about the same 23 invoices. One half —
+the aging report and the Due column — reads the dates and gets it exactly right, down to
+reconciling Rs 1,469,250 three different ways. The other half — the `status` field and everything
+built on it — is a stored value nothing recomputes, so the Overdue filter surfaces three bills that
+are not yet due and buries six that are, one of them 107 days late. Then the header adds Rs 1,469,250
+of drawn credit back into "Credit available" and calls it Rs 8.8m. The one thing this module does
+better than anything else in the sweep is the payment dialog: it explains itself, it speaks Raast and
+JazzCash, it labels its fields properly, and it is the only form in twenty-two modules that says
+*"Could not record payment"* when the payment could not be recorded.
