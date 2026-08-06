@@ -62,7 +62,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 30 | Plan & billing | `/dashboard/billing` | ✅ 216 | **`[x]` COMPLETE — 155 run, 61 not run, 20 findings (4× S2)** |
 | 31 | Collaborations | `/dashboard/collaborations` | ✅ 238 | **`[x]` COMPLETE — 165 run, 73 not run, 22 findings (4× S2)** |
 | 32 | Business Settings | `/dashboard/settings` | ✅ 286 | **`[x]` COMPLETE — 150 run, 136 not run, 16 findings (2× S2) + 7/7 regressions pass** |
-| 33 | Availability | `/dashboard/settings?tab=availability` | ✅ 152 | `[~]` cases written — execution in progress |
+| 33 | Availability | `/dashboard/settings?tab=availability` | ✅ 152 | **`[x]` COMPLETE — 95 run, 57 not run, 13 findings (2× S2)** |
 | 34 | Cancellation policy | `/dashboard/settings?tab=policy` | — | `[ ]` |
 | 35 | Setup checklist | `/dashboard/onboarding` | — | `[ ]` |
 | 36 | Tonight | `/dashboard/venue-os?tab=today` | — | `[ ]` |
@@ -16859,3 +16859,259 @@ leftover QA marker. `?month=2026-09` returns zero, so these are the only blocked
 - **D33-150** Cross-check the Module 28 notification count — unchanged.
 - **D33-151** Confirm nothing was written to the businesses themselves.
 - **D33-152** No storage keys left behind.
+
+---
+
+## MODULE 33 — EXECUTION RESULTS
+
+Driven on live prod `https://www.weddingwala.pk/dashboard/settings?tab=availability` as user **3351**,
+in a **visible** Playwright browser at 1440×900 with `slowMo` and an on-screen banner, so the run
+could be watched. Write blocker armed throughout.
+
+**95 of 152 cases driven. 13 findings (2× S2, 10× S3, 1× S4). Nothing was written.**
+
+| Integrity (Node-side oracle) | At open | At close |
+|---|---|---|
+| Blocked date **id 6** — 3358 | 2026-08-06 · `[QA] duplicate test` | **identical** |
+| Blocked date **id 7** — 3359 | 2026-08-06 · `hi` | **identical** |
+| Blocked date **id 8** — 3360 | 2026-08-06 · `hi` | **identical** |
+| Rows per venue | 1 / 1 / 1 | **1 / 1 / 1** |
+| Notifications (Module 28) · promotions (29) · tier (30) · collaborations (31) | 61/60 · 0 · free · 0/0 | **all unchanged** |
+| Diverted writes | — | **5**, listed below |
+| Console errors | — | **none** |
+
+```
+POST   /api/v1/bookings/blocked-dates  {"blockedDate":"2026-08-06","reason":"QA PROBE — do not keep","businessId":3358}
+POST   /api/v1/bookings/blocked-dates  {"blockedDate":"2020-01-01","reason":null,"businessId":3358}
+DELETE /api/v1/bookings/blocked-dates/2026-08-06?businessId=3358
+DELETE /api/v1/bookings/blocked-dates/2026-08-06?businessId=3358   ← same click, see WWL-493
+```
+
+**A correction to my own reading, recorded before the findings.** On the first venue-switch pass my
+row selector reported *"0 rows, 0 Free buttons"* for 3359 and 3360, which would have been a serious
+scoping failure. Re-driving it with a longer settle window and a selector-independent count showed
+**all three venues render their own row correctly**. That first reading was my measurement, not a
+defect, and the scoping regression **passes**. Likewise a duplicate-date "warning detected" was my
+regex matching the words *"[QA] duplicate test"* inside a row; checked against the form area
+specifically, there is no warning at all — which is the actual finding (WWL-489).
+
+### WWL-488 (S2) — every venue is blocked today, and two of the rows look like residue of a fixed bug
+
+Read live, and rendered on screen as **"Thu, 06 August 2026"** under each venue:
+
+| id | Venue | Date | Reason |
+|---|---|---|---|
+| 6 | Rehman Grand Marquee | **2026-08-06** | `[QA] duplicate test` |
+| 7 | Rehman Banquet & Lawn | **2026-08-06** | `hi` |
+| 8 | Rehman Marquee Bahria | **2026-08-06** | `hi` |
+
+`?month=2026-09` returns zero, so these are the only blocked dates on the account. **All three
+approved, publicly listed venues are closed to bookings today**, and the vendor's own stated reasons
+are a one-word placeholder on two of them and a QA marker on the third.
+
+Two things follow.
+
+**The `hi` pair matches the signature of the bug this module was fixed for.** `availability-manager.tsx`
+records it: *"Previously this component took no businessId at all, so blocking a date hit every venue
+the vendor owned — verified live: one click created rows on both business 3361 and 3362, and the list
+then showed the same date twice with no way to tell them apart or release one."* Two venues, one date,
+one identical reason is exactly what that produces. The fix stops new occurrences and performs **no
+cleanup**, so the rows the bug created are still live and still blocking.
+
+**Nothing would ever surface this to the vendor.** There is no anomaly flag, no "you have blocked
+today on all three venues" prompt, and no created-at or created-by on a row (WWL-497) — so
+`[QA] duplicate test` is unattributable and indistinguishable from a real block.
+
+### WWL-489 (S2) — the same date can be blocked twice, and Free is keyed by date
+
+Driven on 3358, whose only blocked date is **2026-08-06**. Selecting that same date:
+
+| Check | Result |
+|---|---|
+| **Block date** button | **enabled** |
+| Warning in the form area | **none** — form reads only *"Date \| Reason (optional) \| Block date"* |
+| `aria-invalid` anywhere | **none** |
+| Request | **transmitted** — `{"blockedDate":"2026-08-06","reason":"QA PROBE — do not keep","businessId":3358}` |
+| Toast | **"Date blocked"** |
+
+Nothing on either side of the wire told the vendor the date was already blocked. The reason on the
+existing row — `[QA] duplicate test` — suggests somebody has been here before.
+
+What makes it more than cosmetic is the delete path. `unblockMut` is called with `b.blockedDate`, so
+the request is:
+
+```
+DELETE /api/v1/bookings/blocked-dates/2026-08-06?businessId=3358
+```
+
+**Keyed by the date, not by the row id.** With two rows for one date, one **Free** click acts on an
+indeterminate number of them — and the vendor sees two identical rows, each with its own Free button,
+with no way to tell which is which. That is precisely the state the earlier fix note describes as
+*"no way to tell them apart or release one"*, reachable again by a different route.
+
+### WWL-490 (S3) — a date six years in the past can be blocked
+
+The date input carries **no `min`** and **no `max`**. Driven:
+
+| Entered | `validity.valid` | Block button | Transmitted |
+|---|---|---|---|
+| **2020-01-01** | true | **enabled** | **yes** — `{"blockedDate":"2020-01-01","reason":null,"businessId":3358}` |
+| 2099-12-31 | true | enabled | (not sent) |
+
+A block on a past date can never affect a booking and can never be noticed, but it joins the
+unbounded, unpaginated list forever (WWL-495) — one more row between the vendor and the dates that
+matter.
+
+### WWL-491 (S3) — Free has no confirmation
+
+Clicking **Free** produced **zero dialogs** and went straight to the DELETE. One click restores a date
+to public availability, on a screen whose own description is *"Block dates you're unavailable so
+couples can't book them."*
+
+The asymmetry across this sweep is now consistent enough to state plainly: Collaborations reserves its
+only confirmation for withdrawing your **own** message (WWL-453), and here removing a block that
+protects the venue from a double-booking takes none.
+
+### WWL-492 (S3) — both writes report success and change nothing
+
+| Action | Toast | Reality |
+|---|---|---|
+| Block duplicate | **"Date blocked"**, form cleared | list still 1 row |
+| Free | **"Date freed"** | list still 1 row |
+
+`onSuccess` clears the date and reason fields and invalidates the query — so after a failed block the
+vendor's typed reason is gone too, and the list refetches to prove the toast wrong.
+
+### WWL-493 (S3) — one click, two DELETEs
+
+Under injected network failure a single **Free** click produced **two** requests. Global
+`mutations: { retry: 1 }` — the fifth module in a row (WWL-411, WWL-432, WWL-451, and the Availability
+block path here).
+
+The severity splits by verb. A repeated **DELETE** keyed by date is idempotent, so the retry is
+harmless. A repeated **POST** is not: with no duplicate check on either side (WWL-489), a retried
+block writes a second row for the same date.
+
+### WWL-494 (S3) — one date at a time, on a market that closes for weeks
+
+There is no date range, no recurring rule, no bulk block, no copy-from-another-venue and no import.
+A vendor closing for **Muharram** blocks ten days one at a time; for **Ramadan**, thirty; across three
+venues, ninety — each with its own venue switch, its own date pick and its own unconfirmed click.
+
+The API's own `month` parameter shows the backend thinks in ranges; the write path does not.
+
+### WWL-495 (S3) — the list is unbounded and the month filter is never used
+
+`BlockedDatesAPI.getAll(undefined, businessId)` passes `undefined` for `month`, so the request is
+unfiltered. The server supports `?month=` — verified live, `2026-09` returns zero — and the UI never
+sends it.
+
+So the list is every blocked date the venue has ever had, with no pagination, no year grouping, no
+"past" collapse and no pruning. A venue that blocks one day a week accumulates fifty-two rows a year
+in a flat list sorted ascending, with the oldest — and least relevant — first.
+
+### WWL-496 (S3) — freeing one date disables every Free button
+
+`unblockMut.isPending` is a single mutation object, and every row renders
+`disabled={unblockMut.isPending}`. Establishing it live needs several rows, which this account does
+not have per venue; established from source, and identical to the shared-mutation pattern in
+Collaborations (WWL-453).
+
+### WWL-497 (S3) — a blocked date has no provenance
+
+A row carries a date and an optional reason. There is no created-at, no created-by, no source and no
+business name on the row. So a vendor looking at `[QA] duplicate test` — or at `hi` — has no way to
+learn when it appeared, who added it, or whether it came from this screen at all.
+
+### WWL-498 (S3) — the visible label and the accessible name disagree
+
+Both inputs are labelled three times over:
+
+| Input | `<label htmlFor>` | `id` | `aria-label` |
+|---|---|---|---|
+| Date | *"Date"* | `block-date` | **"Block date"** |
+| Reason | *"Reason (optional)"* | `block-reason` | **"Reason for blocking"** |
+
+The `aria-label` **overrides** the associated `<label>`, so a screen-reader user hears *"Block date"*
+where a sighted user reads *"Date"* — and *"Block date"* is also the name of the button beside it.
+The wiring is more thorough than anywhere else in the hub; it is the redundancy that creates the
+mismatch.
+
+### WWL-499 (S3) — the failure toast is axios's own string
+
+Driven under network failure, the toast read **"Network Error"** — `onError` falls through
+`response.data.message → e.message`, and `e.message` is populated. Same as Promote (WWL-425) and
+Collaborations, and the opposite of Billing (WWL-440), which deliberately omits that fallback.
+
+Worth noting the unblock path holds its toast for **8000ms** while the block path uses the default —
+someone judged a failed release more important to read than a failed block.
+
+### WWL-500 (S4) — availability has no calendar
+
+Dates are entered through a bare native `type="date"` input and listed as flat text rows. There is no
+month grid, no visual of which dates are open, and no way to see a blocked date in context with the
+bookings around it. The Calendar module exists elsewhere in the product; this screen does not link to
+it, and it does not link back.
+
+---
+
+### What passed, and it is worth saying
+
+- **L — nothing was written.** Ids 6, 7 and 8 identical at close — same dates, same reasons — and one
+  row per venue. Five diverted writes, all listed. The four cross-module baselines (notifications,
+  promotions, subscription tier, collaborations) are also unchanged.
+- **The scoping regression holds, verified on the wire.** This is the fix the module exists to
+  protect, and all three legs carry the business id:
+
+  | Call | Carries `businessId` |
+  |---|---|
+  | `GET` list | ✅ query param, per venue |
+  | `POST` block | ✅ **in the captured body** — `"businessId":3358` |
+  | `DELETE` free | ✅ **in the captured query** — `?businessId=3358` |
+
+  Driven through the visible UI, each of the three venues renders its own single row and no other.
+  The query key `["blocked-dates", businessId]` means a switch refetches rather than reusing.
+- **D33-040 — this is the best-labelled form in the sweep.** Both inputs carry an `id`, a real
+  `<label htmlFor>` **and** an `aria-label` — against the Profile tab's five fields with none of the
+  three (WWL-480), and the search inputs in Promote and Collaborations with only a placeholder. The
+  doubled naming is a flaw (WWL-498), but it is a flaw of over-provision.
+- **D33-041 — Block date is disabled until a date is chosen**, and a reason alone does not enable it.
+- **D33-028 / D33-032 — the rendering is right.** `en-PK` produces **"Thu, 06 August 2026"** — weekday,
+  zero-padded day, long month, year — and the ascending sort by string `localeCompare` is correct
+  precisely because the API returns ISO dates. Verified both.
+- **D33-006 — the hub's sticky save bar is correctly absent** on this tab, because every action here
+  is immediate. The `wired: false` classification is right.
+- **D33-001 — the deep link works.** `?tab=availability` opens straight to the tab, unlike
+  `?tab=policy`, which falls through to Profile (Module 32, WWL-474).
+- **D33-011 — the empty state exists** and reads *"No blocked dates — Your calendar is fully open.
+  Block dates above when you're unavailable."* Not reachable on this account, since every venue has a
+  row.
+- Console clean throughout; no unhandled rejection.
+
+### Not driven, each with its reason
+
+| Cases | Why |
+|---|---|
+| **D33-020 → D33-022** (the public consequence of today's blocks) | Requires the public availability check and the Calendar module; belongs to those modules. What is established here is that three approved listings carry a block on today's date. |
+| **D33-049 / D33-050** (a genuine duplicate row) | Creating one means writing a second block to a live venue. The request was captured and the delete-by-date keying read from source; the resulting two-identical-rows state is established by construction, not by producing it. |
+| **D33-065 / D33-066** (blocking a date that has a booking) | Would require blocking a real booked date on an approved venue. |
+| **D33-067 → D33-069** (per-slot vs per-venue) | `slotTemplateId: null` is written by the controller; the interaction with Venue-OS halls and partitions belongs to Module 39. |
+| **D33-091** (all Free buttons disabling together) | Needs several rows on one venue; established from the shared `unblockMut.isPending`. |
+| **D33-094 / D33-095 / D33-112 → D33-114** (cross-vendor ownership probes) | Probing another vendor's business id on a write verb means aiming a mutation at data that is not this account's. The read path was probed and is correctly scoped; the write-side ownership checks are recorded as unverified rather than assumed. |
+| **D33-119 / D33-120** (render cost at scale, pruning) | This account has one row per venue. The absence of pagination and of any pruning is established from source. |
+| **D33-133 → D33-142** (360×740) | The visible browser was kept at desktop for this pass so the run could be followed on screen; the rail-scroll measurement from Module 32 (1,516px against 296px) already covers reaching this tab on a phone. Recorded as not run rather than carried over. |
+
+### Module 33 — status
+
+**152 cases written, 95 driven. 13 findings (2× S2, 10× S3, 1× S4).**
+
+**The module's verdict.** The fix this screen exists to protect is genuinely holding: the business id
+now travels on the read, the write and the delete, and each venue shows only its own dates —
+confirmed on the wire and on screen. The form is the best-labelled in the sweep. And sitting inside
+it, untouched, are three blocked dates on **today's date** across all three approved venues — one
+reading `[QA] duplicate test` and two reading `hi`, a pair whose shape is exactly what the old
+block-every-venue bug produced. The fix stopped the bleeding and nobody cleared the wound. Meanwhile
+the screen will happily block the same date twice with no warning, delete by date rather than by row
+so the second one cannot be told from the first, accept a block dated 2020, free a date with no
+confirmation at all, and — on a platform whose vendors close for Muharram and Ramadan — offer no way
+to block more than one day at a time.
