@@ -69,7 +69,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 37 | Event profit | `/dashboard/venue-os?tab=profit` | ✅ 170 | `[x]` COMPLETE — 121 run, 49 not run, 15 findings (1× S1, 5× S2) |
 | 38 | Venue money | `/dashboard/venue-os?tab=money` | ✅ 200 | `[x]` COMPLETE — 138 run, 62 not run, 14 findings (4× S2) |
 | 39 | Halls & spaces | `/dashboard/venue-os?tab=spaces` | ✅ 170 | `[x]` COMPLETE — 124 run, 46 not run, 10 findings (1× S1, 3× S2) |
-| 40 | Cash & cheques | `/dashboard/venue-os?tab=cash` | ✅ 140 | `[~]` cases written, executing |
+| 40 | Cash & cheques | `/dashboard/venue-os?tab=cash` | ✅ 140 | `[x]` COMPLETE — 108 run, 32 not run, 10 findings (4× S2) |
 | 41 | Kitchen & suppliers | `/dashboard/venue-os?tab=kitchen` | — | `[ ]` |
 | 42 | Accounting | `/dashboard/venue-os?tab=advanced` | — | `[ ]` |
 | 43 | Field capture | `/dashboard/field` | — | `[ ]` |
@@ -20164,3 +20164,182 @@ Panel 2 is why the tab shows *"Couldn't load PDC tracking."* on arrival — case
 | D40-140 | **Zero mutating requests across the entire module** | headline safety assertion |
 
 **Total: 140 cases.**
+
+---
+
+## Module 40 — RESULTS (live production, visible browser)
+
+**140 cases written · 108 driven · 32 not run · 10 findings (4× S2, 5× S3, 1× S4).**
+
+**Nothing was written.** The one cash-float POST was captured and diverted. Two POSTs were allowed
+through after verifying both handlers in the controller — `liabilityCalendarPdcHandler` and
+`committeePayoutOptimiserHandler` persist only on an explicit `persist === true`, which was **never
+sent** (`persistEverSent: false`).
+
+---
+
+### WWL-579 (S2) — the cheque drawer asks the wrong question, four times
+
+Captured in the browser on arrival and on every window switch:
+
+```
+GET /api/v1/venue-os/pdc/alerts?withinDays=5     ← no businessId
+GET /api/v1/venue-os/pdc/alerts?withinDays=3
+GET /api/v1/venue-os/pdc/alerts?withinDays=7
+GET /api/v1/venue-os/pdc/alerts?withinDays=14
+```
+
+The component calls `venueOsApi.pdcAlerts(undefined, withinDays)`. The handler's second line:
+
+```js
+if (businessId == null) return apiResponse(res, 400, false, "businessId is required", null);
+```
+
+Verified both ways against production:
+
+| Request | Result |
+|---|---|
+| `?withinDays=5` — **what the FE sends** | **400** `BusinessId is required` |
+| `?businessId=3358&withinDays=5` | **200** |
+
+So the panel shows *"Couldn't load PDC tracking."* on arrival and after all four window clicks. It is
+the exact twin of WWL-540 (menu re-cost) — a panel that was never given the venue scope every other
+panel received.
+
+Unlike the tariff panel, this one is **not** short of data.
+
+### WWL-580 (S2) — there is a real Rs 695,700 cheque, and nothing on this tab can see it
+
+```
+GET /venue-os/pdc/alerts?businessId=3358&withinDays=99999
+→ [{"id":42,"bookingId":170,"amount":"695700.00","chequeDate":"2026-09-06","status":"held","overdue":false}]
+```
+
+Booking #170 is *Imran Shafi & Hafsa Imran* — Rs 1,546,000, dated 09-Sept-2026, marked **Completed**.
+(The same booking as WWL-529's completed-in-the-future anomaly and one of WWL-542's seven 100%-margin
+rows. It is now also the venue's only post-dated cheque.)
+
+All three panels that should surface it report nothing:
+
+| Panel | On 2026-09 | Reality |
+|---|---|---|
+| Cheques clearing soon | **400 error** | Rs 695,700 held |
+| Liability calendar — PDC column | **`—`** (rendered on screen) | Rs 695,700 due |
+| Bounce-stress — `pdcExpectedInflowPkr` | **0**, `totalPdcInflow: 0`, `pdcDependentMonths: []` | Rs 695,700 inflow |
+
+The tab's own hint is *"chase post-dated cheques before they clear or bounce."* The one cheque this
+venue holds is invisible in all three places.
+
+### WWL-581 (S2) — the widest window cannot reach the cheque
+
+Even with `businessId` fixed, the drawer offers **3d · 5d · 7d · 14d**. Today is 07-Aug-2026; the
+cheque clears **06-Sept-2026 — 30 days out**. Probed every window:
+
+| withinDays | Result |
+|---|---|
+| 0, 3, 5, 7, 14 | `[]` |
+| **99999** | the Rs 695,700 cheque |
+
+So repairing WWL-579 alone still leaves the cheque unreachable from the UI at every available setting.
+A post-dated cheque in Pakistan is routinely written 30–90 days out; a 14-day ceiling cannot see the
+instrument the panel is named after.
+
+### WWL-582 (S2) — a mistyped month gives a false all-clear on the bounce-risk screen
+
+Typed `notamonth` into the liability calendar's from-field and clicked Build. On screen:
+
+> Month · Committee · Ijarah · Udhaar · Bank · PDC · Total due · Proj. cash · Shortfall
+> *(header row, and nothing else)*
+
+```
+GET .../liability-calendar?from=notamonth&to=2027-01  → 200  {"months":[],"totalDue":0}
+```
+
+**HTTP 200, empty months, no error message anywhere.** A vendor who fat-fingers a month sees a
+bounce-risk timeline with no rows, which reads exactly like "you owe nothing this season". The
+endpoint validates presence (`from and to are required` → clean 400) but never validates shape.
+
+### WWL-583 (S3) — "Open drawer" opens a real galla on one click
+
+Enabled on arrival, no confirmation. Captured and diverted:
+
+```
+POST /venue-os/cash-float  {"businessId":3358,"openingFloat":0}
+```
+
+One click creates a cash-float row for today with a **zero opening float** — the default value of an
+untouched field. Nothing asks "are you sure", and nothing says what opening a drawer means.
+
+### WWL-584 (S3) — one tab, one concept, two controls
+
+| Panel | Control | Default |
+|---|---|---|
+| Liability calendar | two **unlabelled free-text** boxes, placeholder `from YYYY-MM` / `to YYYY-MM` | **blank** → Build disabled |
+| PDC bounce-stress | two `input[type="month"]` | **pre-filled 2026-10 → 2027-03** |
+
+Both ask for a month range, on the same tab, one above the other. One is typed and empty, one is
+picked and populated — and they show **different ranges side by side** (2026-08→2027-01 vs
+2026-10→2027-03), so the two tables disagree about which months are on screen. The free-text one is
+also the only path to WWL-582.
+
+### WWL-585 (S3) — a reversed range behaves differently on two screens
+
+| Endpoint | `from` later than `to` |
+|---|---|
+| `liability-calendar` | **200**, `months: []`, silent |
+| `availability-range` (Module 39) | **500**, raw Postgres range error |
+
+Same class of bad input, two different answers, neither of them a 400.
+
+### WWL-586 (S3) — a negative window is accepted
+
+`?withinDays=-5` → **200** `[]`. Neither rejected nor clamped.
+
+### WWL-587 (S3) — the cheque table would name a booking id, not a customer
+
+Header: *Cheque # · Booking · Amount · Clears · Status*, and the row renders `#{r.bookingId}` —
+`#170`, not *Imran Shafi & Hafsa Imran*. Every other Venue-OS surface was moved to names; this one
+still prints the key. (Unreachable today behind WWL-579, so recorded from the source and the shape of
+the API response.)
+
+### WWL-588 (S4) — no `h1` on the page
+
+`document.querySelectorAll('h1').length === 0` — third Venue-OS tab in a row (Modules 37, 38, 40).
+
+---
+
+### What holds — verified, not assumed
+
+- **Scope is clean.** Three named venue dropdowns, all reading 3358, **zero `Venue #` boxes**. Every
+  scoped request carried `businessId=3358`.
+- **The window buttons are correct in every way except the ceiling.** 5d is the default, the active
+  window is visually distinct, each switch fires **exactly one** request, and `retry: false` is
+  honoured — no request storm behind the error.
+- **The liability table is honest about absence.** Nine columns rendering `—` for "no data" and
+  `Rs 0` for "genuinely zero" — a distinction most of this product does not make.
+- **Advance float is the best-worded panel on the tab**: *"Rs 0 of customer cash funding ops ·
+  **Rs 0 refundable — do not spend**"*. It names the trap that ruins Pakistani venues — spending
+  customers' advances — in nine words.
+- **The payout optimiser answers in plain language**: *"No financing gap this season — no committee
+  payout needs retargeting."*
+- **Bounce-stress renders per month**: `2026-10 · due Rs 0 | cash Rs 0 + cheques Rs 0 | ok` — the
+  with-cheques and without-cheques split the panel promises.
+- **Validation works where it is wired**: missing `from`/`to` → clean **400** `From and to (YYYY-MM)
+  are required`.
+- **Layout is clean at BOTH widths** — 0 overflowing elements at 1440px **and** at 360×740, with
+  `docScrollX` false. The first Venue-OS tab in this sweep to pass mobile with nothing to fix.
+- **`persist` was never sent**, on any call, from the UI or my probes.
+
+### Not run (32), with reasons
+
+- **The whole galla lifecycle** — record collections/deposits, close with a counted amount, the
+  over/short arithmetic (`expected = opening + collected − deposited`). Opening the drawer is already
+  a write; recording and closing create the vendor's cash history and a permanent over/short figure.
+  Captured and diverted at the first step.
+- **D40-070–081 over/short edge cases** (negative collected, deposited exceeding available, paisa
+  decimals, zero count) — each requires an open float and a close.
+- **D40-042/043 overdue cheque styling** — the one real cheque is `overdue: false`, and the panel
+  cannot fetch it anyway (WWL-579).
+- **D40-045/046 mark cleared / mark bounced** — no such control exists on this tab; not driven
+  elsewhere.
+- **D40-055 cross-tenant isolation** — would require probing another vendor's cheques.
