@@ -66,7 +66,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 34 | Cancellation policy | `/dashboard/cancellation-policy` | ✅ 156 | **`[x]` COMPLETE — 105 run, 51 not run, 14 findings (1× S1, 3× S2)** |
 | 35 | Setup checklist | `/dashboard/onboarding` | ✅ 158 | **`[x]` COMPLETE — 110 run, 48 not run, 12 findings (3× S2)** |
 | 36 | Tonight | `/dashboard/venue-os?tab=today` | ✅ 150 | **`[x]` COMPLETE — 100 run, 50 not run, 12 findings (3× S2)** |
-| 37 | Event profit | `/dashboard/venue-os?tab=profit` | — | `[ ]` |
+| 37 | Event profit | `/dashboard/venue-os?tab=profit` | ✅ 170 | `[~]` cases written, executing |
 | 38 | Venue money | `/dashboard/venue-os?tab=money` | — | `[ ]` |
 | 39 | Halls & spaces | `/dashboard/venue-os?tab=spaces` | — | `[ ]` |
 | 40 | Cash & cheques | `/dashboard/venue-os?tab=cash` | — | `[ ]` |
@@ -18579,3 +18579,235 @@ gets is a genuinely useful list of who owes them money, on which nothing is clic
 one hundred days overdue, and not a button on the row**. Among the events it counts as upcoming are a
 booking that is 0% paid and still *Pending*, one whose customer is the vendor themselves, and one
 marked **Completed** whose wedding is five weeks away and three quarters unpaid.
+
+---
+
+# Module 37 — Event profit (`/dashboard/venue-os?tab=profit`)
+
+**Surface.** Four panels, in render order:
+
+| # | Component | What it claims | Data source |
+|---|---|---|---|
+| 1 | `EventProfitBoard` | *"Did each shaadi make money?"* — 5 KPI tiles + a per-function table | bookings × `VendorExpense.bookingId` — **no GL, no flag** |
+| 2 | `EventPnlView` | *"Per-event P&L (off the ledger)"* — revenue / COGS / opex / gross / net | `GET /venue-os/bookings/:id/pnl`, double-entry GL |
+| 3 | `CateringRecost` | *"Menu re-cost (deg-rate-card)"* — food cost/head at today's rates | `POST /venue-os/menu/recost` |
+| 4 | `VenueOsInsights` | feature status + 236CB / provincial wedding-tax calculator | `GET /venue-os/health`, `POST /venue-os/tax/compute` |
+
+**Two engines answer the same question on one screen.** Panel 1 computes profit from bookings and
+tagged expenses; panel 2 computes it from the general ledger. Nothing on the page says they are
+different numbers from different sources, and a vendor reading top-to-bottom will treat the second as
+a refinement of the first.
+
+**Self-imposed limits for this module, each with its reason:**
+
+- The **tax calculator is not saved or filed** — `POST /venue-os/tax/compute` is a pure computation,
+  so it is driven; nothing that writes a tax record is.
+- **No expense is created, re-tagged or deleted** to manufacture a spend figure. The spend side is a
+  real vendor's real ledger.
+- **No booking's status or amount is edited** to test the cancelled-row logic. Cancelled rows are read
+  from the three that already exist.
+- `CateringRecost` is driven **read-only**: a re-cost computes, it does not re-price a booking.
+
+---
+
+## D37-A · Arrival, scope and identity (cases 1–18)
+
+| # | Case | Expected |
+|---|---|---|
+| D37-001 | `?tab=profit` opens directly on Bookings & Profit, not Today | tab active from URL |
+| D37-002 | Reload holds the tab | still profit |
+| D37-003 | Back from another tab returns here | history honoured |
+| D37-004 | Exactly one `h1` on the page | 1 |
+| D37-005 | `aria-selected="true"` on exactly one tab | 1 |
+| D37-006 | The active tabpanel is the profit panel | `data-state="active"` |
+| D37-007 | Panel renders all four card titles | 4 |
+| D37-008 | Section hint names what the tab does | *"Did this shaadi make money — and what tax do you owe on it?"* |
+| D37-009 | Switching the header venue re-scopes the board | rows change or are proven venue-agnostic |
+| D37-010 | "All venues" shows every venue's functions | superset of any single venue |
+| D37-011 | No `Venue #` raw number box anywhere in the panel | 0 |
+| D37-012 | No console error on arrival | 0 |
+| D37-013 | No mutating request on arrival | 0 |
+| D37-014 | Panel does not overflow horizontally at 1440px | 0 elements past the viewport |
+| D37-015 | Panel does not overflow at 360px | 0, or inside its own scroller |
+| D37-016 | The per-function table has its own `overflow-x-auto` | present (`min-w-[720px]`) |
+| D37-017 | Tab strip reachable by keyboard | arrow keys move tabs |
+| D37-018 | Focus visible on every interactive control | ring present |
+
+## D37-B · The five KPI tiles — do the numbers reconcile? (cases 19–52)
+
+| # | Case | Expected |
+|---|---|---|
+| D37-019 | `Booked` equals the sum of the Revenue column | exact |
+| D37-020 | `Received` equals the sum of the Received column | exact |
+| D37-021 | `Spent (tagged)` equals the sum of the Spent column | exact |
+| D37-022 | `Net profit` equals `Booked − Spent` | exact, per the source |
+| D37-023 | **`Net profit` counts money not yet received** | Booked − Spent, NOT Received − Spent — flag if so |
+| D37-024 | `Outstanding` equals `Booked − Received` | exact |
+| D37-025 | `Outstanding` here equals `To collect` on the Today tab | the two tabs must agree |
+| D37-026 | `% collected` = Received ÷ Booked | rounded correctly |
+| D37-027 | `% margin` = Net ÷ Booked | rounded correctly |
+| D37-028 | Cancelled bookings contribute 0 revenue | per the fix already in this file |
+| D37-029 | Cancelled bookings still contribute their tagged spend | a real loss |
+| D37-030 | A cancelled row shows a NEGATIVE net | revenue 0 − spend |
+| D37-031 | Cancelled rows are not ranked #1 under "Most profit" | regression check |
+| D37-032 | Cancelled rows are not ranked #1 under "Biggest" | regression check |
+| D37-033 | `Outstanding` excludes cancelled bookings | not chasing a called-off wedding |
+| D37-034 | Refunded bookings treated as cancelled | the cancel/refund prefix test |
+| D37-035 | Rows with neither revenue nor spend are dropped | signal-only |
+| D37-036 | A booking with spend but no price still appears | revenue 0, spend > 0 |
+| D37-037 | Margin shows an em-dash when revenue is 0 | no divide-by-zero |
+| D37-038 | Margin of exactly 100% means zero tagged spend | flag as misleading if unlabelled |
+| D37-039 | How many rows show 100% margin | count |
+| D37-040 | Rs 0-priced bookings do not distort the totals | check |
+| D37-041 | Negative net renders in rose, positive in emerald | colour matches sign |
+| D37-042 | Tiles survive a hard reload unchanged | same numbers |
+| D37-043 | Tiles agree with the Money tab's "Cost per function" spend | cross-tab |
+| D37-044 | `Spent (tagged)` is labelled as tagged-only, not total spend | wording |
+| D37-045 | Untagged expenses are excluded and this is disclosed | check for a note |
+| D37-046 | Portfolio `Net profit` vs the Money tab's total spend | reconcile |
+| D37-047 | Numbers are `tabular-nums` and right-aligned | alignment |
+| D37-048 | PKR formatting is Rs 1,234,567 throughout | no bare numbers |
+| D37-049 | No tile reads NaN, Infinity or undefined | sanity |
+| D37-050 | Tiles at 360px stack without clipping | 2-col grid |
+| D37-051 | Tile labels are readable, not truncated mid-word | check |
+| D37-052 | A tile's `delta` line matches its value | e.g. 54% collected |
+
+## D37-C · The per-function table (cases 53–96)
+
+| # | Case | Expected |
+|---|---|---|
+| D37-053 | Sort "Recent" orders by booking date descending | verified against the dates |
+| D37-054 | Sort "Most profit" orders by net descending | verified |
+| D37-055 | Sort "Biggest" orders by revenue descending | verified |
+| D37-056 | The active sort button is visually distinct | `bg-primary` |
+| D37-057 | The sort control is a real button, keyboard reachable | yes |
+| D37-058 | Sort is NOT in the URL — a sorted view cannot be shared | flag if so |
+| D37-059 | Sort survives a tab switch away and back | state or reset, recorded |
+| D37-060 | Sort resets on hard reload | recorded |
+| D37-061 | Each row names the customer, not a booking id | real names |
+| D37-062 | Each row shows date · status | present |
+| D37-063 | **Is any row a link to its booking?** | expected: 0 — flag |
+| D37-064 | Revenue column matches the booking's total | spot-check 3 rows |
+| D37-065 | Received column matches the booking's down payment | spot-check |
+| D37-066 | Spent column matches the expenses tagged to that booking | spot-check against the Money tab |
+| D37-067 | Net = Revenue − Spent per row | arithmetic on every visible row |
+| D37-068 | Margin = Net ÷ Revenue per row | arithmetic |
+| D37-069 | An em-dash in Spent means no tagged expense, not zero spend | wording |
+| D37-070 | Row count ≤ 40 | `MAX_ROWS` |
+| D37-071 | When truncated, the "Showing 40 of N" line appears | disclosure |
+| D37-072 | That line points somewhere useful | is it a link? |
+| D37-073 | Empty state when no priced bookings | copy check |
+| D37-074 | Loading state while bookings/expenses resolve | *"Loading your bookings…"* |
+| D37-075 | Expense query failure degrades to spend em-dash, not a broken board | kill the request and observe |
+| D37-076 | Booking query failure shows a real error, not an empty board | observe |
+| D37-077 | Table has a `thead` with `th` headers | semantics |
+| D37-078 | Headers carry a scope | a11y |
+| D37-079 | Table scrolls horizontally inside its own container at 360px | `overflow-x-auto` |
+| D37-080 | The page itself does not scroll horizontally at 360px | `docScrollX` false |
+| D37-081 | A Completed booking dated in the future appears here too | cross-check WWL-529 |
+| D37-082 | A booking whose customer is the vendor appears | cross-check WWL-533 |
+| D37-083 | Statuses rendered verbatim from the API | no invented labels |
+| D37-084 | `Awaiting Payment` rows show Received Rs 0 | consistency |
+| D37-085 | `Pending` rows are counted in Booked | is an unconfirmed booking "booked"? — record |
+| D37-086 | Row hover gives feedback | recorded |
+| D37-087 | Row order stable across re-render | no jitter |
+| D37-088 | Same booking never appears twice | dedupe |
+| D37-089 | Multi-venue: rows from all three venues present under "All venues" | check |
+| D37-090 | Switching to one venue filters the table | or is proven not to — record |
+| D37-091 | Dates formatted consistently | no mixed formats |
+| D37-092 | Long customer names truncate rather than break the layout | check |
+| D37-093 | Currency never renders in a different unit | check |
+| D37-094 | Table re-sorts without a network request | client-side |
+| D37-095 | No mutating request from any sort click | 0 |
+| D37-096 | Sorting twice on the same key does not toggle direction silently | record |
+
+## D37-D · Per-event P&L, off the ledger (cases 97–124)
+
+| # | Case | Expected |
+|---|---|---|
+| D37-097 | The booking picker lists functions by name and date | not raw ids |
+| D37-098 | Picker placeholder reads *"Which function?"* | copy |
+| D37-099 | Picking a booking issues exactly ONE request | not two |
+| D37-100 | Management view is the default | `MANAGEMENT_ONLY` |
+| D37-101 | The Management / Tax toggle is a real pair of buttons | yes |
+| D37-102 | Switching to Tax (declared) re-queries | new request |
+| D37-103 | Tax and Management return DIFFERENT numbers | if identical, the toggle is decorative — flag |
+| D37-104 | Five stats render: Revenue, Food/COGS, Overheads, Gross, Net | 5 |
+| D37-105 | `Gross profit` = Revenue − COGS | arithmetic |
+| D37-106 | `Net profit` = Gross − Overheads | arithmetic |
+| D37-107 | Net renders emerald when ≥ 0, red when < 0 | colour |
+| D37-108 | **The GL Revenue matches the board's Revenue for the same booking** | the two engines must agree — flag if not |
+| D37-109 | The GL Net matches the board's Net for the same booking | flag if not |
+| D37-110 | A booking with no GL postings returns an honest empty, not zeros | observe |
+| D37-111 | Error copy on failure is *"Couldn't load per-event P&L."* | present |
+| D37-112 | That copy does not leak a Postgres/Sequelize string | check |
+| D37-113 | `retry: false` — a failure does not storm the backend | 1 request |
+| D37-114 | The panel is scoped by the active venue | `activeBusinessId` in the query key |
+| D37-115 | Switching venue with a booking picked re-queries | check |
+| D37-116 | Picking a booking from another venue is handled | 403/404 or empty, not a crash |
+| D37-117 | Loading state shows *"Loading…"* | present |
+| D37-118 | Clearing the picker clears the stats | no stale numbers |
+| D37-119 | The picked booking is NOT in the URL | flag — cannot be shared |
+| D37-120 | The panel does not write anything | 0 mutations |
+| D37-121 | Stats at 360px stack 2-wide | `grid-cols-2` |
+| D37-122 | Every stat is Rs-formatted | check |
+| D37-123 | Nothing renders Rs NaN | sanity |
+| D37-124 | The two profit panels are visually distinguishable | do they look like the same answer twice? |
+
+## D37-E · Menu re-cost (cases 125–146)
+
+| # | Case | Expected |
+|---|---|---|
+| D37-125 | **The panel asks for "Card IDs" as free text** | flag: unanswerable |
+| D37-126 | There is no picker for deg-rate-cards anywhere on the page | confirm |
+| D37-127 | Nothing on the page tells the vendor where to find a card id | confirm |
+| D37-128 | Re-cost is disabled until Card IDs is non-empty | `disabled` |
+| D37-129 | Typing letters produces an empty id list, not a crash | filtered |
+| D37-130 | An empty id list still fires a request | flag if it does |
+| D37-131 | Ids accept comma OR space separation | both |
+| D37-132 | Negative and zero ids are dropped | positive only |
+| D37-133 | A non-existent id returns an honest error | observe |
+| D37-134 | Error copy is *"Couldn't load catering re-cost."* | present |
+| D37-135 | Error copy does not leak internals | check |
+| D37-136 | `Quoted / head` is optional | request omits it when blank |
+| D37-137 | Food cost/head renders with 2-dp rounding | check |
+| D37-138 | The underwater alert appears when cost exceeds quoted | observe or reason |
+| D37-139 | The alert names the ingredient that moved | per the source comment |
+| D37-140 | Re-cost issues exactly one request per click | not two |
+| D37-141 | Double-clicking Re-cost does not double-fire | busy guard |
+| D37-142 | Busy state shows *"Costing…"* | present |
+| D37-143 | The result clears before a new request | no stale figure |
+| D37-144 | The panel writes nothing | recost is a computation |
+| D37-145 | Panel usable at 360px | check |
+| D37-146 | The quoted-per-head field accepts negatives | record |
+
+## D37-F · Tax calculator + status (cases 147–170)
+
+| # | Case | Expected |
+|---|---|---|
+| D37-147 | The status card lists which venue-OS features the account has | present |
+| D37-148 | Status is scoped to the ACTIVE venue | in the query key |
+| D37-149 | Status does not read as a list of internal flag names | wording |
+| D37-150 | Base amount defaults to 1,000,000 | check |
+| D37-151 | Five jurisdictions offered: PRA SRB KPRA BRA ICT | 5 |
+| D37-152 | The jurisdiction defaults to PRA | Punjab — matches two of three venues |
+| D37-153 | A Rawalpindi venue also defaults to PRA | correct (Punjab) |
+| D37-154 | Filer / Non-filer toggle present | 2 |
+| D37-155 | Non-filer is the default | record — is that the safe default? |
+| D37-156 | Compute returns a breakdown, not a single number | check |
+| D37-157 | 236CB advance tax appears in the breakdown | named |
+| D37-158 | Non-filer rate is higher than filer for the same base | arithmetic |
+| D37-159 | Changing jurisdiction changes the result | not decorative |
+| D37-160 | The rates match the published FBR/PRA rates | spot-check one |
+| D37-161 | Compute fires exactly one request | not two |
+| D37-162 | A zero base returns zero, not an error | observe |
+| D37-163 | A negative base is rejected or handled | record |
+| D37-164 | The result is NOT saved anywhere | read-only — confirm 0 writes |
+| D37-165 | Nothing claims the figure is filed with FBR | wording — this is a calculator |
+| D37-166 | The calculator does not use the booking's real amount | standalone — flag as a missed connection |
+| D37-167 | Error path shows honest copy | observe |
+| D37-168 | Panel usable at 360px | check |
+| D37-169 | The tax panel and the profit board do not disagree on revenue | cross-check |
+| D37-170 | Nothing on this tab writes to the ledger | 0 mutations across the whole module |
+
+**Total: 170 cases.**
