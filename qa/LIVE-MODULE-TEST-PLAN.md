@@ -58,7 +58,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 26 | Drone NOC | `/dashboard/drone-noc` | ✅ 138 | **`[x]` COMPLETE — 60 run, 78 not run, 17 findings (3× S2)** |
 | 27 | Reviews | `/dashboard/reviews` | ✅ 310 | **`[x]` COMPLETE — 218 run, 92 not run, 26 findings (1× S1, 6× S2)** |
 | 28 | Notifications | `/dashboard/notifications` | ✅ 258 | **`[x]` COMPLETE — 195 run, 63 not run, 20 findings (5× S2)** |
-| 29 | Promote | `/dashboard/promote` | — | `[ ]` |
+| 29 | Promote | `/dashboard/promote` | ✅ 222 | `[~]` cases written — execution in progress |
 | 30 | Plan & billing | `/dashboard/billing` | — | `[ ]` |
 | 31 | Collaborations | `/dashboard/collaborations` | — | `[ ]` |
 | 32 | Business Settings | `/dashboard/settings` | — | `[~]` 11 tabs done earlier |
@@ -13933,3 +13933,282 @@ only a full reload revealed it. The server emits an error event for exactly this
 the product listens. And on a phone — where `hover: none` is true — not one of the twenty delete
 buttons can be seen or found, which on a screen with no bulk delete and no retention policy means
 the list can only grow.
+
+---
+
+## MODULE 29 — TEST CASES
+
+Route `/dashboard/promote`. A vendor requests a paid marketplace placement; a super-admin approves or
+rejects it; approval flips `Business.sponsored` for a window. One view, one create dialog, seven
+endpoints.
+
+Established from source and from a live probe taken before any case ran:
+
+| Established | Value |
+|---|---|
+| Promotion requests on this account | **0** |
+| All three venues | `sponsored: false · promotionStatus: "none"` |
+| Pricing catalog (live) | homepage 5,000 / 10,000 / 17,500 · category 3,000 / 6,000 / 10,500 · city 2,500 / 5,000 / 8,750 · search 2,000 / 4,000 / 7,000 |
+| Windows accepted server-side | **7, 15, 30** only |
+| `POST /promotions/:id/cancel` (WW-079) | live — **no consumer in the frontend** |
+| `PromotionRequest.status = "expired"` | declared in the model — **nothing ever writes it** |
+| The expiry sweeper | updates **`Business`** only, never the request row |
+| Admin queue as a vendor | **403**, correctly |
+
+### A. Route, shell and load (D29-001 → D29-016)
+
+- **D29-001** Sidebar → **Promote** navigates to `/dashboard/promote`.
+- **D29-002** `document.title` (*"Dashboard : Promote"*) vs the page title vs the eyebrow vs the nav label.
+- **D29-003** The eyebrow reads **Grow**.
+- **D29-004** The rail entry is `aria-current="page"` — and re-check whether `/dashboard/chat` still claims it (WWL-379).
+- **D29-005** Direct URL loads with no client-side error and a clean console.
+- **D29-006** The component header comment says *"Route /dashboard/promote-new"* — resolve `/dashboard/promote-new` and establish what it actually is.
+- **D29-007** The same comment says *"Read-only; original screen untouched"* on a screen that files a paid request. Establish the contradiction.
+- **D29-008** The page metadata reads *"Request featured placement on the Wedding Wala marketplace."* — check against what the screen can actually do.
+- **D29-009** The description under the title reads *"Your featured-placement requests."*
+- **D29-010** Header action **Request placement** renders and opens the dialog.
+- **D29-011** Reload → identical content.
+- **D29-012** TanStack query key is `["promote-redesigned"]` with no businessId in it. Establish what that means when the venue changes.
+- **D29-013** `BusinessesAPI.getUserBusinesses()` is fetched under `["my-businesses"]` purely to derive `businesses?.[0]?.id`.
+- **D29-014** Client-side nav away and back — establish whether the query refetches or serves cache.
+- **D29-015** The loading state is `DataTable`'s own skeleton.
+- **D29-016** No leaks after leaving the route.
+
+### B. The four stat cards (D29-017 → D29-036)
+
+- **D29-017** Four cards render: **Total requests · Pending · Active · Quoted (total)**.
+- **D29-018** With zero requests all four read 0 / Rs 0. Verify each.
+- **D29-019** `Total requests` = `all.length` — the unfiltered list, so the search box does not move it. Verify.
+- **D29-020** `Pending` = `status === "pending"`.
+- **D29-021** `Pending` carries `trend="up"` when non-zero — establish what an upward trend arrow means on a count of things waiting for someone else.
+- **D29-022** `Active` = `status === "approved"`.
+- **D29-023** **`Active` never checks `endsAt`.** Establish that a promotion whose window closed months ago still counts.
+- **D29-024** …and that nothing anywhere writes `PromotionRequest.status = "expired"`. The model declares the status; grep the backend for a writer.
+- **D29-025** The expiry sweeper (`vrSweepers.js` §10) updates **`Business`** — `sponsored: false, promotionStatus: "expired"` — and leaves the request row `approved`. Establish the divergence: two records, two answers.
+- **D29-026** So after a window closes, `Business.promotionStatus` says *expired* while the vendor's own Promote screen says *Active*.
+- **D29-027** `Quoted (total)` = `all.reduce(sum of priceQuoted)` across **every** status.
+- **D29-028** So a **rejected** request's quote is counted in the total the vendor is shown. Establish.
+- **D29-029** …and a **cancelled** one.
+- **D29-030** …and an **expired** one, twice over, since expiry never lands on the row.
+- **D29-031** Establish what the card is therefore measuring: not spend, not commitment, not owed.
+- **D29-032** `formatPkr` on the total — verify the rendering of 0 and of a large number.
+- **D29-033** There is **no card for money actually spent**, and no payment link anywhere on the screen.
+- **D29-034** Establish whether any payment flow exists for an approved placement at all — search the product for one.
+- **D29-035** The cards are `grid-cols-2 lg:grid-cols-4`. Check the 2-up wrap.
+- **D29-036** Card values are not `tabular-nums`; check alignment when the numbers grow.
+
+### C. The table (D29-037 → D29-070)
+
+- **D29-037** With zero rows the empty state renders: **"No placement requests yet"** with the description naming homepage, category, city and search, and a **Request placement** CTA.
+- **D29-038** The empty state is correct here — the register genuinely holds zero. Contrast with Modules 20–22, where the same primitive fired over populated data.
+- **D29-039** Six columns: **Business · Placement · Window · Quoted · Requested · Status**.
+- **D29-040** `Business` renders `r.business?.name` and falls back to `#${businessId}` — establish when the fallback can fire (the list endpoint always includes the business).
+- **D29-041** `Placement` renders `PLACEMENT_LABEL[placement]` and falls back to `cap(placement)`.
+- **D29-042** Verify all four labels: Homepage hero · Category top · City top · Search boost.
+- **D29-043** `Window` renders `${windowDays} days`, or `—` when `windowDays` is 0 or absent. Establish that the server refuses anything but 7/15/30, so the `—` branch is unreachable through the UI.
+- **D29-044** `Quoted` renders a `MoneyCell` with a null branch. Verify both.
+- **D29-045** `Requested` renders `fmtDate(createdAt)` as `en-PK`, `dd MMM yyyy`.
+- **D29-046** `fmtDate` guards `isNaN` and returns `—`. Confirm.
+- **D29-047** `Status` renders a `StatusPill` from `STATUS_TONE`, with `|| "neutral"` as a fallback.
+- **D29-048** **This module is immune to the Module 21 crash** — verify `statusTone` cannot return undefined, and credit it.
+- **D29-049** All five statuses have a tone: approved success · pending warning · rejected error · expired error · cancelled neutral. Verify the mapping.
+- **D29-050** **`rejected` and `expired` share the error tone.** Establish that a request an admin refused and a placement that simply finished look identical.
+- **D29-051** `cap()` turns `expired` into `Expired` and would turn an underscored status into spaced words. Verify.
+- **D29-052** The table is `selectable` with a selection set.
+- **D29-053** Establish that the selection feeds **only** `ExportMenu` — and credit that, against Module 27 where the checkbox column had no consumer at all.
+- **D29-054** Select-all, then export, and confirm only the selected rows appear.
+- **D29-055** No row actions of any kind: no view, no cancel, no detail. Confirm by inspecting the rendered row.
+- **D29-056** Search box placeholder reads *"Search promotions…"*.
+- **D29-057** Search matches `business.name`, the placement **label**, `note` and `status`. Verify each of the four.
+- **D29-058** Establish that searching a placement *key* (`homepage`) rather than its label (`Homepage hero`) still matches, since `placementLabel` is what is searched.
+- **D29-059** Search is client-side over the full list — confirm no request fires.
+- **D29-060** Search does not move the stat cards (D29-019). Confirm the divergence is visible.
+- **D29-061** `DensityToggle` renders; drive it and confirm the row height changes.
+- **D29-062** Density persists across a reload? Establish.
+- **D29-063** `ExportMenu` — capture the file without downloading.
+- **D29-064** Verify the seven export columns: Business · Placement · Window (days) · Quoted · Status · Requested · Note.
+- **D29-065** **The export writes `fmtDate(createdAt)`** — a display string, not an ISO date. Same defect as WWL-329 in Halal certs; establish whether Promote repeats it.
+- **D29-066** The export includes `note`, which the table does not show. Establish.
+- **D29-067** The export omits `startsAt`, `endsAt`, `rejectionReason` and `decidedAt`.
+- **D29-068** Filename is `promotions` with no date and no venue.
+- **D29-069** `renderCard` is the mobile row: business, placement · price, status pill. Establish what it drops.
+- **D29-070** Error state: `isError` renders *"Couldn't load promotions."* with a **Retry** that calls `refetch`. Drive it under injected failure.
+
+### D. What the screen never shows (D29-071 → D29-086)
+
+- **D29-071** `startsAt` is on the row type and is **not a column**.
+- **D29-072** `endsAt` is on the row type and is **not a column**.
+- **D29-073** So a vendor with an approved placement **cannot see when it runs or when it ends** anywhere on this screen.
+- **D29-074** …and the approval notification is the only place the end date appears — *"live until 12 Sep 2026"* — in a notification feed where 85% of rows are mislabelled (WWL-388).
+- **D29-075** `rejectionReason` is captured by the admin, stored on the row, sent in a notification — and is **not a column**.
+- **D29-076** So a rejected request shows the word **Rejected** and nothing else. Establish that the reason is unreachable from this screen.
+- **D29-077** `decidedAt` and `decidedByUserId` are not shown.
+- **D29-078** `business.sponsored` and `business.promotionEndsAt` are fetched by the list endpoint and rendered nowhere.
+- **D29-079** So the screen cannot tell the vendor whether they are **currently featured**.
+- **D29-080** There is no link from a request to the public listing it would promote.
+- **D29-081** There is no preview of what a homepage-hero placement looks like.
+- **D29-082** There is no performance data — no impressions, no clicks, no bookings attributed. Establish whether the backend records any.
+- **D29-083** So a vendor asked for Rs 17,500 has no way to learn whether the last one worked.
+- **D29-084** No sort control on any column.
+- **D29-085** No status filter — with mixed statuses the only tool is the free-text box.
+- **D29-086** No date filter.
+
+### E. The request dialog (D29-087 → D29-128)
+
+- **D29-087** **Request placement** opens a dialog titled *"Request a placement"*.
+- **D29-088** Description reads *"Boost your visibility. Your request goes to admin for approval."*
+- **D29-089** With pricing loaded, two selects render: **Placement** and **Duration**.
+- **D29-090** Placement defaults to `pricing[0]` — establish that this is **Homepage hero**, the most expensive option.
+- **D29-091** Duration defaults to `prices[0]` — the **7-day** window.
+- **D29-092** Changing placement resets duration to that placement's first price. Drive it.
+- **D29-093** Verify the four placement options and their labels.
+- **D29-094** Verify each placement's three durations and prices against the live catalog.
+- **D29-095** The duration option text is `"{n} days — {formatPkr(price)}"`. Verify the rendering.
+- **D29-096** The quoted-price panel renders `formatPkr(priceFor)` when a price is resolvable.
+- **D29-097** Cross-check every one of the twelve price points against `quotePrice()`: `BASE_PRICE_7D × WINDOW_MULT`, `{7:1, 15:2, 30:3.5}`.
+- **D29-098** Establish the per-day rate at each window and confirm the discount is monotonic (7d dearest per day, 30d cheapest).
+- **D29-099** **The word "indicative" appears nowhere in the UI.** The API module's own comment says *"Pricing is indicative (D7 placeholder)"* and the controller says *"The FE labels them 'indicative'"*. Grep the frontend and establish that it does not.
+- **D29-100** So the vendor is shown **"Quoted price Rs 5,000"** in a bordered panel, and a **"Quoted (total)"** stat card, for a number the backend calls a placeholder.
+- **D29-101** There is no VAT, no PRA/FBR line and no total-payable on a priced screen. Cross-check against the FBR/PRA e-invoicing work.
+- **D29-102** **Note** is an optional textarea with placeholder *"Anything the admin should know"*.
+- **D29-103** The note has **no `maxLength`**; the server truncates at **1000** characters with `.slice(0, 1000)` — silently. Paste 1200 and establish that nothing warns and the tail is lost.
+- **D29-104** All three field labels are `<label>` with **no `htmlFor`**, and no input carries an `id`.
+- **D29-105** `canSave = !!placement && !!windowDays && businessId != null`.
+- **D29-106** Both selects are pre-populated, so **Save is enabled the instant the dialog opens** — a vendor can file a Rs 5,000 request in two clicks with no deliberate choice.
+- **D29-107** `FormBlockedHint` renders *"Fill in the required fields above to save."* when blocked. Establish when it can ever appear, given D29-106.
+- **D29-108** **There is no confirmation step.** Pressing *Request placement* files it immediately.
+- **D29-109** The button label cycles to *Sending…* with a spinner while pending.
+- **D29-110** `onSuccess` fires `showSuccessToast("Placement requested")` and closes the dialog.
+- **D29-111** Drive the create with the write blocker armed and capture the body.
+- **D29-112** Establish whether the diverted write produces a false success (the pattern in every prior module).
+- **D29-113** `onError` reads `e?.response?.data?.message` first — so the server's 409 text should surface. Drive a failure and confirm which string appears.
+- **D29-114** Establish that this is **better** than Modules 27 and 28, where the message was swallowed.
+- **D29-115** **There is no business picker.** `businessId` comes from `businesses?.[0]?.id`.
+- **D29-116** So on a three-venue account only **Rehman Grand Marquee (3358)** can ever be promoted. Prove it from the captured body.
+- **D29-117** **Ninth module** with the `businesses[0]` mechanism. Enumerate the family.
+- **D29-118** The dialog never names the business it is about to promote. Confirm.
+- **D29-119** `businessId` is `undefined` until the `my-businesses` query resolves — establish what the dialog does if opened first.
+- **D29-120** When `pricing.length === 0` the dialog renders *"Promotion pricing isn't available right now."* and **still shows the Request placement button**. Establish whether it is disabled.
+- **D29-121** Dialog closes on Cancel, Esc and overlay click.
+- **D29-122** Reopening resets placement, duration and note (`useEffect` on `open`). Drive it.
+- **D29-123** Establish whether the dialog can be dismissed mid-flight while `saveMut.isPending`.
+- **D29-124** Rapid double-click on *Request placement* — confirm only one request.
+- **D29-125** Keyboard: Tab through both selects, the textarea and the button.
+- **D29-126** Focus lands inside the dialog on open and returns to the trigger on close.
+- **D29-127** The dialog is `sm:max-w-md`; check at 360px.
+- **D29-128** `showSuccessToast` is the undo-capable helper — establish whether an undo is offered here, and whether one could work given there is no cancel wired.
+
+### F. Pricing and the money story (D29-129 → D29-150)
+
+- **D29-129** `GET /promotions/pricing` returns the same catalog as `listMine`. Confirm both live.
+- **D29-130** So the dedicated pricing endpoint is redundant on this screen — establish whether anything else calls it.
+- **D29-131** Verify homepage: 5,000 / 10,000 / 17,500.
+- **D29-132** Verify category: 3,000 / 6,000 / 10,500.
+- **D29-133** Verify city: 2,500 / 5,000 / 8,750.
+- **D29-134** Verify search: 2,000 / 4,000 / 7,000.
+- **D29-135** `quotePrice` returns `Math.round(base * mult)` — establish there is no rounding drift at 3.5×.
+- **D29-136** An unknown placement yields `base = 0` → a **Rs 0 quote**. Establish that the `PLACEMENTS` guard runs first, so this is unreachable via the API.
+- **D29-137** An unknown window yields `mult = 1` → the 7-day price for any window. Establish that `WINDOWS` guards it first.
+- **D29-138** So both fallbacks are dead code behind validators — confirm and credit the ordering.
+- **D29-139** Probe the API with `windowDays: 60` and confirm **400 "windowDays must be 7, 15, or 30"**.
+- **D29-140** Probe with `placement: "footer"` and confirm **400 "Invalid placement"**.
+- **D29-141** Probe with a missing `businessId` and confirm **400 "businessId required"**.
+- **D29-142** Probe with a business the vendor does not own and confirm **404 "Business not found or not yours"**.
+- **D29-143** Establish that the price is computed **server-side** and the client's number is never trusted. Confirm `priceQuoted` is not read from the body.
+- **D29-144** …and credit that, on a screen where the client displays a price.
+- **D29-145** The price is stamped at request time and never re-quoted. Establish what happens if the catalog changes before an admin approves.
+- **D29-146** `priceQuoted` is `DECIMAL(12,2)`; the FE coerces with `Number()`. Check for precision loss at scale.
+- **D29-147** There is no currency symbol in the model — `formatPkr` supplies it. Confirm the rendering.
+- **D29-148** No invoice, no receipt, no payment reference is created on approval. Establish from `approvePromotion`.
+- **D29-149** So an approved placement flips `sponsored: true` with **no money having changed hands** in the system.
+- **D29-150** Establish whether anything reconciles a promotion against the Khata / receipts modules.
+
+### G. The cancel that has no button (D29-151 → D29-164)
+
+- **D29-151** `POST /api/v1/promotions/:id/cancel` exists, is owner-scoped, and is guarded to `pending` only.
+- **D29-152** Its own comment states the problem it was written for: *"a vendor who filed a request by mistake had no way to retract it (and createPromotionRequest then blocked them with 'a request is already pending')."*
+- **D29-153** **`PromotionsAPI` has no `cancel` method.** Prove it from `lib/api/promotions.ts`.
+- **D29-154** **No component in the product calls the cancel route.** Prove it by searching the frontend.
+- **D29-155** The table has no row actions, so there is no surface it could hang from.
+- **D29-156** So the exact user-facing problem WW-079 describes is **still live**: the backend was fixed and the button was never built.
+- **D29-157** Establish the trap concretely: file a request, then try to file another. `createPromotionRequest` returns **409 "A request is already pending for this business"**.
+- **D29-158** …and there is no way out of that state from any screen. The vendor waits for an admin.
+- **D29-159** WW-150 adds a second lock: **409 "An approved promotion is already active for this business"** while `endsAt` is in the future.
+- **D29-160** Establish that this second lock *is* time-based and therefore self-clearing — and credit it against D29-023, where the same screen's own card is not.
+- **D29-161** So the backend knows how to compare `endsAt` to `now`; the stat card above simply does not.
+- **D29-162** Establish whether a super-admin can cancel on the vendor's behalf, and from where.
+- **D29-163** The `cancelled` status therefore never appears in production. Confirm against the live data.
+- **D29-164** …which makes the `cancelled → neutral` tone mapping unreachable. Confirm.
+
+### H. Backend guards and authorisation (D29-165 → D29-180)
+
+- **D29-165** `createPromotionRequest` refuses a non-vendor with **403 "Vendors only"**.
+- **D29-166** Ownership: the business must be `userId = req.user.id` unless super-admin.
+- **D29-167** `listMyPromotions` scopes to the vendor's own business ids.
+- **D29-168** With zero businesses it returns an empty list **plus the pricing catalog**. Establish that the dialog still works for a vendor with no business — and what `businesses[0]` does then.
+- **D29-169** `GET /promotions/admin/queue` as a vendor → **403**. Verify live.
+- **D29-170** `POST /promotions/admin/:id/approve` as a vendor → **403**. Verify live.
+- **D29-171** `POST /promotions/admin/:id/reject` as a vendor → **403**. Verify live.
+- **D29-172** Contrast with WWL-339 (Drone NOC), where the applicant could approve their own permit. Establish that Promote gets this right and credit it.
+- **D29-173** `approvePromotion` runs in a transaction and rolls back on error.
+- **D29-174** It refuses a non-pending row with **409 `Already ${status}`**.
+- **D29-175** `rejectPromotion` requires no reason — `reason` falls back to `null`. Establish that a rejection with no explanation is permitted.
+- **D29-176** WW-224: rejecting one request no longer downgrades a business with another live promotion. Establish the guard.
+- **D29-177** Both decisions fire a `NotificationService.send` of type **`system`** — which, per WWL-388, renders as a grey SYSTEM pill in the vendor's feed.
+- **D29-178** So *"Promotion approved — you're featured"* arrives looking like a platform announcement. Establish the cross-module consequence.
+- **D29-179** `cancelPromotionRequest` validates the id with `Number.isFinite` → **400 "Invalid request id"** rather than a raw 500. Probe it and contrast with WWL-395 (Notifications).
+- **D29-180** Probe cancel on a foreign id and confirm 404 or 403, not a leak.
+
+### I. Venue scoping (D29-181 → D29-190)
+
+- **D29-181** `/api/v1/promotions` is **not** in `BUSINESS_SCOPED_PREFIXES`. Confirm from `axiosConfig`.
+- **D29-182** `listMyPromotions` ignores `req.query.businessId` entirely — it scopes to *all* the vendor's businesses. Confirm from source.
+- **D29-183** So the table merges all three venues, with a **Business** column to tell them apart. Establish that this is a deliberate and reasonable choice here.
+- **D29-184** Switch venue and confirm the table does not change.
+- **D29-185** …and that the query key `["promote-redesigned"]` has no businessId, so nothing would refetch anyway.
+- **D29-186** Establish whether the venue switcher's label is therefore misleading on this screen.
+- **D29-187** The create dialog is *not* scoped by the switcher either — it uses `businesses[0]`.
+- **D29-188** So scoping to venue 3360 and pressing Request placement files against **3358**. Prove it from the captured body.
+- **D29-189** This is the sharpest instance of the `businesses[0]` family in the sweep, because the screen shows a Business column that will then contradict the vendor's intent.
+- **D29-190** Establish what a vendor who wants to promote their second venue is supposed to do.
+
+### J. Accessibility (D29-191 → D29-202)
+
+- **D29-191** `<th scope="col">` on the table headers.
+- **D29-192** The select-all and per-row checkboxes have accessible names.
+- **D29-193** The three dialog labels have no `htmlFor`; the inputs have no `id`.
+- **D29-194** The two `<select>` elements are reachable and operable by keyboard.
+- **D29-195** The quoted-price panel is not associated with the duration select — establish how a screen-reader user learns the price changed.
+- **D29-196** `StatusPill` conveys status by text as well as colour. Confirm.
+- **D29-197** `rejected` and `expired` share a tone (D29-050) — establish that the text still distinguishes them.
+- **D29-198** The search input has a decorative icon with `pointer-events-none`; check it is not announced.
+- **D29-199** The search input has **no label and no `aria-label`** — only a placeholder. Confirm.
+- **D29-200** `h1` on the page.
+- **D29-201** Focus order: header action → search → density → export → table.
+- **D29-202** `prefers-reduced-motion` against the spinner.
+
+### K. Mobile 360×740 (D29-203 → D29-212)
+
+- **D29-203** No horizontal overflow: `scrollWidth === clientWidth` **and** an element-level right-edge count, ancestor walk stopping before `<body>`.
+- **D29-204** The four stat cards at `grid-cols-2`.
+- **D29-205** `renderCard` replaces the table — confirm the card layout renders and what it drops (window, requested date).
+- **D29-206** The **Request placement** header action at 360px.
+- **D29-207** The search input is `w-56` fixed — check it does not push the toolbar wide.
+- **D29-208** Density toggle and Export at 360px — establish whether either is hidden by a breakpoint, as in Module 27.
+- **D29-209** The dialog at 360px: both selects, the price panel, the textarea, the footer.
+- **D29-210** Tap targets ≥ 44px on the selects and the buttons.
+- **D29-211** The empty state at 360px.
+- **D29-212** Under true touch emulation (`hover: none`), establish that nothing on this screen depends on hover.
+
+### L. Integrity (D29-213 → D29-222)
+
+- **D29-213** Console clean.
+- **D29-214** No unhandled rejection.
+- **D29-215** Clean-realm inventory at open: request count, per-venue `sponsored` / `promotionStatus` / `promotionEndsAt`.
+- **D29-216** Every write attempted, listed with its captured body.
+- **D29-217** Confirm **no promotion request was created**: count still 0 at close.
+- **D29-218** Confirm no `Business.promotionStatus` moved off `"none"` — the create path updates the business as a side effect, so this is the second thing a leaked write would touch.
+- **D29-219** Confirm `sponsored` is still `false` on all three venues.
+- **D29-220** Confirm no notification was generated (the approve/reject paths send them; the create path does not — verify).
+- **D29-221** Confirm the notification total from Module 28 is unchanged, as a cross-check that nothing fired.
+- **D29-222** No storage keys left behind.
