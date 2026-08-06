@@ -64,7 +64,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 32 | Business Settings | `/dashboard/settings` | ✅ 286 | **`[x]` COMPLETE — 150 run, 136 not run, 16 findings (2× S2) + 7/7 regressions pass** |
 | 33 | Availability | `/dashboard/settings?tab=availability` | ✅ 152 | **`[x]` COMPLETE — 95 run, 57 not run, 13 findings (2× S2)** |
 | 34 | Cancellation policy | `/dashboard/cancellation-policy` | ✅ 156 | **`[x]` COMPLETE — 105 run, 51 not run, 14 findings (1× S1, 3× S2)** |
-| 35 | Setup checklist | `/dashboard/onboarding` | ✅ 158 | `[~]` cases written — execution in progress |
+| 35 | Setup checklist | `/dashboard/onboarding` | ✅ 158 | **`[x]` COMPLETE — 110 run, 48 not run, 12 findings (3× S2)** |
 | 36 | Tonight | `/dashboard/venue-os?tab=today` | — | `[ ]` |
 | 37 | Event profit | `/dashboard/venue-os?tab=profit` | — | `[ ]` |
 | 38 | Venue money | `/dashboard/venue-os?tab=money` | — | `[ ]` |
@@ -17851,3 +17851,262 @@ field it claims to fix.
 - **D35-156** Confirm the cross-module baselines (28–34) are unchanged.
 - **D35-157** Confirm following a fix link does not itself write.
 - **D35-158** No storage keys left behind.
+
+---
+
+## MODULE 35 — EXECUTION RESULTS
+
+Driven on live prod `https://www.weddingwala.pk/dashboard/onboarding` as user **3351**, in the
+**visible** browser, following every fix link to its destination and inspecting what is actually there.
+
+**110 of 158 cases driven. 12 findings (3× S2, 8× S3, 1× S4). This module writes nothing, and nothing
+was written.**
+
+| Integrity (Node-side oracle) | At open | At close |
+|---|---|---|
+| 3358 score | **44** | **44** |
+| 3359 score | **52** | **52** |
+| 3360 score | **52** | **52** |
+| Mutating requests, whole run | — | **0** |
+| Cross-module baselines (28–34) | — | **all unchanged** |
+| Console errors | — | **none** |
+
+Live scores and category breakdowns:
+
+| Business | Score | Core | Photos | Pricing | Trust | Specialty | Verification |
+|---|---|---|---|---|---|---|---|
+| 3358 Rehman Grand Marquee | **44** | 22/35 | **3/15** | 15/20 | **0/15** | 4/10 | **0/5** |
+| 3359 Rehman Banquet & Lawn | **52** | 32/35 | **0/15** | 10/20 | 3/15 | 7/10 | **0/5** |
+| 3360 Rehman Marquee Bahria | **52** | 32/35 | **0/15** | 10/20 | 3/15 | 7/10 | **0/5** |
+
+The arithmetic is exact: 22+3+15+0+4+0 = **44**, 32+0+10+3+7+0 = **52** twice, and the maxima
+35+15+20+15+10+5 = **100**.
+
+### WWL-515 (S2) — the checklist names the fix, and the fix is on a different page
+
+The component sets its own standard in a comment:
+
+> *"Each row is a link to the field that fixes it… A checklist that names a gap without naming its fix
+> is a scoreboard, not a checklist."*
+
+Every undone item on 3358 carries a link. Each was followed in the browser and the destination
+inspected for the field it claims to fix:
+
+| Checklist item | Links to | Field is actually on | |
+|---|---|---|---|
+| **Owner name** | `?tab=profile` | `?tab=listing` — *"Owner / lead name"* | 🔴 |
+| **WhatsApp number** | `?tab=profile` | `?tab=listing` — *"WhatsApp number (bookings)"* | 🔴 |
+| **Languages spoken (2+)** | `?tab=profile` | `?tab=listing` — *"Languages spoken"* | 🔴 |
+| **Years in business** | `?tab=profile` | `?tab=listing` — *"Years in business"* | 🔴 |
+| **Weddings completed** | `?tab=profile` | `?tab=listing` — *"Weddings completed"* | 🔴 |
+| **Owner bio** | `?tab=profile` | `?tab=listing` — *"About the owner"* | 🔴 |
+| **Brand logo uploaded** | `?tab=images` | `?tab=profile` — *"Brand logo URL"* | 🔴 |
+| **Cancellation policy set** | `?tab=listing` | `?tab=pricing` — *"Cancellation policy"* | 🔴 |
+| At least 5 photos | `?tab=images` | `?tab=images` | ✅ |
+| At least 10 photos | `?tab=images` | `?tab=images` | ✅ |
+| References | `?tab=listing` | `?tab=listing` | ✅ |
+| Press & awards | `?tab=listing` | *"Awards & recognition"*, *"Press & features"* | ✅ |
+| 3+ amenities · Parking | `?tab=amenities` | `?tab=amenities` | ✅ |
+| NTN · NTN verified · CNIC · CNIC verified · Visited | `/dashboard/business-documents` | **404** | 🔴 |
+
+Measured, not inferred. `?tab=profile` contains exactly five labels — *Business name · Description ·
+City · Area / locality · Brand logo URL* — and **none** of the six identity items. `?tab=listing`
+contains all six, plus *Awards & recognition* and *Press & features*, and **no** cancellation control.
+`?tab=pricing` has *"Cancellation policy"*. `?tab=images` has one file input and no brand-logo field.
+
+The six identity items and the brand logo are essentially **swapped**: the identity fields live on
+Listing content and point at Profile; the brand logo lives on Profile and points at Images.
+
+**13 of the 20 undone items on 3358 lead somewhere that cannot fix them.** A vendor working the list
+top to bottom clicks *"Owner name"* — the highest-weighted item they can act on — and arrives at a tab
+with no owner-name field and nothing telling them where to go next.
+
+### WWL-516 (S2) — the entire Verification category points at a page that does not exist
+
+All five Verification items link to **`/dashboard/business-documents`**. Driven live:
+
+> **404 — Page not found.** *"The page you were looking for doesn't exist or has moved."*
+
+So the whole category — NTN, NTN verified, CNIC, CNIC verified, Visited — is unreachable, and it is
+**0/5 on all three businesses**, which is consistent with nobody ever having got there.
+
+Three of those five points are not the vendor's to earn in any case. The items' own copy says so:
+*"We check this — nothing for you to do once submitted"* for both verified flags, and *"A visited
+badge is the strongest trust signal on the platform"* for a badge only Wedding Wala can grant.
+
+So of 100 points, **3 are awarded by the platform**, and the 2 the vendor could submit have no page to
+submit them on.
+
+### WWL-517 (S2) — the one link in "Highest-impact next moves" is a 404
+
+The suggestions block ends with **"Edit business profile" → `/dashboard/business/{id}`**. Driven live
+with the real id:
+
+> `/dashboard/business/3358` → **404 — Page not found.**
+
+Business Settings is at `/dashboard/settings`. So the single call-to-action attached to the
+highest-impact block on the onboarding screen goes nowhere.
+
+### WWL-518 (S3) — the highest-impact block is the one place you cannot click through from
+
+`suggestions` is a `string[]` — plain text, rendered as a list with an arrow glyph. The same items
+appear again in the category lists below **with working links** (or at least with links, per
+WWL-515).
+
+So the block designed to answer *"what should I do first?"* — 3358's is *Owner name · WhatsApp number
+· Cancellation policy set* — is the only part of the page a vendor cannot act on directly, and its
+one link 404s.
+
+### WWL-519 (S3) — five activation fields are fetched and shown nowhere, including the most actionable
+
+The API returns nine activation fields per business. The panel renders **four**.
+
+| Field | 3358 | 3359 | 3360 | Rendered? |
+|---|---|---|---|---|
+| `shieldOn` | true | true | true | ✅ header |
+| `bookings` | 8 | 8 | 6 | ✅ |
+| `futureConfirmed` | 1 | 4 | 1 | ✅ |
+| `baaqiTracked` | 4 | 7 | 3 | ✅ |
+| `leadsTotal` | 28 | 24 | 24 | ❌ |
+| **`leadsAwaitingReply`** | **10** | **6** | **6** | ❌ |
+| `leadsWorked` | 18 | 18 | 18 | ❌ |
+| `receipts` | 15 | 13 | 11 | ❌ |
+| `functionSheets` | 6 | 7 | 4 | ❌ |
+
+**Twenty-two leads are awaiting a reply across the three venues**, the number is already on the
+payload, and the screen whose job is *"what should I do next"* does not show it. It shows how many
+bookings were logged instead.
+
+Cross-checks against Module 28: those same stale leads are what generate the `lead_stale_48h` and
+`lead_followup_due` notifications — 49 of the 61 rows in that feed, all of them wearing a grey
+**SYSTEM** pill (WWL-388).
+
+### WWL-520 (S3) — the panel says activation matters and the score ignores it
+
+The panel's own comment: *"activation first: reward a WORKING venue, not photos."*
+
+The score does not include it. All 100 points come from the six profile categories; `activation` is
+rendered beside the score and contributes nothing to it. **3358 is the most active venue by leads
+(28) and receipts (15) and scores the lowest (44)**, while 3359 and 3360 score 52 with fewer of both.
+
+So the page states a principle in one panel and scores by the opposite in the next.
+
+### WWL-521 (S3) — 3359 and 3360 are scored identically, down to the suggestion list
+
+| | 3359 | 3360 |
+|---|---|---|
+| Score | 52 | 52 |
+| Every category | 32/0/10/3/7/0 | **32/0/10/3/7/0** |
+| Suggestions | Advance · Cancellation · 5 photos | **identical** |
+
+Two different venues in two different cities with different capacities and prices produce a
+byte-identical assessment. Both have **zero photographs** (Module 32) and neither has advance terms or
+a cancellation policy — so the checklist is right, and it is also unable to say anything that
+distinguishes them.
+
+### WWL-522 (S3) — the progress bars carry no accessible value
+
+Six `Progress` bars per card, each `h-1` — a **1-pixel** track — with the numeric `earned / max` beside
+it. Queried live: no `aria-valuenow` and no `aria-valuetext` reached the DOM. So the visual channel is
+a hairline and the non-visual channel is the adjacent text only.
+
+### WWL-523 (S3) — a failed fetch reads as "no businesses"
+
+```js
+.then((r) => setData(r.data?.data?.businesses ?? []))
+.catch((e) => toast.error(...))
+```
+
+`data` stays `[]` on failure, so the render falls to **"No businesses yet. Create one and your
+onboarding checklist will appear here."** A vendor whose request failed is told they have no business
+— the same shape as WWL-400 (Notifications) and WWL-443 (Billing).
+
+### WWL-524 (S3) — the page's own promise is unsubstantiated on the page
+
+The route metadata reads: *"Complete your business profile to **climb search ranking** and **unlock
+trust badges**."*
+
+Nothing on the screen connects the score to either. There is no indication of where the vendor
+currently ranks, no badge shown as locked or unlocked, and no threshold named. The only badge-shaped
+thing in the payload is `visited`, which the vendor cannot earn (WWL-516).
+
+### WWL-525 (S3) — there is no `h1` on the page
+
+Measured live: **zero `h1` elements**. The page heading *"Onboarding checklist"* renders as `h2`, and
+each business card's name is also `h2`, so the document has no top-level heading and six second-level
+ones.
+
+### WWL-526 (S4) — two different params open the same tab
+
+The sidebar's Business Settings entry links `?tab=overview`; the checklist links `?tab=profile`. Both
+resolve to Profile through `PARAM_TO_TAB`, so both work — but the same destination is addressed two
+ways from two places in the same product.
+
+---
+
+### What passed, and it is worth saying
+
+- **L — nothing was written.** Zero mutating requests across the entire run, all three scores
+  identical at close, and the cross-module baselines from Modules 28–34 unchanged. This is the only
+  read-only module in the sweep so far.
+- **D35-022 → D35-027 — the arithmetic is exact.** Every category's `earned` sums to the headline
+  score, every `max` sums to 100, and `earned + undone weights = max` in each category, on all three
+  businesses. Verified by hand against the live payload.
+- **The `why` copy is the best writing in this product.** It states a consequence, in this market, in
+  the vendor's terms:
+
+  > *"Families in Pakistan book people, not companies. A name makes…"* — Owner name
+  > *"Almost every enquiry in Pakistan arrives on WhatsApp."* — WhatsApp number
+  > *"Parking decides bookings for large functions more often than…"* — Parking
+  > *"A family that will vouch for you is worth more than a paragraph…"* — References
+  > *"The one thing that protects you when a family postpones."* — Cancellation policy
+
+  Not one of them restates the field name. That is rarer than it should be, and it is exactly what
+  makes WWL-515 worth fixing rather than working around.
+- **D35-066 — done rows are deliberately unlinked**, with the reasoning written down: *"Done rows stay
+  unlinked and quiet: there is nothing to act on."* Verified — no anchor wraps a completed row, and
+  the `why` line renders only on undone ones.
+- **D35-082 — the suggestions really are the highest-impact items.** 3358's three undone 5-pointers
+  are ownerName, whatsappNumber and cancellation, and those are exactly the three surfaced.
+- **D35-120 → D35-122 — the checklist catches a gap that Settings hides.** 3359 and 3360 are told
+  *"Advance / down-payment configured"* is missing, and 3358 is not — which matches the database
+  exactly (`downPaymentType` null on both, Percentage/10 on 3358). Business Settings **displays**
+  *"Percentage"* on those two venues because of its `?? "Percentage"` default (WWL-472); this page
+  reads the column and tells the truth.
+- **D35-058 / D35-125 — the amenity links are correct**, and `parking` is correctly undone on 3358
+  (`parking: false`) — consistent with Module 32's live read.
+- **D35-107 → D35-109 — the Photos scoring is honest**: 3/15 on the venue with one photograph and
+  **0/15** on the two with none, with both `imageMin5` and `imageMin10` undone. It is the clearest
+  statement anywhere in the portal of the problem recorded in WWL-476.
+- **D35-018 / D35-019 — the tier bands render correctly**: 44 → *Getting there*, 52 → *Solid start*,
+  and *"56 pts on the table"* computes.
+- Console clean; no unhandled rejection.
+
+### Not driven, each with its reason
+
+| Cases | Why |
+|---|---|
+| **D35-057** (`socials` → `/dashboard/profile`) | The destination is *Account settings* — personal information, account, business contact, security — and no social field surfaced in the inspection, but the page had not finished rendering its inputs when captured. Recorded as **inconclusive** rather than counted among the wrong links in WWL-515. |
+| **D35-098 → D35-100** (the shield-off state and `/dashboard/migrate`) | All three venues have `shieldOn: true`, so the off-state copy and its link never render. Established from source. |
+| **D35-005 → D35-007** (the migration card's flags and dismissal) | The card renders — *"Bring your business in"*, with links to Customers and Bookings — but establishing which import flags gate it, and where a dismissal persists, needs the flag surface rather than this page. |
+| **D35-035 / D35-036** (does the score drive ranking or badges) | Requires the public search ranking and the badge system. The metadata's claim is recorded as unsubstantiated **on this page** (WWL-524), not as false. |
+| **D35-111 → D35-113** (are the six Trust fields settable anywhere) | Four are on `?tab=listing` and were seen there; NTN and CNIC have no reachable page (WWL-516). A full audit of where each is written belongs with the Listing-content work not driven in Module 32. |
+| **D35-123 / D35-127** (would the WWL-472 null→false conversion change a score) | Would require saving from Settings, which the write blocker prevented and which this module must not cause. |
+| **D35-141 → D35-150** (360×740) | The visible browser was kept at desktop so the run could be followed on screen. |
+
+### Module 35 — status
+
+**158 cases written, 110 driven. 12 findings (3× S2, 8× S3, 1× S4).**
+
+**The module's verdict.** Someone thought hard about this screen. The scoring is arithmetically exact
+across three businesses, done rows are deliberately left quiet because there is nothing to act on, and
+every gap carries a sentence explaining what it costs in terms a Pakistani venue owner will recognise
+— *"Families in Pakistan book people, not companies"*, *"Parking decides bookings for large functions"*.
+The component even writes down the principle: a checklist that names a gap without naming its fix is
+a scoreboard, not a checklist. And then thirteen of the twenty gaps on the weakest venue link
+somewhere that cannot fix them — the six identity fields point at a tab that does not contain them
+while the brand logo points at the one that does not either, the cancellation item misses both places
+that set it, and the entire Verification category, along with the only link in *Highest-impact next
+moves*, lands on a **404**. Beside all of it sits an activation panel that declares a working venue
+matters more than photos, holds twenty-two unanswered leads in its payload without showing them, and
+contributes nothing to the score it is printed next to.
