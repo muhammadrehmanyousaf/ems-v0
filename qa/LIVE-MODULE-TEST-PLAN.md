@@ -49,7 +49,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 17 | Trade operations | `/dashboard/trade-ops` | ✅ 86 | **`[x]` COMPLETE — 71 run, 15 not run, 10 findings** |
 | 18 | Automation | `/dashboard/automation` | ✅ 78 | **`[x]` COMPLETE — 62 run, 16 not run, 10 findings** |
 | 19 | Kitchen prep | `/dashboard/kitchen-prep` | ✅ 143 | **`[x]` COMPLETE — 85 run, 58 not run, 13 findings (5× S2)** |
-| 20 | Inventory | `/dashboard/inventory` | — | `[ ]` |
+| 20 | Inventory | `/dashboard/inventory` | ✅ 204 | `[ ]` cases written, execution in progress |
 | 21 | Staff & payroll | `/dashboard/staff` | — | `[~]` bug confirmed, fix unverified |
 | 22 | Suppliers | `/dashboard/suppliers` | — | `[~]` dead tab open |
 | 23 | Brokers | `/dashboard/brokers` | — | `[ ]` |
@@ -8667,3 +8667,323 @@ that would create a recipe was never built, and the empty state sends them to a 
 page that does not exist. On a phone — where a cook would actually hold this — three of the five
 controls are off the edge of the screen and cannot be scrolled to. And on the day someone finally
 does load a recipe, the default venue scope will greet them with *"Authorization check failed"*.
+
+---
+
+# MODULE 20 — INVENTORY (`/dashboard/inventory`)
+
+**What the screen is for.** The vendor's stock book: chairs, crockery, linen, generators, rice and
+ghee. Items hold a running `currentStock`; every change is supposed to go through a **movement**
+(restock / consumed / wastage / transfer in / transfer out / stock-take), which snapshots
+`stockBefore` and `stockAfter` into an immutable ledger inside one transaction, so the ledger and
+the running total can never drift. Direct `PATCH` on an item deliberately refuses to touch stock.
+
+**Source read before writing these cases**
+- `app/(dashboard)/dashboard/inventory/page.tsx`
+- `components/.../inventory/redesigned/inventory-redesigned-view.tsx` — table, stats, toolbar, delete
+- `components/.../inventory/redesigned/inventory-form-dialog.tsx` — create + edit
+- `components/.../inventory/redesigned/inventory-movement-dialog.tsx` — the only stock-changing path
+- `lib/api/inventory.ts` — 8 endpoints, category/unit/movement dictionaries
+- `src/routes/inventoryRouter.js`, `src/controllers/inventoryController.js`
+- `src/utils/inventoryHelpers.js` — `validateInventoryItem`, `validateMovement`, `applyMovement`
+
+**Pre-flight state, read off live prod before any case was written**
+
+| Fact | Value |
+|---|---|
+| `GET /inventory/items` (no filter) | **36 items** |
+| Per venue — 3358 / 3359 / 3360 | **12 / 12 / 12** |
+| `summary.totalStockValue` | **Rs 68,511,200** |
+| `summary.lowStockCount` | **0** |
+| `summary.byCategory` | equipment 12 · rental 9 · linen 6 · consumable 6 · ingredient 3 |
+| `GET /inventory/movements` | **0 movements** |
+| Three rows named `Banquet Chairs` | ids 155 / 167 / 179 — one per venue, stock 791 / 776 / 755, cost 4100 / 8600 / 4250 |
+
+So the ledger the whole design is built around is **empty**: every item's stock is its opening
+balance, never moved.
+
+**Element inventory (16 interactive + 4 states)**
+
+| # | Element | Where |
+|---|---|---|
+| 1 | Sidebar `Inventory` link | Operate rail |
+| 2 | `Add item` button | PageHeader action |
+| 3–6 | Stat cards: Total items · Low / out of stock · Stock value · Categories | header grid |
+| 7 | `Search items…` input | toolbar |
+| 8 | Density toggle | toolbar |
+| 9 | Export menu | toolbar |
+| 10 | Select-all checkbox + per-row checkboxes | table |
+| 11 | `Adjust stock` (RefreshCw) | row action |
+| 12 | `Edit item` (Pencil) | row action |
+| 13 | `Remove item` (Trash2) | row action |
+| 14 | Item form dialog — 10 fields + Cancel/Save | modal |
+| 15 | Movement dialog — 4 fields + Cancel/Record | modal |
+| 16 | Delete confirm — Cancel/Remove | alert |
+| A–D | loading · error+Retry · empty · card (mobile) renderers | table states |
+
+**Safety limits for this module, each with its reason**
+
+| Limit | Reason |
+|---|---|
+| **No item is created, edited or deleted.** | These are a live vendor's real 36 stock lines carrying Rs 68.5M of book value. Every write is captured and diverted to a nonexistent path; payloads are recorded and reported. |
+| **No movement is recorded.** | A movement is by design **immutable** — the backend soft-deletes but never reverses one, and its own response says *"Stock count NOT auto-reversed."* Writing one would permanently alter a real stock count and put the first-ever row into an audit ledger that is currently clean. |
+| **No booking is linked to a movement.** | Would attach QA data to a real customer's booking record. |
+| **Reads may hit the live API freely.** | `GET` on items/movements is side-effect free. |
+
+---
+
+## MODULE 20 — TEST CASES
+
+### A. Route, navigation and access (D20-001 → D20-010)
+
+- **D20-001** Sidebar → **Inventory** navigates to `/dashboard/inventory`.
+- **D20-002** The correct rail entry is `aria-current="page"` while on the screen.
+- **D20-003** Breadcrumb renders and its `Dashboard` crumb links home.
+- **D20-004** Direct URL loads with no client-side error.
+- **D20-005** `document.title` is `Dashboard : Inventory`.
+- **D20-006** Meta description names the actual job (stock tracker, immutable ledger).
+- **D20-007** Uppercase and trailing-slash URLs normalise per the LOCKED rules.
+- **D20-008** `/dashboard/inventory-new` — the route named in the component's own header comment — resolves to what? Dead-door check.
+- **D20-009** Browser Back returns to the previous route.
+- **D20-010** The component comment claims *"Read-only presentation; original screen untouched"* — verify against what the screen actually does (create, edit, delete, movements).
+
+### B. First paint and data integrity (D20-011 → D20-024)
+
+- **D20-011** Eyebrow `Operate`, `h1` **Inventory**, description all render.
+- **D20-012** The table paints **36 rows** matching the API.
+- **D20-013** Row order is `name ASC` as the backend sends it; the FE does not re-sort.
+- **D20-014** No column is sortable — confirm and judge, on a 36-row stock book.
+- **D20-015** There is **no pagination** — confirm every row is in the DOM.
+- **D20-016** Loading skeleton renders before data arrives.
+- **D20-017** Numbers render with `tabular-nums` so columns align.
+- **D20-018** `currentStock` arrives as a **string** (`"755.000"`) and is coerced with `Number(v) || 0` — check no row renders `0` for a real stock.
+- **D20-019** A stock of exactly `0` renders `0`, not `—`, and is not confused with "no data".
+- **D20-020** `lastRestockCostPerUnit: null` renders as an em-dash via `MoneyCell`, not `Rs 0`.
+- **D20-021** Every one of the 7 categories in the dictionary renders a label; unknown values fall back gracefully.
+- **D20-022** Every one of the 17 units renders; `other` shows as `unit`.
+- **D20-023** The three `Banquet Chairs` rows (155 / 167 / 179) are visually distinguishable — is there any venue indicator?
+- **D20-024** `business` is eager-loaded by the API on every item. Is it used anywhere in the UI?
+
+### C. Stat cards (D20-025 → D20-036)
+
+- **D20-025** **Total items** equals the row count (36).
+- **D20-026** **Stock value** — the FE recomputes `Σ stock × lastCost` client-side instead of using the API's `summary.totalStockValue`. Compare the two figures.
+- **D20-027** Items with a `null` last cost contribute **0** to stock value — quantify how much book value that hides.
+- **D20-028** **Low / out of stock** — the FE counts `stock <= threshold`; the API requires `threshold > 0` **and** `stock <= threshold`. Construct the divergence and check which the card shows.
+- **D20-029** With `lowStockCount: 0` from the API, does the FE card also read 0?
+- **D20-030** The Low card's delta text flips between `reorder` and `all good` — verify the wording at 0.
+- **D20-031** **Categories** counts distinct categories present (expect 5, not 7).
+- **D20-032** Stat cards are computed from `all`, not the filtered `items` — type a search and check whether the cards move.
+- **D20-033** If they don't move, is that stated anywhere, or does the screen show "36 items" above one visible row?
+- **D20-034** The **Low / out of stock** card is not clickable — the API supports `lowStockOnly=true` and no UI reaches it.
+- **D20-035** Stock value is rounded with `Math.round` before `formatPkr` — check for a rounding drift against the API's own rounding.
+- **D20-036** Card icons match their meaning (`Package`, `AlertTriangle`, `Wallet`, `LayoutGrid`).
+
+### D. Table columns and row rendering (D20-037 → D20-052)
+
+- **D20-037** Column set is Item · SKU · Category · Stock · Last cost/unit · Status · actions.
+- **D20-038** `SKU` is `null` on every live row — the column renders `—` 36 times. Judge the column's value.
+- **D20-039** Category renders capitalised raw value (`Rental`), **not** the dictionary label (`Rental fleet`) — confirm the mismatch with the dialog's own dropdown.
+- **D20-040** Stock renders `755 piece` — check pluralisation and unit-label mapping (`gram` → `g`, `litre` → `L`).
+- **D20-041** `Status` pill: `In stock` / `Low stock` / `Out of stock` thresholds match `stockState`.
+- **D20-042** A row where `stock === threshold` exactly is **Low stock**, not In stock.
+- **D20-043** A row with `threshold = 0` and `stock = 0` — which pill, and does it agree with the card?
+- **D20-044** Row actions: `Adjust stock`, `Edit item`, `Remove item` — all three present on every row.
+- **D20-045** Each row action has an `aria-label`, and they are **identical across rows** — check whether the item name is announced.
+- **D20-046** Row action buttons are ≥ 24×24 CSS px.
+- **D20-047** Clicking a row (not an action) does nothing — no drill-in to the item's movement history.
+- **D20-048** There is **no movement-history view anywhere on the screen**, though `listMovements` exists and `getItem` returns the last 30. Confirm.
+- **D20-049** `<th scope="col">` present on header cells.
+- **D20-050** Selection checkboxes have per-row accessible names, not a repeated "Select row".
+- **D20-051** The header select-all checkbox reflects indeterminate state.
+- **D20-052** Long item names truncate rather than breaking the row.
+
+### E. Venue scoping (D20-053 → D20-062)
+
+- **D20-053** `InventoryAPI.listItems()` is called with **no arguments** — confirm no `businessId` on the wire.
+- **D20-054** `queryKey: ["inventory-redesigned"]` contains no businessId — switching venue cannot invalidate it.
+- **D20-055** Switch to 3358 → does the row count change from 36?
+- **D20-056** Switch to 3359 → same check.
+- **D20-057** Switch to 3360 → same check.
+- **D20-058** Hard reload while scoped to one venue — still 36?
+- **D20-059** The API **does** honour `?businessId=` (12 / 12 / 12 verified). So the capability exists and the UI never uses it.
+- **D20-060** With all three venues merged and no venue column, can a vendor tell which `Banquet Chairs` row is which? Cost differs 4100 / 8600 / 4250 — a purchase decision made off the wrong row.
+- **D20-061** The create dialog receives `businessId = businesses?.[0]?.id` — the **first** business, not the active one. Confirm which venue a new item would be filed under while scoped to a different venue.
+- **D20-062** Editing an item sends `businessId: item.businessId` — confirm the edit path is not affected by D20-061.
+
+### F. Search (D20-063 → D20-074)
+
+- **D20-063** Typing filters rows live with no request (client-side over the fetched list).
+- **D20-064** Search matches **name**, **sku**, **category**; the backend's own search matches **name**, **sku**, **defaultSupplierName** — confirm the mismatch and its consequence.
+- **D20-065** Searching a supplier name finds nothing in the UI even though the API would match it.
+- **D20-066** Search is case-insensitive.
+- **D20-067** Leading/trailing whitespace is trimmed.
+- **D20-068** A search with no matches shows the **empty state** — check the wording ("No inventory yet" + "Add item") against a stock book of 36 items.
+- **D20-069** Clearing the search restores all 36 rows.
+- **D20-070** Search survives a density change.
+- **D20-071** Search does **not** survive a reload (not in the URL) — confirm and judge.
+- **D20-072** Regex-special characters (`.`, `*`, `(`) are treated literally.
+- **D20-073** An Urdu search term matches an Urdu item name.
+- **D20-074** Search input has an accessible name (it has a placeholder and a decorative icon).
+
+### G. Selection and export (D20-075 → D20-088)
+
+- **D20-075** Selecting a row updates the selection set.
+- **D20-076** Select-all selects the **filtered** rows, not all 36, when a search is active.
+- **D20-077** Selection survives a search change — or is it silently orphaned?
+- **D20-078** Export menu opens and offers its formats.
+- **D20-079** Export with a selection exports **only** the selected rows.
+- **D20-080** Export with no selection exports the filtered rows.
+- **D20-081** Exported columns are Item · SKU · Category · Stock · Unit · Last cost.
+- **D20-082** A `null` SKU exports as an empty string, not `null`.
+- **D20-083** A `null` last cost exports as **0** — check whether that misrepresents "unknown" as "free".
+- **D20-084** The export carries **no venue column**, so a merged 36-row export cannot be split by venue.
+- **D20-085** CSV escaping: a name containing a comma or quote does not break the file.
+- **D20-086** The download filename is `inventory` + extension.
+- **D20-087** Export is captured without writing a file to the user's disk.
+- **D20-088** Nothing about the export hits the network (client-side generation).
+
+### H. Density (D20-089 → D20-094)
+
+- **D20-089** The density toggle is icon-only with `aria-label`s — identify them.
+- **D20-090** Switching to compact reduces row height measurably.
+- **D20-091** The choice persists across a reload.
+- **D20-092** The choice persists across a route change and back.
+- **D20-093** Density does not disturb the selection.
+- **D20-094** Both density buttons expose pressed state.
+
+### I. Add-item dialog (D20-095 → D20-118)
+
+- **D20-095** `Add item` opens the dialog titled **Add inventory item**.
+- **D20-096** Ten fields render: name, category, unit, SKU, opening stock, threshold, last cost, lead time, supplier, notes.
+- **D20-097** `Opening stock` renders only in create mode, never in edit.
+- **D20-098** Name is `autoFocus` on open.
+- **D20-099** Save is disabled with an empty name and the hint reads **"Add a name to save."**
+- **D20-100** Category dropdown lists all 7 dictionary labels.
+- **D20-101** Unit dropdown lists all 17.
+- **D20-102** Negative opening stock shows **"Opening stock can't be negative."** and blocks Save.
+- **D20-103** Negative threshold, negative cost, negative lead time each show their own message.
+- **D20-104** Each numeric error sets `aria-invalid` and is wired by `aria-describedby`.
+- **D20-105** The blocked hint changes to **"Fix the highlighted fields to save."** when a numeric error is present.
+- **D20-106** Stock above the backend cap (1,000,000) — client blocks or server 400 with a readable message?
+- **D20-107** Cost above Rs 50 crore — same check.
+- **D20-108** Lead time above 365 — server rejects; is the message readable?
+- **D20-109** Lead time as a decimal (`2.5`) — server requires an integer.
+- **D20-110** A 200-character item name — server clips to 160; does the UI warn?
+- **D20-111** A 100-character SKU — server clips to 60 silently.
+- **D20-112** Notes of 6,000 characters — server clips to 5,000 silently.
+- **D20-113** The captured request body shape and the endpoint (`POST /api/v1/inventory/items`).
+- **D20-114** `businessId` in the captured body — which venue?
+- **D20-115** Empty numeric fields serialise as `undefined`, not `0` (the `numOrU` helper).
+- **D20-116** Re-opening the dialog after a cancel resets the form (the `loadedId` ref).
+- **D20-117** Escape and the overlay close the dialog without saving.
+- **D20-118** With the write diverted, does the dialog claim success?
+
+### J. Edit-item dialog (D20-119 → D20-132)
+
+- **D20-119** `Edit item` opens with the title **Edit item** and every field prefilled.
+- **D20-120** `Opening stock` is absent — stock cannot be edited directly.
+- **D20-121** The body still carries `currentStock`; the backend `delete patch.currentStock` drops it. Confirm the FE sends it and the server ignores it.
+- **D20-122** `businessId` is sent as `item.businessId` and the server drops it as immutable.
+- **D20-123** Switching from editing item A to item B refreshes the form (the `loadedId` key).
+- **D20-124** Clearing the name blocks Save with the same hint.
+- **D20-125** Clearing an optional field sends `undefined`, and the server maps it to `null`.
+- **D20-126** The endpoint is `PATCH /api/v1/inventory/items/{id}`.
+- **D20-127** Editing an item belonging to venue B while scoped to venue A still targets the right row.
+- **D20-128** Cancel discards edits — reopen and confirm the original values.
+- **D20-129** Save is disabled while pending and shows **Saving…**.
+- **D20-130** With the write diverted, does the toast claim **"Item updated"**?
+- **D20-131** Does the row in the table change after a diverted update?
+- **D20-132** Does the list refetch after a diverted update?
+
+### K. Movement dialog — the only stock-changing path (D20-133 → D20-154)
+
+- **D20-133** `Adjust stock` opens **Adjust stock — {item name}** and shows the current stock.
+- **D20-134** All six movement types are offered with their labels (`adjustment` → **Stock-take**).
+- **D20-135** The quantity label changes to **Counted quantity** for a stock-take.
+- **D20-136** The projected **New stock** line updates live: `restock` and `transfer_in` add, `consumed`/`wastage`/`transfer_out` subtract, `adjustment` sets absolute.
+- **D20-137** A projection below zero renders in destructive red.
+- **D20-138** …but Save is **still enabled** — the client lets you submit a movement the server will refuse. Confirm the server's 400 `insufficient_stock` is what stops it.
+- **D20-139** **A stock-take of 0 cannot be saved** (`canSave = qty > 0`), even though the backend explicitly accepts `adjustment` with quantity 0.
+- **D20-140** …and the delete path's own error message instructs the vendor to *"Record an adjustment movement to zero it first."* Confirm that instruction cannot be followed in the UI.
+- **D20-141** `Cost / unit` appears only for `restock` and `transfer_in`; check it also stamps `lastRestockCostPerUnit` (restock only, per the controller).
+- **D20-142** There is **no supplier field**, though the placeholder text says *"Restock from supplier"* and the API accepts `supplierName`.
+- **D20-143** There is **no booking picker**, though the placeholder says *"used at Ahmed wedding"* and the API accepts `bookingId` — so consumption can never be attributed to an event.
+- **D20-144** There is **no date field** — every movement is stamped `now()`. Yesterday's consumption cannot be recorded on yesterday.
+- **D20-145** There is no `notes` and no `photoUrl`, both of which the API accepts.
+- **D20-146** Quantity accepts decimals (`0.5 kg`) — server rounds to 3 places.
+- **D20-147** Quantity above 1,000,000 — server 400 with a readable message.
+- **D20-148** A negative quantity — blocked client-side by `qty > 0`.
+- **D20-149** Non-numeric quantity → `num()` yields 0 → Save disabled.
+- **D20-150** Switching item A → item B resets type/quantity/cost/reason.
+- **D20-151** The captured body: `POST /api/v1/inventory/movements` with `{inventoryItemId, type, quantity, costPerUnit?, reason?}` and nothing else.
+- **D20-152** `quantity` serialises as a **number**.
+- **D20-153** With the write diverted, does the dialog claim **"Stock updated"** and close?
+- **D20-154** Is the stock in the table unchanged after the diverted movement, and does the value snap back?
+
+### L. Delete flow (D20-155 → D20-166)
+
+- **D20-155** `Remove item` opens an `AlertDialog` naming the item.
+- **D20-156** The copy says *"This can't be undone."* — check that against the backend's paranoid soft-delete.
+- **D20-157** Cancel closes without a request.
+- **D20-158** Escape closes without a request.
+- **D20-159** `Remove` issues `DELETE /api/v1/inventory/items/{id}`.
+- **D20-160** Every live item has stock > 0, so the server would answer **409 STOCK_NOT_ZERO** — confirm the message reaches the vendor.
+- **D20-161** The FE's fallback error text already says *"(stock must be zero first)"* — check which message actually shows.
+- **D20-162** Combined with D20-139: an item with stock **cannot be deleted through the UI at all** unless the vendor discovers the `consumed`-to-zero workaround. Establish this end to end.
+- **D20-163** With the write diverted, does the dialog claim **"Item removed"**?
+- **D20-164** Does the row disappear from the table after a diverted delete?
+- **D20-165** Does a hard reload bring it back?
+- **D20-166** Is the delete confirm's destructive action styled and focused per convention (Cancel default, Remove destructive)?
+
+### M. Resilience (D20-167 → D20-176)
+
+- **D20-167** Offline → the table shows its error state with **Retry**, not a blank page.
+- **D20-168** Unroutable host → same, and Retry re-issues the request.
+- **D20-169** Backend 500 → error state, message surfaced.
+- **D20-170** The error string is the generic *"Couldn't load inventory."* — does it distinguish offline from server error?
+- **D20-171** Slow network → skeleton persists, no flash of the empty state.
+- **D20-172** A malformed response does not white-screen.
+- **D20-173** Token cleared → 401 forces logout.
+- **D20-174** A diverted write leaves the query cache consistent after `invalidate()`.
+- **D20-175** Rapid double-click on Save issues one request or two.
+- **D20-176** Console is clean across the module.
+
+### N. Accessibility (D20-177 → D20-188)
+
+- **D20-177** Every dialog field's `<label>` is programmatically associated (`Field` renders a bare `<label>` — check).
+- **D20-178** The three row-action buttons announce which item they act on.
+- **D20-179** Table headers carry `scope`.
+- **D20-180** The status pill's meaning is not colour-only.
+- **D20-181** Dialogs trap focus and restore it to the trigger on close.
+- **D20-182** The alert dialog is announced with its title and description.
+- **D20-183** Error messages are linked with `aria-describedby` and `aria-invalid` (`fieldAria`).
+- **D20-184** Search input has an accessible name.
+- **D20-185** Stat cards are readable as label + value, not just a number.
+- **D20-186** Focus rings visible on all controls.
+- **D20-187** Heading order `h1` → the rest, no skipped level.
+- **D20-188** The blocked-save hint is announced, not only shown.
+
+### O. Mobile — 360×740 (D20-189 → D20-198)
+
+- **D20-189** No horizontal page scroll.
+- **D20-190** **And** zero clipped elements outside deliberate scroll containers, with `html`/`body` excluded from the scroller walk (the mistake that hid the Module 19 breakage).
+- **D20-191** The table switches to the card renderer at 360.
+- **D20-192** The card shows name, category, stock, status and cost.
+- **D20-193** **Row actions are absent from the card** — check whether Adjust / Edit / Remove are reachable on a phone at all.
+- **D20-194** Stat cards reflow to 2 columns without clipping the Rs value.
+- **D20-195** The toolbar (search + density + export) fits.
+- **D20-196** Both dialogs are usable at 360 — fields reachable, buttons not clipped.
+- **D20-197** Touch targets ≥ 24×24 px.
+- **D20-198** The Rs 68.5M stat value does not overflow its card.
+
+### P. Integrity close-out (D20-199 → D20-204)
+
+- **D20-199** Item count still **36** at close, through a clean iframe realm.
+- **D20-200** Movement count still **0**.
+- **D20-201** `summary.totalStockValue` still **Rs 68,511,200**.
+- **D20-202** Every item's `currentStock` unchanged against the opening snapshot.
+- **D20-203** Every diverted write is listed with its method, URL and body.
+- **D20-204** No `POST`/`PATCH`/`DELETE` reached the real API.
+
+**204 cases written.** Execution follows.
