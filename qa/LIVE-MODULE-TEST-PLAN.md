@@ -59,7 +59,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 27 | Reviews | `/dashboard/reviews` | ✅ 310 | **`[x]` COMPLETE — 218 run, 92 not run, 26 findings (1× S1, 6× S2)** |
 | 28 | Notifications | `/dashboard/notifications` | ✅ 258 | **`[x]` COMPLETE — 195 run, 63 not run, 20 findings (5× S2)** |
 | 29 | Promote | `/dashboard/promote` | ✅ 222 | **`[x]` COMPLETE — 150 run, 72 not run, 22 findings (4× S2)** |
-| 30 | Plan & billing | `/dashboard/billing` | — | `[ ]` |
+| 30 | Plan & billing | `/dashboard/billing` | ✅ 216 | `[~]` cases written — execution in progress |
 | 31 | Collaborations | `/dashboard/collaborations` | — | `[ ]` |
 | 32 | Business Settings | `/dashboard/settings` | — | `[~]` 11 tabs done earlier |
 | 33 | Availability | `/dashboard/settings?tab=availability` | — | `[ ]` |
@@ -14624,3 +14624,277 @@ written for exactly that has no button; no way to see when an approved placement
 rejected one was refused, because five fetched fields are displayed nowhere; and no way to tell
 whether the last one worked, because nothing measures it. The "Active" card will keep counting a
 placement long after the sweeper has switched it off. And at no point does anyone ask to be paid.
+
+---
+
+## MODULE 30 — TEST CASES
+
+Route `/dashboard/billing`. One view, no dialogs, five endpoints. The vendor reads their tier and the
+catalog and can register an **upgrade intent** — there is no payment integration; settlement is
+offline and a super-admin activates.
+
+Established from source and a live probe taken before any case ran:
+
+| Established | Value |
+|---|---|
+| This vendor's tier | **free** — `subscriptionStartsAt`, `subscriptionEndsAt`, `pendingUpgradeTier`, `upgradeRequestedAt` all **null** |
+| Catalog | Khata Lite **Rs 0** · Business **Rs 2,500/mo** · Growth **Rs 6,000/mo** |
+| Controller comment | *"Structure locked (§17.1); prices are D7 placeholders."* |
+| API module comment | *"No payment integration yet (D7)."* |
+| `rawTier` + `subscriptionExpired` | returned by `/subscriptions/me` — **absent from the FE's `MyPlanData` type** |
+| `FEATURE_MIN_TIER` | **11** features mapped, backend and frontend |
+| `canUse(` call sites in the frontend | **0** |
+| Hard gates anywhere | **0** — the backend helper's own comment says so |
+| `<UpgradeNudge>` usages | **1**, `feature="analytics"` on Insights |
+| Admin endpoints as a vendor | **403** ×3 |
+
+### A. Route, shell and load (D30-001 → D30-016)
+
+- **D30-001** Sidebar → **Plan & billing** navigates to `/dashboard/billing`.
+- **D30-002** `document.title` (*"Dashboard : Plan & Billing"*) vs the page title (**"Billing & plan"**) vs the nav label (**"Plan & billing"**) vs the eyebrow (**"Money"**). Four namings; enumerate them.
+- **D30-003** The eyebrow reads **Money** while the sidebar files this page under **GROW**. Establish the disagreement.
+- **D30-004** `aria-current="page"` — count the elements claiming it (WWL-423).
+- **D30-005** Direct URL loads with no client-side error.
+- **D30-006** The component header says *"Read-only presentation; original screen untouched. Route /dashboard/billing-new."* — it is mounted at `/dashboard/billing` and it files an upgrade request. Establish both contradictions.
+- **D30-007** Resolve `/dashboard/billing-new` and record what it is.
+- **D30-008** Page metadata: *"Your Wedding Wala plan — Khata Lite, Business, or Growth."* — check the names render.
+- **D30-009** The description reads *"Your subscription and what each tier unlocks."* Check "unlocks" against §E.
+- **D30-010** Loading state: three `h-72 animate-pulse` skeletons plus `…` in the current-plan line.
+- **D30-011** Reload → identical content.
+- **D30-012** The query key is `["billing-redesigned"]` with nothing in it — establish that this page is user-scoped, not venue-scoped, and that this is correct (the tier is on `User`, not `Business`).
+- **D30-013** Switch venue and confirm nothing on this page changes — and that this is right.
+- **D30-014** `SubscriptionAPI.getMyPlan` swallows every error and returns `null`. Establish what the page renders then.
+- **D30-015** …specifically: `plans` becomes `[]`, so **no plan cards render at all** and the current-plan line reads `—`. Establish that a failed fetch is indistinguishable from a catalog with no plans.
+- **D30-016** No leaks after leaving the route.
+
+### B. The current-plan summary (D30-017 → D30-040)
+
+- **D30-017** The summary bar renders: **Current plan** · (Renews / ends) · the reassurance line.
+- **D30-018** Current plan resolves through `plans.find(p => p.tier === current)?.name`, falling back to `cap(current)`.
+- **D30-019** Live: the vendor is `free`, so it should read **Khata Lite**. Verify.
+- **D30-020** Establish that the fallback `cap("free")` → *"Free"* only fires if the catalog is missing — i.e. only in the failure state of D30-015.
+- **D30-021** `pendingUpgradeTier` renders a warning `StatusPill` reading `{Tier} requested`. Live it is null; establish the branch from source.
+- **D30-022** The pill would read **"Pro requested"** / **"Premium requested"** — the raw tier keys, **not** the catalog names *Business* / *Growth*. Establish the inconsistency: the same screen names the tier one way in the card and another in the pill.
+- **D30-023** `upgradeRequestedAt` is fetched and **never rendered**. So a vendor cannot see how long their request has been waiting.
+- **D30-024** **Renews / ends** renders only when `subscriptionEndsAt` is set. Live it is null, so the block is absent. Verify.
+- **D30-025** One label for two opposite meanings: a plan that *renews* and a plan that *ends*. Establish that nothing distinguishes them.
+- **D30-026** `subscriptionStartsAt` is fetched and **never rendered**.
+- **D30-027** `fmtDate` is `en-PK`, `dd MMM yyyy`, with an `isNaN` guard that returns the raw string rather than `—`. Establish the difference from the module's own `fmtDate` in Promote, which returns `—`.
+- **D30-028** The reassurance line reads **"We never take a cut of your bookings"** with a shield icon.
+- **D30-029** Test that claim against the product: search the backend for a platform commission on vendor bookings.
+- **D30-030** `VendorPayouts.platformFee` exists and is summed in `analyticsController`. Establish what it is, when it is charged, and whether it contradicts the line.
+- **D30-031** Establish whether any vendor on this platform has ever had a `platformFee` applied.
+- **D30-032** Record the finding only if the mechanism actually applies to a vendor booking — do not report a claim as false on the strength of a column name.
+- **D30-033** The reassurance line is `ml-auto`, so it sits at the far right of the bar. Check where it lands when the bar wraps.
+- **D30-034** The summary bar shows **no price** for the current plan.
+- **D30-035** …no billing date, no next charge, no amount due.
+- **D30-036** …no payment method, because there is none (D7).
+- **D30-037** …and no invoice or receipt. Establish that a page titled *Plan & billing* contains no billing document of any kind.
+- **D30-038** There is no **cancel** control anywhere on the page.
+- **D30-039** There is no downgrade path — see D30-090.
+- **D30-040** There is no contact / support link for a billing question, on a screen whose whole settlement model is "our team will reach out".
+
+### C. The expiry story the client throws away (D30-041 → D30-060)
+
+- **D30-041** `/subscriptions/me` returns **`rawTier`** and **`subscriptionExpired`**. Verify live.
+- **D30-042** The backend comment states exactly why: *"Additive: the tier BEFORE the expiry downgrade, so the client can offer 'Renew' on the plan the vendor actually had rather than 'Request' on every paid tier once currentTier reads free."*
+- **D30-043** **`MyPlanData` in `lib/api/subscription.ts` declares neither field.** Prove it from the interface.
+- **D30-044** **The view reads neither.** Prove it from the component.
+- **D30-045** So establish the consequence for an expired Business vendor: `currentTier` reads `free`, the card for **Khata Lite** is marked **Current**, and **Business** shows an **Upgrade** button.
+- **D30-046** …with **nothing on screen saying the subscription expired**.
+- **D30-047** …and no **Renew** wording anywhere, which is the exact affordance the backend field was added for.
+- **D30-048** WW-197's read-path fix works server-side: an elapsed `subscriptionEndsAt` reports `currentTier: "free"` immediately rather than waiting for the sweeper. Establish from source and credit it.
+- **D30-049** The daily sweeper also downgrades expired plans in `vrSweepers.js`. Establish that the two mechanisms agree.
+- **D30-050** `requestUpgrade` has a matching fix: a same-tier request is allowed **when expired**, so an expired Business vendor can re-request Business. Establish from source.
+- **D30-051** …and establish that the vendor cannot reach it, because the UI shows **Khata Lite** as current and would send `pro` as an *upgrade* — which is what the backend wants anyway. Trace whether the flow actually works end to end despite the missing fields.
+- **D30-052** Where it breaks: an expired **Growth** vendor. `currentTier` reads free, so the Growth card offers **Upgrade**; that request is a genuine upgrade by rank and succeeds. Establish whether anything is actually lost, or only the wording.
+- **D30-053** Conclude precisely: is this a broken flow or a missing signal? Report only what is established.
+- **D30-054** `subscriptionEndsAt` in the past would still render under **"Renews / ends"** with no styling change. Establish that an expired date is presented identically to a future one.
+- **D30-055** No countdown, no "expires in N days", no warning band as the date approaches.
+- **D30-056** Establish whether any notification fires as a subscription nears expiry — search the notification types and the sweeper.
+- **D30-057** Cross-check against Module 28's live type histogram: is there a subscription-expiry notification type at all?
+- **D30-058** `activateUpgrade` stores `subscriptionEndsAt`; WW-197's note says nothing read it until the sweeper was added. Establish the current state.
+- **D30-059** Establish what happens to a vendor's data and access at expiry — given §E, probably nothing.
+- **D30-060** So establish whether expiry has any observable consequence at all.
+
+### D. The three plan cards (D30-061 → D30-100)
+
+- **D30-061** Three cards render in catalog order: **Khata Lite · Business · Growth**.
+- **D30-062** The current tier's card carries `border-primary ring-1 ring-primary/40`. Verify on the live free card.
+- **D30-063** …and a **Current** `StatusPill` with `tone="success"`.
+- **D30-064** A pending tier carries a **Requested** pill with `tone="warning"`, suppressed when it is also current.
+- **D30-065** Card title is `p.name || p.tier` with `capitalize`. Verify all three names.
+- **D30-066** Tagline renders: *Get your business in* · *For most vendors* · *Scaling / multi-hall*.
+- **D30-067** Price renders `formatPkr(pricePkrMonthly)` when > 0, else the literal **Free**.
+- **D30-068** Verify **Rs 0 → "Free"**, **Rs 2,500 → "Rs 2,500 / mo"**, **Rs 6,000 → "Rs 6,000 / mo"**.
+- **D30-069** The `/ mo` suffix is suppressed on the free card. Verify.
+- **D30-070** **The prices are D7 placeholders and nothing says so.** Grep the UI for any hedge — the same defect as WWL-412 in Promote.
+- **D30-071** No annual option, no discount, no trial, no currency other than PKR.
+- **D30-072** No VAT / sales-tax line on a priced screen, on a product that has an FBR e-invoicing engine.
+- **D30-073** Highlights render as a bulleted list with an emerald `CheckCircle2`.
+- **D30-074** Verify Khata Lite's four highlights, Business's five, Growth's five.
+- **D30-075** Caps render only when non-empty, under a top border, with a `Minus` icon.
+- **D30-076** **Only Khata Lite has caps.** Business and Growth have `caps: []`, so neither card states a single limit.
+- **D30-077** Establish what that means for a vendor comparing Business against Growth: the difference is expressed only as extra highlights, never as a limit.
+- **D30-078** The list `key={j}` is the array index — establish whether that matters here (static catalog, no reordering).
+- **D30-079** The card is a `div`, not an article/section; there is no heading hierarchy beyond `h3`.
+- **D30-080** Button state, current tier: **"Current plan"**, `variant="outline"`, **disabled**.
+- **D30-081** Button state, lower tier: **"Included below your plan"**, `variant="ghost"`, **disabled**.
+- **D30-082** Button state, pending tier: **"Upgrade requested"**, **disabled**.
+- **D30-083** Button state, higher tier: **"Upgrade"** (or **"Switch"** when the price is 0).
+- **D30-084** Live, on `free`: Khata Lite disabled *Current plan*, Business **Upgrade**, Growth **Upgrade**. Verify all three.
+- **D30-085** `isDowngrade` uses the FE's own `TIER_RANK`, duplicated from `entitlementHelper`. Establish the duplication.
+- **D30-086** **"Included below your plan"** is a claim about entitlements — check it against §E, where nothing is gated.
+- **D30-087** …so for a Growth vendor the Khata Lite card says its features are "included below your plan" while the Khata Lite card's own **caps** say *"No FBR e-invoicing"* and *"No automations"*, which the Growth vendor does have. Establish the self-contradiction.
+- **D30-088** The **"Switch"** label appears only for a free tier the vendor is not on — i.e. only for a paid vendor looking at Khata Lite. But that card is a downgrade, so it renders *"Included below your plan"* instead. Establish that **"Switch" is unreachable**.
+- **D30-089** Confirm by enumerating every reachable button state.
+- **D30-090** **There is no downgrade and no cancellation anywhere.** A Growth vendor wanting Business or free has no control on this page and no endpoint (`requestUpgrade` refuses a non-upward tier with `NOT_AN_UPGRADE`).
+- **D30-091** Probe the API and confirm the refusal, so the absence is a design decision and not an oversight in the UI alone.
+- **D30-092** Establish where a vendor is supposed to cancel — search the product for any cancellation surface.
+- **D30-093** The spinner shows only on the clicked card: `upgrade.isPending && upgrade.variables === p.tier`. Drive it and credit if correct.
+- **D30-094** All three buttons are `disabled={upgrade.isPending}` — establish whether a second card can be clicked mid-flight.
+- **D30-095** The grid is `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`. Check the 2-up state, where three cards leave one orphaned.
+- **D30-096** Cards use `mt-auto` on the button block so the buttons align across cards of unequal height. Verify.
+- **D30-097** Verify card heights are equal at `lg`.
+- **D30-098** There is no "most popular" marker, though Business's tagline says *"For most vendors"*.
+- **D30-099** There is no feature-comparison table — only three independent lists.
+- **D30-100** So a vendor cannot see what Business has that Khata Lite does not, except by reading two lists side by side.
+
+### E. What the plan claims versus what the product does (D30-101 → D30-130)
+
+This is the heart of the module.
+
+- **D30-101** `FEATURE_MIN_TIER` maps **11** features: analytics · cheque_ledger · contracts_esign · wa_templates · staff · remove_branding (**pro**); fbr_invoicing · multi_business · client_portal · automations · forecasting (**premium**).
+- **D30-102** The backend helper's own comment: *"nothing calls this as a hard gate yet (live-system safety — we don't lock features vendors already use)."* Establish it is accurate.
+- **D30-103** `canUse(` has **zero call sites in the frontend**. Prove it.
+- **D30-104** `<UpgradeNudge>` is used **once**, `feature="analytics"` on the Insights screen. Prove it.
+- **D30-105** So of eleven gated features, **one** produces a soft nudge and **none** is enforced.
+- **D30-106** Now test the free plan's claims against this account, which is on **free**:
+- **D30-107** Khata Lite highlight: **"1 business"**. This account has **three** — 3358, 3359, 3360. Verify live.
+- **D30-108** `multi_business` is mapped to **premium**. Establish the contradiction.
+- **D30-109** Khata Lite cap: **"No automations"**. Establish whether `/dashboard/automation` is reachable and functional on this account.
+- **D30-110** `automations` is mapped to **premium**.
+- **D30-111** Khata Lite cap: **"No FBR e-invoicing"**. Establish the state of the FBR engine and whether the route exists for this vendor.
+- **D30-112** `staff` is **pro** — establish that `/dashboard/staff` works on this free account (Module 21 drove 95 live shifts there).
+- **D30-113** `cheque_ledger` is **pro** — establish that `/dashboard/pdcs` works.
+- **D30-114** `analytics` is **pro** — establish that `/dashboard/insights` works, and whether the single UpgradeNudge appears there.
+- **D30-115** `wa_templates` is **pro** — establish whether WhatsApp templates are reachable.
+- **D30-116** `contracts_esign` is **pro** — establish whether the function-sheet e-sign flow is reachable.
+- **D30-117** `client_portal` is **premium** — establish whether the couple portal is reachable.
+- **D30-118** `forecasting` is **premium** — establish whether any forecasting surface is reachable.
+- **D30-119** `remove_branding` is **pro** — establish whether Wedding Wala branding actually appears on this free vendor's quotes.
+- **D30-120** Tally: how many of the eleven claims hold on this account?
+- **D30-121** Establish the commercial consequence: what exactly is a vendor paying Rs 2,500/mo for, given the tally.
+- **D30-122** …and Rs 6,000/mo for Growth, whose headline differentiators are multi-business and automations.
+- **D30-123** Be precise about the direction of the defect: this is not a security hole — no vendor is getting another vendor's data. It is a **pricing page describing a product that does not exist**.
+- **D30-124** Establish that the safety reasoning is sound and recorded: *"we don't lock features vendors already use"* is the right instinct on a live system.
+- **D30-125** …so the defect is that the **plan cards were shipped anyway**, promising limits the team deliberately chose not to enforce.
+- **D30-126** Check whether any copy on the page hedges this — "coming soon", "from", "planned".
+- **D30-127** Establish whether the FE `lib/entitlements.ts` and the BE `entitlementHelper.js` agree feature-for-feature.
+- **D30-128** Establish whether the plan **catalog** (highlights/caps) agrees with `FEATURE_MIN_TIER`. Compare item by item.
+- **D30-129** Specifically: Business's highlights list *"WhatsApp templates + staff + analytics"* — three separate `FEATURE_MIN_TIER` entries collapsed into one bullet. Establish the mapping is at least consistent.
+- **D30-130** Growth's highlight *"Everything in Business"* is the only cross-tier statement on the page. Verify it is true against the two lists.
+
+### F. The upgrade action (D30-131 → D30-158)
+
+- **D30-131** Press **Upgrade** on Business with the write blocker armed; capture the body.
+- **D30-132** Expect `POST /api/v1/subscriptions/request-upgrade {"tier":"pro"}`.
+- **D30-133** **There is no confirmation step.** One click files an intent against a Rs 2,500/mo plan.
+- **D30-134** The button says **"Upgrade"**, not "Request upgrade" — while the toast says *"Upgrade requested — we'll review it and notify you when it's active"* and the server says *"our team will reach out to set it up"*. Establish the three different descriptions of the same act.
+- **D30-135** Nothing on the card says the upgrade is not immediate, or that it must be paid for offline, or how.
+- **D30-136** Establish what the vendor is told about **how to pay**. Search the page.
+- **D30-137** The diverted write: does the success toast fire anyway? Establish the false-success pattern.
+- **D30-138** `showSuccessToast` is the undo-capable helper — establish whether an undo is offered, and whether one could work (there is no cancel-upgrade endpoint).
+- **D30-139** `onSuccess` invalidates `["billing-redesigned"]`; confirm the refetch and that the card state does not change after a diverted write.
+- **D30-140** `onError` reads `e?.response?.data?.message` first, falling back to *"Could not request upgrade"* — note it does **not** fall through `e.message`, so a network failure shows the module's own string rather than axios's. Establish, and contrast with WWL-425 in Promote.
+- **D30-141** Drive the failure path and confirm which string appears.
+- **D30-142** **Global `mutations: { retry: 1 }`** applies here too. Drive a failure and count the requests on the wire.
+- **D30-143** Establish whether a duplicate `request-upgrade` is harmful: the handler is an idempotent `user.update({pendingUpgradeTier})`, so a retry overwrites rather than duplicates. Confirm and record it as contained.
+- **D30-144** Rapid double-click on **Upgrade** — confirm the `disabled={upgrade.isPending}` guard holds.
+- **D30-145** Click Business, then Growth, before the first resolves.
+- **D30-146** Once `pendingUpgradeTier` is set, the card becomes **Upgrade requested** and disabled. Establish from source.
+- **D30-147** …and the other paid card stays clickable, so a vendor with a pending Business request can also request Growth, overwriting the first. Establish.
+- **D30-148** …with no confirmation and no record that the first request existed. `pendingUpgradeTier` is a single column.
+- **D30-149** There is **no cancel-upgrade** endpoint and no control. Once requested, the pill stays until an admin acts.
+- **D30-150** Cross-check with WWL-408 (Promote), where the cancel endpoint exists and has no button. Here there is no endpoint at all. Enumerate the pattern across both.
+- **D30-151** Probe `tier: "platinum"` → **400 "Invalid tier"**. Verify live.
+- **D30-152** Probe with no tier → **400 "Invalid tier"**. Verify live.
+- **D30-153** Probe `tier: "free"` while on free → **400 "Already on this tier"**. Verify live.
+- **D30-154** Probe a downgrade (`pro` → `free`) — not drivable on a free account; establish the `NOT_AN_UPGRADE` guard from source (WW-027).
+- **D30-155** WW-027's own note explains the bug it fixed: a premium vendor could "request" free and land in the admin queue as an upgrade. Establish the fix is present.
+- **D30-156** `activateUpgrade` and `declineUpgrade` both notify the vendor. Establish the notification **type** and cross-check against Module 28's SYSTEM problem.
+- **D30-157** Establish whether the vendor is notified of anything at **request** time. (The create path sends nothing.)
+- **D30-158** So after clicking Upgrade the only record the vendor has is a pill on this page and a toast that vanished.
+
+### G. What a billing page does not have (D30-159 → D30-172)
+
+- **D30-159** No invoice list.
+- **D30-160** No receipt, and no link to the Receipts module.
+- **D30-161** No payment method on file, and no way to add one.
+- **D30-162** No billing history — not even a record of when the current plan started (`subscriptionStartsAt` is fetched and dropped, D30-026).
+- **D30-163** No billing address, no NTN / CNIC field, no tax details — on a product with an FBR e-invoicing engine.
+- **D30-164** No usage meter — nothing shows how close the vendor is to any cap (there are no enforced caps, §E).
+- **D30-165** No seats / users concept, though `staff` is a paid feature.
+- **D30-166** No proration statement, no mid-cycle explanation.
+- **D30-167** No refund policy and no terms link.
+- **D30-168** No "contact sales" for the Growth tier, though its tagline is *"Scaling / multi-hall"*.
+- **D30-169** Establish what a vendor who wants to pay right now is supposed to do, using only this page.
+- **D30-170** Establish whether any other screen in the product accepts a subscription payment.
+- **D30-171** Cross-check with the Payments / Receipts / Khata modules already swept: do any of them carry a subscription line?
+- **D30-172** Conclude what "Plan & billing" currently is: a pricing page plus an intent button.
+
+### H. Backend guards (D30-173 → D30-186)
+
+- **D30-173** `GET /subscriptions/admin/upgrade-requests` as a vendor → **403**. Verify live.
+- **D30-174** `POST /subscriptions/admin/:userId/activate` as a vendor → **403**. Verify live.
+- **D30-175** `POST /subscriptions/admin/:userId/decline` as a vendor → **403**. Verify live.
+- **D30-176** Credit it against WWL-339 (Drone NOC), and note it matches Module 29's boundary.
+- **D30-177** Probe `activate` against **another** user id and confirm the 403 comes from the middleware, not from ownership — so no id is leaked either way.
+- **D30-178** `getMyPlan` is scoped to `req.user.id` with no id parameter — establish there is no way to read another vendor's plan.
+- **D30-179** `requestUpgrade` is likewise self-scoped.
+- **D30-180** `activateUpgrade` takes `months` from the body — establish the bound, if any, and what an unbounded value would do to `subscriptionEndsAt`.
+- **D30-181** …and whether a super-admin could set a 1,200-month subscription.
+- **D30-182** `declineUpgrade` takes a `reason`; establish whether it is stored anywhere or only sent.
+- **D30-183** Establish whether the decline reason reaches the vendor's screen. (`pendingUpgradeTier` is cleared; there is no rejection field on `User`.)
+- **D30-184** So a declined upgrade leaves **no trace on the billing page** — the pill simply disappears. Establish.
+- **D30-185** The `:userId` params have no `isInt` validation. Probe with a non-numeric id and record the status — but note the super-admin gate fires first, so this is unreachable for a vendor.
+- **D30-186** Establish whether `subscriptionTier` is ever read for anything other than display.
+
+### I. Accessibility (D30-187 → D30-196)
+
+- **D30-187** `h1` on the page.
+- **D30-188** Card titles are `h3` — establish whether an `h2` exists between them and the page title.
+- **D30-189** The **Current** and **Requested** pills convey state by text as well as colour.
+- **D30-190** Disabled buttons carry their reason as visible text (*"Current plan"*, *"Included below your plan"*, *"Upgrade requested"*) — credit this: it is the BUG-057 pattern done well.
+- **D30-191** …but establish whether a disabled button is announced with its label by a screen reader.
+- **D30-192** The highlight and cap icons are decorative; check they are not announced.
+- **D30-193** The price is a bare `<span>`; establish how *"Rs 2,500 / mo"* is read out.
+- **D30-194** Focus order across the three cards.
+- **D30-195** Colour contrast of the emerald reassurance line and the `text-muted-foreground` caps.
+- **D30-196** `prefers-reduced-motion` against the loading pulse and the spinner.
+
+### J. Mobile 360×740 (D30-197 → D30-206)
+
+- **D30-197** No horizontal overflow: `scrollWidth === clientWidth` **and** an element-level right-edge count, ancestor walk stopping before `<body>`.
+- **D30-198** Cards stack to `grid-cols-1`.
+- **D30-199** The summary bar wraps; establish where the *"We never take a cut"* line lands once `ml-auto` has nothing to push against.
+- **D30-200** Card content at 360px: title, pill, tagline, price, highlights, caps, button.
+- **D30-201** Tap targets ≥ 44px on the three buttons.
+- **D30-202** The **Current** pill and the title on one line at 360px.
+- **D30-203** Long highlight strings wrap without overflow.
+- **D30-204** Under true touch emulation (`hover: none`), establish nothing here depends on hover.
+- **D30-205** The whole page height at 360px — how far must a vendor scroll to compare Growth against Khata Lite?
+- **D30-206** …and establish that comparing tiers on a phone means scrolling past every feature of the tier in between.
+
+### K. Integrity (D30-207 → D30-216)
+
+- **D30-207** Console clean.
+- **D30-208** No unhandled rejection.
+- **D30-209** Clean-realm inventory at open: `currentTier`, `rawTier`, `subscriptionExpired`, both dates, `pendingUpgradeTier`, `upgradeRequestedAt`.
+- **D30-210** Every write attempted, listed with its captured body.
+- **D30-211** Confirm `subscriptionTier` is unchanged at close.
+- **D30-212** Confirm **`pendingUpgradeTier` is still null** — this is the one field a leaked write would set, and it is visible to a super-admin in a queue a human actions.
+- **D30-213** Confirm `upgradeRequestedAt` is still null.
+- **D30-214** Confirm both subscription dates are still null.
+- **D30-215** Confirm the Module 28 notification count is unchanged, as a cross-check that no decision fired.
+- **D30-216** No storage keys left behind.
