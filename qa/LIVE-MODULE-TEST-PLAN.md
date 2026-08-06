@@ -71,7 +71,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 39 | Halls & spaces | `/dashboard/venue-os?tab=spaces` | ✅ 170 | `[x]` COMPLETE — 124 run, 46 not run, 10 findings (1× S1, 3× S2) |
 | 40 | Cash & cheques | `/dashboard/venue-os?tab=cash` | ✅ 140 | `[x]` COMPLETE — 108 run, 32 not run, 10 findings (4× S2) |
 | 41 | Kitchen & suppliers | `/dashboard/venue-os?tab=kitchen` | ✅ 140 | `[x]` COMPLETE — 104 run, 36 not run, 8 findings (3× S2) |
-| 42 | Accounting | `/dashboard/venue-os?tab=advanced` | — | `[ ]` |
+| 42 | Accounting | `/dashboard/venue-os?tab=advanced` | ✅ 210 | `[~]` cases written, executing |
 | 43 | Field capture | `/dashboard/field` | — | `[ ]` |
 | 44 | Quote requests | `/dashboard/quotes` | — | `[ ]` |
 
@@ -20680,3 +20680,285 @@ Fourth Venue-OS tab in a row (37, 38, 40, 41).
   production runs, so standard cost per plate, ghee-over-standard and the rupee shortfall have no
   data to compute from.
 - **D41-120–123 a rate above tolerance** — needs a contract on file to exceed.
+
+---
+
+# Module 42 — Accounting / Advanced (`/dashboard/venue-os?tab=advanced`)
+
+**Surface.** Seven accordion groups holding **28 views** — the largest single surface in the sweep.
+
+| Group | `?group=` | Views |
+|---|---|---|
+| Full costing & margins | `costing` | `EventCostedPnlView` · `EventMarginsView` · `BookingGlPost` |
+| Accounting & tax | `accounting` | `AccountingDepthView` · `PeriodCloseView` · `ComplianceExportView` |
+| Group, partners & capital | `group` | `BiCockpitView` · `OrgRollupView` · `GroupConsolidationView` · `CapexView` · `OwnVsLeaseView` · `CapTableView` · `PartnerLedgerView` · `SuccessionView` |
+| Working capital & financing | `working-capital` | `WorkingCapitalRunwayView` · `WorkingCapitalInstrumentsView` · `FinancingView` |
+| Compliance (AML / KYC) | `compliance` | `AmlCockpitView` · `AmlRegistersView` · `DnfbpCardView` |
+| Legal, insurance & safety | `legal` | `InsurancePoliciesView` · `WeatherClaimView` · `ForceMajeureBatchView` · `LegalEsgView` |
+| Setup & tools | `setup` | `BulkImportView` · `CommsEngineView` · `CommsChannelsView` · `DiasporaVendorView` |
+
+**Self-imposed limits for this module, each with its reason:**
+
+- **No period is closed or reopened.** `PeriodCloseView`'s own comment: *"Closing a month locks that
+  business's journal entries and freezes the reported P&L; the engine then rejects any new posting
+  into the closed month."* Module 38 confirmed the guard is live in `txPostingEngine` — closing
+  August would block this venue's own bookkeeping. Captured and diverted.
+- **No booking is posted to the GL.**
+- **No AML record is created.** `AmlRegistersView` records bank deposits, reconciles declared
+  turnover and *"stamps an **immutable** Compliance-Shield"* — a fabricated compliance artefact on a
+  real business is not something a QA pass may leave behind.
+- **No beneficial-ownership entry, no STR/CTR, no insurance policy, no weather claim, no
+  force-majeure batch.**
+- **Bulk import: PREVIEW only.** The source states preview is a dry-run — *"nothing is written"* —
+  and COMMIT writes the valid rows. Preview is driven; commit is captured and diverted.
+- **No comms config saved and no message sent** — sends reach real customers.
+- Every read, every roll-up, every score and every export **preview** is driven.
+
+---
+
+## D42-A · Accordion mechanics and addressability (cases 1–32)
+
+| # | Case | Expected |
+|---|---|---|
+| D42-001 | `?tab=advanced` opens on Advanced | tab active |
+| D42-002 | All seven group headers render | 7 |
+| D42-003 | All seven start collapsed | none expanded |
+| D42-004 | The intro line explains who the tab is for | *"a plain hall owner can ignore this whole tab"* |
+| D42-005 | Expanding a group reveals its views | driven per group |
+| D42-006 | Multiple groups can be open at once | `type="multiple"` |
+| D42-007 | Collapsing hides the content | driven |
+| D42-008 | `?group=costing` expands costing on load | deep link |
+| D42-009 | `?group=accounting` | deep link |
+| D42-010 | `?group=group` | deep link |
+| D42-011 | `?group=working-capital` | deep link |
+| D42-012 | `?group=compliance` | deep link |
+| D42-013 | `?group=legal` | deep link |
+| D42-014 | `?group=setup` | deep link |
+| D42-015 | A deep-linked group scrolls into view | `scrollIntoView` on `venue-os-{value}` |
+| D42-016 | An unknown `?group=` falls back safely | no crash, nothing expanded |
+| D42-017 | Leaving Advanced drops `group` from the URL | `params.delete("group")` |
+| D42-018 | Expanding a group does NOT write `group` to the URL | record — the reverse of the deep link |
+| D42-019 | Reload with `?group=` re-expands | driven |
+| D42-020 | Each group header has an icon | 7 |
+| D42-021 | Group headers are keyboard reachable | check |
+| D42-022 | `aria-expanded` reflects state | check |
+| D42-023 | Collapsed content is not in the accessibility tree | check |
+| D42-024 | No console error on arrival | 0 |
+| D42-025 | No mutating request on arrival | 0 |
+| D42-026 | No mutating request from expanding any group | 0 |
+| D42-027 | Expanding all seven at once does not error | driven |
+| D42-028 | Panel does not overflow at 1440px with all groups open | 0 elements |
+| D42-029 | Panel does not overflow at 360px with all groups open | 0, or in a scroller |
+| D42-030 | Exactly one `h1` | recorded |
+| D42-031 | Count views that render vs the 28 expected | the headline number |
+| D42-032 | Count `Venue #` raw boxes across all 28 views | 0 expected |
+
+## D42-B · Full costing & margins (cases 33–58)
+
+| # | Case | Expected |
+|---|---|---|
+| D42-033 | `EventCostedPnlView` renders | check |
+| D42-034 | It picks a function by name | `placeholder="which function?"` |
+| D42-035 | Fully-costed P&L differs from the tagged-expense board | it adds overhead |
+| D42-036 | **Does it show the Rs 8,847,000 of fixed overheads WWL-554 found missing?** | the key cross-check |
+| D42-037 | Revenue matches the Profit tab for the same booking | cross-check |
+| D42-038 | Overhead absorption is explained | copy |
+| D42-039 | The absorption basis is named | check |
+| D42-040 | It errors honestly when the GL is empty | WWL-539 said the GL has nothing |
+| D42-041 | `EventMarginsView` renders | check |
+| D42-042 | Margins are per function | check |
+| D42-043 | Margin ranking is shown | check |
+| D42-044 | Margins reconcile with the Profit tab's 64–68% band | cross-check |
+| D42-045 | A 100%-margin row appears here too | WWL-542 cross-check |
+| D42-046 | `BookingGlPost` renders | check |
+| D42-047 | It picks a function by name | `placeholder="which function?"` |
+| D42-048 | **It has no venue scope hook** | `useBusinessIdField` count is 0 — flag |
+| D42-049 | Posting is captured and diverted | 0 delivered |
+| D42-050 | The captured body names the booking | check |
+| D42-051 | Nothing warns that posting writes to the ledger | flag if absent |
+| D42-052 | Posting has no confirmation | flag if absent |
+| D42-053 | Posting twice is idempotent | reasoned from `sourceRefType` |
+| D42-054 | The panel says what posting achieves | copy |
+| D42-055 | Error copy is human | check |
+| D42-056 | One click → one request | not two |
+| D42-057 | Panels at 360px | usable |
+| D42-058 | Zero writes delivered from this group | assertion |
+
+## D42-C · Accounting & tax (cases 59–92)
+
+| # | Case | Expected |
+|---|---|---|
+| D42-059 | `AccountingDepthView` renders | check |
+| D42-060 | It shows a trial balance or ledger depth | check |
+| D42-061 | Debits equal credits | the fundamental check |
+| D42-062 | **Is there any GL data at all?** | WWL-539 says no postings |
+| D42-063 | An empty ledger says so | copy |
+| D42-064 | `PeriodCloseView` renders | check |
+| D42-065 | It lists periods with their status | OPEN / CLOSED |
+| D42-066 | The current month's status is shown | check |
+| D42-067 | **Close is captured and diverted** | never delivered |
+| D42-068 | The captured body names the period | check |
+| D42-069 | **Close warns what it locks** | *"rejects any new posting"* — flag if absent |
+| D42-070 | Close has a confirmation step | flag if absent |
+| D42-071 | Reopen exists and is distinguishable | check |
+| D42-072 | Reopen is captured and diverted | never delivered |
+| D42-073 | Closing a month with no postings is prevented or allowed | record |
+| D42-074 | A closed month cannot be closed twice | reasoned |
+| D42-075 | The period field validates `YYYY-MM` | driven against the captured body |
+| D42-076 | A future month can be closed | record — it should not be |
+| D42-077 | `ComplianceExportView` renders | check |
+| D42-078 | The export names its format | CSV / FBR pack |
+| D42-079 | The export is a read | GET |
+| D42-080 | Generating an export is driven | live if read-only |
+| D42-081 | The export downloads a file | blob captured |
+| D42-082 | The file has content | size > 0 |
+| D42-083 | The file is not empty of rows | check |
+| D42-084 | The export names the period it covers | check |
+| D42-085 | The export does not claim to be filed | wording |
+| D42-086 | An empty period exports an empty file honestly | driven |
+| D42-087 | Error copy is human | check |
+| D42-088 | Error copy leaks no SQL | check |
+| D42-089 | One click → one request | not two |
+| D42-090 | Panels at 360px | usable |
+| D42-091 | Numbers are PKR-formatted | check |
+| D42-092 | Zero writes delivered from this group | assertion |
+
+## D42-D · Group, partners & capital — 8 views (cases 93–128)
+
+| # | Case | Expected |
+|---|---|---|
+| D42-093 | All eight views render | 8 |
+| D42-094 | `BiCockpitView` renders KPIs | check |
+| D42-095 | BI KPIs reconcile with the Profit tab | cross-check |
+| D42-096 | `OrgRollupView` renders | check |
+| D42-097 | The roll-up covers all three venues | the vendor owns three |
+| D42-098 | Roll-up revenue = sum of the three venues | arithmetic |
+| D42-099 | `GroupConsolidationView` renders | check |
+| D42-100 | Inter-business elimination is named | *ghar-ka-maal* per the source |
+| D42-101 | With one org, consolidation says so honestly | check |
+| D42-102 | `CapexView` renders | check |
+| D42-103 | Capex list is empty and says so | probe |
+| D42-104 | `OwnVsLeaseView` renders | check |
+| D42-105 | Own-vs-lease is a computation | POST — verify purity |
+| D42-106 | If pure, driven for real | live |
+| D42-107 | The comparison names both options in rupees | check |
+| D42-108 | `CapTableView` renders | check |
+| D42-109 | Cap table is empty and says so | probe |
+| D42-110 | `PartnerLedgerView` renders | check |
+| D42-111 | Partner ledger is empty and says so | probe |
+| D42-112 | `SuccessionView` renders | check |
+| D42-113 | Succession is a sensitive surface — nothing is fabricated | 0 writes |
+| D42-114 | Every view in the group is venue-scoped | check |
+| D42-115 | Count raw-id boxes in this group | record |
+| D42-116 | Count unlabelled inputs in this group | record |
+| D42-117 | Every empty state is honest | count views showing nothing at all |
+| D42-118 | No view renders a bare heading with no body | the Module 36 lesson |
+| D42-119 | Errors are human across the group | check |
+| D42-120 | No SQL leaks across the group | check |
+| D42-121 | One click → one request throughout | spot-check |
+| D42-122 | Group at 360px | usable |
+| D42-123 | The group does not overflow | check |
+| D42-124 | Roll-up handles "All venues" vs one venue | driven |
+| D42-125 | Switching venue re-scopes the group | driven |
+| D42-126 | Nothing in the group leaks another vendor's data | reasoned |
+| D42-127 | Numbers PKR-formatted throughout | check |
+| D42-128 | Zero writes delivered from this group | assertion |
+
+## D42-E · Working capital & financing (cases 129–146)
+
+| # | Case | Expected |
+|---|---|---|
+| D42-129 | All three views render | 3 |
+| D42-130 | `WorkingCapitalRunwayView` shows a runway | check |
+| D42-131 | Runway reconciles with the Cash tab's advance float | cross-check |
+| D42-132 | Runway names the assumption behind it | copy |
+| D42-133 | A zero-data runway says so | check |
+| D42-134 | `WorkingCapitalInstrumentsView` renders | check |
+| D42-135 | Instruments are Pakistani-appropriate | committee, udhaar, ijarah |
+| D42-136 | `FinancingView` renders | check |
+| D42-137 | Financing options are described, not sold | wording |
+| D42-138 | Nothing applies for financing | 0 writes |
+| D42-139 | No interest figure is presented as advice | wording |
+| D42-140 | Islamic-finance framing where relevant | ijarah is already used |
+| D42-141 | Errors human | check |
+| D42-142 | One click → one request | spot-check |
+| D42-143 | Group at 360px | usable |
+| D42-144 | Every input labelled | count |
+| D42-145 | PKR-formatted | check |
+| D42-146 | Zero writes delivered | assertion |
+
+## D42-F · Compliance (AML / KYC) (cases 147–176)
+
+| # | Case | Expected |
+|---|---|---|
+| D42-147 | All three views render | 3 |
+| D42-148 | `AmlCockpitView` renders the §21 disallowance meter | check |
+| D42-149 | The meter is ALWAYS paired with §111 framing | the source insists — verify |
+| D42-150 | The structuring guard is non-dismissable | verify |
+| D42-151 | **The guard never says "split"** | it must say *"deposit in full"* |
+| D42-152 | The guard's wording is checked verbatim | the legal risk |
+| D42-153 | The BTPA benami truth test renders | check |
+| D42-154 | Cash-vs-banked cost is computed | driven if pure |
+| D42-155 | The computation is a read or captured | safety |
+| D42-156 | `AmlRegistersView` renders | check |
+| D42-157 | Recording a deposit is captured and diverted | never delivered |
+| D42-158 | Turnover reconciliation is a read | check |
+| D42-159 | The beneficial-ownership register is listed | check |
+| D42-160 | **Stamping a Compliance-Shield is captured and diverted** | *immutable* — never delivered |
+| D42-161 | Nothing fabricates a compliance record | 0 writes |
+| D42-162 | `DnfbpCardView` renders a readiness score | check |
+| D42-163 | The score lists the gaps | check |
+| D42-164 | The five criteria are named | registration, officer, CDD, BO register, STR/CTR |
+| D42-165 | The score is honest for an account with no AML setup | check |
+| D42-166 | A 0% score is not dressed up | wording |
+| D42-167 | Nothing claims FBR registration that does not exist | the serious case |
+| D42-168 | The card says what to do next | actionability |
+| D42-169 | Legal citations are correct in form | §21, §111, BTPA, DNFBP |
+| D42-170 | Nothing here is presented as legal advice | wording |
+| D42-171 | Errors human | check |
+| D42-172 | No SQL leaks | check |
+| D42-173 | Group at 360px | usable |
+| D42-174 | Every input labelled | count |
+| D42-175 | One click → one request | spot-check |
+| D42-176 | Zero writes delivered from this group | assertion |
+
+## D42-G · Legal, insurance & safety + Setup & tools (cases 177–210)
+
+| # | Case | Expected |
+|---|---|---|
+| D42-177 | All four legal views render | 4 |
+| D42-178 | `InsurancePoliciesView` lists policies | probe |
+| D42-179 | Creating a policy is captured and diverted | never delivered |
+| D42-180 | An expiring policy is flagged | reasoned |
+| D42-181 | `WeatherClaimView` renders | check |
+| D42-182 | A claim is captured and diverted | never delivered |
+| D42-183 | The parametric trigger is explained | copy |
+| D42-184 | `ForceMajeureBatchView` renders | check |
+| D42-185 | A batch is captured and diverted | never delivered |
+| D42-186 | Force majeure touches real bookings — nothing is applied | 0 writes |
+| D42-187 | `LegalEsgView` renders | check |
+| D42-188 | All four setup views render | 4 |
+| D42-189 | `BulkImportView` renders | check |
+| D42-190 | The target-table picker lists tables | check |
+| D42-191 | **PREVIEW is a dry-run** | the source says nothing is written |
+| D42-192 | Preview is driven for real with a tiny CSV | live |
+| D42-193 | Preview reports the detected column mapping | check |
+| D42-194 | Preview reports rows OK vs rows with errors | check |
+| D42-195 | Preview writes nothing | verify 0 |
+| D42-196 | **COMMIT is captured and diverted** | never delivered |
+| D42-197 | Commit is visually distinct from preview | flag if not |
+| D42-198 | Commit has a confirmation | flag if absent |
+| D42-199 | A malformed CSV is reported, not swallowed | driven |
+| D42-200 | An empty paste is handled | driven |
+| D42-201 | `CommsEngineView` renders the cost roll-up | check |
+| D42-202 | Costs shown in PKR and USD | per the source |
+| D42-203 | The messaging config is not saved | captured |
+| D42-204 | The MessageEvent catalog is read-only | verify |
+| D42-205 | `CommsChannelsView` renders | check |
+| D42-206 | **No message is sent to anyone** | 0 sends |
+| D42-207 | `DiasporaVendorView` renders | check |
+| D42-208 | Setup group at 360px | usable |
+| D42-209 | Every empty state across all 28 views is honest | count silent ones |
+| D42-210 | **Zero writes delivered across the entire module** | headline safety assertion |
+
+**Total: 210 cases.**
