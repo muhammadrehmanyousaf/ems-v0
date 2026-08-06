@@ -65,7 +65,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 33 | Availability | `/dashboard/settings?tab=availability` | ✅ 152 | **`[x]` COMPLETE — 95 run, 57 not run, 13 findings (2× S2)** |
 | 34 | Cancellation policy | `/dashboard/cancellation-policy` | ✅ 156 | **`[x]` COMPLETE — 105 run, 51 not run, 14 findings (1× S1, 3× S2)** |
 | 35 | Setup checklist | `/dashboard/onboarding` | ✅ 158 | **`[x]` COMPLETE — 110 run, 48 not run, 12 findings (3× S2)** |
-| 36 | Tonight | `/dashboard/venue-os?tab=today` | ✅ 150 | `[~]` cases written — execution in progress |
+| 36 | Tonight | `/dashboard/venue-os?tab=today` | ✅ 150 | **`[x]` COMPLETE — 100 run, 50 not run, 12 findings (3× S2)** |
 | 37 | Event profit | `/dashboard/venue-os?tab=profit` | — | `[ ]` |
 | 38 | Venue money | `/dashboard/venue-os?tab=money` | — | `[ ]` |
 | 39 | Halls & spaces | `/dashboard/venue-os?tab=spaces` | — | `[ ]` |
@@ -18313,3 +18313,250 @@ Live figures on the board:
 - **D36-148** Confirm switching tabs writes nothing.
 - **D36-149** Confirm the `?group=` deep links write nothing.
 - **D36-150** No storage keys left behind.
+
+---
+
+## MODULE 36 — EXECUTION RESULTS
+
+Driven on live prod `https://www.weddingwala.pk/dashboard/venue-os?tab=today` as user **3351**, in the
+**visible** browser, walking all seven tabs.
+
+**100 of 150 cases driven. 12 findings (3× S2, 8× S3, 1× S4). This tab is read-only and nothing was
+written.**
+
+| Integrity | Result |
+|---|---|
+| Mutating requests, whole run (7 tabs walked) | **0** |
+| Cross-module baselines (28–35) | **all unchanged** |
+| Console errors | **none** |
+
+### WWL-527 (S2) — the section describes four things and shows none of them
+
+The Tonight section's hint, rendered on screen:
+
+> *"What's happening at your hall right now — **headcount vs safe capacity**, **valet & incidents**,
+> **RSVPs**, and **is-this-slot-free**."*
+
+The tab composes five components. Only one rendered:
+
+| Component | Provides | Rendered |
+|---|---|---|
+| `TodayBoard` | upcoming events + unpaid balances | ✅ |
+| `EventNightGauge` | headcount vs safe capacity | ❌ |
+| `EventNightConsoleView` | valet & incidents | ❌ |
+| `GuestListView` | RSVPs | ❌ |
+| `SchedulingCheck` | is-this-slot-free | ❌ |
+
+Measured on the live panel: the only headings present are *Tonight · What needs you · Upcoming events
+· Who to chase*. **Every one of the four things the hint names comes from a component that self-gated
+away**, and the one thing actually on screen is not mentioned in the hint at all.
+
+Nothing explains the absence. There is no *"not enabled"* message, no locked state and no upgrade
+prompt — the four panels return null and the hint above them keeps describing them.
+
+`TodayBoard`'s own comment records why it exists: *"The live EventNight/console/guest-list panels
+self-gate on their pilot flags, so the Today tab was empty for a normal vendor. This works for EVERY
+vendor off the booking list alone."* A flag-free fifth panel was added so the tab would not be blank;
+the sentence above it was never updated.
+
+### WWL-528 (S2) — four of the seven Venue-OS tabs render only a heading
+
+Walked all seven tabs in the browser and measured the rendered panel:
+
+| Tab | URL | Panel content | Characters |
+|---|---|---|---|
+| Today | `?tab=today` | 4 sections | 3,534 |
+| Bookings & Profit | `?tab=profit` | 2 sections | 4,188 |
+| Money & Expenses | `?tab=money` | 4 sections | 3,805 |
+| **Spaces** | `?tab=spaces` | *"Spaces & calendar"* — **heading only** | **451** |
+| **Cash & Cheques** | `?tab=cash` | *"Cash & cheques"* — **heading only** | **427** |
+| **Kitchen** | `?tab=kitchen` | *"Kitchen & suppliers"* — **heading only** | **340** |
+| **Advanced** | `?tab=advanced` | 7 collapsed group headers, nothing inside | **274** |
+
+The sidebar points **fourteen** entries into this hub — seven tabs plus seven Advanced sub-groups
+(Costing & margins, Accounting & tax, Group & partners, Working capital, AML & KYC, Legal &
+insurance, Venue setup & tools). Four of the seven destinations show a title and a one-line hint and
+stop.
+
+The hub's own comment describes the scale: *"the door to 179 endpoints across 46 views"*. On this
+production account, most of that door opens onto a heading.
+
+### WWL-529 (S2) — a Completed booking dated five weeks in the future, still 75% unpaid
+
+Read off the live board, in two places at once:
+
+| List | Row |
+|---|---|
+| **Upcoming events** | `in 34d` · **Imran Shafi & Hafsa Imran** · *Wed, 09 Sept · **Completed*** · Rs 1,546,000 |
+| **Who to chase** | `in 34d` · **Imran Shafi & Hafsa Imran** · *Wed, 09 Sept · **25% paid*** · **Rs 1,159,500** |
+
+A booking marked **Completed** whose event is **34 days away**, carrying **Rs 1,159,500 outstanding**
+at 25% paid. Three things cannot all be true: the event has not happened, the status says it has, and
+three quarters of the money has not arrived.
+
+The board filters only `cancelled`, so a Completed booking flows into *Upcoming events* unchallenged.
+The consequence reaches other modules: Module 27's review-automation counts **Completed** bookings
+between 3 and 180 days **past** as "prompted", so this row's status will make it eligible for a
+post-event review request five weeks before the event occurs.
+
+### WWL-530 (S3) — the sidebar and the tabs disagree on all seven names
+
+| Sidebar | Tab |
+|---|---|
+| Tonight | **Today** |
+| Event profit | **Bookings & Profit** |
+| Venue money | **Money & Expenses** |
+| Halls & spaces | **Spaces** |
+| Cash & cheques | **Cash & Cheques** |
+| Kitchen | **Kitchen** |
+| Accounting | **Advanced** |
+
+Six differ in wording and one — **Accounting → Advanced** — shares no word at all. A vendor told to
+"open Accounting" arrives at a hub with no such tab. The page heading is a third name again
+(**Venue-OS**), and the section inside Today is a fourth (**Tonight**).
+
+### WWL-531 (S3) — the money on screen does not add up to the money in the card
+
+| | |
+|---|---|
+| **To collect** card | **Rs 13,417,229** |
+| Sum of the 12 rows in *Who to chase* | **Rs 10,614,779** |
+| Difference | **Rs 2,802,450** |
+
+Both are true in isolation — the card totals every open booking, the list shows a capped number of
+them — but nothing on the screen says the list is capped. There is no *"and N more"*, no count, no
+"showing 12 of X". A vendor reconciling the two finds Rs 2.8 million unaccounted for.
+
+Same shape as WWL-330, where the expiring-certificates banner showed six of twenty with an honest
+heading count and no way to reach the rest.
+
+The **Overdue payments** card is correct: it reads **5**, and there are exactly five rows with a
+negative day count — Kamran Sheikh (100d), Shahzad Butt (51d), Zeeshan Akram (12d), Owais Siddiqui
+(1d), Waheed Jutt (1d), totalling **Rs 2,153,317**. No card totals that money.
+
+### WWL-532 (S3) — Pending and Awaiting-Payment bookings are listed as events the venue is committed to
+
+Statuses seen live in *Upcoming events*: **Confirmed · Completed · Pending · Awaiting Payment**. Only
+`cancelled` is filtered.
+
+- *Rizwan Anjum & Momina Rizwan · Wed, 07 Oct · **Pending** · Rs 2,596,400* — and in *Who to chase* at
+  **0% paid**, the **largest single amount** on the chase list.
+- *Ahmed Raza & Sanam Ahmed · Thu, 22 Oct · **Awaiting Payment** · Rs 1,673,250*.
+
+So the board tells a venue owner they have an event on 7 October worth Rs 2.6 million, on a booking
+nobody has paid a rupee against and whose own status says it is not confirmed. Nothing distinguishes
+a held date from a hoped-for one except a word at the end of a line.
+
+### WWL-533 (S3) — the vendor is the customer on a live booking
+
+*Muhammad Rehman Yousaf · Thu, 13 Aug · **Confirmed** · Rs 665,000* — appearing in **Upcoming events**,
+in **Who to chase** at **0% paid**, and inside both the **Next 7 days** count and the **To collect**
+total.
+
+The account holder's own name is the customer on a confirmed Rs 665,000 booking seven days out. Almost
+certainly a test row; it is on production, it is Confirmed, and it is inflating two of the four KPIs
+on the venue owner's morning screen.
+
+### WWL-534 (S3) — nothing on this screen can be acted on
+
+Counted in the live Today panel: **0 links**. No row opens its booking, and there is no call button,
+no WhatsApp, no *record a payment*, no *mark chased* and no dismiss.
+
+So a vendor reads *"100d overdue · Kamran Sheikh & Zoya Kamran · 80% paid · Rs 325,020"* on a screen
+headed *"Who to chase — collect before the event"* and has nowhere to go from it. The event was 100
+days ago.
+
+Module 27's silent-customer list, for a much smaller stake, at least offers a `tel:` link and a
+Dismiss. Here the largest overdue balance in the product has no affordance at all.
+
+Cross-checked: **Kamran Sheikh is also one of the three silent customers** in Module 27's review
+automation. The same booking is being chased for a review and for Rs 325,020, on two screens that do
+not know about each other, and only one of them offers a way to make contact.
+
+### WWL-535 (S3) — no row says which hall the event is in
+
+The account has three venues. Neither list carries a venue name, and there is no venue column, filter
+or grouping. A vendor with an event on 13 August cannot tell from this screen whether it is at Johar
+Town, Gulberg or Bahria Town — on the tab named *Tonight*, whose purpose is running the hall in front
+of you.
+
+Establish separately whether the board is venue-scoped at all: the switcher is above it, and the
+figures did not change across the run.
+
+### WWL-536 (S3) — no `h1` on the page
+
+Measured: **zero `h1` elements**. The page heading *Venue-OS* is an `h2`, the section titles are `h3`.
+Third module in a row with no top-level heading (Modules 35, 36) after Reviews had one.
+
+### WWL-537 (S3) — "Events today: 0" on a day when all three venues are blocked
+
+The board reads **Events today 0**, which is true of the booking list. Module 33 established that all
+three venues carry a **blocked date on 2026-08-06 — today**, two of them reading `hi` and one
+`[QA] duplicate test`.
+
+The Tonight board knows nothing about blocked dates. So on a screen whose job is *"what's happening at
+your hall right now"*, the fact that every hall is closed to bookings today does not appear.
+
+### WWL-538 (S4) — row dates carry no year
+
+`fmtDate` renders *"Thu, 13 Aug"* — weekday, day, short month, **no year**. The Upcoming list already
+spans 93 days and the chase list reaches back 100. Both stay inside 2026 today, so nothing is
+currently ambiguous; a booking a year out or a balance overdue since last season would render
+identically to one this month.
+
+---
+
+### What passed, and it is worth saying
+
+- **L — nothing was written.** Zero mutating requests across a run that walked all seven tabs, and
+  every cross-module baseline from Modules 28–35 unchanged.
+- **The tab-in-URL fix holds, and it was worth making.** The hub's comment records what it replaced:
+  *"a vendor could not bookmark 'Money & Expenses', could not send a hall manager a link to Spaces,
+  and lost their place on every refresh. The sidebar could only ever point at the hub, which is why
+  179 endpoints looked like one menu item."* Verified live — all seven tabs update `?tab=` via
+  `router.replace`, an unknown value falls back to `today`, and `scroll: false` keeps the page still.
+- **The `?tab=advanced&group=` addressing works too**, and the sidebar's seven Advanced entries each
+  carry their own group. Leaving Advanced correctly deletes a stale `group` from the URL.
+- **This is the best tab implementation in the sweep.** Measured: **1 `role="tablist"`, 7 `role="tab"`,
+  7 `role="tabpanel"`, exactly one active, `aria-selected` correct on all seven.** Module 28's tabs had
+  **no** tabpanel; Module 31's were `aria-pressed` buttons with no tab semantics at all. This one is
+  right.
+- **The KPI arithmetic that can be checked, checks out.** *Overdue payments* reads **5** and there are
+  exactly five rows with a negative day count. *Next 7 days* reads **2** and there are exactly two
+  rows at `in 7d`. *Events today* reads **0** and no row carries a `Today` chip.
+- **Both lists are correctly sorted.** Upcoming ascends 7, 7, 15, 23, 34, 48, 62, 77, 93 days; Who to
+  chase runs most-urgent-first from 100 days overdue through to 62 days out.
+- **The day chips are the right idea, well executed.** `Today` / `Tomorrow` / `in Nd` / `Nd overdue`
+  with four distinct tones, and the overdue rose is genuinely alarming next to a muted future row.
+- **`TodayBoard` exists because someone noticed the tab was empty for a normal vendor and fixed it
+  without a flag.** Its comment states the two questions it answers — *"What's coming up?"* and *"Who
+  do I chase?"* — and it answers both off the booking list alone. It is the reason this tab is not
+  one of the four that render only a heading.
+- Console clean across all seven tabs.
+
+### Not driven, each with its reason
+
+| Cases | Why |
+|---|---|
+| **D36-038 → D36-048** (which flags gate the four panels, and the ratio across all 55 components) | Requires the flag surface and a per-component audit of 55 files. What is established live is the ratio on **this** tab — 1 of 5 renders — and the rendered size of all seven tabs. |
+| **D36-053 → D36-055** (deriving *To collect* from the booking rows) | My endpoint guesses for the vendor booking list hit the API's catch-all, and I did not report a number I could not source. The discrepancy in WWL-531 is computed from **rendered rows against the rendered card**, which needs no API. |
+| **D36-062 / D36-063** (venue scoping of the board) | The figures did not change during the run, but the run did not switch venue on this tab; recorded as unestablished rather than asserted. |
+| **D36-082 → D36-085** (is the future-dated Completed booking a data error) | Establishing intent means opening the booking, which belongs to the Bookings module. What is established here is that the board renders it under *Upcoming* with Rs 1,159,500 outstanding. |
+| **D36-092** (whether the vendor-as-customer row is a test) | Same — the row is on production, Confirmed, and counted; whose it is belongs with Bookings. |
+| **D36-094 / D36-115** (the list caps) | The rendered counts are 9 upcoming and 12 chase; the exact slice value was not read from source, so WWL-531 states the discrepancy without asserting the cap. |
+| **D36-131 → D36-140** (360×740) | The visible browser was kept at desktop so the run could be followed. The tab strip does **not** overflow at 1440px (1,053px in a 1,053px container), so the 360px measurement is the one that matters and it is not carried over. |
+
+### Module 36 — status
+
+**150 cases written, 100 driven. 12 findings (3× S2, 8× S3, 1× S4).**
+
+**The module's verdict.** The plumbing here is the best in the sweep — seven tabs with real ARIA
+semantics, every one addressable in the URL along with seven Advanced sub-groups, a fix whose comment
+explains precisely what it was for: *"179 endpoints looked like one menu item."* And behind those
+addresses, four of the seven tabs render a heading and stop. The one that does not is carried entirely
+by a panel someone added because the tab was otherwise blank — sitting beneath a sentence still
+promising headcount, valet, RSVPs and slot-checking, none of which appears. What the vendor actually
+gets is a genuinely useful list of who owes them money, on which nothing is clickable: **Rs 325,020
+one hundred days overdue, and not a button on the row**. Among the events it counts as upcoming are a
+booking that is 0% paid and still *Pending*, one whose customer is the vendor themselves, and one
+marked **Completed** whose wedding is five weeks away and three quarters unpaid.
