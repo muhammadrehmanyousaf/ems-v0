@@ -50,7 +50,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 18 | Automation | `/dashboard/automation` | ✅ 78 | **`[x]` COMPLETE — 62 run, 16 not run, 10 findings** |
 | 19 | Kitchen prep | `/dashboard/kitchen-prep` | ✅ 143 | **`[x]` COMPLETE — 85 run, 58 not run, 13 findings (5× S2)** |
 | 20 | Inventory | `/dashboard/inventory` | ✅ 204 | **`[x]` COMPLETE — 132 run, 72 not run, 18 findings (5× S2)** |
-| 21 | Staff & payroll | `/dashboard/staff` | — | `[~]` bug confirmed, fix unverified |
+| 21 | Staff & payroll | `/dashboard/staff` | ✅ 188 | `[ ]` cases written, execution in progress |
 | 22 | Suppliers | `/dashboard/suppliers` | — | `[~]` dead tab open |
 | 23 | Brokers | `/dashboard/brokers` | — | `[ ]` |
 | 24 | Generator fuel | `/dashboard/generator-fuel` | — | `[ ]` |
@@ -9282,3 +9282,318 @@ and the date, new items are filed under whichever venue happens to be first, the
 anywhere so three copies of "Banquet Chairs" are indistinguishable, and on a phone nothing can be
 adjusted at all. The one instruction the product gives when a delete fails — *record an adjustment to
 zero it first* — is the one movement the dialog refuses to save.
+
+---
+
+# MODULE 21 — STAFF & PAYROLL (`/dashboard/staff`)
+
+**What the screen is for.** Two tabs. **Roster** is the crew list — name, role, the space they
+default to, permanent-monthly vs casual-dihari, pay rate, and a per-member switch that gives them a
+login to the staff portal. **Shifts & payroll** is an append-only pay ledger: every shift snapshots
+the staffer's name, role and pay maths (base + overtime + bonus − deduction → gross → net) so the
+record stays auditable, then moves through pending → partial → paid → disputed → void, with a
+separate attendance track (scheduled → checked in → worked / no-show / excused / replaced).
+
+**Source read before writing these cases**
+- `app/(dashboard)/dashboard/staff/page.tsx`, `app/(dashboard)/dashboard/staff/[id]/page.tsx`
+- `components/.../staff/redesigned/staff-redesigned-view.tsx` — tabs, roster, stats, delete
+- `components/.../staff/redesigned/payroll-tab.tsx` — shift ledger, transitions, attendance
+- `components/.../staff/redesigned/payroll-dialogs.tsx` — Shift / Pay / Dispute / Void / Replace
+- `components/.../staff/redesigned/staff-form-dialog.tsx`, `staff-detail-view.tsx`
+- `components/staff-portal/staff-login-control.tsx`, `staff-leave-queue.tsx`
+- `lib/api/staff.ts` — the `AttendanceStatus` union and the label/tone dictionaries
+- `components/dashboard/primitives/status-pill.tsx` — `TONE[tone].cls`
+- `src/controllers/staffController.js`, `src/models/staffShift.js` — `ATTENDANCE_STATUSES`
+- `lib/axiosConfig.js` — `BUSINESS_SCOPED_PREFIXES` includes `/api/v1/staff`
+
+**Pre-flight state, read off live prod before any case was written**
+
+| Fact | Value |
+|---|---|
+| `GET /staff/members` (unscoped, raw) | **33 members** — 11 per venue × 3 |
+| Roster rows shown while scoped to 3360 | **11** — the axios interceptor injects `businessId` |
+| `GET /staff/shifts` (unscoped, raw) | **95 shifts** |
+| Every shift's `attendanceStatus` | **`"present"`** |
+| Frontend `AttendanceStatus` union | `scheduled · checked_in · completed · absent · excused · replaced` — **no `present`** |
+| Backend `ATTENDANCE_STATUSES` | the same six — **also no `present`** |
+| DB column | `STRING(20)`, `defaultValue: "scheduled"`, **no enum constraint** |
+| Shift sample | 2026-08-21 · waiter Rs 1,800 · lead cook Rs 2,500 · manager Rs 3,519 · valet Rs 1,750 — all `pending` |
+| Staff triplication | "Arshad Ali" exists as ids 147 / 158 / 169, one per venue |
+
+**Element inventory (2 tabs · 27 interactive)**
+
+| # | Element | Where |
+|---|---|---|
+| 1–2 | `Roster` / `Shifts & payroll` tabs | TabsList |
+| 3 | `Add staff` | roster header |
+| 4–7 | Stat cards: Total staff · Active · On salary · Daily (dihari) | roster |
+| 8 | `Search staff…` | roster toolbar |
+| 9–11 | Density toggle · Import · Export | roster toolbar |
+| 12 | Select-all + row checkboxes | roster table |
+| 13 | Member name → `/dashboard/staff/{id}` | roster row |
+| 14 | `Enable login` / staff-portal control | roster row |
+| 15–16 | `Edit staff` · `Remove staff` | roster row |
+| 17 | Staff form dialog | modal |
+| 18 | Remove-staff confirm | alert |
+| 19 | `Log shift` | payroll header |
+| 20–23 | Stat cards: To pay out · Paid · In dispute · Shifts | payroll |
+| 24 | Leave queue | payroll |
+| 25 | Status chips (All / Pending / Part-paid / Paid / Disputed / Void) with counts | payroll toolbar |
+| 26 | From / To date filters + clear | payroll toolbar |
+| 27 | Row actions: Mark paid · Dispute · Void · Payslip · Remove · attendance · Replace | payroll rows |
+
+**Safety limits for this module, each with its reason**
+
+| Limit | Reason |
+|---|---|
+| **No shift is created, transitioned, paid, disputed, voided or deleted.** | These are a real crew's wages. A `paid` transition writes a payment record against a named person; `void` erases their claim. Memory rule: never write money rows on the live vendor's ledger. |
+| **No staff member is created, edited or deleted.** | 33 real people with real phone numbers. |
+| **No staff login is enabled or disabled.** | Enabling a login provisions portal access for a real person and may send them credentials. |
+| **No leave request is approved or rejected.** | Decides a real person's time off. |
+| **No payslip PDF is opened in a way that leaves the vendor's browser.** | The blob fetch is a GET and safe; the new tab is intercepted. |
+| **Reads may hit the live API freely.** | GETs are side-effect free. |
+
+---
+
+## MODULE 21 — TEST CASES
+
+### A. Route, navigation and tabs (D21-001 → D21-014)
+
+- **D21-001** Sidebar → **Staff & payroll** navigates to `/dashboard/staff`.
+- **D21-002** `document.title` is `Dashboard : Staff & Payroll`.
+- **D21-003** The rail entry is `aria-current="page"`.
+- **D21-004** Breadcrumb renders and links home.
+- **D21-005** `/dashboard/staff-new` — the route named in the component's own header comment — resolves to what?
+- **D21-006** The header comment claims *"Read-only; original screen untouched"* — check against a screen that creates, edits, deletes and pays.
+- **D21-007** Two tabs render: **Roster** and **Shifts & payroll**.
+- **D21-008** Roster is selected by default.
+- **D21-009** Switching tabs does **not** change the URL (`defaultValue`, no `onValueChange`) — so a payroll view cannot be linked or bookmarked.
+- **D21-010** …and a reload always returns to Roster, discarding the tab choice.
+- **D21-011** Tabs are keyboard-navigable with arrow keys and expose `aria-selected`.
+- **D21-012** **Clicking `Shifts & payroll` — does the tab render at all?**
+- **D21-013** If it fails, what does the vendor see, and is the failure scoped to the tab or to the whole route?
+- **D21-014** Is the failure recoverable — does `Try again` restore the screen, or does it fail again?
+
+### B. Roster — first paint and data (D21-015 → D21-028)
+
+- **D21-015** Eyebrow `Operate`, `h1`, description render.
+- **D21-016** The `h1` reads **"Team & Shooters"** while the nav entry says **"Staff & payroll"** — two names for one screen.
+- **D21-017** Row count matches the scoped API response.
+- **D21-018** Columns: Name · Role · Space · Type · Phone · Rate · Status · actions.
+- **D21-019** The name cell is a link to `/dashboard/staff/{id}` and looks like one.
+- **D21-020** Initials avatar renders two letters for a two-word name and one for a single word.
+- **D21-021** `role` renders underscores as spaces and capitalised (`parking_valet` → `Parking valet`).
+- **D21-022** `Space` shows `defaultSubVenue.name` and `—` when null.
+- **D21-023** `Rate` prefers monthly salary, falls back to dihari, then `—`.
+- **D21-024** A member with **both** a salary and a dihari rate shows only the salary — confirm and judge.
+- **D21-025** `Status` pill reflects `isActive`.
+- **D21-026** Phone renders as stored; check for a broken/short number.
+- **D21-027** `<th scope>` present.
+- **D21-028** Row checkboxes have per-row accessible names.
+
+### C. Roster — stat cards (D21-029 → D21-036)
+
+- **D21-029** **Total staff** equals the row count.
+- **D21-030** **Active** counts `isActive`.
+- **D21-031** **On salary** counts `monthlySalary > 0`.
+- **D21-032** **Daily (dihari)** counts a dihari rate **excluding** anyone with a salary — verify the exclusion.
+- **D21-033** The four counts add up sensibly against 11 scoped members.
+- **D21-034** Cards are computed from `all`, not the filtered set — type a search and check.
+- **D21-035** The **Active** card is hard-coded `trend="up"` regardless of the number — check what it claims when 0 are active.
+- **D21-036** Card labels are readable as label + value.
+
+### D. Roster — venue scoping (D21-037 → D21-044)
+
+- **D21-037** `/api/v1/staff` is in `BUSINESS_SCOPED_PREFIXES`, so the axios interceptor injects `businessId` on GETs. Confirm on the wire.
+- **D21-038** Switch to 3358 → request carries `businessId=3358` and the roster changes.
+- **D21-039** Switch to 3359 → same.
+- **D21-040** Switch to 3360 → same.
+- **D21-041** **All venues** → no `businessId`, and all 33 members appear.
+- **D21-042** `queryKey: ["staff-redesigned"]` contains **no** businessId — so does the cache actually re-fetch on a venue switch, or is the interceptor's param invisible to the cache key?
+- **D21-043** The same person exists three times (Arshad Ali 147/158/169). At **All venues**, can the vendor tell them apart?
+- **D21-044** `businessId = businesses?.[0]?.id` is handed to the create dialog — which venue does a new staff member land on while scoped to a different one?
+
+### E. Roster — search, selection, export, import, density (D21-045 → D21-060)
+
+- **D21-045** Search filters on name, role and phone, client-side, with no request.
+- **D21-046** Search is case-insensitive and trims.
+- **D21-047** A no-match search shows the empty state — check its wording against a populated roster.
+- **D21-048** The empty state says *"Add your shooters, editors and assistants"* — judge against a venue's valets, cooks and security guards.
+- **D21-049** Clearing search restores every row.
+- **D21-050** Search is not in the URL and is lost on reload.
+- **D21-051** Select-all selects the filtered rows.
+- **D21-052** Export offers CSV and XLSX.
+- **D21-053** Export columns: Name · Role · Type · Phone · Monthly salary · Dihari rate · Active.
+- **D21-054** The export carries **staff phone numbers** — confirm, and note it is a personal-data export with no warning.
+- **D21-055** A null salary exports as **0**, not blank — check whether that reads as "paid nothing".
+- **D21-056** No venue column in the export.
+- **D21-057** Import button opens the staff importer.
+- **D21-058** The importer is not executed — record what it would accept.
+- **D21-059** Density toggle changes row height and persists in `ww-ui-prefs`.
+- **D21-060** Density does not disturb selection or search.
+
+### F. Roster — staff form dialog (D21-061 → D21-078)
+
+- **D21-061** `Add staff` opens the dialog with its create title.
+- **D21-062** Every field renders; identify the full set.
+- **D21-063** Required-field blocking and the blocked-save hint.
+- **D21-064** Role dropdown lists the full `StaffRole` dictionary.
+- **D21-065** Employment type offers permanent_monthly · casual_dihari · contract.
+- **D21-066** Choosing permanent vs casual changes which pay field is asked for.
+- **D21-067** A negative monthly salary.
+- **D21-068** A negative dihari rate.
+- **D21-069** A salary above any sane cap.
+- **D21-070** A Pakistani phone number in local (`03xx`) and international (`+92`) form.
+- **D21-071** An invalid phone (letters, 3 digits).
+- **D21-072** A duplicate name — allowed? (three Arshad Alis already exist).
+- **D21-073** The default sub-venue picker lists this venue's spaces only.
+- **D21-074** The captured create body and endpoint.
+- **D21-075** `businessId` in the captured body.
+- **D21-076** Edit prefills every field.
+- **D21-077** Edit sends `PATCH` to the member's id.
+- **D21-078** Cancel/Escape discard without a request.
+
+### G. Roster — remove staff (D21-079 → D21-086)
+
+- **D21-079** `Remove staff` opens an alert naming the member.
+- **D21-080** The copy says *"This can't be undone."* — check against the backend's delete semantics.
+- **D21-081** Cancel and Escape close without a request.
+- **D21-082** Remove issues `DELETE` to the member's id.
+- **D21-083** Does the server refuse to delete a member who has shifts on the ledger?
+- **D21-084** If it soft-deletes, do their shifts survive with the name snapshot intact?
+- **D21-085** With the write diverted, does the toast claim **"Staff removed"**?
+- **D21-086** Does the row return after a hard reload?
+
+### H. Roster — the staff-portal login control (D21-087 → D21-094)
+
+- **D21-087** The control renders on every row; identify its states.
+- **D21-088** For a member with no login it offers **Enable login**.
+- **D21-089** What does enabling actually do — create a user, set a password, send an SMS?
+- **D21-090** Is the vendor told what the staffer will receive?
+- **D21-091** Is there a confirmation step before provisioning access for a real person?
+- **D21-092** The captured request and endpoint (**not sent**).
+- **D21-093** Can a login be revoked from the same control?
+- **D21-094** Is the control's purpose clear without documentation — "login" to what?
+
+### I. Member detail page `/dashboard/staff/{id}` (D21-095 → D21-106)
+
+- **D21-095** The name link navigates to the member's page.
+- **D21-096** The page loads and names the member.
+- **D21-097** It shows what they are still owed.
+- **D21-098** It lists every shift they worked.
+- **D21-099** Does it survive the same attendance-status value that breaks the payroll tab?
+- **D21-100** Breadcrumb / back path to the roster.
+- **D21-101** A non-existent id.
+- **D21-102** Another vendor's member id → refused, not rendered.
+- **D21-103** Money figures agree with the payroll ledger.
+- **D21-104** Any actions on this page are captured, not sent.
+- **D21-105** The page at 360px.
+- **D21-106** Console clean on this route.
+
+### J. Shifts & payroll — the ledger (D21-107 → D21-126)
+
+- **D21-107** The tab renders its own PageHeader and `Log shift` action.
+- **D21-108** Four stat cards: To pay out · Paid · In dispute · Shifts.
+- **D21-109** **To pay out** uses `outstandingTotal ?? pendingTotal`, and its delta names the pending count and the part-paid balance.
+- **D21-110** `partialBalance = max(0, outstandingTotal − pendingTotal)` — verify against the API's own numbers.
+- **D21-111** Status chips show live counts per status and filter the table.
+- **D21-112** The chip counts come from the **summary**, the rows from a **separate** query — confirm they agree.
+- **D21-113** Date From/To filter the ledger and the summary together.
+- **D21-114** The clear-dates button appears only when a date is set.
+- **D21-115** Columns: Date · Staff · Base/OT/Bonus/Ded. · Gross · Net · Status · actions.
+- **D21-116** The breakdown chips render only the non-zero components.
+- **D21-117** `Net` shows the paid amount and, for a part-paid shift, the balance still due.
+- **D21-118** The staff cell shows the **snapshot** name and role, not the current record.
+- **D21-119** A shift linked to a booking shows `Booking #id`.
+- **D21-120** `Gross` and `Net` are rounded for display only.
+- **D21-121** The payment pill and the attendance pill both render.
+- **D21-122** The empty state reads *"No shifts in this window"* — correct wording for a filtered ledger.
+- **D21-123** The leave queue renders or is absent.
+- **D21-124** Row selection works.
+- **D21-125** There is no export on this tab — confirm, on the one table a vendor would hand to an accountant.
+- **D21-126** `<th scope>` on this table.
+
+### K. Shifts & payroll — transitions (D21-127 → D21-142)
+
+- **D21-127** `pending` offers Mark paid · Dispute · Void.
+- **D21-128** `partial` offers the same three.
+- **D21-129** `paid` offers **only** Dispute — a paid shift cannot be un-paid.
+- **D21-130** `disputed` offers Mark paid · Void · Pending.
+- **D21-131** `void` offers only Pending.
+- **D21-132** Mark paid opens the **Pay** dialog, not a bare transition.
+- **D21-133** The Pay dialog is partial-aware — it accepts an amount less than net.
+- **D21-134** Paying less than net lands the shift in `partial`, not `paid`.
+- **D21-135** Paying more than net — refused?
+- **D21-136** The payment-method list matches `PAYMENT_METHOD_LABELS` (Raast, IBFT, SadaPay, NayaPay…).
+- **D21-137** Dispute captures a reason.
+- **D21-138** Void captures a reason.
+- **D21-139** Replace opens the replacement dialog and captures who covered.
+- **D21-140** Every row action is disabled while that row is busy.
+- **D21-141** Each captured transition payload and endpoint (**none sent**).
+- **D21-142** With a write diverted, does the toast claim success?
+
+### L. Shifts & payroll — attendance (D21-143 → D21-152)
+
+- **D21-143** Every live shift carries `attendanceStatus: "present"`.
+- **D21-144** `"present"` is absent from the frontend `AttendanceStatus` union.
+- **D21-145** `"present"` is absent from the backend `ATTENDANCE_STATUSES` too.
+- **D21-146** The DB column is an unconstrained `STRING(20)` — so nothing rejected the value.
+- **D21-147** `ATTENDANCE_STATUS_LABELS["present"]` → what does the pill render?
+- **D21-148** `ATTENDANCE_TONE["present"]` → what tone does `StatusPill` receive?
+- **D21-149** `StatusPill` does `TONE[tone].cls` — what happens when `tone` is `undefined`?
+- **D21-150** `NEXT_ATTENDANCE_OPTIONS["present"]` → which attendance actions can the vendor take?
+- **D21-151** Is the bad value correctable from anywhere in the UI?
+- **D21-152** Establish the full chain from the stored value to what the vendor sees.
+
+### M. Payslip (D21-153 → D21-158)
+
+- **D21-153** The Payslip button appears on every shift row.
+- **D21-154** It fetches `/staff/shifts/{id}/payslip-pdf` as a blob.
+- **D21-155** The blob is a real PDF.
+- **D21-156** It opens in a new tab via an object URL — intercepted here, not opened.
+- **D21-157** A failure shows *"Could not open payslip"*.
+- **D21-158** The payslip is per-shift only — there is no month-end payslip or payroll run.
+
+### N. Resilience (D21-159 → D21-166)
+
+- **D21-159** Offline → the roster shows its error state with Retry.
+- **D21-160** Unroutable host → same.
+- **D21-161** The error text is *"Couldn't load staff."* — does it distinguish causes?
+- **D21-162** Do the stat cards render zeros beside a failed load, as Inventory's do?
+- **D21-163** Slow network → skeleton, no flash of empty.
+- **D21-164** A malformed response does not white-screen.
+- **D21-165** The error boundary that catches a render throw — what does it show, and does it name a reference the vendor can quote?
+- **D21-166** Console errors across the module.
+
+### O. Accessibility (D21-167 → D21-174)
+
+- **D21-167** Row-action buttons announce which member they act on.
+- **D21-168** Dialog labels are programmatically associated.
+- **D21-169** Tabs expose `aria-selected` and roving focus.
+- **D21-170** Status pills are not colour-only.
+- **D21-171** The alert dialog announces title + description and focuses Cancel.
+- **D21-172** Focus rings on all controls.
+- **D21-173** Heading order.
+- **D21-174** The search input has an accessible name.
+
+### P. Mobile — 360×740 (D21-175 → D21-182)
+
+- **D21-175** No horizontal page scroll.
+- **D21-176** **And** zero clipped elements outside deliberate scroll containers, with `html`/`body` excluded from the walk.
+- **D21-177** The roster switches to the card renderer.
+- **D21-178** The card shows name, role, rate and status — are the row actions reachable?
+- **D21-179** The login control on mobile.
+- **D21-180** Stat cards reflow to 2 columns.
+- **D21-181** The payroll tab at 360 (if it renders at all).
+- **D21-182** Touch targets ≥ 24×24.
+
+### Q. Integrity close-out (D21-183 → D21-188)
+
+- **D21-183** Member count unchanged at close, via a clean iframe realm.
+- **D21-184** Shift count unchanged (95).
+- **D21-185** Every shift's `paymentStatus` unchanged.
+- **D21-186** No staff login was provisioned.
+- **D21-187** Every diverted write listed with method, URL and body.
+- **D21-188** No `POST`/`PATCH`/`DELETE` reached the real API.
+
+**188 cases written.** Execution follows.
