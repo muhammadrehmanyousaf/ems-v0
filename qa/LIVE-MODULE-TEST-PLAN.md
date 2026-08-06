@@ -57,7 +57,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 25 | Halal certs | `/dashboard/halal-certs` | ✅ 138 | **`[x]` COMPLETE — 58 run, 80 not run, 19 findings (3× S2)** |
 | 26 | Drone NOC | `/dashboard/drone-noc` | ✅ 138 | **`[x]` COMPLETE — 60 run, 78 not run, 17 findings (3× S2)** |
 | 27 | Reviews | `/dashboard/reviews` | ✅ 310 | **`[x]` COMPLETE — 218 run, 92 not run, 26 findings (1× S1, 6× S2)** |
-| 28 | Notifications | `/dashboard/notifications` | — | `[ ]` |
+| 28 | Notifications | `/dashboard/notifications` | ✅ 258 | `[~]` cases written — **execution BLOCKED, no browser tool** (see Module 28 blocker note) |
 | 29 | Promote | `/dashboard/promote` | — | `[ ]` |
 | 30 | Plan & billing | `/dashboard/billing` | — | `[ ]` |
 | 31 | Collaborations | `/dashboard/collaborations` | — | `[ ]` |
@@ -13174,3 +13174,350 @@ retract endpoint built for exactly that case has no button. The export drops the
 box cannot search a review. And the card headed *"nudge them on WhatsApp"* has no WhatsApp button on
 any row, because every phone number on this account is one digit short of a number that can be
 dialled at all.
+
+---
+
+## MODULE 28 — TEST CASES
+
+Route `/dashboard/notifications`. Unlike every module so far this screen holds **no data source of
+its own** — it renders `NotificationContext`, the same provider that feeds the header bell and the
+sidebar badge, so a defect here is a defect on every page of the portal. State arrives by two
+channels at once: REST (`/api/v1/notifications`) on mount and a **Socket.io** stream
+(`notification:new`, `notification:unread-count`) thereafter, with mutations preferring the socket
+and falling back to REST.
+
+Written from source before execution. Facts established from the repo while writing:
+
+| Established | Where |
+|---|---|
+| DB enum carries **16** notification types | `notificationModel.js` |
+| The page's `NOTIFICATION_CONFIG` covers **11** | `notifications/page.tsx` |
+| So **5** types have no icon, no tone and no label — they fall through to `system` | `NOTIFICATION_CONFIG[type] \|\| NOTIFICATION_CONFIG.system` |
+| `public/sounds/` **does not exist** in the repo | `new Audio("/sounds/notification.mp3")` |
+| Server caps `limit` at **50**; the client always asks for **20** | controller vs `NotificationAPI` |
+| `WW-253` floors `page` at 1 | controller |
+| Mark-read and mark-all-read prefer `socket.emit`, which is **fire-and-forget** | `NotificationContext` |
+
+### A. Route, shell and header (D28-001 → D28-016)
+
+- **D28-001** Sidebar → **Notifications** navigates to `/dashboard/notifications`.
+- **D28-002** `document.title` vs the page title vs the eyebrow vs the nav label.
+- **D28-003** The eyebrow reads **Console · Notifications**.
+- **D28-004** The rail entry is `aria-current="page"` — and check whether `/dashboard/chat` still claims it (WWL-379).
+- **D28-005** Direct URL loads with no client-side error.
+- **D28-006** The description reads *"Stay updated on bookings, payments and reviews."* — check it against the five types it can also show (leads, change requests, welcome, system, payouts).
+- **D28-007** `PageHeader` actions render **Mark all read** only when `unreadCount > 0`. Establish both branches.
+- **D28-008** With 0 unread there is **no** control to mark anything read in bulk, and no control to mark anything *unread* at all.
+- **D28-009** The page is a client component with no server data — check the first paint before the context resolves.
+- **D28-010** `isLoading && notifications.length === 0` renders a centred spinner; establish the ordering against the empty state, which requires `!isLoading`.
+- **D28-011** Reload → identical list, identical counts, identical unread count.
+- **D28-012** Client-side nav away and back — the context is mounted at the **root layout**, so the list should NOT refetch. Confirm, and establish what that means for staleness.
+- **D28-013** So a vendor who leaves the tab open for a day sees a list that only grows by socket, never by refetch. Establish whether `refreshNotifications` is reachable from any control.
+- **D28-014** `refreshNotifications` is exported by the context and consumed by **nothing**. Prove it.
+- **D28-015** No search box, no date filter, no per-venue filter on a page that can hold hundreds of rows.
+- **D28-016** The page never mentions a venue. Establish that notifications are **user-scoped, not business-scoped** (`userId` only on the model) and what that means for a three-venue vendor.
+
+### B. The Live / Offline pill and the socket (D28-017 → D28-038)
+
+- **D28-017** The pill renders in the description line, coloured by `isConnected`.
+- **D28-018** Live state: green dot, `animate-pulse`, text **Live**, `title="Live updates active"`.
+- **D28-019** Offline state: grey dot, text **Offline**, `title="Connecting…"` — note the title says *Connecting* while the label says *Offline*.
+- **D28-020** Read the live value on production. If **Offline**, establish why before reporting anything.
+- **D28-021** `BACKEND_WS_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000"`. The same variable feeds `lib/backend-url.ts`, so if REST works the variable is set — confirm the resolved socket origin in the browser rather than assuming either way.
+- **D28-022** Confirm the handshake carries the JWT: `auth: { token }`, read from `localStorage.auth_token` with a cookie fallback.
+- **D28-023** `transports: ["websocket", "polling"]` — establish which one actually connects on production (Railway + Vercel).
+- **D28-024** `reconnectionAttempts: 10`, delay 1000 → max 5000. Establish the total window before the client gives up permanently: after ten failures the pill stays **Offline** forever with no retry control on the page.
+- **D28-025** There is **no manual reconnect** and **no refresh** control anywhere on this screen.
+- **D28-026** `connect_error` is `console.error`-ed only; nothing is surfaced to the user beyond the grey dot.
+- **D28-027** `socket.on("connect")` logs `[Notifications] Socket connected` to the console on production. Count the console noise this module produces in a normal session.
+- **D28-028** `notification:new` prepends to `notifications` **and** increments `totalCount` — but does **not** increment `unreadCount`; that arrives separately on `notification:unread-count`. Establish the window in which the list and the badge disagree.
+- **D28-029** …and if the `unread-count` event is dropped, the row renders unread while the badge does not count it. Establish the failure mode.
+- **D28-030** `notification:new` prepends **unconditionally** — no dedup against an id already in state. Combined with `loadMore`, establish whether a duplicate id can enter the list.
+- **D28-031** A duplicate id would collide on React's `key={n.id}`. Watch the console for the key warning.
+- **D28-032** The socket prepends **regardless of the active filter** — a new payment notification arriving while the Bookings tab is selected changes the tab counts under the user.
+- **D28-033** `playNotificationSound()` fires on every `notification:new`, loading `/sounds/notification.mp3` at volume 0.3.
+- **D28-034** **`public/sounds/` does not exist in the repository.** Establish live whether the file 404s, and note the `.catch(() => {})` that hides it.
+- **D28-035** The sound is unconditional — there is no mute, no preference and no respect for the OS "do not disturb". A vendor with the portal open during a barat gets audio.
+- **D28-036** Autoplay policy: `audio.play()` rejects before the first user gesture. Establish that the `.catch` swallows it silently.
+- **D28-037** The socket disconnects on unmount of the **provider**, which lives in the root layout — so it survives every in-app navigation. Confirm one connection per session, not one per page.
+- **D28-038** Log out and back in: confirm the old socket is disconnected and the notification state is cleared (`setNotifications([])`).
+
+### C. Filter tabs and their counts (D28-039 → D28-066)
+
+- **D28-039** Five tabs render: **All · Unread · Bookings · Payments · Reviews**.
+- **D28-040** Each shows a count pill only when `count > 0`.
+- **D28-041** The active tab's pill is cream-on-gold; the inactive ones are muted. Verify both.
+- **D28-042** **All** shows `totalCount` — a **server** total.
+- **D28-043** **Unread** shows `unreadCount` — a **server** total, from a separate endpoint.
+- **D28-044** **Bookings** shows `notifications.filter(...).length` — **only the rows currently loaded** (20 at first).
+- **D28-045** **Payments** and **Reviews** likewise.
+- **D28-046** So the tab strip mixes two denominators. With more than 20 notifications, establish live that *All* and *Unread* count the whole account while *Bookings*, *Payments* and *Reviews* count the first page.
+- **D28-047** Press **Load more** and watch the three loaded-page counts change while *All* does not. That divergence is the proof.
+- **D28-048** The filter itself is applied client-side to `notifications`, so selecting **Unread** with 100 unread and 20 loaded shows 20 rows under a tab that says 100.
+- **D28-049** `unreadOnly` is supported by the API (`?unreadOnly=true`) and the client **never sends it**. Prove it from `NotificationAPI.getNotifications` call sites.
+- **D28-050** So the Unread tab could have been server-side and is not.
+- **D28-051** Booking filter is `type.startsWith("booking_")` — establish that this also catches `booking_change_request_applied`, which has no config entry.
+- **D28-052** Payment filter is `startsWith("payment_") || type === "payout_processed"`.
+- **D28-053** Review filter is exact `=== "new_review"`.
+- **D28-054** **There is no tab for the four lead types** (`new_lead`, `lead_stale_48h`, `lead_followup_due`) or for `welcome` / `system`. Enumerate which types are reachable only through *All*.
+- **D28-055** With a busy account, establish how far a vendor must scroll under *All* to find a lead notification.
+- **D28-056** Switching tabs does not change the URL — no `?tab=` query state. Verify.
+- **D28-057** So a filtered view cannot be linked, bookmarked or restored after a reload.
+- **D28-058** Reload while on **Payments** → the page returns to **All**.
+- **D28-059** The back button does not walk the tab history.
+- **D28-060** `TabsList` is `flex-wrap` — establish the wrap point and whether counts stay attached to their labels.
+- **D28-061** Keyboard: arrow keys move between tabs (Radix roving tabindex). Verify.
+- **D28-062** The tabs render `role="tab"` but there is **no `role="tabpanel"`** — the list below is a plain div. Establish the a11y consequence.
+- **D28-063** Select a filter with zero matches → the empty state reads *"Nothing here / No notifications match this filter."* Verify against *All*'s different copy.
+- **D28-064** A filter that matches nothing on the **loaded page** but would match on page 2 shows the empty state while **Load more** is still offered below it. Establish that contradiction.
+- **D28-065** Counts are recomputed on every render from `notifications` — check for flicker while a socket event lands.
+- **D28-066** Delete a row and confirm every affected count moves consistently (`totalCount` decrements only on API success; the loaded-page counts decrement immediately).
+
+### D. The notification row (D28-067 → D28-096)
+
+- **D28-067** Row layout: unread bar · icon disc · title · dot · message · relative time · type pill · delete button.
+- **D28-068** Unread rows carry `bg-bridal-blush/30`, a 3px gold left bar (`aria-hidden`), a bold title and a gold dot.
+- **D28-069** Read rows drop all four. Verify the diff on one row before and after marking it read.
+- **D28-070** **The entire row is `cursor-pointer` and its `onClick` marks read — and navigates nowhere.**
+- **D28-071** `Notification.data` is a JSON column carrying the payload (booking id, payment id, review id). Establish what is actually in it on production rows.
+- **D28-072** …and establish that **nothing on this page reads `data`**. Prove it by searching the component.
+- **D28-073** So *"Booking #164 approved"* cannot take the vendor to booking 164 from the one screen built to tell them about it.
+- **D28-074** The row has no `role`, no `tabIndex` and no `onKeyDown` — it is a clickable `div`. Establish that a keyboard user cannot mark a notification read.
+- **D28-075** The **delete** button is `opacity-0 group-hover:opacity-100`. Establish that it is invisible until hover.
+- **D28-076** …and therefore **unreachable on touch**, where there is no hover. Count reachable delete buttons at 360px.
+- **D28-077** It is still in the tab order while invisible — Tab to it and check whether focus is visible.
+- **D28-078** `title="Delete notification"` is its only accessible name; there is no `aria-label` and no text.
+- **D28-079** `e.stopPropagation()` prevents the row's mark-read from firing on a delete click. Verify.
+- **D28-080** Title truncation: `min-w-0` + `flex-wrap` — establish behaviour with a very long title.
+- **D28-081** Message is rendered as plain text with no clamp — establish behaviour with a long message.
+- **D28-082** Neither title nor message is sanitised or linkified; establish whether any production row contains a URL and how it renders.
+- **D28-083** `formatDate` — *Just now* under a minute, *N min ago* under an hour, *N hours ago* under a day, *N days ago* under a week, then an absolute date.
+- **D28-084** The absolute branch uses `toLocaleDateString("en-US", …)` on a dashboard that is otherwise `en-PK`.
+- **D28-085** The year is included only when it differs from the current year — establish the December/January boundary.
+- **D28-086** The relative time never refreshes: it is computed at render. A row that said *"1 min ago"* still says so an hour later unless something else re-renders the page. Establish live.
+- **D28-087** A future `createdAt` (clock skew between Railway and the browser) yields a negative diff → `minutes < 1` → **"Just now"**. Establish by computation.
+- **D28-088** There is no absolute timestamp anywhere on the row — not even a `title` on the relative time. Establish that the exact moment of a notification is unavailable in the UI.
+- **D28-089** The type pill uses `config.label` and `config.tone`, the same tone as the icon disc.
+- **D28-090** Verify each of the 11 configured labels against its type: Booking · Approved · Rejected · Cancelled · Payment · Failed · Refund · Payout · Review · Welcome · System.
+- **D28-091** **`booking_created` is labelled "Booking" while `booking_approved` is labelled "Approved"** — one is a noun, the others are past participles. Establish the inconsistency across the four booking types.
+- **D28-092** Tone colours: establish that `booking_rejected` and `payment_failed` share the coral tone, and `booking_cancelled` and `payment_refunded` share gold.
+- **D28-093** So a **cancelled booking** and a **refunded payment** are visually identical at a glance apart from the icon.
+- **D28-094** Contrast-check the coral and sage tones against their backgrounds.
+- **D28-095** Rows are separated by `divide-y divide-border/60` inside a `flush` SectionCard.
+- **D28-096** Hover state `hover:bg-muted/30` on a read row versus the unread `bg-bridal-blush/30` — establish whether hovering an unread row makes it look read.
+
+### E. Type coverage — 16 enum types, 11 configured (D28-097 → D28-118)
+
+- **D28-097** Enumerate the DB enum from `notificationModel.js`: 16 labels.
+- **D28-098** Enumerate `NOTIFICATION_CONFIG`: 11 keys.
+- **D28-099** Establish the five with no entry: **`booking_change_request_applied`**, **`lead_stale_48h`**, **`lead_followup_due`**, **`new_lead`** — and confirm the eleventh key `system` is doing double duty as both a real type and the fallback.
+- **D28-100** So each of those four renders the grey `Info` icon and the pill **"System"**.
+- **D28-101** **`new_lead` is the F-7 notification** — fired the instant a public inquiry lands, explicitly *"so the vendor responds fast, instead of only being nudged 48h later once it's already cold"*. Establish that it arrives looking like a system message.
+- **D28-102** `lead_stale_48h` is the F-6 nudge whose enum label was missing entirely until a migration fixed it — the comment records that the feature was **dead in production**. Establish whether any such row exists on this account now.
+- **D28-103** `booking_change_request_applied` is a **money** event (WW-184: "a change-request top-up clears"). Establish that it renders as *System*, grey, indistinguishable from a platform announcement.
+- **D28-104** Query production for the type histogram on this account and record which of the 16 actually occur.
+- **D28-105** For every type present, verify its rendered icon, tone and label against the config.
+- **D28-106** For every type absent, record it as unverifiable rather than passing it.
+- **D28-107** **The fallback is safe** — `|| NOTIFICATION_CONFIG.system` means an unknown type cannot crash the row, unlike the Module 21 `StatusPill`. Confirm and credit.
+- **D28-108** Confirm no type produces `undefined.icon`.
+- **D28-109** Establish whether `data` differs per type in a way the UI could have used (booking id, amount, review id).
+- **D28-110** The booking filter catches `booking_change_request_applied` by prefix, so it appears under **Bookings** while labelled **System**. Verify the contradiction live if such a row exists.
+- **D28-111** The three lead types match **no** filter, so they are *All*-only. Verify.
+- **D28-112** Cross-check the lead types against the Lead inbox module — establish whether the notification and the inbox agree on what is stale.
+- **D28-113** `welcome` renders a blush/mauve `Sparkles`. Establish whether this account still has its welcome row and how old it is.
+- **D28-114** Establish the oldest notification on the account and whether anything ever prunes them.
+- **D28-115** There is no retention policy in the model, no `paranoid`, no TTL. Confirm.
+- **D28-116** So the list grows without bound and the only pruning is manual, one row at a time, behind a hover-only button.
+- **D28-117** Establish the total count on this account and how many **Load more** presses it takes to reach the oldest row.
+- **D28-118** Establish whether the type is exposed anywhere the vendor could filter on beyond the four tabs.
+
+### F. Mark as read (D28-119 → D28-142)
+
+- **D28-119** Click an unread row → the gold bar, the blush background, the bold title and the dot all clear.
+- **D28-120** `unreadCount` decrements by one, and the **Unread** tab count follows.
+- **D28-121** The header's **Mark all read** button disappears when the last unread is cleared. Verify the boundary.
+- **D28-122** Clicking an **already-read** row does nothing — `if (!notification.isRead)` guards it. Verify no request fires.
+- **D28-123** The update is optimistic: state changes before any network call.
+- **D28-124** **When the socket is connected the mutation is `socket.emit("notification:mark-read", …)` — fire-and-forget.** `emit` returns the socket and never throws, so the surrounding `catch` can never run.
+- **D28-125** Establish the consequence: if the server's handler fails, the client has already shown the row as read and will never revert.
+- **D28-126** The server's failure path emits `notification:error` — establish that **nothing in the client listens for it**.
+- **D28-127** Prove it by searching the context for `notification:error`.
+- **D28-128** When the socket is *not* connected the REST path runs, `NotificationAPI.markAsRead` swallows its own error and returns `false` — which the context does not check either. Establish that the `catch` is unreachable on both paths.
+- **D28-129** So a mark-read can fail on both channels without the UI ever knowing.
+- **D28-130** Hard-reload after marking one read and confirm the server agrees (the only real proof this works).
+- **D28-131** Confirm `readAt` is stamped server-side.
+- **D28-132** Mark read, then check the header bell badge and the sidebar count on another page — the same context feeds all three.
+- **D28-133** Mark a row read on the notifications page, navigate to another dashboard page, and confirm the badge is consistent without a reload.
+- **D28-134** Open two surfaces (page + bell dropdown, if one exists) and confirm they do not disagree.
+- **D28-135** The socket broadcasts `notification:unread-count` to `user:<id>` — the whole room, so a second browser tab updates too. Establish whether the *row* also updates in the second tab, or only the count.
+- **D28-136** So in a second tab the badge can read 0 while the rows still render unread. Establish live if a second session is available; otherwise from source.
+- **D28-137** `setUnreadCount((prev) => Math.max(0, prev - 1))` — floors at zero. Verify it cannot go negative under repeated clicks.
+- **D28-138** Rapid-click one unread row several times — confirm only one emit and one decrement.
+- **D28-139** Click several unread rows quickly and confirm the count lands correctly.
+- **D28-140** Mark read while a filter is active — confirm the row does not vanish from **Unread** until the filter is re-evaluated, and establish whether it does so mid-click.
+- **D28-141** …which means clicking a row in the Unread tab makes it disappear under the cursor. Establish the interaction.
+- **D28-142** There is no undo and no "mark unread". Confirm.
+
+### G. Mark all read (D28-143 → D28-156)
+
+- **D28-143** The button renders only when `unreadCount > 0` and carries a `CheckCheck` icon.
+- **D28-144** No confirmation dialog. Establish.
+- **D28-145** Press it: every loaded row loses its unread styling and `unreadCount` goes to 0.
+- **D28-146** The button then disappears — establish that this is the only feedback; there is no toast anywhere in this module.
+- **D28-147** **Confirm: this module fires no toasts at all.** Compare with every other module in the sweep.
+- **D28-148** Optimistic again, and again via `socket.emit` when connected — the same unreachable `catch` as D28-124.
+- **D28-149** The optimistic update marks **only the loaded rows** read, while the server marks **all** rows read. Establish the divergence: press Load more afterwards and check whether the newly loaded rows arrive read.
+- **D28-150** Hard-reload and confirm the server marked everything.
+- **D28-151** Establish what the server returns — `Marked N notifications as read` with `{updated: N}` — and that the client never reads it, so the vendor is never told how many.
+- **D28-152** The revert path restores `prevNotifications` captured from the closure. Establish the staleness risk if a socket event lands mid-flight.
+- **D28-153** `markAllAsRead` depends on `[notifications, unreadCount]`, so it is recreated on every list change — establish whether a click can use a stale closure.
+- **D28-154** Press it with a filter active — confirm it marks everything, not just the filtered set, and that nothing says so.
+- **D28-155** Press it twice quickly.
+- **D28-156** Press it, then check the bell badge and the sidebar count.
+
+### H. Delete (D28-157 → D28-176)
+
+- **D28-157** Hover a row → the trash icon appears at the right.
+- **D28-158** **No confirmation.** One click deletes.
+- **D28-159** Establish that the deletion is a **hard delete**: `NotificationService.delete` on a model with no `paranoid` flag.
+- **D28-160** The row disappears optimistically before the request resolves.
+- **D28-161** `totalCount` decrements **only after** the API resolves; the loaded-page tab counts decrement immediately. Establish the window where *All* disagrees with the visible rows.
+- **D28-162** After a successful delete the context re-fetches `getUnreadCount` — establish that deleting an **unread** notification lowers the badge.
+- **D28-163** …and that deleting a **read** one does not.
+- **D28-164** On failure the row is restored from `prev` — but `prev` is captured from the closure at call time, so establish what happens if a socket event landed in between.
+- **D28-165** `deleteNotification` has `[notifications]` in its dependency array; establish the stale-closure risk on rapid deletes.
+- **D28-166** Delete two rows quickly and confirm both disappear and neither reappears.
+- **D28-167** `NotificationAPI.deleteNotification` swallows its error and returns `false`; the context's `catch` therefore never runs on an HTTP error — only on a thrown exception. Establish that a **404 or 500 leaves the row deleted on screen**.
+- **D28-168** Hard-reload after a failed delete and confirm the row returns — the screen was wrong until then.
+- **D28-169** Drive one delete with the write blocker armed and capture `DELETE /api/v1/notifications/{id}`.
+- **D28-170** Confirm the row returns after a reload, proving nothing was written.
+- **D28-171** The backend scopes the delete to `(id, userId)` — establish that another user's notification 404s rather than deleting.
+- **D28-172** Probe a non-numeric `:id` — the router has **no `param().isInt()` guard**, unlike `reviewRouter` (WW-280). Establish what `NotificationService.delete` does with `abc`.
+- **D28-173** Same for `PATCH /:id/read`.
+- **D28-174** There is **no bulk delete** and no "clear all", though there is a "mark all read".
+- **D28-175** So an account with hundreds of stale notifications can only be cleaned one hover-and-click at a time.
+- **D28-176** Delete the last row on a filter and confirm the empty state appears with the right copy.
+
+### I. Load more and pagination (D28-177 → D28-196)
+
+- **D28-177** **Load more** renders only when `hasMore`.
+- **D28-178** It is disabled while `isLoading` and shows a spinner.
+- **D28-179** Press it and confirm 20 more rows append.
+- **D28-180** Confirm `page` advances and the next press asks for page 3.
+- **D28-181** The client always requests `limit=20`; the server allows up to **50**. Establish the mismatch and the extra round trips it costs.
+- **D28-182** Rows are appended with no dedup: `[...prev, ...result.notifications]`. Establish whether a socket-delivered row that is also on page 2 can appear twice.
+- **D28-183** Establish the offset-shift mechanism: a new notification prepended server-side pushes every row down by one, so page 2 re-serves the last row of page 1.
+- **D28-184** Watch the console for a React duplicate-key warning after a Load more with an intervening socket event.
+- **D28-185** Load every page to the end and confirm **Load more** disappears exactly when `hasMore` goes false.
+- **D28-186** Confirm the total loaded equals `totalCount`.
+- **D28-187** Scroll position after Load more — confirm the page does not jump.
+- **D28-188** Load more while a filter is active — confirm the newly loaded rows are filtered too, and that the tab counts jump.
+- **D28-189** …and that this is the moment the loaded-page counts stop matching *All* (D28-047).
+- **D28-190** There is no virtualisation. Establish render cost at the full count.
+- **D28-191** No scroll-to-top control after loading many pages.
+- **D28-192** The pagination state is not in the URL; a reload starts from page 1.
+- **D28-193** `loadMore` guards on `isLoading || !hasMore`. Rapid double-click and confirm one request.
+- **D28-194** Probe `?page=-5` on the API directly and confirm WW-253's floor returns page 1 rather than a DB error.
+- **D28-195** Probe `?limit=999` and confirm the 50 cap.
+- **D28-196** Probe `?unreadOnly=true` and confirm the server honours it — the parameter the client never sends.
+
+### J. Empty and error states (D28-197 → D28-210)
+
+- **D28-197** *All* with zero rows: **"No notifications yet"** with the longer explanatory copy.
+- **D28-198** A filter with zero matches: **"Nothing here / No notifications match this filter."**
+- **D28-199** The empty state requires `!isLoading` — establish that a slow load shows the spinner, not the empty state.
+- **D28-200** **`NotificationAPI.getNotifications` swallows every error and returns an empty list.** So a 500 or a timeout renders *"No notifications yet"* — a false statement about the account.
+- **D28-201** Establish that no error state exists anywhere in this module: no toast, no retry, no banner.
+- **D28-202** `getUnreadCount` returns 0 on error → **Mark all read** disappears and the badge reads zero.
+- **D28-203** So a failing unread-count endpoint silently tells the vendor they are up to date.
+- **D28-204** The context's `loadInitialNotifications` catch only logs.
+- **D28-205** Establish the behaviour when the token is expired: the axios interceptor force-logs-out on 401.
+- **D28-206** Establish the behaviour when the socket connects but REST fails, and vice versa.
+- **D28-207** Drive a failure injection on `/notifications` and confirm the empty state (tooling permitting).
+- **D28-208** Drive a failure injection on `/unread-count` and confirm the button vanishes.
+- **D28-209** Confirm no unhandled promise rejection in any failure path.
+- **D28-210** Confirm the page never renders a partial/torn state between the two endpoints.
+
+### K. Cross-surface consistency (D28-211 → D28-222)
+
+- **D28-211** The header bell badge reads the same `unreadCount`. Verify on this page and on three others.
+- **D28-212** The sidebar entry's count, if present, matches.
+- **D28-213** Mark one read here → confirm the bell updates without a reload.
+- **D28-214** Delete an unread one here → confirm the bell updates.
+- **D28-215** The provider sits in the root layout, so the same socket serves the public site too if the user visits it. Establish scope.
+- **D28-216** Establish whether notifications appear for a vendor across all three venues or only the account (the model has no `businessId`).
+- **D28-217** So a three-venue vendor cannot tell which venue a notification is about unless the message says so. Check the message text of production rows.
+- **D28-218** Cross-check a `new_review` notification against the Reviews module — confirm the review it names exists and the counts agree.
+- **D28-219** Cross-check a `booking_*` notification against the Bookings module.
+- **D28-220** Cross-check `new_lead` against the Lead inbox.
+- **D28-221** Establish whether every event that *should* notify does: pick a recent booking and a recent review and look for their notifications.
+- **D28-222** …and conversely, whether any notification refers to a record that no longer exists.
+
+### L. Accessibility (D28-223 → D28-236)
+
+- **D28-223** The row is a `div` with `onClick` and no `role`, no `tabIndex`, no keyboard handler.
+- **D28-224** So the primary action of this page — marking a notification read — is **mouse-only**.
+- **D28-225** The delete button is `opacity-0` but still focusable; establish whether Tab reveals it.
+- **D28-226** The delete button's only name is a `title`.
+- **D28-227** The unread indicator bar is `aria-hidden`; the gold dot has no label either. Establish how read/unread is conveyed non-visually.
+- **D28-228** …and conclude whether a screen-reader user can tell an unread notification from a read one at all.
+- **D28-229** The type pill is text, so it reads out; confirm.
+- **D28-230** Tabs expose `role="tab"` with no `tabpanel`. Verify with the accessibility tree.
+- **D28-231** The Live/Offline pill's meaning lives in a `title`; establish whether it is announced.
+- **D28-232** Heading levels: the page title, then each row's `h3`. Establish whether an `h1` exists.
+- **D28-233** Focus order through the page: tabs → rows? → delete buttons → Load more.
+- **D28-234** Colour alone distinguishes the tones; check each against contrast minimums.
+- **D28-235** `prefers-reduced-motion` versus the pulsing Live dot and the spinner.
+- **D28-236** Text sizes: `text-[13.5px]`, `text-[12.5px]`, `text-[10.5px]`, `text-[10px]`. Measure the computed values.
+
+### M. Mobile 360×740 (D28-237 → D28-246)
+
+- **D28-237** No horizontal overflow: `scrollWidth === clientWidth` **and** an element-level right-edge count, ancestor walk stopping before `<body>`.
+- **D28-238** The five filter tabs wrap; count the rows and confirm every count pill stays with its label.
+- **D28-239** **Count the reachable delete buttons.** `opacity-0 group-hover:opacity-100` has no touch equivalent.
+- **D28-240** Establish whether a notification can be deleted at all on a phone.
+- **D28-241** Row layout at 360px: icon disc, title, message, time and pill.
+- **D28-242** The Live/Offline pill inside the description at 360px.
+- **D28-243** **Mark all read** in the header at 360px.
+- **D28-244** Tap targets ≥ 44px on the tabs and the rows.
+- **D28-245** Load more at 360px.
+- **D28-246** Long titles and messages at 360px.
+
+### N. Integrity (D28-247 → D28-258)
+
+- **D28-247** Console clean, apart from the module's own `[Notifications]` connect log.
+- **D28-248** No unhandled promise rejection.
+- **D28-249** Record the full notification inventory at open through a clean realm: total, unread, and the type histogram.
+- **D28-250** Every write attempted, listed with its captured body.
+- **D28-251** Confirm **no notification was deleted**: same total, same ids, same unread count at close.
+- **D28-252** Confirm **no notification was marked read** that was unread at open — establish the read/unread vector before and after.
+- **D28-253** This is the first module where the natural test action (clicking a row) is itself a **write**. Record explicitly how mark-read was exercised without changing state, and what was left undriven because it could not be.
+- **D28-254** Confirm the socket was not used to emit any mutation that bypassed the HTTP write blocker.
+- **D28-255** …and establish that a socket `emit` is **invisible to an XHR/fetch write blocker**, so the blocker alone is not sufficient on this module. Record the mitigation used.
+- **D28-256** Confirm `unreadCount` at close equals the value at open.
+- **D28-257** Confirm the type histogram at close equals the one at open.
+- **D28-258** Confirm no localStorage or sessionStorage key was left behind.
+
+### MODULE 28 — EXECUTION BLOCKED
+
+Cases are written and committed. **Execution has not started**, and no case below is claimed as run.
+
+The MCP browser servers dropped mid-session: `puppeteer` disconnected and `chrome-devtools` never
+reconnected. `ToolSearch` returns no navigation or script-evaluation tool of any kind, so there is
+currently **no way to reach the live portal through a browser at all** — not desktop, not 360px, not
+even a read-only page load. Every prior module in this sweep was driven through the real UI, and the
+standing rule for this work is that the API is an oracle, never a substitute for clicking.
+
+What is recorded above is therefore **source-established only**, and is written as questions to put
+to the live screen rather than as findings. Nothing is marked `[x]`.
+
+Two things about this module make waiting for the browser the right call rather than working around it:
+
+1. **The natural test action is a write.** Clicking a row marks it read. There is no way to exercise
+   the primary interaction of this page without changing the vendor's own notification state.
+2. **The HTTP write blocker is not sufficient here.** When the socket is connected, mark-read and
+   mark-all-read go out as `socket.emit(...)`, which an XHR/fetch interceptor cannot see. A mitigation
+   has to be designed and proven before the first click, not after — D28-253 → D28-255 exist for that.
+
+Resume point: arm the blocker **plus** a socket-emit interceptor, take the clean-realm inventory
+(D28-249), then run section A onward.
