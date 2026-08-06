@@ -69,7 +69,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 37 | Event profit | `/dashboard/venue-os?tab=profit` | ✅ 170 | `[x]` COMPLETE — 121 run, 49 not run, 15 findings (1× S1, 5× S2) |
 | 38 | Venue money | `/dashboard/venue-os?tab=money` | ✅ 200 | `[x]` COMPLETE — 138 run, 62 not run, 14 findings (4× S2) |
 | 39 | Halls & spaces | `/dashboard/venue-os?tab=spaces` | ✅ 170 | `[x]` COMPLETE — 124 run, 46 not run, 10 findings (1× S1, 3× S2) |
-| 40 | Cash & cheques | `/dashboard/venue-os?tab=cash` | — | `[ ]` |
+| 40 | Cash & cheques | `/dashboard/venue-os?tab=cash` | ✅ 140 | `[~]` cases written, executing |
 | 41 | Kitchen & suppliers | `/dashboard/venue-os?tab=kitchen` | — | `[ ]` |
 | 42 | Accounting | `/dashboard/venue-os?tab=advanced` | — | `[ ]` |
 | 43 | Field capture | `/dashboard/field` | — | `[ ]` |
@@ -19974,3 +19974,193 @@ space selector alongside Main Hall and Terrace Lawn.
 - **D39-126/127 calendar cell interaction** — `venueSpacesApi.book` writes a real reservation.
 - **D39-084–088 slot validation** (end before start, midnight crossing, capacity 0) — each requires
   saving a slot that decides what a customer can book.
+
+---
+
+# Module 40 — Cash & cheques (`/dashboard/venue-os?tab=cash`)
+
+**Surface.** Four panels:
+
+| # | Component | What it does | Scope |
+|---|---|---|---|
+| 1 | `CashFloatClose` | open the galla, record collections/deposits, close with a counted amount → over/short | `useBusinessIdField` |
+| 2 | `PdcDrawer` | cheques clearing within N days, overdue flagged | **none — sends `businessId: undefined`** |
+| 3 | `LiabilityCalendarView` | bounce-risk timeline, month by month | `useBusinessIdField` |
+| 4 | `PdcStressOptimiserView` | bounce-stress + payout optimiser | `useBusinessIdField` |
+
+Panel 2 is why the tab shows *"Couldn't load PDC tracking."* on arrival — case D40-021 exists for it.
+
+**Self-imposed limits for this module, each with its reason:**
+
+- **No cash float is opened, recorded into, or closed.** `openCashFloat` / `recordToFloat` /
+  `closeCashFloat` create and mutate a real money row on a live vendor's daily galla, and the close
+  computes an over/short that becomes part of their cash history. Captured and diverted.
+- **`persist` is never set on the liability calendar.** The endpoint takes `persist?: boolean`;
+  every call I make omits it, so nothing is written.
+- **No cheque is marked cleared, bounced or re-presented.**
+- Reads, window switching, the over/short arithmetic (computed from captured inputs, not saved) and
+  every error path are driven in full.
+
+---
+
+## D40-A · Arrival and scope (cases 1–20)
+
+| # | Case | Expected |
+|---|---|---|
+| D40-001 | `?tab=cash` opens on Cash & Cheques | tab active from URL |
+| D40-002 | Reload holds the tab | still cash |
+| D40-003 | All four panels render | 4 card titles |
+| D40-004 | Section hint describes the tab | *"Close the daily galla… chase post-dated cheques"* |
+| D40-005 | No `Venue #` raw box | 0 |
+| D40-006 | Venue dropdowns present and in agreement | count + values |
+| D40-007 | **Does the PDC drawer have a venue control at all?** | it uses no scope hook |
+| D40-008 | No console error on arrival | 0 |
+| D40-009 | No mutating request on arrival | 0 |
+| D40-010 | No horizontal overflow at 1440px | 0 elements |
+| D40-011 | No horizontal overflow at 360px | 0, or inside a scroller |
+| D40-012 | Wide tables have their own scroller | check each |
+| D40-013 | Buttons enabled once the venue resolves | no dead disabled state |
+| D40-014 | Panel headings are vendor language | *galla*, *cheques* |
+| D40-015 | "galla" is explained or obvious in context | copy |
+| D40-016 | Focus ring visible on every control | check |
+| D40-017 | Exactly one `h1` | recorded |
+| D40-018 | Switching venue re-scopes each panel | driven |
+| D40-019 | Switching venue does not leak the previous venue's data | driven |
+| D40-020 | Panel order matches the hint | galla first, cheques second |
+
+## D40-B · The PDC drawer (cases 21–58)
+
+| # | Case | Expected |
+|---|---|---|
+| D40-021 | **The drawer errors on arrival** | *"Couldn't load PDC tracking."* |
+| D40-022 | The request omits `businessId` | `pdcAlerts(undefined, withinDays)` |
+| D40-023 | The backend requires `businessId` | 400 |
+| D40-024 | With `businessId` the endpoint returns data | probe Node-side |
+| D40-025 | So the panel can never show a cheque | the conclusion |
+| D40-026 | The error copy does not name the real cause | it says "couldn't load" |
+| D40-027 | The error copy leaks no internals | check |
+| D40-028 | Four window buttons: 3d 5d 7d 14d | 4 |
+| D40-029 | 5d is the default | check |
+| D40-030 | The active window is visually distinct | `variant="default"` |
+| D40-031 | Switching window re-queries | new request per switch |
+| D40-032 | Each switch fires exactly one request | not two |
+| D40-033 | Switching window while erroring re-errors | no stale state |
+| D40-034 | `retry: false` honoured | one request per failure |
+| D40-035 | The window is not in the URL | record |
+| D40-036 | The empty state names the window | *"in the next N days"* |
+| D40-037 | Loading state present | *"Loading…"* |
+| D40-038 | Table headers: Cheque # Booking Amount Clears Status | 5 |
+| D40-039 | **Cheque rows would show `#id` for the booking** | not a customer name — flag |
+| D40-040 | Amount is PKR-formatted | check |
+| D40-041 | "Clears" is a readable date | not raw ISO |
+| D40-042 | Overdue cheques are flagged | the panel's stated purpose |
+| D40-043 | An overdue cheque is visually distinct | badge/colour |
+| D40-044 | Rows link to the booking | expected 0 — record |
+| D40-045 | Nothing marks a cheque cleared from here | record |
+| D40-046 | Nothing marks a cheque bounced from here | record |
+| D40-047 | The panel is read-only | 0 writes |
+| D40-048 | Probe: are there any PDCs on this account? | Node-side |
+| D40-049 | If none, what would the panel show? | empty state |
+| D40-050 | The 14d window returns a superset of 3d | probe |
+| D40-051 | A 0-day window is handled | probe |
+| D40-052 | A negative window is handled | probe |
+| D40-053 | A huge window is handled | probe |
+| D40-054 | The endpoint is tenant-scoped | audit H3 says it now is — verify |
+| D40-055 | Another vendor's cheques are not returned | reasoned from the scoping |
+| D40-056 | Panel at 360px | usable |
+| D40-057 | Table scrolls inside its own container | present |
+| D40-058 | Keyboard reachable | check |
+
+## D40-C · Cash-float close / galla (cases 59–100)
+
+| # | Case | Expected |
+|---|---|---|
+| D40-059 | Opening float defaults to 0 | check |
+| D40-060 | "Open drawer" disabled until a venue resolves | check |
+| D40-061 | "Open drawer" is captured and diverted | 0 delivered |
+| D40-062 | The captured body carries businessId + openingFloat | check |
+| D40-063 | A negative opening float is rejected | driven |
+| D40-064 | A non-numeric opening float is handled | driven |
+| D40-065 | Collected / deposited fields appear only after opening | check |
+| D40-066 | "Advance float" / record is captured and diverted | 0 delivered |
+| D40-067 | The captured body carries collected + deposited | check |
+| D40-068 | Close requires a counted amount | check |
+| D40-069 | Close is captured and diverted | 0 delivered |
+| D40-070 | **Expected = opening + collected − deposited** | the panel's stated formula |
+| D40-071 | Over/short = counted − expected | arithmetic |
+| D40-072 | A short is shown in red | check |
+| D40-073 | An over is shown distinctly | check |
+| D40-074 | Exactly zero over/short is shown as balanced | check |
+| D40-075 | The over/short is stated in rupees, not a percentage | check |
+| D40-076 | Negative collected rejected | driven |
+| D40-077 | Negative deposited rejected | driven |
+| D40-078 | Deposited > collected + opening is flagged | driven |
+| D40-079 | A counted amount of 0 is a valid answer | driven |
+| D40-080 | Decimal paisa handled | driven |
+| D40-081 | Very large amounts do not overflow | driven |
+| D40-082 | The panel explains what a galla close is | copy |
+| D40-083 | Nothing claims the count was verified by anyone | wording |
+| D40-084 | A second open on the same day is prevented or flagged | reasoned |
+| D40-085 | Closing twice is prevented | reasoned |
+| D40-086 | The float is venue-scoped | businessId in body |
+| D40-087 | Switching venue clears an open float | driven |
+| D40-088 | Error copy is human | *"Couldn't load cash-float."* |
+| D40-089 | Error copy leaks no SQL | check |
+| D40-090 | One click → one request | not two |
+| D40-091 | Double-clicking Open does not double-fire | busy guard |
+| D40-092 | Busy state disables the buttons | check |
+| D40-093 | The panel at 360px | usable |
+| D40-094 | Amounts are `tabular-nums` | check |
+| D40-095 | No `Rs NaN` | sanity |
+| D40-096 | The close result names the drawer it closed | check |
+| D40-097 | Nothing prints or exports the close | record |
+| D40-098 | The close does not reach the Money tab as an expense | reasoned |
+| D40-099 | The float is not in the URL | record |
+| D40-100 | Keyboard reachable | check |
+
+## D40-D · Liability calendar + bounce-stress (cases 101–140)
+
+| # | Case | Expected |
+|---|---|---|
+| D40-101 | "Build calendar" disabled until a venue resolves | check |
+| D40-102 | From / To month fields present | 2 |
+| D40-103 | **Do they default to anything?** | flag if blank |
+| D40-104 | Building the calendar is a GET | read |
+| D40-105 | **`persist` is not sent** | it must stay a read |
+| D40-106 | The calendar returns month rows | probe |
+| D40-107 | Each month shows liabilities due | check |
+| D40-108 | Each month shows projected cash | check |
+| D40-109 | A shortfall month is flagged | the panel's purpose |
+| D40-110 | The flag names the amount short | check |
+| D40-111 | Bounce risk is explained in words | not just a number |
+| D40-112 | An empty range returns an honest empty | probe |
+| D40-113 | A reversed range is handled | probe — WWL-572 family |
+| D40-114 | An invalid month is handled | probe |
+| D40-115 | A 1-month range works | probe |
+| D40-116 | A 24-month range works | probe |
+| D40-117 | "Bounce-stress" is a POST — is it pure? | verify in the controller |
+| D40-118 | If it writes, it is captured and diverted | safety |
+| D40-119 | If pure, it is driven for real | live |
+| D40-120 | The stress result names which months are PDC-dependent | `pdcDependentMonths` |
+| D40-121 | `projectedCashWithPdc` vs `shortfallWithoutPdc` both shown | check |
+| D40-122 | The difference between them is explained | copy |
+| D40-123 | "Optimise payout" is a POST — is it pure? | verify |
+| D40-124 | If it writes, captured and diverted | safety |
+| D40-125 | The optimiser explains what it optimised | copy |
+| D40-126 | The optimiser does not actually pay anyone | verify |
+| D40-127 | Nothing on the panel moves money | 0 writes |
+| D40-128 | Error copy is human | check |
+| D40-129 | Error copy leaks no SQL | check |
+| D40-130 | One click → one request | not two |
+| D40-131 | The panel at 360px | usable |
+| D40-132 | Wide output scrolls in its own container | check |
+| D40-133 | Months render as `MMM YYYY`, not `2026-08` | check |
+| D40-134 | Amounts PKR-formatted | check |
+| D40-135 | The range is not in the URL | record |
+| D40-136 | Switching venue clears the calendar | driven |
+| D40-137 | The calendar reconciles with the Today board's "To collect" | cross-check |
+| D40-138 | The calendar reconciles with the PDC drawer | both are cheques |
+| D40-139 | Keyboard reachable | check |
+| D40-140 | **Zero mutating requests across the entire module** | headline safety assertion |
+
+**Total: 140 cases.**
