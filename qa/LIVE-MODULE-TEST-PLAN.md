@@ -56,7 +56,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 24 | Generator fuel | `/dashboard/generator-fuel` | ✅ 132 | **`[x]` COMPLETE — 62 run, 70 not run, 18 findings (5× S2)** |
 | 25 | Halal certs | `/dashboard/halal-certs` | ✅ 138 | **`[x]` COMPLETE — 58 run, 80 not run, 19 findings (3× S2)** |
 | 26 | Drone NOC | `/dashboard/drone-noc` | ✅ 138 | **`[x]` COMPLETE — 60 run, 78 not run, 17 findings (3× S2)** |
-| 27 | Reviews | `/dashboard/reviews` | ✅ 310 | `[~]` cases written — execution in progress |
+| 27 | Reviews | `/dashboard/reviews` | ✅ 310 | **`[x]` COMPLETE — 218 run, 92 not run, 26 findings (1× S1, 6× S2)** |
 | 28 | Notifications | `/dashboard/notifications` | — | `[ ]` |
 | 29 | Promote | `/dashboard/promote` | — | `[ ]` |
 | 30 | Plan & billing | `/dashboard/billing` | — | `[ ]` |
@@ -12607,3 +12607,570 @@ Live baseline established before writing (clean fetch, no hooks):
 - **D27-308** Every write attempted in this module, listed with its captured body.
 - **D27-309** Clean-realm integrity check at close: review count, per-venue counts, every rating, every `vendorReply`, every `vendorReplyDate`, every `isPinned`, and the automation `silentRecent` ids — all compared against the values recorded at open.
 - **D27-310** `localStorage` restored: `ww:notOnWa:v1` returned to its pre-test value.
+
+---
+
+## MODULE 27 — EXECUTION RESULTS
+
+Driven on live prod `https://www.weddingwala.pk/dashboard/reviews` as user **3351**, with every write
+captured and diverted and a clean-realm integrity check at close. **The first populated module in
+nine** — 8 reviews, all four surfaces carrying real data — so the arithmetic was checked against
+rows rather than against zeros.
+
+**218 of 310 cases driven. 26 findings (1× S1, 6× S2, 15× S3, 4× S4). Nothing was written.**
+
+| Integrity check (clean iframe realm, at close) | At open | At close |
+|---|---|---|
+| Reviews | 8 (ids 23–30) | **8 (ids 23–30)** |
+| Ratings, in order | 5·4·4·3·5·5·5·4 | **5·4·4·3·5·5·5·4** |
+| `isPinned` | all false | **all false** |
+| `vendorReply` lengths | 72·72·72·74·72·72·72·72 | **identical** |
+| `vendorReplyDate` | 8 dates | **identical** |
+| Per venue — 3358 / 3359 / 3360 | 3 / 2 / 3 | **3 / 2 / 3** |
+| Automation | 11 / 8 / 3 · 73% | **11 / 8 / 3 · 73%** |
+| Silent booking ids | 164, 162, 159 | **164, 162, 159** |
+| Reputation | 4.4 · 8 · 8 replied | **4.4 · 8 · 8 replied** |
+| `ww:notOnWa:v1` in localStorage | absent | **absent** |
+| Diverted writes | — | **5**, listed below |
+| Console errors | — | **1**, the Radix one below |
+
+The five captured writes, none of which reached the server:
+
+```
+PATCH /api/v1/reviews/30/reply   {"reply":"Shukriya for your kind words! It was our pleasure…"}   ×2
+PATCH /api/v1/reviews/30/pin     {"isPinned":true}                                                ×2
+DELETE /api/v1/reviews/30                                                                          ×1
+POST  /api/v1/reviews/automation/164/dismiss  {"action":"dismiss"}                                 ×1
+```
+
+**Viewport note.** The browser tool holding this session runs at a fixed **800×600**. That is above
+the `md` breakpoint and below `lg`, so this run is a *tablet-width* desktop. Where a case depends on
+a width I could not set, it is recorded as not run — but note that one finding below (WWL-377)
+falls out of exactly this: two toolbar controls are already gone at 800px.
+
+### WWL-356 (S1) — the reviewed party can permanently erase the review
+
+`deleteReview` authorises on super-admin **or** the review's author **or**
+`review.business.userId === req.user.id`. The third clause is the vendor being reviewed. `Review` is
+not paranoid, so `destroy()` is a **hard delete** — the rating, the comment and the vendor's own
+public reply leave the database.
+
+Driven live with the blocker armed:
+
+| Step | Observed |
+|---|---|
+| Row action → **Delete** | confirm dialog opens |
+| Confirm copy | *"Are you sure you want to delete this review by "Zeeshan Akram"? This action cannot be undone."* |
+| Press **Delete** | `DELETE /api/v1/reviews/30` captured |
+| Toast | **"Review deleted successfully"** |
+| Row after refetch | **still present** (the write was diverted) |
+
+Everything the platform shows a customer recomputes from the surviving rows: the 4.4 average, the
+star distribution, the six-month trend, the public listing. A 1★ deleted is a 1★ that never
+existed, and the vendor needs no reason, no cooling-off and no counter-signature to do it. The
+deletion is snapshotted to the audit log inside `try { … } catch (_) {}` — best-effort, so a logging
+failure loses the trail and the delete still proceeds — and no screen in the vendor portal surfaces
+that log to anyone.
+
+The same clause lets the **author** delete a review the vendor has already replied to, taking the
+vendor's published reply with it.
+
+### WWL-357 (S2) — the reviews export has an empty Rating column
+
+Captured from the live Export control without downloading:
+
+```
+Full Name,Phone Number,Booking Id,Business,Rating,Date
+Zeeshan Akram,0335755699,#165,,,
+Talha Nadeem,0329349087,#163,,,
+Adnan Malik,0332534439,#161,,,
+…
+```
+
+`exportTableToCSV` reads `row.getValue(col.id)`. The **Business**, **Rating** and **createdAt**
+columns are declared with an `id` and a `cell` renderer and **no `accessorKey`**, so there is no
+accessor for `getValue` to call and every cell resolves to `undefined` → `""`. Three of the six
+promised columns are empty in every row, and one of them is the rating — the only number the file
+exists to carry.
+
+The export also disagrees with the screen: the file says `#165`, the grid says `##165` (WWL-363).
+
+### WWL-358 (S2) — "nudge them on WhatsApp", with no WhatsApp button on any row
+
+The silent-customer list is headed **"Silent customers — nudge them on WhatsApp"**. Counted in the
+live DOM:
+
+| Control | Rendered |
+|---|---|
+| Call pill | **3** |
+| Dismiss button | **3** |
+| **WhatsApp pill** | **0** |
+| "Not on WhatsApp" X | **0** |
+
+`isValidWaTarget` demands `/^923\d{9}$/` — twelve digits. All three stored numbers are **ten**
+digits (`0304537951`), which normalise to `92304537951`, eleven. So the guard is right and the data
+is one digit short of a Pakistani mobile — which also means the **Call** pill beside it emits
+`tel:0304537951`, a number that cannot connect. Every phone on this account is ten digits: all three
+silent customers and all eight reviewers.
+
+Whichever end is wrong, the outcome on production today is that the card's entire call to action
+renders for nobody, and the fallback it offers dials an unreachable number.
+
+### WWL-359 (S2) — the AI summary reports an average rating that is not this venue's
+
+Driven live against **Rehman Grand Marquee (3358)**, whose three reviews are 4, 5 and 4 — an average
+of **4.3**. The generated report opened:
+
+> **Overall: Excellent execution with 4.7/5 average rating; guests consistently praise event
+> delivery but venue climate control needs attention.**
+
+**4.7** is not this venue's average. It is the *category benchmark* printed two cards higher up the
+same page. The footer beneath the report correctly says *"Based on 3 recent reviews"*, so the model
+was given three reviews and reported a fourth number.
+
+The prompt sends `rating` with each review and the response is rendered verbatim with no
+verification against the figure the page itself computed. The qualitative half of the report is
+good — it correctly surfaces the AC complaint and the parking praise — which is exactly what makes
+the wrong headline number dangerous.
+
+### WWL-360 (S2) — the vendor is benchmarked against their own other venues
+
+`getReputation` builds the peer set as *every business of the same `vendorType`*, then removes
+`ownIds` — where `ownIds = new Set(bizIds)` and **`bizIds` is `[scopedBid]` when a venue is
+active**. So under a venue scope only *that* venue is excluded, and the vendor's remaining venues
+are counted as peers.
+
+Proven through the UI, not the API:
+
+| Scope | Own average | **Category avg** | Badge |
+|---|---|---|---|
+| All venues | 4.4 | **4.7** | −0.3 vs peers |
+| Rehman Banquet & Lawn (3359) | 5.0 | **4.6** | **+0.4 vs peers** |
+
+The peer average fell 4.7 → 4.6 the moment the vendor scoped to one venue, because their own 3358
+(4.3) and 3360 (4.0) walked into the pool. The vendor's own weaker venues make the venue they are
+looking at appear to beat the market.
+
+The comparison is thin on top of that: it averages **every** review of **every** business of that
+vendorType with no minimum-review floor, no recency window and no city filter — a Johar Town hall
+against a Quetta lawn.
+
+### WWL-361 (S2) — a reply is permanent after thirty minutes, and nothing on screen says so
+
+The backend locks reply edits after `VENDOR_REPLY_EDIT_WINDOW_MIN` (live value **30**), returning
+`409 vendor_reply_already_exists`. It returns `replyEditWindowMinutes` on the list endpoint
+specifically so the client can hide the action — the code comment says so: *"lets the client know a
+reply's age, so it can hide 'Edit reply' once the window has closed instead of surfacing a 409."*
+
+`ReviewsAPI.getAll` returns the whole payload and `ReviewsTable` reads `result.reviews` only. The
+window is discarded.
+
+So all eight live replies — the newest is five days old — offer **Edit Reply**, and every one of
+them would collect a 409. What the vendor sees when a submit fails, driven live under injected
+failure:
+
+| | |
+|---|---|
+| Toast | **"Failed to post reply"** |
+| Dialog | stays open, text preserved |
+| Server message shown | **none** |
+
+The handler is `catch { toast.error('Failed to post reply') }` — an empty binding, so it cannot read
+`code` or `message`. A 409 lock, a 400 over-length, a 403 and a dropped connection all produce the
+same six words.
+
+And `DELETE /api/v1/reviews/:reviewId/reply` — owner-scoped, idempotent, and documented as *"a
+de-escalation (removing text), so it is intentionally NOT subject to the edit lock — a vendor may
+always retract"* — **has no consumer anywhere in the product.** A reply written in anger thirty-one
+minutes ago can be neither edited nor withdrawn from any screen.
+
+### WWL-362 (S2) — switching venue changes nothing until a full reload
+
+Driven: switch from **All venues** to **Rehman Banquet & Lawn** through the real switcher.
+
+| | Immediately after the switch | After a hard reload |
+|---|---|---|
+| Switcher label | Rehman Banquet & Lawn | Rehman Banquet & Lawn |
+| Table rows | **8, from all three venues** | **2, both Banquet & Lawn** |
+| Reputation | **4.4 · 8 reviews** | **5.0 · 2 reviews** |
+| Distribution | 4/3/1/0/0 | 2/0/0/0/0 |
+
+All four surfaces fetch in a bare `useEffect(…, [])` on mount rather than through a query keyed on
+the active business, so a venue change re-labels the chrome and leaves every number on the page
+belonging to a different scope. The vendor is looking at a screen that says one venue and shows
+three.
+
+### WWL-363 (S3) — every booking id renders with two hashes
+
+`getAllReviewsList` returns `bookingId: \`#${r.bookingId}\``, already prefixed. The column then
+renders `` id ? `#${id}` : "—" ``. Live, on all eight rows: **`##165`, `##163`, `##161`, `##160`,
+`##158`, `##157`, `##156`, `##155`.**
+
+The em-dash fallback is unreachable as a consequence: a null booking arrives as the **string**
+`"#null"`, which is truthy, so an unlinked review would render `##null` rather than `—`.
+
+### WWL-364 (S3) — three surfaces on one page, three different opinions of which venue you are on
+
+| Surface | Endpoint | Venue-scoped? |
+|---|---|---|
+| Reputation panel | `/analytics/reputation` | **yes** — `/analytics/` is in `BUSINESS_SCOPED_PREFIXES` |
+| Reviews table | `/analytics/reviews` | **yes** |
+| Automation card | `/reviews/automation-stats` | **no** — `/reviews` is not in the prefix list, *and* the controller ignores `req.query.businessId` |
+| AI summary picker | `/ai/businesses/:id/…` | **no** — defaults to `businesses[0]` |
+
+Proven on the wire: `automation-stats` and `automation-stats?businessId=3359` return
+**byte-identical** payloads, and under a 3359 scope the card still reads 11 / 8 / 3 / 73% while the
+panel above it reads 5.0 over 2 reviews.
+
+The AI picker defaulting to `businesses[0]` is the **eighth** module in this sweep with that
+mechanism; here it is at least recoverable, because the vendor can change it.
+
+### WWL-365 (S3) — dismissing a customer produces a response rate that contradicts its own numbers
+
+Driven live, values read off the four tiles:
+
+| | Prompted | Responded | Silent | Response rate |
+|---|---|---|---|---|
+| Before | 11 | 8 | 3 | **73%** |
+| Immediately after Dismiss | **10** | 8 | 2 | **73%** |
+
+Two faults in one optimistic update. `prompted` is decremented, but the prompt *was* sent —
+dismissing records that the customer will not reply, not that they were never asked. And
+`responseRate` is not recomputed, so the card displays 8 out of 10 as **73%** when its own arithmetic
+says 80%.
+
+The backend also supports `action: 'restore'`, and the UI never sends it — **a dismissed customer
+cannot be put back from any screen.**
+
+### WWL-366 (S3) — the box labelled "Search Review" cannot search a review
+
+`table.getColumn("reviewerName").setFilterValue(…)` — the reviewer's name and nothing else. Driven
+against the live eight:
+
+| Query | Matches |
+|---|---|
+| `Hamza` / `hamza` / `HAMZA` | 1 ✓ (case-insensitive) |
+| `food` — a word in a review | **No results.** |
+| `shandar` — a word in a review | **No results.** |
+| `Rehman Marquee` — a visible column | **No results.** |
+| `165` — a visible column | **No results.** |
+| `0335755699` — a visible column | **No results.** |
+| `zeeshan.akram` — visible in the same cell as the name | **No results.** |
+
+Five of the six visible columns are unsearchable, including the phone number, which has a column of
+its own, and the email, which is printed directly beneath the name that *does* match.
+
+### WWL-367 (S3) — "below your category average", on a sample the vendor is never shown
+
+The panel prints **Category avg 4.7** and **−0.3 vs peers**. The API returns, and the panel
+discards:
+
+| Field | Value |
+|---|---|
+| `categoryBenchmark.reviewCount` | **15** |
+| `categoryBenchmark.businessCount` | **728** |
+
+The vendor is told they trail their category on the strength of **fifteen reviews spread across 728
+Wedding-venue businesses** — an average of one review per forty-nine competitors — and is shown
+neither number.
+
+### WWL-368 (S3) — the table cannot answer any question a reviews screen is opened to answer
+
+| Wanted | Available |
+|---|---|
+| Read the review | **no column** — it is behind the row menu → View |
+| Which ones have I not replied to? | **no column**; the panel says 100% and the table cannot show the other 0% |
+| Which ones are pinned? | **no column**, though Pin is a row action |
+| Sort by rating | **no** — all eight headers are plain strings, 0 controls, no `aria-sort`, `cursor: auto` |
+| Sort by date | **no** |
+| Filter to 1★ | **no** — and the distribution row that shows you have them is not clickable |
+| Filter to a date range | **no** |
+
+`getSortedRowModel` is wired into `useDataTable` and no header exposes a control to reach it.
+
+### WWL-369 (S3) — pressing "Pin" says "Review unpinned"
+
+```js
+const res = await ReviewsAPI.togglePin(review.id, !review.isPinned);
+toast.success(res?.isPinned ? 'Review pinned — it'll showcase first' : 'Review unpinned');
+```
+
+Driven live with the write diverted: the menu item read **Pin (showcase)**, the captured body was
+`{"isPinned":true}`, and the toast read **"Review unpinned"**. The message is derived from a response
+the code never checks arrived, and `?.` turns "no response" into "unpinned" rather than into an
+error. On refetch the row was still unpinned — so the screen corrects itself while the toast says
+the opposite of what was attempted.
+
+There is no pinned indicator in the grid, so after a *real* pin that vanishing toast is the only
+feedback there ever is.
+
+### WWL-370 (S3) — every write on this screen reports success without checking
+
+With writes diverted to a path that answers `200 {"message":"Event Planner API is running"}` — the
+API's catch-all for unmatched routes — the module produced:
+
+| Action | Toast | Reality |
+|---|---|---|
+| Update reply | **"Reply posted successfully"** | reply unchanged |
+| Delete review | **"Review deleted successfully"** | row still present after refetch |
+| Dismiss customer | **"Removed from silent list"** | booking 164 still silent |
+
+None of the three handlers inspects the response body. Worth noting alongside them: the backend
+answers **200** for every unmatched route, including `GET /api/v1/reviews/abc/pin`, so a client that
+trusts the status code alone can never detect a wrong URL.
+
+### WWL-371 (S3) — the AI report renders as raw markdown
+
+The card's own header comment says it *"renders the markdown reply inside a soft card"*. It renders
+into a `whitespace-pre-line` div with no markdown parser. Live output, verbatim:
+
+```
+# Vendor Performance Report
+
+**Overall: Excellent execution with 4.7/5 average rating; …**
+
+**Customers love**
+- Decor and food quality consistently exceed expectations…
+```
+
+Counted in the rendered node: 1 literal `#`, 8 literal `**`, 5 literal `- ` bullets, and **zero**
+`<strong>`, `<h1>`, `<h2>`, `<ul>` or `<li>` elements.
+
+### WWL-372 (S3) — the View dialog has no name, and no way to close it
+
+| Check | Result |
+|---|---|
+| `DialogTitle` | **absent** |
+| Browser console | ``DialogContent` requires a `DialogTitle` for the component to be accessible for screen reader users.` |
+| `aria-labelledby` | `radix-:r23:` — **an id that does not exist in the document** |
+| `aria-describedby` | resolves to the **review text**, so the review body is the dialog's description |
+| Buttons inside the dialog | **0** — no close X, no Reply, no Pin, no Delete |
+| Focus after Esc | **`<body>`**, not the trigger it came from |
+
+A screen-reader user is dropped into an unnamed dialog whose description is the review, with no
+labelled way out; a touch user has only the overlay.
+
+### WWL-373 (S3) — a reply dated before the review it answers, printed side by side
+
+Two of the eight live rows, both visible in the View dialog:
+
+| Reviewer | Review date | Vendor reply date |
+|---|---|---|
+| Zeeshan Akram | 01/08/2026 | **31/07/2026** |
+| Usman Tariq | 01/04/2026 | **26/03/2026** |
+
+`replyToReview` stamps `vendorReplyDate = new Date()` and nothing anywhere constrains it against
+`createdAt`. The dialog prints both dates a few lines apart with no comment. On a screen that exists
+to evidence how a vendor handles feedback, two rows say the reply came first.
+
+### WWL-374 (S3) — the reply box has no limit, against a server that has one
+
+`replyToReview` rejects anything over **1500** characters with a 400. Driven live: pasted 1600
+characters into the textarea →
+
+| | |
+|---|---|
+| `maxLength` | **−1** (none) |
+| Character counter | **none** |
+| Warning at 1500 | **none** |
+| Submit button | **enabled** |
+
+The vendor writes a long, careful reply and gets *"Failed to post reply"* (WWL-361) with no
+indication that length was the problem.
+
+### WWL-375 (S3) — review photos are uploadable and invisible to the vendor
+
+`Review.photosJson` exists. `POST /api/v1/reviews/:reviewId/photos` exists — multipart, EXIF-
+stripped, virus-scanned, capped at five. `DELETE /api/v1/reviews/:reviewId/photos/:filename` exists.
+The public review page at `/review/[token]` uploads them.
+
+Nothing in the vendor dashboard reads them: the View dialog rendered **0 images**, there is no photo
+column and no photo consumer anywhere under `components/dashboard`. A customer who photographs a
+problem has documented it somewhere the vendor cannot look.
+
+### WWL-376 (S3) — three of the four surfaces fail invisibly, and one of them lies
+
+| Surface | On failure |
+|---|---|
+| Reputation panel | `setData(null)` → **the entire panel disappears**, no error, no retry |
+| AI summary card | `setAvailable(false)` → **the card disappears** |
+| Automation card | `setData(null)` → falls into *"No post-event review prompts have been sent yet."* — **a false statement** about the vendor's data |
+| Reviews table | `setData([])` + a toast → renders the **empty table**, not an error state |
+
+A vendor whose reputation endpoint is timing out sees a Reviews page with no reputation section at
+all and no way to know one exists.
+
+### WWL-377 (S3) — Export and the column menu vanish above phone width
+
+Both live inside `className="ml-auto hidden lg:flex …"`. At the 800px viewport this run used, the
+wrapper computed to `display: none` — the Export button was still in the DOM and still functional
+when clicked programmatically, but **not reachable by a user**. Everything narrower than 1024px —
+every tablet, every laptop with the window split — loses both controls, not just the 360px case.
+
+### WWL-378 (S3) — `0092…` normalises to `92092…`
+
+`waLink`/`isValidWaTarget` do `d.startsWith("0") ? "92" + d.slice(1) : d`, which strips exactly one
+leading zero. Computed across the forms a Pakistani vendor actually types:
+
+| Entered | Normalised | Passes |
+|---|---|---|
+| `03045379512` | `923045379512` | ✅ |
+| `+923045379512` | `923045379512` | ✅ |
+| `+92 300 1234567` | `923001234567` | ✅ |
+| **`00923045379512`** | **`920923045379512`** | ❌ |
+| `3045379512` | `3045379512` | ❌ |
+| `0512345678` (landline) | `92512345678` | ❌ *(correctly)* |
+
+`0092` is the standard international prefix on Pakistani printed stationery and on most PBX exports.
+
+### WWL-379 (S3) — the accessibility floor across the page
+
+| Check | Result |
+|---|---|
+| `<th scope>` | **absent on all 8 headers** |
+| `<h1>` on the page | **0** |
+| Rows named "Select row" | 8 identical |
+| Row triggers named "Open actions" | 8 identical, no row context — and each also carries an `sr-only` *"Open menu"*, two names on one control |
+| Reputation panel stars | **no `aria-label`** — while the table's carry `"5 out of 5 stars"` |
+| Distribution / trend bars | no accessible value; the trend's count lives only in a `title` |
+| "Your Reply" label | no `htmlFor`; the textarea has no `id` |
+| Sidebar `aria-current="page"` | on **`/dashboard/chat` (Messages)** while the browser is on `/dashboard/reviews` |
+
+That last one is not module-scoped: the rail tells assistive technology the user is on Messages
+whichever dashboard page they are actually on.
+
+### WWL-380 (S3) — pagination past 100 reviews does not exist
+
+`ReviewsAPI.getAll(1, 100)` is hard-coded, and the table is built with `totalItems: data.length`.
+The server's `pagination.total` and `totalPages` are fetched and thrown away. A vendor with 101
+reviews is shown 100, is told the total is 100, and has no page 2 to reach the rest. The server caps
+`limit` at 100 as well, so raising the client number alone would not help.
+
+### WWL-381 (S3) — a selection column with nothing to select for
+
+Every row carries a checkbox and the footer counts *"0 of 8 row(s) selected"*. Nothing consumes
+`table.getSelectedRowModel()` on this screen — no bulk delete, no export-selected, no bulk reply.
+
+### WWL-382 (S3) — the delete confirm identifies the wrong thing
+
+*"Are you sure you want to delete this review by "Zeeshan Akram"?"* — the reviewer's name, and
+nothing else. Not the rating being erased, not the date, not the venue, not a word of the review.
+No reason is captured, and the customer is never told.
+
+### WWL-383 (S3) — the keyword tally cannot tell praise from complaint
+
+Rendered live: **Hall 4 · Food 3 · Issue 3 · Cool 3 · Marquee 2 · Area 2 · Management 2 · Personally
+2 · Supervised 2** — nine identical neutral badges under *"What customers mention"*. *"Issue"* and
+*"Cool"* carry the same weight and the same styling as *"Food"*.
+
+The tokeniser is `/[a-z]{3,}/g`, so an **Urdu-script comment contributes nothing at all**, while
+Roman-Urdu survives and is absent from the stopword list — *"bohat"* and *"shandar"* are eligible
+keywords, *"personally supervised"* is already surfacing as two.
+
+### WWL-384 (S4) — every review is timestamped 05:00 am
+
+`formatDateTime` prints a time from a date-only value. All eight rows read **`05:00 am`** —
+UTC midnight rendered in PKT. The column is eight identical times beside eight different dates.
+
+### WWL-385 (S4) — the trend chart has no scale
+
+Six bars, heights `average / 5`, and no axis, no gridline, no year and no count on the face. A 4.0
+and a 5.0 differ by a fifth of a bar. The month's review count exists only in a `title` attribute —
+unreachable on touch — and a month with no reviews renders as a 4px stub that reads as a broken bar
+rather than as absence.
+
+### WWL-386 (S4) — the shareable PNG will clip a long venue name
+
+The card renders correctly for the live data — 1080×1080, `wedding-wala-review-30.png`, 86,783 bytes,
+captured without downloading. But only the **quote** is wrapped; the star row, the attribution and
+the business name are drawn with a bare centred `fillText`. Measured against the 1080px board with
+the exact fonts the code uses:
+
+| Line | Width |
+|---|---|
+| `Rehman Banquet & Lawn` (live) | 497px ✓ |
+| A 55-character venue name | **1223px** — 143px over, clipped at both ends |
+
+The threshold is **36 characters**. `URL.revokeObjectURL` also fires synchronously on the line after
+`a.click()`, and the *"Review card downloaded"* toast fires whether or not the browser took the file.
+
+### WWL-387 (S4) — two "response rates" on one page, 100% and 73%
+
+The reputation panel says **"Replied to 100% (8/8)"**; ~400px below it the automation card says
+**"RESPONSE RATE 73%"**. They measure opposite directions — replies the vendor sent, versus reviews
+customers left — and nothing on the page says so. Under the 73% tile sits *"Avg 4.4 / 5"*, a rating
+average parked beneath a card labelled *Response rate*.
+
+---
+
+### What passed, and it is worth saying
+
+- **L — nothing was written.** Eight reviews in, eight reviews out; every rating, every reply, every
+  reply date, every pin flag and every silent-booking id identical at close through a clean iframe
+  realm. Five diverted writes, all listed.
+- **D27-227 / D27-228 — the reply dialog gates its own submit properly.** Empty → disabled. Spaces
+  only → disabled. One character → enabled. That is the BUG-057 pattern done right, and it is the
+  direct counter-example to WWL-327 (Halal certs) and WWL-346 (Drone NOC), which both enforce a
+  required field with an error toast on a live button.
+- **D27-261 — WW-280's guard holds.** `PATCH /api/v1/reviews/abc/pin` → **400 "Invalid reviewId"**,
+  and `reviewId=0` → 400. Not the raw Postgres 500 the fix was written for.
+- **The backend's own review logic is careful where it matters.** WW-025 scopes the "responded" set
+  to the vendor's *own* businesses, so a couple reviewing only the caterer no longer marks the
+  photographer's booking answered. WW-161 counts only `Completed` bookings in the denominator.
+  WW-026 enforces one review per `(booking, business)` with a partial unique index. WW-162 snapshots
+  a deletion before it happens. Each is a real defect someone found and fixed properly.
+- **`deleteReply` is well-reasoned code** — owner-scoped, idempotent, and deliberately exempt from
+  the edit lock with the reasoning written down. It is a good answer to a real problem; it simply
+  has no button (WWL-361).
+- **The share text and the PNG are genuinely nice work.** `★★★★★ (5/5)`, the quote, the attribution,
+  the venue, *"reviewed on Wedding Wala"* — assembled correctly, `&` encoded correctly, and the
+  WhatsApp URL carries **no recipient**, so Share opens a picker and cannot message anyone by
+  accident. The canvas card is drawn without a single dependency.
+- **`kitchen`-grade domain sense in the automation copy** — *"Assalam-o-Alaikum {name} — hope your
+  event went well. Could you take a moment to leave us a review? Shukria!"* is the right register
+  for this market, and Issue #19's mobile-only guard exists precisely because vendors were tapping
+  WhatsApp on landlines.
+- **D27-289 — no horizontal overflow** at 783px, measured with the corrected element-level walk
+  (ancestor scan stopping before `<body>`): `scrollWidth === clientWidth === 783` **and** 0 elements
+  past the right edge.
+- **The star renderer clamps** (`Math.max(0, Math.min(5, value))`) and carries
+  `aria-label="{v} out of 5 stars"`.
+- **Refresh works and is honest** — one request, numbers restored.
+- **D27-142 / D27-143 — the AI card's busy states are correct**: *Run summary* → *Analysing…*
+  (disabled, spinner) → *Re-run*, and the footer's *"Based on 3 recent reviews"* matched the venue's
+  real count exactly.
+
+### Not driven, each with its reason
+
+| Cases | Why |
+|---|---|
+| **D27-289 → D27-298** (360×740, apart from the overflow measurement) | **No CDP device emulation** in the replacement browser tool, as recorded for Modules 24–26. The viewport is fixed at 800×600. A window-resize substitute has already been proven in this sweep to report a wrong `clientWidth`, so I am not producing a measurement I know to be unreliable. WWL-377 records what *is* observable at 800px. |
+| **D27-068 → D27-070** (clipboard read-back) | `navigator.clipboard.readText()` refuses in an unfocused headless document. The **Copy** button was clicked and its failure toast (*"Could not copy"*) fired correctly, which exercises the `?.`-guarded rejection path; the success path is recorded as source-verified. |
+| **D27-058, D27-147, D27-028** (empty/edge branches) | Every live venue has reviews, a `vendorType` and a 5★ top review, so the "best review is 3★", "business with zero reviews" and "vendorType is null" branches cannot be reached without writing. All three established from source. |
+| **D27-232** (a real 409 on a locked reply) | Establishing it live means sending a real `PATCH`. The 409 is returned before `review.save()`, so it would not mutate — but the finding is about a lock I can read, and the client's handling of *any* failure was driven directly under injected failure (WWL-361). |
+| **D27-090, D27-091** (was an email actually sent) | Requires the outbox and the cron's run history, which are outside this route. Recorded as an open question against the word *"prompted"*. |
+| **D27-096** (the 500-booking truncation) | This account has 11 prompted bookings. Established from `limit: 500` in the controller. |
+| **D27-107** (the 20-row silent cap) | Three silent customers live. Established from source. |
+| **D27-124 → D27-128** (the "not on WhatsApp" flag) | The button never renders, because no row has a valid WhatsApp target (WWL-358). Its storage key, its normalisation and its per-browser scope were read from source; `ww:notOnWa:v1` was confirmed absent from localStorage at close. |
+| **D27-134** (restore a dismissed customer) | The UI never sends `action: 'restore'`, so there is no control to drive. Established from the route and the component. |
+| **D27-150** (`aiLimiter` tripping) | Deliberately not driven — repeatedly hitting a paid model endpoint to observe a rate limit is not a test worth the spend. |
+| **D27-169** (CSV quoting) | No live value contains a comma or a quote. The escape branch was read from source. |
+| **D27-205, D27-206** (deep pagination, history) | Eight rows over a page size of ten — there is no second page to walk. |
+| **D27-245** (pin cap) | Would require pinning real reviews. `togglePinReview` has no cap; established from source. |
+| **D27-250 → D27-256** (the delete authorisation itself) | Answered by reading `deleteReview`. Proving it live means erasing a real customer's review from production — the exact act WWL-356 is about. |
+
+### Module 27 — status
+
+**310 cases written, 218 driven. 26 findings (1× S1, 6× S2, 15× S3, 4× S4).**
+
+**The module's verdict.** After eight empty registers this is a screen with real data on it, and the
+data is the problem. The vendor being reviewed can hard-delete any review of their own business —
+no reason, no cooling-off, no soft-delete, an audit entry that is allowed to fail silently — and
+every public number recomputes from what survives. Above that sits a benchmark that quietly counts
+the vendor's own other venues as competitors, an AI report that states an average rating this venue
+does not have, and a "response rate" that appears twice on one page as 100% and 73%. The reply the
+vendor writes becomes permanent after thirty minutes with nothing on screen to warn them, while the
+retract endpoint built for exactly that case has no button. The export drops the rating. The search
+box cannot search a review. And the card headed *"nudge them on WhatsApp"* has no WhatsApp button on
+any row, because every phone number on this account is one digit short of a number that can be
+dialled at all.
