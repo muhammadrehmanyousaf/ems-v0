@@ -68,7 +68,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 36 | Tonight | `/dashboard/venue-os?tab=today` | ✅ 150 | **`[x]` COMPLETE — 100 run, 50 not run, 12 findings (3× S2)** |
 | 37 | Event profit | `/dashboard/venue-os?tab=profit` | ✅ 170 | `[x]` COMPLETE — 121 run, 49 not run, 15 findings (1× S1, 5× S2) |
 | 38 | Venue money | `/dashboard/venue-os?tab=money` | ✅ 200 | `[x]` COMPLETE — 138 run, 62 not run, 14 findings (4× S2) |
-| 39 | Halls & spaces | `/dashboard/venue-os?tab=spaces` | ✅ 170 | `[~]` cases written, executing |
+| 39 | Halls & spaces | `/dashboard/venue-os?tab=spaces` | ✅ 170 | `[x]` COMPLETE — 124 run, 46 not run, 10 findings (1× S1, 3× S2) |
 | 40 | Cash & cheques | `/dashboard/venue-os?tab=cash` | — | `[ ]` |
 | 41 | Kitchen & suppliers | `/dashboard/venue-os?tab=kitchen` | — | `[ ]` |
 | 42 | Accounting | `/dashboard/venue-os?tab=advanced` | — | `[ ]` |
@@ -19783,3 +19783,194 @@ Panel 4 is the odd one out and case D39-004 exists because of it.
 | D39-170 | **Zero mutating requests across the entire module** | the headline safety assertion |
 
 **Total: 170 cases.**
+
+---
+
+## Module 39 — RESULTS (live production, visible browser)
+
+**170 cases written · 124 driven · 46 not run · 10 findings (1× S1, 3× S2, 5× S3, 1× S4).**
+**Zero mutating requests.**
+
+---
+
+### WWL-569 (S1) — the public page offers a hall that is already booked
+
+Driven on the **customer-facing page**, not the dashboard:
+`https://www.weddingwala.pk/wedding-venues/lahore/rehman-grand-marquee-3358`
+
+Picked **13 August 2026** in *"Choose your space"*. What a couple sees:
+
+> **Main Hall** — HALL · PKR 340,000 · **Available**
+> **afsana** — ROOFTOP · PKR 500,000 · **Available** · whole-day
+> **Terrace Lawn** — LAWN · PKR 260,000 · **Available**
+> **Mardana Section** — SECTION · PKR 280,000 · **Available**
+> **Zenana Section** — SECTION · PKR 280,000 · **Available**
+
+13 August 2026 already carries **two Confirmed bookings** on this venue — *Danish Qureshi & Aiman
+Danish* (#167) and *Muhammad Rehman Yousaf* (#180).
+
+Confirmed at the API with **no Authorization header at all** — this is what an anonymous visitor gets:
+
+| Date | Bookings on that date | Public endpoint says |
+|---|---|---|
+| 2026-08-05 | Owais Siddiqui & Laiba Owais — **Confirmed** | all 5 spaces `AVAILABLE` |
+| 2026-08-13 | Danish Qureshi, Muhammad Rehman Yousaf — **Confirmed ×2** | all 5 spaces `AVAILABLE` |
+| 2026-08-21 | Salman Rauf & Kinza Salman — **Confirmed** | all 5 spaces `AVAILABLE` |
+| 2026-08-29 | Waqar Younis & Sana Waqar — **Confirmed** | all 5 spaces `AVAILABLE` |
+
+The vendor's own calendar agrees with the public one and is equally wrong: I counted every cell of the
+August grid — **5 spaces × 31 days = 155 cells, 155 `AVAILABLE`, zero blocked days.**
+
+The cause is visible in the data: no booking is mapped to a sub-venue. `space-pnl` reports
+`revenue: 0` for every space while the venue has booked Rs 33m. The bookings table holds the date; the
+tree-aware availability engine reads the resource mapping, which is empty, so it answers "free" for
+everything.
+
+The component's own header comment states the intent: *"colour-coded AVAILABLE / PARTIALLY-AVAILABLE /
+UNAVAILABLE (from the tree-aware availability engine)… uses the PUBLIC read endpoint (no login
+needed)."* It renders on the public vendor page at `vendor-detail-page.tsx:421`.
+
+A couple can pick a date, see green, and enquire for a hall that has a wedding in it. On a platform
+whose entire value is "is this venue free on my date", this is the worst possible wrong answer.
+
+### WWL-570 (S2) — the panel the hint promises is not on the page
+
+The section hint reads: *"Build your hall / floor / partition tree, set slots, see the availability
+grid, and **see which space earns most**."*
+
+Rendered card titles: *Venue spaces · Booking slots per space · Space calendar*. **Three of four.**
+
+`SpacePnlView` is the only panel on the tab that scopes with `useActiveBusinessId()` instead of
+`useBusinessIdField()`:
+
+```js
+const businessId = useActiveBusinessId();
+...
+if (businessId == null) return null;
+```
+
+The dashboard header's persisted default is **"All venues"**, where `activeBusinessId` is `null` — so
+under the shipped default the panel returns `null`. No heading, no empty state, no "pick a venue".
+Its three neighbours use the shared hook and work fine, which is why the absence looks like nothing at
+all rather than a scoping problem.
+
+### WWL-571 (S2) — per-space P&L computes the cost and then discards it
+
+`GET /venue-spaces/business/3358/space-pnl` → 200:
+
+| Space | `ownCost` | `cost` | `revenue` | `margin` | `marginPct` |
+|---|---|---|---|---|---|
+| Main Hall | **900,300** | 0 | 0 | 0 | null |
+| Zenana Section | **696,300** | 0 | 0 | 0 | null |
+| Mardana Section | **596,600** | 0 | 0 | 0 | null |
+| Terrace Lawn | **517,900** | 0 | 0 | 0 | null |
+| afsana | 0 | 0 | 0 | 0 | null |
+
+**Rs 2,711,100** of real tagged space cost exists in `ownCost`. The rolled-up `cost` — the field the UI
+table and the three totals actually render — is **0** for every row. So even once WWL-570 is fixed and
+the panel appears, it will report Revenue Rs 0, Cost Rs 0, Margin Rs 0 for a venue with Rs 2.7m of
+space costs and Rs 33m booked. The question *"which space earns the most"* cannot be answered.
+
+### WWL-572 (S2) — the availability grid 500s with raw Postgres text
+
+```
+GET .../availability-range?from=notadate&to=2026-08-31
+→ 500 "Invalid input syntax for type timestamp with time zone: \"notadateT00:00:00.000Z\""
+
+GET .../availability-range?from=2026-08-31&to=2026-08-01
+→ 500 "Range lower bound must be less than or equal to range upper bound"
+```
+
+Both are database errors surfaced verbatim as 500s where a 400 belongs — the third instance of this
+family in the sweep (WWL-560 depreciation, and the Module 32 notifications probe). The UI uses
+`input[type="month"]`, so a browser cannot reach the first one; a reversed range is reachable through
+the API only.
+
+### WWL-573 (S3) — nothing in the "tree" is nested
+
+Across all three venues, **every** node reports `parentSubVenueId: null` and `depth: 0`:
+
+- 3358 — Main Hall, afsana, Terrace Lawn, Mardana Section, Zenana Section (5)
+- 3359 — Banquet Hall, Open Lawn, Basement Hall (3)
+- 3360 — Marquee A, Marquee B, Rooftop (3)
+
+*Mardana Section* and *Zenana Section* are SECTIONs sitting beside Main Hall rather than inside it.
+The panel is titled *"halls · floors · partitions"* and the UI offers "+ child" on every row, but no
+child exists anywhere.
+
+Consequence: **capacity warnings can never fire.** The warning compares a parent's capacity to the sum
+of its children — with no children, `capacity-warnings` returns `[]` permanently, and the amber block
+is unreachable code for every venue on the account.
+
+### WWL-574 (S3) — `path` is populated for some nodes and not others
+
+```
+Main Hall   (seeded 00:12)  path: null      depth: 0
+afsana      (UI, 20:38)     path: "/3355/"  depth: 0
+```
+
+Same venue, same depth, one has a materialised path and one does not. Anything that resolves a subtree
+by `path` will silently skip the seeded rows.
+
+### WWL-575 (S3) — the calendar opens blank
+
+`const [month, setMonth] = React.useState<string>("")` — the month input starts empty, so "Show" is
+disabled and the grid is absent until the vendor picks a month by hand. The obvious default is the
+current month.
+
+### WWL-576 (S3) — the calendar's only signal is colour
+
+`CELL = { AVAILABLE: "bg-white", PARTIAL: "bg-amber-300", UNAVAILABLE: "bg-rose-500" }`. The legend
+reads *booked · partial · free*, but the cells carry no text, no title and no aria description — and
+`AVAILABLE` is plain white, which disappears against the card in dark mode.
+
+### WWL-577 (S3) — the slot templates cannot describe a shaadi
+
+The venue's two slots, both business-scoped (`subVenueId: null`):
+
+| Label | Start | End | Buffer after |
+|---|---|---|---|
+| Lunch event | 12:00 | 16:00 | **180 min** |
+| Dinner event | 19:00 | 23:00 | **0 min** |
+
+A dinner function ends at 23:00 with **zero turnaround** — the next booking can start immediately, with
+no cleanup gap, on the slot that actually needs one. And no slot can express a function running past
+midnight, which is the norm for a barat.
+
+### WWL-578 (S4) — a live listed venue has a space called "afsana"
+
+A `ROOFTOP` priced at Rs 500,000, whole-day, created through the UI on 2 Aug. It sits in the public
+space selector alongside Main Hall and Terrace Lawn.
+
+---
+
+### What holds — verified, not assumed
+
+- **The Module 36 fix carries.** The tree **loads on arrival** with no click; five spaces render by
+  name with capacity, price and booking mode — *Main Hall cap 510 · Rs 340,000 · session*. Three
+  venue dropdowns, all reading 3358, **zero `Venue #` boxes**.
+- **All eight space kinds** are offered when adding: HALL FLOOR SECTION LAWN MARQUEE BASEMENT ROOFTOP
+  OTHER.
+- **The merge-package builder lists spaces by name**, not ids, and "Create package" stays disabled
+  until a valid selection exists. "Add space" and "Show" are correctly disabled too — no dead-enabled
+  buttons on this tab.
+- **Month arithmetic is correct**: `2026-02` returned 28 days, `2028-02` returned **29**.
+- **Every read is venue-scoped** — three separate trees, no cross-venue leakage.
+- **The public page copy is the best writing in the product**: *"Booking early matters most during the
+  October–March peak season"*, *"so a 400-guest walima isn't squeezed into a 250-seat hall"*, *"Ask
+  whether outside catering and decorators are allowed"*. Genuinely Pakistani, genuinely useful — which
+  is what makes WWL-569 sit underneath it so badly.
+- **Zero mutating requests** across the whole module.
+
+### Not run (46), with reasons
+
+- **Every create / edit / delete** — add space, add child, rename, re-parent, delete, create merge
+  package, add/delete slot. These rows are the sellable structure of three approved, publicly-listed
+  venues and `deleteSubVenue` cascades. Captured and diverted.
+- **D39-121/122 parent/descendant availability propagation** — no node has a parent (WWL-573), so
+  there is no nesting to propagate through.
+- **D39-033/034 capacity warnings** — unreachable for the same reason.
+- **D39-062/065 merge validation** — creating a merge package is a sellable product.
+- **D39-126/127 calendar cell interaction** — `venueSpacesApi.book` writes a real reservation.
+- **D39-084–088 slot validation** (end before start, midnight crossing, capacity 0) — each requires
+  saving a slot that decides what a customer can book.
