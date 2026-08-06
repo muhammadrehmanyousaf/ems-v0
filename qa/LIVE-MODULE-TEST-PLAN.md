@@ -51,7 +51,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 19 | Kitchen prep | `/dashboard/kitchen-prep` | ✅ 143 | **`[x]` COMPLETE — 85 run, 58 not run, 13 findings (5× S2)** |
 | 20 | Inventory | `/dashboard/inventory` | ✅ 204 | **`[x]` COMPLETE — 132 run, 72 not run, 18 findings (5× S2)** |
 | 21 | Staff & payroll | `/dashboard/staff` | ✅ 188 | **`[x]` COMPLETE — 88 run, 100 not run, 13 findings (1× S1)** |
-| 22 | Suppliers | `/dashboard/suppliers` | — | `[~]` dead tab open |
+| 22 | Suppliers | `/dashboard/suppliers` | ✅ 194 | `[ ]` cases written, execution in progress |
 | 23 | Brokers | `/dashboard/brokers` | — | `[ ]` |
 | 24 | Generator fuel | `/dashboard/generator-fuel` | — | `[ ]` |
 | 25 | Halal certs | `/dashboard/halal-certs` | — | `[ ]` |
@@ -9842,3 +9842,315 @@ role so the ledger stays true after someone leaves, attendance tracked separatel
 JazzCash and Easypaisa as payout methods, a payslip per shift. None of it can be opened. The venue
 owes 33 people **Rs 57,282** and the only way to see any of it is to open thirty-three separate
 pages, one per person, and add it up by hand.
+
+---
+
+# MODULE 22 — SUPPLIERS & A/P (`/dashboard/suppliers`)
+
+**What the screen is for.** The money the venue **owes**. Two tabs. **A/P invoices** (the default) is
+the accounts-payable ledger: every supplier bill with its due date, how much of it has been paid, what
+is still outstanding, and five aging buckets — current, 0-7, 8-30, 31-60 and 60+ days overdue — with
+row actions to log a bill, record a payment against it, dispute it, void it or remove it.
+**Suppliers** is the directory behind it: who they buy from, the contact, the phone, the credit limit.
+
+**Source read before writing these cases**
+- `app/(dashboard)/dashboard/suppliers/page.tsx`, `.../suppliers/[id]/page.tsx`
+- `components/.../suppliers/redesigned/suppliers-redesigned-view.tsx` — both tabs
+- `components/.../suppliers/redesigned/invoice-dialogs.tsx` — Log / Pay / Dispute / Void
+- `components/.../suppliers/redesigned/supplier-form-dialog.tsx`, `supplier-detail-view.tsx`
+- `lib/api/suppliers.ts` — `InvoiceStatus`, `AgingReport`, status labels
+- `lib/axiosConfig.js` — `/api/v1/suppliers` **is** in `BUSINESS_SCOPED_PREFIXES`
+
+**Pre-flight state, read off live prod before any case was written**
+
+| Fact | Value |
+|---|---|
+| Suppliers | **18** — 6 per venue × 3 |
+| Categories | produce · meat · atta_grains · flowers · generator_rental · equipment_rental (3 each) |
+| Active / inactive | **18 / 0** |
+| Invoices | **23** |
+| Invoice status split | paid **11** · partially_paid **6** · received **3** · overdue **3** |
+| Billed / paid / **outstanding** | Rs 3,373,500 / Rs 1,904,250 / **Rs 1,469,250** |
+| Aging — current | 6 invoices · Rs 990,500 |
+| Aging — 0-7d | 0 · Rs 0 |
+| Aging — 8-30d | 3 · Rs 363,750 |
+| Aging — 31-60d | 1 · Rs 31,750 |
+| Aging — 60d+ | 2 · Rs 83,250 |
+| Aging grand total | Rs 1,469,250 — reconciles exactly with `totalOutstanding` |
+| `aging.perSupplier` | **7 rows** the API computes (who is owed the most) |
+| Supplier triplication | "Al-Madina Fruit & Vegetable" as ids 91 / 97 / 103, one per venue, credit limits Rs 600k / 750k / 400k |
+
+**Element inventory (2 tabs · 24 interactive)**
+
+| # | Element | Where |
+|---|---|---|
+| 1–2 | `A/P invoices` / `Suppliers` tabs | TabsList |
+| 3 | `Log invoice` | invoices header |
+| 4–8 | Five aging stat cards | invoices |
+| 9 | `Search invoices…` | invoices toolbar |
+| 10 | Eight status chips with counts | invoices toolbar |
+| 11–12 | Density · Export | invoices toolbar |
+| 13 | Select-all + row checkboxes | invoices table |
+| 14–17 | Row actions: Record payment · Dispute invoice · Void invoice · Remove invoice | invoices rows |
+| 18 | `Add supplier` | directory header |
+| 19–22 | Four directory stat cards | directory |
+| 23 | Supplier name → `/dashboard/suppliers/{id}` | directory row |
+| 24 | `Edit supplier` · `Remove supplier` | directory rows |
+| — | Four invoice dialogs + two confirm alerts | modals |
+
+**Safety limits for this module, each with its reason**
+
+| Limit | Reason |
+|---|---|
+| **No invoice is logged, paid, disputed, voided or removed.** | This is a real A/P ledger carrying **Rs 1,469,250** the venue genuinely owes six named suppliers. Recording a payment against a bill is a money write; disputing one is a statement to a trading partner. Memory rule: never write money rows on the live vendor's ledger. |
+| **No supplier is created, edited or deleted.** | Real trading partners with real phone numbers and credit terms. |
+| **Reads may hit the live API freely.** | GETs are side-effect free. |
+| **No supplier is contacted.** | No call, no message, from any control on this screen. |
+
+---
+
+## MODULE 22 — TEST CASES
+
+### A. Route, navigation and tabs (D22-001 → D22-012)
+
+- **D22-001** Sidebar → **Suppliers** navigates to `/dashboard/suppliers`.
+- **D22-002** `document.title` — check it against the screen's own `h1`.
+- **D22-003** The rail entry is `aria-current="page"`.
+- **D22-004** Breadcrumb renders and links home.
+- **D22-005** `/dashboard/suppliers-new` — the route named in the component's header comment — resolves to what?
+- **D22-006** The comment claims *"Original screen untouched"* — check what this screen actually does.
+- **D22-007** Two tabs render; **A/P invoices** is selected by default.
+- **D22-008** Switching tabs does **not** change the URL — so an A/P view cannot be linked.
+- **D22-009** A reload always returns to A/P invoices, discarding the tab choice.
+- **D22-010** Tabs are keyboard-navigable and expose `aria-selected`.
+- **D22-011** Both tabs render without throwing (the failure mode found in Module 21).
+- **D22-012** Browser Back leaves the screen cleanly.
+
+### B. A/P invoices — first paint and totals (D22-013 → D22-028)
+
+- **D22-013** The intro line renders: *"Every payment routes through the backend payment applier — amount paid and status can never drift."*
+- **D22-014** The table paints 23 rows (or the venue-scoped subset).
+- **D22-015** Columns: Supplier · Due · Paid / Total · Outstanding · Status · actions.
+- **D22-016** The supplier cell shows the **snapshot** name, the invoice number and the invoice date.
+- **D22-017** `Paid / Total` renders both figures and a progress bar.
+- **D22-018** The progress bar is capped at 100% when paid exceeds total.
+- **D22-019** `Outstanding` is `max(0, total − paid)` and is toned warning when > 0.
+- **D22-020** The five aging cards read `current 990,500 · 0-7d 0 · 8-30d 363,750 · 31-60d 31,750 · 60d+ 83,250`.
+- **D22-021** Those five sum to **Rs 1,469,250** — the same figure the invoice summary reports as `totalOutstanding`.
+- **D22-022** There is **no total-outstanding card**. A vendor must add five numbers to learn what they owe.
+- **D22-023** The aging cards show a rupee total but **not** the invoice count per bucket, though the API returns both.
+- **D22-024** `aging.perSupplier` — 7 rows ranking who is owed the most — is computed by the API. Is it rendered anywhere?
+- **D22-025** Before the aging query resolves the cards read `—`, not `Rs 0`.
+- **D22-026** Rows are ordered most-recent-first; confirm and judge for an A/P ledger.
+- **D22-027** `<th scope>` on the header cells.
+- **D22-028** Row checkboxes have per-row accessible names.
+
+### C. A/P invoices — due dates and overdue maths (D22-029 → D22-040)
+
+- **D22-029** A due date in the future renders the date alone.
+- **D22-030** A due date within 7 days renders a `Due in Nd` info pill.
+- **D22-031** A past due date on an unpaid invoice renders `Nd overdue` in warning tone.
+- **D22-032** A past due date on a **paid** invoice renders **no** overdue pill (`status !== "paid"` guard).
+- **D22-033** A past due date on a **void** invoice renders no overdue pill.
+- **D22-034** A null due date renders `—`.
+- **D22-035** `daysFromNow` compares against **UTC** midnight (`setUTCHours(0,0,0,0)`) while the vendor is in PKT (UTC+5). Establish whether the day count is off between 00:00 and 05:00 PKT.
+- **D22-036** The overdue day count matches what the backend used to bucket the invoice.
+- **D22-037** An invoice in the `overdue` **status** and an invoice merely past its due date — are both shown as overdue?
+- **D22-038** The three live `overdue`-status invoices appear in an aging bucket consistent with their dates.
+- **D22-039** Exactly-today's due date — 0 days, which pill?
+- **D22-040** Date formatting is `en-PK` and consistent with the rest of the dashboard.
+
+### D. A/P invoices — status chips and filtering (D22-041 → D22-054)
+
+- **D22-041** Eight chips render: All · Received · Partially paid · Paid · Overdue · Disputed · Void · Draft.
+- **D22-042** Each chip shows a count.
+- **D22-043** The counts at rest match the API summary: paid 11 · partially_paid 6 · received 3 · overdue 3.
+- **D22-044** The `All` chip's count is the **sum of `summary.byStatus`** — verify it equals 23.
+- **D22-045** Clicking `Paid` filters the table to 11 rows.
+- **D22-046** **…and what happens to the other seven chips' counts?** The summary comes from the same filtered query, so establish whether selecting one status zeroes the rest.
+- **D22-047** If it does, can the vendor still see that 3 invoices are overdue while looking at Paid?
+- **D22-048** The `All` chip's count while a filter is active.
+- **D22-049** Chips for statuses with zero rows (`disputed`, `void`, `draft`) still render and are clickable.
+- **D22-050** Selecting an empty status shows the empty state, not a blank table.
+- **D22-051** The filter is not in the URL and is lost on reload.
+- **D22-052** The aging cards do **not** change when a status filter is applied — confirm, and judge whether that reads as inconsistent.
+- **D22-053** The active chip is visually distinguishable beyond colour.
+- **D22-054** Chips are keyboard-reachable in order.
+
+### E. A/P invoices — search, selection, export, density (D22-055 → D22-068)
+
+- **D22-055** Search matches supplier name, invoice number and description, client-side.
+- **D22-056** Searching an invoice number (`INV-5297`) finds exactly that row.
+- **D22-057** Search combines with the status filter.
+- **D22-058** A no-match search shows *"No invoices in this window"* — judge the wording.
+- **D22-059** Search is case-insensitive and trims.
+- **D22-060** Search is lost on reload.
+- **D22-061** Export offers CSV and XLSX with filename `supplier-invoices`.
+- **D22-062** Export columns: Supplier · Invoice # · Invoice date · Due date · Total · Paid · Outstanding · Status.
+- **D22-063** The export includes the computed `Outstanding` — good for an accountant; verify it matches the row.
+- **D22-064** Status exports the **label**, not the raw enum — check against the pattern found in Modules 20 and 21.
+- **D22-065** The export carries **no venue column**, though three venues' invoices merge at All-venues scope.
+- **D22-066** Export respects the selection, and the filter when nothing is selected.
+- **D22-067** Density toggle changes row height and persists.
+- **D22-068** Nothing about the export hits the network.
+
+### F. A/P invoices — row actions and permissions (D22-069 → D22-080)
+
+- **D22-069** `Record payment` renders only when status is not paid and not void.
+- **D22-070** `Dispute invoice` renders unless the invoice is void.
+- **D22-071** `Void invoice` renders only when not paid and not void.
+- **D22-072** `Remove invoice` renders only when not paid.
+- **D22-073** On a **paid** invoice, exactly one action remains — confirm which.
+- **D22-074** Each action has an `aria-label`; check whether the supplier or invoice number is announced.
+- **D22-075** Icon-only actions are ≥ 24×24 px.
+- **D22-076** The four action icons are visually distinct (green tick, amber triangle, grey cross, bin).
+- **D22-077** Clicking a row itself does nothing — there is no drill-in to the invoice.
+- **D22-078** Nothing links an invoice to the supplier's own page.
+- **D22-079** No payment history per invoice is shown, though every payment routes through the applier.
+- **D22-080** Row actions on mobile.
+
+### G. A/P invoices — the four dialogs (D22-081 → D22-104)
+
+- **D22-081** `Log invoice` opens and lists its fields.
+- **D22-082** The supplier picker is fed by `SupplierAPI.list({isActive: true})` — 18 suppliers.
+- **D22-083** The picker shows which venue each supplier belongs to, or does not.
+- **D22-084** A business picker is present (`businesses` is passed in) — confirm and check its default.
+- **D22-085** Required-field blocking and the blocked-save hint.
+- **D22-086** A negative invoice total.
+- **D22-087** A due date **before** the invoice date.
+- **D22-088** A due date years in the future.
+- **D22-089** The captured create body and endpoint.
+- **D22-090** `Record payment` opens naming the invoice and showing what is outstanding.
+- **D22-091** Paying **less** than outstanding → the invoice should land in `partially_paid`.
+- **D22-092** Paying **exactly** the outstanding → `paid`.
+- **D22-093** Paying **more** than outstanding — is it refused, and by which side?
+- **D22-094** A zero or negative payment.
+- **D22-095** The payment-method list.
+- **D22-096** A payment dated in the future.
+- **D22-097** The captured payment body and endpoint.
+- **D22-098** `Dispute invoice` captures a reason and is required.
+- **D22-099** The captured dispute body.
+- **D22-100** `Void invoice` captures a reason.
+- **D22-101** Void is refused on a paid invoice — client-side, server-side, or both.
+- **D22-102** The captured void body.
+- **D22-103** Each dialog resets between invoices.
+- **D22-104** With writes diverted, do the dialogs claim success?
+
+### H. A/P invoices — remove (D22-105 → D22-110)
+
+- **D22-105** `Remove invoice` opens an alert reading *"Soft delete. Paid invoices cannot be removed."*
+- **D22-106** The alert does **not** name the invoice or the supplier — confirm and judge on a destructive action.
+- **D22-107** Cancel and Escape close without a request.
+- **D22-108** Remove issues `DELETE` to the invoice id.
+- **D22-109** With the write diverted, does the toast claim **"Invoice removed"**?
+- **D22-110** Does the row return after a hard reload?
+
+### I. Suppliers directory (D22-111 → D22-128)
+
+- **D22-111** The tab renders 18 rows (or the venue-scoped 6).
+- **D22-112** Columns: Supplier · Category · Contact · Phone · Credit limit · Status · actions.
+- **D22-113** The supplier name links to `/dashboard/suppliers/{id}`.
+- **D22-114** Category renders capitalised with underscores replaced (`atta_grains` → `Atta grains`).
+- **D22-115** Credit limit renders as money; a null renders an em-dash.
+- **D22-116** **Total suppliers** equals the row count.
+- **D22-117** **Active** counts `isActive` — 18 of 18 live.
+- **D22-118** **Categories** counts distinct categories — expect 6.
+- **D22-119** **"Credit available"** is the **sum of credit LIMITS**, not limit minus outstanding. Establish what the card actually computes and what its label promises.
+- **D22-120** Quantify the gap: total credit limits vs total limits minus the Rs 1,469,250 already owed.
+- **D22-121** The card is hard-coded `trend="up"` on Active regardless of the number.
+- **D22-122** Stat cards are computed from `all`, not the filtered set.
+- **D22-123** Search matches name, contact, phone and category.
+- **D22-124** A no-match search shows *"No suppliers yet — Add the vendors you buy from — albums, frames, props"*. Judge against a venue buying meat, atta and generator rental.
+- **D22-125** Export columns and filename `suppliers`.
+- **D22-126** The export carries supplier phone numbers and credit limits with no warning.
+- **D22-127** `<th scope>` and per-row checkbox labels.
+- **D22-128** Row actions at 360px.
+
+### J. Suppliers directory — form and delete (D22-129 → D22-144)
+
+- **D22-129** `Add supplier` opens the dialog and lists its fields.
+- **D22-130** Required-field blocking and the hint.
+- **D22-131** The category list matches the six live categories, or offers more.
+- **D22-132** A negative credit limit.
+- **D22-133** A credit limit above any sane cap.
+- **D22-134** A non-numeric phone.
+- **D22-135** Is there a venue field, or does `businesses?.[0]?.id` decide?
+- **D22-136** The captured create body — which `businessId`?
+- **D22-137** Edit prefills every field.
+- **D22-138** Edit sends `PATCH` to the supplier id.
+- **D22-139** Cancel and Escape discard.
+- **D22-140** `Remove supplier` names the supplier and says *"This can't be undone."*
+- **D22-141** Does the server refuse to delete a supplier that still has unpaid invoices?
+- **D22-142** The delete error toast is given `duration: 8000` — confirm it is readable.
+- **D22-143** With the write diverted, does the toast claim **"Supplier removed"**?
+- **D22-144** Does the row return after a hard reload?
+
+### K. Venue scoping (D22-145 → D22-154)
+
+- **D22-145** `/api/v1/suppliers` is in `BUSINESS_SCOPED_PREFIXES` — confirm `businessId` on the wire.
+- **D22-146** Switch to 3358 → 6 suppliers.
+- **D22-147** Switch to 3359 → 6.
+- **D22-148** Switch to 3360 → 6.
+- **D22-149** All venues → 18.
+- **D22-150** Do the **invoices** and the **aging** re-scope with the venue too?
+- **D22-151** Does the aging grand total change per venue, and does it still reconcile?
+- **D22-152** `queryKey: ["suppliers-redesigned"]` and `["supplier-aging"]` contain no businessId — the same structural risk as Module 21.
+- **D22-153** At All venues, "Al-Madina Fruit & Vegetable" appears 3× with credit limits Rs 600k / 750k / 400k and **no venue column** — can the vendor tell them apart?
+- **D22-154** The `Log invoice` supplier picker at All venues — does it show 18 entries with 6 duplicate names?
+
+### L. Supplier detail page `/dashboard/suppliers/{id}` (D22-155 → D22-164)
+
+- **D22-155** The name link navigates there.
+- **D22-156** The page loads and names the supplier.
+- **D22-157** It shows what is outstanding to them.
+- **D22-158** It lists their invoices.
+- **D22-159** Its figures agree with `aging.perSupplier` (e.g. supplier 97 → Rs 425,500 across 2 invoices).
+- **D22-160** A non-existent id.
+- **D22-161** Actions on that page are captured, not sent.
+- **D22-162** Formatting consistency with the directory (the mismatch found in Module 21).
+- **D22-163** The page at 360px.
+- **D22-164** Console clean on that route.
+
+### M. Resilience (D22-165 → D22-172)
+
+- **D22-165** Offline → both tables show their error state with Retry.
+- **D22-166** Unroutable host → same; Retry re-issues.
+- **D22-167** The aging cards during a failed load — do they read `—` or `Rs 0`?
+- **D22-168** A failed invoice query with a working aging query, and vice versa.
+- **D22-169** Slow network → skeleton, no flash of empty.
+- **D22-170** Malformed response does not white-screen.
+- **D22-171** An unknown `status` value from the API — does `INVOICE_TONE[status]` repeat the Module 21 crash?
+- **D22-172** Console clean across the module.
+
+### N. Accessibility (D22-173 → D22-180)
+
+- **D22-173** Row actions announce which invoice they act on.
+- **D22-174** Dialog labels are programmatically associated.
+- **D22-175** Tabs expose `aria-selected` and roving focus.
+- **D22-176** Status pills are not colour-only.
+- **D22-177** The progress bar has a text equivalent.
+- **D22-178** Alert dialogs announce title + description and focus Cancel.
+- **D22-179** Focus rings on all controls.
+- **D22-180** Heading order.
+
+### O. Mobile — 360×740 (D22-181 → D22-188)
+
+- **D22-181** No horizontal page scroll.
+- **D22-182** **And** zero clipped elements outside deliberate scroll containers.
+- **D22-183** Five aging cards reflow without clipping their rupee values.
+- **D22-184** The invoice table switches to the card renderer.
+- **D22-185** The card shows supplier, number, date, status, paid/total and outstanding — are the four row actions reachable?
+- **D22-186** Eight status chips wrap without overflow.
+- **D22-187** Both dialogs are usable at 360.
+- **D22-188** Touch targets ≥ 24×24.
+
+### P. Integrity close-out (D22-189 → D22-194)
+
+- **D22-189** Supplier count still 18 at close, via a clean iframe realm.
+- **D22-190** Invoice count still 23.
+- **D22-191** The status split unchanged (11 / 6 / 3 / 3).
+- **D22-192** `totalOutstanding` still **Rs 1,469,250** and the aging buckets unchanged.
+- **D22-193** Every diverted write listed with method, URL and body.
+- **D22-194** No `POST`/`PATCH`/`DELETE` reached the real API.
+
+**194 cases written.** Execution follows.
