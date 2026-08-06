@@ -67,7 +67,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 35 | Setup checklist | `/dashboard/onboarding` | ✅ 158 | **`[x]` COMPLETE — 110 run, 48 not run, 12 findings (3× S2)** |
 | 36 | Tonight | `/dashboard/venue-os?tab=today` | ✅ 150 | **`[x]` COMPLETE — 100 run, 50 not run, 12 findings (3× S2)** |
 | 37 | Event profit | `/dashboard/venue-os?tab=profit` | ✅ 170 | `[x]` COMPLETE — 121 run, 49 not run, 15 findings (1× S1, 5× S2) |
-| 38 | Venue money | `/dashboard/venue-os?tab=money` | ✅ 200 | `[~]` cases written, executing |
+| 38 | Venue money | `/dashboard/venue-os?tab=money` | ✅ 200 | `[x]` COMPLETE — 138 run, 62 not run, 14 findings (4× S2) |
 | 39 | Halls & spaces | `/dashboard/venue-os?tab=spaces` | — | `[ ]` |
 | 40 | Cash & cheques | `/dashboard/venue-os?tab=cash` | — | `[ ]` |
 | 41 | Kitchen & suppliers | `/dashboard/venue-os?tab=kitchen` | — | `[ ]` |
@@ -19335,3 +19335,227 @@ fully-costed P&L reports. So:
 | D38-200 | **Zero journal entries posted across the entire module** | the headline safety assertion |
 
 **Total: 200 cases.**
+
+---
+
+## Module 38 — RESULTS (live production, visible browser)
+
+**200 cases written · 138 driven · 62 not run · 14 findings (4× S2, 8× S3, 2× S4).**
+
+**Zero journal entries posted.** Six Preview/Post clicks were captured and diverted; three dry-runs
+were driven Node-side with `dryRun: true` set by me, after verifying
+`txPostingEngine.postEvent` returns at its `if (dryRun)` guard **before any database write** (line
+187) and `utilityAllocationService.runAllocation` returns earlier still. One POST was allowed
+through — `estimateBillHandler`, a pure computation.
+
+---
+
+### WWL-554 (S2) — Rs 8,847,000 of real spending is invisible to per-event profit
+
+Same account, same year, two tabs:
+
+| | Money & Expenses (Year) | Bookings & Profit |
+|---|---|---|
+| Fixed overheads | **Rs 8,847,000** | *not represented* |
+| Event / function costs | Rs 7,985,000 | `Spent (tagged)` **Rs 7,985,000** |
+| **Total spend** | **Rs 16,832,000** | — |
+| Net profit | — | **Rs 25,508,850** |
+
+`8,847,000 + 7,985,000 = 16,832,000` — the Money tab's own arithmetic is exact. And its event half
+matches the Profit tab's Spent column **to the rupee**, which proves the two screens read the same
+ledger.
+
+The Profit tab then computes net profit from the event half **only**. Electricity Rs 3,938,000,
+Salary/payroll Rs 3,246,500 and the rest of the fixed pool never touch it. Booked Rs 33,493,850 minus
+*all* recorded spend is **Rs 16,661,850** — the screen says Rs 25,508,850, a **Rs 8.85m** overstatement,
+and nothing on either tab mentions the other.
+
+This compounds WWL-541 (net counts money not yet received) and WWL-542 (seven functions at 100%
+margin). The three together mean the headline profit figure is wrong in three independent ways.
+
+### WWL-555 (S2) — the FIXED badge and the Fixed-overheads tile contradict each other
+
+August 2026, one screen:
+
+> Fixed overheads **Rs 0** · *rent · utilities · salary*
+> Event / function costs **Rs 2,151,600** · 4 events
+>
+> By category — Rs 2,151,600 total
+> Ingredients Rs 1,405,000 · 65% · Casual labour Rs 270,400 · 13% ·
+> **Rentals** `FIXED` **Rs 196,000** · 9% · Other Rs 163,500 · 8% · Fuel Rs 116,700 · 5%
+
+A category is badged **FIXED** for Rs 196,000 while the Fixed-overheads tile directly above reads
+**Rs 0**, and that same Rs 196,000 is counted inside "Event / function costs". The badge describes the
+*category*; the tile counts *untagged* expenses. Both are labelled "fixed" and they disagree.
+
+The Year view has the same rows behaving correctly (Rs 8,847,000 fixed), so the vendor sees the
+classification flip depending on which range button they pressed.
+
+### WWL-556 (S2) — "Save expense" on an empty form does nothing, silently
+
+Opened *Add expense*, clicked **Save expense** with every field blank:
+
+- requests fired: **0**
+- dialog: **still open**
+- `.text-destructive` / `[role="alert"]` messages: **0**
+- toasts: **0**
+- full dialog text after submit: no validation copy anywhere
+
+Client-side validation blocks the submit and then says nothing. The button is indistinguishable from
+broken. All **nine** inputs also carry `required: false`, so the browser contributes no message either.
+
+### WWL-557 (S2) — the tariff estimator instructs the vendor to do something the product cannot do
+
+Driven live with 12,000 kWh @ 150 kVA, and Node-side with three payloads:
+
+```
+POST /venue-os/business/3358/tariff/estimate-bill  → 200
+{"status":"NO_TARIFF","note":"No tariff profile on file for GRID. Seed the DISCO tariff first."}
+```
+
+Identical for 12,000 units, 0 units and −5,000 units. `GET .../tariff-profiles` returns `[]`.
+
+`POST /venue-os/tariff-profiles` exists in the router. **The string `tariff-profiles` appears nowhere
+in the frontend** — not in `lib/api/venueOs.ts`, not in any component. There is no screen, dialog or
+button anywhere in the product that can seed a DISCO tariff.
+
+So the panel is permanently stuck on an instruction that cannot be followed, and the header comment's
+promise — *"the bill the allocation engine apportions is computed, not hand-typed"* — never happens.
+
+### WWL-558 (S2) — Post writes to the live ledger with no confirmation and no warning
+
+Captured from the live page, every request diverted before delivery:
+
+| Button | Endpoint | Body |
+|---|---|---|
+| Preview | `/business/3358/lease-accrual/run` | `{"period":"2026-07","dryRun":true}` |
+| **Post rent** | `/business/3358/lease-accrual/run` | `{"period":"2026-07","dryRun":false}` |
+| Preview | `/business/3358/utility-allocation/run` | `{"billingMonth":"2026-07","residualShare":0,"dryRun":true}` |
+| **Post** | `/business/3358/utility-allocation/run` | `{"billingMonth":"2026-07","residualShare":0}` |
+| Preview | `/business/3358/depreciation/run` | `{"period":"2026-07","dryRun":true}` |
+| **Post** | `/business/3358/depreciation/run` | `{"period":"2026-07","dryRun":false}` |
+
+The dry-run contract is honoured exactly — that part is right. But **Post sits directly beside
+Preview**, same size, same style, and fires a double-entry GL posting on a single click with no
+confirmation dialog, no "this writes to your ledger" copy, and no undo. The utility panel's own source
+notes that *"a re-run reverses the prior posted run"* — nothing on screen says so.
+
+### WWL-559 (S3) — five of seven panels have no data at all
+
+```
+GET .../venue-leases     → []      GET .../fixed-assets     → []
+GET .../utility-meters   → []      GET .../tariff-profiles  → []
+```
+
+Leases, assets, meters and tariffs are all empty, yet every panel renders its full form apparatus.
+Only the expense cockpit and the wage register have anything. No panel says "you haven't added any
+yet" except the tariff note.
+
+### WWL-560 (S3) — a malformed period 500s with an internal function name
+
+```
+POST /depreciation/run {"period":"07-2026","dryRun":true}
+→ 500 {"message":"RunDepreciation: period must be 'YYYY-MM', got \"07-2026\""}
+```
+
+A service-layer `throw` surfacing as a 500 with the function name in it. The lease endpoint returns a
+clean **400** `Period ('YYYY-MM') is required` for the same class of error. The UI mitigates this with
+`input[type=month]` on the depreciation panel — but the utility panel uses **free-text `YYYY-MM`
+boxes**, so a typo there is reachable from the keyboard.
+
+### WWL-561 (S3) — the depreciation dry-run response omits `dryRun`
+
+```
+lease  → {"...","dryRun":true,"results":[]}
+depr   → {"...","assetCount":0,"postedCount":0,"results":[]}      ← no dryRun field
+```
+
+A caller cannot tell a preview response from a real posting response.
+
+### WWL-562 (S3) — the range is not in the URL
+
+Day / Month / Year / All all work and change the data, but `location.search` stays `?tab=money`
+throughout. Same family as WWL-547.
+
+### WWL-563 (S3) — `meter #` is the last raw-id box on the tab
+
+Every `Venue #` box is gone. `meter #` remains — and `GET .../utility-meters` returns `[]`, so there
+is no id to type.
+
+### WWL-564 (S3) — three period fields, two different controls
+
+Lease and depreciation use `input[type="month"]`. The utility panel uses two `input[type="text"]` with
+a `YYYY-MM` placeholder. Same concept, same screen, two behaviours — and only the text one can be
+mistyped into WWL-560.
+
+### WWL-565 (S3) — the Add-expense form marks nothing required
+
+Nine inputs — amount, date, category, payment method, payee, subcategory, description, receipt,
+booking — **`required: false` on all nine**.
+
+### WWL-566 (S4) — two fields ship pre-filled
+
+A text input holds `"Main"` (placeholder `generator`) and another holds `"Main LESCO"` (placeholder
+`label`). A vendor who never touches them submits someone's seed values.
+
+### WWL-567 (S4) — the booking picker is inconsistent with the Profit tab
+
+Placeholder here is `"which function?"` (lowercase); the Profit tab uses `"Which function?"`. One of
+the two pickers on this tab has **no label at all**.
+
+### WWL-568 (S3) — the category percentages are cut off at 360px
+
+At 360×740 with real device emulation, six elements extend past the viewport with `docScrollX`
+**false**, so nothing reveals them:
+
+- two action buttons
+- **four `span.w-10 shrink-0 text-right`** — the `65%` / `13%` / `9%` / `8%` labels of the category
+  breakdown
+
+A fixed `w-10` right-aligned column in a row that cannot shrink. Same family as the Today-board
+overflow fixed in PR #185. The wide table on this tab is correctly wrapped in its own
+`overflow-x: auto` scroller (560px content in a 326px viewport) — the percentages are not.
+
+---
+
+### What holds — verified, not assumed
+
+- **The Module 36 venue fix carries.** **Zero `Venue #` number boxes** on the widest panel set in the
+  product; **six** named venue dropdowns, and all six read `3358` in agreement. (I first mis-read this
+  as "two empty" — those two are booking pickers whose option list contains the customer *Muhammad
+  Rehman Yousaf*, which my regex matched. Corrected.)
+- **Category arithmetic is exact.** August: `1,405,000 + 270,400 + 196,000 + 163,500 + 116,700 =
+  2,151,600` — matches the "By category total" and the "Spent · month" tile. Percentages sum to
+  **100**.
+- **`Fixed overheads + Event costs = total spend`** exactly, in both the Month and Year views.
+- **Cross-tab reconciliation is exact**: Year event costs Rs 7,985,000 = the Profit tab's
+  `Spent (tagged)` Rs 7,985,000.
+- **Cost-per-function rows are exact**: `net = revenue − spent` on all four rows, and the four spend
+  figures sum to Rs 2,151,600 — the month total.
+- **The dry-run safety contract is real**, proven by six captured request bodies.
+- **Validation works where it is wired**: missing period → clean `400 Period ('YYYY-MM') is required`
+  on both lease and depreciation.
+- **The Day empty state is the best in the sweep**: *"No expenses in this day yet. Add the first one"*
+  — states the fact and offers the fix.
+- **The Add-expense form is genuinely Pakistani-native.** Its booking picker's first option is the
+  clearest copy in the product: *"Recurring overhead — not tied to one function (rent, utilities,
+  salary)"* — the fixed/event distinction, in a vendor's words, at the moment it is decided. Receipt
+  capture reads *"Photograph the parchi and we'll fill in the amount, payee and date."* Payment
+  methods include **Jazzcash, Easypaisa, Raast and IBFT**.
+- **Layout is clean at 1440px** — 0 overflowing elements, table in its own scroller.
+- Every read was scoped to businessId 3358; nothing leaked across venues.
+
+### Not run (62), with reasons
+
+- **Every posting path** (Post rent, Post allocation, Post depreciation, Add lease, Add asset, Add
+  meter, Record bill, Record shift, Post-to-GL, Save expense) — these write double-entry journal
+  entries to a live vendor's general ledger and change what every event's costed P&L reports.
+  Captured and diverted instead; the bodies are recorded above.
+- **D38-103–108 lease maths** (remaining commitment, escalation, not_started/expired skips,
+  idempotency) — the venue owns its halls, so `venue-leases` is empty and there is nothing to compute.
+- **D38-144/145 allocation share arithmetic** — no utility bills exist for any month.
+- **D38-172/173 straight-line depreciation** — no fixed assets exist.
+- **D38-186–192 tariff breakdown** (slabs, per-kVA, surcharge, duty, GST, effective date) —
+  unreachable behind `NO_TARIFF` (WWL-557).
+- **D38-063–065 min-wage floor warning** — needs a recorded shift.
+- **D38-123–125 genset dip validation** — needs a reconciled event.
