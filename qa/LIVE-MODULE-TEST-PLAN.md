@@ -60,7 +60,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 28 | Notifications | `/dashboard/notifications` | ✅ 258 | **`[x]` COMPLETE — 195 run, 63 not run, 20 findings (5× S2)** |
 | 29 | Promote | `/dashboard/promote` | ✅ 222 | **`[x]` COMPLETE — 150 run, 72 not run, 22 findings (4× S2)** |
 | 30 | Plan & billing | `/dashboard/billing` | ✅ 216 | **`[x]` COMPLETE — 155 run, 61 not run, 20 findings (4× S2)** |
-| 31 | Collaborations | `/dashboard/collaborations` | — | `[ ]` |
+| 31 | Collaborations | `/dashboard/collaborations` | ✅ 238 | `[~]` cases written — execution in progress |
 | 32 | Business Settings | `/dashboard/settings` | — | `[~]` 11 tabs done earlier |
 | 33 | Availability | `/dashboard/settings?tab=availability` | — | `[ ]` |
 | 34 | Cancellation policy | `/dashboard/settings?tab=policy` | — | `[ ]` |
@@ -15251,3 +15251,302 @@ Eleven features are mapped to a tier; **none** is enforced, and the team wrote d
 for that — the page just went out anyway. There is no invoice, no payment method, no way to pay, and
 no way to stop paying. And the one click that starts it all takes no confirmation and, on a bad
 connection, fires twice.
+
+---
+
+## MODULE 31 — TEST CASES
+
+Route `/dashboard/collaborations`. Vendor↔vendor subcontracting: the lead vendor invites another
+vendor by phone or email, the invitee accepts or declines, and an agreed amount is **tracked but not
+collected**. One view with two directions, one create dialog, six endpoints.
+
+**Safety constraint recorded before any case ran.** `send` matches the phone/email against real
+Wedding Wala accounts and, on a match, fires an in-app notification to that vendor. **No invite may
+leave this account.** The write blocker stays armed for the whole module; the self-invite probe below
+is the only send-shaped request permitted, because the server refuses it before the row is created.
+
+Established from source and a live probe:
+
+| Established | Value |
+|---|---|
+| Incoming invites | **0** |
+| Outgoing invites | **0** |
+| `POST /collaborations` with no phone and no email | **400** "Sub-vendor phone or email required" |
+| Self-invite by email | **400** "That's you — pick another vendor" — refused before create |
+| accept / decline / cancel on a missing id | **404** ×3 |
+| `POST /collaborations/abc/accept` | **500** — *"Invalid input syntax for type integer: \"abc\""* |
+| Notification type on invite / accept / decline | **`system`** — the WWL-388 pill |
+
+### A. Route, shell and load (D31-001 → D31-014)
+
+- **D31-001** Sidebar → **Collaborations** navigates to `/dashboard/collaborations`.
+- **D31-002** `document.title` vs the page `h1` vs the nav label vs the breadcrumb.
+- **D31-003** The eyebrow reads **Grow**.
+- **D31-004** `aria-current="page"` element count (WWL-423 / WWL-446).
+- **D31-005** Direct URL loads with no client-side error.
+- **D31-006** The component header says *"Original screen untouched. Route /dashboard/collaborations-new."* — resolve that route and establish the contradiction. Fourth module in a row with a stale Track-C header.
+- **D31-007** Page metadata: *"Invite other Wedding Wala vendors to collaborate on your events."*
+- **D31-008** The description reads *"Invites to team up with other Wedding Wala vendors on events — incoming and outgoing."*
+- **D31-009** Header action **Invite vendor** opens the dialog.
+- **D31-010** The query fetches **both** directions in one `Promise.all` under a single key. Establish that a failure in either fails both.
+- **D31-011** …so a working *incoming* list is hidden by a failing *outgoing* one. Establish from source.
+- **D31-012** Reload → identical content.
+- **D31-013** The query key `["collaborations-redesigned"]` carries no business — establish that collaborations are **user-scoped**, not venue-scoped, and whether that is right for a three-venue vendor.
+- **D31-014** Switch venue and confirm nothing changes.
+
+### B. The four stat cards (D31-015 → D31-034)
+
+- **D31-015** Four cards: **Total invites · Pending · Accepted · Agreed value**.
+- **D31-016** With zero invites all four read 0 / Rs 0. Verify.
+- **D31-017** `allInvites` is `[...incoming, ...outgoing]` — the cards deliberately mix both directions. Establish.
+- **D31-018** So **Pending** counts invites *waiting on me* together with invites *waiting on someone else* — two different obligations in one number.
+- **D31-019** …and **Agreed value** sums money I would *receive* with money I would *pay*.
+- **D31-020** Establish what a vendor is supposed to read from a single "Agreed value" that nets nothing and separates nothing.
+- **D31-021** `agreedTotal` includes **declined** invites.
+- **D31-022** …and **cancelled** ones.
+- **D31-023** So the figure is neither committed, nor owed, nor earned. Same family as WWL-418 (Promote) and WWL-342 (Drone NOC).
+- **D31-024** **`trend="up"` is hard-coded on the Accepted card**, regardless of value. Verify it renders an upward indicator with zero accepted.
+- **D31-025** **`trend="flat"` is hard-coded on Pending.** Verify.
+- **D31-026** Establish that neither trend is computed from anything — contrast with Promote, where `trend` was at least conditional on the count.
+- **D31-027** So the arrows are decoration that reads as data.
+- **D31-028** `formatPkr(0)` on the Agreed value card — verify the rendering.
+- **D31-029** No card separates incoming from outgoing.
+- **D31-030** No card counts **declined** or **cancelled**, though both are statuses.
+- **D31-031** The cards do not respond to the direction tab. Switch tabs and confirm all four stay put.
+- **D31-032** …and confirm they do not respond to the search box either.
+- **D31-033** The grid is `grid-cols-2 lg:grid-cols-4`.
+- **D31-034** Card values are not `tabular-nums`.
+
+### C. The two direction tabs (D31-035 → D31-054)
+
+- **D31-035** Two buttons render: **Invites to you** and **Invites you sent**, each with a count pill.
+- **D31-036** Live both counts are **0**. Verify the pill renders at zero (unlike Module 28, where a zero count hid the pill entirely).
+- **D31-037** The active tab is `bg-primary/10 text-primary`; the inactive one is muted.
+- **D31-038** They are `<button aria-pressed>`, **not** `role="tab"`. Establish the a11y consequence and contrast with Module 28's `role="tab"` without a `tabpanel`.
+- **D31-039** Switching tabs changes the table data source.
+- **D31-040** …and the **With** column header flips between **From** and **To**. Verify.
+- **D31-041** …and the row actions change from Accept/Decline to Cancel.
+- **D31-042** …and the empty-state copy changes. Verify both strings.
+- **D31-043** Credit the direction-aware empty states — they are correct and specific, unlike the generic ones in Modules 20–22.
+- **D31-044** `React.useEffect(() => setSelected(new Set()), [tab])` — the selection resets on tab change because row ids are not unique across directions. Drive it: select rows, switch tab, confirm the selection cleared.
+- **D31-045** Credit that: it is a real bug someone anticipated. Establish what would have happened without it (export would mix directions).
+- **D31-046** The search box does **not** reset on tab change. Establish that a query typed on Incoming still filters Outgoing.
+- **D31-047** The tab is not in the URL — no `?tab=`. Establish.
+- **D31-048** Reload while on **Invites you sent** → returns to Incoming.
+- **D31-049** The back button does not walk the tabs.
+- **D31-050** The default tab is **incoming**. Establish whether that is the right default for a vendor who mostly sends.
+- **D31-051** The tab counts come from the full lists, not the filtered ones. Type a search and confirm the counts do not move.
+- **D31-052** Establish that this is correct (they are direction totals, not result counts) and contrast with WWL-389, where mixed denominators were wrong.
+- **D31-053** The tab strip is `w-fit` inside a bordered card. Check at narrow widths.
+- **D31-054** Keyboard: Tab to each button, Enter/Space to activate.
+
+### D. The table (D31-055 → D31-090)
+
+- **D31-055** Empty state renders with a direction-aware title and description plus an **Invite vendor** CTA.
+- **D31-056** Seven columns: **Event · From/To · Scope · Agreed amount · Sent · Status · (actions)**.
+- **D31-057** `Event` falls back to **"Untitled collaboration"** when `eventLabel` is null. Establish that the field is optional in the dialog, so this is reachable.
+- **D31-058** `counterpartName` for **incoming**: `fromVendor.fullName → fromName → "A vendor"`.
+- **D31-059** `counterpartName` for **outgoing**: `toVendor.fullName → toNameSnapshot → toPhone → toEmail → "—"`.
+- **D31-060** **So an unmatched invitee's raw phone number or email is printed in the grid.** Establish the fallback chain and what it exposes.
+- **D31-061** On **outgoing**, an invite with no `toUserId` appends *"· not on Wedding Wala yet"* in italics. Establish the copy.
+- **D31-062** Credit that: it tells the vendor the invite will not be delivered in-app, which the server also says in its response message.
+- **D31-063** `Scope` is rendered through `cap()`, which upper-cases the first letter **and replaces underscores with spaces** — on a free-text field. Establish what that does to a scope like *"drone_coverage"* versus *"Drone coverage"*.
+- **D31-064** `Agreed amount` uses `MoneyCell` with `num()`, which coerces null to **0** — so an invite with no amount renders **Rs 0**, not an em-dash. Contrast with Promote, which passes `null` through deliberately.
+- **D31-065** Establish the consequence: "no amount agreed" and "agreed on nothing" render identically.
+- **D31-066** `Sent` renders `fmtDate(createdAt)` as `en-PK`, `d MMM yyyy` — note the day is **not** zero-padded here, unlike Promote's `2-digit`. Establish the inconsistency between two screens in the same track.
+- **D31-067** `Status` uses `STATUS_TONE[c.status] ?? "neutral"` — immune to the Module 21 crash. Verify and credit.
+- **D31-068** Verify the four tones: accepted success · pending warning · declined error · cancelled neutral.
+- **D31-069** Non-pending rows render **`—`** in the actions column. Establish.
+- **D31-070** **`declineReason` is not a column.** So a declined invite shows *Declined* and nothing else.
+- **D31-071** **`respondedAt` is not a column.** So there is no record of *when* an invite was answered.
+- **D31-072** `functionSheetId` is on the model and is **not** shown, and there is no link to the function sheet the collaboration belongs to.
+- **D31-073** Establish that the dialog cannot set `functionSheetId` either — so the field is unreachable from both ends.
+- **D31-074** Search matches `counterpartName`, `eventLabel` and `scope`. Verify each.
+- **D31-075** Search does **not** match status or amount. Verify.
+- **D31-076** Search is client-side; confirm no request fires.
+- **D31-077** `DensityToggle` renders — identify its actual markup this time before drawing any conclusion (the Module 29 lesson).
+- **D31-078** `ExportMenu` respects `selectedIds`.
+- **D31-079** Capture the CSV and verify six columns: Event · From/To · Scope · Agreed amount · Sent · Status.
+- **D31-080** **The export writes `c.createdAt` raw** — an ISO string, not `fmtDate`. Establish, and credit it against WWL-329 (Halal) and Promote's `fmtDate` export.
+- **D31-081** The export header for the counterpart column follows the active tab (`withHeader`). Establish that two exports from the same screen have different headers.
+- **D31-082** The export omits `declineReason`, `respondedAt`, `toPhone`, `toEmail` and `functionSheetId`.
+- **D31-083** The filename is `collaborations` with no direction and no date — so the two exports are indistinguishable once downloaded.
+- **D31-084** `renderCard` is the mobile row: event, counterpart · amount, status pill. Establish what it drops (scope, date, and **all row actions**).
+- **D31-085** So establish whether an invite can be accepted, declined or cancelled at all on a phone.
+- **D31-086** Error state: *"Couldn't load collaborations."* with a **Retry**. Drive under injected failure.
+- **D31-087** No sort control on any column.
+- **D31-088** No status filter — with four statuses the only tool is free text.
+- **D31-089** No date filter.
+- **D31-090** The selection column exists; establish it feeds only `ExportMenu` (as in Promote) — no bulk accept, no bulk cancel.
+
+### E. The invite dialog (D31-091 → D31-134)
+
+- **D31-091** **Invite vendor** opens a dialog titled *"Invite a vendor"*.
+- **D31-092** Description: *"Bring another vendor onto a job. They'll get an invite to accept."*
+- **D31-093** Six fields: **Vendor name · Phone · Email · Event / job · Scope · Agreed amount (Rs)**.
+- **D31-094** `autoFocus` is on Vendor name. Verify.
+- **D31-095** Phone placeholder is `03xx-xxxxxxx`.
+- **D31-096** The Email input has **no `type="email"`** — verify, and establish that no format validation exists on either side.
+- **D31-097** Agreed amount is `type="number"` with **no `min`**. Type a negative and establish the client accepts it.
+- **D31-098** The server clamps with `Math.max(0, _agreed)` — so a negative becomes **0**, silently, rather than being rejected. Establish from source.
+- **D31-099** WW-146 caps the amount at `9,999,999,999.99`; anything larger becomes **null**, not an error. Establish the silent coercion.
+- **D31-100** So three different invalid amounts (negative, over-cap, non-numeric) resolve to three different silent outcomes and none is reported.
+- **D31-101** `canSave = toName.trim() && (toPhone.trim() || toEmail.trim())` — a name **and at least one** contact.
+- **D31-102** **The blocked hint reads *"Add a name, a phone and an email to save."*** — it demands all three. Establish the mismatch against the rule that needs only one contact.
+- **D31-103** Drive it: fill name + phone only, confirm the button **enables** while the hint's wording would have said otherwise.
+- **D31-104** Fill name only → confirm blocked, and read the hint.
+- **D31-105** Fill phone only, no name → confirm blocked.
+- **D31-106** Whitespace-only name → confirm blocked.
+- **D31-107** The three labels-to-inputs: check `htmlFor` and `id` on all six fields.
+- **D31-108** The helper line reads *"Provide a phone or email so we can match the vendor."* — establish that it states the rule correctly, which makes the hint above it the outlier.
+- **D31-109** No field has a `maxLength`; the server truncates scope at **2000**, event label at **200**, name at **200**. Establish the silent truncation on each.
+- **D31-110** There is **no vendor picker and no search** — the vendor must be identified by typing a phone or email from memory.
+- **D31-111** Establish that the product knows this vendor's suppliers, brokers and customers, and offers none of them here.
+- **D31-112** There is **no confirmation step** before an invite that notifies a real person.
+- **D31-113** **Drive the send with the write blocker armed** and capture the body. Confirm nothing leaves.
+- **D31-114** Confirm the captured body carries exactly what was typed and nothing more.
+- **D31-115** Establish whether the diverted write produces a false success.
+- **D31-116** `onSuccess` reads `res?.matched` to choose between *"Invite sent — vendor matched!"* and *"Invite sent"*. Establish what a diverted (or malformed) response does to that branch.
+- **D31-117** …specifically: with no response body, `res?.matched` is falsy → the vendor is told **"Invite sent"** for an invite that was never created. Same shape as WWL-369 (Pin → "Review unpinned").
+- **D31-118** The server's own message is more honest than either toast: *"Invite saved — that vendor isn't on Wedding Wala yet, so they won't be notified in-app"*. Establish that the client **discards it** and shows "Invite sent" instead.
+- **D31-119** So a vendor who invites someone not on the platform is told the invite was *sent*, when the server explicitly said it was only *saved*.
+- **D31-120** Establish what actually happens to an unmatched invite: no notification, no email, no SMS. Search for any outbound dispatch.
+- **D31-121** …so an unmatched invite is a private note that the recipient will never see, presented as a sent invitation.
+- **D31-122** `onError` chain: `response.data.message → e.message → "Couldn't send invite"`. Drive a network failure and establish which string appears (the WWL-425 vs WWL-440 comparison).
+- **D31-123** Global `mutations: { retry: 1 }` — drive a failure and count the requests. Establish whether a duplicate invite would be created if the first actually succeeded.
+- **D31-124** …and establish that `send` has **no idempotency guard** — unlike Promote's pending check and Billing's single-column update. Read the controller.
+- **D31-125** So a retried invite creates **two rows** and fires **two notifications** to the same vendor. Establish from source; do not drive it.
+- **D31-126** Reopening the dialog resets all six fields (`useEffect` on `open`). Drive it.
+- **D31-127** The dialog can be dismissed mid-flight; establish whether `saveMut.isPending` blocks it.
+- **D31-128** Rapid double-click on **Send invite** — confirm the `disabled` guard holds.
+- **D31-129** Esc and overlay click close the dialog.
+- **D31-130** Focus lands in the dialog on open and returns to the trigger on close.
+- **D31-131** The dialog is `sm:max-w-md`; the two 2-column grids collapse below `sm`. Check at 360px.
+- **D31-132** `showSuccessToast` is undo-capable — establish whether an undo is offered, and whether one could work (cancel exists, so unlike Billing it could).
+- **D31-133** No draft persistence — establish that closing the dialog loses everything typed.
+- **D31-134** Establish whether the form warns before discarding a filled-in invite.
+
+### F. Accept and Decline (D31-135 → D31-162)
+
+- **D31-135** On **incoming**, a pending row renders **Accept** (outline, with a Check icon) and a ghost icon button labelled **Decline**.
+- **D31-136** The Decline control is an **icon only**, named solely by `aria-label="Decline"`. Establish there is no visible text.
+- **D31-137** Contrast: Accept has a label, Decline does not — on the two halves of the same decision.
+- **D31-138** **Neither has a confirmation.** One click accepts a commercial commitment with an agreed amount.
+- **D31-139** …while **Cancel**, the least consequential of the three, has a full `AlertDialog`. Establish the inconsistency.
+- **D31-140** Both buttons disable while either mutation is pending (`acceptMut.isPending` / `declineMut.isPending`).
+- **D31-141** Establish whether the disable is per-row or global — `acceptMut.isPending` is one mutation object shared across every row.
+- **D31-142** …so accepting one invite disables **Accept on every row**. Establish from source.
+- **D31-143** `onSuccess` fires *"Invite accepted"* / *"Invite declined"* and invalidates.
+- **D31-144** The backend refuses a non-pending invite with **409 `Already ${status}`**. Establish.
+- **D31-145** …and a foreign invite with **403 "Not your invite"**. Establish.
+- **D31-146** Probe accept on a non-existent id → **404**. Verified live.
+- **D31-147** The response notification to the sender is `type: "system"` → WWL-388. Establish.
+- **D31-148** The accept notification title contains a **✓ glyph**: *"Collaboration accepted ✓"*. Establish how that renders in the notification row.
+- **D31-149** Accepting does **not** create a booking, a function sheet, a supplier record or a ledger entry. Establish what it does create.
+- **D31-150** …so establish what "accepted" means operationally: a status change and a notification.
+- **D31-151** `agreedAmount` is described as *"tracked, not collected"*. Establish that no payment, invoice or payable is generated on either side.
+- **D31-152** Cross-check: does an accepted collaboration appear in Suppliers, Brokers, Expenses or the Khata? Search for a consumer of `SubcontractInvite` outside this module.
+- **D31-153** Establish whether the invitee's side records the amount as **receivable** anywhere.
+- **D31-154** After accepting, the row's actions become `—`. There is no "mark delivered", no "mark paid", no dispute path.
+- **D31-155** So an accepted collaboration is terminal in the UI. Establish.
+- **D31-156** There is no way to **un-accept** or renegotiate; the only statuses are the four.
+- **D31-157** Establish whether the sender can cancel an **accepted** invite — `cancel` requires `pending`, so no.
+- **D31-158** …and whether the invitee can withdraw an acceptance — no endpoint.
+- **D31-159** Drive Accept with the blocker armed on a synthetic id and confirm the request shape only — do **not** act on a real invite (there are none).
+- **D31-160** Establish the false-success behaviour on a diverted accept.
+- **D31-161** Drive the failure path and record the toast.
+- **D31-162** Confirm `retry: 1` applies to accept/decline too, and whether a duplicate is harmful (the 409 guard makes the second a no-op — establish).
+
+### G. Cancel (D31-163 → D31-178)
+
+- **D31-163** On **outgoing**, a pending row renders a ghost **Cancel** button with an `XCircle` icon and `aria-label="Cancel invite"`.
+- **D31-164** Clicking it opens an `AlertDialog` titled *"Cancel this invite?"*.
+- **D31-165** The description **names the counterpart and the event**: *"The invite to {name} for "{event}" will be withdrawn. This can't be undone."* Establish and credit — this is the best destructive-confirm copy in the sweep so far, against WWL-316 (Generator fuel names nothing) and WWL-382 (Reviews names only the reviewer).
+- **D31-166** The confirm button reads **Cancel invite**; the dismiss reads **Keep invite**. Credit the wording — neither is a bare "Cancel/OK" on a screen where "Cancel" is also the action.
+- **D31-167** `e.preventDefault()` on the action so the dialog stays open while the mutation runs. Establish.
+- **D31-168** The button label becomes *"Cancelling…"* while pending, and both controls disable.
+- **D31-169** `onSuccess` clears `cancelTarget`, toasts *"Invite cancelled"* and invalidates.
+- **D31-170** On failure the dialog **stays open** — establish, and contrast with the create dialogs that close regardless.
+- **D31-171** The backend requires `fromUserId === req.user.id` → **403 "Not your invite"** otherwise.
+- **D31-172** …and `status === "pending"` → **409** otherwise. So an accepted invite cannot be withdrawn.
+- **D31-173** Establish that the invitee is **not notified** when an invite is cancelled — `cancel` sends no notification, unlike accept/decline.
+- **D31-174** So a vendor who was invited, and notified, is never told the invite was withdrawn. It simply becomes uncancellable and inert on their screen.
+- **D31-175** Probe cancel on a missing id → **404**. Verified live.
+- **D31-176** Drive the cancel confirm with the blocker armed (no real invite exists; establish the request shape from source).
+- **D31-177** Establish the false-success behaviour.
+- **D31-178** Establish whether `respondedAt` is set on cancel — it is, which means the field means three different things (accepted at / declined at / cancelled at) under one name.
+
+### H. The decline reason that cannot be given (D31-179 → D31-190)
+
+- **D31-179** The backend accepts `reason` on decline, stores it in `declineReason`, and puts it in the notification to the sender: *"…declined your invite: {reason}"*.
+- **D31-180** `CollaborationsAPI.decline(id, reason?)` accepts the parameter.
+- **D31-181** **The view calls `CollaborationsAPI.decline(id)` with no reason.** Prove it from `declineMut`.
+- **D31-182** There is **no reason input** anywhere in the module — no dialog, no prompt, no textarea.
+- **D31-183** So `declineReason` can never be non-null through the UI, and the sender's notification always ends with a full stop instead of an explanation.
+- **D31-184** Establish that `declineReason` is also not a column (D31-070), so even a reason set by another client would be invisible.
+- **D31-185** Enumerate the chain: the column exists, the endpoint accepts it, the API client accepts it, the notification renders it — and no surface collects it.
+- **D31-186** Compare with WWL-408 (Promote's cancel endpoint with no button) and WWL-361 (Reviews' retract endpoint with no client). Establish the pattern across three modules.
+- **D31-187** Establish the operational cost: a subcontract declined without a reason gives the lead vendor nothing to act on, on a screen with no messaging.
+- **D31-188** …and there is no link from a collaboration to the chat module.
+- **D31-189** Establish whether the two vendors have any way to communicate about an invite from within this feature.
+- **D31-190** Conclude what a decline actually conveys.
+
+### I. Backend guards (D31-191 → D31-206)
+
+- **D31-191** `send` refuses a non-vendor with **403 "Vendors only"**.
+- **D31-192** Neither phone nor email → **400**. Verified live.
+- **D31-193** Self-invite by email → **400 "That's you — pick another vendor"**. Verified live, and refused **before** the row is created.
+- **D31-194** Establish that the self-invite check only fires when the contact **matches a user** — so self-inviting by an unregistered phone would be permitted. Read the guard.
+- **D31-195** `_matchUser` prefers **email** over phone. Establish the precedence.
+- **D31-196** The email match is case-insensitive via `lower(email)`. Establish.
+- **D31-197** WW-076 / WW-266: the phone match is on the **last 10 digits** via `right(regexp_replace(...), 10)`, not a `LIKE %…%` substring. Establish and credit — the old form could bind an invite to the wrong vendor.
+- **D31-198** `_nat` normalises `0092…`, `92…` (≥12 digits) and a leading `0` on an 11-digit number. Verify the transformation on a table of Pakistani forms.
+- **D31-199** Contrast with WWL-378, where the Reviews automation card's own normaliser mangles `0092…`. Establish that this module gets it right and that one does not.
+- **D31-200** `agreedAmount` clamping: `Math.max(0, …)` and the `9,999,999,999.99` ceiling (WW-146). Establish both.
+- **D31-201** `functionSheetId` is accepted from the body with **no ownership check** — establish whether a vendor could bind an invite to a function sheet that is not theirs.
+- **D31-202** …and establish the impact, given nothing reads the field.
+- **D31-203** **`POST /collaborations/abc/accept` returns 500 with the raw Postgres text** — *"Invalid input syntax for type integer: \"abc\""*. Verified live.
+- **D31-204** Establish that the controller returns `err.message` directly, so the database's own error string reaches the client.
+- **D31-205** …and that the frontend's `onError` renders `response.data.message` in a toast, so such a string is user-facing by design.
+- **D31-206** Establish that the id always comes from the API in practice, so this is an API-surface defect rather than a UI-reachable one — and compare with WWL-395 (Notifications, generic 500) and the `isInt` guards that `reviewRouter` and `promotionRouter` do have.
+
+### J. Accessibility (D31-207 → D31-218)
+
+- **D31-207** `h1` on the page.
+- **D31-208** `<th scope="col">` on the table headers.
+- **D31-209** The direction tabs are `aria-pressed` buttons, not a tablist. Establish how they are announced.
+- **D31-210** The **Decline** icon button's only name is `aria-label="Decline"` — no visible text (D31-136).
+- **D31-211** The **Cancel invite** icon button carries both an `aria-label` and visible text; check which wins.
+- **D31-212** The search input has no label and no `aria-label` — placeholder only (as in Promote, WWL-423).
+- **D31-213** The six dialog labels: `htmlFor` and `id`.
+- **D31-214** The `AlertDialog` traps focus and returns it.
+- **D31-215** `StatusPill` conveys status by text as well as colour.
+- **D31-216** The counterpart column's italic *"· not on Wedding Wala yet"* is meaningful text, not decoration — establish it is announced.
+- **D31-217** Focus order: header action → tabs → search → density → export → table.
+- **D31-218** `prefers-reduced-motion` against the spinner.
+
+### K. Mobile 360×740 (D31-219 → D31-228)
+
+- **D31-219** No horizontal overflow: `scrollWidth === clientWidth` **and** an element-level right-edge count, ancestor walk stopping before `<body>`.
+- **D31-220** Four stat cards at `grid-cols-2`.
+- **D31-221** The two-button tab strip at 360px.
+- **D31-222** `renderCard` replaces the table — **confirm it renders no Accept, no Decline and no Cancel**.
+- **D31-223** So establish whether any invite can be actioned at all on a phone (the Module 28 question, on a screen where the action is commercial).
+- **D31-224** The dialog at 360px: six fields, two collapsing 2-column grids, footer.
+- **D31-225** Tap targets ≥ 44px on the tabs, the dialog inputs and the footer buttons.
+- **D31-226** Export and density at 360px — identify their markup before concluding anything.
+- **D31-227** The empty state at 360px.
+- **D31-228** Under true touch emulation (`hover: none`), establish nothing here depends on hover.
+
+### L. Integrity (D31-229 → D31-238)
+
+- **D31-229** Console clean.
+- **D31-230** No unhandled rejection.
+- **D31-231** Clean-realm inventory at open: incoming count, outgoing count.
+- **D31-232** Every write attempted, listed with its captured body.
+- **D31-233** **Confirm no invite was created** — incoming and outgoing both still 0 at close.
+- **D31-234** **Confirm no notification was sent to any other vendor.** This is the one module where a leaked write reaches a third party.
+- **D31-235** Cross-check this account's own notification count (Module 28 baseline 60) — unchanged.
+- **D31-236** Confirm no `SubcontractInvite` row exists with this user as sender.
+- **D31-237** Confirm the self-invite probe created nothing (it was refused with a 400 before create).
+- **D31-238** No storage keys left behind.
