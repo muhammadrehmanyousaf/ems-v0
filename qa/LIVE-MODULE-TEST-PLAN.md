@@ -68,7 +68,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 36 | Tonight | `/dashboard/venue-os?tab=today` | ✅ 150 | **`[x]` COMPLETE — 100 run, 50 not run, 12 findings (3× S2)** |
 | 37 | Event profit | `/dashboard/venue-os?tab=profit` | ✅ 170 | `[x]` COMPLETE — 121 run, 49 not run, 15 findings (1× S1, 5× S2) |
 | 38 | Venue money | `/dashboard/venue-os?tab=money` | ✅ 200 | `[x]` COMPLETE — 138 run, 62 not run, 14 findings (4× S2) |
-| 39 | Halls & spaces | `/dashboard/venue-os?tab=spaces` | — | `[ ]` |
+| 39 | Halls & spaces | `/dashboard/venue-os?tab=spaces` | ✅ 170 | `[~]` cases written, executing |
 | 40 | Cash & cheques | `/dashboard/venue-os?tab=cash` | — | `[ ]` |
 | 41 | Kitchen & suppliers | `/dashboard/venue-os?tab=kitchen` | — | `[ ]` |
 | 42 | Accounting | `/dashboard/venue-os?tab=advanced` | — | `[ ]` |
@@ -19559,3 +19559,227 @@ overflow fixed in PR #185. The wide table on this tab is correctly wrapped in it
   unreachable behind `NO_TARIFF` (WWL-557).
 - **D38-063–065 min-wage floor warning** — needs a recorded shift.
 - **D38-123–125 genset dip validation** — needs a reconciled event.
+
+---
+
+# Module 39 — Halls & spaces (`/dashboard/venue-os?tab=spaces`)
+
+**Surface.** Four panels:
+
+| # | Component | What it does | Scope hook |
+|---|---|---|---|
+| 1 | `VenueSpacesManagerView` | Hall → Floor → Partition tree, capacity warnings, merge packages | `useBusinessIdField` |
+| 2 | `SpaceSlotsEditor` | sellable slot templates per space | `useBusinessIdField` |
+| 3 | `SpaceCalendarView` | month grid, tree-aware availability colouring | `useBusinessIdField` |
+| 4 | `SpacePnlView` | which space earns most | **`useActiveBusinessId`** |
+
+Panel 4 is the odd one out and case D39-004 exists because of it.
+
+**Self-imposed limits for this module, each with its reason:**
+
+- **No space is created, renamed, re-parented or deleted.** These rows are the sellable structure of
+  three approved, publicly-listed venues; `deleteSubVenue` cascades (`{deleted, ids[]}`). Every
+  mutating click is captured and diverted.
+- **No merge package is created.** A merge group is a sellable product.
+- **No slot template is saved.** Slots decide what a customer can book.
+- **Nothing is booked from the calendar.** `venueSpacesApi.book` writes a real reservation.
+- Reads, tree walking, capacity arithmetic, the calendar grid and the P&L are driven in full.
+
+---
+
+## D39-A · Arrival, scope, the missing fourth panel (cases 1–24)
+
+| # | Case | Expected |
+|---|---|---|
+| D39-001 | `?tab=spaces` opens on Spaces | tab active from URL |
+| D39-002 | Reload holds the tab | still spaces |
+| D39-003 | Section hint names all four things | tree · slots · grid · which space earns most |
+| D39-004 | **Is the "which space earns most" panel on screen?** | the hint promises it |
+| D39-005 | Panel count rendered vs promised | 4 expected |
+| D39-006 | `SpacePnlView` under "All venues" | `useActiveBusinessId` is null → `return null` |
+| D39-007 | Nothing explains its absence | no message, no locked state |
+| D39-008 | Selecting a venue in the header makes it appear | proves the cause |
+| D39-009 | The other three panels work under "All venues" | they use the shared hook |
+| D39-010 | No `Venue #` raw box | 0 |
+| D39-011 | Venue dropdowns present and in agreement | count + values |
+| D39-012 | The tree loads on arrival | no "Load spaces" click needed |
+| D39-013 | Spaces render by name, not id | check |
+| D39-014 | No console error on arrival | 0 |
+| D39-015 | No mutating request on arrival | 0 |
+| D39-016 | No horizontal overflow at 1440px | 0 elements |
+| D39-017 | No horizontal overflow at 360px | 0, or inside a scroller |
+| D39-018 | The calendar grid has its own scroller | it is wide by nature |
+| D39-019 | Exactly one `h1` on the page | recorded (Module 37 found 0) |
+| D39-020 | Focus visible on every control | check |
+| D39-021 | Buttons enabled once the venue resolves | no dead disabled state |
+| D39-022 | Panel headings are vendor language | *"halls · floors · partitions"* |
+| D39-023 | Switching venue reloads the tree | driven |
+| D39-024 | Switching venue does not leak the previous tree | driven |
+
+## D39-B · The space tree (cases 25–70)
+
+| # | Case | Expected |
+|---|---|---|
+| D39-025 | The tree renders every space the venue owns | count vs API |
+| D39-026 | Each node shows its kind | HALL / FLOOR / SECTION / LAWN / ROOFTOP … |
+| D39-027 | Children are visually nested under their parent | indentation or hierarchy |
+| D39-028 | Depth is honest — a SECTION under a HALL reads as a child | check |
+| D39-029 | Capacity shown per node | check |
+| D39-030 | Price shown per node | `Rs` formatted or an em-dash |
+| D39-031 | An unpriced space shows an em-dash, not `Rs 0` | check |
+| D39-032 | Whole-day flag surfaced where set | check |
+| D39-033 | **Capacity warnings render when children exceed the parent** | the amber block |
+| D39-034 | The warning names the space, both numbers and the overage | *"children total X > capacity Y (over by Z)"* |
+| D39-035 | No warning when the tree is consistent | check current state |
+| D39-036 | The warning is computed server-side | `capacityWarnings` endpoint |
+| D39-037 | Warning count matches the API | exact |
+| D39-038 | The eight kinds are all offered when adding | HALL FLOOR SECTION LAWN MARQUEE BASEMENT ROOFTOP OTHER |
+| D39-039 | "Add space" is disabled until a name is entered | check |
+| D39-040 | Add is captured and diverted | 0 delivered |
+| D39-041 | The captured body carries businessId | check |
+| D39-042 | The captured body carries the chosen parent | nesting works |
+| D39-043 | A child can be added under any node | the UI offers it |
+| D39-044 | The parent picker names spaces, not ids | check |
+| D39-045 | Adding with capacity > parent capacity is allowed but warned | record |
+| D39-046 | Negative capacity rejected | driven |
+| D39-047 | Zero capacity handled | driven |
+| D39-048 | Negative price rejected | driven |
+| D39-049 | A very long name does not break the row | driven |
+| D39-050 | Duplicate names are permitted or rejected | record |
+| D39-051 | Edit is available per node | check |
+| D39-052 | Edit is captured and diverted | 0 delivered |
+| D39-053 | **Delete has a guard** | the source claims delete-with-guard |
+| D39-054 | The guard says what will be lost | cascade count |
+| D39-055 | Delete is captured and diverted | 0 delivered |
+| D39-056 | Deleting a parent warns about its children | `{deleted, ids[]}` is a cascade |
+| D39-057 | Nothing deletes a space that has bookings | reasoned or driven |
+| D39-058 | Merge packages section present | check |
+| D39-059 | Merge packages listed by name | check |
+| D39-060 | A merge package names its member spaces | check |
+| D39-061 | Merge price shown | check |
+| D39-062 | Creating a merge package requires ≥2 spaces | driven |
+| D39-063 | Merge creation is captured and diverted | 0 delivered |
+| D39-064 | Space picks for a merge are by name | not ids |
+| D39-065 | The same space twice in one package is prevented | driven |
+| D39-066 | Empty state when the venue has no spaces | copy check on a second venue |
+| D39-067 | Error copy is human | *"Hierarchical spaces are not enabled…"* |
+| D39-068 | Error copy leaks no SQL | check |
+| D39-069 | One click → one request | not two |
+| D39-070 | The tree survives a hard reload | same nodes |
+
+## D39-C · Slot templates (cases 71–104)
+
+| # | Case | Expected |
+|---|---|---|
+| D39-071 | The space list loads on arrival | no click needed |
+| D39-072 | Spaces are pickable by name | check |
+| D39-073 | Picking a space loads its slots | driven |
+| D39-074 | The scope of the returned slots is shown | `scope` field |
+| D39-075 | Venue-level vs space-level slots are distinguishable | check |
+| D39-076 | A space with no slots shows an empty state | copy |
+| D39-077 | Slot rows show start and end | check |
+| D39-078 | Slot rows show a label | e.g. lunch / dinner |
+| D39-079 | Slot rows show capacity | check |
+| D39-080 | Times render in a Pakistani-readable format | not raw ISO |
+| D39-081 | Overlapping slots are flagged | driven or reasoned |
+| D39-082 | Adding a slot is captured and diverted | 0 delivered |
+| D39-083 | The captured body carries the space id | check |
+| D39-084 | End before start is rejected | driven |
+| D39-085 | Equal start and end rejected | driven |
+| D39-086 | A slot crossing midnight is handled | driven — a shaadi runs past 12 |
+| D39-087 | Capacity defaults to 1 | check |
+| D39-088 | Capacity 0 rejected | driven |
+| D39-089 | Deleting a slot is captured and diverted | 0 delivered |
+| D39-090 | Turnaround/gap is expressible | check |
+| D39-091 | The editor explains what a slot sells | copy |
+| D39-092 | Switching space clears the previous slots | no stale rows |
+| D39-093 | Switching venue clears the space list | no cross-venue leak |
+| D39-094 | Error copy is human | check |
+| D39-095 | One click → one request | not two |
+| D39-096 | Slots are not in the URL | record |
+| D39-097 | The panel is usable at 360px | check |
+| D39-098 | Slot times are timezone-stable | Asia/Karachi |
+| D39-099 | A slot cannot be created for another venue's space | reasoned |
+| D39-100 | The slot list order is stable | no jitter |
+| D39-101 | Long slot labels truncate | check |
+| D39-102 | The panel loads without a slot chosen | no error |
+| D39-103 | Keyboard reachable throughout | check |
+| D39-104 | No mutating request from browsing | 0 |
+
+## D39-D · The availability calendar (cases 105–142)
+
+| # | Case | Expected |
+|---|---|---|
+| D39-105 | Month input present | check |
+| D39-106 | **The month defaults to something** | `useState("")` — flag if blank |
+| D39-107 | "Show" is disabled until a month is chosen | check |
+| D39-108 | Choosing the current month and showing renders a grid | driven |
+| D39-109 | The grid has a row per space | count matches the tree |
+| D39-110 | Rows are indented Hall → Floor → Partition | check |
+| D39-111 | The grid has a cell per day of that month | 31 for August |
+| D39-112 | Month bounds are computed correctly | last day of month |
+| D39-113 | February is handled | driven with `2026-02` |
+| D39-114 | A leap year is handled | driven with `2028-02` |
+| D39-115 | Three colours are used | AVAILABLE / PARTIAL / UNAVAILABLE |
+| D39-116 | A legend explains the three | *booked · partial · free* |
+| D39-117 | **`AVAILABLE` is `bg-white`** | invisible in dark mode — flag |
+| D39-118 | The legend colours match the cell colours | check |
+| D39-119 | Colour is not the ONLY signal | a11y — flag if it is |
+| D39-120 | Cells carry a title/aria description | check |
+| D39-121 | **Booking a parent marks every descendant unavailable** | the correctness the doc calls out |
+| D39-122 | A booked descendant marks the parent PARTIAL | the other direction |
+| D39-123 | The grid matches the bookings on the Today board | cross-check a known date |
+| D39-124 | A day with a confirmed booking is not shown free | the money-critical case |
+| D39-125 | Cancelled bookings do not block a day | driven or reasoned |
+| D39-126 | The grid is read-only | clicking a cell writes nothing |
+| D39-127 | Clicking a cell does something useful, or nothing | record |
+| D39-128 | A month with no bookings renders an all-free grid | driven |
+| D39-129 | A far-future month is handled | driven |
+| D39-130 | A past month is handled | driven |
+| D39-131 | An invalid month string is handled | driven |
+| D39-132 | The grid has its own horizontal scroller | 31 columns |
+| D39-133 | The space-name column is readable at 360px | check |
+| D39-134 | The month is not in the URL | record |
+| D39-135 | Switching venue clears the grid | no leak |
+| D39-136 | Error copy is *"Not enabled for this account yet."* | present |
+| D39-137 | That copy is wrong if the real cause is something else | check the status |
+| D39-138 | One click → one request | not two |
+| D39-139 | The grid survives a hard reload | re-driven |
+| D39-140 | Day numbers are labelled | check |
+| D39-141 | Weekends are distinguishable | shaadi season is weekend-heavy — record |
+| D39-142 | No mutating request across the whole calendar | 0 |
+
+## D39-E · Per-space P&L (cases 143–170)
+
+| # | Case | Expected |
+|---|---|---|
+| D39-143 | The panel renders once a venue is active | driven after switching |
+| D39-144 | Three totals: Revenue, Cost, Margin | 3 |
+| D39-145 | Margin shows both rupees and a percentage | check |
+| D39-146 | `Margin = Revenue − Cost` | arithmetic |
+| D39-147 | `marginPct = Margin ÷ Revenue` | arithmetic |
+| D39-148 | A null `marginPct` renders without a stray `·` | check |
+| D39-149 | The table lists every space | count vs the tree |
+| D39-150 | Per-row margin arithmetic | every row |
+| D39-151 | Row revenues sum to the Revenue total | exact |
+| D39-152 | Row costs sum to the Cost total | exact |
+| D39-153 | Revenue is folded up the tree | a parent includes its children |
+| D39-154 | A space with no bookings shows zero, not blank | check |
+| D39-155 | **Space revenue reconciles with the Profit tab** | Rs 33,493,850 booked — does it appear here? |
+| D39-156 | Space cost reconciles with the Money tab | cross-check |
+| D39-157 | An unmapped booking (no space) is disclosed | where does its revenue go? |
+| D39-158 | The table has a horizontal scroller | present |
+| D39-159 | Error copy is *"Per-space P&L isn't enabled for this venue yet."* | present |
+| D39-160 | That copy is accurate — is it a flag or empty data? | probe the endpoint |
+| D39-161 | `retry: false` honoured | 1 request on failure |
+| D39-162 | Loading state present | *"Loading…"* |
+| D39-163 | Rows link to the space | record |
+| D39-164 | Numbers are `tabular-nums` | check |
+| D39-165 | No `Rs NaN` | sanity |
+| D39-166 | Percentages are integers | check |
+| D39-167 | The panel is usable at 360px | check |
+| D39-168 | Switching venue re-queries | query key includes businessId |
+| D39-169 | The panel writes nothing | 0 |
+| D39-170 | **Zero mutating requests across the entire module** | the headline safety assertion |
+
+**Total: 170 cases.**
