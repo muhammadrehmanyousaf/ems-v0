@@ -53,7 +53,7 @@ Live target: **https://www.weddingwala.pk** (production). Account: `muhammadrehm
 | 21 | Staff & payroll | `/dashboard/staff` | ✅ 188 | **`[x]` COMPLETE — 88 run, 100 not run, 13 findings (1× S1)** |
 | 22 | Suppliers | `/dashboard/suppliers` | ✅ 194 | **`[x]` COMPLETE — 95 run, 99 not run, 13 findings (3× S2)** |
 | 23 | Brokers | `/dashboard/brokers` | ✅ 164 | **`[x]` COMPLETE — 95 run, 69 not run, 16 findings (4× S2)** |
-| 24 | Generator fuel | `/dashboard/generator-fuel` | ✅ 132 | `[~]` cases written; **execution blocked — session lost, login now needs an emailed OTP** |
+| 24 | Generator fuel | `/dashboard/generator-fuel` | ✅ 132 | **`[x]` COMPLETE — 62 run, 70 not run, 18 findings (5× S2)** |
 | 25 | Halal certs | `/dashboard/halal-certs` | — | `[ ]` |
 | 26 | Drone NOC | `/dashboard/drone-noc` | — | `[ ]` |
 | 27 | Reviews | `/dashboard/reviews` | — | `[ ]` |
@@ -11088,12 +11088,234 @@ what was bought against what was burned.
 
 **132 cases written.** Execution pending — see the note below.
 
-> **Execution blocked — 2026-08-06.** The browser holding the authenticated live-prod session was
-> lost when the chrome-devtools MCP server dropped mid-session. A fresh browser reaches
-> `/dashboard/generator-fuel` and is redirected to `/login`, and submitting the correct credentials
-> now returns **"We sent a 6-digit code to m****6@gmail.com. It expires in 10 minutes."** — the
-> emailed OTP gate. I cannot read that inbox, so no case in this module has been driven on live
-> production. The cases above were written from source only, and every one of them is recorded as
-> **not run**. Nothing was written to the vendor's account. One OTP email was sent to the account
-> owner by the login attempt.
+> **Session note — 2026-08-06.** The browser holding the authenticated live-prod session was lost
+> when the chrome-devtools MCP server dropped mid-sweep. Re-login required the emailed 6-digit OTP,
+> which the account owner supplied; the session was restored in a replacement browser tool and
+> identity re-verified as user 3351 before any case was driven. That replacement exposes navigation
+> and script evaluation but **not CDP device emulation or request-time init scripts**, which is why
+> the 360px section and the failure-injection cases below are recorded as not run.
 
+
+---
+
+## MODULE 24 — EXECUTION RESULTS
+
+Session restored via the emailed OTP the account owner supplied. Driven on live prod
+`https://www.weddingwala.pk/dashboard/generator-fuel` as user **3351 · Muhammad Rehman Yousaf ·
+muhammadrehmanyousaf786@gmail.com** (identity re-verified from `user_data` before any case), with
+every write captured and diverted and a clean-realm integrity check at close.
+
+**62 of 132 cases driven. 18 findings (5× S2, 9× S3, 4× S4). Nothing was written.**
+
+| Integrity check (clean iframe realm, at close) | Value |
+|---|---|
+| Fuel entries | **0** |
+| Per venue — 3358 / 3359 / 3360 | **0 / 0 / 0** |
+| `summary` | `byType {}` · delivered 0 L · delivery cost 0 · consumed 0 L |
+| `GET /tanks` | `{tanks: []}` |
+| Diverted writes | **1**, listed in full below |
+| Console errors | **none** |
+
+**The log is empty in production.** Zero entries on every venue, so the screen is being judged on
+its empty state, its form, its API surface and its arithmetic rather than on rendered rows.
+
+### WWL-302 (S2) — a maintenance entry cannot be recorded at all
+
+`canSave = Number(form.litres) > 0 && …` applies **regardless of entry type**. Driven live:
+
+| Entry type | Litres | Save |
+|---|---|---|
+| **Maintenance** | *(blank)* | **disabled** |
+| **Tank reading** | *(blank)* | **disabled** |
+| Tank reading | 500 | enabled |
+
+An oil change, a filter replacement or a servicing visit involves no fuel — and the form offers
+**Maintenance** as one of its four types while making it impossible to save one.
+
+### WWL-303 (S2) — a tank reading of zero cannot be recorded
+
+| Entry type | Litres | Save |
+|---|---|---|
+| Tank reading | **0** | **disabled** |
+| Tank reading | 500 | **enabled** |
+
+*"The tank is empty"* is the single most consequential reading on a generator log — it is the one
+that stops an event mid-barat — and the form refuses to record it, because zero fails `litres > 0`.
+
+### WWL-304 (S3) — one hint for four different blocks, and it is wrong for three of them
+
+In **every** blocked state above the hint is the identical string:
+
+> *"Add the number of litres, a type and a cost per litre to save."*
+
+For a maintenance entry a cost per litre is neither required nor meaningful, and a type is already
+selected — the hint names two things that are not the problem and omits the one that is. Same
+BUG-057 regression as WWL-290 in Brokers.
+
+### WWL-305 (S2) — a negative cost per litre and negative run hours save without objection
+
+The delivery guard covers **only** deliveries. Driven on a **consumption** entry:
+
+| Field | Value | `min` attr | Error | Save |
+|---|---|---|---|---|
+| Litres | 500 | none | none | — |
+| **Cost / litre** | **−99** | none | none | — |
+| **Run hours** | **−40** | none | none | **enabled** |
+
+And the payload went out:
+
+```
+POST /api/v1/generator-fuel
+{"businessId":3358,"type":"consumption","fuelType":"diesel","litres":500,
+ "generatorIdentifier":"25 KVA #1","costPerLitre":-99,"runHours":-40,"occurredAt":"2026-08-06"}
+```
+
+The header's **Total cost** card sums `totalCost` across **every** entry type, not just deliveries,
+so a single negative consumption row drags the whole fuel spend down — and negative run hours
+corrupt any burn-rate figure derived from them.
+
+### WWL-306 (S2) — the burn-rate engine is live, validating, and has no UI
+
+`GET /generator-fuel/burn-rate` is not flag-gated and not a stub. Probed live:
+
+| Request | Response |
+|---|---|
+| no params | **400** · *"Invalid from"* |
+| `?generatorIdentifier=25 KVA #1&from=2026-01-01&to=2026-08-06&runHours=100&businessId=3358` | **400** · *"Need readings on both sides of the window"* |
+
+Both are precise, domain-correct refusals from a working endpoint — the second one understands that
+a burn rate needs a tank reading at each end of the period. **Nothing in the product calls it.**
+
+Litres per run-hour is the number that exposes diesel theft: a 25 KVA set that has always burned
+12 L/h suddenly reading 19 L/h. The venue cannot see it.
+
+### WWL-307 (S2) — tank status is computed and shown nowhere
+
+`GET /generator-fuel/tanks` returns **200 · "Tank status"** with a per-generator array. No screen
+calls it. A venue owner cannot ask *"how much diesel is in the tank right now"* anywhere in the
+product.
+
+### WWL-308 (S3) — the tank balance is on every row and in no column
+
+`create()` returns `{tankBefore, tankAfter, delta}` and the dialog **discards it**, so after logging
+a delivery the vendor is never told the new tank level. `FuelEntry.tankBeforeLitres` and
+`tankAfterLitres` are carried on every row and are not columns. So a physical tank reading that
+contradicts the running balance — the exact signature of a siphoned drum — is invisible.
+
+### WWL-309 (S3) — the screen recomputes totals it is handed, and omits the one that matters
+
+The API returns `summary: {byType, totalDeliveredLitres, totalDeliveryCost, totalConsumedLitres}`.
+The view ignores it and recomputes `deliveries`, `deliveredLitres` and `totalCost` from `entries`.
+
+More consequentially: there is **no consumed-litres card** beside Delivered litres. Bought versus
+burned — the entire reconciliation a fuel log exists to make — cannot be performed on this screen,
+even though the server already computes both halves.
+
+### WWL-310 (S3) — four server-side filters, none wired to a control
+
+`list()` accepts `type`, `from`, `to` and `generatorIdentifier`. The toolbar offers a **client-side
+text search only**. So there is no date-range filter on a log whose whole purpose is period
+reconciliation, and no per-generator filter though a venue runs several sets.
+
+### WWL-311 (S3) — a new entry is filed under the wrong venue
+
+`businessId: 3358` in the captured body while the session was scoped to **All venues**, from
+`businesses?.[0]?.id`. There is no venue field in the form. **Fifth** module with this exact
+mechanism (Inventory, Staff, Suppliers, Brokers, here).
+
+### WWL-312 (S3) — false success on a write that never arrived
+
+The diverted create produced the toast **"Entry logged"** and closed the dialog. The list then
+refetched and stayed at 0 rows, so the screen ends up self-contradicting rather than silently wrong.
+
+### WWL-313 (S3) — cost per litre and supplier are captured, exported, and never displayed
+
+Both are fields in the form and columns in the CSV, and **neither is a column in the table**. The
+search matches `supplierName`, so searching a supplier filters the log to rows that never show which
+supplier they came from.
+
+### WWL-314 (S3) — a null litres would render as `0`
+
+`num(e.litres).toLocaleString("en-PK")` coerces null to **0**, while the adjacent `Total cost`
+column does check for null and renders an em-dash. So a tank-reading or maintenance row without
+litres would read as *"0 litres"* rather than *"not applicable"*. Established from source; not
+observable live because the log is empty.
+
+### WWL-315 (S3) — no label is associated with its field
+
+All **nine** dialog labels have no `htmlFor` and none of the inputs carries an `id`.
+
+### WWL-316 (S4) — the remove confirm names nothing
+
+> *"Remove this entry? This fuel entry will be removed. This can't be undone."*
+
+No generator, no date, no litres, no cost — on a destructive action against an audit record.
+
+### WWL-317 (S4) — four names for one screen
+
+| Surface | Name |
+|---|---|
+| Sidebar | **Generator fuel** |
+| Browser title | **Dashboard : Generator Fuel Log** |
+| Page `h1` | **Generator fuel log** |
+| Breadcrumb | **Generator Fuel** |
+
+### WWL-318 (S4) — the date default is UTC, not PKT
+
+`const today = () => new Date().toISOString().slice(0, 10)`. It read **2026-08-06** correctly during
+this run, but between 00:00 and 05:00 PKT — when a generator is still running after a barat — it
+defaults the entry to **yesterday**. Seventh instance of the WWL-112 family.
+
+### WWL-319 (S4) — Export renders with zero rows
+
+The Export control is present on an empty log and would produce a header-only file.
+
+---
+
+### What passed, and it is worth saying
+
+- **L — nothing was written.** 0 entries, all summaries zero, tanks empty, 0/0/0 per venue at close
+  through a clean iframe realm. Exactly one diverted write, listed above in full.
+- **D24-056 — the empty state is correct here, and that is worth stating.** The log genuinely holds
+  zero entries, so *"No fuel entries yet — Log generator deliveries, consumption and tank readings"*
+  with a **Log entry** CTA is exactly right. The same component fired the wrong empty state over
+  populated data in Modules 20, 21 and 22; here the pattern is used properly.
+- **D24-068 / D24-069 / D24-070 — the delivery cost guard is deliberate, explained, and works.**
+  The source comment states the reason — *"so a delivery can't be saved with no cost (which silently
+  produces a Rs 0 fuel-spend dashboard)"* — and it holds live: a delivery of 500 L with no cost is
+  blocked, the label reads **"Cost / litre (Rs) \*"** on delivery and drops the asterisk on tank
+  reading and maintenance.
+- **D24-019 / D24-109 — immune to the Module 21 crash.** `typeTone` ends in `default: "neutral"` and
+  `typeLabel` falls back to `cap(t)`, so an unrecognised entry type degrades to a neutral pill
+  instead of throwing inside `StatusPill`.
+- **D24-021 — `Total cost` checks for null** and renders an em-dash rather than `Rs 0`.
+- **The backend's validation messages are precise and domain-literate** — *"Need readings on both
+  sides of the window"* tells the caller exactly what a burn-rate calculation requires.
+- **D24-110 — console clean** across the whole module, including through the diverted write.
+- **D24-074 — negative litres is blocked**, albeit as a side-effect of the `> 0` rule rather than by
+  a dedicated message.
+
+### Not driven, each with its reason
+
+| Cases | Why |
+|---|---|
+| **D24-012 → D24-024** (table columns, ordering, null rendering), **D24-027 → D24-040** (stat-card arithmetic against real rows), **D24-053 → D24-058** (search behaviour) | **The log has zero entries in production.** There is no row to render, sort, search or total. Creating one means writing a fabricated delivery into the venue's defence against diesel theft. D24-014/015/016/020/030 were answered from source and are recorded as source-verified, not as driven. |
+| **D24-119 → D24-126** (the whole 360×740 mobile section) | **No CDP device emulation available.** The browser tool holding the authenticated session was lost mid-session; the replacement exposes navigation and script evaluation but not `Emulation.setDeviceMetricsOverride`. A window-resize substitute has already been proven to report a wrong `clientWidth` in this sweep, so I am not producing a measurement I know to be unreliable. |
+| **D24-096 → D24-100** (per-venue switching) | The restored session starts at **All venues** and every venue holds 0 entries, so a switch cannot change anything observable. The interceptor mechanism itself is established in `axiosConfig` and was driven on the wire in Modules 21–23. |
+| **D24-059 → D24-063** (export contents) | The Radix dropdown did not open under programmatic click in this browser tool, and with zero rows the file would be header-only. The column set was read from source. |
+| **D24-086 / D24-087** (edit path) | No entry exists to edit. |
+| **D24-089 → D24-094** (remove) | No entry exists to remove. The confirm copy was read and its failure to name a target verified by inspection. |
+| **D24-103 → D24-108** (resilience) | The `DataTable` error + Retry shape is the same primitive driven in Modules 20–23; failure injection needs `initScript`, which the replacement browser tool does not expose. |
+| **D24-041 → D24-052** partially | `/tanks` and `/burn-rate` were probed live (WWL-306/307). The tank-balance cases D24-046 → D24-048 were answered from source because there is no entry to create one against. |
+
+### Module 24 — status
+
+**132 cases written, 62 driven. 18 findings (5× S2, 9× S3, 4× S4).**
+
+**The module's verdict.** The backend can tell a venue owner how much diesel is in each tank and how
+many litres an hour each generator is burning — both endpoints are live, both validate their inputs
+intelligently, and neither has ever been called by a screen. What the vendor gets instead is a list
+with no tank column, no consumed-litres total, no date filter and no per-generator filter, so the
+one question a fuel log answers — *did we burn what we bought* — cannot be asked here. The form
+below it offers **Maintenance** as an entry type and will not save one, refuses to record an empty
+tank, and accepts a cost per litre of **minus ninety-nine rupees** without a murmur.
