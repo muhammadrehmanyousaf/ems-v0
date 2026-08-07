@@ -17,6 +17,7 @@
  */
 
 import * as React from "react"
+import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
 import { useMutation } from "@tanstack/react-query"
 import { DroneNocAPI, type DroneNOC, type PermitStatus } from "@/lib/api/droneNoc"
 import {
@@ -90,11 +91,16 @@ export function PermitReasonDialog({
 
   if (!permit) return null
 
+  /**
+   * WWL-346 — this checked the reason and fired toast.error("Reason required")
+   * AFTER the vendor pressed Save. Every other form on the platform disables
+   * the button and says what it is waiting for, which is the difference between
+   * being told a rule and being caught by one.
+   */
+  const blockedReason = reason.trim() ? undefined : `Add a reason — it is recorded on the permit and sent to the vendor.`
+  const canSave = !blockedReason
   const submit = () => {
-    if (!reason.trim()) {
-      toast.error("Reason required")
-      return
-    }
+    if (!canSave) return
     mut.mutate(permit)
   }
 
@@ -123,7 +129,8 @@ export function PermitReasonDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mut.isPending}>
             Cancel
           </Button>
-          <Button onClick={submit} disabled={mut.isPending}>
+          <FormBlockedHint message={blockedReason} />
+          <Button onClick={submit} disabled={mut.isPending || !canSave}>
             {mut.isPending && <Spinner className="mr-2 h-4 w-4" />}
             Save
           </Button>

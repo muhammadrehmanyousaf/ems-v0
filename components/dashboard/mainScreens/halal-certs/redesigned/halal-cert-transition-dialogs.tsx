@@ -16,6 +16,7 @@
  */
 
 import * as React from "react"
+import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
 import { useMutation } from "@tanstack/react-query"
 import { HalalCertAPI, type HalalCert } from "@/lib/api/halalCerts"
 import {
@@ -66,11 +67,15 @@ export function RevokeCertDialog({
       toast.error(e?.response?.data?.message || e?.message || "Couldn't revoke certificate"),
   })
 
+  /**
+   * WWL-327 — this checked the reason and fired toast.error("Revoke reason
+   * required") AFTER the vendor pressed a live, destructive Revoke button. The
+   * create dialog directly beside it already disables and explains. Revoking is
+   * terminal, so being told the rule beforehand matters more here, not less.
+   */
+  const revokeBlocked = reason.trim() ? undefined : "Add the reason for revoking — it stays on the certificate's record."
   const submit = () => {
-    if (!reason.trim()) {
-      toast.error("Revoke reason required")
-      return
-    }
+    if (revokeBlocked) return
     mut.mutate()
   }
 
@@ -98,9 +103,10 @@ export function RevokeCertDialog({
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={mut.isPending}>
             Cancel
           </Button>
+          <FormBlockedHint message={revokeBlocked} />
           <Button
             onClick={submit}
-            disabled={mut.isPending}
+            disabled={mut.isPending || !!revokeBlocked}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             {mut.isPending ? (

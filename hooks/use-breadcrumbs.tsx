@@ -37,6 +37,9 @@ const segmentLabels: Record<string, string> = {
   'tax': 'Tax report',
   'trade-ops': 'Trade operations',
   'report-cards': 'Reports',
+  // WWL-353 — title-casing the slug produced "Drone Noc" beside a page called
+  // "Drone NOC permits". NOC is an acronym.
+  'drone-noc': 'Drone NOC',
 };
 
 export function useBreadcrumbs() {

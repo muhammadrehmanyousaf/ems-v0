@@ -128,7 +128,39 @@ export function DroneNocRedesignedView({ adminCapable = true }: { adminCapable?:
       ),
     },
     { key: "authority", header: "Authority", cellClassName: "text-muted-foreground", render: (p) => authorityLabel(p) },
-    { key: "pilot", header: "Pilot", cellClassName: "text-muted-foreground", render: (p) => p.pilotName || "—" },
+    /**
+     * WWL-344 — five captured fields were columns in nothing: valid-from, drone
+     * registration, pilot licence, venue/area and drone model. The search
+     * matches `droneRegNumber` and `venueAddress`, so searching either filtered
+     * the table down to rows that never showed the thing being searched for.
+     *
+     * WWL-355 — the pilot licence is the field an inspector asks for, and it
+     * was captured, stored, and absent from both the table and the export.
+     */
+    {
+      key: "pilot",
+      header: "Pilot",
+      cellClassName: "text-muted-foreground",
+      render: (p) => (
+        <div className="min-w-0">
+          <div className="truncate">{p.pilotName || "—"}</div>
+          {p.pilotLicense && <div className="truncate text-xs">Licence {p.pilotLicense}</div>}
+        </div>
+      ),
+    },
+    {
+      key: "drone",
+      header: "Drone",
+      cellClassName: "text-muted-foreground",
+      render: (p) => (
+        <div className="min-w-0">
+          <div className="truncate">{p.droneModel || "—"}</div>
+          {p.droneRegNumber && <div className="truncate text-xs">Reg {p.droneRegNumber}</div>}
+        </div>
+      ),
+    },
+    { key: "venue", header: "Venue / area", cellClassName: "max-w-[200px] truncate text-muted-foreground", render: (p) => p.venueAddress || "—" },
+    { key: "validFrom", header: "Valid from", cellClassName: "text-muted-foreground", render: (p) => fmtDate(p.validFrom) },
     { key: "validUntil", header: "Valid until", cellClassName: "text-muted-foreground", render: (p) => fmtDate(p.validUntil) },
     {
       key: "fee",
@@ -158,8 +190,20 @@ export function DroneNocRedesignedView({ adminCapable = true }: { adminCapable?:
           {canCancel(p.status) && (
             <Button size="sm" variant="ghost" onClick={() => setCancelling(p)} aria-label="Cancel permit"><Icon name="XCircle" size={14} /></Button>
           )}
-          <Button size="sm" variant="ghost" onClick={() => openEdit(p)} aria-label="Edit permit"><Icon name="Pencil" size={14} /></Button>
-          <Button size="sm" variant="ghost" onClick={() => setDeleting(p)} aria-label="Remove permit"><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
+          {/**
+            * WWL-345 — Edit and Remove rendered on EVERY status, approved
+            * included. The backend guards only the status field
+            * (`delete patch.status`), so an approved permit's reference number
+            * and validity window could be rewritten afterwards with no trace.
+            * A permit is a document an authority issued; once approved, the
+            * way to change it is a fresh application, not a quiet edit.
+            */}
+          {p.status !== "approved" && (
+            <Button size="sm" variant="ghost" onClick={() => openEdit(p)} aria-label={`Edit permit ${p.referenceNumber}`}><Icon name="Pencil" size={14} /></Button>
+          )}
+          {p.status !== "approved" && (
+            <Button size="sm" variant="ghost" onClick={() => setDeleting(p)} aria-label={`Remove permit ${p.referenceNumber}`}><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
+          )}
         </div>
       ),
     },
@@ -216,7 +260,12 @@ export function DroneNocRedesignedView({ adminCapable = true }: { adminCapable?:
                 { header: "Type", value: (p) => typeLabel(p) },
                 { header: "Authority", value: (p) => authorityLabel(p) },
                 { header: "Pilot", value: (p) => p.pilotName ?? "" },
+                // WWL-355 — the licence is the field an inspector asks for. It
+                // was captured, stored, and missing from the export.
+                { header: "Pilot licence", value: (p) => p.pilotLicense ?? "" },
+                { header: "Drone model", value: (p) => p.droneModel ?? "" },
                 { header: "Drone reg #", value: (p) => p.droneRegNumber ?? "" },
+                { header: "Venue / area", value: (p) => p.venueAddress ?? "" },
                 { header: "Valid from", value: (p) => p.validFrom ?? "" },
                 { header: "Valid until", value: (p) => p.validUntil ?? "" },
                 { header: "Fee paid", value: (p) => num(p.feePaid) },
