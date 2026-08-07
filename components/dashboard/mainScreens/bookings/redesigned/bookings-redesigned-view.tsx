@@ -52,6 +52,20 @@ const fmtDate = (s?: string) => {
   return isNaN(d.getTime()) ? s : d.toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })
 }
 
+const PAGE_SIZE = 50
+
+const BUCKETS = [
+  { value: "active", label: "Active" },
+  { value: "completed", label: "Archive" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "all", label: "All" },
+] as const
+
+type BucketValue = (typeof BUCKETS)[number]["value"]
+
+const isBucket = (v: string | null | undefined): v is BucketValue =>
+  !!v && BUCKETS.some((b) => b.value === v)
+
 export function BookingsRedesignedView() {
   const [search, setSearch] = React.useState("")
   // Seed the bucket from the URL so the sidebar panel can link straight to a
@@ -60,20 +74,29 @@ export function BookingsRedesignedView() {
   // afterwards; this only decides where you land.
   const searchParams = useSearchParams()
   const urlBucket = searchParams?.get("bucket")
-  const [bucket, setBucket] = React.useState<"active" | "completed">(
-    urlBucket === "completed" ? "completed" : "active",
+  const [bucket, setBucket] = React.useState<BucketValue>(
+    isBucket(urlBucket) ? urlBucket : "active",
   )
+  const [page, setPage] = React.useState(1)
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
   const [createOpen, setCreateOpen] = React.useState(false)
 
   const { data, isLoading, isError, refetch } = useFetchData({
     endpoint: "/api/v1/bookings",
-    queryKey: ["bookings-redesigned", bucket],
-    Params: { page: 1, limit: 50, sortBy: "createdAt", sortOrder: "DESC", search: search || undefined, bucket },
+    queryKey: ["bookings-redesigned", bucket, String(page)],
+    Params: { page, limit: PAGE_SIZE, sortBy: "createdAt", sortOrder: "DESC", search: search || undefined, bucket },
   })
 
   const bookings: BookingData[] = data?.data?.data ?? []
-  const total: number = data?.data?.filters?.total ?? bookings.length
+  const filters = data?.data?.filters
+  const total: number = filters?.total ?? bookings.length
+  // WWL-043 — the server caps a page at 100 rows and this screen had no
+  // pagination control of any kind, so a venue past that line lost rows with
+  // no message while "Collected (shown)" and "Due (shown)" quietly understated
+  // the money. The tiles were honestly labelled, but nothing told the vendor
+  // that "shown" had been capped by the server rather than by their filter.
+  const totalPages: number = filters?.totalPages ?? 1
+  const isTruncated = total > bookings.length
 
   // Stats computed from the loaded page (labelled honestly).
   const collected = bookings.reduce((s, b) => s + (Number(b.downPayment) || 0), 0)
@@ -119,10 +142,23 @@ export function BookingsRedesignedView() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Total bookings" value={total} icon="Calendar" />
-        <StatCard label="Collected (shown)" value={formatPkr(collected)} icon="Wallet" trend="up" delta="received" />
-        <StatCard label="Due (shown)" value={formatPkr(due)} icon="Clock" delta="to chase" />
+        <StatCard
+          label={isTruncated ? `Collected (this page)` : "Collected"}
+          value={formatPkr(collected)} icon="Wallet" trend="up" delta="received"
+        />
+        <StatCard
+          label={isTruncated ? `Due (this page)` : "Due"}
+          value={formatPkr(due)} icon="Clock" delta="to chase"
+        />
         <StatCard label="This month" value={thisMonth} icon="TrendingUp" />
       </div>
+
+      {isTruncated && (
+        <p className="rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm text-amber-700 dark:text-amber-500">
+          Showing {bookings.length} of {total} bookings. The two money figures above
+          cover this page only — page through to see the rest.
+        </p>
+      )}
 
       <DataTable
         columns={columns}
@@ -153,18 +189,23 @@ export function BookingsRedesignedView() {
                 className="h-9 w-56 rounded-md border border-input bg-background pl-8 pr-3 text-sm outline-none ring-ring placeholder:text-muted-foreground focus-visible:ring-2"
               />
             </div>
-            <div className="flex rounded-md border border-input p-0.5">
-              {(["active", "completed"] as const).map((b) => (
+            {/* WWL-036 — there were only two tabs, and Cancelled bookings are
+                hidden from "active" and absent from "completed". Three real
+                cancelled bookings were therefore unreachable from anywhere in
+                the entire Bookings module. */}
+            <div className="flex rounded-md border border-input p-0.5" role="group" aria-label="Filter bookings">
+              {BUCKETS.map((b) => (
                 <button
-                  key={b}
+                  key={b.value}
                   type="button"
-                  onClick={() => setBucket(b)}
+                  aria-pressed={bucket === b.value}
+                  onClick={() => { setBucket(b.value); setPage(1) }}
                   className={cn(
-                    "h-8 rounded px-3 text-sm capitalize transition-colors",
-                    bucket === b ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent",
+                    "h-8 rounded px-3 text-sm transition-colors",
+                    bucket === b.value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent",
                   )}
                 >
-                  {b === "active" ? "Active" : "Archive"}
+                  {b.label}
                 </button>
               ))}
             </div>
@@ -212,6 +253,25 @@ export function BookingsRedesignedView() {
           </div>
         )}
       />
+
+      {/* WWL-043 — the only way past row 100 of the ledger. */}
+      {totalPages > 1 && (
+        <nav className="flex items-center justify-between gap-3" aria-label="Bookings pages">
+          <span className="text-sm text-muted-foreground">
+            Page {page} of {totalPages} · {total} bookings
+          </span>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" disabled={page <= 1 || isLoading}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}>
+              <Icon name="ChevronLeft" size={14} className="mr-1" /> Previous
+            </Button>
+            <Button size="sm" variant="outline" disabled={page >= totalPages || isLoading}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+              Next <Icon name="ChevronRight" size={14} className="ml-1" />
+            </Button>
+          </div>
+        </nav>
+      )}
 
       {/* Phase-1 SPINE — owner money ledger. Moved BELOW the table: it repeats
           the money the stat strip already shows (booked / received / baqaya),

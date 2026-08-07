@@ -44,6 +44,10 @@ export interface OrderHeader {
   guaranteedPax?: number | null;
   expectedPax?: number | null;
   orderStage?: OrderStage | null;
+  /** Booking lifecycle status. WWL-044 — the editor needs to know. */
+  status?: string | null;
+  /** True when the booking is cancelled: the server refuses order writes. */
+  locked?: boolean | null;
 }
 
 export interface OrderTotals {
