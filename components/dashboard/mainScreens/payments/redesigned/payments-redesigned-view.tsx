@@ -210,6 +210,7 @@ export function PaymentsRedesignedView() {
       </div>
 
       <DataTable
+        caption="Payments"
         columns={columns}
         data={payments}
         getRowId={(p) => String(p.bookingId)}

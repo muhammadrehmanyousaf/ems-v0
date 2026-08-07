@@ -219,6 +219,7 @@ export function CollaborationsRedesignedView() {
       </div>
 
       <DataTable
+        caption="Collaborations"
         columns={columns}
         data={filtered}
         getRowId={(c) => String(c.id)}

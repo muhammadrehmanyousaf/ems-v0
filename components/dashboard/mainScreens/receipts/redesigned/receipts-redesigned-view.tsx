@@ -120,6 +120,7 @@ export function ReceiptsRedesignedView() {
       </div>
 
       <DataTable
+        caption="Receipts"
         columns={columns}
         data={receipts}
         getRowId={(r) => String(r.id)}

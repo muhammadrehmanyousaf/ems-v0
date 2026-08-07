@@ -48,6 +48,22 @@ export interface DataTableProps<T> {
   bulkActions?: (ids: Set<string>) => React.ReactNode
   onRowClick?: (row: T) => void
   className?: string
+  /**
+   * WWL-120/137/153/170/187 — table a11y, unchanged across five modules.
+   *
+   * `caption` names the table for a screen reader ("Payments, 25 rows"), which
+   * is otherwise a grid of numbers with no announced purpose. It is visually
+   * hidden — sighted users already have the page heading.
+   */
+  caption?: string
+  /**
+   * A per-row name for the selection checkbox. Every row previously carried the
+   * identical accessible name "Select row", so a screen-reader user heard it
+   * ten times with nothing to tell the rows apart — they could not know WHICH
+   * booking they were about to bulk-delete. Falls back to the first column's
+   * text content, then to the row id.
+   */
+  getRowLabel?: (row: T) => string
 }
 
 const alignCls = (a?: Column<any>["align"]) =>
@@ -121,6 +137,8 @@ export function DataTable<T>({
   bulkActions,
   onRowClick,
   className,
+  caption,
+  getRowLabel,
 }: DataTableProps<T>) {
   const density = useUiStore((s) => s.density)
   const rowPad = density === "compact" ? "py-2" : "py-3"
@@ -131,6 +149,25 @@ export function DataTable<T>({
 
   const toggleAll = () =>
     onSelectionChange?.(allSelected ? new Set() : new Set(allIds))
+  /**
+   * Best-effort human name for a row, for the checkbox's accessible name.
+   * Prefers an explicit `getRowLabel`, then the first column that renders a
+   * plain string (the name/customer column in every table here), then the id.
+   */
+  const rowLabel = React.useCallback((row: T, id: string): string => {
+    if (getRowLabel) {
+      const v = getRowLabel(row)
+      if (v) return v
+    }
+    for (const c of columns) {
+      if (c.key === "select" || c.key === "actions") continue
+      const raw = (row as any)?.[c.key]
+      if (typeof raw === "string" && raw.trim()) return raw.trim()
+      if (typeof raw === "number") return String(raw)
+    }
+    return `row ${id}`
+  }, [columns, getRowLabel])
+
   const toggleOne = (id: string) => {
     const next = new Set(sel)
     next.has(id) ? next.delete(id) : next.add(id)
@@ -179,13 +216,14 @@ export function DataTable<T>({
             actions column is off the right edge. */}
         <div className="hidden w-full overflow-x-auto md:block">
           <table className="w-full text-sm" style={{ fontVariantNumeric: "tabular-nums" }}>
+            {caption && <caption className="sr-only">{caption}</caption>}
             <thead>
               <tr className="border-b border-border">
                 {selectable && (
                   <th scope="col" className="w-10 px-4 py-2.5">
                     <input
                       type="checkbox"
-                      aria-label="Select all"
+                      aria-label={caption ? `Select all ${data.length} rows of ${caption}` : "Select all rows"}
                       checked={allSelected}
                       ref={(el) => {
                         if (el) el.indeterminate = someSelected
@@ -225,12 +263,15 @@ export function DataTable<T>({
                   >
                     {selectable && (
                       <td className={cn("px-4", rowPad)} onClick={(e) => e.stopPropagation()}>
+                        {/* WWL-120 — a 16x16 target is under the WCAG 2.2
+                            24x24 minimum, so the box is padded out to a 24px
+                            hit area without changing how it looks. */}
                         <input
                           type="checkbox"
-                          aria-label="Select row"
+                          aria-label={`Select ${rowLabel(row, id)}`}
                           checked={sel.has(id)}
                           onChange={() => toggleOne(id)}
-                          className="h-4 w-4 rounded border-input accent-[hsl(var(--primary))]"
+                          className="h-4 w-4 rounded border-input accent-[hsl(var(--primary))] p-[4px] -m-[4px] box-content cursor-pointer"
                         />
                       </td>
                     )}

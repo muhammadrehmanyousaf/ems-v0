@@ -16,6 +16,8 @@ import { formatColumnId } from "@/lib/utils"
 
 type CoreDataTableProps<TData extends object> = {
     table: RTTable<TData>
+    /** Screen-reader name for the table, e.g. "Reviews". Visually hidden. */
+    caption?: string
 }
 
 /**
@@ -108,12 +110,18 @@ function MobileCards<TData extends object>({ table }: CoreDataTableProps<TData>)
 
 export function DataTable<TData extends object>({
     table,
+    caption,
 }: CoreDataTableProps<TData>) {
     return (
         <div className="w-full">
             {/* Desktop / tablet grid — unchanged. */}
             <ScrollArea className="hidden w-full max-w-full h-[calc(100dvh-260px)] overflow-auto rounded-md border md:grid md:h-[calc(100dvh-256px)]">
                 <Table>
+                    {/* WWL-120/137/153/170/187 — a screen reader met these
+                        tables as an unnamed grid of numbers. The caption names
+                        the table and its size; it is visually hidden because
+                        sighted users already have the page heading. */}
+                    {caption && <caption className="sr-only">{`${caption}, ${table.getRowModel().rows.length} rows`}</caption>}
                     <TableHeader>
                         {table.getHeaderGroups().map((hg) => (
                             <TableRow key={hg.id}>

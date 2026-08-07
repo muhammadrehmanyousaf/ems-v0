@@ -217,6 +217,7 @@ export function FunctionSheetsRedesignedView() {
       </div>
 
       <DataTable
+        caption="Function sheets"
         columns={columns}
         data={sheets}
         getRowId={(f) => String(f.id)}

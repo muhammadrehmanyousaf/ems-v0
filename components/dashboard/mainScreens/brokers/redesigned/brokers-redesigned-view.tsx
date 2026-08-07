@@ -273,6 +273,7 @@ export function BrokersRedesignedView() {
       </div>
 
       <DataTable
+        caption="Brokers"
         columns={columns}
         data={rows}
         getRowId={(c) => String(c.id)}

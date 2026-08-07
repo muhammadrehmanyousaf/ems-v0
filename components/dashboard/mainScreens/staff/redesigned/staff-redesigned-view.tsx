@@ -140,6 +140,7 @@ export function StaffRedesignedView() {
       </div>
 
       <DataTable
+        caption="Staff"
         columns={columns}
         data={members}
         getRowId={(m) => String(m.id)}

@@ -134,6 +134,7 @@ export function PromoteRedesignedView() {
       </div>
 
       <DataTable
+        caption="Promotions"
         columns={columns}
         data={requests}
         getRowId={(r) => String(r.id)}

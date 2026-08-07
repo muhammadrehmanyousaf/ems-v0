@@ -183,6 +183,7 @@ export function GeneratorFuelRedesignedView() {
       )}
 
       <DataTable
+        caption="Generator fuel log"
         columns={columns}
         data={entries}
         getRowId={(e) => String(e.id)}

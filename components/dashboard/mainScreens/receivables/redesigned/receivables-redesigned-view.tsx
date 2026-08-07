@@ -128,6 +128,7 @@ export function ReceivablesRedesignedView() {
       </div>
 
       <DataTable
+        caption="Receivables"
         columns={columns}
         data={customers}
         getRowId={(c) => c.customerPhone || c.customerEmail || c.customerName || JSON.stringify(c)}

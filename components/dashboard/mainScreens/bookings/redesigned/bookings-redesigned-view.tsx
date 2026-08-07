@@ -181,6 +181,7 @@ export function BookingsRedesignedView() {
       )}
 
       <DataTable
+        caption="Bookings"
         columns={columns}
         data={bookings}
         getRowId={(b) => String(b.id)}

@@ -67,6 +67,7 @@ export function RevenueRedesignedView() {
       </div>
 
       <DataTable
+        caption="Revenue"
         columns={columns}
         data={rows}
         getRowId={(r) => r.month}

@@ -116,6 +116,7 @@ export function RolesAdminRedesignedView() {
       </div>
 
       <DataTable
+        caption="Roles"
         columns={columns}
         data={roles}
         getRowId={(r) => String(r.id)}
