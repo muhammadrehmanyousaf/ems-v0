@@ -16,6 +16,9 @@ import {
   type Notification,
 } from "@/lib/api/notifications";
 
+/** WWL-402 — the server caps `limit` at 50; asking for 20 doubled the trips. */
+const PAGE_SIZE = 50;
+
 const BACKEND_WS_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
 
@@ -132,13 +135,48 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [isAuthenticated, user?.id]);
 
+  /**
+   * WWL-397 — this ran on every `notification:new` and requested
+   * `/sounds/notification.mp3`, which returns 404 text/html: `public/sounds/`
+   * does not exist in the repository. The empty `.catch` hid it, so every
+   * incoming notification fired a failing request forever. There was also no
+   * mute and no preference, so a vendor with the portal open during a function
+   * would have got audio if the file HAD existed.
+   *
+   * Synthesised with the Web Audio API instead of shipping a binary: no asset
+   * to 404, no download, and it can be silenced. Muting is remembered, and the
+   * whole thing is skipped when the browser has not granted audio yet — an
+   * AudioContext created without a user gesture just stays suspended.
+   */
   const playNotificationSound = () => {
     try {
-      const audio = new Audio("/sounds/notification.mp3");
-      audio.volume = 0.3;
-      audio.play().catch(() => {});
+      if (typeof window === "undefined") return;
+      if (localStorage.getItem("ww-notification-sound") === "off") return;
+
+      const Ctx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      if (ctx.state === "suspended") {
+        // No user gesture yet — a browser will not play this, so don't try.
+        void ctx.close();
+        return;
+      }
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(1174, ctx.currentTime + 0.09);
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.28);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.3);
+      osc.onended = () => void ctx.close();
     } catch {
-      // No audio file available, silently ignore
+      // Audio is a courtesy, never a requirement.
     }
   };
 
@@ -146,7 +184,10 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     setLoadError(null);
     try {
-      const result = await NotificationAPI.getNotifications(1, 20);
+      // WWL-402 — the server accepts `limit` up to 50 (verified: ?limit=999
+      // returns 50) and the client always sent 20, so 61 rows took four round
+      // trips instead of two.
+      const result = await NotificationAPI.getNotifications(1, PAGE_SIZE);
       setNotifications(result.notifications);
       setTotalCount(result.total);
       setHasMore(result.hasMore);
@@ -168,7 +209,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       const nextPage = page + 1;
-      const result = await NotificationAPI.getNotifications(nextPage, 20);
+      const result = await NotificationAPI.getNotifications(nextPage, PAGE_SIZE);
       setNotifications((prev) => [...prev, ...result.notifications]);
       setTotalCount(result.total);
       setHasMore(result.hasMore);
@@ -231,20 +272,42 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [notifications, unreadCount]);
 
+  /**
+   * WWL-403 — the row left the list immediately while `totalCount` decremented
+   * only inside the success path, so for the duration of the request the header
+   * said 61 and the list showed 19 of 20. And on failure the row was restored
+   * from a closure captured at call time — clobbering anything the socket had
+   * delivered meanwhile — while the count had never moved at all.
+   *
+   * The row and the count now move together, and the revert is a functional
+   * update that re-inserts one row rather than replacing the whole list.
+   */
   const deleteNotification = useCallback(async (id: number) => {
-    const prev = notifications;
-    setNotifications((curr) => curr.filter((n) => n.id !== id));
+    let removed: Notification | undefined;
+    let removedIndex = -1;
+    setNotifications((curr) => {
+      removedIndex = curr.findIndex((n) => n.id === id);
+      removed = removedIndex >= 0 ? curr[removedIndex] : undefined;
+      return curr.filter((n) => n.id !== id);
+    });
+    const wasUnread = removed ? !removed.isRead : false;
+    setTotalCount((c) => Math.max(0, c - 1));
+    if (wasUnread) setUnreadCount((c) => Math.max(0, c - 1));
+
     try {
       await NotificationAPI.deleteNotification(id);
-      setTotalCount((c) => Math.max(0, c - 1));
-      const count = await NotificationAPI.getUnreadCount();
-      setUnreadCount(count);
     } catch {
-      // Revert optimistic delete on failure
-      setNotifications(prev);
+      setNotifications((curr) => {
+        if (!removed || curr.some((n) => n.id === id)) return curr;
+        const next = [...curr];
+        next.splice(removedIndex >= 0 ? removedIndex : next.length, 0, removed);
+        return next;
+      });
+      setTotalCount((c) => c + 1);
+      if (wasUnread) setUnreadCount((c) => c + 1);
       setActionError("Couldn't delete that notification — it's still here.");
     }
-  }, [notifications]);
+  }, []);
 
   const refreshNotifications = useCallback(async () => {
     await loadInitialNotifications();
