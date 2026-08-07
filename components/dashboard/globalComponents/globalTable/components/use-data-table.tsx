@@ -41,6 +41,9 @@ type UseDataTableReturn<TData extends object> = {
   setColumnVisibility: React.Dispatch<React.SetStateAction<VisibilityState>>;
   columnFilters: ColumnFiltersState;
   setColumnFilters: React.Dispatch<React.SetStateAction<ColumnFiltersState>>;
+  /** WWL-366 — free-text search across every column, not one named column. */
+  globalFilter: string;
+  setGlobalFilter: React.Dispatch<React.SetStateAction<string>>;
   sorting: SortingState;
   setSorting: React.Dispatch<React.SetStateAction<SortingState>>;
   paginationState: PaginationStateTypes;
@@ -84,6 +87,15 @@ export function useDataTable<TData extends object, TValue = unknown>(
     setPageSizeValue(val.pageSize);
   };
 
+  /**
+   * WWL-366 — tables built on this hook could only filter one named column at a
+   * time, so a box labelled "Search Review" searched the reviewer's name and
+   * nothing else: five of the six visible columns, including the phone number
+   * and the review text itself, matched nothing. A global filter is additive —
+   * existing per-column filters keep working untouched.
+   */
+  const [globalFilter, setGlobalFilter] = React.useState("");
+
   const table = useReactTable({
     data,
     columns,
@@ -94,7 +106,9 @@ export function useDataTable<TData extends object, TValue = unknown>(
       rowSelection,
       pagination: paginationState,
       columnFilters,
+      globalFilter,
     },
+    onGlobalFilterChange: setGlobalFilter,
     manualPagination: true, // server-side pagination
     onPaginationChange: handlePaginationChange,
     onSortingChange: setSorting,
@@ -121,6 +135,8 @@ export function useDataTable<TData extends object, TValue = unknown>(
     setColumnVisibility,
     columnFilters,
     setColumnFilters,
+    globalFilter,
+    setGlobalFilter,
     sorting,
     setSorting,
     paginationState,

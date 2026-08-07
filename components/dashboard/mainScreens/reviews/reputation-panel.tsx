@@ -173,18 +173,41 @@ export default function ReputationPanel() {
                 <span className="text-[10px] text-muted-foreground">{data.total} review{data.total === 1 ? "" : "s"}</span>
               </div>
             </div>
-            {data.categoryBenchmark?.average != null && (
-              <p className="mt-2 text-[11px]">
-                Category avg <span className="font-semibold tabular-nums">{data.categoryBenchmark.average.toFixed(1)}</span>
-                {vsBenchmark != null && (
-                  <Badge variant="outline" className={`ml-1.5 text-[10px] ${
-                    vsBenchmark >= 0 ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-amber-50 border-amber-200 text-amber-800"
-                  }`}>
-                    {vsBenchmark >= 0 ? "+" : ""}{vsBenchmark.toFixed(1)} vs peers
-                  </Badge>
-                )}
-              </p>
-            )}
+            {/**
+              * WWL-367 — the panel told a vendor they trail their category and
+              * showed neither number the claim rests on. The API returns both:
+              * live, that was FIFTEEN reviews spread across 728 wedding-venue
+              * businesses — one review per forty-nine competitors. A comparison
+              * is only worth reading next to its sample, so the sample is now
+              * printed, and a sample too thin to mean anything says so instead
+              * of dressing itself up as a verdict.
+              */}
+            {data.categoryBenchmark?.average != null && (() => {
+              const bench = data.categoryBenchmark!
+              // Below this, the "average" is a handful of reviews across
+              // hundreds of businesses and comparing against it is noise.
+              const thin = bench.reviewCount < 30
+              return (
+                <p className="mt-2 text-[11px]">
+                  Category avg <span className="font-semibold tabular-nums">{bench.average!.toFixed(1)}</span>
+                  {vsBenchmark != null && !thin && (
+                    <Badge variant="outline" className={`ml-1.5 text-[10px] ${
+                      vsBenchmark >= 0 ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-amber-50 border-amber-200 text-amber-800"
+                    }`}>
+                      {vsBenchmark >= 0 ? "+" : ""}{vsBenchmark.toFixed(1)} vs peers
+                    </Badge>
+                  )}
+                  <span className="ml-1 text-muted-foreground">
+                    from {bench.reviewCount} review{bench.reviewCount === 1 ? "" : "s"} across{" "}
+                    {bench.businessCount} {bench.vendorType || "business"}
+                    {bench.businessCount === 1 ? "" : "es"}
+                  </span>
+                  {thin && (
+                    <span className="ml-1 text-muted-foreground">— too few to compare against yet.</span>
+                  )}
+                </p>
+              )
+            })()}
             {data.responseRate != null && (
               <p className="mt-1.5 text-[11px] text-muted-foreground flex items-center gap-1">
                 <MessageCircle className="h-3 w-3" />

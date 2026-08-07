@@ -16,13 +16,21 @@ function ReviewsTableActions<TData>({
     return (
         <div className="flex items-center justify-between">
             <div className="flex flex-1 items-center space-x-2">
+                {/**
+                  * WWL-366 — the box said "Search Review" and filtered the
+                  * reviewer's NAME. Driven live against eight reviews: "food"
+                  * and "shandar" (words inside reviews) matched nothing, and so
+                  * did the phone number, the booking id, the venue name and the
+                  * email printed directly under the name that did match. Five of
+                  * the six visible columns were unsearchable on a screen whose
+                  * only job is finding a review.
+                  */}
                 <Input
-                    placeholder="Search Review..."
-                    value={(table.getColumn("reviewerName")?.getFilterValue() as string) ?? ""}
-                    onChange={(event) =>
-                        table.getColumn("reviewerName")?.setFilterValue(event.target.value)
-                    }
-                    className="h-9 w-[250px] xl:w-[300px]"
+                    placeholder="Search name, phone, venue, booking or review text…"
+                    aria-label="Search reviews"
+                    value={table.getState().globalFilter ?? ""}
+                    onChange={(event) => table.setGlobalFilter(event.target.value)}
+                    className="h-9 w-[250px] xl:w-[340px]"
                 />
             </div>
             <div className="ml-auto hidden lg:flex items-center gap-2">
