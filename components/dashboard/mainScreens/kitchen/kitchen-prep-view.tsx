@@ -23,6 +23,9 @@ import { cn } from "@/lib/utils"
 const inputCls = "h-9 rounded-md border border-input bg-background px-2.5 text-sm outline-none ring-ring focus-visible:ring-2"
 interface Row { dishName: string; guests: string }
 
+/** Far past Pakistan's largest walima; a guard against a slipped keypress. */
+const MAX_GUESTS = 100_000
+
 export function KitchenPrepView() {
   // WWL-233 / F3 — the default venue scope produced a 500 because this sent
   // no businessId under "All venues". One scoping primitive.
@@ -39,6 +42,22 @@ export function KitchenPrepView() {
     retry: false, // 404 when the engine is dark
   })
   const boms = bomsQ.data ?? []
+
+  /**
+   * WWL-241 — the builder survived a venue switch: a guest count typed at "All
+   * venues" stayed put while the recipe list re-scoped underneath it, so once
+   * recipes exist a dish chosen for one venue would remain selected against
+   * another venue's list. The rows belong to a venue; when the venue changes
+   * they are no longer about anything.
+   */
+  const loadedBusinessId = React.useRef<number | null | undefined>(undefined)
+  React.useEffect(() => {
+    if (loadedBusinessId.current === undefined) { loadedBusinessId.current = businessId; return }
+    if (loadedBusinessId.current === businessId) return
+    loadedBusinessId.current = businessId
+    setRows([{ dishName: "", guests: "" }])
+    setSheet(null)
+  }, [businessId])
 
   const setRow = (i: number, k: keyof Row, v: string) => setRows((r) => r.map((row, j) => (j === i ? { ...row, [k]: v } : row)))
   const addRow = () => setRows((r) => [...r, { dishName: "", guests: "" }])
@@ -63,6 +82,10 @@ export function KitchenPrepView() {
     if (!raw) return "add a head count"
     if (!Number.isFinite(n)) return "head count must be a number"
     if (n <= 0) return "head count must be more than 0"
+    // WWL-240 — reject what the server would floor or the field would accept.
+    if (!Number.isInteger(n)) return "head count must be a whole number of people"
+    if (!/^\d+$/.test(raw)) return "write the number in figures — 1000, not 1e3"
+    if (n > MAX_GUESTS) return `head count looks too large — over ${MAX_GUESTS.toLocaleString("en-PK")}`
     return null
   }
   const rowProblems = rows.map(rowProblem)
@@ -83,6 +106,15 @@ export function KitchenPrepView() {
   // matched dishes — not the live builder rows — so it stays consistent with the
   // deghs on the page even if the user edits a row after generating.
   const sheetGuests = sheet ? sheet.dishes.reduce((s, d) => s + (Number(d.guests) || 0), 0) : 0
+
+  /**
+   * WWL-235 — "Total heads across dishes" sums only the MATCHED dishes, so on a
+   * sheet with an unmatched dish it prints lower than the numbers the vendor
+   * typed, with nothing tying the difference to the amber banner further down.
+   * A cook sheet that under-reports heads is a sheet that under-cooks.
+   */
+  const requestedGuests = usableRows.reduce((s, r) => s + (Number(r.guests) || 0), 0)
+  const guestsExcluded = sheet ? Math.max(0, requestedGuests - sheetGuests) : 0
 
   /**
    * WWL-231 — ANY rejection rendered "the kitchen-BOM engine isn't enabled for
@@ -152,21 +184,42 @@ export function KitchenPrepView() {
                   onChange={(e) => setRow(i, "dishName", e.target.value)}
                   aria-label={`Dish ${i + 1}`}
                 >
-                  <option value="">{boms.length ? "Pick a dish…" : "No recipes yet — add them in kitchen settings"}</option>
+                  {/* WWL-230 — this said "add them in kitchen settings". There
+                      is no kitchen settings screen; the command palette knows
+                      nothing by that name either. Directions to a place that
+                      does not exist are worse than no directions. */}
+                  <option value="">{boms.length ? "Pick a dish…" : "No recipes set up for this venue yet"}</option>
                   {boms.map((b) => <option key={b.id} value={b.dishName}>{b.dishName}</option>)}
                 </select>
                 <div className="flex items-center gap-2">
                   <input
                     className={cn(inputCls, "w-full min-w-0 tabular-nums sm:w-28")}
                     type="number"
+                    /* WWL-240 — no max and no step: 999999999 was accepted and
+                       ArrowUp took it to 1,000,000,000. `1e3` displayed to the
+                       vendor as "1e3", and `12.5` was sent and floored to 12
+                       server-side. A head count is a whole number of people,
+                       and 100,000 is far past Pakistan's largest walima. */
                     min={1}
+                    max={MAX_GUESTS}
+                    step={1}
                     inputMode="numeric"
                     value={r.guests}
                     onChange={(e) => setRow(i, "guests", e.target.value)}
                     placeholder="guests"
                     aria-label={`Head count for dish ${i + 1}`}
                   />
-                  <Button size="sm" variant="ghost" className="h-9 shrink-0 px-2" onClick={() => removeRow(i)} aria-label={`Remove dish ${i + 1}`}>
+                  {/* WWL-238 — the `r.length > 1` guard is right and the
+                      button did not reflect it: no `disabled`, no
+                      `aria-disabled`, no message. Clicking Remove on the only
+                      row did nothing at all, silently. */}
+                  <Button
+                    size="sm" variant="ghost" className="h-9 shrink-0 px-2"
+                    disabled={rows.length <= 1}
+                    title={rows.length <= 1 ? "A prep sheet needs at least one dish" : undefined}
+                    onClick={() => removeRow(i)}
+                    aria-label={`Remove dish ${i + 1}`}
+                  >
                     <Icon name="Trash2" size={14} />
                   </Button>
                 </div>
@@ -188,6 +241,18 @@ export function KitchenPrepView() {
           <Button size="sm" variant="outline" onClick={addRow}><Icon name="Plus" size={14} className="mr-1" /> Add dish</Button>
           {/* WWL-234 — an incomplete row must not be quietly left out of a cook
               sheet, so it blocks the build until it is fixed or removed. */}
+          {/* WWL-236 — the only feedback was a corner toast measured at
+              1,253ms cold from click, so a vendor who pressed Generate and
+              watched the button saw nothing at all for over a second. The
+              button is disabled with the reason beside it now: the answer is
+              on screen before the click, not a second after it. */}
+          {(incompleteCount > 0 || usableRows.length === 0) && (
+            <p role="status" className="ml-auto mr-2 text-xs text-muted-foreground">
+              {usableRows.length === 0 && incompleteCount === 0
+                ? "Pick a dish and a head count to build the sheet."
+                : "Fix the rows above to build the sheet."}
+            </p>
+          )}
           <Button
             size="sm"
             disabled={genMut.isPending || incompleteCount > 0 || usableRows.length === 0}
@@ -220,6 +285,11 @@ export function KitchenPrepView() {
             <div className="mt-1 text-[13px]">
               {eventLabel && <span className="font-medium">{eventLabel} · </span>}
               <span className="text-neutral-500">Total heads across dishes:</span> <span className="font-medium tabular-nums">{sheetGuests}</span>
+              {guestsExcluded > 0 && (
+                <span className="text-amber-700 dark:text-amber-400">
+                  {" "}· {guestsExcluded} more heads are on dishes with no recipe and are NOT in this plan
+                </span>
+              )}
             </div>
           </header>
 

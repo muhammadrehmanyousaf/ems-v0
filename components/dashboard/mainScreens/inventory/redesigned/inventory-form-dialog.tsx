@@ -138,7 +138,7 @@ export function InventoryFormDialog({
               vendor looking at Bahria's stock added chairs and they landed on
               Grand Marquee's book, with nothing on screen saying so. */}
           {!isEdit && <RecordVenueField value={venueId} onChange={setVenueId} noun="item" />}
-          <Field label="Item name"><input className={inputCls} value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="e.g. Premium photo album (12x18)" autoFocus /></Field>
+          <Field label="Item name"><input className={inputCls} value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="e.g. Banquet chair, Chafing dish, Basmati rice" autoFocus /></Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Category">
               <select className={inputCls} value={form.category} onChange={(e) => set("category", e.target.value as InventoryCategory)}>
