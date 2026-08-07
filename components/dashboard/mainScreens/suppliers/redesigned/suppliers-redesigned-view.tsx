@@ -49,6 +49,7 @@ import {
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
+import { daysOverdueInKarachi } from "@/lib/utils/pk-date"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
@@ -62,13 +63,15 @@ function fmtDate(iso: string | null | undefined): string {
     return iso as string
   }
 }
+/**
+ * WWL-285 (S4) — this counted days against UTC midnight while the vendor is in
+ * Karachi (UTC+5), so for the first five hours of every Pakistani day an invoice
+ * read one day less overdue than it actually was. Counted in Karachi now.
+ */
 function daysFromNow(iso: string | null | undefined): number | null {
   if (!iso) return null
   try {
-    const t = new Date(iso).getTime()
-    const today = new Date()
-    today.setUTCHours(0, 0, 0, 0)
-    return Math.floor((t - today.getTime()) / (1000 * 60 * 60 * 24))
+    return -daysOverdueInKarachi(iso)
   } catch {
     return null
   }
@@ -135,7 +138,9 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
   const invKey = ["supplier-invoices", statusFilter] as const
   const invQuery = useQuery({
     queryKey: invKey,
-    queryFn: () => SupplierAPI.listInvoices({ status: statusFilter === "all" ? undefined : statusFilter }),
+    // WWL-273 — "overdue" is derived client-side from the due date, so the
+    // server must return everything rather than the stored-status subset.
+    queryFn: () => SupplierAPI.listInvoices({ status: statusFilter === "all" || statusFilter === "overdue" ? undefined : statusFilter }),
   })
   const agingQuery = useQuery({ queryKey: ["supplier-aging"], queryFn: () => SupplierAPI.aging() })
   // Suppliers list feeds the "Log invoice" picker.
@@ -155,12 +160,27 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
   const summary = invQuery.data?.summary
   const allInvoices = invQuery.data?.invoices ?? []
   const invoices = React.useMemo(() => {
+    let list = allInvoices
+    /**
+     * WWL-273 (S2) — picking "Overdue" filtered on the STORED status, which
+     * nothing recomputes against the due date. So it showed the bills carrying
+     * that label and hid the ones that were actually late: the filter named the
+     * right thing and returned the wrong set. Lateness is derived now, the same
+     * way it is on the Brokers screen.
+     */
+    if (statusFilter === "overdue") {
+      list = list.filter((inv) => {
+        if (inv.status === "paid" || inv.status === "void") return false
+        const d = daysFromNow(inv.dueDate)
+        return d != null && d < 0
+      })
+    }
     const q = search.trim().toLowerCase()
-    if (!q) return allInvoices
-    return allInvoices.filter((inv) =>
+    if (!q) return list
+    return list.filter((inv) =>
       [inv.supplierNameSnapshot, inv.invoiceNumber, inv.description].some((v) => (v ?? "").toLowerCase().includes(q)),
     )
-  }, [allInvoices, search])
+  }, [allInvoices, search, statusFilter])
 
   const aging: AgingReport | undefined = agingQuery.data
   const b = aging?.buckets

@@ -31,6 +31,8 @@ import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { LinkedFunctionSheetBadge } from "@/components/shared/linked-function-sheet-badge"
+import { daysOverdueInKarachi } from "@/lib/utils/pk-date"
+import { cn } from "@/lib/utils"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
@@ -90,20 +92,48 @@ export function BrokersRedesignedView() {
   })
 
   const all = data?.commissions ?? []
+
+  /**
+   * WWL-286 (S2) — the Overdue card read `status === "overdue"`, and NO
+   * commission in production ever carries that status: nothing recomputes it
+   * against the due date. So the card sat at 0 while Rs 138,750 was between 36
+   * and 122 days late. Lateness is derived from the due date now, in Karachi,
+   * exactly like every other overdue figure in the product.
+   */
+  const isLate = React.useCallback((c: BrokerCommission) => {
+    if (c.status === "paid" || c.status === "void") return false
+    if (num(c.commissionAmount) - num(c.amountPaid) <= 0) return false
+    if (!c.dueDate) return false
+    return daysOverdueInKarachi(c.dueDate) > 0
+  }, [])
+
+  const [statusFilter, setStatusFilter] = React.useState<"all" | "late" | "unpaid" | "paid">("all")
+
   const rows = React.useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return all
-    return all.filter((c) =>
-      [c.brokerNameSnapshot, c.description, brokerTypeLabel(c)].some((v) =>
-        (v ?? "").toLowerCase().includes(q),
-      ),
-    )
-  }, [all, search])
+    let list = all
+    if (q) {
+      list = list.filter((c) =>
+        [c.brokerNameSnapshot, c.description, brokerTypeLabel(c), statusLabel(c.status)].some((v) =>
+          (v ?? "").toLowerCase().includes(q),
+        ),
+      )
+    }
+    // WWL-288 (S2) — there was no status filter of ANY kind, and the Overdue
+    // card was inert, so there was no path from "something is late" to "which
+    // ones" short of exporting the CSV and opening a spreadsheet.
+    if (statusFilter === "late") list = list.filter(isLate)
+    else if (statusFilter === "unpaid") list = list.filter((c) => num(c.commissionAmount) - num(c.amountPaid) > 0 && c.status !== "void")
+    else if (statusFilter === "paid") list = list.filter((c) => c.status === "paid")
+    return list
+  }, [all, search, statusFilter, isLate])
 
   const totalCommission = all.reduce((s, c) => s + num(c.commissionAmount), 0)
   const totalPaid = all.reduce((s, c) => s + num(c.amountPaid), 0)
   const outstanding = Math.max(0, totalCommission - totalPaid)
-  const overdueCount = all.filter((c) => c.status === "overdue").length
+  const lateRows = all.filter(isLate)
+  const overdueCount = lateRows.length
+  const overdueAmount = lateRows.reduce((s, c) => s + Math.max(0, num(c.commissionAmount) - num(c.amountPaid)), 0)
 
   const columns: Column<BrokerCommission>[] = [
     {
@@ -141,9 +171,33 @@ export function BrokersRedesignedView() {
       render: (c) => fmtDate(c.accruedDate),
     },
     {
+      // WWL-287 (S2) — every row carries a dueDate and the CSV export wrote it,
+      // but the screen showed only the ACCRUAL date. The one field that makes
+      // lateness visible was exported and never displayed.
+      key: "due",
+      header: "Due",
+      cellClassName: "text-muted-foreground",
+      render: (c) => {
+        if (!c.dueDate) return "—"
+        const late = isLate(c)
+        const days = late ? daysOverdueInKarachi(c.dueDate) : 0
+        return (
+          <span className={late ? "font-medium text-destructive" : undefined}>
+            {fmtDate(c.dueDate)}
+            {late && <span className="block text-[11px]">{days} day{days === 1 ? "" : "s"} late</span>}
+          </span>
+        )
+      },
+    },
+    {
       key: "status",
       header: "Status",
-      render: (c) => <StatusPill tone={statusTone(c.status)}>{statusLabel(c.status)}</StatusPill>,
+      render: (c) =>
+        isLate(c) ? (
+          <StatusPill tone="error">Overdue</StatusPill>
+        ) : (
+          <StatusPill tone={statusTone(c.status)}>{statusLabel(c.status)}</StatusPill>
+        ),
     },
     {
       key: "actions", header: "", align: "right",
@@ -189,7 +243,34 @@ export function BrokersRedesignedView() {
         <StatCard label="Commissions" value={all.length} icon="Users" />
         <StatCard label="Total commission" value={formatPkr(totalCommission)} icon="Wallet" />
         <StatCard label="Outstanding" value={formatPkr(outstanding)} icon="DollarSign" trend={outstanding > 0 ? "up" : undefined} />
-        <StatCard label="Overdue" value={overdueCount} icon="AlertTriangle" />
+        <StatCard
+          label="Overdue"
+          value={overdueCount}
+          icon="AlertTriangle"
+          delta={overdueAmount > 0 ? `${formatPkr(overdueAmount)} late` : undefined}
+          trend={overdueCount > 0 ? "down" : undefined}
+        />
+      </div>
+
+      {/* WWL-288 — a path from "something is late" to "which ones". */}
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="text-muted-foreground">Show:</span>
+        {([["all", `All (${all.length})`], ["late", `Overdue (${overdueCount})`], ["unpaid", "Still owed"], ["paid", "Paid"]] as const).map(([k, lbl]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setStatusFilter(k)}
+            aria-pressed={statusFilter === k}
+            className={cn(
+              "rounded-md border px-2.5 py-1 transition-colors",
+              statusFilter === k
+                ? "border-primary bg-primary font-medium text-primary-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {lbl}
+          </button>
+        ))}
       </div>
 
       <DataTable
