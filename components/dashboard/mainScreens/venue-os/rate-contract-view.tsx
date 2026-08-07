@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
 const PKR = (n: number | string | null | undefined): string => "Rs " + Math.round(Number(n || 0)).toLocaleString("en-PK");
 function readErr(e: unknown, fallback: string): string {
@@ -67,10 +68,10 @@ export function RateContractView(): React.ReactElement | null {
         </div>
 
         <div className="flex flex-wrap items-end gap-2 rounded-md border p-3 text-sm">
-          <input type="text" placeholder="item e.g. Chicken" value={item} onChange={(e) => setItem(e.target.value)} className="w-36 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-          <input type="number" placeholder="rate/unit" value={rate} onChange={(e) => setRate(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-          <input type="number" placeholder="tol %" value={tol} onChange={(e) => setTol(e.target.value)} className="w-16 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-          <Button size="sm" onClick={() => void guard(async () => { await venueOsApi.createRateContract({ businessId: bid, itemNameSnapshot: item, contractedRatePkr: Number(rate), tolerancePct: Number(tol), effectiveFrom: new Date().toISOString().slice(0, 10) }); setContracts(await venueOsApi.listRateContracts(bid)); })} disabled={!businessId || !item || !rate || busy}>Add contract</Button>
+          <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Item e.g. Chicken<input type="text" placeholder="item e.g. Chicken" value={item} onChange={(e) => setItem(e.target.value)} className="w-36 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
+          <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Rate/unit<input min={0} type="number" placeholder="rate/unit" value={rate} onChange={(e) => setRate(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
+          <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Tol %<input min={0} type="number" placeholder="tol %" value={tol} onChange={(e) => setTol(e.target.value)} className="w-16 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
+          <Button size="sm" onClick={() => void guard(async () => { await venueOsApi.createRateContract({ businessId: bid, itemNameSnapshot: item, contractedRatePkr: Number(rate), tolerancePct: Number(tol), effectiveFrom: todayInKarachi() }); setContracts(await venueOsApi.listRateContracts(bid)); })} disabled={!businessId || !item || !rate || busy}>Add contract</Button>
         </div>
 
         {contracts && (
@@ -87,9 +88,9 @@ export function RateContractView(): React.ReactElement | null {
 
         <div className="flex flex-wrap items-end gap-2 rounded-md border p-3 text-sm">
           <span className="font-medium">Check a GRN line</span>
-          <input type="text" placeholder="item" value={item} onChange={(e) => setItem(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-          <input type="number" placeholder="billed rate" value={billRate} onChange={(e) => setBillRate(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-          <input type="number" placeholder="qty" value={qty} onChange={(e) => setQty(e.target.value)} className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Item<input type="text" placeholder="item" value={item} onChange={(e) => setItem(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
+          <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Billed rate<input min={0} type="number" placeholder="billed rate" value={billRate} onChange={(e) => setBillRate(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
+          <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Qty<input min={0} type="number" placeholder="qty" value={qty} onChange={(e) => setQty(e.target.value)} className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
           <Button size="sm" variant="outline" onClick={() => void guard(async () => setCheck(await venueOsApi.checkGrnContracts(bid, { lines: [{ itemNameSnapshot: item, ratePkr: Number(billRate), qty: Number(qty) }] })))} disabled={!businessId || !item || !billRate || busy}>Check</Button>
         </div>
 

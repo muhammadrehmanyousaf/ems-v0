@@ -57,6 +57,7 @@ import {
   type SupplierPaymentMethod,
   type CreateInvoiceInput,
 } from "@/lib/api/suppliers"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
 export interface VendorBusinessOption {
   id: number
@@ -103,7 +104,7 @@ export function LogInvoiceDialog({
     resolver: zodResolver(invoiceSchema),
     defaultValues: {
       businessId: businesses[0]?.id,
-      invoiceDate: new Date().toISOString().slice(0, 10),
+      invoiceDate: todayInKarachi(),
       subtotal: 0,
       taxAmount: 0,
     },
@@ -114,7 +115,7 @@ export function LogInvoiceDialog({
     if (open) {
       form.reset({
         businessId: businesses[0]?.id,
-        invoiceDate: new Date().toISOString().slice(0, 10),
+        invoiceDate: todayInKarachi(),
         subtotal: 0,
         taxAmount: 0,
       })

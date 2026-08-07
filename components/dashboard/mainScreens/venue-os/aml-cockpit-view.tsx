@@ -65,7 +65,7 @@ export function AmlCockpitView(): React.ReactElement | null {
         <div className="space-y-2 rounded-md border p-3">
           <div className="flex flex-wrap items-end gap-2 text-sm">
             <span className="font-medium">§21 meter</span>
-            <input type="number" placeholder="amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Amount<input min={0} type="number" placeholder="amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
             <select value={mode} onChange={(e) => setMode(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <option value="cash">cash</option>
               <option value="online">online / bank</option>
@@ -89,7 +89,7 @@ export function AmlCockpitView(): React.ReactElement | null {
         <div className="space-y-2 rounded-md border p-3">
           <div className="flex flex-wrap items-end gap-2 text-sm">
             <span className="font-medium">Structuring guard</span>
-            <input type="number" placeholder="deposit" value={deposit} onChange={(e) => setDeposit(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Deposit<input min={0} type="number" placeholder="deposit" value={deposit} onChange={(e) => setDeposit(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
             <Button
               size="sm"
               onClick={() => void guard(async () => setStruct(await venueOsApi.structuringCheck({ businessId: Number(businessId), proposedDepositPkr: Number(deposit) })))}
@@ -110,7 +110,7 @@ export function AmlCockpitView(): React.ReactElement | null {
         <div className="space-y-2 rounded-md border p-3">
           <div className="flex flex-wrap items-end gap-2 text-sm">
             <span className="font-medium">Benami check</span>
-            <input type="text" placeholder="relationship" value={rel} onChange={(e) => setRel(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Relationship<input type="text" placeholder="relationship" value={rel} onChange={(e) => setRel(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
             <label className="flex items-center gap-1 text-xs">
               <input type="checkbox" checked={traceable} onChange={(e) => setTraceable(e.target.checked)} /> traceable funding
             </label>

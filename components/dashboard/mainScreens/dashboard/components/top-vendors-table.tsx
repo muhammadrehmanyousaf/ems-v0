@@ -52,12 +52,12 @@ const TopVendorsTable: React.FC<TopVendorsTableProps> = ({ vendors }) => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-muted-foreground">
-                  <th className="py-2 pr-4 text-left font-medium">#</th>
-                  <th className="py-2 pr-4 text-left font-medium">Vendor</th>
-                  <th className="py-2 pr-4 text-left font-medium">Type</th>
-                  <th className="py-2 pr-4 text-right font-medium">Bookings</th>
-                  <th className="py-2 pr-4 text-right font-medium">Businesses</th>
-                  <th className="py-2 text-right font-medium">Rating</th>
+                  <th scope="col" className="py-2 pr-4 text-left font-medium">#</th>
+                  <th scope="col" className="py-2 pr-4 text-left font-medium">Vendor</th>
+                  <th scope="col" className="py-2 pr-4 text-left font-medium">Type</th>
+                  <th scope="col" className="py-2 pr-4 text-right font-medium">Bookings</th>
+                  <th scope="col" className="py-2 pr-4 text-right font-medium">Businesses</th>
+                  <th scope="col" className="py-2 text-right font-medium">Rating</th>
                 </tr>
               </thead>
               <tbody>

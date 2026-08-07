@@ -334,10 +334,10 @@ export default function PublicSignPage() {
                 <table className="w-full text-xs">
                   <thead className="bg-neutral-50">
                     <tr>
-                      <th className="px-3 py-2 text-left">Description</th>
-                      <th className="px-2 py-2 text-right">Qty</th>
-                      <th className="px-2 py-2 text-right">Unit</th>
-                      <th className="px-3 py-2 text-right">Total</th>
+                      <th scope="col" className="px-3 py-2 text-left">Description</th>
+                      <th scope="col" className="px-2 py-2 text-right">Qty</th>
+                      <th scope="col" className="px-2 py-2 text-right">Unit</th>
+                      <th scope="col" className="px-3 py-2 text-right">Total</th>
                     </tr>
                   </thead>
                   <tbody>

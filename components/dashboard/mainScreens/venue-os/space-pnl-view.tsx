@@ -53,11 +53,11 @@ export function SpacePnlView(): React.ReactElement | null {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs text-muted-foreground">
-                    <th className="py-1.5 font-medium">Space</th>
-                    <th className="py-1.5 text-right font-medium">Revenue</th>
-                    <th className="py-1.5 text-right font-medium">Cost</th>
-                    <th className="py-1.5 text-right font-medium">Margin</th>
-                    <th className="py-1.5 text-right font-medium">%</th>
+                    <th scope="col" className="py-1.5 font-medium">Space</th>
+                    <th scope="col" className="py-1.5 text-right font-medium">Revenue</th>
+                    <th scope="col" className="py-1.5 text-right font-medium">Cost</th>
+                    <th scope="col" className="py-1.5 text-right font-medium">Margin</th>
+                    <th scope="col" className="py-1.5 text-right font-medium">%</th>
                   </tr>
                 </thead>
                 <tbody>

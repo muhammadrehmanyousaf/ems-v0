@@ -36,6 +36,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { SupplierAPI, type Supplier, type SupplierInvoice } from '@/lib/api/suppliers';
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
 const n = (v: number | string | null | undefined) => Number(v) || 0;
 const fmtPKR = (v: number | string | null | undefined) =>
@@ -144,7 +145,7 @@ export default function SupplierDetailView({ supplierId }: { supplierId: number 
     serverOutstanding != null
       ? serverOutstanding
       : outstandingInvoices.reduce((sum, i) => sum + (n(i.totalAmount) - n(i.amountPaid)), 0);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInKarachi();
   const overdueInvoices = outstandingInvoices.filter(
     (i) => i.dueDate && i.dueDate.slice(0, 10) < today,
   );

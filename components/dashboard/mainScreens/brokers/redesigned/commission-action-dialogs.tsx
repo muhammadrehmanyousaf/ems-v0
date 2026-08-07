@@ -27,12 +27,13 @@ import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
 const PAYMENT_METHODS = Object.keys(COMMISSION_PAYMENT_METHOD_LABELS) as CommissionPaymentMethod[]
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => todayInKarachi()
 const errMsg = (e: any, fallback: string) => e?.response?.data?.message || e?.message || fallback
 
 function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {

@@ -67,14 +67,14 @@ export function UtilityAllocationView(): React.ReactElement | null {
         <div className="space-y-2 rounded-md border p-3">
           <div className="flex flex-wrap items-end gap-2 text-sm">
             <span className="font-medium">Meters</span>
-            <input type="text" placeholder="label" value={label} onChange={(e) => setLabel(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Label<input type="text" placeholder="label" value={label} onChange={(e) => setLabel(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
             <select value={meterType} onChange={(e) => setMeterType(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <option value="GRID">GRID</option>
               <option value="GENSET">GENSET</option>
               <option value="GAS">GAS</option>
               <option value="WATER_SOURCE">WATER</option>
             </select>
-            <input type="number" placeholder="kVA" value={kva} onChange={(e) => setKva(e.target.value)} className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">KVA<input min={0} type="number" placeholder="kVA" value={kva} onChange={(e) => setKva(e.target.value)} className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
             <Button size="sm" onClick={() => void guard(async () => { await venueOsApi.createUtilityMeter({ businessId: Number(businessId), label, meterType, sanctionedLoadKva: kva ? Number(kva) : undefined }); setMeters(await venueOsApi.listUtilityMeters(Number(businessId))); })} disabled={!businessId || !label || busy}>
               Add
             </Button>
@@ -95,9 +95,9 @@ export function UtilityAllocationView(): React.ReactElement | null {
         <div className="space-y-2 rounded-md border p-3">
           <div className="flex flex-wrap items-end gap-2 text-sm">
             <span className="font-medium">Bill</span>
-            <input type="number" placeholder="meter #" value={meterId} onChange={(e) => setMeterId(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-            <input type="text" placeholder="YYYY-MM" value={month} onChange={(e) => setMonth(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-            <input type="number" placeholder="total payable" value={total} onChange={(e) => setTotal(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Meter #<input min={0} type="number" placeholder="meter #" value={meterId} onChange={(e) => setMeterId(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
+            <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">YYYY-MM<input type="text" placeholder="YYYY-MM" value={month} onChange={(e) => setMonth(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
+            <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Total payable<input min={0} type="number" placeholder="total payable" value={total} onChange={(e) => setTotal(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
             <Button size="sm" onClick={() => void guard(async () => { await venueOsApi.createUtilityBill({ meterId: Number(meterId), billingMonth: month, totalPayable: Number(total) }); })} disabled={!meterId || !month || !total || busy}>
               Record bill
             </Button>
@@ -108,7 +108,7 @@ export function UtilityAllocationView(): React.ReactElement | null {
         <div className="space-y-2 rounded-md border p-3">
           <div className="flex flex-wrap items-end gap-2 text-sm">
             <span className="font-medium">Allocate</span>
-            <input type="text" placeholder="YYYY-MM" value={month} onChange={(e) => setMonth(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">YYYY-MM<input type="text" placeholder="YYYY-MM" value={month} onChange={(e) => setMonth(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
             <label className="text-xs">
               residual %
               <input type="number" value={residualShare} onChange={(e) => setResidualShare(e.target.value)} className="ml-1 w-16 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />

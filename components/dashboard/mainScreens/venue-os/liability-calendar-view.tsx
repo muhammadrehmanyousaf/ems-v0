@@ -55,8 +55,8 @@ export function LiabilityCalendarView(): React.ReactElement | null {
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2 text-sm">
           <BusinessScopeField value={businessId} onChange={setBusinessId} />
-          <input type="text" placeholder="from YYYY-MM" value={from} onChange={(e) => setFrom(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-          <input type="text" placeholder="to YYYY-MM" value={to} onChange={(e) => setTo(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">From YYYY-MM<input type="text" placeholder="from YYYY-MM" value={from} onChange={(e) => setFrom(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
+          <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">To YYYY-MM<input type="text" placeholder="to YYYY-MM" value={to} onChange={(e) => setTo(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
           <Button size="sm" onClick={() => void guard(async () => setCal(await venueOsApi.liabilityCalendar(Number(businessId), from, to)))} disabled={!businessId || !from || !to || busy}>
             Build calendar
           </Button>
@@ -80,15 +80,15 @@ export function LiabilityCalendarView(): React.ReactElement | null {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
-                  <th className="py-1 pr-2">Month</th>
-                  <th className="pr-2">Committee</th>
-                  <th className="pr-2">Ijarah</th>
-                  <th className="pr-2">Udhaar</th>
-                  <th className="pr-2">Bank</th>
-                  <th className="pr-2">PDC</th>
-                  <th className="pr-2 font-medium">Total due</th>
-                  <th className="pr-2">Proj. cash</th>
-                  <th className="pr-2">Shortfall</th>
+                  <th scope="col" className="py-1 pr-2">Month</th>
+                  <th scope="col" className="pr-2">Committee</th>
+                  <th scope="col" className="pr-2">Ijarah</th>
+                  <th scope="col" className="pr-2">Udhaar</th>
+                  <th scope="col" className="pr-2">Bank</th>
+                  <th scope="col" className="pr-2">PDC</th>
+                  <th scope="col" className="pr-2 font-medium">Total due</th>
+                  <th scope="col" className="pr-2">Proj. cash</th>
+                  <th scope="col" className="pr-2">Shortfall</th>
                 </tr>
               </thead>
               <tbody>

@@ -148,12 +148,12 @@ export function EventProfitBoard(): React.ReactElement {
             <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                  <th className="px-4 py-2 font-medium">Function</th>
-                  <th className="px-4 py-2 text-right font-medium">Revenue</th>
-                  <th className="px-4 py-2 text-right font-medium">Received</th>
-                  <th className="px-4 py-2 text-right font-medium">Spent</th>
-                  <th className="px-4 py-2 text-right font-medium">Net</th>
-                  <th className="px-4 py-2 text-right font-medium">Margin</th>
+                  <th scope="col" className="px-4 py-2 font-medium">Function</th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">Revenue</th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">Received</th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">Spent</th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">Net</th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">Margin</th>
                 </tr>
               </thead>
               <tbody>

@@ -88,10 +88,10 @@ export function CommsEngineView(): React.ReactElement | null {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
-                  <th className="py-1 pr-2">Event</th>
-                  <th className="pr-2"># sent</th>
-                  <th className="pr-2">PKR</th>
-                  <th className="pr-2">USD</th>
+                  <th scope="col" className="py-1 pr-2">Event</th>
+                  <th scope="col" className="pr-2"># sent</th>
+                  <th scope="col" className="pr-2">PKR</th>
+                  <th scope="col" className="pr-2">USD</th>
                 </tr>
               </thead>
               <tbody>

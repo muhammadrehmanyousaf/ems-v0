@@ -55,11 +55,11 @@ export function PdcDrawer(): React.ReactElement | null {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-xs text-muted-foreground">
-                  <th className="py-2 pr-3">Cheque #</th>
-                  <th className="py-2 pr-3">Booking</th>
-                  <th className="py-2 pr-3 text-right">Amount</th>
-                  <th className="py-2 pr-3">Clears</th>
-                  <th className="py-2 pr-3">Status</th>
+                  <th scope="col" className="py-2 pr-3">Cheque #</th>
+                  <th scope="col" className="py-2 pr-3">Booking</th>
+                  <th scope="col" className="py-2 pr-3 text-right">Amount</th>
+                  <th scope="col" className="py-2 pr-3">Clears</th>
+                  <th scope="col" className="py-2 pr-3">Status</th>
                 </tr>
               </thead>
               <tbody>

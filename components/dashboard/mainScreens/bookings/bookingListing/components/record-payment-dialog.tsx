@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { BookingsAPI, type PaymentType } from '@/lib/api/dashboard';
 import { ReceiptsAPI, type ReceiptMethod } from '@/lib/api/paymentReceipts';
 import type { BookingData } from '@/lib/dashboard-types';
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
 /* The three preset types below post to /bookings/:id/record-payment, which
    accepts ONLY "down_payment" | "remaining" | "full_payment" and carries no
@@ -152,7 +153,7 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, onSuccess }: 
                     bookingId: booking.id,
                     amount: customValue,
                     method: mappedMethod,
-                    receivedDate: new Date().toISOString().slice(0, 10),
+                    receivedDate: todayInKarachi(),
                     ...(txnRef.trim() ? { transactionRef: txnRef.trim() } : {}),
                     // Keep the vendor's actual choice when it had to be mapped to
                     // "other", so the khata still shows "cheque" rather than losing it.

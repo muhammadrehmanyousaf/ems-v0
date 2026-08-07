@@ -128,7 +128,7 @@ export function DataTable<T>({
             <thead>
               <tr className="border-b border-border">
                 {selectable && (
-                  <th className="w-10 px-4 py-2.5">
+                  <th scope="col" className="w-10 px-4 py-2.5">
                     <input
                       type="checkbox"
                       aria-label="Select all"
@@ -142,7 +142,7 @@ export function DataTable<T>({
                   </th>
                 )}
                 {columns.map((c) => (
-                  <th
+                  <th scope="col"
                     key={c.key}
                     style={c.width ? { width: c.width } : undefined}
                     className={cn(

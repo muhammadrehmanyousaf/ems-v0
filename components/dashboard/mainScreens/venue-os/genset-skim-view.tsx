@@ -80,9 +80,9 @@ export function GensetSkimView(): React.ReactElement | null {
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2 text-sm">
           <BusinessScopeField value={businessId} onChange={setBusinessId} />
-          <input type="text" placeholder="generator" value={generator} onChange={(e) => setGenerator(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Generator<input type="text" placeholder="generator" value={generator} onChange={(e) => setGenerator(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
           <BookingPicker value={bookingId ? Number(bookingId) : null} onChange={(id) => setBookingId(id ? String(id) : "")} className="w-56" placeholder="which function?" />
-          <input type="number" placeholder="kVA" value={kva} onChange={(e) => setKva(e.target.value)} className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">KVA<input min={0} type="number" placeholder="kVA" value={kva} onChange={(e) => setKva(e.target.value)} className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
           <Button
             size="sm"
             onClick={() => void guard(async () => setRecon(await venueOsApi.reconcileGenset({ businessId: Number(businessId), generatorIdentifier: generator, bookingId: Number(bookingId), kva: kva ? Number(kva) : undefined })))}

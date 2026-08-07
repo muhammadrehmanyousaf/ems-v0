@@ -141,12 +141,12 @@ export function VenueLeaseView(): React.ReactElement | null {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-xs text-muted-foreground">
-                  <th className="py-2 pr-3">Venue</th>
-                  <th className="py-2 pr-3 text-right">Rent/mo</th>
-                  <th className="py-2 pr-3 text-right">Pagri/mo</th>
-                  <th className="py-2 pr-3 text-right">Remaining</th>
-                  <th className="py-2 pr-3 text-right">Committed</th>
-                  <th className="py-2 pr-3 text-right">Deposit</th>
+                  <th scope="col" className="py-2 pr-3">Venue</th>
+                  <th scope="col" className="py-2 pr-3 text-right">Rent/mo</th>
+                  <th scope="col" className="py-2 pr-3 text-right">Pagri/mo</th>
+                  <th scope="col" className="py-2 pr-3 text-right">Remaining</th>
+                  <th scope="col" className="py-2 pr-3 text-right">Committed</th>
+                  <th scope="col" className="py-2 pr-3 text-right">Deposit</th>
                 </tr>
               </thead>
               <tbody>

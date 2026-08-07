@@ -281,10 +281,10 @@ export function FunctionSheetDetailRedesignedView({ id }: { id?: number } = {}) 
               <div className="overflow-x-auto"><table className="w-full min-w-[420px] text-sm" style={{ fontVariantNumeric: "tabular-nums" }}>
                 <thead>
                   <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                    <th className="py-2 font-medium">Description</th>
-                    <th className="py-2 text-right font-medium">Qty</th>
-                    <th className="py-2 text-right font-medium">Unit</th>
-                    <th className="py-2 text-right font-medium">Total</th>
+                    <th scope="col" className="py-2 font-medium">Description</th>
+                    <th scope="col" className="py-2 text-right font-medium">Qty</th>
+                    <th scope="col" className="py-2 text-right font-medium">Unit</th>
+                    <th scope="col" className="py-2 text-right font-medium">Total</th>
                   </tr>
                 </thead>
                 <tbody>

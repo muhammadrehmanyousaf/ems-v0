@@ -168,7 +168,7 @@ function DataTable({
         <thead>
           <tr className="bg-bridal-ivory/60 font-bridal text-[11px] uppercase tracking-[0.1em] text-bridal-text-label">
             {headers.map((h) => (
-              <th key={h} className="px-4 py-3 font-medium whitespace-nowrap">
+              <th scope="col" key={h} className="px-4 py-3 font-medium whitespace-nowrap">
                 {h}
               </th>
             ))}

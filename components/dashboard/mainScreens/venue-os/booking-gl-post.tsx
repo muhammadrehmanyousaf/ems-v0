@@ -145,9 +145,9 @@ export function BookingGlPost(): React.ReactElement | null {
             <table className="w-full">
               <thead>
                 <tr className="border-b text-left text-xs text-muted-foreground">
-                  <th className="py-1 pr-3">Account</th>
-                  <th className="py-1 pr-3 text-right">Debit</th>
-                  <th className="py-1 pr-3 text-right">Credit</th>
+                  <th scope="col" className="py-1 pr-3">Account</th>
+                  <th scope="col" className="py-1 pr-3 text-right">Debit</th>
+                  <th scope="col" className="py-1 pr-3 text-right">Credit</th>
                 </tr>
               </thead>
               <tbody>

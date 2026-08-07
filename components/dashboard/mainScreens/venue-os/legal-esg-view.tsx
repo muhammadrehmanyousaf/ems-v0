@@ -52,7 +52,7 @@ export function LegalEsgView(): React.ReactElement | null {
           <div className="space-y-2 rounded-md border p-3 text-sm">
             <div className="flex flex-wrap items-end gap-2">
               <BusinessScopeField value={businessId} onChange={setBusinessId} />
-              <input type="number" placeholder="cheque Rs" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+              <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Cheque Rs<input min={0} type="number" placeholder="cheque Rs" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
               <Button size="sm" onClick={() => void guard(async () => { const c = await venueOsApi.build489f(Number(businessId), { counterpartyName: "Defaulter", amountPkr: Number(amount) }); setCaseMsg(`489-F drafted — file by ${c.statutoryDeadline}`); })} disabled={!businessId || !amount || busy}>Draft 489-F</Button>
               <Button size="sm" variant="outline" onClick={() => void guard(async () => { const r = await venueOsApi.reviewResponse({ requestedIntent: "resolve", concessionOffer: "10% off next booking" }); setReply(r.publicReply); })} disabled={busy}>Draft review reply</Button>
             </div>

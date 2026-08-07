@@ -35,11 +35,12 @@ import {
   validateNotFutureDate,
   validateOptionalText,
 } from "@/components/dashboard/primitives/field-error"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
 const CATEGORIES = Object.keys(EXPENSE_CATEGORY_LABELS) as ExpenseCategory[]
 const METHODS: ExpensePaymentMethod[] = ["cash", "bank_transfer", "cheque", "jazzcash", "easypaisa", "raast", "ibft", "card", "other"]
 const methodLabel = (m: string) => m.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => todayInKarachi()
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
@@ -296,7 +297,7 @@ export function ExpenseFormDialog({
               <input
                 id="exp-date"
                 type="date"
-                max={new Date().toISOString().slice(0, 10)}
+                max={todayInKarachi()}
                 className={cn(inputCls, shown.spentDate && ERROR_INPUT_CLS)}
                 value={form.spentDate}
                 onChange={(e) => { set("spentDate", e.target.value); touch("spentDate") }}

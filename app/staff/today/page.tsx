@@ -10,6 +10,7 @@ import {
   type StaffProfile,
   type MyShift,
 } from "@/lib/api/staffPortal";
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
 function fmtDate(ymd: string): string {
   // ymd is "YYYY-MM-DD"
@@ -26,7 +27,7 @@ function fmtRs(v: string | number | null): string {
   return `Rs. ${Math.round(n).toLocaleString("en-PK")}`;
 }
 function todayYmd(): string {
-  return new Date().toISOString().slice(0, 10);
+  return todayInKarachi();
 }
 
 const ATT_LABEL: Record<string, string> = {
