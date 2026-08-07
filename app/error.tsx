@@ -90,12 +90,18 @@ export default function Error({
           </Link>
         </div>
 
+        {/**
+          * WWL-261 — this said "quote the reference above" unconditionally,
+          * while the reference is `error.digest` and a CLIENT-side throw has
+          * none: on those failures the vendor was asked to quote something that
+          * was never on the page. Ask for the reference only when there is one.
+          */}
         <p className="font-bridal text-[12.5px] text-bridal-text-soft max-w-md mx-auto">
           If this keeps happening,{" "}
           <Link href="/contact" className="text-bridal-gold hover:underline">
             tell us what you were doing
           </Link>{" "}
-          when it broke and quote the reference above. We respond within 24 hours.
+          when it broke{error?.digest ? " and quote the reference above" : ""}. We respond within 24 hours.
         </p>
       </div>
     </div>

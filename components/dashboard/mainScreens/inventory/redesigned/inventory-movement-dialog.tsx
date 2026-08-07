@@ -117,20 +117,34 @@ export function InventoryMovementDialog({
    */
   const isStockTake = !ADDS.includes(type) && !SUBTRACTS.includes(type)
   const qtyValid = quantity.trim() !== "" && Number.isFinite(qty) && (isStockTake ? qty >= 0 : qty > 0)
-  const canSave = !!item && qtyValid
+
+  /**
+   * WWL-253 — consuming 9999 against a stock of 755 rendered the projection as
+   * −9244 in destructive red and left Record movement ENABLED. The screen had
+   * already worked out that the movement was impossible, showed the vendor the
+   * impossible number, and then let them send it — with only the server's
+   * `insufficient_stock` refusal standing between the click and a failure.
+   *
+   * A stock-take is exempt: counting a shelf to a number lower than the book
+   * says is the whole purpose of a stock-take, and the projection IS the count.
+   */
+  const wouldGoNegative = !isStockTake && projected < 0
+  const canSave = !!item && qtyValid && !wouldGoNegative
 
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for,
   // and say the right thing: the old hint named "the required fields above"
   // while the only field was filled in correctly.
   const blockedReason = canSave
     ? undefined
-    : !item
-      ? "Pick an item to adjust."
-      : quantity.trim() === ""
-        ? isStockTake ? "Enter the counted quantity (0 is allowed)." : "Enter a quantity."
-        : qty < 0
-          ? "Quantity can't be negative."
-          : "A restock or wastage of zero changes nothing — use Stock-take to set the count to 0."
+    : wouldGoNegative
+      ? `You only have ${cur} ${unit} in stock — you can't take out ${qty}.`
+      : !item
+        ? "Pick an item to adjust."
+        : quantity.trim() === ""
+          ? isStockTake ? "Enter the counted quantity (0 is allowed)." : "Enter a quantity."
+          : qty < 0
+            ? "Quantity can't be negative."
+            : "A restock or wastage of zero changes nothing — use Stock-take to set the count to 0."
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
