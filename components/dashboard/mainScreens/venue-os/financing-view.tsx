@@ -72,7 +72,10 @@ export function FinancingView(): React.ReactElement | null {
 
         <div className="flex flex-wrap items-end gap-2 rounded-md border p-3 text-sm">
           <span className="font-medium">Bank referral pack</span>
-          <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Business #<input min={0} type="number" placeholder="business #" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
+          {/* WWL-599 / F11 — this was a raw "Business #" box asking the vendor to
+              type a primary key nobody can know, for the venue they had already
+              chosen by name at the top of this panel. Removed; the resolved id
+              is used directly. */}
           <Button size="sm" variant="outline" onClick={() => void guard(async () => setPack(await venueOsApi.referralPack(Number(businessId), { seasonYear: new Date().getFullYear() })))} disabled={!businessId || busy}>Build one-pager</Button>
         </div>
 
