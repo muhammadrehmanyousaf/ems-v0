@@ -17,8 +17,10 @@
  */
 
 import * as React from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useRecordBusinessId } from "@/hooks/use-record-business-id"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 import Link from "next/link"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
@@ -91,6 +93,23 @@ const INVOICE_TONE: Record<InvoiceStatus, StatusTone> = {
 }
 
 export function SuppliersRedesignedView() {
+  /**
+   * WWL-282 — `<Tabs defaultValue="invoices">` with no onValueChange and no URL
+   * sync: the tab choice never reached the address bar, so a vendor could not
+   * bookmark the supplier directory or send an accountant a link to the ledger,
+   * and every reload came back to A/P invoices.
+   */
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const tab = searchParams?.get("tab") === "suppliers" ? "suppliers" : "invoices"
+  const setTab = (v: string) => {
+    const qs = new URLSearchParams(searchParams?.toString() ?? "")
+    if (v === "invoices") qs.delete("tab")
+    else qs.set("tab", v)
+    const q = qs.toString()
+    router.replace(q ? `?${q}` : "?", { scroll: false })
+  }
+
   const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
   const businessOptions: VendorBusinessOption[] = React.useMemo(
     () => (businesses ?? []).map((b) => ({ id: b.id, name: b.name || `Business #${b.id}` })),
@@ -111,7 +130,7 @@ export function SuppliersRedesignedView() {
         title="Suppliers"
         description="Your A/P ledger and vendor network."
       />
-      <Tabs defaultValue="invoices" className="space-y-6">
+      <Tabs value={tab} onValueChange={setTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="invoices">
             <Icon name="FileText" size={15} className="mr-1.5" /> A/P invoices
@@ -229,6 +248,9 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
     return c
   }, [ledgerInvoices])
 
+  /** An invoice dated after today — check the date before you trust the ageing. */
+  const isFutureDated = (d?: string | null) => !!d && d.slice(0, 10) > todayInKarachi()
+
   const columns: Column<SupplierInvoice>[] = [
     {
       key: "supplier",
@@ -240,6 +262,17 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
             <div className="truncate font-medium">{inv.supplierNameSnapshot}</div>
             <div className="text-xs text-muted-foreground">
               {inv.invoiceNumber ? `#${inv.invoiceNumber} · ` : ""}{fmtDate(inv.invoiceDate)}
+              {/* WWL-284 — four live invoices carry an invoice date AFTER today
+                  and render as ordinary bills; one of them is the invoice
+                  marked Overdue, which cannot be true of a bill dated next
+                  week. Almost certainly a typo when it was entered, and the
+                  vendor is the only one who can say — so it is flagged rather
+                  than hidden or corrected. */}
+              {isFutureDated(inv.invoiceDate) && (
+                <span className="ml-1.5 rounded border border-amber-500/40 bg-amber-500/10 px-1 text-[10px] font-medium text-amber-700 dark:text-amber-400">
+                  dated in the future
+                </span>
+              )}
             </div>
           </div>
         </div>

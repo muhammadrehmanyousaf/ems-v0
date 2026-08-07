@@ -10,7 +10,8 @@
 import * as React from "react"
 import { errorMessage } from "@/lib/utils/api-error"
 import { RecordVenueField } from "@/components/dashboard/shared/record-venue-field"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { useVendorBookings, formatBookingLabel, isCancelledBooking } from "@/hooks/use-vendor-bookings"
 import { BrokerAPI, BROKER_TYPE_LABELS, type BrokerCommission, type BrokerType, type CommissionType } from "@/lib/api/brokers"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -27,11 +28,14 @@ const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 t
 const labelCls = "text-xs font-medium text-muted-foreground"
 
 interface FormState {
+  brokerId: string; bookingId: string
   brokerNameSnapshot: string; brokerTypeSnapshot: BrokerType; commissionType: CommissionType
   commissionPct: string; commissionFlat: string; bookingAmountSnapshot: string
   accruedDate: string; dueDate: string; description: string
 }
 const blank = (c?: BrokerCommission): FormState => ({
+  brokerId: c?.brokerId != null ? String(c.brokerId) : "",
+  bookingId: c?.bookingId != null ? String(c.bookingId) : "",
   brokerNameSnapshot: c?.brokerNameSnapshot ?? "",
   brokerTypeSnapshot: (c?.brokerTypeSnapshot as BrokerType) ?? BROKER_TYPES[0],
   commissionType: (c?.commissionType as CommissionType) ?? "percentage",
@@ -77,10 +81,70 @@ export function CommissionFormDialog({
   }, [open, commission])
   const set = (k: keyof FormState, v: string) => setForm((f) => ({ ...f, [k]: v }))
 
+  /**
+   * WWL-289 — Broker name was a free text box on a screen that ALREADY fetches
+   * all 12 broker records, and there was no booking picker at all. The captured
+   * create body carried no `brokerId` and no `bookingId`, so a commission
+   * created through the UI could never be attached to the broker who earned it
+   * or the event that generated it — while the seeded rows link through to a
+   * real function sheet, so the Event column works and simply stays empty
+   * forever for anything a vendor enters.
+   *
+   * Both ids have been accepted by the API the whole time.
+   *
+   * WWL-295 — picking a broker also pulls across what the record already knows:
+   * their type and their `defaultCommissionPct`. Twelve brokers carry a default
+   * rate and the form made the vendor retype it from memory.
+   */
+  const { data: brokerData } = useQuery({
+    queryKey: ["brokers-for-commission", effectiveBusinessId],
+    queryFn: () => BrokerAPI.list(effectiveBusinessId ? { businessId: effectiveBusinessId } : {}),
+    enabled: open,
+    staleTime: 5 * 60_000,
+  })
+  const brokers = brokerData?.brokers ?? []
+  const { data: bookings } = useVendorBookings(open)
+
+  const pickBroker = (id: string) => {
+    setForm((f) => {
+      const b = brokers.find((x) => String(x.id) === id)
+      if (!b) return { ...f, brokerId: "" }
+      const pct = b.defaultCommissionPct != null ? String(b.defaultCommissionPct) : f.commissionPct
+      return {
+        ...f,
+        brokerId: id,
+        brokerNameSnapshot: b.name,
+        brokerTypeSnapshot: (b.brokerType as BrokerType) ?? f.brokerTypeSnapshot,
+        // Only pre-fill a rate the vendor has not already typed over.
+        commissionPct: f.commissionPct.trim() === "" ? pct : f.commissionPct,
+      }
+    })
+  }
+
+  /** Picking the event fills the booking amount the percentage is computed on. */
+  const pickBooking = (id: string) => {
+    setForm((f) => {
+      const b = (bookings ?? []).find((x) => String(x.id) === id)
+      if (!b) return { ...f, bookingId: "" }
+      const amt = Number(b.totalAmount)
+      return {
+        ...f,
+        bookingId: id,
+        bookingAmountSnapshot:
+          f.bookingAmountSnapshot.trim() === "" && Number.isFinite(amt) && amt > 0
+            ? String(Math.round(amt))
+            : f.bookingAmountSnapshot,
+      }
+    })
+  }
+
   const saveMut = useMutation({
     mutationFn: () => {
       const body = {
         businessId: commission?.businessId ?? effectiveBusinessId!,
+        // WWL-289 — both ids have been accepted by the API all along.
+        brokerId: form.brokerId ? Number(form.brokerId) : null,
+        bookingId: form.bookingId ? Number(form.bookingId) : null,
         brokerNameSnapshot: form.brokerNameSnapshot.trim() || undefined,
         brokerTypeSnapshot: form.brokerTypeSnapshot,
         commissionType: form.commissionType,
@@ -124,7 +188,26 @@ export function CommissionFormDialog({
         <div className="space-y-4 py-1">
           <RecordVenueField value={venueId} onChange={setVenueId} noun="commission" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Broker name"><input className={inputCls} value={form.brokerNameSnapshot} onChange={(e) => set("brokerNameSnapshot", e.target.value)} autoFocus /></Field>
+            <Field label="Broker" className="sm:col-span-2">
+              <select className={inputCls} value={form.brokerId} onChange={(e) => pickBroker(e.target.value)} autoFocus>
+                <option value="">Not one of my saved brokers — type a name</option>
+                {brokers.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}{b.agencyName ? ` · ${b.agencyName}` : ""}{b.phoneNumber ? ` · ${b.phoneNumber}` : ""}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            {/* A one-off broker is a real case (a guest's uncle who sent a
+                family), so the free-text name stays — it just is not the only
+                way in any more. */}
+            <Field label={form.brokerId ? "Broker name (from their record)" : "Broker name"}>
+              <input
+                className={inputCls}
+                value={form.brokerNameSnapshot}
+                onChange={(e) => { set("brokerNameSnapshot", e.target.value); if (form.brokerId) set("brokerId", "") }}
+              />
+            </Field>
             <Field label="Broker type">
               <select className={inputCls} value={form.brokerTypeSnapshot} onChange={(e) => set("brokerTypeSnapshot", e.target.value as BrokerType)}>
                 {BROKER_TYPES.map((t) => <option key={t} value={t}>{BROKER_TYPE_LABELS[t]}</option>)}
@@ -140,6 +223,14 @@ export function CommissionFormDialog({
               ? <Field label="Commission %"><input type="number" className={cn(inputCls, "tabular-nums")} value={form.commissionPct} onChange={(e) => set("commissionPct", e.target.value)} placeholder="e.g. 5" /></Field>
               : <Field label="Commission (Rs)"><input type="number" className={cn(inputCls, "tabular-nums")} value={form.commissionFlat} onChange={(e) => set("commissionFlat", e.target.value)} /></Field>}
             <Field label={form.commissionType === "percentage" ? "Booking amount (Rs) — required" : "Booking amount (Rs)"}><input type="number" className={cn(inputCls, "tabular-nums")} value={form.bookingAmountSnapshot} onChange={(e) => set("bookingAmountSnapshot", e.target.value)} placeholder={form.commissionType === "percentage" ? "needed to compute %" : ""} /></Field>
+            <Field label="Event / booking" className="sm:col-span-2">
+              <select className={inputCls} value={form.bookingId} onChange={(e) => pickBooking(e.target.value)}>
+                <option value="">Not tied to one booking</option>
+                {(bookings ?? []).filter((b) => !isCancelledBooking(b)).map((b) => (
+                  <option key={b.id} value={b.id}>{formatBookingLabel(b)}</option>
+                ))}
+              </select>
+            </Field>
             <Field label="Accrued date"><input type="date" className={inputCls} value={form.accruedDate} onChange={(e) => set("accruedDate", e.target.value)} /></Field>
             <Field label="Due date"><input type="date" className={inputCls} value={form.dueDate} onChange={(e) => set("dueDate", e.target.value)} /></Field>
           </div>
