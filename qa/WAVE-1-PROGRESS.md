@@ -44,6 +44,16 @@ that closed it. Nothing is marked closed without a code change behind it.
 | **F10** UTC → PKT | `WWL-062` `112` `158` `165` `181` `285` `300` `318` `338` `354` | **21 call sites across 16 files** now use `todayInKarachi()` |
 | **F6** money truth | `WWL-541` `542` `554` | The headline is labelled **"Booked − tagged spend"**, the margin is computed only over functions that have a cost, and a panel states the three things it is not — in the vendor's own figures |
 
+## Wave 3 — mobile, raw ids, dead doors, hidden features
+
+| Family / ID | Findings | What was done |
+|---|---|---|
+| **F4** mobile | `WWL-053` `086` `093` `122` `146` `160` `244` `265` `280` `296` `377` `391` `459` | **Both table layers** now render cards below `md`, built from the same column config, with the actions cell lifted out and given full width. `globalTable` (bookings, customers, reviews, payments…) and the primitives `DataTable`. Selection checkboxes come with it, which also closes `WWL-122` |
+| **F11** raw ids | `WWL-563` `592` `599` | Two `Business #` boxes deleted (the venue was already chosen by name on the same panel) · `Meter #` → named dropdown of the meters already loaded above it · `Partner #` → named dropdown from the cap table · the rest say where the number comes from |
+| **§4** dead doors | `WWL-516` `517` | Every verification item, and the only link in *"Highest-impact next moves"*, pointed at `/dashboard/business-documents` — not a route. Now `/dashboard/business/{id}/documents`. Verified by checking every internal href against the 306-route app router: **zero dead links remain** |
+| **§3** hidden features | `WWL-128` | The offline/online payment split has always been computed and was rendered nowhere. Now two cards |
+| Money screen | `WWL-118` `115` | A "Still owed" filter, sort by Most owed / Biggest / Event date, search that matches amounts and statuses, and stat cards that describe the rows actually on screen |
+
 ## Shared primitives built (the leverage)
 
 | Primitive | Closes | What it guarantees |
@@ -66,3 +76,37 @@ that closed it. Nothing is marked closed without a code change behind it.
 - `ChatAPI.getTotalUnread` stays soft. It is fired-and-forgotten from four call
   sites as a badge count; making it throw would produce unhandled rejections for
   no user-visible benefit. It logs now instead of failing silently.
+
+---
+
+## What is deliberately still open
+
+Everything below needs per-screen work or a product decision; no shared
+primitive reaches it. It is the honest remainder, not a hidden backlog.
+
+**Product gaps — the feature is not there** (§5 of the backlog, ~18):
+no way to cancel or downgrade a plan (`WWL-433`) · "Plan & billing" contains no
+billing (`WWL-436`) · Availability has no calendar (`WWL-500`) · a commission
+cannot be attached to a broker or its event (`WWL-289`) · the Halal certificate
+document cannot be attached anywhere (`WWL-322`) · a drone permit cannot be tied
+to its wedding (`WWL-348`) · collaboration stops at "accepted" (`WWL-463`) · the
+اردو toggle is inert (`WWL-011`) · `Toggle Sidebar` is dead (`WWL-013`) · ⌘K
+finds no data (`WWL-015`).
+
+**Backend engines with no UI** (§3, ~8): generator burn-rate (`WWL-306`), tank
+status (`WWL-307`), the broker directory (`WWL-295`), the supplier
+who-is-owed-most ranking (`WWL-276`), four server-side filters wired to nothing
+(`WWL-310`), the `/upcoming` permits endpoint (`WWL-347`), and five groups of
+fetched-but-unrendered fields.
+
+**Unreachable screens** (§4 remainder): `WWL-229` (unreachable for every
+vendor), `WWL-528` (four Venue-OS tabs render only a heading), `WWL-352` (the
+Compliance rail is empty in production), `WWL-559`, `WWL-601`, `WWL-017`
+(11 of 20 onboarding tasks dead-end).
+
+**The rest of the S3/S4 tail** — copy fixes, stale component headers, tone and
+formatting drift. Individually cheap, collectively a long list; each is one row
+in [00-OPEN-BACKLOG.md](00-OPEN-BACKLOG.md) with a reproduction.
+
+**The 1,864 unrun cases** still need a seeded staging vendor, a test customer and
+a second vendor account. That infrastructure is unchanged by this work.
