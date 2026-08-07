@@ -182,7 +182,25 @@ function BusinessChecklistCard({ biz }: { biz: BizCompleteness }) {
               {t.label}
             </Badge>
           </div>
+          {/**
+            * WWL-520 — the activation panel below states "activation first:
+            * reward a WORKING venue, not photos", and the score does the
+            * opposite: all 100 points come from the six PROFILE categories and
+            * activation contributes nothing. Live, 3358 is the most active
+            * venue by leads (28) and receipts (15) and scored the LOWEST (44),
+            * while two quieter venues scored 52. One page, two contradictory
+            * principles.
+            *
+            * Fixed by naming the score for what it measures, not by changing
+            * the formula: re-weighting it would silently move the score of
+            * every listing on a live marketplace, which is a product decision
+            * and not a QA fix. The number is honest now, and the activation
+            * panel is labelled as the separate thing it is.
+            */}
           <div className="text-right shrink-0">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+              Profile completeness
+            </div>
             <div className="text-4xl font-bold tracking-tight text-bridal-gold-dark tabular-nums">
               {biz.score}
               <span className="text-base text-neutral-400 font-normal">
@@ -198,9 +216,15 @@ function BusinessChecklistCard({ biz }: { biz: BizCompleteness }) {
           </div>
         </div>
 
-        {/* Phase-1 EPIC 6 · T6.5 — activation first: reward a WORKING venue, not photos. */}
+        {/* Phase-1 EPIC 6 · T6.5 — how much of the venue's real work is
+            actually running through the portal. Tracked and shown, but NOT part
+            of the completeness score above (WWL-520) — the two answer different
+            questions and used to imply they were the same one. */}
         {biz.activation && (
           <div className="rounded-lg border p-3">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500 mb-1.5">
+              How much you&apos;re using it · counted separately from the score
+            </div>
             <div className="flex items-center gap-1.5 text-xs font-semibold mb-2">
               <ShieldCheck className={cn("h-3.5 w-3.5", biz.activation.shieldOn ? "text-emerald-600" : "text-muted-foreground")} />
               {biz.activation.shieldOn ? "Booking shield ON" : "Booking shield off — add your future dates"}
@@ -283,16 +307,52 @@ function BusinessChecklistCard({ biz }: { biz: BizCompleteness }) {
               <Sparkles className="h-3.5 w-3.5" />
               Highest-impact next moves
             </div>
+            {/**
+              * WWL-518 — `suggestions` is a string[], rendered as plain text
+              * with an arrow glyph. So the block designed to answer "what
+              * should I do first?" was the ONE part of the page a vendor could
+              * not act on — while the very same items appeared again in the
+              * category lists below, each with a working link to the field that
+              * fixes it.
+              *
+              * The links were never missing; they were just in the other list.
+              * Matching a suggestion to its checklist item by label reuses the
+              * href the item already carries, so the two lists cannot point
+              * anywhere different.
+              */}
             <ul className="space-y-1">
-              {biz.suggestions.map((s, i) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-2 text-sm text-neutral-800"
-                >
-                  <ArrowRight className="h-3.5 w-3.5 mt-0.5 text-bridal-gold-dark shrink-0" />
-                  {s}
-                </li>
-              ))}
+              {biz.suggestions.map((s, i) => {
+                const item = biz.categories
+                  .flatMap((c) => c.items)
+                  .find((it) => it.label.trim().toLowerCase() === s.trim().toLowerCase());
+                const body = (
+                  <>
+                    <ArrowRight className="h-3.5 w-3.5 mt-0.5 text-bridal-gold-dark shrink-0" />
+                    <span className="min-w-0">
+                      <span className="block leading-snug">{s}</span>
+                      {item?.why && (
+                        <span className="mt-0.5 block text-[11px] leading-snug text-neutral-500">
+                          {item.why}
+                        </span>
+                      )}
+                    </span>
+                  </>
+                );
+                return (
+                  <li key={i}>
+                    {item?.href ? (
+                      <Link
+                        href={item.href}
+                        className="flex items-start gap-2 rounded-md px-1 py-0.5 text-sm text-neutral-800 hover:bg-bridal-gold/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        {body}
+                      </Link>
+                    ) : (
+                      <span className="flex items-start gap-2 px-1 py-0.5 text-sm text-neutral-800">{body}</span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
             <Link
               href={`/dashboard/business/${biz.businessId}`}
