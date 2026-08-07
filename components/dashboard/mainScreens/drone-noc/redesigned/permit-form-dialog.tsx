@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { useVendorBookings, formatBookingLabel, isCancelledBooking } from "@/hooks/use-vendor-bookings"
 import { errorMessage } from "@/lib/utils/api-error"
 import { RecordVenueField } from "@/components/dashboard/shared/record-venue-field"
 import { useMutation } from "@tanstack/react-query"
@@ -27,11 +28,13 @@ const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 t
 const labelCls = "text-xs font-medium text-muted-foreground"
 
 interface FormState {
+  bookingId: string;
   referenceNumber: string; permitType: PermitType; issuingAuthority: IssuingAuthority
   droneModel: string; droneRegNumber: string; pilotName: string; pilotLicense: string
   eventDescription: string; venueAddress: string; validFrom: string; validUntil: string; feePaid: string; notes: string
 }
 const blank = (p?: DroneNOC): FormState => ({
+  bookingId: p?.bookingId != null ? String(p.bookingId) : "",
   referenceNumber: p?.referenceNumber ?? "",
   permitType: (p?.permitType as PermitType) ?? TYPES[0],
   issuingAuthority: (p?.issuingAuthority as IssuingAuthority) ?? AUTHORITIES[0],
@@ -74,11 +77,21 @@ export function PermitFormDialog({
     if (open) { const key = permit?.id ?? "new"; if (loadedId.current !== key) { setForm(blank(permit)); loadedId.current = key } } else { loadedId.current = null }
   }, [open, permit])
   const set = (k: keyof FormState, v: string) => setForm((f) => ({ ...f, [k]: v }))
+  const { data: bookings } = useVendorBookings(open)
 
   const saveMut = useMutation({
     mutationFn: () => {
       const body = {
         businessId: permit?.businessId ?? effectiveBusinessId!,
+        /**
+         * WWL-348 — a permit could not be tied to the wedding it was obtained
+         * for: no booking picker in the 12-field form and no bookingId in the
+         * captured body, though the model carries one and the unused
+         * `/upcoming` endpoint is built entirely around "booking-linked
+         * windows". A drone permit exists FOR an event; that was the one thing
+         * the form could not record.
+         */
+        bookingId: form.bookingId ? Number(form.bookingId) : null,
         referenceNumber: form.referenceNumber.trim(),
         permitType: form.permitType,
         issuingAuthority: form.issuingAuthority,
@@ -123,6 +136,15 @@ export function PermitFormDialog({
         <div className="space-y-4 py-1">
           <RecordVenueField value={venueId} onChange={setVenueId} noun="permit" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* WWL-348 — the wedding this permit is for. */}
+            <Field label="Event / booking" className="sm:col-span-2">
+              <select className={inputCls} value={form.bookingId} onChange={(e) => set("bookingId", e.target.value)}>
+                <option value="">Not tied to one booking</option>
+                {(bookings ?? []).filter((b) => !isCancelledBooking(b)).map((b) => (
+                  <option key={b.id} value={b.id}>{formatBookingLabel(b)}</option>
+                ))}
+              </select>
+            </Field>
             <Field label="Reference number"><input className={inputCls} value={form.referenceNumber} onChange={(e) => set("referenceNumber", e.target.value)} autoFocus /></Field>
             <Field label="Permit type">
               <select className={inputCls} value={form.permitType} onChange={(e) => set("permitType", e.target.value as PermitType)}>
