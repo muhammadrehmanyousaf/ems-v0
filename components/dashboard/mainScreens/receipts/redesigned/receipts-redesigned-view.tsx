@@ -40,6 +40,9 @@ const methodTone = (m: string): StatusTone => (m === "cash" ? "success" : m === 
 // the linked account, fall back to the booking, never show the vendor.
 const payerName = (r: PaymentReceipt) => r.customer?.fullName || r.booking?.customerName || ""
 
+/** WWL-157 — one screenful and a bit; "Load more" doubles it. */
+const PAGE_SIZE = 100
+
 export function ReceiptsRedesignedView() {
   const qc = useQueryClient()
   const [search, setSearch] = React.useState("")
@@ -49,9 +52,21 @@ export function ReceiptsRedesignedView() {
   const [prefill, setPrefill] = React.useState<ReceiptPrefill | undefined>(undefined)
   const [deleting, setDeleting] = React.useState<PaymentReceipt | null>(null)
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["receipts-redesigned"],
-    queryFn: () => ReceiptsAPI.list(),
+  /**
+   * WWL-157 — the endpoint had no limit and no paging, so the entire ledger
+   * shipped on every load and every total was summed in the browser. Fine at
+   * 39 rows; it degrades linearly and silently.
+   *
+   * The screen now asks for a page and grows it on demand. The money headline
+   * does NOT come from the page — the server computes it in SQL across the
+   * whole filtered ledger, so "Total received" stays true no matter how much
+   * of the table has been loaded.
+   */
+  const [pageSize, setPageSize] = React.useState(PAGE_SIZE)
+  const { data, isLoading, isError, isFetching, refetch } = useQuery({
+    queryKey: ["receipts-redesigned", pageSize],
+    queryFn: () => ReceiptsAPI.list({ limit: pageSize }),
+    placeholderData: (prev) => prev,
   })
   const invalidate = () => qc.invalidateQueries({ queryKey: ["receipts-redesigned"] })
   const openCreate = () => { setEditing(undefined); setPrefill(undefined); setDialogOpen(true) }
@@ -82,15 +97,33 @@ export function ReceiptsRedesignedView() {
    */
   const filtering = search.trim().length > 0
   const scope = receipts
-  const total = scope.reduce((s, r) => s + num(r.amount), 0)
   const now = new Date()
   const thisMonth = scope.filter((r) => {
     const d = new Date(r.receivedDate)
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
   })
   const thisMonthTotal = thisMonth.reduce((s, r) => s + num(r.amount), 0)
-  const cashTotal = scope.filter((r) => r.method === "cash").reduce((s, r) => s + num(r.amount), 0)
-  const scopeNote = filtering ? `of ${all.length} total` : undefined
+
+  /**
+   * WWL-157 — with paging on, a total summed from the loaded rows would go up
+   * as the vendor scrolls, which is the same lie in a new costume. Unfiltered
+   * headlines come from the server's whole-ledger aggregate; only a filter,
+   * which is genuinely about the rows on screen, is summed locally.
+   */
+  const ledgerTotal = num(data?.summary?.total)
+  const ledgerCount = data?.total ?? all.length
+  const ledgerCash = num(data?.summary?.byMethod?.cash)
+
+  const total = filtering ? scope.reduce((s, r) => s + num(r.amount), 0) : ledgerTotal
+  const cashTotal = filtering
+    ? scope.filter((r) => r.method === "cash").reduce((s, r) => s + num(r.amount), 0)
+    : ledgerCash
+  const shownCount = filtering ? scope.length : ledgerCount
+  const scopeNote = filtering ? `of ${ledgerCount} total` : undefined
+
+  // How much of the ledger is actually in the browser right now.
+  const loaded = all.length
+  const hasMore = loaded < ledgerCount
 
   // WWL-150 — the server's per-rail breakdown, biggest first.
   const byMethodRows = Object.entries(data?.summary?.byMethod ?? {})
@@ -134,8 +167,24 @@ export function ReceiptsRedesignedView() {
         <StatCard label={filtering ? "Total received (filtered)" : "Total received"} value={formatPkr(total)} icon="Wallet" trend="up" delta={scopeNote} error={isError} />
         <StatCard label="This month" value={formatPkr(thisMonthTotal)} icon="Calendar" trend="up" delta={`${thisMonth.length} ${thisMonth.length === 1 ? "receipt" : "receipts"}`} error={isError} />
         <StatCard label={filtering ? "Cash collected (filtered)" : "Cash collected"} value={formatPkr(cashTotal)} icon="DollarSign" error={isError} />
-        <StatCard label={filtering ? "Receipts (filtered)" : "Receipts"} value={scope.length} icon="FileText" delta={scopeNote} />
+        <StatCard label={filtering ? "Receipts (filtered)" : "Receipts"} value={shownCount} icon="FileText" delta={scopeNote} />
       </div>
+
+      {/* WWL-157 — never let the table imply it is the whole book. If a search
+          is running while rows are still unloaded, say so plainly: a vendor
+          who searches for a customer and sees nothing must not conclude the
+          receipt was never recorded. */}
+      {hasMore && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed bg-muted/30 px-3 py-2 text-xs">
+          <span className="text-muted-foreground">
+            Showing the {loaded} most recent of {ledgerCount} receipts.
+            {filtering && " Search only covers what is loaded."}
+          </span>
+          <Button size="sm" variant="secondary" className="h-7" disabled={isFetching} onClick={() => setPageSize((n) => n + PAGE_SIZE)}>
+            {isFetching ? "Loading…" : "Load more"}
+          </Button>
+        </div>
+      )}
 
       {/*
         WWL-150 — every response already carries `summary.byMethod`:

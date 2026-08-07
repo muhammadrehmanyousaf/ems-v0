@@ -57,8 +57,14 @@ export interface ReceiptSummary {
 }
 
 export interface ReceiptListResponse {
+  /** This page. Equals the whole ledger when no `limit` was requested. */
   receipts: PaymentReceipt[];
+  /** WWL-157 — computed in SQL over the WHOLE filtered set, never over the page. */
   summary: ReceiptSummary;
+  /** Rows matching the filter across the whole ledger. */
+  total?: number;
+  limit?: number | null;
+  offset?: number;
 }
 
 export interface CreateReceiptInput {
@@ -85,6 +91,13 @@ export interface ReceiptListFilters {
   method?: ReceiptMethod;
   from?: string;
   to?: string;
+  /**
+   * WWL-157 — opt-in paging. Omit it and the whole ledger comes back, which is
+   * what callers that match receipts to bookings client-side rely on. Capped
+   * server-side at 500.
+   */
+  limit?: number;
+  offset?: number;
 }
 
 export class ReceiptsAPI {
