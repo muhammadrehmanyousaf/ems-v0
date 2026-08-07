@@ -19,6 +19,7 @@ import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useBusiness } from "@/context/BusinessContext"
 import { Button } from "@/components/ui/button"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
+import { DangerousAction } from "@/components/dashboard/primitives/dangerous-action"
 import { toast } from "sonner"
 
 const fmtDate = (s?: string | null) => {
@@ -132,11 +133,54 @@ export function QuotesView() {
                     )}
                     {myTurn && hasStandingOffer(q) && (
                       <>
-                        <Button size="sm" onClick={() => acceptMut.mutate(q.id)} disabled={acceptMut.isPending}>Accept {formatPkr(q.quotedPrice)}</Button>
+                        {/* WWL-609 family — Accept commits this venue to the
+                            customer's number. Confirm names the amount. */}
+                        <DangerousAction
+                          title="Accept this price?"
+                          consequence={
+                            <>
+                              You&apos;ll be committing to <strong>{formatPkr(q.quotedPrice)}</strong> for{" "}
+                              {q.customer?.fullName || "this customer"}. The customer is told straight away,
+                              and the negotiation closes — you can&apos;t re-open it from this screen.
+                            </>
+                          }
+                          confirmLabel={`Accept ${formatPkr(q.quotedPrice)}`}
+                          confirmVariant="default"
+                          disabled={acceptMut.isPending}
+                          onConfirm={async () => { await acceptMut.mutateAsync(q.id) }}
+                        >
+                          <Button size="sm" disabled={acceptMut.isPending}>Accept {formatPkr(q.quotedPrice)}</Button>
+                        </DangerousAction>
                         <Button size="sm" variant="outline" onClick={() => setPriceFor(q)}>Counter</Button>
                       </>
                     )}
-                    <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => declineMut.mutate(q.id)} disabled={declineMut.isPending}>Decline</Button>
+                    {/* WWL-609 (S2) — Decline fired on the first click, on every
+                        non-terminal quote including one you have never priced,
+                        and ends a live sales conversation with no way back from
+                        this screen. Visual quietness is not a guard. */}
+                    <DangerousAction
+                      title="Decline this enquiry?"
+                      consequence={
+                        <>
+                          {q.customer?.fullName || "This customer"} will be told you&apos;re not quoting
+                          for {q.eventType || "their event"}
+                          {q.deliveryDate ? ` on ${fmtDate(q.deliveryDate)}` : ""}. This ends the conversation and
+                          can&apos;t be undone from here.
+                          {q.status === "inquiry" && (
+                            <>
+                              {" "}
+                              <strong>You haven&apos;t sent them a price yet</strong> — you can quote
+                              instead.
+                            </>
+                          )}
+                        </>
+                      }
+                      confirmLabel="Decline"
+                      disabled={declineMut.isPending}
+                      onConfirm={async () => { await declineMut.mutateAsync(q.id) }}
+                    >
+                      <Button size="sm" variant="ghost" className="text-muted-foreground" disabled={declineMut.isPending}>Decline</Button>
+                    </DangerousAction>
                   </div>
                 )}
               </li>

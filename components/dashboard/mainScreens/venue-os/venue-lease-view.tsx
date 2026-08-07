@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
+import { DangerousAction } from "@/components/dashboard/primitives/dangerous-action";
 
 const PKR = (n: string | number): string => "Rs " + Math.round(Number(n) || 0).toLocaleString("en-PK");
 
@@ -177,9 +178,28 @@ export function VenueLeaseView(): React.ReactElement | null {
           <Button size="sm" variant="outline" onClick={() => void accrue(true)} disabled={!businessId || !period || busy}>
             Preview
           </Button>
-          <Button size="sm" onClick={() => void accrue(false)} disabled={!businessId || !period || busy}>
-            Post rent
-          </Button>
+          {/* WWL-558 (S2) — "Post rent" sat beside "Preview", looked identical,
+              and wrote real journal entries to the live ledger on one click with
+              no confirmation and no warning. Preview stays one click; posting
+              does not. */}
+          <DangerousAction
+            title={`Post ${period || "this month"}'s rent to the ledger?`}
+            consequence={
+              <>
+                This writes real journal entries against{" "}
+                <strong>{period || "the selected period"}</strong>. They appear in your P&amp;L and
+                your tax report immediately. Use <strong>Preview</strong> first if you just want to
+                see the numbers — that writes nothing.
+              </>
+            }
+            confirmLabel="Post rent"
+            disabled={!businessId || !period || busy}
+            onConfirm={() => accrue(false)}
+          >
+            <Button size="sm" disabled={!businessId || !period || busy}>
+              Post rent
+            </Button>
+          </DangerousAction>
         </div>
 
         {err && <p className="text-sm text-destructive">{err}</p>}

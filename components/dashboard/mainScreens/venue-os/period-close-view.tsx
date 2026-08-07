@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
+import { DangerousAction } from "@/components/dashboard/primitives/dangerous-action";
 
 const PKR = (n: string | number | null | undefined): string => "Rs " + Math.round(Number(n) || 0).toLocaleString("en-PK");
 
@@ -76,9 +77,30 @@ export function PeriodCloseView(): React.ReactElement | null {
             Check status
           </Button>
           {status && !closed && (
-            <Button size="sm" onClick={() => void close()} disabled={!ready || busy}>
-              Close month
-            </Button>
+            /* WWL-597 (S2) — "Close month" was the third button in a row of
+               three, styled like the harmless "Check status" beside it, and one
+               click froze that month's books: every journal entry locked and
+               every new posting into the month rejected. It has to be asked for
+               deliberately, so this one requires the period to be typed. */
+            <DangerousAction
+              title={`Close and lock ${status.period}?`}
+              consequence={
+                <>
+                  Every journal entry in <strong>{status.period}</strong> will be locked and the
+                  reported P&amp;L frozen. Nothing new can be posted into that month — a late
+                  supplier bill, a correction, a receipt entered a day late will all be refused
+                  until you reopen it.
+                </>
+              }
+              requireTyped={status.period}
+              confirmLabel="Close the month"
+              disabled={!ready || busy}
+              onConfirm={() => close()}
+            >
+              <Button size="sm" disabled={!ready || busy}>
+                Close month
+              </Button>
+            </DangerousAction>
           )}
           {status && closed && (
             <Button size="sm" variant="outline" onClick={() => void reopen()} disabled={!ready || busy}>
