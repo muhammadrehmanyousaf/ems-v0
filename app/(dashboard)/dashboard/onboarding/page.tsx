@@ -5,10 +5,20 @@ import { Heading } from '@/components/heading';
 import { Separator } from '@/components/ui/separator';
 import type { Metadata } from 'next';
 
+/**
+ * WWL-524 — this used to promise "climb search ranking and unlock trust
+ * badges", and the page substantiated neither: it shows no ranking position, no
+ * badge as locked or unlocked, and names no threshold for either. The only
+ * badge-shaped field on the payload is `visited`, which a vendor cannot earn.
+ *
+ * The page is a good checklist. Describing it as what it is beats promising two
+ * things it cannot show — and neither claim can be honestly made until the
+ * ranking signal and the badge thresholds actually surface here.
+ */
 export const metadata: Metadata = {
   title: 'Dashboard : Onboarding',
   description:
-    'Complete your business profile to climb search ranking and unlock trust badges.',
+    'See what your listing is missing, why each gap costs you bookings, and fix it in one click.',
 };
 
 export default function Page() {

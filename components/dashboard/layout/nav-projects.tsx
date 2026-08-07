@@ -148,7 +148,15 @@ export function NavSections({ sections }: { sections: NavSection[] }) {
                           asChild
                           className={`${ITEM_BASE} ${ICON_BASE} flex-1 pr-1`}
                         >
-                          <Link href={`${item.url}?tab=overview`}>
+                          {/* WWL-526 — this emitted `?tab=overview` while the
+                              onboarding checklist emitted `?tab=profile`. Both
+                              resolve to Profile through PARAM_TO_TAB, so both
+                              worked; the same destination was simply addressed
+                              two ways from two places in one product. The hub
+                              writes its own key back to the URL, so that is the
+                              one to standardise on. `overview` still resolves,
+                              so old bookmarks and links keep working. */}
+                          <Link href={item.url}>
                             <item.icon />
                             <span>{label(item)}</span>
                           </Link>
