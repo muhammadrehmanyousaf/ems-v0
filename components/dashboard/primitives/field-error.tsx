@@ -111,6 +111,20 @@ export function validateName(
 /**
  * Rupee amount. Rejects negatives and zero by default because a Rs 0 listing is
  * the "3,268 businesses bookable at Rs 0" hole, not a real free service.
+ *
+ * WWL-126 — every money column in this product is NUMERIC(12,2) (verified on
+ * the live database: Bookings.totalAmount, PaymentReceipts.amount,
+ * VendorExpenses.amount, PostDatedCheques.amount). The validator did not know
+ * that, so three inputs got through and the stored value silently disagreed
+ * with what the vendor typed:
+ *
+ *   0.001    → passes "> 0", stores as 0.00 — a receipt for Rs 0, which is the
+ *              exact hole this function exists to close
+ *   100.999  → stores as 101.00 — the ledger holds a number nobody entered
+ *   1e5      → Number() reads 100000 with no hint that is what happened
+ *
+ * Rounding money without saying so is the failure mode; refusing to guess is
+ * the fix. A vendor who genuinely means 101 can type 101.
  */
 export function validatePkr(
   value: string | number,
@@ -122,9 +136,24 @@ export function validatePkr(
 ): string | undefined {
   const raw = String(value ?? "").trim()
   if (!raw) return `${label} is required.`
+
+  // A plain decimal literal, optionally signed. Anything else — `1e5`, `0x10`,
+  // `Infinity`, `1,000` — is rejected by name rather than quietly coerced.
+  if (!/^[+-]?\d*\.?\d+$/.test(raw)) {
+    return /[eE]/.test(raw)
+      ? `${label} must be a plain number — write 100000, not ${raw}.`
+      : `${label} must be a number, digits only (no commas or symbols).`
+  }
+
   const n = Number(raw)
   if (!Number.isFinite(n)) return `${label} must be a number.`
   if (n < 0) return `${label} cannot be negative.`
+
+  const decimals = raw.includes(".") ? raw.split(".")[1].length : 0
+  if (decimals > 2) {
+    return `${label} can have at most 2 decimal places — paisa, not fractions of a paisa.`
+  }
+
   if (!allowZero && n === 0) return `${label} must be more than Rs 0.`
   if (n > max) return `${label} looks too large. Please check the amount.`
   return undefined

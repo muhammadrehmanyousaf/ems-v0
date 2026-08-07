@@ -14,6 +14,7 @@ import { Loader2, Check } from "lucide-react";
 import { getCancellationPolicy, saveCancellationPolicy, type PolicyTemplate, type PolicySlab } from "@/lib/api/bookingOrder";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
 const rs = (n: number) => "Rs " + Math.round(n || 0).toLocaleString("en-PK");
@@ -37,6 +38,8 @@ export function PolicyTemplatePicker() {
   const { data, isLoading } = useQuery({ queryKey: ["cancellation-policy"], queryFn: getCancellationPolicy });
   const [picked, setPicked] = useState<string | null>(null);
   const [sample, setSample] = useState(800000);
+  // WWL-507 — the template key awaiting confirmation.
+  const [confirming, setConfirming] = useState<string | null>(null);
 
   const save = useMutation({
     mutationFn: (t: PolicyTemplate) => saveCancellationPolicy({ name: t.name, slabs: t.slabs, forceMajeureRule: t.forceMajeureRule }),
@@ -98,12 +101,37 @@ export function PolicyTemplatePicker() {
         </div>
       )}
 
-      <div className="grid md:grid-cols-3 gap-4">
+      {/**
+        * WWL-509 — choosing a policy was mouse-only: the cards were bare
+        * `<div onClick>`, so they took no focus, answered no key press and
+        * announced nothing. This is a set of mutually exclusive choices, which
+        * is what a radio group is; giving it those semantics makes it reachable
+        * by Tab, selectable with Space or Enter, and readable to a screen
+        * reader as "1 of 3 selected".
+        */}
+      <div className="grid md:grid-cols-3 gap-4" role="radiogroup" aria-label="Cancellation policy template">
         {data.templates.map((t) => {
           const isActive = activeKey === t.key;
           const isPicked = (picked ?? activeKey) === t.key;
           return (
-            <Card key={t.key} className={cn("cursor-pointer transition-colors", isPicked ? "border-primary ring-1 ring-primary" : "hover:border-muted-foreground/40")} onClick={() => setPicked(t.key)}>
+            <Card
+              key={t.key}
+              role="radio"
+              aria-checked={isPicked}
+              aria-label={`${t.name} — ${t.labelEn}${isActive ? " (currently active)" : ""}`}
+              tabIndex={isPicked ? 0 : -1}
+              onKeyDown={(e) => {
+                if (e.key === " " || e.key === "Enter") {
+                  e.preventDefault();
+                  setPicked(t.key);
+                }
+              }}
+              className={cn(
+                "cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                isPicked ? "border-primary ring-1 ring-primary" : "hover:border-muted-foreground/40",
+              )}
+              onClick={() => setPicked(t.key)}
+            >
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -137,13 +165,99 @@ export function PolicyTemplatePicker() {
       <div className="flex items-center gap-3">
         <Button
           disabled={save.isPending || !picked || picked === activeKey}
-          onClick={() => { const t = data.templates.find((x) => x.key === picked); if (t) save.mutate(t); }}
+          onClick={() => setConfirming(picked)}
         >
           {save.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
           {picked && picked === activeKey ? "Yeh already active hai" : "Yeh policy save karein"}
         </Button>
         {save.isSuccess && <span className="text-sm text-emerald-700 dark:text-emerald-400">Save ho gaya ✓</span>}
       </div>
+
+      {/**
+        * WWL-507 — saving took one click and produced zero dialogs, on a
+        * setting that decides how much of a customer's money the vendor keeps
+        * when a wedding is called off. Nothing on the page said what happens to
+        * bookings that already exist.
+        *
+        * What it says is checked against the service, not guessed:
+        * cancellationPolicyService versions by `effectiveFrom` and never
+        * mutates, and policyAcceptanceService freezes a snapshot at the moment
+        * a customer accepts. So an accepted booking keeps the terms it was
+        * sold under; one without a recorded acceptance follows whatever is
+        * active when the refund is worked out.
+        */}
+      <AlertDialog open={!!confirming} onOpenChange={(v) => !v && setConfirming(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Switch to {data.templates.find((t) => t.key === confirming)?.name ?? "this policy"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="rounded border px-2 py-0.5 text-xs">
+                    {data.templates.find((t) => t.key === activeKey)?.name ??
+                      inherited?.name ??
+                      "No policy chosen"}
+                  </span>
+                  <span aria-hidden>→</span>
+                  <span className="rounded border border-primary px-2 py-0.5 text-xs font-medium">
+                    {data.templates.find((t) => t.key === confirming)?.name}
+                  </span>
+                </div>
+                <p>
+                  Bookings where the customer has already <strong>accepted</strong> your terms keep the
+                  version they accepted — that snapshot is frozen and this does not touch it.
+                </p>
+                <p>
+                  Bookings with no recorded acceptance will be refunded under this new policy from now
+                  on. Cancel karne par jo raqam wapas hogi, woh badal jaayegi.
+                </p>
+                {confirming && (
+                  <div className="rounded-md border p-2">
+                    <p className="mb-1 text-xs text-muted-foreground">
+                      On {rs(sample)}, a customer cancelling would get back:
+                    </p>
+                    <ul className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs tabular-nums">
+                      {WINDOWS.map((d) => {
+                        const t = data.templates.find((x) => x.key === confirming)!;
+                        const now = data.templates.find((x) => x.key === activeKey);
+                        const next = Math.round((sample * (100 - forfeitAt(t.slabs, d))) / 100);
+                        const prev = now
+                          ? Math.round((sample * (100 - forfeitAt(now.slabs, d))) / 100)
+                          : null;
+                        return (
+                          <li key={d} className="flex justify-between gap-2">
+                            <span className="text-muted-foreground">{d} din pehle</span>
+                            <span>
+                              {prev != null && prev !== next && (
+                                <span className="mr-1 text-muted-foreground line-through">{rs(prev)}</span>
+                              )}
+                              {rs(next)}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Rehne dein</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const t = data.templates.find((x) => x.key === confirming);
+                if (t) save.mutate(t);
+                setConfirming(null);
+              }}
+            >
+              Haan, yeh policy lagayein
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <p className="text-[11px] text-muted-foreground">Force-majeure (govt/aafat) par paisa zabt nahi hota — carry-forward credit banta hai.</p>
     </div>
   );
