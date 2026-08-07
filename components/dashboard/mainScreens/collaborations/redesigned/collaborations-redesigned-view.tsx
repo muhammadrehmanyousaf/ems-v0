@@ -210,7 +210,7 @@ export function CollaborationsRedesignedView() {
         <StatCard label="Total invites" value={allInvites.length} icon="Users" />
         <StatCard label="Pending" value={pending} icon="Clock" trend="flat" />
         <StatCard label="Accepted" value={accepted} icon="CheckCircle2" trend="up" />
-        <StatCard label="Agreed value" value={formatPkr(agreedTotal)} icon="Wallet" />
+        <StatCard label="Agreed value" value={formatPkr(agreedTotal)} icon="Wallet" error={isError} />
       </div>
 
       <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 w-fit">

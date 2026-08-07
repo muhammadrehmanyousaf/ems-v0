@@ -140,17 +140,25 @@ export function BookingsRedesignedView() {
         }
       />
 
+      {/* WWL-052 — on a failed load the money tiles printed Rs 0 with a green
+          upward arrow beside the word "received", which is indistinguishable
+          from a vendor who has collected nothing. */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total bookings" value={total} icon="Calendar" />
+        <StatCard label="Total bookings" value={isError ? "—" : total} icon="Calendar" />
         <StatCard
           label={isTruncated ? `Collected (this page)` : "Collected"}
-          value={formatPkr(collected)} icon="Wallet" trend="up" delta="received"
+          value={isError ? "—" : formatPkr(collected)}
+          icon="Wallet"
+          trend={isError ? undefined : "up"}
+          delta={isError ? "couldn't load" : "received"}
         />
         <StatCard
           label={isTruncated ? `Due (this page)` : "Due"}
-          value={formatPkr(due)} icon="Clock" delta="to chase"
+          value={isError ? "—" : formatPkr(due)}
+          icon="Clock"
+          delta={isError ? "couldn't load" : "to chase"}
         />
-        <StatCard label="This month" value={thisMonth} icon="TrendingUp" />
+        <StatCard label="This month" value={isError ? "—" : thisMonth} icon="TrendingUp" />
       </div>
 
       {isTruncated && (

@@ -241,15 +241,14 @@ export function BrokersRedesignedView() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Commissions" value={all.length} icon="Users" />
-        <StatCard label="Total commission" value={formatPkr(totalCommission)} icon="Wallet" />
-        <StatCard label="Outstanding" value={formatPkr(outstanding)} icon="DollarSign" trend={outstanding > 0 ? "up" : undefined} />
+        <StatCard label="Total commission" value={formatPkr(totalCommission)} icon="Wallet" error={isError} />
+        <StatCard label="Outstanding" value={formatPkr(outstanding)} icon="DollarSign" trend={outstanding > 0 ? "up" : undefined} error={isError} />
         <StatCard
           label="Overdue"
           value={overdueCount}
           icon="AlertTriangle"
           delta={overdueAmount > 0 ? `${formatPkr(overdueAmount)} late` : undefined}
-          trend={overdueCount > 0 ? "down" : undefined}
-        />
+          trend={overdueCount > 0 ? "down" : undefined} error={isError} />
       </div>
 
       {/* WWL-288 — a path from "something is late" to "which ones". */}

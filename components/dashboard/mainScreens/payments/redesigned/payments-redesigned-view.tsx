@@ -131,9 +131,9 @@ export function PaymentsRedesignedView() {
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total billed" value={isLoading ? "…" : formatPkr(shownStats.total)} icon="Wallet" />
-        <StatCard label="Received" value={isLoading ? "…" : formatPkr(shownStats.received)} icon="CheckCircle2" trend="up" delta="collected" />
-        <StatCard label="Due" value={isLoading ? "…" : formatPkr(shownStats.due)} icon="Clock" delta="to chase" />
+        <StatCard label="Total billed" value={isLoading ? "…" : formatPkr(shownStats.total)} icon="Wallet" error={isError} />
+        <StatCard label="Received" value={isLoading ? "…" : formatPkr(shownStats.received)} icon="CheckCircle2" trend="up" delta="collected" error={isError} />
+        <StatCard label="Due" value={isLoading ? "…" : formatPkr(shownStats.due)} icon="Clock" delta="to chase" error={isError} />
         <StatCard label="Payments" value={isLoading ? "…" : shownStats.count} icon="FileText" />
       </div>
 

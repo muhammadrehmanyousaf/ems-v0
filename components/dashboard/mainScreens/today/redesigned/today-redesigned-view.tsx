@@ -169,16 +169,17 @@ export function TodayRedesignedView() {
         <StatCard label="Events today" value={isLoading ? "…" : eventsToday} icon="Calendar" />
         <StatCard label="Total tasks" value={isLoading ? "…" : totalTasks} icon="CheckCircle2" />
         <StatCard label="Open tasks" value={isLoading ? "…" : openTasks} icon="Clock" delta="to complete" trend={openTasks > 0 ? "down" : "flat"} />
-        <StatCard label="Revenue today" value={isLoading ? "…" : formatPkr(revenueToday)} icon="Wallet" />
+        <StatCard label="Revenue today" value={isLoading ? "…" : formatPkr(revenueToday)} icon="Wallet" error={isError} />
         {/* WWL-021 — this is the whole book's A/R, not today's. It sat in a row
             of four cards that are all "today" figures, under a bare label, so
             it read as money owed on today's events. It now says which it is,
             and a failed load says so instead of quoting Rs 0. */}
         <StatCard
           label="Outstanding (all dates)"
-          value={receivablesError ? "—" : formatPkr(outstandingBalance)}
+          value={formatPkr(outstandingBalance)}
           icon="Clock"
-          delta={receivablesError ? "couldn't load" : outstandingBalance > 0 ? "to collect" : undefined}
+          delta={outstandingBalance > 0 ? "to collect" : undefined}
+          error={receivablesError}
         />
       </div>
 

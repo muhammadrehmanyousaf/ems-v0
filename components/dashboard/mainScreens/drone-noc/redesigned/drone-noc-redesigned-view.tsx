@@ -171,7 +171,7 @@ export function DroneNocRedesignedView({ adminCapable = true }: { adminCapable?:
         <StatCard label="Total permits" value={all.length} icon="ShieldCheck" />
         <StatCard label="Approved" value={approved} icon="CheckCircle2" trend="up" />
         <StatCard label="Needs attention" value={attention} icon="AlertTriangle" />
-        <StatCard label="Fees paid" value={formatPkr(feesPaid)} icon="Wallet" />
+        <StatCard label="Fees paid" value={formatPkr(feesPaid)} icon="Wallet" error={isError} />
       </div>
 
       <DataTable

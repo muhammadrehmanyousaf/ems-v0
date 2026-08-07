@@ -121,7 +121,7 @@ export function ReceivablesRedesignedView() {
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Outstanding" value={isLoading ? "…" : formatPkr(num(t?.grandOutstanding))} icon="Wallet" trend="down" delta="to chase" />
+        <StatCard label="Outstanding" value={isLoading ? "…" : formatPkr(num(t?.grandOutstanding))} icon="Wallet" trend="down" delta="to chase" error={isError} />
         <StatCard label="Customers owing" value={isLoading ? "…" : num(t?.customerCount)} icon="Users" />
         <StatCard label="Open installments" value={isLoading ? "…" : num(t?.installmentsOpen)} icon="Clock" />
         <StatCard label="Oldest overdue" value={isLoading ? "…" : `${num(t?.oldestDaysOverdue)} days`} icon="AlertTriangle" trend={num(t?.oldestDaysOverdue) > 0 ? "down" : "flat"} />

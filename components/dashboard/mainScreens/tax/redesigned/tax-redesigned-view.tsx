@@ -55,10 +55,10 @@ export function TaxRedesignedView() {
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Gross revenue" value={isLoading ? "…" : formatPkr(num(report?.summary?.bookingRevenue))} icon="Wallet" trend="up" />
-        <StatCard label="Expenses" value={isLoading ? "…" : formatPkr(num(report?.summary?.totalExpenses))} icon="Clock" />
-        <StatCard label="Net P&L" value={isLoading ? "…" : formatPkr(netPnl)} icon="TrendingUp" trend={netPnl >= 0 ? "up" : "down"} />
-        <StatCard label="FBR submitted" value={isLoading ? "…" : formatPkr(num(report?.summary?.fbrSubmittedValue))} icon="ShieldCheck" />
+        <StatCard label="Gross revenue" value={isLoading ? "…" : formatPkr(num(report?.summary?.bookingRevenue))} icon="Wallet" trend="up" error={isError} />
+        <StatCard label="Expenses" value={isLoading ? "…" : formatPkr(num(report?.summary?.totalExpenses))} icon="Clock" error={isError} />
+        <StatCard label="Net P&L" value={isLoading ? "…" : formatPkr(netPnl)} icon="TrendingUp" trend={netPnl >= 0 ? "up" : "down"} error={isError} />
+        <StatCard label="FBR submitted" value={isLoading ? "…" : formatPkr(num(report?.summary?.fbrSubmittedValue))} icon="ShieldCheck" error={isError} />
       </div>
 
       <DataTable

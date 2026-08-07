@@ -153,7 +153,7 @@ export function GeneratorFuelRedesignedView() {
         <StatCard label="Total entries" value={all.length} icon="FileText" />
         <StatCard label="Deliveries" value={deliveries} icon="Package" trend="up" />
         <StatCard label="Delivered litres" value={deliveredLitres.toLocaleString("en-PK")} icon="Gauge" />
-        <StatCard label="Total cost" value={formatPkr(totalCost)} icon="Wallet" />
+        <StatCard label="Total cost" value={formatPkr(totalCost)} icon="Wallet" error={isError} />
       </div>
 
       {/* WWL-307 / WWL-308 — what is actually in the tanks, per generator. */}

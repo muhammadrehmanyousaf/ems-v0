@@ -103,7 +103,7 @@ export function InventoryRedesignedView() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Total items" value={all.length} icon="Package" />
         <StatCard label="Low / out of stock" value={lowCount} icon="AlertTriangle" trend={lowCount ? "down" : "flat"} delta={lowCount ? "reorder" : "all good"} />
-        <StatCard label="Stock value" value={formatPkr(Math.round(stockValue))} icon="Wallet" />
+        <StatCard label="Stock value" value={formatPkr(Math.round(stockValue))} icon="Wallet" error={isError} />
         <StatCard label="Categories" value={categories} icon="LayoutGrid" />
       </div>
 

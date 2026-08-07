@@ -130,7 +130,7 @@ export function PromoteRedesignedView() {
         <StatCard label="Total requests" value={all.length} icon="Megaphone" />
         <StatCard label="Pending" value={pending} icon="Clock" trend={pending > 0 ? "up" : undefined} />
         <StatCard label="Active" value={active} icon="ShieldCheck" />
-        <StatCard label="Quoted (total)" value={formatPkr(quotedTotal)} icon="Wallet" />
+        <StatCard label="Quoted (total)" value={formatPkr(quotedTotal)} icon="Wallet" error={isError} />
       </div>
 
       <DataTable

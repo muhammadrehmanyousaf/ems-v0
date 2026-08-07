@@ -25,6 +25,21 @@ export interface StatCardProps {
   onClick?: () => void
   href?: string
   className?: string
+  /**
+   * The load behind this tile failed.
+   *
+   * WWL-018 / WWL-052 — with the money endpoints down, screens across the
+   * portal rendered "Rs 0" with full confidence: the dashboard showed
+   * "Rs 0 collected · Rs 0 owed · 0 events" with no error anywhere on the page,
+   * and Rs 0 collected even carried a green upward trend arrow beside the word
+   * "received". Nothing distinguished it from a vendor who genuinely has
+   * nothing — which for a khata product is the worst possible confusion.
+   *
+   * A missing figure is not a zero. Setting this renders an em dash, drops the
+   * trend arrow, and replaces the delta with "couldn't load", so the tile can
+   * never assert a number it does not have.
+   */
+  error?: boolean
 }
 
 const TREND: Record<NonNullable<StatCardProps["trend"]>, string> = {
@@ -42,13 +57,18 @@ const TREND_ICON: Record<NonNullable<StatCardProps["trend"]>, IconName> = {
 export function StatCard({
   label,
   value,
-  delta,
-  trend,
+  delta: deltaProp,
+  trend: trendProp,
   icon,
   onClick,
   href,
   className,
+  error,
 }: StatCardProps) {
+  // A failed load must never be able to render as a number. See `error` above.
+  const shownValue = error ? "—" : value
+  const delta = error ? "couldn't load" : deltaProp
+  const trend = error ? undefined : trendProp
   const interactive = !!(onClick || href)
   const Wrapper: any = href ? "a" : onClick ? "button" : "div"
   return (
@@ -71,10 +91,14 @@ export function StatCard({
         )}
       </div>
       <div
-        className="text-xl font-semibold tracking-tight text-card-foreground"
+        className={cn(
+          "text-xl font-semibold tracking-tight",
+          error ? "text-muted-foreground" : "text-card-foreground",
+        )}
         style={{ fontVariantNumeric: "tabular-nums" }}
+        {...(error ? { title: "This figure could not be loaded — it is missing, not zero." } : {})}
       >
-        {value}
+        {shownValue}
       </div>
       {delta && (
         <div className={cn("flex items-center gap-1 text-xs", trend ? TREND[trend] : "text-muted-foreground")}>

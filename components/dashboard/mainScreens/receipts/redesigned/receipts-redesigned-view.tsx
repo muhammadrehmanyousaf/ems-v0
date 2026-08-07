@@ -113,9 +113,9 @@ export function ReceiptsRedesignedView() {
       <OutboxConflicts onReenter={openReenter} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total received" value={formatPkr(total)} icon="Wallet" trend="up" />
-        <StatCard label="This month" value={formatPkr(thisMonthTotal)} icon="Calendar" trend="up" delta={`${thisMonth.length} receipts`} />
-        <StatCard label="Cash collected" value={formatPkr(cashTotal)} icon="DollarSign" />
+        <StatCard label="Total received" value={formatPkr(total)} icon="Wallet" trend="up" error={isError} />
+        <StatCard label="This month" value={formatPkr(thisMonthTotal)} icon="Calendar" trend="up" delta={`${thisMonth.length} receipts`} error={isError} />
+        <StatCard label="Cash collected" value={formatPkr(cashTotal)} icon="DollarSign" error={isError} />
         <StatCard label="Receipts" value={all.length} icon="FileText" />
       </div>
 

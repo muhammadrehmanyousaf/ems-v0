@@ -104,7 +104,7 @@ export function PdcsRedesignedView() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Total cheques" value={all.length} icon="FileText" />
         <StatCard label="Held / deposited" value={heldCount} icon="Clock" delta="awaiting" />
-        <StatCard label="Cleared value" value={formatPkr(clearedValue)} icon="Wallet" trend="up" />
+        <StatCard label="Cleared value" value={formatPkr(clearedValue)} icon="Wallet" trend="up" error={isError} />
         <StatCard label="Bounced" value={bounced} icon="AlertTriangle" trend={bounced ? "down" : "flat"} delta={bounced ? "follow up" : "none"} />
       </div>
 
