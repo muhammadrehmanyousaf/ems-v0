@@ -25,6 +25,15 @@ export interface AnnualTaxReport {
     totalExpenses: number;
     expenseCount: number;
     netPnl: number;
+    /**
+     * WWL-194 — which FBR adapter is active. `FBR_PROVIDER` defaults to `noop`,
+     * which submits nothing, so `fbrSubmittedValue` is structurally Rs 0 and a
+     * vendor reading that card concludes they have filed nothing — a different
+     * claim from "this is not switched on". Optional: an older backend won't
+     * send it, and the card falls back to the plain figure.
+     */
+    fbrProvider?: string;
+    fbrConfigured?: boolean;
   };
   expensesByCategory: Record<string, number>;
   months: Array<{

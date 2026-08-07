@@ -209,6 +209,10 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
+        /* WWL-186 — same as WWL-152: a no-match search rendered "No expenses
+           logged" with an Add expense button, telling a vendor with a full
+           ledger they had never used the feature. `filterQuery` above routes a
+           filtered-empty result to the search-specific state instead. */
         empty={{
           icon: "Wallet",
           title: "No expenses logged",

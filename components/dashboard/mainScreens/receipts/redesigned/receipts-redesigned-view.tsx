@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { ReceiptsAPI, type PaymentReceipt, type ReceiptMethod } from "@/lib/api/paymentReceipts"
@@ -47,6 +48,7 @@ const PAGE_SIZE = 100
 
 export function ReceiptsRedesignedView() {
   const qc = useQueryClient()
+  const router = useRouter()
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
   const [dialogOpen, setDialogOpen] = React.useState(false)
@@ -223,6 +225,16 @@ export function ReceiptsRedesignedView() {
       <DataTable
         filterQuery={search}
         onClearFilter={() => setSearch("")}
+        /**
+         * WWL-119 — every row was a navigational dead end: a `<tr>` with no
+         * onRowClick, no link, no button, tabIndex -1 and cursor: auto. From a
+         * payment a vendor could not reach the booking it belongs to, the
+         * customer who made it, or the rest of that booking's receipts — on a
+         * ledger whose whole job is answering "what is this Rs 489,311 against?"
+         *
+         * Rows without a bookingId stay inert rather than navigating nowhere.
+         */
+        onRowClick={(r) => { if (r.bookingId != null) router.push(`/dashboard/bookings/${r.bookingId}`) }}
         caption="Receipts"
         columns={columns}
         data={receipts}
@@ -233,6 +245,12 @@ export function ReceiptsRedesignedView() {
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
+        /* WWL-152 — with `filterQuery` passed, DataTable renders a "no matches"
+           state instead of this one. Searching zzzqqq used to render "No
+           receipts yet" plus a Record receipt button, presenting a populated
+           ledger as first-run onboarding — worse than the sibling cases because
+           it also offered a primary call-to-action. This `empty` is now only
+           what a genuinely empty ledger sees. */
         empty={{
           icon: "FileText",
           title: "No receipts yet",

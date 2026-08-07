@@ -47,6 +47,13 @@ const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 t
 const labelCls = "text-xs font-medium text-muted-foreground"
 
 /** WWL-117 — matches the `max` passed to validateOptionalText. */
+/**
+ * WWL-180 — WWL-117's third recurrence. A note of 1001 characters silently
+ * disabled Save with no field error and the false hint "Add an amount above 0
+ * and the date it was spent to save", while both of those were valid. The
+ * "Paid to" field on the same form got it right, with an excellent message; the
+ * notes field simply had no FieldError and no maxLength.
+ */
 const NOTES_MAX = 1000
 
 interface FormState { amount: string; category: ExpenseCategory; vendorName: string; description: string; spentDate: string; paymentMethod: ExpensePaymentMethod; subcategory: string; subVenueId: string; bookingId: string }
