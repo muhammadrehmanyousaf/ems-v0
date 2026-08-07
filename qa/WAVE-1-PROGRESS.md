@@ -320,3 +320,47 @@ grid is now truthful for all 3,278 either way.
   merge, using a QA vendor on the owner's own email so OTPs can be relayed.
 - The **S3/S4 tail** (285) and the **18 product gaps** are untouched and need a
   product decision, not a fix.
+
+---
+
+## Wave 8 — the S3 tail, swept as families
+
+**Every S1 and every S2 in the 612-finding sweep is now addressed.** What is
+left is 281 findings: **210 S3** (confusing / inaccessible) and **71 S4**
+(cosmetic). Nothing left in the backlog is "broken" or "shows the wrong
+number" — those two classes are closed.
+
+Wave 8 goes after the tail the same way waves 2–3 did: at the source, not
+screen by screen.
+
+| Findings | What it was | Where it was fixed |
+|---|---|---|
+| `WWL-120` `137` `153` `170` `187` + repeats | The sweep recorded "Table a11y, unchanged from Module 10 … third module … fourth … fifth" because the defect lives in two shared components. No `<caption>`, so a screen reader met an unnamed grid of numbers. Every row checkbox announced the identical **"Select row"** — ten rows, ten identical names, so nobody could tell which booking they were bulk-deleting. 16×16 hit area, under the WCAG 2.2 24×24 floor. | Both table layers + all 34 call sites |
+| `WWL-116` `135` `152` `186` + repeats | A no-match search asserted a financial falsehood: a vendor with 25 payments and Rs 23.9m on the books searching `zzzqqq` was told *"No payments yet."* The screen stated a fact about the **account** when the only empty thing was a **text box**. | `DataTable` primitive + 26 screens |
+| `WWL-183` | "Jazzcash", "Ibft", "Bank Transfer" — title-cased raw keys — while `EXPENSE_PAYMENT_METHOD_LABELS` had defined JazzCash / IBFT / Bank transfer all along, and Receipts already rendered them correctly. | Expenses table, card and CSV |
+
+### Live verification this wave
+
+`WWL-100` and `WWL-569` were both **driven on live production**, not argued
+from tests:
+
+- **Rehman Grand Marquee (3358)** — the venue from the original finding.
+  13-Aug (one booking): all five halls PARTIAL, non-sellable, warning banner.
+  12-Aug (no booking): all five AVAILABLE. The customer is never offered a hall
+  the venue may have committed, and a clear day is not over-blocked.
+- **A QA fixture with a real Hall → Floor → Partition tree** — assigning one
+  booking to one leaf turned **three previously-unsellable spaces back into
+  sellable inventory**: self UNAVAILABLE, ancestors PARTIAL, siblings AVAILABLE.
+- The live booking form sent **`subVenueId: 3356`** through the real UI.
+
+Live production shape, worth recording: **3,270 single-space venues, 8
+multi-space.** `WWL-100` only ever bit those 8 — but for them it was the whole
+product.
+
+### Still open
+
+The 281 S3/S4 findings are mostly per-screen from here — the systemic families
+are swept. They are polish and clarity, not broken behaviour.
+
+Plus the **18 product gaps** (features never built) which need a product
+decision, and the **1,864 unrun cases** which need a seeded staging vendor.
