@@ -95,7 +95,41 @@ export function EventProfitBoard(): React.ReactElement {
     const received = rows.reduce((s, r) => s + r.received, 0);
     const spent = rows.reduce((s, r) => s + r.spent, 0);
     const net = booked - spent;
-    return { booked, received, spent, net, outstanding: rows.reduce((s, r) => s + r.outstanding, 0), margin: booked > 0 ? net / booked : 0 };
+
+    /**
+     * WWL-541 / WWL-542 / WWL-554 — the headline read "Net profit
+     * Rs 25,508,850 · 76% margin" and was wrong three independent ways:
+     *
+     *   WWL-541  it is BOOKED minus spent, and Rs 13,417,229 of that had not
+     *            arrived. It is not profit until it is collected.
+     *   WWL-542  seven functions showed 100% margin because nothing was tagged
+     *            to them — Rs 9,702,750 of "profit" with no recorded cost at all.
+     *   WWL-554  it ignores the Money tab's Rs 8,847,000 of fixed overheads
+     *            entirely, which are real money leaving the account.
+     *
+     * The number is not deleted — it is a useful gross figure — but it is
+     * labelled for what it actually is, and the two distortions are counted and
+     * disclosed underneath instead of being silently baked in.
+     */
+    const untagged = rows.filter((r) => r.spent <= 0 && r.revenue > 0);
+    const untaggedRevenue = untagged.reduce((s, r) => s + r.revenue, 0);
+    const costedRows = rows.filter((r) => r.spent > 0);
+    const costedBooked = costedRows.reduce((s, r) => s + r.revenue, 0);
+    const costedNet = costedRows.reduce((s, r) => s + r.net, 0);
+
+    return {
+      booked,
+      received,
+      spent,
+      net,
+      outstanding: rows.reduce((s, r) => s + r.outstanding, 0),
+      // Margin over the functions that actually have a cost against them.
+      // Averaging in rows with zero recorded cost is what produced "76%".
+      margin: costedBooked > 0 ? costedNet / costedBooked : 0,
+      untaggedCount: untagged.length,
+      untaggedRevenue,
+      costedCount: costedRows.length,
+    };
   }, [rows]);
 
   const shown = rows.slice(0, MAX_ROWS);
@@ -114,7 +148,38 @@ export function EventProfitBoard(): React.ReactElement {
         <StatCard label="Received" value={formatPkr(totals.received)} icon="Wallet" delta={totals.booked > 0 ? `${Math.round((totals.received / totals.booked) * 100)}% collected` : undefined} trend="up" />
         <StatCard label="Outstanding" value={formatPkr(totals.outstanding)} icon="Clock" delta="to collect" />
         <StatCard label="Spent (tagged)" value={formatPkr(totals.spent)} icon="TrendingDown" />
-        <StatCard label="Net profit" value={formatPkr(totals.net)} icon="TrendingUp" delta={`${Math.round(totals.margin * 100)}% margin`} trend={totals.net >= 0 ? "up" : "down"} />
+        <StatCard
+          label="Booked − tagged spend"
+          value={formatPkr(totals.net)}
+          icon="TrendingUp"
+          delta={totals.costedCount > 0 ? `${Math.round(totals.margin * 100)}% margin on costed events` : "no costed events yet"}
+          trend={totals.net >= 0 ? "up" : "down"}
+        />
+      </div>
+
+      {/* WWL-541 / 542 / 554 — say what this number is not, in the vendor's own
+          figures, rather than presenting it as net profit. */}
+      <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+        <p className="font-medium">This is not your net profit.</p>
+        <ul className="mt-1 list-disc space-y-0.5 pl-5 text-[13px]">
+          <li>
+            It counts <strong>{formatPkr(totals.outstanding)}</strong> you have booked but not yet
+            received.
+          </li>
+          {totals.untaggedCount > 0 && (
+            <li>
+              <strong>
+                {totals.untaggedCount} function{totals.untaggedCount === 1 ? "" : "s"}
+              </strong>{" "}
+              worth <strong>{formatPkr(totals.untaggedRevenue)}</strong> have no expense tagged to
+              them, so they count as pure profit. Tag their costs and this figure will drop.
+            </li>
+          )}
+          <li>
+            It does not include fixed overheads — rent, salaries, utilities. Those are on the{" "}
+            <strong>Money</strong> tab.
+          </li>
+        </ul>
       </div>
 
       <div className="rounded-xl border border-border bg-card shadow-sm">

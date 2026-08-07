@@ -32,6 +32,18 @@ that closed it. Nothing is marked closed without a code change behind it.
 | `WWL-609` | S2 | **Decline** confirms, names the customer and event, and says "you haven't sent them a price yet" when the quote is still an enquiry | `quotes-view.tsx` |
 | — | S2 | **Accept** confirms too — it commits the venue to the customer's number | `quotes-view.tsx` |
 
+## Wave 2 — the systemic families, swept
+
+| Family | Findings | What was done |
+|---|---|---|
+| **F1** false success | `WWL-142` `159` `312` `333` `351` `370` `416` `435` `473` `492` `503` `556` `591` `605` `606` | Fixed at the **transport layer**: the axios interceptor rejects a 2xx whose envelope says `status: false`, or that carries the API banner. Every call site already had a `catch` showing an error toast — it was unreachable |
+| **F2** a11y floor | `WWL-237` `254` `270` `281` `297` `315` `331` `349` `379` `405` `423` `446` `467` `498` `522` `525` `536` `548` `588` `596` `598` `603` `607` | **73 placeholder-only inputs** across 22 Venue-OS views wrapped in real `<label>`s · `Heading` renders `h1` instead of `h2`, so pages have a document heading at all · **86 `<th>`** across 20 files got `scope="col"` |
+| **F3** venue scoping | `WWL-233` `570` `608` `610` `611` | `useBusinessIdField` is now the only scoping primitive on quotes, space P&L, kitchen prep, the expense dialog's space picker, field capture and the hold dialog. The quotes header names the venue |
+| **F5** irreversibles | `WWL-558` `583` `597` `602` `604` `609` + Accept | Confirms that state the consequence. **Close & lock month** requires the period to be typed |
+| **F8** numeric bounds | `WWL-246` `263` `279` `303` `305` `320` `325` `340` `342` `551` `586` | **49 numeric inputs** that accepted negatives got `min={0}` |
+| **F10** UTC → PKT | `WWL-062` `112` `158` `165` `181` `285` `300` `318` `338` `354` | **21 call sites across 16 files** now use `todayInKarachi()` |
+| **F6** money truth | `WWL-541` `542` `554` | The headline is labelled **"Booked − tagged spend"**, the margin is computed only over functions that have a cost, and a panel states the three things it is not — in the vendor's own figures |
+
 ## Shared primitives built (the leverage)
 
 | Primitive | Closes | What it guarantees |
