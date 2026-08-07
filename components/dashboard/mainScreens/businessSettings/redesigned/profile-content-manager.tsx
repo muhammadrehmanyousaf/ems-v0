@@ -53,7 +53,19 @@ type Award = { title: string; year?: number | null }
 type PressItem = { title: string; url?: string }
 type DayState = { open: string; close: string; closed: boolean }
 
-export function ProfileContentManager({ business, onSaved }: { business: ApiBusiness; onSaved?: () => void }) {
+export function ProfileContentManager({
+  business, onSaved, onDirtyChange,
+}: {
+  business: ApiBusiness
+  onSaved?: () => void
+  /**
+   * WWL-484 — this tab keeps its own state and its own save button, outside the
+   * hub's `dirty` flag, so the business switcher's unsaved-changes guard could
+   * not see edits made here and carried them away without asking. Reported up
+   * so one guard covers the whole hub.
+   */
+  onDirtyChange?: (dirty: boolean) => void
+}) {
   const b = business
   const [ownerName, setOwnerName] = React.useState(b.ownerName ?? "")
   const [ownerBio, setOwnerBio] = React.useState(b.ownerBio ?? "")
@@ -108,6 +120,27 @@ export function ProfileContentManager({ business, onSaved }: { business: ApiBusi
     setCityDraft("")
   }
 
+  /**
+   * Dirty tracking for ~30 independent pieces of state. Comparing a serialised
+   * snapshot against the one taken at mount is both cheaper and less
+   * error-prone than threading a setter through every control — and it cannot
+   * drift when a field is added, which a hand-maintained flag would.
+   *
+   * The component is keyed on the business id by the hub, so "at mount" is
+   * always this business's loaded values.
+   */
+  const snapshot = JSON.stringify([
+    ownerName, ownerBio, years, weddings, languages, hasInsurance, backup, awards, press,
+    cash, bank, taxInvoice, whatsapp, cities, guestLabel, dietary, hours,
+    venueType, caps, amenities, legalCap, closing, oneDish, outsideAllowed, outsideFee,
+    requiresPermit, permitUrl,
+  ])
+  const savedSnapshot = React.useRef<string | null>(null)
+  if (savedSnapshot.current === null) savedSnapshot.current = snapshot
+  const dirty = snapshot !== savedSnapshot.current
+  React.useEffect(() => { onDirtyChange?.(dirty) }, [dirty, onDirtyChange])
+  React.useEffect(() => () => onDirtyChange?.(false), [onDirtyChange])
+
   const save = useMutation({
     mutationFn: () => {
       // Validate the shaped fields client-side (the server 400s otherwise).
@@ -157,7 +190,13 @@ export function ProfileContentManager({ business, onSaved }: { business: ApiBusi
       }
       return BusinessesAPI.update(b.id, payload)
     },
-    onSuccess: () => { toast.success("Listing content saved"); onSaved?.() },
+    onSuccess: () => {
+      // What is on screen is now what is stored, so the guard should stand down.
+      savedSnapshot.current = snapshot
+      onDirtyChange?.(false)
+      toast.success("Listing content saved")
+      onSaved?.()
+    },
     // Surface the SERVER's reason, not axios's wrapper.
     //
     // This read `e?.message`, which for an axios error is the useless string
