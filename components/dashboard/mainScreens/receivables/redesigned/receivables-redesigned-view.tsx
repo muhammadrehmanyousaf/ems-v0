@@ -128,6 +128,8 @@ export function ReceivablesRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Receivables"
         columns={columns}
         data={customers}

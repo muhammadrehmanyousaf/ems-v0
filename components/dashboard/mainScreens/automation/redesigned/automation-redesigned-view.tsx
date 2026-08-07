@@ -153,6 +153,8 @@ export function AutomationRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Automation rules"
         columns={columns}
         data={rules}

@@ -217,6 +217,8 @@ export function FunctionSheetsRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Function sheets"
         columns={columns}
         data={sheets}

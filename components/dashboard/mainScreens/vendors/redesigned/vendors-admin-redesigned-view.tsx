@@ -145,6 +145,8 @@ export function VendorsAdminRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Vendors"
         columns={columns}
         data={rows}

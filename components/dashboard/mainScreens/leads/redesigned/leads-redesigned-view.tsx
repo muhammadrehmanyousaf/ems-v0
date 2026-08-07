@@ -201,6 +201,8 @@ export function LeadsRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Leads"
         columns={columns}
         data={leads}

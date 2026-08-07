@@ -387,6 +387,8 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
       )}
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Suppliers"
         columns={columns}
         data={invoices}

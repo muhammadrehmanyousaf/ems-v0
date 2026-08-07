@@ -163,6 +163,8 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Expenses"
         columns={tableColumns}
         data={expenses}

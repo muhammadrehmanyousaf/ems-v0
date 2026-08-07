@@ -210,6 +210,8 @@ export function PaymentsRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Payments"
         columns={columns}
         data={payments}

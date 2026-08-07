@@ -273,6 +273,8 @@ export function BrokersRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Brokers"
         columns={columns}
         data={rows}

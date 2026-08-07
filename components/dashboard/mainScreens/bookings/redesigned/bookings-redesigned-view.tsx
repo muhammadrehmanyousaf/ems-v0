@@ -181,6 +181,8 @@ export function BookingsRedesignedView() {
       )}
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Bookings"
         columns={columns}
         data={bookings}

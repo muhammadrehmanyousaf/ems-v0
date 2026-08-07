@@ -134,6 +134,8 @@ export function PromoteRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Promotions"
         columns={columns}
         data={requests}
