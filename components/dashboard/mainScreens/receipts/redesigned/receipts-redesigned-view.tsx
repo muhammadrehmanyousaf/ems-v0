@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { ReceiptsAPI, type PaymentReceipt, type ReceiptMethod } from "@/lib/api/paymentReceipts"
 import { ReceiptFormDialog, type ReceiptPrefill } from "@/components/dashboard/mainScreens/receipts/redesigned/receipt-form-dialog"
@@ -77,7 +78,7 @@ export function ReceiptsRedesignedView() {
   const removeMut = useMutation({
     mutationFn: (id: number) => ReceiptsAPI.remove(id),
     onSuccess: () => { showSuccessToast("Receipt removed"); setDeleting(null); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove receipt"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove receipt")),
   })
 
   const all = data?.receipts ?? []

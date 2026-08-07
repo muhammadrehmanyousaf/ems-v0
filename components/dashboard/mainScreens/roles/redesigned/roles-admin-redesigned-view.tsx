@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { RolesAPI, type ApiRole } from "@/lib/api/dashboard"
 import { RoleFormDialog } from "@/components/dashboard/mainScreens/roles/redesigned/role-form-dialog"
@@ -45,7 +46,7 @@ export function RolesAdminRedesignedView() {
   const removeMut = useMutation({
     mutationFn: (id: number) => RolesAPI.delete(id),
     onSuccess: () => { showSuccessToast("Role removed"); setDeleting(null); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove role"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove role")),
   })
 
   const { data, isLoading, isError, refetch } = useQuery({

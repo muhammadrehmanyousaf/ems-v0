@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { MenusAPI, type ApiMenu } from "@/lib/api/dashboard"
 import { formatPkr } from "@/components/dashboard/primitives/money-cell"
@@ -63,13 +64,13 @@ export function MenusManager({ businessId }: { businessId: number }) {
       return editingId ? MenusAPI.update(editingId, body) : MenusAPI.create(body)
     },
     onSuccess: () => { showSuccessToast(editingId ? "Menu updated" : "Menu added"); reset(); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save menu"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save menu")),
   })
   const removeMut = useMutation({
     mutationFn: (id: number) => MenusAPI.delete(id),
     onSuccess: () => { showSuccessToast("Menu removed"); invalidate() },
     onError: (e: any) => toast.error(
-        e?.response?.data?.message || e?.message || "Couldn't remove menu",
+        errorMessage(e, "Couldn't remove menu"),
         { duration: 8000 },
       ),
   })

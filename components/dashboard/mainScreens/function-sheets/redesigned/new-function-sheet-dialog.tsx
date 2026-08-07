@@ -8,6 +8,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation } from "@tanstack/react-query"
 import { FunctionSheetAPI } from "@/lib/api/functionSheets"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -45,7 +46,7 @@ export function NewFunctionSheetDialog({
       eventDate: eventDate || undefined,
     }),
     onSuccess: (sheet: any) => { showSuccessToast("Function sheet created"); onOpenChange(false); if (sheet?.id) onCreated?.(sheet.id) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't create function sheet"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't create function sheet")),
   })
   const canSave = title.trim() && businessId != null
 

@@ -8,6 +8,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { CollaborationsAPI, type CollabInvite, type CollabStatus } from "@/lib/api/collaborations"
 import { InviteVendorDialog } from "@/components/dashboard/mainScreens/collaborations/redesigned/invite-vendor-dialog"
@@ -70,17 +71,17 @@ export function CollaborationsRedesignedView() {
   const acceptMut = useMutation({
     mutationFn: (id: number) => CollaborationsAPI.accept(id),
     onSuccess: () => { showSuccessToast("Invite accepted"); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't accept"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't accept")),
   })
   const declineMut = useMutation({
     mutationFn: (id: number) => CollaborationsAPI.decline(id),
     onSuccess: () => { showSuccessToast("Invite declined"); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't decline"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't decline")),
   })
   const cancelMut = useMutation({
     mutationFn: (id: number) => CollaborationsAPI.cancel(id),
     onSuccess: () => { showSuccessToast("Invite cancelled"); setCancelTarget(null); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't cancel invite"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't cancel invite")),
   })
 
   const { data, isLoading, isError, refetch } = useQuery({

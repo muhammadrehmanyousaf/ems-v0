@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { RecordVenueField } from "@/components/dashboard/shared/record-venue-field"
 import { useMutation } from "@tanstack/react-query"
 import { HalalCertAPI, ISSUING_AUTHORITY_LABELS, type HalalCert, type IssuingAuthority } from "@/lib/api/halalCerts"
@@ -85,7 +86,7 @@ export function HalalCertFormDialog({
       return isEdit ? HalalCertAPI.update(cert!.id, body) : HalalCertAPI.create(body)
     },
     onSuccess: () => { showSuccessToast(isEdit ? "Certificate updated" : "Certificate added"); onSaved?.(); onOpenChange(false) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save certificate"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save certificate")),
   })
   const canSave = form.certNumber.trim() && form.itemDescription.trim() && form.issuedDate && form.expiryDate && (isEdit || effectiveBusinessId != null)
 

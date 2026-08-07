@@ -8,6 +8,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { BlockedDatesAPI, type BlockedDate } from "@/lib/api/dashboard"
 import { EmptyState } from "@/components/dashboard/primitives/empty-state"
@@ -67,7 +68,7 @@ export function AvailabilityManager({ businessId }: { businessId?: number | null
       }
       invalidate()
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't block date"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't block date")),
   })
   const unblockMut = useMutation({
     mutationFn: (d: string) => BlockedDatesAPI.unblock(d, businessId),
@@ -81,7 +82,7 @@ export function AvailabilityManager({ businessId }: { businessId?: number | null
       invalidate()
     },
     onError: (e: any) => toast.error(
-        e?.response?.data?.message || e?.message || "Couldn't free date",
+        errorMessage(e, "Couldn't free date"),
         { duration: 8000 },
       ),
   })

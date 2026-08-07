@@ -16,6 +16,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
 import { useMutation } from "@tanstack/react-query"
 import { HalalCertAPI, type HalalCert } from "@/lib/api/halalCerts"
@@ -64,7 +65,7 @@ export function RevokeCertDialog({
       onOpenChange(false)
     },
     onError: (e: any) =>
-      toast.error(e?.response?.data?.message || e?.message || "Couldn't revoke certificate"),
+      toast.error(errorMessage(e, "Couldn't revoke certificate")),
   })
 
   /**
@@ -185,7 +186,7 @@ export function RenewCertDialog({
       onOpenChange(false)
     },
     onError: (e: any) =>
-      toast.error(e?.response?.data?.message || e?.message || "Couldn't update certificate"),
+      toast.error(errorMessage(e, "Couldn't update certificate")),
   })
 
   return (

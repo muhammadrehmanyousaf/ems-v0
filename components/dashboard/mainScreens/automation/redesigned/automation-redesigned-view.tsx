@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { AutomationRulesAPI, type AutomationRule } from "@/lib/api/automationRules"
@@ -71,14 +72,14 @@ export function AutomationRedesignedView() {
     mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) => AutomationRulesAPI.toggle(id, enabled),
     onSuccess: () => { invalidate() },
     onError: (e: any) => toast.error(
-        e?.response?.data?.message || e?.message || "Couldn't toggle rule",
+        errorMessage(e, "Couldn't toggle rule"),
         { duration: 8000 },
       ),
   })
   const removeMut = useMutation({
     mutationFn: (id: number) => AutomationRulesAPI.remove(id),
     onSuccess: () => { showSuccessToast("Rule removed"); setDeleting(null); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove rule"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove rule")),
   })
 
   const all = data?.rules ?? []

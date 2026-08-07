@@ -9,6 +9,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation } from "@tanstack/react-query"
 import axiosInstance from "@/lib/axiosConfig"
 import { RolesAPI, type ApiRole, type ApiUser } from "@/lib/api/dashboard"
@@ -80,7 +81,7 @@ export function UserFormDialog({
       })
     },
     onSuccess: () => { showSuccessToast(isEdit ? "User updated" : "User created"); onSaved?.(); onOpenChange(false) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save user"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save user")),
   })
 
   const canSave = fullName.trim() && email.trim() && (isEdit || password.length >= 6)

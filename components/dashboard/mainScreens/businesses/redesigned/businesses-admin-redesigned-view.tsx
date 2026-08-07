@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { BusinessesAPI, type ApiBusiness } from "@/lib/api/dashboard"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
@@ -71,7 +72,7 @@ export function BusinessesAdminRedesignedView() {
     // The backend blocks deletes that would orphan money (e.g. active bookings)
     // — surface its specific reason rather than a generic failure (WW-095).
     onSuccess: () => { showSuccessToast("Business removed"); setDeleting(null); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove business"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove business")),
   })
 
   // Server-side paging. Fetching a flat 100 and printing rows.length reported

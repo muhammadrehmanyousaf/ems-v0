@@ -13,6 +13,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { FunctionSheetAPI, STATE_LABELS, type FunctionSheet } from "@/lib/api/functionSheets"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
@@ -56,7 +57,7 @@ export function FunctionSheetSignView() {
     mutationFn: (data: { name: string; mode: string; dataUrl?: string }) =>
       FunctionSheetAPI.update(sheet!.id, { signaturesJson: { vendor: data } } as any),
     onSuccess: () => { showSuccessToast("Vendor signature saved"); qc.invalidateQueries({ queryKey: ["fs-sign"] }) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save signature"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save signature")),
   })
 
   const issueLinkMut = useMutation({
@@ -67,7 +68,7 @@ export function FunctionSheetSignView() {
       showSuccessToast("Signing link generated")
     },
     onError: (e: any) => toast.error(
-        e?.response?.data?.message || e?.message || "Couldn't generate link",
+        errorMessage(e, "Couldn't generate link"),
         { duration: 8000 },
       ),
   })
@@ -75,7 +76,7 @@ export function FunctionSheetSignView() {
   const advanceMut = useMutation({
     mutationFn: () => FunctionSheetAPI.transition(sheet!.id, { to: "signed" }),
     onSuccess: () => { showSuccessToast("Contract marked Signed"); qc.invalidateQueries({ queryKey: ["fs-sign"] }) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't advance"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't advance")),
   })
 
   if (isLoading) return <div className="p-4 md:p-6"><DetailSkeleton /></div>

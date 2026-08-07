@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { ExpensesAPI, EXPENSE_PAYMENT_METHOD_LABELS, expensesQueryKey, type VendorExpense } from "@/lib/api/vendorExpenses"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
@@ -111,7 +112,7 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
     mutationFn: (id: number) => ExpensesAPI.remove(id),
     onSuccess: () => { showSuccessToast("Expense removed"); setDeleting(null); invalidate() },
     onError: (e: any) => toast.error(
-        e?.response?.data?.message || e?.message || "Couldn't remove expense",
+        errorMessage(e, "Couldn't remove expense"),
         { duration: 8000 },
       ),
   })

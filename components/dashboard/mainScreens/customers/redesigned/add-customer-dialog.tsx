@@ -21,6 +21,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import axiosInstance from "@/lib/axiosConfig"
 import { VendorsAPI } from "@/lib/api/dashboard"
@@ -124,7 +125,7 @@ export function AddCustomerDialog({
       })
     },
     onSuccess: () => { showSuccessToast("Customer added"); onSaved?.(); onOpenChange(false) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't add customer"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't add customer")),
   })
 
   // Address is required for a vendor's own roster (existing rule). For an admin

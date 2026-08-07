@@ -12,6 +12,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useSearchParams } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { BusinessesAPI, type ApiBusiness } from "@/lib/api/dashboard"
@@ -334,7 +335,7 @@ export function BusinessSettingsHubView() {
     // something the vendor has to read and act on.
     onError: (e: any) =>
       toast.error(
-        e?.response?.data?.message || e?.message || "Couldn't save your changes.",
+        errorMessage(e, "Couldn't save your changes."),
         { duration: 8000 },
       ),
   })

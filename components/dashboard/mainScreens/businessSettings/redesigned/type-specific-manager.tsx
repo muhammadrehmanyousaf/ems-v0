@@ -18,6 +18,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { BusinessesAPI, type ApiBusiness } from "@/lib/api/dashboard"
 import { type VendorTypeConfig, type TypeSpecificFieldDef } from "@/lib/vendor-type-config"
@@ -134,7 +135,7 @@ export function TypeSpecificManager({ business, config, onSaved }: Props) {
       qc.invalidateQueries({ queryKey: ["biz-settings-hub"] })
       onSaved?.()
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Failed to update settings"),
+    onError: (e: any) => toast.error(errorMessage(e, "Failed to update settings")),
   })
 
   // ── Empty state — vendor type has no type-specific fields ─────────

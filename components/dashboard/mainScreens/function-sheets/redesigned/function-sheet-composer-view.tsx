@@ -11,6 +11,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { FunctionSheetAPI, STATE_LABELS, type FunctionSheet, type FunctionSheetState } from "@/lib/api/functionSheets"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
@@ -152,7 +153,7 @@ export function FunctionSheetComposerView() {
       } as any),
     onSuccess: () => { showSuccessToast("Function sheet saved"); setDirty(false); qc.invalidateQueries({ queryKey: ["fs-composer"] }); qc.invalidateQueries({ queryKey: ["fs-detail-redesigned"] }) },
     onError: (e: any) => toast.error(
-        e?.response?.data?.message || e?.message || "Save failed",
+        errorMessage(e, "Save failed"),
         { duration: 8000 },
       ),
   })
@@ -161,7 +162,7 @@ export function FunctionSheetComposerView() {
     mutationFn: (to: FunctionSheetState) => FunctionSheetAPI.transition(sheet!.id, { to }),
     onSuccess: (_d, to) => { showSuccessToast(`Moved to ${STATE_LABELS[to]}`); qc.invalidateQueries({ queryKey: ["fs-composer"] }) },
     onError: (e: any) => toast.error(
-        e?.response?.data?.message || e?.message || "Couldn't change status",
+        errorMessage(e, "Couldn't change status"),
         { duration: 8000 },
       ),
   })

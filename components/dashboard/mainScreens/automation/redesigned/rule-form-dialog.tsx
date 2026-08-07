@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation } from "@tanstack/react-query"
 import { AutomationRulesAPI, type AutomationRule, type TriggerType, type ActionType } from "@/lib/api/automationRules"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -67,7 +68,7 @@ export function RuleFormDialog({
       return isEdit ? AutomationRulesAPI.update(rule!.id, body) : AutomationRulesAPI.create(body)
     },
     onSuccess: () => { showSuccessToast(isEdit ? "Rule updated" : "Rule created"); onSaved?.(); onOpenChange(false) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save rule"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save rule")),
   })
   const canSave = name.trim() && triggerType
 

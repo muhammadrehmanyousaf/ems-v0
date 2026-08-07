@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useRecordBusinessId } from "@/hooks/use-record-business-id"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
@@ -95,7 +96,7 @@ export function BrokersRedesignedView() {
   const removeMut = useMutation({
     mutationFn: (id: number) => BrokerAPI.removeCommission(id),
     onSuccess: () => { showSuccessToast("Commission removed"); setDeleting(null); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove commission"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove commission")),
   })
 
   const all = data?.commissions ?? []

@@ -8,6 +8,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { PackagesAPI, type ApiPackage } from "@/lib/api/dashboard"
 import { formatPkr } from "@/components/dashboard/primitives/money-cell"
@@ -62,7 +63,7 @@ export function PackagesManager({ businessId }: { businessId: number }) {
       return editingId ? PackagesAPI.update(editingId, body) : PackagesAPI.create(body)
     },
     onSuccess: () => { showSuccessToast(editingId ? "Package updated" : "Package added"); reset(); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save package"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save package")),
   })
   // Remove had no confirmation and no way back — one stray click destroyed a
   // priced package. Recreating it from the same values is a faithful undo.
@@ -88,7 +89,7 @@ export function PackagesManager({ businessId }: { businessId: number }) {
       })
       invalidate()
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove package"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove package")),
   })
 
   // Validation now produces MESSAGES, not just a boolean. Previously this was a
