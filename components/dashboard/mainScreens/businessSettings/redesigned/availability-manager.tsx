@@ -222,6 +222,17 @@ export function AvailabilityManager({ businessId }: { businessId?: number | null
               {rangeDays && rangeDays > 1 && !rangeErr ? `Block ${rangeDays} dates` : "Block date"}
             </Button>
           </div>
+          {/**
+            * WWL-500 — dates are entered through a bare native date input and
+            * listed as flat text rows: no month grid, no view of which dates
+            * are open, and no way to see a blocked date in context with the
+            * bookings around it. The Calendar module exists elsewhere in the
+            * product and neither screen linked to the other.
+            *
+            * A month grid here would duplicate that module rather than replace
+            * it, so this points at it instead — the blocked dates you set here
+            * are what it draws.
+            */}
           {rangeErr ? (
             <p className="text-xs font-medium text-destructive">{rangeErr}</p>
           ) : rangeDays && rangeDays > 1 ? (
@@ -231,7 +242,11 @@ export function AvailabilityManager({ businessId }: { businessId?: number | null
             </p>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Leave &ldquo;To&rdquo; blank for a single day. Closing for Ramadan or Muharram? Give both dates.
+              Leave &ldquo;To&rdquo; blank for a single day. Closing for Ramadan or Muharram? Give both dates.{" "}
+              <a href="/dashboard/calendar" className="underline underline-offset-2">
+                See these dates on the calendar
+              </a>{" "}
+              alongside the bookings around them.
             </p>
           )}
         </div>

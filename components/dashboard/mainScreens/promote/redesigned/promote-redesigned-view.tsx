@@ -258,13 +258,17 @@ export function PromoteRedesignedView() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
+              {/* WWL-427 — the control sat there over an empty register and
+                  would have produced a header-only promotions.csv. */}
+              {requests.length > 0 && (
               <ExportMenu selectedIds={selected} getRowId={(r) => String(r.id)} rows={requests} filename="promotions" columns={[
                 { header: "Business", value: (r) => r.business?.name ?? `#${r.businessId}` },
                 { header: "Placement", value: (r) => placementLabel(r) },
                 { header: "Window (days)", value: (r) => num(r.windowDays) },
                 { header: "Quoted", value: (r) => num(r.priceQuoted) },
                 { header: "Status", value: (r) => r.status ?? "" },
-                { header: "Requested", value: (r) => fmtDate(r.createdAt) },
+                /* And raw ISO, not "06 Aug 2026", so the file sorts by date. */
+                { header: "Requested", value: (r) => r.createdAt ?? "" },
                 // WWL-417 — on screen, so in the file.
                 { header: "Starts", value: (r) => r.startsAt ?? "" },
                 { header: "Ends", value: (r) => r.endsAt ?? "" },
@@ -272,6 +276,7 @@ export function PromoteRedesignedView() {
                 { header: "Rejection reason", value: (r) => r.rejectionReason ?? "" },
                 { header: "Note", value: (r) => r.note ?? "" },
               ]} />
+              )}
             </div>
           </>
         }

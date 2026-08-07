@@ -29,6 +29,25 @@ type Row = Record<string, string | number>
 // rows[tradeKey][sectionKey] = Row[]
 type RowState = Record<string, Record<string, Row[]>>
 
+/**
+ * WWL-217 — the registry mixes conventions: "Delivery Date" sits beside
+ * "Delivery date", "Setup item list" beside "Artist Roster & Assignments". It
+ * is visible the moment a vendor switches trades, and normalising 134 hand-
+ * written labels in the config risks mangling the ones that are right.
+ *
+ * Sentence case at render instead, with the things that must NOT be lowercased
+ * left alone: anything containing a capital after the first character
+ * (WhatsApp, PoC), anything fully capitalised (NTN, CNIC, KVA), and Rs. A word
+ * is only lowercased when it is plain Title Case and not the first word.
+ */
+const KEEP_AS_IS = /^(?:[A-Z]{2,}|Rs\.?|No\.?|.*[a-z].*[A-Z].*)$/
+function sentenceCase(label: string): string {
+  return label
+    .split(" ")
+    .map((w, i) => (i === 0 || KEEP_AS_IS.test(w) || !/^[A-Z][a-z]+$/.test(w) ? w : w.toLowerCase()))
+    .join(" ")
+}
+
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm outline-none ring-ring focus-visible:ring-2"
 const spanStyle = (span: number) => ({ ["--gc" as any]: `span ${span} / span ${span}` } as React.CSSProperties)
 const gcCell = "[grid-column:1/-1] sm:[grid-column:var(--gc)]"
@@ -173,7 +192,7 @@ export function TradeOperationsHubView() {
           <div key={s.key} className="rounded-xl border border-border bg-card shadow-sm">
             <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
               <span className="grid h-8 w-8 place-items-center rounded-lg bg-muted text-muted-foreground"><Icon name={s.icon} size={16} /></span>
-              <div className="mr-auto"><h2 className="text-sm font-semibold">{s.label}</h2><p className="text-xs text-muted-foreground">{s.desc}</p></div>
+              <div className="mr-auto"><h2 className="text-sm font-semibold">{sentenceCase(s.label)}</h2><p className="text-xs text-muted-foreground">{s.desc}</p></div>
               <Button size="sm" variant="outline" onClick={() => addRow(s.key, s.columns)}><Icon name="Plus" size={14} className="mr-1" /> {s.addLabel}</Button>
             </div>
             <div className="space-y-2 p-3">
@@ -183,7 +202,7 @@ export function TradeOperationsHubView() {
                 <div className="hidden grid-cols-12 gap-2 px-2 sm:grid">
                   {s.columns.map((c) => (
                     <div key={c.key} className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground" style={spanStyle(c.span)}>
-                      <span className="sm:[grid-column:var(--gc)]">{c.label}</span>
+                      <span className="sm:[grid-column:var(--gc)]">{sentenceCase(c.label)}</span>
                     </div>
                   ))}
                 </div>
@@ -192,11 +211,15 @@ export function TradeOperationsHubView() {
                 <div key={String(row._rid ?? i)} className="grid grid-cols-12 items-end gap-2 rounded-lg border border-border/70 p-2">
                   {s.columns.map((c) => (
                     <div key={c.key} className={gcCell} style={spanStyle(c.span)}>
-                      <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground sm:hidden">{c.label}</div>
+                      <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground sm:hidden">{sentenceCase(c.label)}</div>
                       <CellInput col={c} value={row[c.key]} onChange={(v) => setCell(s.key, i, c.key, v)} />
                     </div>
                   ))}
-                  <button onClick={() => removeRow(s.key, i)} aria-label="Remove row" className="grid h-9 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive [grid-column:1/-1] sm:[grid-column:span_1/span_1]">
+                  <button onClick={() => removeRow(s.key, i)} aria-label="Remove row" /* WWL-228 — the one focusable control of 23 with no visible focus
+                     indicator at 360px: hover styles only, so a keyboard user
+                     tabbing through a 134-column registry lost their place on
+                     every Remove button. */
+                  className="grid h-9 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [grid-column:1/-1] sm:[grid-column:span_1/span_1]">
                     <Icon name="Trash2" size={15} />
                   </button>
                 </div>
@@ -236,14 +259,46 @@ function CellInput({ col, value, onChange }: { col: TradeOpsColumn; value: strin
       </select>
     )
   }
+  /**
+   * WWL-216 — none of the 134 columns across the registry validated anything,
+   * and `setCell` stored `e.target.value` verbatim, so a `type="number"` cell
+   * kept whatever the browser handed it and every value serialised as a STRING
+   * regardless of the column's declared type. A quantity column could hold "",
+   * "-3" or "1e5" and the saved sheet would carry the text.
+   *
+   * The column already declares its type; honouring it is the whole fix. A
+   * number cell rejects what is not a plain number and cannot go negative — a
+   * count of chairs, a rate, a headcount are all non-negative in this registry —
+   * and a bad value is named rather than silently kept.
+   */
+  const numberProblem =
+    col.type === "number" && v.trim() !== "" && !/^\d*\.?\d+$/.test(v.trim())
+      ? /[eE]/.test(v)
+        ? "Write it in figures, not 1e5."
+        : Number(v) < 0
+          ? "This can't be negative."
+          : "Numbers only."
+      : undefined
+
   return (
-    <input
-      className={cn(inputCls, col.type === "number" && "text-right tabular-nums")}
-      type={col.type === "number" ? "number" : col.type === "date" ? "date" : "text"}
-      placeholder={col.placeholder || col.label}
-      value={v}
-      onChange={(e) => onChange(e.target.value)}
-    />
+    <>
+      <input
+        className={cn(
+          inputCls,
+          col.type === "number" && "text-right tabular-nums",
+          numberProblem && "border-destructive focus-visible:ring-destructive/40",
+        )}
+        type={col.type === "number" ? "number" : col.type === "date" ? "date" : "text"}
+        {...(col.type === "number" ? { min: 0, step: "any", inputMode: "decimal" as const } : {})}
+        placeholder={col.placeholder || sentenceCase(col.label)}
+        aria-invalid={numberProblem ? true : undefined}
+        value={v}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      {numberProblem && (
+        <p role="alert" className="mt-0.5 text-[11px] font-medium text-destructive">{numberProblem}</p>
+      )}
+    </>
   )
 }
 
