@@ -1414,6 +1414,16 @@ export interface BlockedDate {
   businessId: number;
   blockedDate: string; // "YYYY-MM-DD"
   reason: string | null;
+  /**
+   * WWL-497 — provenance. A row used to carry a date and an optional reason and
+   * nothing else, so a vendor looking at a block reading "hi" could not tell
+   * when it appeared or who added it. Both were always on the record; they were
+   * simply never selected. Optional here because an older backend won't send
+   * them.
+   */
+  userId?: number | null;
+  createdAt?: string | null;
+  user?: { id: number; fullName: string | null } | null;
 }
 
 /**
@@ -1435,9 +1445,21 @@ export interface BlockedDate {
  * the previous all-venues behaviour.
  */
 export class BlockedDatesAPI {
-  static async getAll(month?: string, businessId?: number | null): Promise<BlockedDate[]> {
+  /**
+   * WWL-495 — the caller always passed `undefined` for `month`, so this asked
+   * for every blocked date the venue had ever had: unpaginated, ascending, with
+   * the oldest and least relevant rows first. `from`/`to` bound the window
+   * without forcing it into calendar months, which "block Ramadan" is not.
+   */
+  static async getAll(
+    month?: string,
+    businessId?: number | null,
+    range?: { from?: string; to?: string },
+  ): Promise<BlockedDate[]> {
     const params: Record<string, string | number> = {};
     if (month) params.month = month;
+    if (range?.from) params.from = range.from;
+    if (range?.to) params.to = range.to;
     if (businessId != null) params.businessId = businessId;
     const res = await axiosInstance.get("/api/v1/bookings/blocked-dates", { params });
     return res.data?.data?.blockedDates ?? [];
@@ -1452,11 +1474,20 @@ export class BlockedDatesAPI {
     blockedDate: string,
     reason?: string,
     businessId?: number | null,
-  ): Promise<{ blockedDates: BlockedDate[]; newlyBlocked: number; alreadyBlocked: number }> {
+    /** WWL-494 — inclusive end date for a range block. */
+    blockedDateTo?: string | null,
+  ): Promise<{
+    blockedDates: BlockedDate[];
+    newlyBlocked: number;
+    alreadyBlocked: number;
+    requestedDays: number;
+    conflicted: { businessId: number; blockedDate: string }[];
+  }> {
     const res = await axiosInstance.post("/api/v1/bookings/blocked-dates", {
       blockedDate,
       reason: reason || null,
       ...(businessId != null ? { businessId } : {}),
+      ...(blockedDateTo && blockedDateTo !== blockedDate ? { blockedDateTo } : {}),
     });
     const d = res.data?.data ?? {};
     return {
@@ -1465,6 +1496,8 @@ export class BlockedDatesAPI {
       // rather than inventing a zero, which would report a false failure.
       newlyBlocked: d.newlyBlocked ?? (d.blockedDates?.length ? 1 : 0),
       alreadyBlocked: d.alreadyBlocked ?? 0,
+      requestedDays: d.requestedDays ?? 1,
+      conflicted: d.conflicted ?? [],
     };
   }
 
