@@ -33,6 +33,7 @@ import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
 import { StatusPill, type StatusTone } from "@/components/dashboard/primitives/status-pill"
 import { MoneyCell, formatPkr } from "@/components/dashboard/primitives/money-cell"
+import { DestructiveConfirm } from "@/components/dashboard/primitives/destructive-confirm"
 import { ExportMenu } from "@/components/dashboard/shared/export-menu"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
@@ -490,18 +491,32 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
       <DisputeInvoiceDialog invoice={disputing} onOpenChange={(o) => !o && setDisputing(null)} onSaved={() => { setDisputing(null); refetchAll() }} />
       <VoidInvoiceDialog invoice={voiding} onOpenChange={(o) => !o && setVoiding(null)} onSaved={() => { setVoiding(null); refetchAll() }} />
 
-      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove this invoice?</AlertDialogTitle>
-            <AlertDialogDescription>Soft delete. Paid invoices cannot be removed.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleting && removeMut.mutate(deleting.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remove</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* WWL-278 — the confirm named nothing at all: no supplier, no invoice
+          number, no amount. "Paid invoices cannot be removed" was buried in the
+          description as a general note rather than checked against THIS row, so
+          a vendor could confirm a delete the server was certain to refuse. */}
+      <DestructiveConfirm
+        open={!!deleting}
+        onOpenChange={(v) => !v && setDeleting(null)}
+        title="Remove this invoice?"
+        reversibility="soft"
+        pending={removeMut.isPending}
+        onConfirm={() => deleting && removeMut.mutate(deleting.id)}
+        blockedReason={
+          deleting && Number(deleting.amountPaid) > 0
+            ? `This invoice has ${formatPkr(Number(deleting.amountPaid) || 0)} recorded against it, so it can't be removed. Void it instead if it was raised in error — that keeps the payment history intact.`
+            : null
+        }
+        fields={[
+          { label: "Supplier", value: deleting?.supplierNameSnapshot || "" },
+          { label: "Invoice no.", value: deleting?.invoiceNumber || "" },
+          { label: "Total", value: deleting ? formatPkr(Number(deleting.totalAmount) || 0) : "" },
+          { label: "Paid", value: deleting && Number(deleting.amountPaid) > 0 ? formatPkr(Number(deleting.amountPaid) || 0) : "" },
+          { label: "Invoice date", value: deleting?.invoiceDate || "" },
+          { label: "Due", value: deleting?.dueDate || "" },
+          { label: "Note", value: deleting?.description || "" },
+        ]}
+      />
     </div>
   )
 }

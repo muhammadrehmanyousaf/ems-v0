@@ -25,6 +25,7 @@ import { ExportMenu } from "@/components/dashboard/shared/export-menu"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
+import { DestructiveConfirm } from "@/components/dashboard/primitives/destructive-confirm"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
@@ -101,7 +102,7 @@ export function InventoryRedesignedView() {
           <Button size="sm" variant="ghost" onClick={() => setHistory(i)} aria-label={`Stock history for ${i.name}`}><Icon name="Clock" size={14} /></Button>
           <Button size="sm" variant="ghost" onClick={() => setMoving(i)} aria-label={`Adjust stock for ${i.name}`}><Icon name="RefreshCw" size={14} /></Button>
           <Button size="sm" variant="ghost" onClick={() => openEdit(i)} aria-label={`Edit ${i.name}`}><Icon name="Pencil" size={14} /></Button>
-          <Button size="sm" variant="ghost" onClick={() => setDeleting(i)} aria-label="Remove item"><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
+          <Button size="sm" variant="ghost" onClick={() => setDeleting(i)} aria-label={`Remove ${i.name}`}><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
         </div>
       ),
     },
@@ -205,18 +206,47 @@ export function InventoryRedesignedView() {
       <InventoryMovementDialog open={!!moving} onOpenChange={(v) => !v && setMoving(undefined)} item={moving} onSaved={invalidate} />
       <InventoryHistoryDialog open={!!history} onOpenChange={(v) => !v && setHistory(undefined)} item={history} />
 
-      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove this item?</AlertDialogTitle>
-            <AlertDialogDescription>{deleting?.name} will be removed from inventory. This can't be undone.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleting && removeMut.mutate(deleting.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remove</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/**
+        * WWL-252 — this promised "Banquet Chairs will be removed from
+        * inventory" for an item the server is guaranteed to refuse with a 409,
+        * with the button styled destructive as though it would work. There was
+        * no pre-check on `currentStock` at all.
+        *
+        * The rule is the backend's own: an item with stock cannot be deleted,
+        * and its error message tells the vendor to zero it with an adjustment
+        * first. That instruction is now the dialog's, given before the failure
+        * rather than after it — and it points at the control that carries it
+        * out, which is the Adjust stock dialog two buttons away.
+        *
+        * WWL-156 — "can't be undone" was also false: InventoryItem is
+        * paranoid, and the movement ledger survives the delete.
+        */}
+      <DestructiveConfirm
+        open={!!deleting}
+        onOpenChange={(v) => !v && setDeleting(null)}
+        title="Remove this item?"
+        reversibility="soft"
+        pending={removeMut.isPending}
+        onConfirm={() => deleting && removeMut.mutate(deleting.id)}
+        blockedReason={
+          deleting && num(deleting.currentStock) !== 0
+            ? `${deleting.name} still has ${num(deleting.currentStock)} ${String(deleting.unit)} in stock. Record a stock-take of 0 first (Adjust stock), then remove it — the server refuses to delete an item holding stock.`
+            : null
+        }
+        fields={[
+          { label: "Item", value: deleting?.name || "" },
+          { label: "SKU", value: deleting?.sku || "" },
+          { label: "Category", value: deleting ? cap(deleting.category) : "" },
+          { label: "Stock", value: deleting ? `${num(deleting.currentStock)} ${String(deleting.unit)}` : "" },
+          {
+            label: "Last cost",
+            value: deleting?.lastRestockCostPerUnit != null
+              ? `${formatPkr(num(deleting.lastRestockCostPerUnit))} / ${String(deleting.unit)}`
+              : "",
+          },
+        ]}
+        consequence="Its movement history is kept, so the audit trail stays complete."
+      />
     </div>
   )
 }

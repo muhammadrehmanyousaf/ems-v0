@@ -38,7 +38,7 @@ const DELIVERY_STATUS: Record<string, StatusTone> = { pending: "neutral", "in pr
 
 export function FunctionSheetOperationsView() {
   const qc = useQueryClient()
-  const { data: sheet, isLoading, isError } = useQuery<FunctionSheet | null>({
+  const { data: sheet, isLoading, isError, refetch } = useQuery<FunctionSheet | null>({
     queryKey: ["fs-operations"],
     queryFn: async () => {
       const idParam = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("id") : null
@@ -92,7 +92,31 @@ export function FunctionSheetOperationsView() {
   })
 
   if (isLoading) return <div className="p-4 md:p-6"><DetailSkeleton /></div>
-  if (isError || !sheet) {
+
+  /**
+   * WWL-214 — `isError || !sheet` rendered one screen for two opposite facts.
+   * A vendor holding 17 function sheets, hitting a network blip, was told they
+   * have none and invited to create another — with no Retry anywhere on the
+   * page. "We couldn't load it" and "it doesn't exist" need different words
+   * and different buttons.
+   */
+  if (isError) {
+    return (
+      <div className="p-4 md:p-6">
+        <EmptyState
+          icon="AlertTriangle"
+          title="Couldn't load this function sheet"
+          description="This is a loading problem, not a missing sheet — nothing has been changed or deleted."
+          action={
+            <Button size="sm" variant="secondary" onClick={() => refetch()}>
+              <Icon name="RefreshCw" size={14} className="mr-1.5" /> Try again
+            </Button>
+          }
+        />
+      </div>
+    )
+  }
+  if (!sheet) {
     return <div className="p-4 md:p-6"><EmptyState icon="ClipboardList" title="No function sheet" description="Create a function sheet first to plan its operations." /></div>
   }
 
