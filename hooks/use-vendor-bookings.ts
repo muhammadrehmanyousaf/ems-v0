@@ -17,6 +17,25 @@ export interface VendorBookingLite {
   // bookingController) — just never typed, so no caller could reach it. The
   // Today board needs it to turn "chase this customer" into a phone call.
   customerPhone?: string | null;
+  customerEmail?: string | null;
+  /**
+   * WWL-535 — which venue the event is at. The list endpoint has always
+   * included `bookingDetails[].business`, and nothing typed it, so a
+   * three-venue owner reading "event on 13 August" could not tell whether it
+   * was at Johar Town, Gulberg or Bahria Town — on a board whose whole purpose
+   * is running the hall in front of you.
+   */
+  bookingDetails?: {
+    businessId?: number | null;
+    business?: { id: number; name: string | null } | null;
+    resource?: { id: number; label: string | null; kind: string | null } | null;
+  }[];
+}
+
+/** The venue this booking is at, when the payload carries one. */
+export function bookingVenue(b: VendorBookingLite): { id: number | null; name: string | null } {
+  const d = b.bookingDetails?.[0];
+  return { id: d?.business?.id ?? d?.businessId ?? null, name: d?.business?.name ?? null };
 }
 
 /**
