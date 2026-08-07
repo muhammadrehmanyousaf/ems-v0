@@ -161,7 +161,7 @@ export function PdcFormDialog({ open, onOpenChange, pdc, onSaved }: { open: bool
             </Field>
           )}
           {/**
-            * WWL-117 recurrence — `errs.notes` gated `canSave` while this field
+            * WWL-164 (WWL-117's second recurrence) — `errs.notes` gated `canSave` while this field
             * rendered no FieldError and never called `touch("notes")`, so the
             * message could never appear. At 1001 characters Save went dead and
             * the hint named a different field entirely. No maxLength either, so

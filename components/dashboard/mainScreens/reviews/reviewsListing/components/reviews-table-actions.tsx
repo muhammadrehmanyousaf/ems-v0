@@ -13,6 +13,7 @@ interface DataTableToolbarProps<TData> {
 function ReviewsTableActions<TData>({
     table,
 }: DataTableToolbarProps<TData>) {
+    const selectedCount = table.getSelectedRowModel().rows.length
     return (
         <div className="flex items-center justify-between">
             <div className="flex flex-1 items-center space-x-2">
@@ -34,8 +35,11 @@ function ReviewsTableActions<TData>({
                 />
             </div>
             <div className="ml-auto hidden lg:flex items-center gap-2">
+                {/* WWL-381 — the selection finally does something, and the
+                    button says what it will produce before it is pressed. */}
                 <Button variant="outline" size="sm" onClick={() => exportTableToCSV(table, "reviews")}>
-                    <Download className="mr-2 h-4 w-4" />Export
+                    <Download className="mr-2 h-4 w-4" />
+                    {selectedCount > 0 ? `Export ${selectedCount} selected` : "Export"}
                 </Button>
                 <DataTableColumnView table={table} />
             </div>

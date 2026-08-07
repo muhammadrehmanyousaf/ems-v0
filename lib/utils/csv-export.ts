@@ -21,9 +21,21 @@ export function exportTableToCSV<TData>(
 
   // WWL-123 — escapeCsv also neutralises leading formula triggers, which the
   // inline escaping here used to let straight through into the vendor's Excel.
-  const rows = table
-    .getFilteredRowModel()
-    .rows.map((row) => columns.map((col) => escapeCsv(row.getValue(col.id))));
+  /**
+   * WWL-381 — every row on the reviews table carries a checkbox and the footer
+   * counts "0 of 8 row(s) selected", and NOTHING consumed
+   * `getSelectedRowModel()`: no bulk delete (a business cannot delete a review
+   * written about it — WWL-356), no bulk reply, and no export-selected. A
+   * control that changes a counter and nothing else is a promise the screen
+   * cannot keep.
+   *
+   * Export is the action a selection was always for. When rows are ticked the
+   * file is those rows; otherwise it stays the whole filtered set, so nothing
+   * changes for anyone who never touches a checkbox.
+   */
+  const selected = table.getSelectedRowModel().rows;
+  const source = selected.length > 0 ? selected : table.getFilteredRowModel().rows;
+  const rows = source.map((row) => columns.map((col) => escapeCsv(row.getValue(col.id))));
 
   const csv = [headers.map(escapeCsv).join(","), ...rows.map((row) => row.join(","))].join(
     "\n"
@@ -33,7 +45,7 @@ export function exportTableToCSV<TData>(
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${filename}.csv`;
+  a.download = `${filename}${selected.length > 0 ? "-selected" : ""}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }

@@ -21,7 +21,13 @@ import { cn } from "@/lib/utils"
 import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
 import { RecordVenueField } from "@/components/dashboard/shared/record-venue-field"
 
-const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
+/**
+ * WWL-429 — measured under true touch emulation at 360px, both selects and both
+ * footer buttons rendered 36px high, under the 44px minimum. The dialog itself
+ * fits (360×558, no overflow), so the height is free to take: 44px on touch,
+ * the tighter 36px kept from `sm` up where a pointer is precise.
+ */
+const inputCls = "h-11 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2 sm:h-9"
 const labelCls = "text-xs font-medium text-muted-foreground"
 
 /** WWL-415 — mirrors the server's own `.slice(0, 1000)`. */
@@ -197,16 +203,16 @@ export function PromoteRequestDialog({
                 <span className="font-medium text-foreground">{windowDays} days</span>
                 {priceFor != null && <> at an indicative <span className="font-medium text-foreground">{formatPkr(priceFor)}</span></>}?
               </p>
-              <Button variant="ghost" onClick={() => setConfirming(false)} disabled={saveMut.isPending}>Back</Button>
-              <Button disabled={saveMut.isPending} onClick={() => saveMut.mutate()}>
+              <Button variant="ghost" className="h-11 sm:h-9" onClick={() => setConfirming(false)} disabled={saveMut.isPending}>Back</Button>
+              <Button className="h-11 sm:h-9" disabled={saveMut.isPending} onClick={() => saveMut.mutate()}>
                 {saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Sending…</> : <><Icon name="Send" size={15} className="mr-1.5" /> Yes, send it</>}
               </Button>
             </>
           ) : (
             <>
-              <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+              <Button variant="ghost" className="h-11 sm:h-9" onClick={() => onOpenChange(false)}>Cancel</Button>
               <FormBlockedHint message={blockedReason} />
-              <Button disabled={!canSave} onClick={() => setConfirming(true)}>
+              <Button className="h-11 sm:h-9" disabled={!canSave} onClick={() => setConfirming(true)}>
                 <Icon name="Send" size={15} className="mr-1.5" /> Review request
               </Button>
             </>
