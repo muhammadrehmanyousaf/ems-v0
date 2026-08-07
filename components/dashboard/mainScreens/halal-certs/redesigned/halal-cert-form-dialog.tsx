@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { RecordVenueField } from "@/components/dashboard/shared/record-venue-field"
 import { useMutation } from "@tanstack/react-query"
 import { HalalCertAPI, ISSUING_AUTHORITY_LABELS, type HalalCert, type IssuingAuthority } from "@/lib/api/halalCerts"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -49,6 +50,18 @@ export function HalalCertFormDialog({
   onSaved?: () => void
 }) {
   const isEdit = !!cert
+  /**
+   * WWL-293/311/332/350 — the record used to be filed under whichever venue was
+   * first in the array. `businessId` now arrives undefined when the header is
+   * on "All venues" and the vendor owns more than one, so the dialog asks
+   * instead of guessing. RecordVenueField renders nothing for a single-venue
+   * vendor, who has nothing to get wrong.
+   */
+  const [venueId, setVenueId] = React.useState<string>(businessId != null ? String(businessId) : "")
+  React.useEffect(() => {
+    if (businessId != null) setVenueId(String(businessId))
+  }, [businessId])
+  const effectiveBusinessId = venueId ? Number(venueId) : businessId
   const [form, setForm] = React.useState<FormState>(blank(cert))
   const loadedId = React.useRef<number | "new" | null>(null)
   React.useEffect(() => {
@@ -59,7 +72,7 @@ export function HalalCertFormDialog({
   const saveMut = useMutation({
     mutationFn: () => {
       const body = {
-        businessId: cert?.businessId ?? businessId!,
+        businessId: cert?.businessId ?? effectiveBusinessId!,
         certNumber: form.certNumber.trim(),
         itemDescription: form.itemDescription.trim(),
         issuingAuthority: form.issuingAuthority,
@@ -74,10 +87,20 @@ export function HalalCertFormDialog({
     onSuccess: () => { showSuccessToast(isEdit ? "Certificate updated" : "Certificate added"); onSaved?.(); onOpenChange(false) },
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save certificate"),
   })
-  const canSave = form.certNumber.trim() && form.itemDescription.trim() && form.issuedDate && form.expiryDate && (isEdit || businessId != null)
+  const canSave = form.certNumber.trim() && form.itemDescription.trim() && form.issuedDate && form.expiryDate && (isEdit || effectiveBusinessId != null)
 
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
-  const blockedReason = canSave ? undefined : "Add a cert number, an item description, the date it was issued and an expiry date to save."
+  /**
+   * WWL-290 — the hint listed the content fields and never the venue, so a
+   * vendor on "All venues" who had filled the form correctly read a list of
+   * things they had already done and a Save button that stayed dead. Name the
+   * thing that is actually missing first.
+   */
+  const blockedReason = canSave
+    ? undefined
+    : !isEdit && effectiveBusinessId == null
+      ? "Choose which venue this certificate belongs to."
+      : "Add a cert number, an item description, the date it was issued and an expiry date to save."
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -87,6 +110,7 @@ export function HalalCertFormDialog({
           <DialogDescription>Track halal certification and its expiry.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-1">
+          <RecordVenueField value={venueId} onChange={setVenueId} noun="certificate" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Certificate number"><input className={inputCls} value={form.certNumber} onChange={(e) => set("certNumber", e.target.value)} autoFocus /></Field>
             <Field label="Issuing authority">

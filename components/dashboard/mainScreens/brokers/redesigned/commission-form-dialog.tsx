@@ -8,6 +8,7 @@
  */
 
 import * as React from "react"
+import { RecordVenueField } from "@/components/dashboard/shared/record-venue-field"
 import { useMutation } from "@tanstack/react-query"
 import { BrokerAPI, BROKER_TYPE_LABELS, type BrokerCommission, type BrokerType, type CommissionType } from "@/lib/api/brokers"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -56,6 +57,18 @@ export function CommissionFormDialog({
   onSaved?: () => void
 }) {
   const isEdit = !!commission
+  /**
+   * WWL-293/311/332/350 — the record used to be filed under whichever venue was
+   * first in the array. `businessId` now arrives undefined when the header is
+   * on "All venues" and the vendor owns more than one, so the dialog asks
+   * instead of guessing. RecordVenueField renders nothing for a single-venue
+   * vendor, who has nothing to get wrong.
+   */
+  const [venueId, setVenueId] = React.useState<string>(businessId != null ? String(businessId) : "")
+  React.useEffect(() => {
+    if (businessId != null) setVenueId(String(businessId))
+  }, [businessId])
+  const effectiveBusinessId = venueId ? Number(venueId) : businessId
   const [form, setForm] = React.useState<FormState>(blank(commission))
   const loadedId = React.useRef<number | "new" | null>(null)
   React.useEffect(() => {
@@ -66,7 +79,7 @@ export function CommissionFormDialog({
   const saveMut = useMutation({
     mutationFn: () => {
       const body = {
-        businessId: commission?.businessId ?? businessId!,
+        businessId: commission?.businessId ?? effectiveBusinessId!,
         brokerNameSnapshot: form.brokerNameSnapshot.trim() || undefined,
         brokerTypeSnapshot: form.brokerTypeSnapshot,
         commissionType: form.commissionType,
@@ -85,10 +98,20 @@ export function CommissionFormDialog({
   const amountOk = form.commissionType === "percentage"
     ? (Number(form.commissionPct) || 0) > 0 && (Number(form.bookingAmountSnapshot) || 0) > 0
     : (Number(form.commissionFlat) || 0) > 0
-  const canSave = form.brokerNameSnapshot.trim() && form.accruedDate && amountOk && (isEdit || businessId != null)
+  const canSave = form.brokerNameSnapshot.trim() && form.accruedDate && amountOk && (isEdit || effectiveBusinessId != null)
 
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
-  const blockedReason = canSave ? undefined : "Add a broker name and the date it accrued to save."
+  /**
+   * WWL-290 — the hint listed the content fields and never the venue, so a
+   * vendor on "All venues" who had filled the form correctly read a list of
+   * things they had already done and a Save button that stayed dead. Name the
+   * thing that is actually missing first.
+   */
+  const blockedReason = canSave
+    ? undefined
+    : !isEdit && effectiveBusinessId == null
+      ? "Choose which venue this commission belongs to."
+      : "Add a broker name and the date it accrued to save."
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -98,6 +121,7 @@ export function CommissionFormDialog({
           <DialogDescription>A commission owed to a broker for a referral.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-1">
+          <RecordVenueField value={venueId} onChange={setVenueId} noun="commission" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Broker name"><input className={inputCls} value={form.brokerNameSnapshot} onChange={(e) => set("brokerNameSnapshot", e.target.value)} autoFocus /></Field>
             <Field label="Broker type">

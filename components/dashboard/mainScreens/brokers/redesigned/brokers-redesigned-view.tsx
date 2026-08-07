@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { useRecordBusinessId } from "@/hooks/use-record-business-id"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   BrokerAPI,
@@ -81,7 +82,13 @@ export function BrokersRedesignedView() {
     queryFn: () => BrokerAPI.listCommissions(),
   })
   const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
-  const businessId = businesses?.[0]?.id
+  /**
+   * WWL-293/311/332/350 — this was `businesses?.[0]?.id`, so under "All venues"
+   * a new record landed on whichever venue happened to be first in the array,
+   * silently. The hook returns undefined rather than guessing when there is no
+   * right answer; the create dialog then asks.
+   */
+  const businessId = useRecordBusinessId()
   const invalidate = () => qc.invalidateQueries({ queryKey: ["brokers-redesigned"] })
   const openCreate = () => { setEditing(undefined); setDialogOpen(true) }
   const openEdit = (c: BrokerCommission) => { setEditing(c); setDialogOpen(true) }

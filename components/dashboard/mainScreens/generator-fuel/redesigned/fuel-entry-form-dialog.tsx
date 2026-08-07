@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { RecordVenueField } from "@/components/dashboard/shared/record-venue-field"
 import { useMutation } from "@tanstack/react-query"
 import { GeneratorFuelAPI, ENTRY_TYPE_LABELS, FUEL_TYPE_LABELS, type FuelEntry, type EntryType, type FuelType } from "@/lib/api/generatorFuel"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -53,6 +54,18 @@ export function FuelEntryFormDialog({
   onSaved?: () => void
 }) {
   const isEdit = !!entry
+  /**
+   * WWL-293/311/332/350 — the record used to be filed under whichever venue was
+   * first in the array. `businessId` now arrives undefined when the header is
+   * on "All venues" and the vendor owns more than one, so the dialog asks
+   * instead of guessing. RecordVenueField renders nothing for a single-venue
+   * vendor, who has nothing to get wrong.
+   */
+  const [venueId, setVenueId] = React.useState<string>(businessId != null ? String(businessId) : "")
+  React.useEffect(() => {
+    if (businessId != null) setVenueId(String(businessId))
+  }, [businessId])
+  const effectiveBusinessId = venueId ? Number(venueId) : businessId
   const [form, setForm] = React.useState<FormState>(blank(entry))
   const loadedId = React.useRef<number | "new" | null>(null)
   React.useEffect(() => {
@@ -63,7 +76,7 @@ export function FuelEntryFormDialog({
   const saveMut = useMutation({
     mutationFn: async () => {
       const body = {
-        businessId: entry?.businessId ?? businessId!,
+        businessId: entry?.businessId ?? effectiveBusinessId!,
         type: form.type,
         fuelType: form.fuelType,
         // Maintenance carries no fuel; the server stores 0 for it regardless,
@@ -127,7 +140,7 @@ export function FuelEntryFormDialog({
     !negativeCost &&
     !negativeHours &&
     !negativeLitres &&
-    (isEdit || businessId != null) &&
+    (isEdit || effectiveBusinessId != null) &&
     !deliveryNeedsCost
 
   /**
@@ -160,6 +173,7 @@ export function FuelEntryFormDialog({
           <DialogDescription>Generator fuel deliveries, consumption and readings.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-1">
+          <RecordVenueField value={venueId} onChange={setVenueId} noun="fuel entry" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Entry type">
               <select className={inputCls} value={form.type} onChange={(e) => set("type", e.target.value as EntryType)}>
