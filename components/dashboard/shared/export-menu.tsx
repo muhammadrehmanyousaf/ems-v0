@@ -36,6 +36,15 @@ export interface ExportMenuProps<T> {
   selectedIds?: Set<string>
   /** Row identity — must match the DataTable's getRowId for selection to resolve. */
   getRowId?: (row: T) => string
+  /**
+   * WWL-266 — a one-line warning shown in the menu before the export runs, for
+   * files that carry personal data. The staff export puts 33 people's names,
+   * mobile numbers and salaries into a CSV that then lives in a WhatsApp thread
+   * or a Downloads folder, and nothing anywhere said so. Not a gate — the
+   * vendor is entitled to their own roster — but they should know what they are
+   * about to hand around.
+   */
+  sensitiveNote?: string
 }
 
 // WWL-123 — the escaper here was RFC-4180 correct for quotes, commas and
@@ -74,6 +83,7 @@ export function ExportMenu<T>({
   className,
   selectedIds,
   getRowId,
+  sensitiveNote,
 }: ExportMenuProps<T>) {
   const [busy, setBusy] = React.useState(false)
 
@@ -135,7 +145,13 @@ export function ExportMenu<T>({
         {label}
         <Icon name="ChevronDown" size={13} className="text-muted-foreground" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52">
+      <DropdownMenuContent align="end" className={cn(sensitiveNote ? "w-72" : "w-52")}>
+        {sensitiveNote && (
+          <div className="flex items-start gap-1.5 border-b border-border px-2 py-2 text-[11px] leading-snug text-amber-700 dark:text-amber-400">
+            <Icon name="AlertTriangle" size={13} className="mt-px shrink-0" />
+            <span>{sensitiveNote}</span>
+          </div>
+        )}
         {selectedCount > 0 && (
           <>
             <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">{selectedCount} selected</div>
