@@ -8,7 +8,7 @@
 
 import * as React from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { ReceiptsAPI, type PaymentReceipt } from "@/lib/api/paymentReceipts"
+import { ReceiptsAPI, type PaymentReceipt, type ReceiptMethod } from "@/lib/api/paymentReceipts"
 import { ReceiptFormDialog, type ReceiptPrefill } from "@/components/dashboard/mainScreens/receipts/redesigned/receipt-form-dialog"
 import { OutboxStatus } from "@/components/dashboard/shared/outbox-status"
 import { OutboxConflicts } from "@/components/dashboard/shared/outbox-conflicts"
@@ -91,6 +91,12 @@ export function ReceiptsRedesignedView() {
   const thisMonthTotal = thisMonth.reduce((s, r) => s + num(r.amount), 0)
   const cashTotal = scope.filter((r) => r.method === "cash").reduce((s, r) => s + num(r.amount), 0)
   const scopeNote = filtering ? `of ${all.length} total` : undefined
+
+  // WWL-150 — the server's per-rail breakdown, biggest first.
+  const byMethodRows = Object.entries(data?.summary?.byMethod ?? {})
+    .filter(([, v]) => num(v) > 0)
+    .sort((a, b) => num(b[1]) - num(a[1]))
+    .map(([k, v]) => [k, num(v)] as [string, number])
   // Drop the Txn-ref column entirely when every row is cash (no reference), so
   // the table doesn't carry an all-dashes dead column.
   const hasRef = all.some((r) => (r.transactionRef ?? "").trim().length > 0)
@@ -130,6 +136,38 @@ export function ReceiptsRedesignedView() {
         <StatCard label={filtering ? "Cash collected (filtered)" : "Cash collected"} value={formatPkr(cashTotal)} icon="DollarSign" error={isError} />
         <StatCard label={filtering ? "Receipts (filtered)" : "Receipts"} value={scope.length} icon="FileText" delta={scopeNote} />
       </div>
+
+      {/*
+        WWL-150 — every response already carries `summary.byMethod`:
+        cash 6,314,023 · JazzCash 5,558,585 · bank_transfer 3,175,730 ·
+        Easypaisa 2,990,946 · Raast 2,002,337 · other 1,159,500. The screen
+        surfaced ONLY cash and recomputed that client-side.
+
+        For a Pakistani vendor the JazzCash / Easypaisa / Raast split IS the
+        reconciliation view -- it is what they check each rail's app against at
+        the end of a wedding week -- and it was being sent and thrown away.
+
+        Server-computed, so it describes the whole ledger; labelled as such so
+        it is never confused with the filtered cards above.
+      */}
+      {byMethodRows.length > 0 && (
+        <div className="rounded-xl border bg-card p-4">
+          <div className="mb-3 flex items-baseline justify-between gap-2">
+            <h3 className="text-sm font-semibold">Received by method</h3>
+            <span className="text-[11px] text-muted-foreground">whole ledger</span>
+          </div>
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            {byMethodRows.map(([method, amount]) => (
+              <div key={method} className="min-w-[8rem]">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  {methodLabel(method as ReceiptMethod)}
+                </div>
+                <div className="text-sm font-semibold tabular-nums">{formatPkr(amount)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <DataTable
         filterQuery={search}
