@@ -9,6 +9,7 @@
 import * as React from "react"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useRecordBusinessId } from "@/hooks/use-record-business-id"
+import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { GeneratorFuelAPI, type FuelEntry, type EntryType } from "@/lib/api/generatorFuel"
 import { BusinessesAPI } from "@/lib/api/dashboard"
@@ -24,7 +25,7 @@ import { MoneyCell, formatPkr } from "@/components/dashboard/primitives/money-ce
 import { DestructiveConfirm } from "@/components/dashboard/primitives/destructive-confirm"
 import { ExportMenu } from "@/components/dashboard/shared/export-menu"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
-import { Icon } from "@/components/dashboard/shared/icon"
+import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
@@ -70,9 +71,35 @@ export function GeneratorFuelRedesignedView() {
   const [editing, setEditing] = React.useState<FuelEntry | undefined>(undefined)
   const [deleting, setDeleting] = React.useState<FuelEntry | null>(null)
 
+  /**
+   * WWL-310 — `list()` accepts `type`, `from`, `to` and `generatorIdentifier`,
+   * and the toolbar offered a client-side text search and nothing else. So a
+   * log whose whole purpose is PERIOD reconciliation had no date range, and a
+   * venue running several sets had no per-generator filter. Four filters the
+   * server implements, none of them reachable.
+   */
+  const [typeFilter, setTypeFilter] = React.useState<EntryType | "">("")
+  const [genFilter, setGenFilter] = React.useState("")
+  const [fromDate, setFromDate] = React.useState("")
+  const [toDate, setToDate] = React.useState("")
+
+  const serverFilters = React.useMemo(
+    () => ({
+      ...(typeFilter ? { type: typeFilter } : {}),
+      ...(genFilter ? { generatorIdentifier: genFilter } : {}),
+      ...(fromDate ? { from: fromDate } : {}),
+      ...(toDate ? { to: toDate } : {}),
+    }),
+    [typeFilter, genFilter, fromDate, toDate],
+  )
+
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["generator-fuel-redesigned"],
-    queryFn: () => GeneratorFuelAPI.list(),
+    // The filters are part of the key: the summary above is computed by the
+    // server ACROSS the filtered set, so a stale entry would describe a
+    // different period than the rows beneath it.
+    queryKey: ["generator-fuel-redesigned", serverFilters],
+    queryFn: () => GeneratorFuelAPI.list(serverFilters),
+    placeholderData: (prev) => prev,
   })
   const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
   /**
@@ -82,6 +109,7 @@ export function GeneratorFuelRedesignedView() {
    * right answer; the create dialog then asks.
    */
   const businessId = useRecordBusinessId()
+  const activeBusinessId = useActiveBusinessId()
 
   /**
    * WWL-307 (S2) — tank status is computed on the server and was shown nowhere.
@@ -114,11 +142,31 @@ export function GeneratorFuelRedesignedView() {
     )
   }, [all, search])
 
-  const deliveries = all.filter((e) => e.type === "delivery").length
-  const deliveredLitres = all
-    .filter((e) => e.type === "delivery")
-    .reduce((sum, e) => sum + num(e.litres), 0)
-  const totalCost = all.reduce((sum, e) => sum + num(e.totalCost), 0)
+  /**
+   * WWL-309 — the API returns
+   * `summary: {byType, totalDeliveredLitres, totalDeliveryCost, totalConsumedLitres}`
+   * and this screen ignored it, recomputing three of those from `entries` — so
+   * the headline described only the page it had, not the filtered set the
+   * server had aggregated.
+   *
+   * More consequentially there was NO consumed-litres card beside Delivered.
+   * Bought against burned is the entire reconciliation a fuel log exists to
+   * make, and it could not be done on this screen at all. The server has been
+   * computing it the whole time.
+   */
+  /** Every generator the log has seen, for the per-set filter (WWL-310). */
+  const generatorOptions = React.useMemo(
+    () => Array.from(new Set(all.map((e) => e.generatorIdentifier).filter(Boolean) as string[])).sort(),
+    [all],
+  )
+
+  const summary = data?.summary
+  const deliveries = summary?.byType?.delivery ?? all.filter((e) => e.type === "delivery").length
+  const deliveredLitres = summary?.totalDeliveredLitres
+    ?? all.filter((e) => e.type === "delivery").reduce((sum, e) => sum + num(e.litres), 0)
+  const consumedLitres = summary?.totalConsumedLitres ?? 0
+  const totalCost = summary?.totalDeliveryCost ?? all.reduce((sum, e) => sum + num(e.totalCost), 0)
+  const unaccounted = deliveredLitres - consumedLitres
 
   const columns: Column<FuelEntry>[] = [
     {
@@ -171,11 +219,31 @@ export function GeneratorFuelRedesignedView() {
         actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Log entry</Button>}
       />
 
+      {/* WWL-306 */}
+      <BurnRatePanel businessId={activeBusinessId} generators={generatorOptions} />
+
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total entries" value={all.length} icon="FileText" />
-        <StatCard label="Deliveries" value={deliveries} icon="Package" trend="up" />
-        <StatCard label="Delivered litres" value={deliveredLitres.toLocaleString("en-PK")} icon="Gauge" />
-        <StatCard label="Total cost" value={formatPkr(totalCost)} icon="Wallet" error={isError} />
+        <StatCard label="Total entries" value={all.length} icon="FileText" error={isError} />
+        <StatCard
+          label="Delivered litres"
+          value={deliveredLitres.toLocaleString("en-PK")}
+          delta={`${deliveries} deliver${deliveries === 1 ? "y" : "ies"}`}
+          icon="Gauge"
+          error={isError}
+        />
+        {/* WWL-309 — the other half of the reconciliation. */}
+        <StatCard
+          label="Consumed litres"
+          value={consumedLitres.toLocaleString("en-PK")}
+          delta={
+            deliveredLitres > 0
+              ? `${unaccounted >= 0 ? "" : "-"}${Math.abs(unaccounted).toLocaleString("en-PK")} L ${unaccounted >= 0 ? "still in tank / unlogged" : "more burned than bought"}`
+              : undefined
+          }
+          icon="Gauge"
+          error={isError}
+        />
+        <StatCard label="Delivery cost" value={formatPkr(totalCost)} icon="Wallet" error={isError} />
       </div>
 
       {/* WWL-307 / WWL-308 — what is actually in the tanks, per generator. */}
@@ -232,8 +300,52 @@ export function GeneratorFuelRedesignedView() {
               <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search fuel log…"
                 className="h-9 w-56 rounded-md border border-input bg-background pl-8 pr-3 text-sm outline-none ring-ring placeholder:text-muted-foreground focus-visible:ring-2" />
             </div>
+            {/* WWL-310 — the four the server has always supported. */}
+            <label className="sr-only" htmlFor="fuel-type">Entry type</label>
+            <select
+              id="fuel-type" value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as EntryType | "")}
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm outline-none ring-ring focus-visible:ring-2"
+            >
+              <option value="">All types</option>
+              {(Object.keys(ENTRY_LABELS) as EntryType[]).map((t) => (
+                <option key={t} value={t}>{ENTRY_LABELS[t]}</option>
+              ))}
+            </select>
+            {generatorOptions.length > 0 && (
+              <>
+                <label className="sr-only" htmlFor="fuel-gen">Generator</label>
+                <select
+                  id="fuel-gen" value={genFilter} onChange={(e) => setGenFilter(e.target.value)}
+                  className="h-9 rounded-md border border-input bg-background px-2 text-sm outline-none ring-ring focus-visible:ring-2"
+                >
+                  <option value="">All generators</option>
+                  {generatorOptions.map((g) => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </>
+            )}
+            <label className="sr-only" htmlFor="fuel-from">From date</label>
+            <input
+              id="fuel-from" type="date" value={fromDate} max={toDate || undefined}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm outline-none ring-ring focus-visible:ring-2"
+            />
+            <label className="sr-only" htmlFor="fuel-to">To date</label>
+            <input
+              id="fuel-to" type="date" value={toDate} min={fromDate || undefined}
+              onChange={(e) => setToDate(e.target.value)}
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm outline-none ring-ring focus-visible:ring-2"
+            />
+            {(typeFilter || genFilter || fromDate || toDate) && (
+              <Button size="sm" variant="ghost" onClick={() => { setTypeFilter(""); setGenFilter(""); setFromDate(""); setToDate("") }}>
+                Clear
+              </Button>
+            )}
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
+              {/* WWL-319 — the control sat there on an empty log and would
+                  have produced a header-only file. */}
+              {entries.length > 0 && (
               <ExportMenu selectedIds={selected} getRowId={(e) => String(e.id)} rows={entries} filename="generator-fuel" columns={[
                 { header: "Generator", value: (e) => e.generatorIdentifier ?? "" },
                 { header: "Type", value: (e) => typeLabel(e.type) },
@@ -244,6 +356,7 @@ export function GeneratorFuelRedesignedView() {
                 { header: "Supplier", value: (e) => e.supplierName ?? "" },
                 { header: "Occurred at", value: (e) => e.occurredAt ?? "" },
               ]} />
+              )}
             </div>
           </>
         }
@@ -294,3 +407,101 @@ export function GeneratorFuelRedesignedView() {
 }
 
 export default GeneratorFuelRedesignedView
+
+
+/**
+ * WWL-306 — `GET /generator-fuel/burn-rate` is not flag-gated and not a stub.
+ * Probed live it answers **400 "Invalid from"** with no params and **400 "Need
+ * readings on both sides of the window"** with a full valid-looking query —
+ * both precise, domain-correct refusals from a working engine that understands
+ * it cannot interpolate a burn rate without a tank reading at each end.
+ *
+ * And nothing in the product called it. A venue owner's most-asked generator
+ * question — "how much diesel does this set actually burn an hour?" — was
+ * answerable by the server and unaskable from the app.
+ *
+ * The panel is deliberately small: two dates, a generator and the hours it ran.
+ * The engine's own refusals are surfaced verbatim, because "need readings on
+ * both sides of the window" tells the vendor exactly what to log next.
+ */
+function BurnRatePanel({
+  businessId, generators,
+}: { businessId: number | null; generators: string[] }) {
+  const [gen, setGen] = React.useState("")
+  const [from, setFrom] = React.useState("")
+  const [to, setTo] = React.useState("")
+  const [hours, setHours] = React.useState("")
+
+  const run = useMutation({
+    mutationFn: () =>
+      GeneratorFuelAPI.burnRate({
+        ...(businessId ? { businessId } : {}),
+        generatorIdentifier: gen,
+        from,
+        to,
+        runHours: Number(hours),
+      }),
+    onError: (e: unknown) => toast.error(errorMessage(e, "Couldn't work out the burn rate.")),
+  })
+
+  const ready = !!gen && !!from && !!to && Number(hours) > 0 && from <= to
+  const res = run.data?.result
+
+  return (
+    <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
+      <h2 className="text-sm font-semibold">How much is this set burning?</h2>
+      <p className="text-xs text-muted-foreground">
+        Litres per running hour between two tank readings. Needs a tank reading logged at both ends of
+        the period.
+      </p>
+      <div className="mt-3 flex flex-wrap items-end gap-2">
+        <label className="text-xs text-muted-foreground">
+          <span className="block">Generator</span>
+          {generators.length > 0 ? (
+            <select value={gen} onChange={(e) => setGen(e.target.value)}
+              className="mt-1 h-9 rounded-md border border-input bg-background px-2 text-sm outline-none ring-ring focus-visible:ring-2">
+              <option value="">Pick one…</option>
+              {generators.map((g) => <option key={g} value={g}>{g}</option>)}
+            </select>
+          ) : (
+            <input value={gen} onChange={(e) => setGen(e.target.value)} placeholder="e.g. 25 KVA #1"
+              className="mt-1 h-9 w-40 rounded-md border border-input bg-background px-2 text-sm outline-none ring-ring focus-visible:ring-2" />
+          )}
+        </label>
+        <label className="text-xs text-muted-foreground">
+          <span className="block">From</span>
+          <input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)}
+            className="mt-1 h-9 rounded-md border border-input bg-background px-2 text-sm outline-none ring-ring focus-visible:ring-2" />
+        </label>
+        <label className="text-xs text-muted-foreground">
+          <span className="block">To</span>
+          <input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)}
+            className="mt-1 h-9 rounded-md border border-input bg-background px-2 text-sm outline-none ring-ring focus-visible:ring-2" />
+        </label>
+        <label className="text-xs text-muted-foreground">
+          <span className="block">Hours it ran</span>
+          <input type="number" min={1} step={1} inputMode="numeric" value={hours} onChange={(e) => setHours(e.target.value)}
+            className="mt-1 h-9 w-28 rounded-md border border-input bg-background px-2 text-sm tabular-nums outline-none ring-ring focus-visible:ring-2" />
+        </label>
+        <Button size="sm" disabled={!ready || run.isPending} onClick={() => run.mutate()}>
+          {run.isPending ? <><Spinner size={14} className="mr-1.5" /> Working…</> : "Work it out"}
+        </Button>
+      </div>
+
+      {res && (
+        res.ok ? (
+          <p className="mt-3 rounded-md border border-emerald-300/60 bg-emerald-50 px-3 py-2 text-sm dark:border-emerald-900/60 dark:bg-emerald-950/30">
+            <span className="font-semibold tabular-nums">{res.ratePerHour?.toLocaleString("en-PK")} litres/hour</span>
+            {res.burnLitres != null && (
+              <span className="text-muted-foreground"> · {res.burnLitres.toLocaleString("en-PK")} L burned over {hours} hours</span>
+            )}
+          </p>
+        ) : (
+          <p className="mt-3 rounded-md border border-amber-300/60 bg-amber-50 px-3 py-2 text-sm dark:border-amber-900/60 dark:bg-amber-950/30">
+            {res.reason || "Not enough readings in that window to work this out."}
+          </p>
+        )
+      )}
+    </section>
+  )
+}

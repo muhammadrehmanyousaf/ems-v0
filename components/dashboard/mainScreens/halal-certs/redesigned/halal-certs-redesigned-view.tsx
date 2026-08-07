@@ -112,7 +112,15 @@ export function HalalCertsRedesignedView() {
 
   const active = all.filter((c) => c.status === "active").length
   const expiringSoon = all.filter((c) => c.status === "expiring_soon").length
-  const expiredOrRevoked = all.filter((c) => c.status === "expired" || c.status === "revoked").length
+  /**
+   * WWL-335 — "Expired / revoked" merged a certificate that quietly LAPSED with
+   * one an authority WITHDREW. Operationally those are nothing alike: the first
+   * is a renewal you forgot, the second is a finding against you, and a caterer
+   * facing an inspector needs to know which of the two they are holding.
+   */
+  const [showAllExpiring, setShowAllExpiring] = React.useState(false)
+  const expiredCount = all.filter((c) => c.status === "expired").length
+  const revokedCount = all.filter((c) => c.status === "revoked").length
   const expiring = expiringData?.certs ?? []
 
   const columns: Column<HalalCert>[] = [
@@ -137,6 +145,27 @@ export function HalalCertsRedesignedView() {
     },
     { key: "authority", header: "Authority", cellClassName: "text-muted-foreground", render: (c) => authorityLabel(c) },
     { key: "expiry", header: "Expires", align: "right", cellClassName: "tabular-nums", render: (c) => fmtDate(c.expiryDate) },
+    {
+      /* WWL-322 — the register held the certificate NUMBER and no way to
+         produce the certificate. Now that the dialog can attach one, the table
+         is where an inspector's question gets answered. */
+      key: "doc", header: "Document", align: "center",
+      render: (c) =>
+        c.certPhotoUrl ? (
+          <a
+            href={c.certPhotoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-primary underline underline-offset-2"
+            title="Open the attached certificate"
+          >
+            View
+          </a>
+        ) : (
+          <span className="text-xs text-muted-foreground">Not attached</span>
+        ),
+    },
     { key: "status", header: "Status", render: (c) => <StatusPill tone={statusTone(c.status)}>{statusLabel(c.status)}</StatusPill> },
     {
       key: "actions", header: "", align: "right",
@@ -201,7 +230,12 @@ export function HalalCertsRedesignedView() {
         <StatCard label="Total certificates" value={all.length} icon="ShieldCheck" />
         <StatCard label="Active" value={active} icon="CheckCircle2" trend="up" />
         <StatCard label="Expiring soon" value={expiringSoon} icon="Clock" trend={expiringSoon > 0 ? "down" : "flat"} />
-        <StatCard label="Expired / revoked" value={expiredOrRevoked} icon="AlertTriangle" />
+        <StatCard
+          label="Expired"
+          value={expiredCount}
+          icon="AlertTriangle"
+          delta={revokedCount > 0 ? `${revokedCount} revoked` : undefined}
+        />
       </div>
 
       {expiring.length > 0 && (
@@ -209,9 +243,22 @@ export function HalalCertsRedesignedView() {
           <div className="flex items-center gap-2 text-sm font-semibold text-amber-900 dark:text-amber-200">
             <Icon name="AlertTriangle" size={16} />
             {expiring.length} certificate{expiring.length === 1 ? "" : "s"} expiring soon or already expired
+            {expiring.length > 6 && (
+              <button
+                type="button"
+                onClick={() => setShowAllExpiring((v) => !v)}
+                className="ml-auto text-xs font-medium underline underline-offset-2"
+              >
+                {showAllExpiring ? "Show fewer" : `Show all ${expiring.length}`}
+              </button>
+            )}
           </div>
           <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {expiring.slice(0, 6).map((c) => {
+            {/* WWL-330 — `slice(0, 6)` with no "and N more": the heading was
+                honest ("twenty certificates expiring") and the panel showed six,
+                and there is no status filter on the table either, so the other
+                fourteen could only be found by reading every row. */}
+            {expiring.slice(0, showAllExpiring ? expiring.length : 6).map((c) => {
               const dueIn = daysFromNow(c.expiryDate)
               return (
                 <button
@@ -269,8 +316,14 @@ export function HalalCertsRedesignedView() {
                 { header: "Supplier", value: (c) => supplierName(c) },
                 { header: "Item", value: (c) => c.itemDescription ?? "" },
                 { header: "Authority", value: (c) => authorityLabel(c) },
-                { header: "Issued", value: (c) => fmtDate(c.issuedDate) },
-                { header: "Expires", value: (c) => fmtDate(c.expiryDate) },
+                /* WWL-329 — `fmtDate` returns "06 Aug 2026", which a
+                   spreadsheet cannot sort or filter as a date. On an EXPIRY
+                   register, sorting by expiry is the first thing anyone does.
+                   Brokers and Suppliers already export raw ISO from the same
+                   ExportMenu. */
+                { header: "Issued", value: (c) => c.issuedDate ?? "" },
+                { header: "Expires", value: (c) => c.expiryDate ?? "" },
+                { header: "Document", value: (c) => c.certPhotoUrl ?? "" },
                 { header: "Status", value: (c) => statusLabel(c.status) },
               ]} />
             </div>

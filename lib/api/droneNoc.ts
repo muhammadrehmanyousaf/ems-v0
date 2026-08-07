@@ -72,7 +72,12 @@ export interface PermitSummary {
 
 export interface CreatePermitInput {
   businessId: number;
-  bookingId?: number;
+  /**
+   * WWL-348 — the wedding this permit was obtained for. `null` clears the link
+   * and is distinct from omitting the field; the validator has treated both
+   * null and "" as "not linked" since it was written.
+   */
+  bookingId?: number | null;
   permitType?: PermitType;
   issuingAuthority?: IssuingAuthority;
   referenceNumber: string;

@@ -7,8 +7,10 @@
  */
 
 import * as React from "react"
+import Link from "next/link"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useRecordBusinessId } from "@/hooks/use-record-business-id"
+import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   DroneNocAPI,
@@ -88,6 +90,7 @@ export function DroneNocRedesignedView({ adminCapable = true }: { adminCapable?:
    * right answer; the create dialog then asks.
    */
   const businessId = useRecordBusinessId()
+  const activeBusinessId = useActiveBusinessId()
   const invalidate = () => qc.invalidateQueries({ queryKey: ["drone-noc-redesigned"] })
   const openCreate = () => { setEditing(undefined); setDialogOpen(true) }
   const openEdit = (p: DroneNOC) => { setEditing(p); setDialogOpen(true) }
@@ -109,7 +112,31 @@ export function DroneNocRedesignedView({ adminCapable = true }: { adminCapable?:
   }, [all, search])
 
   const approved = all.filter((p) => p.status === "approved").length
-  const attention = all.filter((p) => p.status === "pending" || p.status === "expiring_soon").length
+  /**
+   * WWL-343 — "Needs attention" merged `pending` with `expiring_soon`. An
+   * application sitting with a regulator and an approved permit about to lapse
+   * are different situations with different remedies: one you chase the CAA
+   * about, the other you renew. One number for both told a vendor neither.
+   */
+  /**
+   * WWL-347 — `GET /api/v1/drone-noc/upcoming` is live, returns cleanly, and
+   * the controller documents it as "pending + expiring-soon + booking-linked
+   * windows". The app's only requests on this route were two bare
+   * `GET /drone-noc` calls; the endpoint that answers "what is coming up and
+   * which wedding is it for" had no consumer at all.
+   *
+   * It answers a different question from the table: the table is a register,
+   * this is a diary.
+   */
+  const { data: upcomingData } = useQuery({
+    queryKey: ["drone-noc-upcoming", activeBusinessId],
+    queryFn: () => DroneNocAPI.upcoming(activeBusinessId ? { businessId: activeBusinessId } : {}),
+    staleTime: 60_000,
+  })
+  const upcoming = upcomingData?.permits ?? []
+
+  const pendingCount = all.filter((p) => p.status === "pending").length
+  const expiringCount = all.filter((p) => p.status === "expiring_soon").length
   const feesPaid = all.reduce((sum, p) => sum + num(p.feePaid), 0)
 
   const columns: Column<DroneNOC>[] = [
@@ -219,10 +246,55 @@ export function DroneNocRedesignedView({ adminCapable = true }: { adminCapable?:
         actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Add permit</Button>}
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {/* WWL-347 */}
+      {upcoming.length > 0 && (
+        <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <h2 className="text-sm font-semibold">Coming up</h2>
+          <p className="text-xs text-muted-foreground">
+            Permits awaiting a decision, expiring soon, or attached to a booked event.
+          </p>
+          <ul className="mt-3 divide-y divide-border/60">
+            {upcoming.slice(0, 8).map((p: DroneNOC) => (
+              <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 py-2 text-sm">
+                <span className="font-medium">#{p.referenceNumber}</span>
+                <StatusPill tone={STATUS_TONE[p.status] ?? "neutral"}>{statusLabel(p.status)}</StatusPill>
+                <span className="text-xs text-muted-foreground">
+                  {p.validFrom ? `from ${fmtDate(p.validFrom)}` : ""}
+                  {p.validUntil ? ` · until ${fmtDate(p.validUntil)}` : ""}
+                </span>
+                {p.bookingId && (
+                  <Link
+                    href={`/dashboard/bookings/${p.bookingId}`}
+                    className="ml-auto text-xs font-medium text-primary hover:underline"
+                  >
+                    Open the event
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+          {upcoming.length > 8 && (
+            <p className="mt-2 text-xs text-muted-foreground">and {upcoming.length - 8} more below.</p>
+          )}
+        </section>
+      )}
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard label="Total permits" value={all.length} icon="ShieldCheck" />
         <StatCard label="Approved" value={approved} icon="CheckCircle2" trend="up" />
-        <StatCard label="Needs attention" value={attention} icon="AlertTriangle" />
+        <StatCard
+          label="With the regulator"
+          value={pendingCount}
+          icon="Clock"
+          delta={pendingCount > 0 ? "awaiting a decision" : undefined}
+        />
+        <StatCard
+          label="Expiring soon"
+          value={expiringCount}
+          icon="AlertTriangle"
+          trend={expiringCount > 0 ? "down" : "flat"}
+          delta={expiringCount > 0 ? "renew before the event" : undefined}
+        />
         <StatCard label="Fees paid" value={formatPkr(feesPaid)} icon="Wallet" error={isError} />
       </div>
 
