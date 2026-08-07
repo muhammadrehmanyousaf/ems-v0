@@ -56,6 +56,14 @@ interface OfflineBookingDialogProps {
      * dialog's original behaviour for callers that don't care.
      */
     onCreated?: (bookingId: number) => void;
+    /**
+     * WWL-034 — the agreed price for this booking, prefilled when converting a
+     * lead. This dialog had no price, amount, total or budget field of any
+     * kind, so a lead worth Rs 1,175,000 became a booking that captured no
+     * amount at all: the one number that made the lead worth chasing was
+     * dropped at the exact moment it became money.
+     */
+    initialAmount?: number | null;
 }
 
 const TIME_SLOTS = [
@@ -210,11 +218,12 @@ function PackageOption({ pkg }: { pkg: ApiPackage }) {
     );
 }
 
-export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDate, initialCustomer, onCreated }: OfflineBookingDialogProps) {
+export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDate, initialCustomer, initialAmount, onCreated }: OfflineBookingDialogProps) {
     // Customer fields
     const [customerName, setCustomerName] = useState('');
     const [customerEmail, setCustomerEmail] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
+
 
     // Issue #27 — existing customer picker. Fetched on dialog open.
     // Vendor either picks one (autofills name/phone/email) or types a
@@ -295,6 +304,7 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, initialCustomer]);
+
     const [guestCount, setGuestCount] = useState('');
     const [quantity, setQuantity] = useState(1);
     // Issue #47 — per-day rate multiplier. Default 1 = single-day,
@@ -465,6 +475,28 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
         [selectedBusiness, packages],
     );
     const needsAgreedAmount = businessUnpriced && !selectedPackageId && !selectedMenuId;
+
+    /**
+     * WWL-034 — carry the lead's budget across.
+     *
+     * The agreed-amount field already existed, but only appears when the
+     * business has no published price. Converting a lead against a business
+     * that DOES have one showed no price field at all, so the lead's
+     * Rs 1,175,000 budget was dropped at the exact moment it became a booking
+     * and Create Booking stayed enabled with no amount captured.
+     *
+     * Two halves: prefill the field when it is shown, and — when it is not —
+     * still put the number in front of the vendor next to the computed price,
+     * so a listing priced at Rs 300,000 against a Rs 1,175,000 lead is visible
+     * rather than silently applied.
+     */
+    useEffect(() => {
+        if (!open) return;
+        if (initialAmount != null && Number(initialAmount) > 0 && !agreedAmount) {
+            setAgreedAmount(String(initialAmount));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, initialAmount, needsAgreedAmount]);
     // A package or menu is what gives an offline booking its price. When the
     // business has no starting price (raw NULL — an explicit 0 is a real "free"
     // price and MUST stay allowed, hence isMoneyUnset not truthiness) and we are
@@ -1235,6 +1267,21 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                             </div>
                             <Separator />
                         </>
+                    )}
+
+                    {/* WWL-034 — when the agreed-amount field is hidden (the
+                        listing has its own price) the lead's budget would
+                        otherwise vanish without trace. Put it next to the
+                        price the server is about to apply. */}
+                    {!needsAgreedAmount && initialAmount != null && Number(initialAmount) > 0 && (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+                            This lead&apos;s budget was <strong>Rs {Number(initialAmount).toLocaleString()}</strong>.
+                            This booking will be priced from the listing
+                            {priceBreakdown && priceBreakdown.subtotal > 0
+                                ? ` at Rs ${priceBreakdown.subtotal.toLocaleString()}`
+                                : ""}
+                            . Adjust the order after creating it if you agreed something different.
+                        </div>
                     )}
 
                     {/* ── Notes ── */}
