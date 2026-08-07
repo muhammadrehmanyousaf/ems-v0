@@ -364,3 +364,94 @@ are swept. They are polish and clarity, not broken behaviour.
 
 Plus the **18 product gaps** (features never built) which need a product
 decision, and the **1,864 unrun cases** which need a seeded staging vendor.
+
+---
+
+## Wave 9 — the per-screen tail
+
+Counted with the qa/ docs excluded from the source grep (scanning them made
+every id look addressed, because that is where findings are *described*):
+
+**405 of 612 addressed · 207 remaining — 0 S1, 0 S2, 145 S3, 62 S4.**
+
+### Rendering what was already being fetched
+
+| Finding | What changed |
+|---|---|
+| `WWL-140` | Receivables grows an aging band: five buckets, both counts, a proportional bar, an "As of HH:mm PKT" line off the `generatedAt` that was never surfaced, and click-to-filter. The wire also contradicted its own docstring — `buckets[].count` counted **installments** while the header comment promised customers, so the five counts summed to 51 on a board headlined 34. Both counts are now named for what they hold; `count` stays as an alias. |
+| `WWL-141` | The Outstanding card drew an unconditional falling arrow. No prior period exists on the payload, so the honest render is no arrow. |
+| `WWL-247` | The movement dialog offered 4 of the 9 fields the API accepts, and its own placeholder advertised two it did not have. Without `bookingId` consumption could never be attributed to an event; without `occurredAt` every movement was stamped `now()`. |
+| `WWL-248` | The audit ledger was **write-only** — `listMovements` existed, `getItem` returned 30 movements, the model snapshots `stockBefore`/`stockAfter` in a transaction, and none of it rendered anywhere. Added the read side, reachable from every row and card. |
+| `WWL-519` | The activation panel rendered 4 of 9 fields. The one it dropped that matters is `leadsAwaitingReply` — 22 people across three venues who asked about a wedding and heard nothing back. |
+| `WWL-127` | The booking picker read `name · date`, so three options all said "Waheed Jutt" and cancelled bookings looked identical to live ones. |
+
+### Requests
+
+| Finding | What changed |
+|---|---|
+| `WWL-149` `WWL-171` | The function-sheet badge asked one booking per request — 14 round-trips for 13 rows. The endpoint takes a set now, and the FE micro-batches on a microtask: **14 requests → 1**. Parsing is a pure helper with 9 tests, because both failure modes are quiet (an empty id set must match *nothing*; a hand-built query must not build an unbounded `IN`). |
+| `WWL-157` | Receipts shipped the whole ledger with no limit. Paging is **opt-in** — a default cap would have silently truncated the customer profile — and the summary is computed in SQL over the whole filtered set, so a page never moves the headline. |
+
+### Venue scope
+
+`WWL-204` — the report card was never venue-scoped. The client *had* been
+sending `businessId` all along; the service ignored it. Scoping it surfaced a
+worse bug underneath: the expense rollup's untagged branch was scoped by
+`createdByUserId` alone, so **"Staff Kharcha" reported the whole group's payroll
+under every single venue** — all three read Rs 4,306,800, exactly
+1,433,700 + 1,495,500 + 1,377,600.
+
+Verified on live production — all five money cards partition exactly:
+
+| Card | 3358 | 3359 | 3360 | Sum | All-venues |
+|---|---|---|---|---|---|
+| `month_money` | 11,761,150 | 12,748,550 | 8,984,150 | 33,493,850 | **33,493,850** |
+| `baqaya` | 4,368,287 | 5,043,737 | 4,005,205 | 13,417,229 | **13,417,229** |
+| `aaj_vasooli` | 1,673,250 | 0 | 0 | 1,673,250 | **1,673,250** |
+| `bookings` | 8 | 8 | 6 | 22 | **22** |
+| `staff_cost` | 1,433,700 | 1,495,500 | 1,377,600 | 4,306,800 | **4,306,800** |
+
+The `REPORT_CARDS_ENABLED` gate is removed — it answered 404 to most vendors
+for a read-only projection of their own bookings.
+
+### Money input
+
+`WWL-126` — every money column is `NUMERIC(12,2)`, verified on the live
+database, and the shared validator did not know it:
+
+| Typed | Was stored as | Now |
+|---|---|---|
+| `0.001` | **0.00** — a receipt for Rs 0 | rejected |
+| `100.999` | 101.00 — a number nobody entered | rejected |
+| `1e5` | 100000, silently | rejected |
+
+`1000`, `1000.5`, `.5`, `99999999.99` still accepted; commas, hex, `Infinity`,
+negatives, zero and over-cap still rejected.
+
+### Friction where it belongs
+
+`WWL-491` Free went straight to the DELETE · `WWL-492` both writes reported
+success unconditionally (the API now returns `newlyBlocked`/`deleted` and the UI
+says which happened) · `WWL-507` cancellation policy saved in one click, with
+nothing said about existing bookings — the confirmation now shows old → new, the
+rupee delta at each window, and that accepted bookings keep their frozen
+snapshot · `WWL-509` the policy cards were bare `<div onClick>`, now a radiogroup.
+
+### Dates, a11y, mobile
+
+`WWL-455` — three surviving UTC derivations, each one day wrong east of
+Greenwich: the dashboard calendar filter returned **yesterday** for every
+Pakistani vendor all day every day; the AML register silently excluded the last
+day of the month it claimed to cover; supplier due dates landed a day early
+before 5am.
+
+`WWL-007` venue switcher items are `menuitemradio` with `aria-checked` ·
+`WWL-522` progress bars carry their value · `WWL-523` a failed fetch no longer
+tells a vendor who owns three venues that they own none · `WWL-205`/`WWL-206`
+14px share targets grown to 44px and each named · `WWL-471` density now applies
+to the mobile card list, so the control that was "missing" is no longer a
+control that does nothing.
+
+`WWL-521` needs no code change: two venues scoring identically is the checklist
+being right — both have zero photographs, no advance terms, no cancellation
+policy.
