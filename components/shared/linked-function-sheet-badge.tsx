@@ -8,15 +8,20 @@
  * to the event command center.
  *
  * Performance notes:
- *   - Function Sheets are looked up via FunctionSheetAPI.list({bookingId}).
- *     Each lookup costs ~1 network call.
- *   - To avoid N+1 fetches on a page rendering 100 rows, we keep an
- *     in-memory cache keyed by bookingId. The cache is process-lifetime
- *     (resets on page reload) which is fine — the badge data is purely
- *     decorative + rate-limited by browser network throttling.
- *   - The cache also coalesces concurrent fetches for the same bookingId
- *     (same Promise reused) so 100 rows with the same booking still
- *     issue a single backend query.
+ *   - WWL-149/171 — this used to call FunctionSheetAPI.list({bookingId})
+ *     once per row. Driven live, rendering 13 receipts fired 14 requests
+ *     across 7 distinct bookings, and 5 cheque rows fired 10, purely to
+ *     label a column. The per-id cache below only helped on the SECOND
+ *     render; the first paint of any page still paid one round-trip per
+ *     distinct booking, growing linearly with the ledger.
+ *
+ *     Requests are now micro-batched: every badge that mounts in the same
+ *     tick drops its bookingId into a pending set, and a single
+ *     `bookingIds=1,2,3` request resolves the whole page. 14 requests
+ *     become 1. Batches are capped at 200 ids to match the server cap.
+ *
+ *   - The process-lifetime cache (keyed by bookingId, 5-minute TTL) still
+ *     serves repeat renders and cross-page revisits without any network.
  *
  * Renders nothing while loading or when no sheet found — keeping the
  * card density unchanged. Vendor only sees the badge when there's
@@ -37,6 +42,65 @@ const cache = new Map<number, CachedSheet>();
 const inflight = new Map<number, Promise<FunctionSheet[]>>();
 const TTL_MS = 5 * 60 * 1000; // 5 minutes — long enough to amortise N+1, short enough to reflect edits
 
+const MAX_BATCH = 200; // matches the server-side cap on `bookingIds`
+
+/** Ids waiting for the next flush, with the resolver each badge is holding. */
+const queue = new Map<number, ((sheets: FunctionSheet[]) => void)[]>();
+let flushScheduled = false;
+
+function scheduleFlush(): void {
+  if (flushScheduled) return;
+  flushScheduled = true;
+  // A microtask, not a timer: every badge in one React commit enqueues
+  // synchronously, so the batch is complete by the time this runs and the
+  // vendor never waits an extra frame for it.
+  Promise.resolve().then(flush);
+}
+
+function flush(): void {
+  flushScheduled = false;
+  if (queue.size === 0) return;
+
+  const ids = Array.from(queue.keys()).slice(0, MAX_BATCH);
+  const waiters = new Map<number, ((sheets: FunctionSheet[]) => void)[]>();
+  for (const id of ids) {
+    waiters.set(id, queue.get(id)!);
+    queue.delete(id);
+  }
+  // Anything over the cap stays queued and goes out in the next batch.
+  if (queue.size > 0) scheduleFlush();
+
+  const settle = (byBooking: Map<number, FunctionSheet[]>) => {
+    for (const [id, resolvers] of waiters) {
+      const sheets = byBooking.get(id) ?? [];
+      cache.set(id, { sheets, fetchedAt: Date.now() });
+      inflight.delete(id);
+      for (const r of resolvers) r(sheets);
+    }
+  };
+
+  FunctionSheetAPI.list({ bookingIds: ids.join(',') })
+    .then((res) => {
+      const byBooking = new Map<number, FunctionSheet[]>();
+      for (const sheet of res.functionSheets || []) {
+        const bid = Number(sheet.bookingId);
+        if (!Number.isFinite(bid)) continue;
+        const list = byBooking.get(bid);
+        if (list) list.push(sheet);
+        else byBooking.set(bid, [sheet]);
+      }
+      settle(byBooking);
+    })
+    .catch(() => {
+      // A failed lookup must not cache "no sheet" as truth — the chip is
+      // decorative, so drop the ids and let a later render try again.
+      for (const [id, resolvers] of waiters) {
+        inflight.delete(id);
+        for (const r of resolvers) r([]);
+      }
+    });
+}
+
 function lookup(bookingId: number): Promise<FunctionSheet[]> {
   const cached = cache.get(bookingId);
   if (cached && Date.now() - cached.fetchedAt < TTL_MS) {
@@ -44,18 +108,14 @@ function lookup(bookingId: number): Promise<FunctionSheet[]> {
   }
   const existing = inflight.get(bookingId);
   if (existing) return existing;
-  const p = FunctionSheetAPI.list({ bookingId })
-    .then((res) => {
-      const sheets = res.functionSheets || [];
-      cache.set(bookingId, { sheets, fetchedAt: Date.now() });
-      inflight.delete(bookingId);
-      return sheets;
-    })
-    .catch(() => {
-      inflight.delete(bookingId);
-      return [];
-    });
+
+  const p = new Promise<FunctionSheet[]>((resolve) => {
+    const resolvers = queue.get(bookingId);
+    if (resolvers) resolvers.push(resolve);
+    else queue.set(bookingId, [resolve]);
+  });
   inflight.set(bookingId, p);
+  scheduleFlush();
   return p;
 }
 
