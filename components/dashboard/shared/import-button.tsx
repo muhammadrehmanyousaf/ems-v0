@@ -13,7 +13,8 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog"
 import { Icon } from "@/components/dashboard/shared/icon"
-import { bulkImportApi, type ImportPreview } from "@/lib/api/bulkImport"
+import { bulkImportApi, type ImportPreview, type ImportTarget } from "@/lib/api/bulkImport"
+import { cn } from "@/lib/utils"
 import { useActiveBusinessStore } from "@/lib/store/active-business-store"
 import { BusinessesAPI } from "@/lib/api/dashboard"
 
@@ -65,6 +66,31 @@ export function ImportButton({
     finally { setBusy(false) }
   }
 
+  /** The importer's own column spec, for the header list + template (WWL-184). */
+  const [spec, setSpec] = React.useState<ImportTarget | null>(null)
+  React.useEffect(() => {
+    if (!open) return
+    let alive = true
+    bulkImportApi
+      .targets(bizId ?? undefined)
+      .then((r) => { if (alive) setSpec(r.targets.find((t) => t.target === target) ?? null) })
+      .catch(() => { /* the list is help, not a gate — the import still works */ })
+    return () => { alive = false }
+  }, [open, bizId, target])
+
+  const downloadTemplate = () => {
+    if (!spec) return
+    const header = spec.fields.map((f) => f.label).join(",")
+    // BOM first so Excel opens Urdu/Arabic column names correctly.
+    const blob = new Blob(["﻿" + header + "\n"], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `${target}-template.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const title = label || target
 
   return (
@@ -79,6 +105,48 @@ export function ImportButton({
             <DialogDescription>Upload or paste a CSV/TSV. We preview first — nothing is saved until you confirm.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            {/**
+              * WWL-184 — "Upload or paste a CSV/TSV" with no sample, no header
+              * list and no download, so the vendor had to guess the schema of a
+              * file they were about to import. The columns were never a secret:
+              * `bulkImportApi.targets()` has always returned them, with labels,
+              * types and which are required. The dialog simply never asked.
+              *
+              * The template is built from the same response, so it can never
+              * describe a column the importer does not accept.
+              */}
+            {spec && (
+              <div className="rounded-md border border-dashed bg-muted/30 p-3 text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-medium">Columns we can read</p>
+                  <button
+                    type="button"
+                    onClick={downloadTemplate}
+                    className="font-medium text-primary underline underline-offset-2"
+                  >
+                    Download a blank template
+                  </button>
+                </div>
+                <p className="mt-1 text-muted-foreground">
+                  Your first row must be the header row. Spelling is matched loosely — &ldquo;mobile&rdquo;,
+                  &ldquo;phone&rdquo; and &ldquo;cell&rdquo; all work. Extra columns are ignored.
+                </p>
+                <ul className="mt-2 flex flex-wrap gap-1.5">
+                  {spec.fields.map((f) => (
+                    <li
+                      key={f.key}
+                      className={cn(
+                        "rounded border px-1.5 py-0.5",
+                        f.required ? "border-primary/40 bg-primary/10 font-medium" : "border-border",
+                      )}
+                      title={f.required ? "Required" : `Optional · ${f.type}`}
+                    >
+                      {f.label}{f.required ? " *" : ""}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <input type="file" accept=".csv,.tsv,text/csv,text/tab-separated-values"
               onChange={(e) => onFile(e.target.files?.[0])} className="block w-full text-sm" />
             <textarea value={content} onChange={(e) => { setContent(e.target.value); setPreview(null) }}

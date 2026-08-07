@@ -75,6 +75,16 @@ export function TaxRedesignedView() {
     { key: "bookings", header: "Bookings", align: "right", cellClassName: "tabular-nums", render: (r) => num(r.bookingCount) },
     { key: "revenue", header: "Revenue", align: "right", render: (r) => <MoneyCell amount={num(r.revenue)} /> },
     { key: "expenses", header: "Expenses", align: "right", render: (r) => <MoneyCell amount={num(r.expenses)} tone="error" /> },
+    /* WWL-195 — the table had Revenue and Expenses and no Net, so per-month
+       profitability — the entire reason to break a year into months — had to be
+       done by hand, on a screen that already computes it for the export. */
+    {
+      key: "net", header: "Net", align: "right",
+      render: (r) => {
+        const net = num(r.revenue) - num(r.expenses)
+        return <MoneyCell amount={net} tone={net < 0 ? "error" : "success"} />
+      },
+    },
   ]
 
   return (
@@ -129,7 +139,23 @@ export function TaxRedesignedView() {
         <StatCard label="Gross revenue" value={isLoading ? "…" : formatPkr(num(report?.summary?.bookingRevenue))} icon="Wallet" trend="up" error={isError} />
         <StatCard label="Expenses" value={isLoading ? "…" : formatPkr(num(report?.summary?.totalExpenses))} icon="Clock" error={isError} />
         <StatCard label="Net P&L" value={isLoading ? "…" : formatPkr(netPnl)} icon="TrendingUp" trend={netPnl >= 0 ? "up" : "down"} error={isError} />
-        <StatCard label="FBR submitted" value={isLoading ? "…" : formatPkr(num(report?.summary?.fbrSubmittedValue))} icon="ShieldCheck" error={isError} />
+        {/* WWL-194 — this reads Rs 0 and structurally always will: FBR_PROVIDER
+            defaults to the noop adapter, which submits nothing anywhere. A
+            vendor reading it concludes they have FILED NOTHING, which is a
+            different claim from "this feature is not switched on" — one is a
+            compliance problem they must act on tonight, the other is ours. The
+            server now says which. */}
+        {report?.summary?.fbrConfigured === false ? (
+          <StatCard
+            label="FBR e-invoicing"
+            value="Not connected"
+            icon="ShieldCheck"
+            delta="nothing is filed from here yet"
+            error={isError}
+          />
+        ) : (
+          <StatCard label="FBR submitted" value={isLoading ? "…" : formatPkr(num(report?.summary?.fbrSubmittedValue))} icon="ShieldCheck" error={isError} />
+        )}
       </div>
 
       <DataTable
@@ -170,10 +196,30 @@ export function TaxRedesignedView() {
               <div className="truncate font-medium">{r.monthLabel}</div>
               <div className="text-xs text-muted-foreground">{num(r.bookingCount)} bookings</div>
             </div>
-            <div className="text-right">
-              <MoneyCell amount={num(r.revenue)} className="text-sm font-medium" />
-              <MoneyCell amount={num(r.expenses)} tone="error" className="text-xs" />
-            </div>
+            {/* WWL-197 — these two figures rendered stacked with no separator
+                and no label: "Rs 2,903,650Rs 2,718,100", with nothing to say
+                which was revenue and which was expenses. Same defect as
+                WWL-122. */}
+            <dl className="shrink-0 space-y-0.5 text-right">
+              <div className="flex items-baseline justify-end gap-2">
+                <dt className="text-[11px] text-muted-foreground">Revenue</dt>
+                <dd><MoneyCell amount={num(r.revenue)} className="text-sm font-medium" /></dd>
+              </div>
+              <div className="flex items-baseline justify-end gap-2">
+                <dt className="text-[11px] text-muted-foreground">Expenses</dt>
+                <dd><MoneyCell amount={num(r.expenses)} tone="error" className="text-xs" /></dd>
+              </div>
+              <div className="flex items-baseline justify-end gap-2 border-t border-border/60 pt-0.5">
+                <dt className="text-[11px] text-muted-foreground">Net</dt>
+                <dd>
+                  <MoneyCell
+                    amount={num(r.revenue) - num(r.expenses)}
+                    tone={num(r.revenue) - num(r.expenses) < 0 ? "error" : "success"}
+                    className="text-sm font-medium"
+                  />
+                </dd>
+              </div>
+            </dl>
           </div>
         )}
       />

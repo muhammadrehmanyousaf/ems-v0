@@ -7,6 +7,8 @@
  */
 
 import * as React from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { AnalyticsAPI, type ReceivablesData, type ReceivablesBucketKey } from "@/lib/api/analytics"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
@@ -50,6 +52,10 @@ const waLink = (phone: string | null | undefined, name: string | null | undefine
  * Keyed off the exact values the API sends (analyticsController `bucketKey`)
  * rather than substring guesses.
  */
+// WWL-139 — the labels were rendered through `cap()`, which upper-cases and
+// swaps underscores for spaces, so the column read "Days 1 30" / "Days 31 60" /
+// "Days 90 plus". Enum formatting applied to something a human has to read as a
+// range. Written out here instead.
 const BUCKETS: Record<string, { tone: StatusTone; label: string }> = {
   current: { tone: "success", label: "Current" },
   days_1_30: { tone: "info", label: "1–30 days" },
@@ -73,6 +79,7 @@ const BUCKET_BAR: Record<string, string> = {
 }
 
 export function ReceivablesRedesignedView() {
+  const router = useRouter()
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
   // WWL-140 — the aging bands were computed on every response and were the one
@@ -121,7 +128,43 @@ export function ReceivablesRedesignedView() {
   const columns: Column<ReceivablesCustomer>[] = [
     { key: "customer", header: "Customer", render: (c) => <span className="font-medium">{c.customerName || "—"}</span> },
     { key: "phone", header: "Phone", cellClassName: "text-muted-foreground", render: (c) => c.customerPhone || "—" },
-    { key: "bookings", header: "Bookings", align: "right", cellClassName: "tabular-nums", render: (c) => num(c.bookingCount) },
+    /**
+     * WWL-138 — a debtor row was a dead end: not clickable, no link to the
+     * customer, the booking or its installments, and no way to record the
+     * payment that is the obvious next step once the money arrives. The only
+     * affordance was a WhatsApp reminder, and 32% of those are broken
+     * (WWL-132).
+     *
+     * `bookings[]` has been on the payload all along, with the id of each. A
+     * customer with one open booking gets a direct link; one with several gets
+     * all of them, because collapsing them to a count is what made this a dead
+     * end in the first place.
+     */
+    {
+      key: "bookings", header: "Bookings", align: "right",
+      render: (c) => {
+        const list = c.bookings ?? []
+        if (list.length === 0) return <span className="tabular-nums">{num(c.bookingCount)}</span>
+        return (
+          <span className="flex flex-wrap justify-end gap-1">
+            {list.slice(0, 3).map((b) => (
+              <Link
+                key={b.bookingId}
+                href={`/dashboard/bookings/${b.bookingId}`}
+                onClick={(e) => e.stopPropagation()}
+                className="rounded border border-border px-1.5 text-xs tabular-nums text-primary hover:bg-muted"
+                title={`Open booking #${b.bookingId} — ${formatPkr(num(b.totalOutstanding))} outstanding`}
+              >
+                #{b.bookingId}
+              </Link>
+            ))}
+            {list.length > 3 && (
+              <span className="text-xs text-muted-foreground">+{list.length - 3}</span>
+            )}
+          </span>
+        )
+      },
+    },
     { key: "open", header: "Open installments", align: "right", cellClassName: "tabular-nums", render: (c) => num(c.installmentsOpen) },
     { key: "overdue", header: "Days overdue", align: "right", cellClassName: "tabular-nums", render: (c) => num(c.oldestDaysOverdue) },
     { key: "bucket", header: "Aging", render: (c) => <StatusPill tone={bucketTone(c.bucket)}>{bucketLabel(c.bucket)}</StatusPill> },
@@ -238,6 +281,13 @@ export function ReceivablesRedesignedView() {
       )}
 
       <DataTable
+        /* One open booking → the whole row is a way in. Several → the row stays
+           inert and the per-booking links above do the work, because guessing
+           which of four bookings the vendor meant would be worse than nothing. */
+        onRowClick={(c) => {
+          const list = c.bookings ?? []
+          if (list.length === 1) router.push(`/dashboard/bookings/${list[0].bookingId}`)
+        }}
         filterQuery={search || (bucketFilter ? bucketLabel(bucketFilter) : "")}
         onClearFilter={() => { setSearch(""); setBucketFilter(null) }}
         caption="Receivables"

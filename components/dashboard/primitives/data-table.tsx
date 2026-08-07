@@ -254,6 +254,9 @@ export function DataTable<T>({
             actions column is off the right edge. */}
         <div className="hidden w-full overflow-x-auto md:block">
           <table className="w-full text-sm" style={{ fontVariantNumeric: "tabular-nums" }}>
+            {/* WWL-196 and its five siblings — module after module shipped a
+                table with 0 of N `<th>` carrying `scope` and no `<caption>`.
+                Fixed once, here, so no screen can regress it individually. */}
             {caption && <caption className="sr-only">{caption}</caption>}
             <thead>
               <tr className="border-b border-border">
