@@ -148,9 +148,10 @@ export class BookingTimelineAPI {
     await axiosInstance.delete(`/api/v1/timeline-tasks/${id}`);
   }
 
-  /** GET /api/v1/timeline-tasks/today */
-  static async today(): Promise<TodayResponse> {
-    const res = await axiosInstance.get(`/api/v1/timeline-tasks/today`);
+  /** GET /api/v1/timeline-tasks/today — scoped to one venue when given (WWL-024). */
+  static async today(businessId?: number | null): Promise<TodayResponse> {
+    const res = await axiosInstance.get(`/api/v1/timeline-tasks/today`,
+      businessId ? { params: { businessId } } : undefined);
     return res.data?.data ?? { date: "", events: [] };
   }
 }

@@ -362,15 +362,21 @@ export class AnalyticsAPI {
    * A/R aging report — vendor-scoped per-customer outstanding-balance
    * rollup. The #1 PK vendor question: "kis se paise leny hen?"
    */
-  static async getReceivables(): Promise<ReceivablesData | null> {
-    try {
-      const res = await axiosInstance.get(
-        `${BACKEND_URL}api/v1/analytics/receivables`
-      );
-      return res.data.data;
-    } catch {
-      return null;
-    }
+  /**
+   * WWL-130 — this used to `catch { return null }`, so a dead endpoint was
+   * indistinguishable from a vendor who is owed nothing: the chase screen
+   * rendered "Nothing outstanding" over a failed request. The error is now
+   * allowed to reach the caller, which already has an error branch.
+   *
+   * WWL-024 — takes the selected venue, so the Today screen's Outstanding
+   * figure follows the switcher instead of always quoting the whole account.
+   */
+  static async getReceivables(businessId?: number | null): Promise<ReceivablesData | null> {
+    const res = await axiosInstance.get(
+      `${BACKEND_URL}api/v1/analytics/receivables`,
+      businessId ? { params: { businessId } } : undefined
+    );
+    return res.data.data;
   }
 
   /**
