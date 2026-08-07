@@ -1426,22 +1426,36 @@ export class BlockedDatesAPI {
     return res.data?.data?.blockedDates ?? [];
   }
 
+  /**
+   * WWL-492 — returns what actually changed, not just the resulting rows.
+   * `newlyBlocked === 0` means the date was already blocked and nothing was
+   * written; the caller must not claim otherwise.
+   */
   static async block(
     blockedDate: string,
     reason?: string,
     businessId?: number | null,
-  ): Promise<BlockedDate[]> {
+  ): Promise<{ blockedDates: BlockedDate[]; newlyBlocked: number; alreadyBlocked: number }> {
     const res = await axiosInstance.post("/api/v1/bookings/blocked-dates", {
       blockedDate,
       reason: reason || null,
       ...(businessId != null ? { businessId } : {}),
     });
-    return res.data?.data?.blockedDates ?? [];
+    const d = res.data?.data ?? {};
+    return {
+      blockedDates: d.blockedDates ?? [],
+      // Older backends send neither counter. Treat that as "we cannot tell"
+      // rather than inventing a zero, which would report a false failure.
+      newlyBlocked: d.newlyBlocked ?? (d.blockedDates?.length ? 1 : 0),
+      alreadyBlocked: d.alreadyBlocked ?? 0,
+    };
   }
 
-  static async unblock(date: string, businessId?: number | null): Promise<void> {
-    await axiosInstance.delete(`/api/v1/bookings/blocked-dates/${date}`, {
+  /** WWL-492 — `deleted` is how many rows were actually removed. */
+  static async unblock(date: string, businessId?: number | null): Promise<number> {
+    const res = await axiosInstance.delete(`/api/v1/bookings/blocked-dates/${date}`, {
       params: businessId != null ? { businessId } : undefined,
     });
+    return Number(res.data?.data?.deleted ?? 0);
   }
 }
