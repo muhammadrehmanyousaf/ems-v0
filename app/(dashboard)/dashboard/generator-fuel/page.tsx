@@ -2,7 +2,7 @@ import { GeneratorFuelRedesignedView } from '@/components/dashboard/mainScreens/
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Dashboard : Generator Fuel Log',
+  title: 'Dashboard : Generator fuel',
   description:
     'Diesel ledger for Pakistani venue generators — deliveries, consumption, tank readings, maintenance. Tracks per-event burn against load-shedding hours.',
 };

@@ -31,6 +31,12 @@ const segmentLabels: Record<string, string> = {
   'generator-fuel': 'Generator fuel',
   'function-sheets': 'Function sheets',
   'venue-os': 'Venue OS',
+  // WWL-198 / WWL-218 / WWL-317 — these read as a different screen from the one
+  // the sidebar names. A vendor should not have to work out that "Trade Ops",
+  // "Trade operations" and "Trade operations hub" are the same page.
+  'tax': 'Tax report',
+  'trade-ops': 'Trade operations',
+  'report-cards': 'Reports',
 };
 
 export function useBreadcrumbs() {

@@ -17,8 +17,10 @@
 
 import * as React from "react"
 import { useQuery } from "@tanstack/react-query"
+import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import {
   ExpensesAPI,
+  expensesQueryKey,
   type VendorExpense,
   type ExpenseCategory,
   EXPENSE_CATEGORY_LABELS,
@@ -78,12 +80,16 @@ const fmtEventDate = (s?: string | null) =>
   s ? new Date(s).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—"
 
 export function ExpenseCockpit(): React.ReactElement {
+  const activeBusinessId = useActiveBusinessId()
   const [gran, setGran] = React.useState<Gran>("month")
   const [anchor, setAnchor] = React.useState<Date>(() => new Date())
   const [addOpen, setAddOpen] = React.useState(false)
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["expense-cockpit"],
+    // WWL-179 — shares the table's key: same endpoint, same rows, one request.
+    // The cockpit always describes the whole ledger, so it passes no bookingId
+    // even when the table below it is filtered to one event.
+    queryKey: expensesQueryKey(activeBusinessId, null),
     queryFn: () => ExpensesAPI.list(),
   })
   const all = data?.expenses ?? []

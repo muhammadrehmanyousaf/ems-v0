@@ -148,7 +148,7 @@ export function PaymentsRedesignedView() {
         eyebrow="Money"
         title="Payments"
         description="Revenue collected and outstanding per booking."
-        actions={<Button onClick={() => setDialogOpen(true)}><Icon name="Plus" size={16} className="mr-1.5" /> Record payment</Button>}
+        actions={<Button onClick={() => setDialogOpen(true)}><Icon name="Plus" size={16} className="mr-1.5" /> Record a receipt</Button>}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

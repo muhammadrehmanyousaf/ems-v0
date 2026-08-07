@@ -334,6 +334,23 @@ const METHODS_NEEDING_REF = new Set([
   "online",
 ])
 
+/**
+ * The rail's own display name, as shown in the dropdown the vendor just used.
+ * Falls back to a de-underscored key so a new rail never renders blank.
+ */
+function railLabel(m: string): string {
+  const LABELS: Record<string, string> = {
+    ibft: "Bank IBFT",
+    bank_transfer: "Bank transfer",
+    jazzcash: "JazzCash",
+    easypaisa: "Easypaisa",
+    raast: "Raast",
+    cheque: "Cheque",
+    card: "Card",
+  }
+  return LABELS[m] ?? m.replace(/_/g, " ")
+}
+
 export function validateTransactionRef(
   value: string,
   method: string,
@@ -342,7 +359,11 @@ export function validateTransactionRef(
   const v = (value ?? "").trim()
   const m = String(method || "").trim().toLowerCase()
   if (!METHODS_NEEDING_REF.has(m)) return undefined
-  if (!v) return `${label} is required for ${m.replace("_", " ")} — you'll need it to match this against your bank statement.`
+  // WWL-125 — this named the internal key, so a vendor who had just picked
+  // "Bank IBFT" from the dropdown was told a ref is "required for ibft", and
+  // one who picked "Bank transfer" got "for bank transfer" in lower case. Use
+  // the label they actually chose.
+  if (!v) return `${label} is required for ${railLabel(m)} — you'll need it to match this against your bank statement.`
   if (v.length < 4) return `${label} looks too short.`
   return undefined
 }

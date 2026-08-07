@@ -31,7 +31,10 @@ const fmtDate = (v?: string | null) => {
   const d = new Date(v)
   return Number.isNaN(d.getTime())
     ? "—"
-    : d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
+    // WWL-226 — `undefined` locale means "whatever the browser is set to", so
+    // a vendor on a US-configured phone read "Aug 6" where every other module
+    // in the portal reads "06 Aug 2026". Pinned like the rest.
+    : d.toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })
 }
 
 const triggerLabel = (r: AutomationRule) => {
@@ -109,7 +112,15 @@ export function AutomationRedesignedView() {
       key: "actions", header: "", align: "right",
       render: (r) => (
         <div className="flex items-center justify-end gap-2">
-          <Switch checked={!!r?.enabled} onCheckedChange={(v) => toggleMut.mutate({ id: r.id, enabled: v })} aria-label="Enabled" />
+          {/* WWL-227 — every custom rule's switch announced the identical name
+              "Enabled", so a screen-reader user tabbing the list heard it once
+              per row with nothing to say which rule they were about to turn
+              off. The built-in switches already do this properly. */}
+          <Switch
+            checked={!!r?.enabled}
+            onCheckedChange={(v) => toggleMut.mutate({ id: r.id, enabled: v })}
+            aria-label={`${r?.enabled ? "Disable" : "Enable"} ${r?.name || `rule #${r?.id}`}`}
+          />
           <Button size="sm" variant="ghost" onClick={() => openEdit(r)} aria-label="Edit rule"><Icon name="Pencil" size={14} /></Button>
           <Button size="sm" variant="ghost" onClick={() => setDeleting(r)} aria-label="Remove rule"><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
         </div>

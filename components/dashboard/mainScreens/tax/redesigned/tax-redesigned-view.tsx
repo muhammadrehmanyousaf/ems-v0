@@ -81,7 +81,7 @@ export function TaxRedesignedView() {
     <div className="space-y-6 p-4 md:p-6">
       <PageHeader
         eyebrow="Money"
-        title="Tax & P&L"
+        title="Tax report"
         description={
           basis === "fiscal"
             ? `Fiscal year ${yearLabel(year)} (July–June) — revenue, expenses and net position.`

@@ -107,7 +107,7 @@ export function ReportCardsView() {
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Report Cards</h1>
+        <h1 className="text-lg font-semibold">Reports</h1>
         <div className="flex items-center gap-2">
           <button
             onClick={shareAllAsImage}
