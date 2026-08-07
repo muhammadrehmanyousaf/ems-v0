@@ -299,13 +299,29 @@ export interface CancellationPolicyState {
   templates: PolicyTemplate[];
 }
 
-export async function getCancellationPolicy(): Promise<CancellationPolicyState | null> {
+/**
+ * WWL-505 — this sent no `businessId`, so the server resolved one with
+ * `resolveOwnedBusinessId` and always answered for the vendor's FIRST venue.
+ * A three-venue vendor could therefore give a cancellation policy to 3358 and
+ * to nothing else: 3359 and 3360 had `active: null` and no route to change it,
+ * on the one setting that decides who keeps the money when a wedding is called
+ * off. Both endpoints have accepted the parameter all along.
+ */
+export async function getCancellationPolicy(businessId?: number | null): Promise<CancellationPolicyState | null> {
   try {
-    const { data } = await axiosInstance.get(`${v1}/policy`);
+    const { data } = await axiosInstance.get(`${v1}/policy`, {
+      params: businessId != null ? { businessId } : undefined,
+    });
     return (data?.data as CancellationPolicyState) ?? null;
   } catch (e: any) { if (e?.response?.status === 404) return null; throw e; }
 }
-export async function saveCancellationPolicy(body: { name?: string; slabs: PolicySlab[]; forceMajeureRule?: string; partialRefundPct?: number }) {
+export async function saveCancellationPolicy(body: {
+  name?: string;
+  slabs: PolicySlab[];
+  forceMajeureRule?: string;
+  partialRefundPct?: number;
+  businessId?: number | null;
+}) {
   const { data } = await axiosInstance.post(`${v1}/policy`, body);
   return data?.data as { id: number; name: string; slabs: PolicySlab[]; forceMajeureRule: string };
 }
@@ -316,7 +332,23 @@ export interface DisputeEvidence {
   policyAcceptance: { acceptedAt: string; acceptedName: string | null; channel: string; snapshot: { name?: string } } | null;
   refundRequests: { id: number; reason: string; state: RefundState; refund: number; forfeit: number; carryForward: number; resolvedVia: string | null }[];
   auditChain: { verified: boolean; checked: number; events: { seq: number; action: string; entityType: string; at: string }[] };
-  exposure: { policyAccepted: boolean; auditVerified: boolean; hasAppliedForfeit: boolean; flag: "OK" | "REVIEW" };
+  exposure: {
+    policyAccepted: boolean;
+    auditVerified: boolean;
+    hasAppliedForfeit: boolean;
+    /**
+     * WWL-511 — money the vendor cannot evidence. The pack listed Rs 1,223,278
+     * collected across two receipts with `hasProof: false` on BOTH and still
+     * flagged OK, because exposure weighed only acceptance and the audit chain.
+     * A forfeit is computed FROM what was received.
+     */
+    receiptsWithoutProof?: number;
+    receiptsTotalCount?: number;
+    unproofedAmount?: number;
+    unproofedShare?: number;
+    moneyUnevidenced?: boolean;
+    flag: "OK" | "REVIEW";
+  };
 }
 export async function getDisputeEvidence(bookingId: number): Promise<DisputeEvidence | null> {
   try {

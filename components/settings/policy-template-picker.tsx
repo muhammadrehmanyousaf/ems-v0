@@ -10,8 +10,12 @@
  */
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Check } from "lucide-react";
+import { Loader2, Check, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { getCancellationPolicy, saveCancellationPolicy, type PolicyTemplate, type PolicySlab } from "@/lib/api/bookingOrder";
+import { useMyBusinesses } from "@/hooks/use-my-businesses";
+import { errorMessage } from "@/lib/utils/api-error";
+import { PersonaPreference } from "@/components/dashboard/layout/persona-preference";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -33,18 +37,83 @@ function sameSlabs(a: PolicySlab[], b: PolicySlab[]): boolean {
   return key(a) === key(b);
 }
 
+/** A slab row while the vendor is editing it — strings, so a half-typed number survives. */
+type DraftSlab = { daysToEvent: string; pctForfeit: string };
+
 export function PolicyTemplatePicker() {
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery({ queryKey: ["cancellation-policy"], queryFn: getCancellationPolicy });
+
+  /**
+   * WWL-505 — the page carried no switcher and sent no businessId, so only the
+   * vendor's first venue could ever have a policy. This is the same defect
+   * Business Settings was repaired for — "every business after the first was
+   * UNREACHABLE" — on the setting that decides who keeps the money when a
+   * wedding is called off.
+   */
+  const { data: businesses } = useMyBusinesses();
+  const [bizId, setBizId] = useState<number | null>(null);
+  const activeBizId = bizId ?? businesses?.[0]?.id ?? null;
+  const activeBiz = businesses?.find((b) => b.id === activeBizId) ?? null;
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["cancellation-policy", activeBizId ?? "default"],
+    queryFn: () => getCancellationPolicy(activeBizId),
+  });
   const [picked, setPicked] = useState<string | null>(null);
   const [sample, setSample] = useState(800000);
   // WWL-507 — the template key awaiting confirmation.
   const [confirming, setConfirming] = useState<string | null>(null);
 
+  /**
+   * WWL-508 — three preset cards and nothing else, though the API accepts
+   * arbitrary slabs. A vendor whose real terms differ from all three had one
+   * other place to write them: the free-text box in Business Settings, which
+   * the refund engine does not read (WWL-514). So their actual policy could not
+   * be expressed anywhere the engine would honour.
+   */
+  const [custom, setCustom] = useState<DraftSlab[] | null>(null);
+
   const save = useMutation({
-    mutationFn: (t: PolicyTemplate) => saveCancellationPolicy({ name: t.name, slabs: t.slabs, forceMajeureRule: t.forceMajeureRule }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["cancellation-policy"] }),
+    mutationFn: (p: { name: string; slabs: PolicySlab[]; forceMajeureRule?: string }) =>
+      saveCancellationPolicy({
+        name: p.name,
+        slabs: p.slabs,
+        forceMajeureRule: p.forceMajeureRule,
+        businessId: activeBizId,
+      }),
+    /**
+     * WWL-512 — the module fired no toasts at all: not on selecting a template,
+     * not on saving, and not on failing to save. It was the only module in the
+     * sweep whose silent path included a WRITE, so a failed save looked exactly
+     * like a successful one.
+     */
+    onSuccess: (_r, p) => {
+      toast.success(
+        `${p.name} is now your cancellation policy${activeBiz?.name ? ` for ${activeBiz.name}` : ""}.`,
+      );
+      qc.invalidateQueries({ queryKey: ["cancellation-policy"] });
+    },
+    onError: (e: unknown) =>
+      toast.error(errorMessage(e, "Couldn't save that policy — nothing was changed."), { duration: 8000 }),
   });
+
+  /** The custom draft as the API wants it, or a reason it isn't ready. */
+  const customParsed = useMemo(() => {
+    if (!custom) return null;
+    const rows = custom.filter((r) => r.daysToEvent.trim() !== "" || r.pctForfeit.trim() !== "");
+    if (rows.length === 0) return { error: "Add at least one rule." };
+    const slabs: PolicySlab[] = [];
+    for (const r of rows) {
+      const d = Number(r.daysToEvent);
+      const p = Number(r.pctForfeit);
+      if (!Number.isInteger(d) || d < 0) return { error: "Days before the event must be a whole number, 0 or more." };
+      if (!Number.isFinite(p) || p < 0 || p > 100) return { error: "The amount kept must be between 0 and 100%." };
+      slabs.push({ daysToEvent: d, pctForfeit: p });
+    }
+    const days = slabs.map((s) => s.daysToEvent);
+    if (new Set(days).size !== days.length) return { error: "Two rules use the same number of days." };
+    return { slabs: [...slabs].sort((a, b) => b.daysToEvent - a.daysToEvent) };
+  }, [custom]);
 
   const activeKey = useMemo(() => {
     if (!data?.active) return null;
@@ -69,7 +138,11 @@ export function PolicyTemplatePicker() {
     return <div className="flex items-center gap-2 text-muted-foreground py-10 justify-center"><Loader2 className="size-4 animate-spin" /> Loading…</div>;
   }
   if (!data) {
-    return <div className="p-6 text-center text-sm text-muted-foreground">Cancellation engine abhi enabled nahi hai.</div>;
+    return (
+      <div className="p-6 text-center text-sm text-muted-foreground" lang="ur-Latn">
+        Cancellation engine abhi enabled nahi hai.
+      </div>
+    );
   }
 
   return (
@@ -77,13 +150,77 @@ export function PolicyTemplatePicker() {
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-lg font-semibold">Cancellation Policy</h1>
-          <p className="text-sm text-muted-foreground">Customer cancel kare to kitna wapas — apni policy chunein.</p>
+          {/* WWL-513 — the page is Roman-Urdu-first and carried no `lang`, so a
+              screen reader pronounced Urdu-in-Latin-script with English
+              phonology. `ur-Latn` is the tag for exactly this. And unlike
+              Business Settings, the page offered no PersonaPreference switch,
+              so a vendor who prefers Professional English had no way to get it
+              here. */}
+          <p className="text-sm text-muted-foreground" lang="ur-Latn">
+            Customer cancel kare to kitna wapas — apni policy chunein.
+          </p>
         </div>
-        <label className="text-sm text-muted-foreground">
-          Sample raqam
-          <input type="number" value={sample} onChange={(e) => setSample(Math.max(0, Number(e.target.value) || 0))}
+        <label className="text-sm text-muted-foreground" htmlFor="policy-sample">
+          <span lang="ur-Latn">Sample raqam</span>
+          <input id="policy-sample" type="number" min={0} value={sample} onChange={(e) => setSample(Math.max(0, Number(e.target.value) || 0))}
             className="ml-2 w-32 rounded-md border bg-transparent px-2 py-1 text-sm tabular-nums" />
         </label>
+      </div>
+
+      <PersonaPreference />
+
+      {(businesses?.length ?? 0) > 1 && (
+        <div className="rounded-lg border bg-card p-3">
+          <p className="mb-2 text-xs font-medium text-muted-foreground">
+            This policy applies to one venue. Choose which.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {businesses!.map((b) => (
+              <button
+                key={b.id}
+                type="button"
+                aria-current={b.id === activeBizId ? "true" : undefined}
+                onClick={() => { setBizId(b.id); setPicked(null); setCustom(null) }}
+                className={cn(
+                  "rounded-lg border px-3 py-1.5 text-left text-xs transition-colors",
+                  b.id === activeBizId
+                    ? "border-primary bg-primary/10 font-medium text-primary"
+                    : "hover:border-primary/40 hover:bg-muted",
+                )}
+              >
+                <span className="block max-w-[220px] truncate">{b.name || `Business #${b.id}`}</span>
+                <span className="block text-[10px] text-muted-foreground">{b.city ?? ""}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* WWL-514 — there are two cancellation-policy fields and neither knows
+          about the other. A vendor who writes their terms in the Business
+          Settings textarea has not set a policy the engine will honour, and a
+          vendor who picks Aam here has not populated the text that appears on
+          their listing. Say so, on both screens, rather than leaving the two to
+          disagree silently. */}
+      <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-3 text-sm">
+        {activeBiz?.cancelationPolicy ? (
+          <>
+            <p className="font-medium">Your listing also shows this text to couples:</p>
+            <p className="mt-1 whitespace-pre-line text-muted-foreground">{activeBiz.cancelationPolicy}</p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              That text is for reading. The refund engine does not use it — the schedule you pick
+              below is what decides the money. Keep them saying the same thing.{" "}
+              <a href="/dashboard/settings?tab=pricing" className="underline underline-offset-2">Edit the text</a>
+            </p>
+          </>
+        ) : (
+          <p className="text-muted-foreground">
+            The schedule you pick here decides refunds. Your public listing has a separate
+            cancellation-policy note for couples to read, and it is currently empty —{" "}
+            <a href="/dashboard/settings?tab=pricing" className="underline underline-offset-2">add it in Business Settings</a>{" "}
+            so what they read matches what they get.
+          </p>
+        )}
       </div>
 
       {inherited && (
@@ -156,10 +293,105 @@ export function PolicyTemplatePicker() {
                     })}
                   </tbody>
                 </table>
+                {/* WWL-506 — each preset carries a non-refundable deposit taken
+                    BEFORE the tiers apply (Aasaan 10% · Aam 20% · Sakht 30%).
+                    The picker neither displayed it nor sent it, so a vendor
+                    choosing Sakht from a table showing rupees had no way to know
+                    a 30% non-refundable deposit rode along with it. */}
+                {t.depositPct != null && t.depositPct > 0 && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Plus a <strong>{t.depositPct}% non-refundable deposit</strong>, taken before the
+                    table above applies.
+                  </p>
+                )}
               </CardContent>
             </Card>
           );
         })}
+      </div>
+
+      {/* WWL-508 — three cards and nothing else, though the API accepts
+          arbitrary slabs. */}
+      <div className="rounded-lg border bg-card p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-semibold">Your own schedule</h2>
+            <p className="text-xs text-muted-foreground">
+              If none of the three match your real terms, write them here.
+            </p>
+          </div>
+          {custom === null ? (
+            <Button size="sm" variant="outline" onClick={() => { setPicked(null); setCustom([{ daysToEvent: "30", pctForfeit: "50" }]) }}>
+              <Plus className="mr-1.5 size-3.5" /> Write my own
+            </Button>
+          ) : (
+            <Button size="sm" variant="ghost" onClick={() => setCustom(null)}>Cancel</Button>
+          )}
+        </div>
+
+        {custom !== null && (
+          <div className="mt-3 space-y-3">
+            <div className="space-y-2">
+              {custom.map((row, i) => (
+                <div key={i} className="flex flex-wrap items-end gap-2">
+                  <label className="text-xs text-muted-foreground">
+                    <span className="block">Cancels this many days before</span>
+                    <input
+                      type="number" min={0} step={1} value={row.daysToEvent}
+                      onChange={(e) => setCustom((c) => c!.map((r, j) => (j === i ? { ...r, daysToEvent: e.target.value } : r)))}
+                      className="mt-1 w-40 rounded-md border bg-transparent px-2 py-1 text-sm tabular-nums"
+                    />
+                  </label>
+                  <label className="text-xs text-muted-foreground">
+                    <span className="block">You keep (%)</span>
+                    <input
+                      type="number" min={0} max={100} step="0.01" value={row.pctForfeit}
+                      onChange={(e) => setCustom((c) => c!.map((r, j) => (j === i ? { ...r, pctForfeit: e.target.value } : r)))}
+                      className="mt-1 w-28 rounded-md border bg-transparent px-2 py-1 text-sm tabular-nums"
+                    />
+                  </label>
+                  {(() => {
+                    const p = Number(row.pctForfeit);
+                    return Number.isFinite(p) && p >= 0 && p <= 100 ? (
+                      <span className="pb-1.5 text-xs text-muted-foreground">
+                        couple gets {rs((sample * (100 - p)) / 100)}
+                      </span>
+                    ) : null;
+                  })()}
+                  <Button
+                    size="sm" variant="ghost" className="ml-auto"
+                    aria-label={`Remove rule ${i + 1}`}
+                    disabled={custom.length === 1}
+                    onClick={() => setCustom((c) => c!.filter((_, j) => j !== i))}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <Button size="sm" variant="outline" onClick={() => setCustom((c) => [...c!, { daysToEvent: "", pctForfeit: "" }])}>
+              <Plus className="mr-1.5 size-3.5" /> Add a rule
+            </Button>
+            {customParsed && "error" in customParsed && (
+              <p className="text-xs font-medium text-destructive">{customParsed.error}</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              A cancellation is charged by the closest rule at or below the days remaining. Anything
+              nearer than your smallest rule uses that rule.
+            </p>
+            <Button
+              size="sm"
+              disabled={save.isPending || !customParsed || "error" in customParsed}
+              onClick={() => {
+                if (!customParsed || "error" in customParsed) return;
+                save.mutate({ name: "Custom", slabs: customParsed.slabs, forceMajeureRule: "CARRY_FORWARD" });
+              }}
+            >
+              {save.isPending && <Loader2 className="mr-1.5 size-4 animate-spin" />}
+              Save my own schedule
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-3">
@@ -168,9 +400,10 @@ export function PolicyTemplatePicker() {
           onClick={() => setConfirming(picked)}
         >
           {save.isPending ? <Loader2 className="size-4 animate-spin mr-1.5" /> : null}
-          {picked && picked === activeKey ? "Yeh already active hai" : "Yeh policy save karein"}
+          <span lang="ur-Latn">
+            {picked && picked === activeKey ? "Yeh already active hai" : "Yeh policy save karein"}
+          </span>
         </Button>
-        {save.isSuccess && <span className="text-sm text-emerald-700 dark:text-emerald-400">Save ho gaya ✓</span>}
       </div>
 
       {/**
@@ -211,8 +444,17 @@ export function PolicyTemplatePicker() {
                 </p>
                 <p>
                   Bookings with no recorded acceptance will be refunded under this new policy from now
-                  on. Cancel karne par jo raqam wapas hogi, woh badal jaayegi.
+                  on. <span lang="ur-Latn">Cancel karne par jo raqam wapas hogi, woh badal jaayegi.</span>
                 </p>
+                {(() => {
+                  const t = data.templates.find((x) => x.key === confirming);
+                  return t?.depositPct ? (
+                    <p>
+                      <strong>{t.depositPct}% of the booking is a non-refundable deposit</strong> under
+                      this policy, taken before the table below applies.
+                    </p>
+                  ) : null;
+                })()}
                 {confirming && (
                   <div className="rounded-md border p-2">
                     <p className="mb-1 text-xs text-muted-foreground">
@@ -245,20 +487,28 @@ export function PolicyTemplatePicker() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Rehne dein</AlertDialogCancel>
+            <AlertDialogCancel><span lang="ur-Latn">Rehne dein</span></AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 const t = data.templates.find((x) => x.key === confirming);
-                if (t) save.mutate(t);
+                if (t) save.mutate({ name: t.name, slabs: t.slabs, forceMajeureRule: t.forceMajeureRule });
                 setConfirming(null);
               }}
             >
-              Haan, yeh policy lagayein
+              <span lang="ur-Latn">Haan, yeh policy lagayein</span>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <p className="text-[11px] text-muted-foreground">Force-majeure (govt/aafat) par paisa zabt nahi hota — carry-forward credit banta hai.</p>
+      <p className="text-[11px] text-muted-foreground" lang="ur-Latn">Force-majeure (govt/aafat) par paisa zabt nahi hota — carry-forward credit banta hai.</p>
+      {/* WWL-508 — stated plainly rather than left to be discovered: there is
+          still no version history and no way to clear a policy back to nothing,
+          though the service does version every save. */}
+      <p className="text-[11px] text-muted-foreground">
+        Every save is kept as a new version from today onward; earlier versions stay in force for
+        bookings already sold under them. There is no way to remove a policy entirely — pick another
+        to replace it.
+      </p>
     </div>
   );
 }
