@@ -142,6 +142,23 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
     // server must return everything rather than the stored-status subset.
     queryFn: () => SupplierAPI.listInvoices({ status: statusFilter === "all" || statusFilter === "overdue" ? undefined : statusFilter }),
   })
+  /**
+   * WWL-274 — the status chips read `summary.byStatus` from the SAME filtered
+   * query that feeds the table, so selecting one chip zeroed all the others.
+   * Picking "Overdue" turned `All(23) · Paid(11)` into `All(3) · Paid(0)`:
+   * `All(3)` is actively false, and a vendor looking at overdue bills could not
+   * see that 6 more were part-paid without clearing the filter first.
+   *
+   * The counts describe the LEDGER, so they come from an unfiltered read that
+   * the chip selection cannot narrow. Separate cache key, so switching filters
+   * never refetches it.
+   */
+  const ledgerQuery = useQuery({
+    queryKey: ["supplier-invoices", "__ledger__"],
+    queryFn: () => SupplierAPI.listInvoices({}),
+  })
+  const ledgerInvoices = ledgerQuery.data?.invoices ?? []
+
   const agingQuery = useQuery({ queryKey: ["supplier-aging"], queryFn: () => SupplierAPI.aging() })
   // Suppliers list feeds the "Log invoice" picker.
   const suppliersQuery = useQuery({ queryKey: ["suppliers-for-invoices"], queryFn: () => SupplierAPI.list({ isActive: true }) })
@@ -157,7 +174,6 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove invoice"),
   })
 
-  const summary = invQuery.data?.summary
   const allInvoices = invQuery.data?.invoices ?? []
   const invoices = React.useMemo(() => {
     let list = allInvoices
@@ -188,6 +204,21 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
   const statusOptions: Array<InvoiceStatus | "all"> = [
     "all", "received", "partially_paid", "paid", "overdue", "disputed", "void", "draft",
   ]
+
+  // WWL-274 — ledger-wide counts, unaffected by which chip is selected.
+  const ledgerCounts = React.useMemo(() => {
+    const c: Record<string, number> = { all: ledgerInvoices.length }
+    for (const inv of ledgerInvoices) {
+      // "overdue" is derived below, never taken from the stored status — a row
+      // carrying that label would otherwise be counted twice.
+      if (inv.status !== "overdue") c[inv.status] = (c[inv.status] ?? 0) + 1
+      if (inv.status !== "paid" && inv.status !== "void") {
+        const d = daysFromNow(inv.dueDate)
+        if (d != null && d < 0) c.overdue = (c.overdue ?? 0) + 1
+      }
+    }
+    return c
+  }, [ledgerInvoices])
 
   const columns: Column<SupplierInvoice>[] = [
     {
@@ -383,9 +414,10 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
             <div className="flex flex-wrap items-center gap-1.5">
               {statusOptions.map((s) => {
                 const active = statusFilter === s
-                const count = s === "all"
-                  ? Object.values(summary?.byStatus ?? {}).reduce((a, n) => a + (n || 0), 0)
-                  : summary?.byStatus?.[s] ?? 0
+                // Counted off the whole ledger, and "overdue" is DERIVED from
+                // the due date — the same rule the table filters by (WWL-273),
+                // so the chip and the rows it produces can never disagree.
+                const count = ledgerCounts[s] ?? 0
                 return (
                   <button
                     key={s}
@@ -485,6 +517,9 @@ function SuppliersDirectoryTab({ businessId }: { businessId?: number }) {
     queryKey: ["suppliers-redesigned"],
     queryFn: () => SupplierAPI.list(),
   })
+  // WWL-275 — what each supplier already owes, so "Credit available" can be
+  // credit that is actually available. Shared cache key with the invoices tab.
+  const agingQuery = useQuery({ queryKey: ["supplier-aging"], queryFn: () => SupplierAPI.aging() })
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["suppliers-redesigned"] })
   const openCreate = () => { setEditing(undefined); setDialogOpen(true) }
@@ -507,7 +542,38 @@ function SuppliersDirectoryTab({ businessId }: { businessId?: number }) {
 
   const active = all.filter((s) => s.isActive).length
   const categories = new Set(all.map((s) => s.category).filter(Boolean)).size
-  const creditTotal = all.reduce((s, x) => s + num(x.creditLimit), 0)
+
+  /**
+   * WWL-275 — "Credit available" was `sum(creditLimit)`: every supplier's
+   * ceiling added up, with nothing subtracted for what has already been drawn.
+   * On live it read Rs 8,800,000 against Rs 1,469,250 already outstanding —
+   * 20% high, on the number a vendor uses to decide whether they can place
+   * another order.
+   *
+   * Available credit is the limit minus what is owed, floored per supplier: a
+   * supplier drawn past their limit contributes zero headroom, not a negative
+   * that quietly funds someone else's.
+   *
+   * No new data is needed — `aging.perSupplier` already carries each
+   * supplier's outstanding, which is also what makes per-supplier headroom
+   * showable in the table.
+   */
+  const outstandingBySupplier = React.useMemo(() => {
+    const m = new Map<number, number>()
+    for (const row of agingQuery.data?.perSupplier ?? []) {
+      if (row.supplierId != null) m.set(Number(row.supplierId), num(row.outstanding))
+    }
+    return m
+  }, [agingQuery.data])
+
+  const headroomOf = (s: Supplier): number | null => {
+    if (s.creditLimit == null) return null
+    return Math.max(0, num(s.creditLimit) - (outstandingBySupplier.get(s.id) ?? 0))
+  }
+
+  const creditLimitTotal = all.reduce((sum, x) => sum + num(x.creditLimit), 0)
+  const creditAvailable = all.reduce((sum, x) => sum + (headroomOf(x) ?? 0), 0)
+  const creditDrawn = Math.max(0, creditLimitTotal - creditAvailable)
 
   const columns: Column<Supplier>[] = [
     {
@@ -526,6 +592,15 @@ function SuppliersDirectoryTab({ businessId }: { businessId?: number }) {
     { key: "contact", header: "Contact", cellClassName: "text-muted-foreground", render: (s) => s.contactPerson || "—" },
     { key: "phone", header: "Phone", cellClassName: "text-muted-foreground", render: (s) => s.phoneNumber || "—" },
     { key: "credit", header: "Credit limit", align: "right", render: (s) => <MoneyCell amount={s.creditLimit != null ? num(s.creditLimit) : null} tone="muted" /> },
+    // WWL-275 — per-supplier headroom was computable from data already on the
+    // client and shown on no screen. It is the number that answers "can I place
+    // another order with them", which is why the limit is recorded at all.
+    {
+      key: "headroom",
+      header: "Available",
+      align: "right",
+      render: (s) => <MoneyCell amount={headroomOf(s)} />,
+    },
     { key: "status", header: "Status", render: (s) => <StatusPill tone={s.isActive ? "success" : "neutral"}>{s.isActive ? "Active" : "Inactive"}</StatusPill> },
     {
       key: "actions", header: "", align: "right",
@@ -551,7 +626,12 @@ function SuppliersDirectoryTab({ businessId }: { businessId?: number }) {
         <StatCard label="Total suppliers" value={all.length} icon="Building2" />
         <StatCard label="Active" value={active} icon="ShieldCheck" trend="up" />
         <StatCard label="Categories" value={categories} icon="LayoutGrid" />
-        <StatCard label="Credit available" value={creditTotal ? formatPkr(creditTotal) : "—"} icon="Wallet" />
+        <StatCard
+          label="Credit available"
+          value={creditLimitTotal ? formatPkr(Math.round(creditAvailable)) : "—"}
+          icon="Wallet"
+          delta={creditLimitTotal ? `${formatPkr(Math.round(creditDrawn))} of ${formatPkr(Math.round(creditLimitTotal))} used` : undefined}
+        />
       </div>
 
       <DataTable

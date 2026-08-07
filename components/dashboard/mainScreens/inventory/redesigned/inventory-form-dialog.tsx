@@ -9,6 +9,7 @@
 import * as React from "react"
 import { useMutation } from "@tanstack/react-query"
 import { InventoryAPI, INVENTORY_CATEGORY_LABELS, INVENTORY_UNIT_LABELS, type InventoryItem, type InventoryCategory, type InventoryUnit } from "@/lib/api/inventory"
+import { RecordVenueField } from "@/components/dashboard/shared/record-venue-field"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
@@ -66,12 +67,16 @@ export function InventoryFormDialog({
     } else { loadedId.current = null }
   }, [open, item])
 
+  // WWL-242 — the venue this item belongs to, asked for rather than guessed.
+  const [venueId, setVenueId] = React.useState<string>(businessId != null ? String(businessId) : "")
+  const effectiveBusinessId = item?.businessId ?? (venueId ? Number(venueId) : businessId)
+
   const set = (k: keyof FormState, v: string) => setForm((f) => ({ ...f, [k]: v }))
 
   const saveMut = useMutation({
     mutationFn: () => {
       const body = {
-        businessId: item?.businessId ?? businessId!,
+        businessId: effectiveBusinessId!,
         name: form.name.trim(),
         category: form.category,
         unit: form.unit,
@@ -107,7 +112,7 @@ export function InventoryFormDialog({
     reorderLeadTimeDays: neg(form.reorderLeadTimeDays) ? "Lead time can't be negative." : undefined,
   }
   const hasNumErr = Object.values(numErrs).some(Boolean)
-  const canSave = form.name.trim() && !hasNumErr && (isEdit || businessId != null)
+  const canSave = form.name.trim() && !hasNumErr && (isEdit || effectiveBusinessId != null)
 
 
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
@@ -128,6 +133,10 @@ export function InventoryFormDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-1">
+          {/* WWL-242 — a new item was filed under `businesses?.[0]?.id`, so a
+              vendor looking at Bahria's stock added chairs and they landed on
+              Grand Marquee's book, with nothing on screen saying so. */}
+          {!isEdit && <RecordVenueField value={venueId} onChange={setVenueId} noun="item" />}
           <Field label="Item name"><input className={inputCls} value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="e.g. Premium photo album (12x18)" autoFocus /></Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Category">

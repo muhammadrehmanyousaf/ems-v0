@@ -95,6 +95,10 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, onSuccess }: 
     const [paymentType, setPaymentType] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('');
     const [customAmount, setCustomAmount] = useState('');
+    // WWL-113 — explicit acknowledgement that an amount well over the balance
+    // is intended. Reset whenever the amount changes, so a tick can never
+    // carry over onto a different figure.
+    const [confirmOverpay, setConfirmOverpay] = useState(false);
     const [txnRef, setTxnRef] = useState('');
     const [saving, setSaving] = useState(false);
 
@@ -128,6 +132,23 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, onSuccess }: 
 
     const customValue = Number(customAmount);
     const customValid = Number.isFinite(customValue) && customValue > 0;
+
+    /**
+     * WWL-113 — an over-payment guard relative to the booking.
+     *
+     * The tolerance is deliberate: rounding a Rs 1,673,250 balance up to
+     * Rs 1,675,000 in cash is ordinary, and making the vendor tick a box for
+     * Rs 1,750 of change would train them to tick it without reading. The
+     * threshold is the larger of Rs 1,000 and 1% of the balance — below that it
+     * is change, above it is a decision.
+     */
+    // Reference is the balance, floored at 0 — so an amount recorded against a
+    // booking that owes nothing is also a decision, not a silent write.
+    const overReference = Math.max(0, remaining);
+    const overBy = customValid ? customValue - overReference : 0;
+    const overTolerance = Math.max(1000, overReference * 0.01);
+    const suspiciousAmount = customValid && overBy > overTolerance;
+    const overMultiple = remaining > 0 ? customValue / remaining : 0;
     const mappedMethod = RECEIPT_METHOD_MAP[paymentMethod] ?? 'other';
     const txnRefRequired = paymentType === CUSTOM && NEEDS_TXN_REF.has(mappedMethod);
 
@@ -255,14 +276,45 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, onSuccess }: 
                                 inputMode="numeric"
                                 min={1}
                                 value={customAmount}
-                                onChange={(e) => setCustomAmount(e.target.value)}
+                                onChange={(e) => { setCustomAmount(e.target.value); setConfirmOverpay(false); }}
                                 placeholder={remaining > 0 ? String(remaining) : '50000'}
                             />
-                            <p className="text-xs text-muted-foreground">
-                                {customValid && remaining > 0 && customValue > remaining
-                                    ? `That is Rs ${(customValue - remaining).toLocaleString()} more than the balance — it will be recorded as a credit.`
-                                    : `Enter exactly what the customer handed over. Remaining balance is Rs ${remaining.toLocaleString()}.`}
-                            </p>
+                            {/* WWL-113 — there was an absolute sanity cap and
+                                nothing relative to the booking, so Rs 99,999,999
+                                against a Rs 1,673,250 booking saved silently:
+                                ~60x the total, and one extra zero on a real
+                                figure desynchronises the ledger permanently.
+
+                                Not refused — vendors do take genuine
+                                overpayments, and a payment that is real but
+                                unrecordable makes the khata disagree with the
+                                cash box, which is worse. It has to be confirmed
+                                instead, and the likely typo is named. */}
+                            {suspiciousAmount ? (
+                                <div className="rounded-md border border-amber-300 bg-amber-50 p-2.5 space-y-1.5 dark:border-amber-800 dark:bg-amber-950/40">
+                                    <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
+                                        {overMultiple >= 10
+                                            ? `That is about ${Math.round(overMultiple)}× the remaining balance of Rs ${remaining.toLocaleString()}. Did you mean Rs ${Math.round(customValue / 10).toLocaleString()}?`
+                                            : `That is Rs ${(customValue - remaining).toLocaleString()} more than the Rs ${remaining.toLocaleString()} balance.`}
+                                    </p>
+                                    <label className="flex items-start gap-2 text-xs text-amber-900 dark:text-amber-200">
+                                        <input
+                                            type="checkbox"
+                                            className="mt-0.5"
+                                            checked={confirmOverpay}
+                                            onChange={(e) => setConfirmOverpay(e.target.checked)}
+                                        />
+                                        <span>
+                                            Yes — the customer handed over Rs {customValue.toLocaleString()}.
+                                            Record the extra as a credit.
+                                        </span>
+                                    </label>
+                                </div>
+                            ) : (
+                                <p className="text-xs text-muted-foreground">
+                                    Enter exactly what the customer handed over. Remaining balance is Rs {remaining.toLocaleString()}.
+                                </p>
+                            )}
                         </div>
                     )}
 
@@ -325,6 +377,9 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, onSuccess }: 
                             !paymentType ||
                             !paymentMethod ||
                             (paymentType === CUSTOM && !customValid) ||
+                            // WWL-113 — an amount well above the balance is a
+                            // decision, not a keystroke.
+                            (paymentType === CUSTOM && suspiciousAmount && !confirmOverpay) ||
                             (txnRefRequired && !txnRef.trim())
                         }
                     >

@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { useState } from 'react'
+import { VenueScopeSync } from '@/lib/providers/venue-scope-sync'
 
 export function QueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -61,6 +62,10 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
+      {/* WWL-114 — drop venue-scoped cache entries when the vendor switches
+          venues, so a switch can never leave the previous venue's rows and
+          totals on screen under the new venue's name. */}
+      <VenueScopeSync />
       {children}
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

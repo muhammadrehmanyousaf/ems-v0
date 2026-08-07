@@ -148,13 +148,32 @@ export function InventoryRedesignedView() {
         renderCard={(i) => {
           const s = stockState(i)
           return (
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="truncate font-medium">{i.name}</div>
-                <div className="text-xs text-muted-foreground">{cap(i.category)} · {num(i.currentStock)} {String(i.unit)}</div>
-                <div className="mt-1"><StatusPill tone={s.tone}>{s.label}</StatusPill></div>
+            <div className="space-y-2.5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{i.name}</div>
+                  <div className="text-xs text-muted-foreground">{cap(i.category)} · {num(i.currentStock)} {String(i.unit)}</div>
+                  <div className="mt-1"><StatusPill tone={s.tone}>{s.label}</StatusPill></div>
+                </div>
+                <MoneyCell amount={i.lastRestockCostPerUnit != null ? num(i.lastRestockCostPerUnit) : null} tone="muted" className="text-sm" />
               </div>
-              <MoneyCell amount={i.lastRestockCostPerUnit != null ? num(i.lastRestockCostPerUnit) : null} tone="muted" className="text-sm" />
+              {/* WWL-244 — this card emitted no buttons, and the table it
+                  replaces is `hidden md:block`. Adjust stock is the only path
+                  that can change a count, so on a phone the module's entire
+                  purpose was unreachable: 108 action buttons in the DOM, 0
+                  visible. Full-width targets, comfortably over the 24px
+                  WCAG 2.2 minimum. */}
+              <div className="flex flex-wrap gap-2 pt-0.5">
+                <Button size="sm" variant="secondary" className="h-9 flex-1 min-w-[7rem]" onClick={() => setMoving(i)}>
+                  <Icon name="RefreshCw" size={14} className="mr-1.5" /> Adjust stock
+                </Button>
+                <Button size="sm" variant="outline" className="h-9 flex-1 min-w-[5rem]" onClick={() => openEdit(i)}>
+                  <Icon name="Pencil" size={14} className="mr-1.5" /> Edit
+                </Button>
+                <Button size="sm" variant="ghost" className="h-9 w-9 shrink-0 p-0" onClick={() => setDeleting(i)} aria-label={`Remove ${i.name}`}>
+                  <Icon name="Trash2" size={15} className="text-muted-foreground" />
+                </Button>
+              </div>
             </div>
           )
         }}

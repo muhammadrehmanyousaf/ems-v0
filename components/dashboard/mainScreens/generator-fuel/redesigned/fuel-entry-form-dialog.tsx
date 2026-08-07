@@ -66,7 +66,9 @@ export function FuelEntryFormDialog({
         businessId: entry?.businessId ?? businessId!,
         type: form.type,
         fuelType: form.fuelType,
-        litres: Number(form.litres) || 0,
+        // Maintenance carries no fuel; the server stores 0 for it regardless,
+        // so don't send a stale figure left behind by a type switch.
+        litres: form.type === "maintenance" ? 0 : Number(form.litres) || 0,
         generatorIdentifier: form.generatorIdentifier.trim() || undefined,
         costPerLitre: numOrU(form.costPerLitre),
         supplierName: form.supplierName.trim() || undefined,
@@ -81,15 +83,74 @@ export function FuelEntryFormDialog({
     onSuccess: () => { showSuccessToast(isEdit ? "Entry updated" : "Entry logged"); onSaved?.(); onOpenChange(false) },
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save entry"),
   })
-  // Require a cost/litre on delivery entries so a delivery can't be saved with
-  // no cost (which silently produces a Rs 0 fuel-spend dashboard).
-  const canSave =
-    Number(form.litres) > 0 &&
-    (isEdit || businessId != null) &&
-    (form.type !== "delivery" || Number(form.costPerLitre) > 0)
+  /**
+   * What "litres" means depends on the entry type, and one rule for all four
+   * made two of them unrecordable.
+   *
+   * `Number(form.litres) > 0` was applied regardless of type:
+   *
+   *   - WWL-302 — **Maintenance** involves no fuel. An oil change, a filter
+   *     swap or a servicing visit has no litres, so Save was permanently
+   *     disabled on one of the four types the form itself offers.
+   *   - WWL-303 — a **Tank reading of 0** is the single most consequential
+   *     reading on a generator log; it is the one that stops an event
+   *     mid-baraat. Zero fails `> 0`, so "the tank is empty" could not be
+   *     recorded.
+   *
+   * Deliveries and consumption genuinely move fuel, so those keep `> 0`.
+   */
+  const needsLitres = form.type === "delivery" || form.type === "consumption"
+  const isReading = form.type === "tank_reading"
+  const litresNum = form.litres.trim() === "" ? null : Number(form.litres)
+  const litresOk = needsLitres
+    ? litresNum != null && litresNum > 0
+    : isReading
+      ? litresNum != null && litresNum >= 0 // 0 = empty tank, the reading that matters most
+      : true // maintenance — no fuel involved
 
-  // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
-  const blockedReason = canSave ? undefined : "Add the number of litres, a type and a cost per litre to save."
+  /**
+   * WWL-305 — the cost guard covered deliveries only, so a **consumption** row
+   * saved with `costPerLitre: -99` and `runHours: -40`, and the payload went
+   * out. The header's Total cost card sums every entry type, so one negative
+   * consumption row drags the whole fuel spend down, and negative run hours
+   * corrupt every burn-rate figure derived from them.
+   */
+  const costNum = form.costPerLitre.trim() === "" ? null : Number(form.costPerLitre)
+  const hoursNum = form.runHours.trim() === "" ? null : Number(form.runHours)
+  const negativeCost = costNum != null && costNum < 0
+  const negativeHours = hoursNum != null && hoursNum < 0
+  const negativeLitres = litresNum != null && litresNum < 0
+  const deliveryNeedsCost = form.type === "delivery" && !(costNum != null && costNum > 0)
+
+  const canSave =
+    litresOk &&
+    !negativeCost &&
+    !negativeHours &&
+    !negativeLitres &&
+    (isEdit || businessId != null) &&
+    !deliveryNeedsCost
+
+  /**
+   * BUG-057 — a disabled button is not feedback. WWL-304: the hint was one
+   * fixed string for four different blocked states, naming a cost per litre
+   * that a maintenance entry does not need and a type that is always already
+   * selected — two things that are not the problem, and never the one that is.
+   */
+  const blockedReason = canSave
+    ? undefined
+    : negativeLitres
+      ? "Litres can't be negative."
+      : negativeCost
+        ? "Cost per litre can't be negative."
+        : negativeHours
+          ? "Run hours can't be negative."
+          : deliveryNeedsCost
+            ? "A delivery needs a cost per litre, or the fuel spend reads Rs 0."
+            : !litresOk
+              ? isReading
+                ? "Enter the tank reading in litres (0 is allowed — it means empty)."
+                : "Enter how many litres this entry is for."
+              : "Pick the venue this entry belongs to."
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -110,12 +171,26 @@ export function FuelEntryFormDialog({
                 {FUEL_TYPES.map((t) => <option key={t} value={t}>{FUEL_TYPE_LABELS[t]}</option>)}
               </select>
             </Field>
-            <Field label="Litres"><input type="number" className={cn(inputCls, "tabular-nums")} value={form.litres} onChange={(e) => set("litres", e.target.value)} placeholder="0" autoFocus /></Field>
-            <Field label={form.type === "delivery" ? "Cost / litre (Rs) *" : "Cost / litre (Rs)"}><input type="number" className={cn(inputCls, "tabular-nums")} value={form.costPerLitre} onChange={(e) => set("costPerLitre", e.target.value)} /></Field>
+            {/* WWL-302 — a maintenance entry involves no fuel, so the field
+                that was blocking it is not shown for one. */}
+            {form.type !== "maintenance" && (
+              <Field label={isReading ? "Tank reading (litres)" : "Litres"}>
+                <input
+                  type="number"
+                  min={0}
+                  className={cn(inputCls, "tabular-nums")}
+                  value={form.litres}
+                  onChange={(e) => set("litres", e.target.value)}
+                  placeholder="0"
+                  autoFocus
+                />
+              </Field>
+            )}
+            <Field label={form.type === "delivery" ? "Cost / litre (Rs) *" : "Cost / litre (Rs)"}><input type="number" min={0} className={cn(inputCls, "tabular-nums")} value={form.costPerLitre} onChange={(e) => set("costPerLitre", e.target.value)} /></Field>
             <Field label="Generator"><input className={inputCls} value={form.generatorIdentifier} onChange={(e) => set("generatorIdentifier", e.target.value)} placeholder="e.g. 25 KVA #1" /></Field>
             <Field label="Date"><input type="date" className={inputCls} value={form.occurredAt} onChange={(e) => set("occurredAt", e.target.value)} /></Field>
             <Field label="Supplier"><input className={inputCls} value={form.supplierName} onChange={(e) => set("supplierName", e.target.value)} /></Field>
-            <Field label="Run hours"><input type="number" className={cn(inputCls, "tabular-nums")} value={form.runHours} onChange={(e) => set("runHours", e.target.value)} /></Field>
+            <Field label="Run hours"><input type="number" min={0} className={cn(inputCls, "tabular-nums")} value={form.runHours} onChange={(e) => set("runHours", e.target.value)} /></Field>
           </div>
           <Field label="Notes"><textarea className={cn(inputCls, "h-20 resize-y py-2")} value={form.notes} onChange={(e) => set("notes", e.target.value)} /></Field>
         </div>

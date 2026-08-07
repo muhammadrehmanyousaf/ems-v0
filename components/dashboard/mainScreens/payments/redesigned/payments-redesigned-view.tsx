@@ -9,6 +9,9 @@
 import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { PaymentsAPI } from "@/lib/api/dashboard"
+// WWL-114 — the venue the header is scoped to. The request already carries it
+// via the axios interceptor; the cache key has to as well.
+import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import type { VendorPayment } from "@/lib/dashboard-types"
 import { ReceiptFormDialog } from "@/components/dashboard/mainScreens/receipts/redesigned/receipt-form-dialog"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
@@ -43,8 +46,26 @@ export function PaymentsRedesignedView() {
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const invalidate = () => qc.invalidateQueries({ queryKey: ["payments-redesigned"] })
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["payments-redesigned"],
+  /**
+   * WWL-114 — offline, the venue switcher lied about scope.
+   *
+   * Switching to Rehman Grand Marquee updated the switcher label and the
+   * persisted store, but the table still showed all 25 rows across 3 venues and
+   * the cards still read Rs 37,348,900 — Grand Marquee's real total is
+   * Rs 12,873,800. No error, no toast, no offline banner: one venue named,
+   * three venues' money.
+   *
+   * The scope is applied by the axios interceptor from the active-business
+   * store, so the REQUEST changed but the cache key did not — TanStack handed
+   * back the previous venue's entry, and a failed refetch left it on screen.
+   *
+   * Keying by the active venue makes each venue its own cache entry, so a
+   * switch can only ever show that venue's data or an honest loading state.
+   */
+  const activeBusinessId = useActiveBusinessId()
+
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
+    queryKey: ["payments-redesigned", activeBusinessId ?? "all"],
     queryFn: () => PaymentsAPI.getVendorRevenue(),
   })
 

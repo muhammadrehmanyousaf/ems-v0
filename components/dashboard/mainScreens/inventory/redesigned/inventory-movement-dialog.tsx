@@ -68,11 +68,39 @@ export function InventoryMovementDialog({
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't record movement"),
   })
 
-  const canSave = !!item && qty > 0
+  /**
+   * WWL-245 — `qty > 0` for every movement type made the app's own corrective
+   * instruction impossible to follow.
+   *
+   * Deleting an item with stock returns:
+   *   "Cannot delete item with non-zero stock. Record an adjustment movement to
+   *    zero it first."
+   *
+   * A stock-take counted at 0 is exactly that adjustment — the projection even
+   * read "New stock: 0 piece" — and Save stayed disabled, so the instruction
+   * could not be carried out and the item could never be removed. The server
+   * allows it; only this gate did not.
+   *
+   * The distinction is by type, not by number. A restock or a wastage OF ZERO is
+   * a no-op and stays blocked; a stock-take of zero is the whole point ("we
+   * counted, there is none left").
+   */
+  const isStockTake = !ADDS.includes(type) && !SUBTRACTS.includes(type)
+  const qtyValid = quantity.trim() !== "" && Number.isFinite(qty) && (isStockTake ? qty >= 0 : qty > 0)
+  const canSave = !!item && qtyValid
 
-
-  // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
-  const blockedReason = canSave ? undefined : "Fill in the required fields above to save."
+  // BUG-057 — a disabled button is not feedback. Say what it is waiting for,
+  // and say the right thing: the old hint named "the required fields above"
+  // while the only field was filled in correctly.
+  const blockedReason = canSave
+    ? undefined
+    : !item
+      ? "Pick an item to adjust."
+      : quantity.trim() === ""
+        ? isStockTake ? "Enter the counted quantity (0 is allowed)." : "Enter a quantity."
+        : qty < 0
+          ? "Quantity can't be negative."
+          : "A restock or wastage of zero changes nothing — use Stock-take to set the count to 0."
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
