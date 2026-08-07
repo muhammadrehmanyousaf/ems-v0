@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react";
+import { toCsv } from "@/lib/utils/csv-escape";
 import Link from "next/link";
 import { CalendarDays, Plus, Trash2, CheckCircle, Circle, Download, Share2, ArrowLeft, Filter, Search, Calendar, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -128,10 +129,10 @@ export default function ChecklistPage() {
       dueDate: item.dueDate || 'Not set'
     }));
     
-    const csv = [
+    const csv = toCsv([
       ['Task', 'Completed', 'Category', 'Priority', 'Due Date'],
       ...data.map(row => [row.title, row.completed, row.category, row.priority, row.dueDate])
-    ].map(row => row.join(',')).join('\n');
+    ]);
     
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);

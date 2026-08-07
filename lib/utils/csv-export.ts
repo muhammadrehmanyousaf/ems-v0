@@ -1,5 +1,6 @@
 import type { Table } from "@tanstack/react-table";
 import { formatColumnId } from "@/lib/utils";
+import { escapeCsv } from "@/lib/utils/csv-escape";
 
 export function exportTableToCSV<TData>(
   table: Table<TData>,
@@ -18,19 +19,13 @@ export function exportTableToCSV<TData>(
     return formatColumnId(col.id);
   });
 
-  const rows = table.getFilteredRowModel().rows.map((row) =>
-    columns.map((col) => {
-      const value = row.getValue(col.id);
-      if (value === null || value === undefined) return "";
-      const str = String(value);
-      if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-        return `"${str.replace(/"/g, '""')}"`;
-      }
-      return str;
-    })
-  );
+  // WWL-123 — escapeCsv also neutralises leading formula triggers, which the
+  // inline escaping here used to let straight through into the vendor's Excel.
+  const rows = table
+    .getFilteredRowModel()
+    .rows.map((row) => columns.map((col) => escapeCsv(row.getValue(col.id))));
 
-  const csv = [headers.join(","), ...rows.map((row) => row.join(","))].join(
+  const csv = [headers.map(escapeCsv).join(","), ...rows.map((row) => row.join(","))].join(
     "\n"
   );
 
