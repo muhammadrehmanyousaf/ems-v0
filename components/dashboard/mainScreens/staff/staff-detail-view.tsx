@@ -39,10 +39,21 @@ import { StaffAPI, type StaffMember, type StaffShift } from '@/lib/api/staff';
 
 const n = (v: number | string | null | undefined) => Number(v) || 0;
 
+/**
+ * WWL-269 — this page and the roster disagreed on how to render the same three
+ * things. Money here was `Rs. 1,750` with a period; the roster, and every other
+ * money surface in the product, writes `Rs 1,500`. Role and employment type
+ * rendered raw (`parking_valet · casual_dihari`) where the roster capitalises
+ * them. Two screens describing one staff member in two dialects.
+ */
 function fmtPKR(v: number | string | null | undefined): string {
   const x = n(v);
-  return `Rs. ${Math.round(x).toLocaleString('en-PK')}`;
+  return `Rs ${Math.round(x).toLocaleString('en-PK')}`;
 }
+
+/** Same transformation the roster uses, so the two cannot drift again. */
+const cap = (v?: string | null) =>
+  v ? v[0].toUpperCase() + v.slice(1).replace(/_/g, ' ') : '';
 
 function fmtDate(iso: string | null | undefined): string {
   if (!iso) return '—';
@@ -168,8 +179,8 @@ export default function StaffDetailView({ staffId }: { staffId: number }) {
           </Button>
           <h1 className="text-2xl font-semibold text-neutral-900">{member.fullName}</h1>
           <p className="text-sm text-neutral-500 mt-0.5">
-            {member.role}
-            {member.employmentType ? ` · ${member.employmentType}` : ''}
+            {cap(member.role)}
+            {member.employmentType ? ` · ${cap(member.employmentType)}` : ''}
             {member.joinedDate ? ` · joined ${fmtDate(member.joinedDate)}` : ''}
           </p>
         </div>
