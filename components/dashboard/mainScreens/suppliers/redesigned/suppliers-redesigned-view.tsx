@@ -17,6 +17,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useRecordBusinessId } from "@/hooks/use-record-business-id"
 import Link from "next/link"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
@@ -179,7 +180,7 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
   const removeMut = useMutation({
     mutationFn: (id: number) => SupplierAPI.removeInvoice(id),
     onSuccess: () => { showSuccessToast("Invoice removed"); setDeleting(null); refetchAll() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove invoice"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove invoice")),
   })
 
   const allInvoices = invQuery.data?.invoices ?? []
@@ -553,7 +554,7 @@ function SuppliersDirectoryTab({ businessId }: { businessId?: number }) {
     mutationFn: (id: number) => SupplierAPI.remove(id),
     onSuccess: () => { showSuccessToast("Supplier removed"); setDeleting(null); invalidate() },
     onError: (e: any) => toast.error(
-        e?.response?.data?.message || e?.message || "Couldn't remove supplier",
+        errorMessage(e, "Couldn't remove supplier"),
         { duration: 8000 },
       ),
   })

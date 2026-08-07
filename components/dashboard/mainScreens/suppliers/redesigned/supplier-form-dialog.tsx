@@ -10,6 +10,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation } from "@tanstack/react-query"
 import { SupplierAPI, type Supplier, type SupplierCategory } from "@/lib/api/suppliers"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -99,7 +100,7 @@ export function SupplierFormDialog({
       return isEdit ? SupplierAPI.update(supplier!.id, body) : SupplierAPI.create(body)
     },
     onSuccess: () => { showSuccessToast(isEdit ? "Supplier updated" : "Supplier added"); onSaved?.(); onOpenChange(false) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save supplier"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save supplier")),
   })
 
   const canSave = form.name.trim() && (isEdit || businessId != null)

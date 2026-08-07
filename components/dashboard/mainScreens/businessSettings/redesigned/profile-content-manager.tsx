@@ -12,6 +12,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation } from "@tanstack/react-query"
 import { BusinessesAPI, type ApiBusiness } from "@/lib/api/dashboard"
 import { Icon, Spinner, type IconName } from "@/components/dashboard/shared/icon"
@@ -168,7 +169,7 @@ export function ProfileContentManager({ business, onSaved }: { business: ApiBusi
     // bar had; this manager was missed at the time.
     onError: (e: any) =>
       toast.error(
-        e?.response?.data?.message || e?.message || "Couldn't save your listing content.",
+        errorMessage(e, "Couldn't save your listing content."),
         { duration: 8000 },
       ),
   })

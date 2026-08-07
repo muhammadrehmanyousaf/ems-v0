@@ -8,6 +8,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { PDC_STATUS_LABELS, PdcAPI, type PostDatedCheque, type PdcStatus } from "@/lib/api/postDatedCheques"
 import axiosInstance from "@/lib/axiosConfig"
@@ -81,7 +82,7 @@ export function PdcFormDialog({ open, onOpenChange, pdc, onSaved }: { open: bool
       return isEdit ? PdcAPI.update(pdc!.id, body) : PdcAPI.create(body)
     },
     onSuccess: () => { showSuccessToast(isEdit ? "Cheque updated" : "Cheque logged"); onSaved?.(); onOpenChange(false) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save cheque"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save cheque")),
   })
   // NOTE: chequeDate deliberately does NOT use validateNotFutureDate. A PDC is a
   // POST-dated cheque, so a future date is the entire point. What matters here
@@ -218,7 +219,7 @@ export function PdcTransitionDialog({ open, onOpenChange, pdc, onSaved }: { open
     // marked deposited" while every pill, filter and column in the module reads
     // "Deposited (awaiting clearance)". The canonical map already existed.
     onSuccess: () => { showSuccessToast(`Cheque marked ${PDC_STATUS_LABELS[to] ?? to}`); onSaved?.(); onOpenChange(false) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't update cheque"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't update cheque")),
   })
   const depositErr = to === "deposited" ? validateNotFutureDate(depositDate, { label: "Deposit date" }) : undefined
   /**

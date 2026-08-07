@@ -8,6 +8,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { ReceiptsAPI, RECEIPT_METHOD_LABELS, type PaymentReceipt, type ReceiptMethod } from "@/lib/api/paymentReceipts"
 import axiosInstance from "@/lib/axiosConfig"
@@ -109,7 +110,7 @@ export function ReceiptFormDialog({
       else showSuccessToast(isEdit ? "Receipt updated" : "Receipt logged")
       onSaved?.(); onOpenChange(false)
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save receipt"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save receipt")),
   })
   // This is a money ledger, so the gaps here cost real reconciliation work:
   //   - amount had NO min, so the browser's spinner offered negatives

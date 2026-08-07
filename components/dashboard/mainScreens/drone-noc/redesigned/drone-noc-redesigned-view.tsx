@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useRecordBusinessId } from "@/hooks/use-record-business-id"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
@@ -93,7 +94,7 @@ export function DroneNocRedesignedView({ adminCapable = true }: { adminCapable?:
   const removeMut = useMutation({
     mutationFn: (id: number) => DroneNocAPI.remove(id),
     onSuccess: () => { showSuccessToast("Permit removed"); setDeleting(null); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove permit"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove permit")),
   })
 
   const all = data?.permits ?? []

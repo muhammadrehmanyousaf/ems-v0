@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { PdcAPI, type PostDatedCheque, type PdcStatus } from "@/lib/api/postDatedCheques"
 import { PdcFormDialog, PdcTransitionDialog } from "@/components/dashboard/mainScreens/pdcs/redesigned/pdc-dialogs"
@@ -58,7 +59,7 @@ export function PdcsRedesignedView() {
   const removeMut = useMutation({
     mutationFn: (id: number) => PdcAPI.remove(id),
     onSuccess: () => { showSuccessToast("Cheque removed"); setDeleting(null); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove cheque"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove cheque")),
   })
 
   const all = data?.pdcs ?? []

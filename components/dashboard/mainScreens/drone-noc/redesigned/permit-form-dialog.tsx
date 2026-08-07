@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { RecordVenueField } from "@/components/dashboard/shared/record-venue-field"
 import { useMutation } from "@tanstack/react-query"
 import { DroneNocAPI, PERMIT_TYPE_LABELS, PERMIT_AUTHORITY_LABELS, type DroneNOC, type PermitType, type IssuingAuthority } from "@/lib/api/droneNoc"
@@ -95,7 +96,7 @@ export function PermitFormDialog({
       return isEdit ? DroneNocAPI.update(permit!.id, body) : DroneNocAPI.create(body)
     },
     onSuccess: () => { showSuccessToast(isEdit ? "Permit updated" : "Permit added"); onSaved?.(); onOpenChange(false) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save permit"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save permit")),
   })
   const canSave = form.referenceNumber.trim() && form.validFrom && form.validUntil && (isEdit || effectiveBusinessId != null)
 

@@ -8,6 +8,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { RecordVenueField } from "@/components/dashboard/shared/record-venue-field"
 import { useMutation } from "@tanstack/react-query"
 import { BrokerAPI, BROKER_TYPE_LABELS, type BrokerCommission, type BrokerType, type CommissionType } from "@/lib/api/brokers"
@@ -93,7 +94,7 @@ export function CommissionFormDialog({
       return isEdit ? BrokerAPI.updateCommission(commission!.id, body) : BrokerAPI.createCommission(body)
     },
     onSuccess: () => { showSuccessToast(isEdit ? "Commission updated" : "Commission added"); onSaved?.(); onOpenChange(false) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save commission"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save commission")),
   })
   const amountOk = form.commissionType === "percentage"
     ? (Number(form.commissionPct) || 0) > 0 && (Number(form.bookingAmountSnapshot) || 0) > 0

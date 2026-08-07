@@ -9,6 +9,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { BankDetailsAPI, type BankDetail, type UpsertBankDetailInput } from "@/lib/api/bankDetails"
 import { StatusPill } from "@/components/dashboard/primitives/status-pill"
@@ -77,13 +78,13 @@ export function BankAccountsManager() {
       return editingId ? BankDetailsAPI.update(editingId, body) : BankDetailsAPI.create(body)
     },
     onSuccess: () => { showSuccessToast(editingId ? "Bank account updated" : "Bank account added"); reset(); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save account"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save account")),
   })
   const activeMut = useMutation({
     mutationFn: (id: number) => BankDetailsAPI.setActive(id),
     onSuccess: () => { showSuccessToast("Default payout account updated"); invalidate() },
     onError: (e: any) => toast.error(
-        e?.response?.data?.message || e?.message || "Couldn't set active",
+        errorMessage(e, "Couldn't set active"),
         { duration: 8000 },
       ),
   })
@@ -91,7 +92,7 @@ export function BankAccountsManager() {
     mutationFn: (id: number) => BankDetailsAPI.remove(id),
     onSuccess: () => { showSuccessToast("Bank account removed"); invalidate() },
     onError: (e: any) => toast.error(
-        e?.response?.data?.message || e?.message || "Couldn't remove account",
+        errorMessage(e, "Couldn't remove account"),
         { duration: 8000 },
       ),
   })

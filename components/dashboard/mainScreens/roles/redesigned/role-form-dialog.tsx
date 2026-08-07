@@ -6,6 +6,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation } from "@tanstack/react-query"
 import { RolesAPI, type ApiRole } from "@/lib/api/dashboard"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -44,7 +45,7 @@ export function RoleFormDialog({
       return isEdit ? RolesAPI.update(role!.id, body) : RolesAPI.create(body)
     },
     onSuccess: () => { showSuccessToast(isEdit ? "Role updated" : "Role created"); onSaved?.(); onOpenChange(false) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save role"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save role")),
   })
   const canSave = name.trim()
 

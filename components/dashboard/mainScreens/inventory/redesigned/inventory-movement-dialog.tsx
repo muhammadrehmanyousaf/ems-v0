@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation } from "@tanstack/react-query"
 import { InventoryAPI, MOVEMENT_TYPE_LABELS, type InventoryItem, type MovementType } from "@/lib/api/inventory"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -94,7 +95,7 @@ export function InventoryMovementDialog({
       notes: notes.trim() || undefined,
     }),
     onSuccess: () => { showSuccessToast("Stock updated"); onSaved?.(); onOpenChange(false) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't record movement"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't record movement")),
   })
 
   /**

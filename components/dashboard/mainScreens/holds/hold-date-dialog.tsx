@@ -9,6 +9,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation } from "@tanstack/react-query"
 import { VendorHoldsAPI, HOLD_SLOT_PRESETS } from "@/lib/api/vendorHolds"
 import { useBusinessIdField } from "@/lib/store/use-business-id-field"
@@ -91,7 +92,7 @@ export function HoldDateDialog({
 
       onSaved?.(); onOpenChange(false)
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't hold the date"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't hold the date")),
   })
 
   const canSave = !!form.holdDate && !!form.holdTime.trim()

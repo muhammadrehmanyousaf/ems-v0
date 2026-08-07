@@ -10,6 +10,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { venueOsApi, type RecipeBom, type KitchenPrepSheet } from "@/lib/api/venueOs"
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
@@ -75,7 +76,7 @@ export function KitchenPrepView() {
       return venueOsApi.kitchenPrep(businessId as number, dishes)
     },
     onSuccess: (s) => setSheet(s),
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't build the prep sheet"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't build the prep sheet")),
   })
 
   // Total heads shown on the printed sheet is derived from the GENERATED sheet's

@@ -6,6 +6,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useRecordBusinessId } from "@/hooks/use-record-business-id"
 import Link from "next/link"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
@@ -59,7 +60,7 @@ export function StaffRedesignedView() {
   const removeMut = useMutation({
     mutationFn: (id: number) => StaffAPI.removeMember(id),
     onSuccess: () => { showSuccessToast("Staff removed"); setDeleting(null); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove staff"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove staff")),
   })
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())

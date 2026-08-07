@@ -11,6 +11,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   BookingTimelineAPI, TIMELINE_EVENT_KINDS, TIMELINE_EVENT_KIND_LABELS,
@@ -69,7 +70,7 @@ export function TimelineManagerDialog({
   const refresh = () => { qc.invalidateQueries({ queryKey: ["timeline", bookingId] }); onChanged?.() }
   const wrap = (fn: () => Promise<any>, ok: string) => async () => {
     try { await fn(); toast.success(ok); refresh() }
-    catch (e: any) { toast.error(e?.response?.data?.message || e?.message || "Something went wrong") }
+    catch (e: any) { toast.error(errorMessage(e, "Something went wrong")) }
   }
 
   const startAdd = () => { setForm(blankForm()); setEditingId("new") }
@@ -93,12 +94,12 @@ export function TimelineManagerDialog({
       else if (typeof editingId === "number") await BookingTimelineAPI.update(editingId, body)
     },
     onSuccess: () => { toast.success("Saved"); cancelEdit(); refresh() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save")),
   })
   const seedMut = useMutation({
     mutationFn: () => BookingTimelineAPI.seedFromTemplate(bookingId, { kind: seedKind, anchorTime: anchorTime || undefined }),
     onSuccess: (t) => { toast.success(`${t.length} tasks added — edit any time`); refresh() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't seed template"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't seed template")),
   })
 
   const AssigneeField = (

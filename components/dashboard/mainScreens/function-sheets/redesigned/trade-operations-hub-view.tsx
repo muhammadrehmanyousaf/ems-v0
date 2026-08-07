@@ -12,6 +12,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { FunctionSheetAPI, type FunctionSheet } from "@/lib/api/functionSheets"
 import { TRADE_OPS, getTrade, type TradeOpsColumn } from "@/lib/dashboard/trade-ops-config"
@@ -103,7 +104,7 @@ export function TradeOperationsHubView() {
       qc.invalidateQueries({ queryKey: ["trade-ops-hub"] })
     },
     onError: (e: any) => toast.error(
-        e?.response?.data?.message || e?.message || "Save failed",
+        errorMessage(e, "Save failed"),
         { duration: 8000 },
       ),
   })

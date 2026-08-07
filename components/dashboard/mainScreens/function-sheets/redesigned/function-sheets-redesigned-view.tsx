@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useRecordBusinessId } from "@/hooks/use-record-business-id"
 import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
@@ -122,7 +123,7 @@ export function FunctionSheetsRedesignedView() {
   const removeMut = useMutation({
     mutationFn: (id: number) => FunctionSheetAPI.remove(id),
     onSuccess: () => { showSuccessToast("Function sheet removed"); setDeleting(null); qc.invalidateQueries({ queryKey: ["function-sheets-redesigned"] }) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove function sheet"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove function sheet")),
   })
 
   const all = data?.functionSheets ?? []

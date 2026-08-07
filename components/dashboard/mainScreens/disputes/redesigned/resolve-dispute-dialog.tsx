@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation } from "@tanstack/react-query"
 import { resolveDispute, type DisputeResolution } from "@/lib/api/disputes"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -41,7 +42,7 @@ export function ResolveDisputeDialog({
   const mut = useMutation({
     mutationFn: () => resolveDispute(disputeId!, { resolution, notes: notes.trim() || undefined }),
     onSuccess: (res: any) => { showSuccessToast(res?.restoredPayoutCount ? `Resolved — ${res.restoredPayoutCount} payout(s) restored` : "Dispute resolved"); onSaved?.(); onOpenChange(false) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't resolve dispute"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't resolve dispute")),
   })
   const current = RESOLUTIONS.find((r) => r.value === resolution)
 

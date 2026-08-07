@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { errorMessage } from "@/lib/utils/api-error"
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import axiosInstance from "@/lib/axiosConfig";
@@ -55,7 +56,7 @@ export default function PayBookingPage() {
         if (!b) throw new Error("Booking not found or not yours");
         setBooking(b);
       } catch (e: any) {
-        setError(e?.response?.data?.message || e?.message || "Failed to load booking");
+        setError(errorMessage(e, "Failed to load booking"));
       } finally {
         setLoading(false);
       }

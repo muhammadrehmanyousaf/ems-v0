@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation } from "@tanstack/react-query"
 import { StaffAPI, type StaffMember, type StaffRole, type EmploymentType } from "@/lib/api/staff"
 import { RecordVenueField } from "@/components/dashboard/shared/record-venue-field"
@@ -105,7 +106,7 @@ export function StaffFormDialog({
       return isEdit ? StaffAPI.updateMember(member!.id, body) : StaffAPI.createMember(body)
     },
     onSuccess: () => { showSuccessToast(isEdit ? "Staff updated" : "Staff added"); onSaved?.(); onOpenChange(false) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save staff member"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save staff member")),
   })
   /*
    * Every field except the full name accepted anything at all.

@@ -8,6 +8,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation } from "@tanstack/react-query"
 import { CollaborationsAPI } from "@/lib/api/collaborations"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -49,7 +50,7 @@ export function InviteVendorDialog({
       agreedAmount: agreedAmount.trim() === "" ? undefined : Number(agreedAmount) || 0,
     }),
     onSuccess: (res: any) => { showSuccessToast(res?.matched ? "Invite sent — vendor matched!" : "Invite sent"); onSaved?.(); onOpenChange(false) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't send invite"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't send invite")),
   })
   const canSave = toName.trim() && (toPhone.trim() || toEmail.trim())
 

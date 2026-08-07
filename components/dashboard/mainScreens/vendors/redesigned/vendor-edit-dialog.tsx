@@ -8,6 +8,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation } from "@tanstack/react-query"
 import axiosInstance from "@/lib/axiosConfig"
 import { type ApiUser } from "@/lib/api/dashboard"
@@ -44,7 +45,7 @@ export function VendorEditDialog({
       fullName: fullName.trim(), email: email.trim(), phoneNumber: phoneNumber.trim(),
     }),
     onSuccess: () => { showSuccessToast("Vendor updated"); onSaved?.(); onOpenChange(false) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't update vendor"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't update vendor")),
   })
   const canSave = fullName.trim() && email.trim()
 

@@ -11,6 +11,7 @@
  */
 
 import { useState } from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import Link from "next/link"
 import { QuotesAPI, QUOTE_EVENT_TYPES } from "@/lib/api/quotes"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -49,7 +50,7 @@ export default function RequestQuoteDialog({ businessId, vendorName, open, onOpe
       })
       setSent(true)
     } catch (e: any) {
-      setError(e?.response?.data?.message || e?.message || "Couldn't send your request — please try again")
+      setError(errorMessage(e, "Couldn't send your request — please try again"))
     } finally {
       setSubmitting(false)
     }

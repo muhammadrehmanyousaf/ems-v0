@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { RecordVenueField } from "@/components/dashboard/shared/record-venue-field"
 import { useMutation } from "@tanstack/react-query"
 import { GeneratorFuelAPI, ENTRY_TYPE_LABELS, FUEL_TYPE_LABELS, type FuelEntry, type EntryType, type FuelType } from "@/lib/api/generatorFuel"
@@ -94,7 +95,7 @@ export function FuelEntryFormDialog({
       else await GeneratorFuelAPI.create(body)
     },
     onSuccess: () => { showSuccessToast(isEdit ? "Entry updated" : "Entry logged"); onSaved?.(); onOpenChange(false) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save entry"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save entry")),
   })
   /**
    * What "litres" means depends on the entry type, and one rule for all four
