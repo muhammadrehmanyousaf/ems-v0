@@ -19,6 +19,7 @@ import { StatusPill, type StatusTone } from "@/components/dashboard/primitives/s
 import { MoneyCell, formatPkr } from "@/components/dashboard/primitives/money-cell"
 import { ExportMenu } from "@/components/dashboard/shared/export-menu"
 import { bookedOn, receivedOn, outstandingOn, derivedPaymentStatus } from "@/lib/utils/booking-money"
+import { spaceNameOf } from "@/lib/utils/booking-space"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
@@ -109,7 +110,18 @@ export function BookingsRedesignedView() {
 
   const columns: Column<BookingData>[] = [
     { key: "service", header: "Booking", render: (b) => <span className="font-medium">{serviceLabel(b)}</span> },
-    { key: "space", header: "Space", cellClassName: "text-muted-foreground", render: (b) => b.bookingDetails?.[0]?.resource?.label || "—" },
+    // WWL-050 — this rendered "—" on all 22 rows and exported an empty column
+    // in every CSV. It read `resource.label`, which only ever resolves for
+    // venues that built BusinessResource rows in the older capacity screen; the
+    // halls a vendor actually builds live in the SubVenue tree, and that is what
+    // a booking now records. `resource` stays as the fallback for the venues
+    // that did use it.
+    {
+      key: "space",
+      header: "Space",
+      cellClassName: "text-muted-foreground",
+      render: (b) => spaceNameOf(b) || <span title="No hall recorded for this booking">—</span>,
+    },
     { key: "customer", header: "Customer", cellClassName: "text-muted-foreground", render: (b) => b.customerName || "—" },
     { key: "date", header: "Date", cellClassName: "text-muted-foreground whitespace-nowrap", render: (b) => fmtDate(b.bookingDate) },
     { key: "amount", header: "Amount", align: "right", render: (b) => <MoneyCell amount={bookedOn(b)} /> },
@@ -224,7 +236,9 @@ export function BookingsRedesignedView() {
                 filename="bookings"
                 columns={[
                   { header: "Booking", value: serviceLabel },
-                  { header: "Space", value: (b) => b.bookingDetails?.[0]?.resource?.label || "" },
+                  // WWL-048/WWL-050 — exported blank in every row because the
+                  // payload carried no space at all.
+                  { header: "Space", value: (b) => spaceNameOf(b) || "" },
                   { header: "Customer", value: (b) => b.customerName },
                   { header: "Phone", value: (b) => b.customerPhone },
                   { header: "Date", value: (b) => fmtDate(b.bookingDate) },

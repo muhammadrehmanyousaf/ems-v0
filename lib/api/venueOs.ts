@@ -1833,11 +1833,34 @@ export interface CalendarSlotCell {
   slotTemplateId: number; capacity: number; used: number; free: number;
   state: CellState; runsThisWeekday?: boolean; lastSpot?: boolean;
 }
-export interface CalendarHallCell { subVenueId: number; state: CellState }
-export interface CalendarDay { isBlocked: boolean; slots: CalendarSlotCell[]; halls: CalendarHallCell[]; bookedCount?: number }
+export interface CalendarHallCell {
+  subVenueId: number;
+  state: CellState;
+  /** The bookings occupying this hall on this day — lets a cell name them. */
+  bookingIds?: number[];
+}
+export interface CalendarDay {
+  isBlocked: boolean;
+  slots: CalendarSlotCell[];
+  halls: CalendarHallCell[];
+  /**
+   * WWL-100 — bookings on this day that resolve to no space.
+   *
+   * This used to be `bookedCount`, a plain per-day booking count, and the grid
+   * turned it into paint: any day with a booking had every free cell rewritten
+   * to Booked. That is what made all seven hall rows identical, and it cost the
+   * vendor every hall they could still have sold that day. It now counts only
+   * the genuinely unassigned ones, which get their own row instead.
+   */
+  unassignedCount?: number;
+  unassignedBookingIds?: number[];
+  /** @deprecated mirrors `unassignedCount`; kept for older clients. */
+  bookedCount?: number;
+}
 export interface VenueCalendar {
   businessId: number; from: string; to: string; hallMode: boolean;
   slots: { slotTemplateId: number; label: string; startTime: string; endTime: string }[];
-  halls: { subVenueId: number; name: string; kind: string; depth: number; parentSubVenueId: number | null }[];
+  halls: { subVenueId: number; name: string; kind: string; depth: number; parentSubVenueId: number | null; bookingMode?: string }[];
   days: Record<string, CalendarDay>;
+  unassignedByDay?: Record<string, number>;
 }

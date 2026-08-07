@@ -1153,6 +1153,14 @@ export interface CreateBookingVendor {
   // specific hall / lawn for this line. Triggers PARTITION_CONFLICT
   // server-side if the hall is already booked on that date.
   resourceId?: number;
+  // WWL-050 / WWL-100 — the SubVenue (hall / lawn / floor / partition) this
+  // line occupies, from the venue's own space tree. This is the assignment the
+  // availability grid, the Space column, the CSV export and the per-space P&L
+  // all read; `resourceId` above remains supported and bridges to it. Omit when
+  // the vendor did not pick: the server pins a single-space venue to its one
+  // space, and leaves a multi-space booking unassigned rather than guessing.
+  // A hall already taken on that date is refused with SPACE_CONFLICT.
+  subVenueId?: number;
   // DRIFT-09 — optional because the SERVER computes both from packages / menu /
   // minimumPrice / add-ons and overwrites whatever the client sends before it's
   // read (bookingController overwrites vendors[].totalAmount/downPayment from

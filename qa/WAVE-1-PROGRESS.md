@@ -142,12 +142,8 @@ still has no guest timings, no menu, no setup instructions and no kitchen notes.
 It is an operations document that contains no operations. That is a content
 design job.
 
-**Per-space availability** (`WWL-100`): the halls × days grid renders 98 cells
-whose columns are all identical, because bookings carry no space assignment
-(`WWL-050`). One booking marks the whole property unavailable, so the vendor
-cannot sell the Terrace Lawn on a day the Main Hall is taken. A matrix that
-implies a granularity the data does not have is worse than no matrix; fixing it
-means assigning spaces at booking time, which is a flow change.
+**Per-space availability** (`WWL-100`, `WWL-050`) — **CLOSED in wave 6.** See
+the section below.
 
 **Backend engines with no UI** (§3, remaining): the broker directory
 (`WWL-295`), four server-side filters wired to nothing (`WWL-310`), the
@@ -166,3 +162,94 @@ in [00-OPEN-BACKLOG.md](00-OPEN-BACKLOG.md) with a reproduction.
 
 **The 1,864 unrun cases** still need a seeded staging vendor, a test customer and
 a second vendor account. That infrastructure is unchanged by this work.
+
+---
+
+## Wave 6 — a booking now records the space it occupies
+
+`WWL-100` and `WWL-050` were one defect on four surfaces, and it was not a
+display bug: **a booking never recorded which hall it was in.**
+
+Because nothing carried the answer, every surface had to guess, and each guessed
+differently:
+
+| Surface | What it did | What the vendor saw |
+|---|---|---|
+| Availability grid | counted bookings per **day**, client painted every free cell Booked | 7 halls × 14 days, all columns identical — the Terrace Lawn unsellable on a day only the Main Hall was taken |
+| `availabilityForRange` | read `BookingSpaces` claims only | production has none: the writer sat behind `SCHEDULING_MULTI_RESOURCE`, never enabled |
+| `availabilityForDate` | a third rule (`fullyCommitted`) | disagreed with both of the above |
+| Bookings table + CSV | read `resource.label` | `—` on all 22 rows; an empty column in every export |
+
+Underneath sat **two disjoint space tables**. `BusinessResource` counts capacity
+for vendor types whose resource is a crew, a chair or a vehicle, and picked up a
+`'hall'` kind along the way. `SubVenue` is the venue tree — Hall → Floor →
+Partition, carrying capacity, gender mode, per-space slots, per-space expenses,
+per-space P&L, the public "Choose your space" selector and the booking engine.
+Vendors build halls in the SubVenue tree; **the booking dialog's hall picker read
+`BusinessResource`**, so it was empty at every venue that has halls, nothing was
+ever assigned, and the grid had nothing per-hall to show.
+
+### What was built
+
+**One rule.** `utils/spaceOccupancy.js` decides, `services/spaceOccupancy
+Service.js` reads. Occupancy unions the `BookingSpaces` claim with a new
+`BookingDetails.subVenueId` assignment, applies tree semantics on read from
+`parentSubVenueId`, and takes sessions from `slotVocabulary` so a morning mehndi
+and an evening walima coexist in one hall. The grid, the booking refusal, the
+public selector and the assignment endpoint all resolve through it — a green
+cell and a refusal cannot disagree.
+
+Tree semantics are read from parent pointers, not the materialised `path`
+column, deliberately: `String(null).startsWith(null)` is `true`, so a
+path-based check silently makes every node an ancestor of every other whenever
+`path` is NULL. There is a test for exactly that.
+
+**Unassigned bookings are reported, not guessed.** Both silent answers are
+wrong — painting halls Booked destroys sellable inventory (that *is* `WWL-100`),
+painting them Free hides a booking. The grid gets a "No hall recorded" row with
+a count per day; tapping a cell records the hall. The one exception is a venue
+with a **single bookable space**, where there is nothing to be ambiguous about:
+those bookings are resolved automatically, which makes the grid truthful for the
+large majority of the platform with no vendor action and no data migration.
+
+**`WWL-569` is explicitly preserved.** Reporting ambiguity is right for the
+vendor, who owns the business and can resolve it. It is not right for a
+customer: a stranger offered a hall that "might" be occupied is how the public
+double-booking happened. So the caller states its policy — the public selector
+passes `blockOnUnassigned`, the vendor grid does not. Two tests pin both halves.
+
+### Regression discipline
+
+- The `SCHEDULING_MULTI_RESOURCE` gate is gone, but `BookingSpaces` claims are
+  written **only for an explicit pick**. Claiming on behalf of the ~3,269
+  single-space venues that chose nothing would newly subject their existing
+  booking patterns to the Postgres `EXCLUDE` constraint, which can only reject
+  more than today. Their broad (business, date, time) guard is untouched, and
+  their grid is truthful from the assignment column alone.
+- `getBusinessAvailabilityBulk`'s per-hall path was also flag-gated, so **every**
+  venue took the per-business rule there — one booking made the whole property
+  unsellable at that slot. It is now decided by whether the venue actually has
+  more than one bookable space. Single-space venues are byte-identical.
+- `bookingSlotToRange` built `${date}TBarat:00.000+05:00` — an Invalid Date —
+  for any non-clock `bookingTime`, so a slot-template or named-function booking
+  could never have written a claim at all. Fixed via the same vocabulary.
+- The migration is additive, nullable and reversible; its backfill only touches
+  venues with a single bookable space. **Not run** — prod-first, the operator's.
+
+### Flags removed
+
+`venue_os_v2` gated the grid on both ends, so the calendar a venue needs most
+answered 404 for almost every vendor. Per the standing no-flags rule it was
+debt, and behind it this entire fix would have been invisible. Ownership is
+still enforced by the endpoint; a flag was never what protected it.
+
+### Still open in this area
+
+- **`WWL-100` follow-through is data, not code.** A multi-space venue's *past*
+  bookings stay unassigned until the vendor records them — by design, because
+  guessing which hall a past wedding was in would put a wrong answer on their
+  calendar. The grid now names them and fixes each in one tap.
+- **Not verified on live production.** Nothing here is deployed and the
+  migration has not been run. The claims are backed by 28 new unit tests and the
+  live evidence in `LIVE-MODULE-TEST-PLAN.md`, not by a browser session against
+  weddingwala.pk.
