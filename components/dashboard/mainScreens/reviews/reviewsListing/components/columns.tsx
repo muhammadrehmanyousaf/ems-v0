@@ -9,7 +9,7 @@ import { StartComponent } from "./star-component";
 
 export const columns = (
     onView: (review: Review) => void,
-    onDelete: (review: Review) => void,
+    // WWL-356 — no onDelete. A business cannot delete a review written about it.
     onReply: (review: Review) => void,
     onPin?: (review: Review) => void,
 ): ColumnDef<Review>[] => [
@@ -90,7 +90,6 @@ export const columns = (
             <RowActions
                 data={row.original}
                 onView={onView}
-                onDelete={onDelete}
                 onReply={onReply}
                 onPin={onPin}
             />

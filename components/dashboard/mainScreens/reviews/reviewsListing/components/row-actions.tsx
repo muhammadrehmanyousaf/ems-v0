@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, MoreHorizontal, Trash2, MessageSquareReply, Pin, PinOff } from "lucide-react";
+import { Eye, MoreHorizontal, MessageSquareReply, Pin, PinOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -12,15 +12,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Review } from "@/lib/dashboard-types";
 
+/**
+ * WWL-356 (S1) — there was a Delete action here, and the backend honoured it for
+ * the business being reviewed. `Review` is not paranoid, so it was a hard
+ * delete: rating, comment and the vendor's own published reply gone, with the
+ * public average, star distribution and trend silently recomputed around the
+ * hole. A vendor can reply to a review and pin one. They cannot erase one.
+ */
 interface RowActionsProps {
     data: Review;
     onView: (review: Review) => void;
-    onDelete: (review: Review) => void;
     onReply: (review: Review) => void;
     onPin?: (review: Review) => void;
 }
 
-export function RowActions({ data, onView, onDelete, onReply, onPin }: RowActionsProps) {
+export function RowActions({ data, onView, onReply, onPin }: RowActionsProps) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -53,14 +59,6 @@ export function RowActions({ data, onView, onDelete, onReply, onPin }: RowAction
                         )}
                     </DropdownMenuItem>
                 )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                    className="gap-2 text-destructive focus:text-destructive"
-                    onClick={() => onDelete(data)}
-                >
-                    <Trash2 className="size-4" />
-                    Delete
-                </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
     );

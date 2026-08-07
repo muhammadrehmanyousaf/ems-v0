@@ -115,6 +115,29 @@ export function ShareLinkDialog({
     }
   }, [sheet]);
 
+  // WWL-078 (S1) — `url` and `waMessage` used to live BELOW an
+  // `if (!sheet) return null` guard. The dialog first renders with sheet == null
+  // (4 hooks), then re-renders once the sheet arrives (5 hooks), and React threw
+  // #310 "Rendered more hooks than during the previous render" — which took the
+  // whole /dashboard/function-sheets/[id] route down, not just the dialog.
+  // Every hook now runs on every render; the null-checks moved inside.
+  const url = issuedToken ? buildShareUrl(issuedToken.token) : '';
+
+  const waMessage = useMemo(() => {
+    if (!sheet || !url) return '';
+    const name = sheet.customerName || 'there';
+    const title = sheet.title || 'your event';
+    return [
+      `Assalam-o-Alaikum ${name},`,
+      ``,
+      `Please review and sign the ${title} contract here:`,
+      url,
+      ``,
+      `Link expires ${new Date(issuedToken?.expiresAt || Date.now()).toLocaleDateString('en-PK')}.`,
+      `Wedding Wala vendor`,
+    ].join('\n');
+  }, [sheet, url, issuedToken]);
+
   if (!sheet) return null;
 
   const handleIssue = async () => {
@@ -152,8 +175,6 @@ export function ShareLinkDialog({
     }
   };
 
-  const url = issuedToken ? buildShareUrl(issuedToken.token) : '';
-
   const handleCopy = async () => {
     if (!url) return;
     try {
@@ -163,21 +184,6 @@ export function ShareLinkDialog({
       toast.error('Could not copy — long-press the URL to copy manually');
     }
   };
-
-  const waMessage = useMemo(() => {
-    if (!url) return '';
-    const name = sheet.customerName || 'there';
-    const title = sheet.title || 'your event';
-    return [
-      `Assalam-o-Alaikum ${name},`,
-      ``,
-      `Please review and sign the ${title} contract here:`,
-      url,
-      ``,
-      `Link expires ${new Date(issuedToken?.expiresAt || Date.now()).toLocaleDateString('en-PK')}.`,
-      `Wedding Wala vendor`,
-    ].join('\n');
-  }, [url, sheet, issuedToken]);
 
   const handleWhatsappShare = () => {
     if (!waMessage) return;

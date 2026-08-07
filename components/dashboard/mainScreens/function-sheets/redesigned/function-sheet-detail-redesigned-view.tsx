@@ -17,6 +17,7 @@ import {
   STATE_LABELS,
   PDF_VARIANT_LABELS,
   variantsAvailable,
+  lineItemLabel,
   type FunctionSheet,
   type FunctionSheetState,
   type PdfVariant,
@@ -290,7 +291,11 @@ export function FunctionSheetDetailRedesignedView({ id }: { id?: number } = {}) 
                   {items.map((it: any, i: number) => (
                     <tr key={i} className="border-b border-border/60 last:border-0">
                       <td className="py-2.5">
-                        <div className="font-medium">{it.label}</div>
+                        {/* WWL-071 — read through the helper: stored items use
+                            `description`, this view was reading `label`, so the
+                            vendor saw an empty Description column on their own
+                            Rs 1,092,200 quote. */}
+                        <div className="font-medium">{lineItemLabel(it) || <span className="text-muted-foreground">Untitled item</span>}</div>
                         {it.notes && <div className="text-xs text-muted-foreground">{it.notes}</div>}
                       </td>
                       <td className="py-2.5 text-right text-muted-foreground">{num(it.qty)}</td>
