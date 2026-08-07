@@ -54,6 +54,14 @@ interface Activation {
   futureConfirmed: number;
   baaqiTracked: number;
   shieldOn: boolean;
+  // WWL-519 — all five arrive on every response and were typed nowhere, so no
+  // caller could reach them even to try. Optional because an older backend
+  // deploy omits them; the panel degrades to the original three stats.
+  leadsTotal?: number;
+  leadsAwaitingReply?: number;
+  leadsWorked?: number;
+  receipts?: number;
+  functionSheets?: number;
 }
 interface BizCompleteness {
   businessId: number;
@@ -165,6 +173,34 @@ function BusinessChecklistCard({ biz }: { biz: BizCompleteness }) {
               <ShieldCheck className={cn("h-3.5 w-3.5", biz.activation.shieldOn ? "text-emerald-600" : "text-muted-foreground")} />
               {biz.activation.shieldOn ? "Booking shield ON" : "Booking shield off — add your future dates"}
             </div>
+            {/**
+              * WWL-519 — the API returns nine activation fields and this panel
+              * rendered four. The one it dropped that matters most is
+              * `leadsAwaitingReply`: on the live account that was 22 people
+              * across three venues who had asked about a wedding and heard
+              * nothing back. A block whose entire job is answering "what should
+              * I do next?" was showing how many bookings had been LOGGED —
+              * bookkeeping — while the actual next action sat unrendered on the
+              * same payload.
+              *
+              * It goes first, and it is a link, because reading the number is
+              * not the point; replying is.
+              */}
+            {(biz.activation.leadsAwaitingReply ?? 0) > 0 && (
+              <Link
+                href="/dashboard/leads"
+                className="mb-2 flex items-center justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 px-2.5 py-2 text-amber-900 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100"
+              >
+                <span className="text-xs font-semibold">
+                  {biz.activation.leadsAwaitingReply}{" "}
+                  {biz.activation.leadsAwaitingReply === 1 ? "lead is" : "leads are"} waiting on a reply
+                </span>
+                <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-medium">
+                  Reply now <ArrowRight className="h-3 w-3" />
+                </span>
+              </Link>
+            )}
+
             <div className="grid grid-cols-3 gap-2 text-center">
               {[
                 { n: biz.activation.bookings, label: "bookings logged" },
@@ -177,6 +213,30 @@ function BusinessChecklistCard({ biz }: { biz: BizCompleteness }) {
                 </div>
               ))}
             </div>
+
+            {/* The remaining four, as a secondary line — they describe how much
+                of the venue's real work already lives in the portal. */}
+            {(() => {
+              const a = biz.activation!;
+              const extra = [
+                { n: a.leadsTotal, label: "leads received" },
+                { n: a.leadsWorked, label: "leads worked" },
+                { n: a.receipts, label: "receipts recorded" },
+                { n: a.functionSheets, label: "function sheets" },
+              ].filter((s) => s.n != null);
+              if (extra.length === 0) return null;
+              return (
+                <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] sm:grid-cols-4">
+                  {extra.map((s) => (
+                    <div key={s.label} className="flex items-baseline justify-between gap-1 sm:flex-col sm:items-start sm:gap-0">
+                      <dt className="text-muted-foreground leading-tight">{s.label}</dt>
+                      <dd className="font-semibold tabular-nums">{s.n}</dd>
+                    </div>
+                  ))}
+                </dl>
+              );
+            })()}
+
             {!biz.activation.shieldOn && (
               <Link href="/dashboard/migrate" className="inline-flex items-center gap-1 mt-2 text-[11px] font-medium text-emerald-700 hover:underline">
                 Switch on the shield <ArrowRight className="h-3 w-3" />

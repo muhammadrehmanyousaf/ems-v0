@@ -63,6 +63,63 @@ export function daysOverdueInKarachi(due: Date | string, now: Date = new Date())
 }
 
 /**
+ * `YYYY-MM-DD` read straight off a Date's own calendar fields, with no
+ * timezone conversion at all.
+ *
+ * Use this — NOT `toKarachiDateString` — for a Date that came out of a date
+ * PICKER or was built with `new Date(y, m, d)`. Those carry a wall-clock
+ * intent ("the square the vendor clicked"), not an instant, and converting
+ * them shifts the day: a `<Calendar>` hands back local midnight, so east of
+ * Greenwich `toISOString()` lands on the previous evening and `.slice(0,10)`
+ * silently returns YESTERDAY. That is how the dashboard filter reported the
+ * wrong day for every Pakistani vendor, all day, every day.
+ */
+export function calendarDateString(d: Date): string {
+  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
+ * Last calendar day of a `YYYY-MM` period, as `YYYY-MM-DD`.
+ *
+ * `new Date(y, m, 0).toISOString().slice(0,10)` is the tempting one-liner and
+ * it is wrong east of Greenwich for the same reason as above — it returns the
+ * second-to-last day, quietly truncating every month-end report by one day.
+ */
+export function lastDayOfPeriod(period: string): string {
+  const [y, m] = period.split("-").map(Number);
+  if (!y || !m) return "";
+  return calendarDateString(new Date(y, m, 0));
+}
+
+/** Add (or subtract) whole days to a `YYYY-MM-DD` string without touching timezones. */
+export function addDaysToDateString(dateStr: string, days: number): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr || "")) return "";
+  const d = new Date(
+    Date.UTC(
+      Number(dateStr.slice(0, 4)),
+      Number(dateStr.slice(5, 7)) - 1,
+      Number(dateStr.slice(8, 10)),
+    ),
+  );
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Clock time in Karachi, e.g. `4:12 pm` — for "as of" freshness disclosures. */
+export function karachiTimeLabel(value: Date | string | number): string {
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("en-PK", {
+    timeZone: KARACHI,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(d);
+}
+
+/**
  * The `max` for a date input that must not accept the future — today in
  * Karachi, never yesterday.
  */
