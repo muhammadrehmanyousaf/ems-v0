@@ -25,6 +25,7 @@ import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { LinkedFunctionSheetBadge } from "@/components/shared/linked-function-sheet-badge"
+import { DestructiveConfirm } from "@/components/dashboard/primitives/destructive-confirm"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const fmtDate = (s?: string | null) => {
@@ -277,18 +278,30 @@ export function ReceiptsRedesignedView() {
 
       <ReceiptFormDialog open={dialogOpen} onOpenChange={setDialogOpen} receipt={editing} prefill={prefill} onSaved={invalidate} />
 
-      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove this receipt?</AlertDialogTitle>
-            <AlertDialogDescription>This {deleting ? formatPkr(num(deleting.amount)) : ""} receipt will be removed. This can't be undone.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleting && removeMut.mutate(deleting.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remove</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* WWL-145 — the confirm named only the amount, on a ledger where this
+          vendor has two "Barat — Salman Rauf" receipts. WWL-156 — it also said
+          "can't be undone" while PaymentReceipt is paranoid: true. */}
+      <DestructiveConfirm
+        open={!!deleting}
+        onOpenChange={(v) => !v && setDeleting(null)}
+        title="Remove this receipt?"
+        reversibility="soft"
+        pending={removeMut.isPending}
+        onConfirm={() => deleting && removeMut.mutate(deleting.id)}
+        fields={[
+          { label: "Amount", value: deleting ? formatPkr(num(deleting.amount)) : "" },
+          { label: "From", value: deleting ? payerName(deleting) : "" },
+          { label: "Method", value: deleting ? methodLabel(deleting.method) : "" },
+          { label: "Received", value: deleting ? fmtDate(deleting.receivedDate) : "" },
+          { label: "Txn ref", value: deleting?.transactionRef || "" },
+          { label: "Booking", value: deleting?.bookingId ? `#${deleting.bookingId}` : "" },
+        ]}
+        consequence={
+          deleting?.bookingId
+            ? "The booking's paid total and payment status will be recalculated without it."
+            : undefined
+        }
+      />
     </div>
   )
 }

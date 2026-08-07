@@ -41,6 +41,9 @@ function Field({ label, children, className }: { label: string; children: React.
 // ─── Create / edit ───────────────────────────────────────────────
 interface BookingOption { id: number; customerName: string; bookingDate: string }
 interface FormState { chequeNumber: string; bankName: string; branchCode: string; amount: string; chequeDate: string; bookingId: string; notes: string }
+
+/** WWL-117 — matches the `max` passed to validateOptionalText. */
+const NOTES_MAX = 1000
 const blank = (p?: PostDatedCheque): FormState => ({
   chequeNumber: p?.chequeNumber ?? "", bankName: p?.bankName ?? "", branchCode: p?.branchCode ?? "",
   amount: p?.amount != null ? String(p.amount) : "", chequeDate: (p?.chequeDate ?? today()).slice(0, 10),
@@ -104,7 +107,7 @@ export function PdcFormDialog({ open, onOpenChange, pdc, onSaved }: { open: bool
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
   const blockedReason =
     !canSave && !Object.values(shown).some(Boolean)
-      ? errs.bookingId ?? "Add a cheque number, a bank name, an amount above 0 and a cheque date to save."
+      ? errs.bookingId ?? errs.notes ?? "Add a cheque number, a bank name, an amount above 0 and a cheque date to save."
       : undefined
 
   return (
@@ -149,7 +152,32 @@ export function PdcFormDialog({ open, onOpenChange, pdc, onSaved }: { open: bool
               <p className="text-[11px] text-muted-foreground">A cheque must be tied to a booking whose customer has a registered account.</p>
             </Field>
           )}
-          <Field label="Notes"><textarea className={cn(inputCls, "h-20 resize-y py-2")} value={form.notes} onChange={(e) => set("notes", e.target.value)} /></Field>
+          {/**
+            * WWL-117 recurrence — `errs.notes` gated `canSave` while this field
+            * rendered no FieldError and never called `touch("notes")`, so the
+            * message could never appear. At 1001 characters Save went dead and
+            * the hint named a different field entirely. No maxLength either, so
+            * nothing stopped the paste that caused it.
+            */}
+          <Field label="Notes">
+            <textarea
+              id="pdc-notes"
+              className={cn(inputCls, "h-20 resize-y py-2", shown.notes && ERROR_INPUT_CLS)}
+              value={form.notes}
+              maxLength={NOTES_MAX}
+              onChange={(e) => { set("notes", e.target.value); touch("notes") }}
+              onBlur={() => touch("notes")}
+              {...fieldAria("pdc-notes", shown.notes)}
+            />
+            <div className="flex items-start justify-between gap-2">
+              <FieldError id="pdc-notes" message={shown.notes} />
+              {form.notes.length > NOTES_MAX - 100 && (
+                <span className={cn("shrink-0 text-[11px] tabular-nums", form.notes.length >= NOTES_MAX ? "text-destructive" : "text-muted-foreground")}>
+                  {form.notes.length} / {NOTES_MAX}
+                </span>
+              )}
+            </div>
+          </Field>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>

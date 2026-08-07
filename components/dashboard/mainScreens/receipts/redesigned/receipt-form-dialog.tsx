@@ -15,6 +15,7 @@ import { enqueue as outboxEnqueue, isOutboxEnabled, isOffline } from "@/lib/outb
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
+import { BookingPicker } from "@/components/dashboard/shared/booking-picker"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -39,6 +40,9 @@ function Field({ label, children, className }: { label: string; children: React.
 }
 
 interface BookingOption { id: number; customerName: string; bookingDate: string }
+
+/** WWL-117 — matches the `max` passed to validateOptionalText below. */
+const NOTES_MAX = 1000
 interface FormState { method: ReceiptMethod; amount: string; receivedDate: string; transactionRef: string; bookingId: string; notes: string }
 export interface ReceiptPrefill { bookingId?: number; amount?: number; method?: string; receivedDate?: string; note?: string }
 const blank = (r?: PaymentReceipt, prefill?: ReceiptPrefill): FormState => ({
@@ -133,7 +137,7 @@ export function ReceiptFormDialog({
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
   const blockedReason =
     !canSave && !Object.values(shown).some(Boolean)
-      ? errs.bookingId ?? "Add an amount above 0 and the date it was received to save."
+      ? errs.bookingId ?? errs.notes ?? "Add an amount above 0 and the date it was received to save."
       : undefined
 
   return (
@@ -194,14 +198,48 @@ export function ReceiptFormDialog({
           </div>
           {!isEdit && (
             <Field label="Linked booking (registered customer)">
-              <select className={inputCls} value={form.bookingId} onChange={(e) => set("bookingId", e.target.value)}>
-                <option value="">Select a booking…</option>
-                {(bookings ?? []).map((b) => <option key={b.id} value={b.id}>{b.customerName}{b.bookingDate ? ` · ${b.bookingDate.slice(0, 10)}` : ""}</option>)}
-              </select>
+              {/* WWL-127 — this was a hand-rolled `name · date` select, so three
+                  options read "Waheed Jutt" and cancelled bookings sat among
+                  the live ones with nothing to tell them apart. The shared
+                  picker carries amount, payment status and id, and groups the
+                  cancelled ones under their own heading. */}
+              <BookingPicker
+                value={form.bookingId ? Number(form.bookingId) : null}
+                onChange={(id) => set("bookingId", id == null ? "" : String(id))}
+                placeholder="Select a booking…"
+                className="w-full min-w-0"
+                aria-label="Booking this receipt belongs to"
+              />
               <p className="text-[11px] text-muted-foreground">A receipt must be tied to a booking whose customer has a registered account.</p>
             </Field>
           )}
-          <Field label="Notes"><textarea className={cn(inputCls, "h-20 resize-y py-2")} value={form.notes} onChange={(e) => set("notes", e.target.value)} /></Field>
+          {/**
+            * WWL-117 — `errs.notes` gated `canSave`, but this field rendered no
+            * FieldError and `touch("notes")` was never called, so the message
+            * could never appear. At 1001 characters Save went dead and the
+            * hint said "Add an amount above 0 and the date it was received" —
+            * while amount and date were both valid. The textarea had no
+            * maxLength either, so nothing stopped the paste that caused it.
+            */}
+          <Field label="Notes">
+            <textarea
+              id="rcpt-notes"
+              className={cn(inputCls, "h-20 resize-y py-2", shown.notes && ERROR_INPUT_CLS)}
+              value={form.notes}
+              maxLength={NOTES_MAX}
+              onChange={(e) => { set("notes", e.target.value); touch("notes") }}
+              onBlur={() => touch("notes")}
+              {...fieldAria("rcpt-notes", shown.notes)}
+            />
+            <div className="flex items-start justify-between gap-2">
+              <FieldError id="rcpt-notes" message={shown.notes} />
+              {form.notes.length > NOTES_MAX - 100 && (
+                <span className={cn("shrink-0 text-[11px] tabular-nums", form.notes.length >= NOTES_MAX ? "text-destructive" : "text-muted-foreground")}>
+                  {form.notes.length} / {NOTES_MAX}
+                </span>
+              )}
+            </div>
+          </Field>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>

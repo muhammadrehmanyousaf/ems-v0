@@ -30,6 +30,7 @@ import { CustomFieldsManager } from "@/components/dashboard/shared/custom-fields
 import { useCustomFieldDefs } from "@/components/dashboard/shared/custom-fields-section"
 import type { CustomFieldDef } from "@/lib/api/customFields"
 import { LinkedFunctionSheetBadge } from "@/components/shared/linked-function-sheet-badge"
+import { DestructiveConfirm } from "@/components/dashboard/primitives/destructive-confirm"
 
 const fmtCf = (v: unknown, d: CustomFieldDef): string => {
   if (v == null || v === "") return "—"
@@ -269,18 +270,32 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
         />
       )}
 
-      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove this expense?</AlertDialogTitle>
-            <AlertDialogDescription>This {deleting ? formatPkr(num(deleting.amount)) : ""} entry will be removed. This can't be undone.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleting && removeMut.mutate(deleting.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remove</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* WWL-182 — "This Rs 46,400 entry will be removed" on a 55-row ledger,
+          with no category, payee, date or event. WWL-156's other half: the
+          model is paranoid, so "can't be undone" was false in the database. */}
+      <DestructiveConfirm
+        open={!!deleting}
+        onOpenChange={(v) => !v && setDeleting(null)}
+        title="Remove this expense?"
+        reversibility="soft"
+        pending={removeMut.isPending}
+        onConfirm={() => deleting && removeMut.mutate(deleting.id)}
+        fields={[
+          { label: "Amount", value: deleting ? formatPkr(num(deleting.amount)) : "" },
+          { label: "Category", value: deleting ? cap(deleting.category) : "" },
+          { label: "Paid to", value: deleting?.vendorName || "" },
+          { label: "Spent on", value: deleting?.spentDate || "" },
+          { label: "Method", value: deleting?.paymentMethod ? methodLabel(deleting.paymentMethod) : "" },
+          { label: "Space", value: deleting?.subVenue?.name || "" },
+          {
+            label: "Event",
+            value: deleting?.booking
+              ? deleting.booking.customerName || `#${deleting.booking.id}`
+              : "",
+          },
+          { label: "Note", value: deleting?.description || "" },
+        ]}
+      />
     </div>
   )
 }

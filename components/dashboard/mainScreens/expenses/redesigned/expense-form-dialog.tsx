@@ -45,6 +45,9 @@ const today = () => todayInKarachi()
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
 
+/** WWL-117 — matches the `max` passed to validateOptionalText. */
+const NOTES_MAX = 1000
+
 interface FormState { amount: string; category: ExpenseCategory; vendorName: string; description: string; spentDate: string; paymentMethod: ExpensePaymentMethod; subcategory: string; subVenueId: string; bookingId: string }
 // `bookingId` lets a caller pre-tag the expense to an event — used when this
 // dialog is opened from inside a booking's Event Financials module, so the
@@ -243,7 +246,7 @@ export function ExpenseFormDialog({
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
   const blockedReason =
     !canSave && !Object.values(shown).some(Boolean)
-      ? "Add an amount above 0 and the date it was spent to save."
+      ? errs.description ?? "Add an amount above 0 and the date it was spent to save."
       : undefined
 
   return (
@@ -355,7 +358,32 @@ export function ExpenseFormDialog({
               {bookingsQ.isLoading && <p className="text-[11px] text-muted-foreground">Loading your bookings…</p>}
             </Field>
           </div>
-          <Field label="Note"><textarea className={cn(inputCls, "h-20 resize-y py-2")} value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="What was this for?" /></Field>
+          {/**
+            * WWL-117 recurrence — `errs.description` gated `canSave` while this field
+            * rendered no FieldError and never called `touch("description")`, so the
+            * message could never appear. At 1001 characters Save went dead and
+            * the hint named a different field entirely. No maxLength either, so
+            * nothing stopped the paste that caused it.
+            */}
+          <Field label="Note">
+            <textarea
+              id="exp-note"
+              className={cn(inputCls, "h-20 resize-y py-2", shown.description && ERROR_INPUT_CLS)}
+              value={form.description}
+              maxLength={NOTES_MAX}
+              onChange={(e) => { set("description", e.target.value); touch("description") }}
+              onBlur={() => touch("description")} placeholder="What was this for?"
+              {...fieldAria("exp-note", shown.description)}
+            />
+            <div className="flex items-start justify-between gap-2">
+              <FieldError id="exp-note" message={shown.description} />
+              {form.description.length > NOTES_MAX - 100 && (
+                <span className={cn("shrink-0 text-[11px] tabular-nums", form.description.length >= NOTES_MAX ? "text-destructive" : "text-muted-foreground")}>
+                  {form.description.length} / {NOTES_MAX}
+                </span>
+              )}
+            </div>
+          </Field>
           <CustomFieldsSection entityType="expense" businessId={activeBusinessId} values={cf} onChange={setCf} heading="Your custom fields" />
         </div>
 

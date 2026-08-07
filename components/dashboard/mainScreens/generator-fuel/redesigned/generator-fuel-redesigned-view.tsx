@@ -19,6 +19,7 @@ import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
 import { StatusPill, type StatusTone } from "@/components/dashboard/primitives/status-pill"
 import { MoneyCell, formatPkr } from "@/components/dashboard/primitives/money-cell"
+import { DestructiveConfirm } from "@/components/dashboard/primitives/destructive-confirm"
 import { ExportMenu } from "@/components/dashboard/shared/export-menu"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
@@ -243,18 +244,26 @@ export function GeneratorFuelRedesignedView() {
 
       <FuelEntryFormDialog open={dialogOpen} onOpenChange={setDialogOpen} entry={editing} businessId={businessId} onSaved={invalidate} />
 
-      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove this entry?</AlertDialogTitle>
-            <AlertDialogDescription>This fuel entry will be removed. This can't be undone.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleting && removeMut.mutate(deleting.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remove</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* WWL-316 — "This fuel entry will be removed" named no generator, date,
+          litres or cost, on a destructive action against an audit record. */}
+      <DestructiveConfirm
+        open={!!deleting}
+        onOpenChange={(v) => !v && setDeleting(null)}
+        title="Remove this fuel entry?"
+        reversibility="soft"
+        pending={removeMut.isPending}
+        onConfirm={() => deleting && removeMut.mutate(deleting.id)}
+        fields={[
+          { label: "Generator", value: deleting?.generatorIdentifier || "" },
+          { label: "Type", value: deleting ? typeLabel(deleting.type) : "" },
+          { label: "Litres", value: deleting ? `${Number(deleting.litres) || 0} L` : "" },
+          { label: "Cost", value: deleting?.totalCost != null ? formatPkr(Number(deleting.totalCost) || 0) : "" },
+          { label: "Supplier", value: deleting?.supplierName || "" },
+          { label: "When", value: deleting ? fmtDate(deleting.occurredAt) : "" },
+          { label: "Tank", value: deleting ? `${Number(deleting.tankBeforeLitres) || 0} → ${Number(deleting.tankAfterLitres) || 0} L` : "" },
+        ]}
+        consequence="The tank readings recorded either side of this entry stay as they are, so the running tank level will no longer add up across the log."
+      />
     </div>
   )
 }
