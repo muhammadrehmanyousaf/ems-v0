@@ -8,7 +8,7 @@
 
 import * as React from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { ExpensesAPI, EXPENSE_PAYMENT_METHOD_LABELS, type VendorExpense } from "@/lib/api/vendorExpenses"
+import { ExpensesAPI, EXPENSE_PAYMENT_METHOD_LABELS, expensesQueryKey, type VendorExpense } from "@/lib/api/vendorExpenses"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
 import { StatusPill } from "@/components/dashboard/primitives/status-pill"
@@ -90,11 +90,13 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
   const { data, isLoading, isError, refetch } = useQuery({
     // bookingId is part of the key: without it, opening two bookings' financials
     // in one session would serve the first booking's expenses for the second.
-    queryKey: ["expenses-redesigned", activeBusinessId, bookingId ?? null],
+    // WWL-179 — shared with ExpenseCockpit above, which asked the same
+    // question under its own key and doubled every load.
+    queryKey: expensesQueryKey(activeBusinessId, bookingId ?? null),
     queryFn: () => ExpensesAPI.list(bookingId != null ? { bookingId } : {}),
   })
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["expenses-redesigned"] })
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["expenses"] })
   // Recording an expense from inside an event pre-tags it to that event, so the
   // vendor never has to remember to attach it — and the Costing tab reflects it.
   const openCreate = () => {
