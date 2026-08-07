@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { RecordVenueField } from "@/components/dashboard/shared/record-venue-field"
 import { useMutation } from "@tanstack/react-query"
 import { DroneNocAPI, PERMIT_TYPE_LABELS, PERMIT_AUTHORITY_LABELS, type DroneNOC, type PermitType, type IssuingAuthority } from "@/lib/api/droneNoc"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -54,6 +55,18 @@ export function PermitFormDialog({
   onSaved?: () => void
 }) {
   const isEdit = !!permit
+  /**
+   * WWL-293/311/332/350 — the record used to be filed under whichever venue was
+   * first in the array. `businessId` now arrives undefined when the header is
+   * on "All venues" and the vendor owns more than one, so the dialog asks
+   * instead of guessing. RecordVenueField renders nothing for a single-venue
+   * vendor, who has nothing to get wrong.
+   */
+  const [venueId, setVenueId] = React.useState<string>(businessId != null ? String(businessId) : "")
+  React.useEffect(() => {
+    if (businessId != null) setVenueId(String(businessId))
+  }, [businessId])
+  const effectiveBusinessId = venueId ? Number(venueId) : businessId
   const [form, setForm] = React.useState<FormState>(blank(permit))
   const loadedId = React.useRef<number | "new" | null>(null)
   React.useEffect(() => {
@@ -64,7 +77,7 @@ export function PermitFormDialog({
   const saveMut = useMutation({
     mutationFn: () => {
       const body = {
-        businessId: permit?.businessId ?? businessId!,
+        businessId: permit?.businessId ?? effectiveBusinessId!,
         referenceNumber: form.referenceNumber.trim(),
         permitType: form.permitType,
         issuingAuthority: form.issuingAuthority,
@@ -84,10 +97,20 @@ export function PermitFormDialog({
     onSuccess: () => { showSuccessToast(isEdit ? "Permit updated" : "Permit added"); onSaved?.(); onOpenChange(false) },
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save permit"),
   })
-  const canSave = form.referenceNumber.trim() && form.validFrom && form.validUntil && (isEdit || businessId != null)
+  const canSave = form.referenceNumber.trim() && form.validFrom && form.validUntil && (isEdit || effectiveBusinessId != null)
 
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
-  const blockedReason = canSave ? undefined : "Add a reference number, a start date and an end date to save."
+  /**
+   * WWL-290 — the hint listed the content fields and never the venue, so a
+   * vendor on "All venues" who had filled the form correctly read a list of
+   * things they had already done and a Save button that stayed dead. Name the
+   * thing that is actually missing first.
+   */
+  const blockedReason = canSave
+    ? undefined
+    : !isEdit && effectiveBusinessId == null
+      ? "Choose which venue this permit belongs to."
+      : "Add a reference number, a start date and an end date to save."
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -97,6 +120,7 @@ export function PermitFormDialog({
           <DialogDescription>Track your drone permit, validity and pilot.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-1">
+          <RecordVenueField value={venueId} onChange={setVenueId} noun="permit" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Reference number"><input className={inputCls} value={form.referenceNumber} onChange={(e) => set("referenceNumber", e.target.value)} autoFocus /></Field>
             <Field label="Permit type">

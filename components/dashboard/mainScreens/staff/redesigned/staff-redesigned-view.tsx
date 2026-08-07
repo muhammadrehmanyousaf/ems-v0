@@ -6,6 +6,7 @@
  */
 
 import * as React from "react"
+import { useRecordBusinessId } from "@/hooks/use-record-business-id"
 import Link from "next/link"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { StaffAPI, type StaffMember } from "@/lib/api/staff"
@@ -45,7 +46,13 @@ export function StaffRedesignedView() {
   const [editing, setEditing] = React.useState<StaffMember | undefined>(undefined)
   const [deleting, setDeleting] = React.useState<StaffMember | null>(null)
   const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
-  const businessId = businesses?.[0]?.id
+  /**
+   * WWL-293/311/332/350 — this was `businesses?.[0]?.id`, so under "All venues"
+   * a new record landed on whichever venue happened to be first in the array,
+   * silently. The hook returns undefined rather than guessing when there is no
+   * right answer; the create dialog then asks.
+   */
+  const businessId = useRecordBusinessId()
   const invalidate = () => qc.invalidateQueries({ queryKey: ["staff-redesigned"] })
   const openCreate = () => { setEditing(undefined); setDialogOpen(true) }
   const openEdit = (m: StaffMember) => { setEditing(m); setDialogOpen(true) }

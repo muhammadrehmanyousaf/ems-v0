@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { AutomationRulesAPI, type AutomationRule } from "@/lib/api/automationRules"
 import { RuleFormDialog } from "@/components/dashboard/mainScreens/automation/redesigned/rule-form-dialog"
@@ -52,9 +53,12 @@ export function AutomationRedesignedView() {
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<AutomationRule | undefined>(undefined)
   const [deleting, setDeleting] = React.useState<AutomationRule | null>(null)
+  const activeBusinessId = useActiveBusinessId()
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["automation-redesigned"],
+    // WWL-224 — the venue is part of the key now that the server scopes by it,
+    // or switching venue would keep serving the previous venue's rule list.
+    queryKey: ["automation-redesigned", activeBusinessId],
     queryFn: () => AutomationRulesAPI.list(),
   })
 
