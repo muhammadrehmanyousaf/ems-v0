@@ -68,9 +68,17 @@ export function PdcsRedesignedView() {
     return all.filter((p) => [p.chequeNumber, p.bankName, p.customer?.fullName].some((v) => (v ?? "").toLowerCase().includes(q)))
   }, [all, search])
 
-  const heldCount = all.filter((p) => p.status === "held" || p.status === "deposited").length
-  const clearedValue = all.filter((p) => p.status === "cleared").reduce((s, p) => s + num(p.amount), 0)
-  const bounced = all.filter((p) => p.status === "bounced").length
+  /**
+   * WWL-168 — `Total cheques 5` / `Bounced 2` stayed frozen while the table
+   * filtered to 1 row, or to 0. Fourth consecutive money module where the
+   * headline described a different set than the rows beneath it.
+   */
+  const filtering = search.trim().length > 0
+  const scope = pdcs
+  const scopeNote = filtering ? `of ${all.length} total` : undefined
+  const heldCount = scope.filter((p) => p.status === "held" || p.status === "deposited").length
+  const clearedValue = scope.filter((p) => p.status === "cleared").reduce((s, p) => s + num(p.amount), 0)
+  const bounced = scope.filter((p) => p.status === "bounced").length
 
   const columns: Column<PostDatedCheque>[] = [
     { key: "cheque", header: "Cheque #", render: (p) => <span className="font-medium tabular-nums">{p.chequeNumber}</span> },
@@ -102,9 +110,9 @@ export function PdcsRedesignedView() {
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total cheques" value={all.length} icon="FileText" />
-        <StatCard label="Held / deposited" value={heldCount} icon="Clock" delta="awaiting" />
-        <StatCard label="Cleared value" value={formatPkr(clearedValue)} icon="Wallet" trend="up" error={isError} />
+        <StatCard label={filtering ? "Cheques (filtered)" : "Total cheques"} value={scope.length} icon="FileText" delta={scopeNote} />
+        <StatCard label="Held / deposited" value={heldCount} icon="Clock" delta={scopeNote ?? "awaiting"} />
+        <StatCard label={filtering ? "Cleared value (filtered)" : "Cleared value"} value={formatPkr(clearedValue)} icon="Wallet" trend="up" error={isError} />
         <StatCard label="Bounced" value={bounced} icon="AlertTriangle" trend={bounced ? "down" : "flat"} delta={bounced ? "follow up" : "none"} />
       </div>
 

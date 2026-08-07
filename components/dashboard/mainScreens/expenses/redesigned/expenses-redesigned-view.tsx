@@ -167,11 +167,30 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
           & overheads), and per-function profit. The detailed ledger follows. */}
       <ExpenseCockpit />
 
+      {/*
+        WWL-185 — "Spent · month stayed at Rs 745,200 while the ledger filtered
+        from 55 rows to 5, to 0, and back."
+
+        The cockpit above is a PERIOD summary and is labelled as one, so making
+        it follow a text search would trade one wrong headline for another. What
+        was missing is the ledger saying what it is currently showing, so the two
+        numbers stop looking like they disagree. The divider carries that now.
+      */}
       <div className="flex items-center gap-2 pt-1">
         <div className="h-px flex-1 bg-border" />
-        <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Full ledger</span>
+        <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          {search.trim()
+            ? `Full ledger — showing ${expenses.length} of ${all.length}`
+            : "Full ledger"}
+        </span>
         <div className="h-px flex-1 bg-border" />
       </div>
+      {search.trim() && (
+        <p className="-mt-3 text-center text-[11px] text-muted-foreground">
+          The summary above covers the whole period, not just these {expenses.length}
+          {expenses.length === 1 ? " row" : " rows"}.
+        </p>
+      )}
 
       <DataTable
         filterQuery={search}

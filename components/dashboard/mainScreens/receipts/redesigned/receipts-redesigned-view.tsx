@@ -71,14 +71,26 @@ export function ReceiptsRedesignedView() {
     return all.filter((r) => [payerName(r), r.transactionRef, r.method, r.notes].some((v) => (v ?? "").toLowerCase().includes(q)))
   }, [all, search])
 
-  const total = all.reduce((s, r) => s + num(r.amount), 0)
+  /**
+   * WWL-151 — the cards read `all` while the table rendered the filtered rows,
+   * so filtering 13 receipts down to 2 (or to 0) left the headline frozen at
+   * Rs 7,704,813 every time. Third consecutive money module with this. A
+   * headline that describes a different set than the rows under it is not a
+   * summary; it is two answers to one question.
+   *
+   * The cards describe what is on screen, and say so when a filter is on.
+   */
+  const filtering = search.trim().length > 0
+  const scope = receipts
+  const total = scope.reduce((s, r) => s + num(r.amount), 0)
   const now = new Date()
-  const thisMonth = all.filter((r) => {
+  const thisMonth = scope.filter((r) => {
     const d = new Date(r.receivedDate)
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
   })
   const thisMonthTotal = thisMonth.reduce((s, r) => s + num(r.amount), 0)
-  const cashTotal = all.filter((r) => r.method === "cash").reduce((s, r) => s + num(r.amount), 0)
+  const cashTotal = scope.filter((r) => r.method === "cash").reduce((s, r) => s + num(r.amount), 0)
+  const scopeNote = filtering ? `of ${all.length} total` : undefined
   // Drop the Txn-ref column entirely when every row is cash (no reference), so
   // the table doesn't carry an all-dashes dead column.
   const hasRef = all.some((r) => (r.transactionRef ?? "").trim().length > 0)
@@ -113,10 +125,10 @@ export function ReceiptsRedesignedView() {
       <OutboxConflicts onReenter={openReenter} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total received" value={formatPkr(total)} icon="Wallet" trend="up" error={isError} />
-        <StatCard label="This month" value={formatPkr(thisMonthTotal)} icon="Calendar" trend="up" delta={`${thisMonth.length} receipts`} error={isError} />
-        <StatCard label="Cash collected" value={formatPkr(cashTotal)} icon="DollarSign" error={isError} />
-        <StatCard label="Receipts" value={all.length} icon="FileText" />
+        <StatCard label={filtering ? "Total received (filtered)" : "Total received"} value={formatPkr(total)} icon="Wallet" trend="up" delta={scopeNote} error={isError} />
+        <StatCard label="This month" value={formatPkr(thisMonthTotal)} icon="Calendar" trend="up" delta={`${thisMonth.length} ${thisMonth.length === 1 ? "receipt" : "receipts"}`} error={isError} />
+        <StatCard label={filtering ? "Cash collected (filtered)" : "Cash collected"} value={formatPkr(cashTotal)} icon="DollarSign" error={isError} />
+        <StatCard label={filtering ? "Receipts (filtered)" : "Receipts"} value={scope.length} icon="FileText" delta={scopeNote} />
       </div>
 
       <DataTable
