@@ -12,7 +12,7 @@
  */
 
 import * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import {
@@ -28,6 +28,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface Item {
@@ -90,19 +91,27 @@ function tierFor(score: number): {
 export default function OnboardingChecklistView() {
   const [data, setData] = useState<BizCompleteness[]>([]);
   const [loading, setLoading] = useState(true);
+  // WWL-523 — see the render branch below.
+  const [failed, setFailed] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
+    setFailed(null);
     axiosInstance
       .get('/api/v1/businesses/my-completeness')
       .then((r) => setData(r.data?.data?.businesses ?? []))
-      .catch((e) =>
-        toast.error(
-          e?.response?.data?.message ||
-            'Failed to load onboarding checklist',
-        ),
-      )
+      .catch((e) => {
+        const msg =
+          e?.response?.data?.message || 'Failed to load onboarding checklist';
+        setFailed(msg);
+        toast.error(msg);
+      })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   if (loading) {
     return (
@@ -110,6 +119,29 @@ export default function OnboardingChecklistView() {
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-96 w-full" />
       </div>
+    );
+  }
+
+  /**
+   * WWL-523 — a failed fetch left `data` at `[]`, which fell straight through
+   * to "No businesses yet. Create one…". A vendor who owns three venues was
+   * told they own none, and invited to create one they already have, because
+   * the network hiccuped. Failure and emptiness are different answers and only
+   * one of them has a retry.
+   */
+  if (failed) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-start gap-3 p-5 text-sm">
+          <p className="font-medium">Couldn&apos;t load your onboarding checklist.</p>
+          <p className="text-muted-foreground">
+            This is a loading problem, not a change to your account — your businesses are safe.
+          </p>
+          <Button size="sm" variant="secondary" onClick={load}>
+            Try again
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -291,7 +323,23 @@ function BusinessChecklistCard({ biz }: { biz: BizCompleteness }) {
                     {cat.earned} / {cat.max} pts
                   </span>
                 </div>
-                <Progress value={pct} className="h-1" />
+                {/**
+                  * WWL-522 — six of these per card, each on a 1-pixel track,
+                  * and nothing reached the accessibility tree: no
+                  * `aria-valuenow`, no `aria-valuetext`. So the visual channel
+                  * was a hairline and the non-visual channel was the adjacent
+                  * text only. Both channels now carry the value, and the track
+                  * is thick enough to read.
+                  */}
+                <Progress
+                  value={pct}
+                  className="h-1.5"
+                  aria-label={`${cat.label} completeness`}
+                  aria-valuenow={cat.earned}
+                  aria-valuemin={0}
+                  aria-valuemax={cat.max}
+                  aria-valuetext={`${cat.earned} of ${cat.max} points`}
+                />
                 {/* Each row is a link to the field that fixes it, and carries
                     the reason it matters. A checklist that names a gap without
                     naming its fix is a scoreboard, not a checklist — and the
