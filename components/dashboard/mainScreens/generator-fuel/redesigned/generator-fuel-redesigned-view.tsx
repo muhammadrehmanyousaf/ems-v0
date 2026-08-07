@@ -183,6 +183,8 @@ export function GeneratorFuelRedesignedView() {
       )}
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Generator fuel log"
         columns={columns}
         data={entries}

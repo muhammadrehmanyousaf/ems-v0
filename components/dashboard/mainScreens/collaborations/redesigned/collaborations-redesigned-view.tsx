@@ -219,6 +219,8 @@ export function CollaborationsRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Collaborations"
         columns={columns}
         data={filtered}

@@ -226,6 +226,8 @@ export function HalalCertsRedesignedView() {
       )}
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Halal certificates"
         columns={columns}
         data={certs}

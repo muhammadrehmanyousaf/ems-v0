@@ -108,6 +108,8 @@ export function InventoryRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Inventory"
         columns={columns}
         data={items}

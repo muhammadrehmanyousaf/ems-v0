@@ -147,6 +147,8 @@ export function UsersAdminRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Users"
         columns={columns}
         data={users}

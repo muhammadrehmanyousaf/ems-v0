@@ -140,6 +140,8 @@ export function StaffRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Staff"
         columns={columns}
         data={members}

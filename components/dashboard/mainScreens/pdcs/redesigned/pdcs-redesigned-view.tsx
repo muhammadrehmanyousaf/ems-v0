@@ -109,6 +109,8 @@ export function PdcsRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Cheque ledger"
         columns={columns}
         data={pdcs}

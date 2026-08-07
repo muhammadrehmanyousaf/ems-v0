@@ -314,6 +314,8 @@ export function VendorQueueRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Vendor queue"
         columns={columns}
         data={rows}

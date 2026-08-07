@@ -116,6 +116,8 @@ export function RolesAdminRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Roles"
         columns={columns}
         data={roles}

@@ -183,6 +183,8 @@ export function BusinessesAdminRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Businesses"
         columns={columns}
         data={businesses}

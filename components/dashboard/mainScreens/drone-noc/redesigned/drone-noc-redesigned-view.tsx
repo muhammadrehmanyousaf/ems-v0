@@ -175,6 +175,8 @@ export function DroneNocRedesignedView({ adminCapable = true }: { adminCapable?:
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
         caption="Drone NOC permits"
         columns={columns}
         data={permits}
