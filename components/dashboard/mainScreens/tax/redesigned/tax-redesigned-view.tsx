@@ -3,7 +3,7 @@
 /**
  * Tax & P&L — redesigned (Track C, computed). Wired to
  * TaxReportAPI.getAnnualReport(); rendered through the primitives. Read-only;
- * original screen untouched. Route /dashboard/tax-new.
+ * Route /dashboard/tax.
  */
 
 import * as React from "react"

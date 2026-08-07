@@ -4,7 +4,7 @@
  * Collaborations — redesigned (Track C). Wired to CollaborationsAPI for both
  * directions: Incoming (invites to you — Accept/Decline) and Outgoing (invites
  * you sent — Cancel). Rendered through the redesign primitives. Original screen
- * untouched. Route /dashboard/collaborations-new.
+ * untouched. Route /dashboard/collaborations.
  */
 
 import * as React from "react"

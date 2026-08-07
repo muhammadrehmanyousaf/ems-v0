@@ -2,8 +2,8 @@
 
 /**
  * Generator fuel log — redesigned (Track C). Wired to GeneratorFuelAPI.list();
- * rendered through the shared primitives. Read-only; original screen untouched.
- * Route /dashboard/generator-fuel-new.
+ * rendered through the shared primitives. 
+ * Route /dashboard/generator-fuel.
  */
 
 import * as React from "react"
@@ -73,6 +73,20 @@ export function GeneratorFuelRedesignedView() {
   })
   const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
   const businessId = businesses?.[0]?.id
+
+  /**
+   * WWL-307 (S2) — tank status is computed on the server and was shown nowhere.
+   * WWL-308 (S3) — the tank balance sits on every row and in no column.
+   *
+   * The one number a generator operator actually wants — how much diesel is in
+   * each tank right now — was a request away and never asked for.
+   */
+  const tanksQ = useQuery({
+    queryKey: ["generator-fuel-tanks", businessId],
+    queryFn: () => GeneratorFuelAPI.tanks(businessId ? { businessId } : {}),
+    enabled: businessId != null,
+  })
+  const tanks = tanksQ.data?.tanks ?? []
   const invalidate = () => qc.invalidateQueries({ queryKey: ["generator-fuel-redesigned"] })
   const openCreate = () => { setEditing(undefined); setDialogOpen(true) }
   const openEdit = (e: FuelEntry) => { setEditing(e); setDialogOpen(true) }
@@ -130,7 +144,7 @@ export function GeneratorFuelRedesignedView() {
     <div className="space-y-6 p-4 md:p-6">
       <PageHeader
         eyebrow="Compliance"
-        title="Generator fuel log"
+        title="Generator fuel"
         description="Deliveries, consumption and tank readings."
         actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Log entry</Button>}
       />
@@ -141,6 +155,32 @@ export function GeneratorFuelRedesignedView() {
         <StatCard label="Delivered litres" value={deliveredLitres.toLocaleString("en-PK")} icon="Gauge" />
         <StatCard label="Total cost" value={formatPkr(totalCost)} icon="Wallet" />
       </div>
+
+      {/* WWL-307 / WWL-308 — what is actually in the tanks, per generator. */}
+      {tanks.length > 0 && (
+        <div className="rounded-xl border border-border bg-card shadow-sm">
+          <div className="border-b border-border px-4 py-2.5">
+            <h2 className="text-sm font-semibold">In the tanks now</h2>
+          </div>
+          <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
+            {tanks.map((t) => (
+              <div key={t.identifier} className="rounded-lg border border-border p-3">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="truncate text-sm font-medium">{t.identifier}</span>
+                  <span className="text-xs uppercase text-muted-foreground">{t.fuelType}</span>
+                </div>
+                <div className="mt-1 text-xl font-semibold tabular-nums">
+                  {Number(t.currentTankLitres || 0).toLocaleString("en-PK")}
+                  <span className="ml-1 text-sm font-normal text-muted-foreground">litres</span>
+                </div>
+                <div className="text-[11px] text-muted-foreground">
+                  last reading {fmtDate(t.lastReadingAt)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <DataTable
         columns={columns}

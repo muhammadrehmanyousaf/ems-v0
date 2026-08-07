@@ -3,7 +3,7 @@
 /**
  * Brokers — redesigned (Track C). Wired to BrokerAPI.listCommissions() — the
  * per-event broker commission ledger — rendered through the primitives.
- * Read-only; original screen untouched. Route /dashboard/brokers-new.
+ * Route /dashboard/brokers.
  */
 
 import * as React from "react"

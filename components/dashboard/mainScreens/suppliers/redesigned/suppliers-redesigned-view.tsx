@@ -13,7 +13,7 @@
  *
  *   2. Suppliers — the existing directory (create/edit via SupplierFormDialog).
  *
- * Original screen untouched. Route /dashboard/suppliers-new.
+ * Original screen untouched. Route /dashboard/suppliers.
  */
 
 import * as React from "react"
@@ -295,6 +295,45 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
         <StatCard label="31-60d overdue" value={b ? formatPkr(Math.round(b.d31_60.total)) : "—"} icon="AlertTriangle" trend={b && b.d31_60.total > 0 ? "down" : undefined} />
         <StatCard label="60d+ overdue" value={b ? formatPkr(Math.round(b.d60plus.total)) : "—"} icon="AlertTriangle" trend={b && b.d60plus.total > 0 ? "down" : undefined} />
       </div>
+
+      {/* WWL-277 (S3) — five aging cards and no total. The vendor could not see
+          what they owe altogether without adding five numbers up by hand. */}
+      {aging && (
+        <div className="flex flex-wrap items-baseline justify-between gap-2 rounded-lg border border-border bg-muted/40 px-4 py-2.5 text-sm">
+          <span className="font-medium">Owed to suppliers, all buckets</span>
+          <span className="text-lg font-semibold tabular-nums">{formatPkr(Math.round(aging.grandTotal))}</span>
+        </div>
+      )}
+
+      {/* WWL-276 (S3) — the API ranks suppliers by what is outstanding to each
+          of them, and the UI threw the ranking away. "Who do I owe the most" is
+          the first question an operator asks on this screen. */}
+      {aging && aging.perSupplier?.length > 0 && (
+        <div className="rounded-xl border border-border bg-card shadow-sm">
+          <div className="border-b border-border px-4 py-2.5">
+            <h2 className="text-sm font-semibold">Who you owe the most</h2>
+          </div>
+          <ul className="divide-y divide-border">
+            {[...aging.perSupplier]
+              .sort((x, y) => Number(y.outstanding) - Number(x.outstanding))
+              .slice(0, 6)
+              .map((s) => (
+                <li key={`${s.supplierId ?? "none"}-${s.supplierName}`} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium">{s.supplierName}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {s.invoiceCount} invoice{s.invoiceCount === 1 ? "" : "s"}
+                      {s.supplierCategory ? ` · ${s.supplierCategory}` : ""}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-sm font-semibold tabular-nums">
+                    {formatPkr(Math.round(Number(s.outstanding) || 0))}
+                  </span>
+                </li>
+              ))}
+          </ul>
+        </div>
+      )}
 
       <DataTable
         columns={columns}

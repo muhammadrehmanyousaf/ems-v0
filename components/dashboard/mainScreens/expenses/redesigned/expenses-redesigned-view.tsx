@@ -2,8 +2,8 @@
 
 /**
  * Expenses — redesigned (Track C). Wired to ExpensesAPI.list(); rendered through
- * the primitives. Read-only presentation; original screen untouched.
- * Route /dashboard/expenses-new.
+ * the primitives. Read-only presentation; 
+ * Route /dashboard/expenses.
  */
 
 import * as React from "react"

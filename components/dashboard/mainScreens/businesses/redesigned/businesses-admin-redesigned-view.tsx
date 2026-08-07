@@ -3,7 +3,7 @@
 /**
  * Businesses (admin) — redesigned (Track C). Wired to BusinessesAPI.getAll();
  * rendered through the primitives, mirroring the staff redesigned view 1:1.
- * Read-only; original screen untouched. Route /dashboard/businesses-new.
+ * Route /dashboard/businesses.
  */
 
 import * as React from "react"

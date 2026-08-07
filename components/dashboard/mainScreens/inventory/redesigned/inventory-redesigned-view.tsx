@@ -2,8 +2,8 @@
 
 /**
  * Inventory — redesigned (Track C). Wired to InventoryAPI.listItems(); rendered
- * through the primitives. Read-only presentation; original screen untouched.
- * Route /dashboard/inventory-new.
+ * through the primitives. Read-only presentation; 
+ * Route /dashboard/inventory.
  */
 
 import * as React from "react"

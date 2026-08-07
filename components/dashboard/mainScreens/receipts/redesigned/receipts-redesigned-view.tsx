@@ -2,8 +2,8 @@
 
 /**
  * Receipts — redesigned (Track C). Wired to ReceiptsAPI.list(); rendered through
- * the primitives. Read-only presentation; original screen untouched.
- * Route /dashboard/receipts-new.
+ * the primitives. Read-only presentation; 
+ * Route /dashboard/receipts.
  */
 
 import * as React from "react"

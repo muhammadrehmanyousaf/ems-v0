@@ -3,7 +3,7 @@
 /**
  * Billing — redesigned (Track C, bespoke). Plan pricing cards wired to
  * SubscriptionAPI.getMyPlan(); current tier highlighted. Read-only presentation;
- * original screen untouched. Route /dashboard/billing-new. Token-only (themes).
+ * Route /dashboard/billing. Token-only (themes).
  */
 
 import * as React from "react"

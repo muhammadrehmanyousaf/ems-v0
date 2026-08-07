@@ -3,7 +3,7 @@
 /**
  * Insights (Grow) — redesigned (Track C, computed). Wired to
  * InsightsAPI.getAdvanced(); rendered through the primitives. Read-only;
- * original screen untouched. Route /dashboard/insights-new.
+ * Route /dashboard/insights.
  */
 
 import * as React from "react"

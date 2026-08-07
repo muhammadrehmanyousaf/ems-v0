@@ -3,7 +3,7 @@
 /**
  * Payments (revenue) — redesigned (Track C, computed). Wired to
  * PaymentsAPI.getVendorRevenue(); rendered through the primitives. Read-only;
- * original screen untouched. Route /dashboard/payments-new.
+ * Route /dashboard/payments.
  */
 
 import * as React from "react"

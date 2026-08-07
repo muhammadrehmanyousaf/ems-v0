@@ -3,7 +3,7 @@
 /**
  * Calendar — redesigned (Track C, bespoke). A clean month grid + day agenda,
  * wired to the real /api/v1/bookings. Read-only; original calendar untouched.
- * Route /dashboard/calendar-new. Token-only so it themes with the palette.
+ * Route /dashboard/calendar. Token-only so it themes with the palette.
  */
 
 import * as React from "react"

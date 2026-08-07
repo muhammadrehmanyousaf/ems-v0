@@ -4,7 +4,7 @@
  * Revenue — redesigned (Track C, computed). Wired to
  * AnalyticsAPI.getDashboardKpis() + getRevenueTrends(); rendered through the
  * primitives. Read-only; original /dashboard revenue screen untouched.
- * Route /dashboard/revenue-new.
+ * Route /dashboard/revenue.
  */
 
 import * as React from "react"

@@ -2,8 +2,8 @@
 
 /**
  * Halal certificates — redesigned (Track C). Wired to HalalCertAPI.list();
- * rendered through the primitives. Read-only; original screen untouched.
- * Route /dashboard/halal-certs-new.
+ * rendered through the primitives. 
+ * Route /dashboard/halal-certs.
  */
 
 import * as React from "react"

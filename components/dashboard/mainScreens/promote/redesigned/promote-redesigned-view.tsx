@@ -2,8 +2,8 @@
 
 /**
  * Promote — redesigned (Track C). Wired to PromotionsAPI.listMine(); rendered
- * through the primitives. Read-only; original screen untouched.
- * Route /dashboard/promote-new.
+ * through the primitives. 
+ * Route /dashboard/promote.
  */
 
 import * as React from "react"

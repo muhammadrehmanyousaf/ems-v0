@@ -2,8 +2,8 @@
 
 /**
  * Automation rules — redesigned (Track C). Wired to AutomationRulesAPI.list();
- * rendered through the shared primitives. Read-only; original screen untouched.
- * Route /dashboard/automation-new.
+ * rendered through the shared primitives. 
+ * Route /dashboard/automation.
  */
 
 import * as React from "react"

@@ -3,7 +3,7 @@
 /**
  * Receivables (A/R) — redesigned (Track C, computed). Wired to
  * AnalyticsAPI.getReceivables(); rendered through the primitives. Read-only;
- * original screen untouched. Route /dashboard/receivables-new.
+ * Route /dashboard/receivables.
  */
 
 import * as React from "react"

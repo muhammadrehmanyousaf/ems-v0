@@ -4,7 +4,7 @@
  * Dashboard home (Overview) — redesigned (Track C, flagship landing surface).
  * Wired to AnalyticsAPI.getDashboardKpis() + getRecentBookings(); rendered
  * through the primitives. Read-only; original /dashboard home untouched.
- * Route /dashboard/overview-new.
+ * Route /dashboard.
  */
 
 import * as React from "react"

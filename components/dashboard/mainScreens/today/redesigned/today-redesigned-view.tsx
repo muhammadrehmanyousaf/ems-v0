@@ -3,7 +3,7 @@
 /**
  * Today (day-of timeline) — redesigned (Track C, computed). Wired to
  * BookingTimelineAPI.today(); rendered through the primitives. Read-only;
- * original screen untouched. Route /dashboard/today-new.
+ * Route /dashboard/today.
  *
  * Note: the live API returns events as { booking: {...}, tasks: [] } — we
  * normalise each into the flat row shape the screen renders against.
