@@ -68,9 +68,16 @@ export function InventoryRedesignedView() {
     return all.filter((i) => [i.name, i.sku, i.category].some((v) => (v ?? "").toLowerCase().includes(q)))
   }, [all, search])
 
-  const lowCount = all.filter((i) => num(i.currentStock) <= num(i.lowStockThreshold)).length
-  const stockValue = all.reduce((s, i) => s + num(i.currentStock) * num(i.lastRestockCostPerUnit), 0)
-  const categories = new Set(all.map((i) => i.category)).size
+  /**
+   * WWL-249 — the stat cards ignored the search, so filtering the list left
+   * "Total items" and "Stock value" describing stock the vendor could not see.
+   */
+  const filtering = search.trim().length > 0
+  const scope = items
+  const scopeNote = filtering ? `of ${all.length} total` : undefined
+  const lowCount = scope.filter((i) => num(i.currentStock) <= num(i.lowStockThreshold)).length
+  const stockValue = scope.reduce((s, i) => s + num(i.currentStock) * num(i.lastRestockCostPerUnit), 0)
+  const categories = new Set(scope.map((i) => i.category)).size
 
   const columns: Column<InventoryItem>[] = [
     { key: "name", header: "Item", render: (i) => <span className="font-medium">{i.name}</span> },
@@ -101,9 +108,9 @@ export function InventoryRedesignedView() {
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total items" value={all.length} icon="Package" />
+        <StatCard label={filtering ? "Items (filtered)" : "Total items"} value={scope.length} icon="Package" delta={scopeNote} />
         <StatCard label="Low / out of stock" value={lowCount} icon="AlertTriangle" trend={lowCount ? "down" : "flat"} delta={lowCount ? "reorder" : "all good"} />
-        <StatCard label="Stock value" value={formatPkr(Math.round(stockValue))} icon="Wallet" error={isError} />
+        <StatCard label={filtering ? "Stock value (filtered)" : "Stock value"} value={formatPkr(Math.round(stockValue))} icon="Wallet" error={isError} />
         <StatCard label="Categories" value={categories} icon="LayoutGrid" />
       </div>
 

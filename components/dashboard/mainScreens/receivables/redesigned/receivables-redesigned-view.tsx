@@ -80,6 +80,27 @@ export function ReceivablesRedesignedView() {
     return all.filter((c) => [c.customerName, c.customerPhone].some((v) => (v ?? "").toLowerCase().includes(q)))
   }, [all, search])
 
+  /**
+   * WWL-134 — filtering 34 rows down to 1, or to 0, left the headline at
+   * Rs 23,961,479 / 34 customers in every case: the cards read the server's
+   * `totals` while the table rendered the filtered rows. Second money module
+   * with the WWL-115 pattern.
+   *
+   * With a filter on, the cards describe the rows on screen and say so. With
+   * no filter they keep using the server totals, which are authoritative for
+   * the whole ledger (and unaffected by the page cap).
+   */
+  const filtering = search.trim().length > 0
+  const shown = {
+    outstanding: filtering ? customers.reduce((s, c) => s + num(c.totalOutstanding), 0) : num(t?.grandOutstanding),
+    customerCount: filtering ? customers.length : num(t?.customerCount),
+    installmentsOpen: filtering ? customers.reduce((s, c) => s + num(c.installmentsOpen), 0) : num(t?.installmentsOpen),
+    oldestDaysOverdue: filtering
+      ? customers.reduce((m, c) => Math.max(m, num(c.oldestDaysOverdue)), 0)
+      : num(t?.oldestDaysOverdue),
+  }
+  const scopeNote = filtering ? `of ${all.length} total` : undefined
+
   const columns: Column<ReceivablesCustomer>[] = [
     { key: "customer", header: "Customer", render: (c) => <span className="font-medium">{c.customerName || "—"}</span> },
     { key: "phone", header: "Phone", cellClassName: "text-muted-foreground", render: (c) => c.customerPhone || "—" },
@@ -121,10 +142,10 @@ export function ReceivablesRedesignedView() {
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Outstanding" value={isLoading ? "…" : formatPkr(num(t?.grandOutstanding))} icon="Wallet" trend="down" delta="to chase" error={isError} />
-        <StatCard label="Customers owing" value={isLoading ? "…" : num(t?.customerCount)} icon="Users" />
-        <StatCard label="Open installments" value={isLoading ? "…" : num(t?.installmentsOpen)} icon="Clock" />
-        <StatCard label="Oldest overdue" value={isLoading ? "…" : `${num(t?.oldestDaysOverdue)} days`} icon="AlertTriangle" trend={num(t?.oldestDaysOverdue) > 0 ? "down" : "flat"} />
+        <StatCard label={filtering ? "Outstanding (filtered)" : "Outstanding"} value={isLoading ? "…" : formatPkr(shown.outstanding)} icon="Wallet" trend="down" delta={scopeNote ?? "to chase"} error={isError} />
+        <StatCard label={filtering ? "Customers owing (filtered)" : "Customers owing"} value={isLoading ? "…" : shown.customerCount} icon="Users" delta={scopeNote} error={isError} />
+        <StatCard label={filtering ? "Open installments (filtered)" : "Open installments"} value={isLoading ? "…" : shown.installmentsOpen} icon="Clock" error={isError} />
+        <StatCard label={filtering ? "Oldest overdue (filtered)" : "Oldest overdue"} value={isLoading ? "…" : `${shown.oldestDaysOverdue} ${shown.oldestDaysOverdue === 1 ? "day" : "days"}`} icon="AlertTriangle" trend={shown.oldestDaysOverdue > 0 ? "down" : "flat"} error={isError} />
       </div>
 
       <DataTable
