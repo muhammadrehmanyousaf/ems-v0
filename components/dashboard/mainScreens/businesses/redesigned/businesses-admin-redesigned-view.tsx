@@ -183,6 +183,7 @@ export function BusinessesAdminRedesignedView() {
       </div>
 
       <DataTable
+        caption="Businesses"
         columns={columns}
         data={businesses}
         getRowId={(b) => String(b.id)}

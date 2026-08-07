@@ -101,6 +101,7 @@ export function AuditLogsRedesignedView() {
       </div>
 
       <DataTable
+        caption="Audit log"
         columns={columns}
         data={rows}
         getRowId={(l) => String(l.id)}

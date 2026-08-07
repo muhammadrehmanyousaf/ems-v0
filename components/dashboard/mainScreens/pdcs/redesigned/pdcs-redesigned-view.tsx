@@ -109,6 +109,7 @@ export function PdcsRedesignedView() {
       </div>
 
       <DataTable
+        caption="Cheque ledger"
         columns={columns}
         data={pdcs}
         getRowId={(p) => String(p.id)}

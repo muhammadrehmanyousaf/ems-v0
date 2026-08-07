@@ -163,6 +163,7 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
       </div>
 
       <DataTable
+        caption="Expenses"
         columns={tableColumns}
         data={expenses}
         getRowId={(e) => String(e.id)}

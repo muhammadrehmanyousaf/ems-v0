@@ -314,6 +314,7 @@ export function VendorQueueRedesignedView() {
       </div>
 
       <DataTable
+        caption="Vendor queue"
         columns={columns}
         data={rows}
         getRowId={(r) => String(r.id)}

@@ -133,6 +133,7 @@ export function TaxRedesignedView() {
       </div>
 
       <DataTable
+        caption="Tax report"
         columns={columns}
         data={months}
         getRowId={(r) => r.monthLabel}

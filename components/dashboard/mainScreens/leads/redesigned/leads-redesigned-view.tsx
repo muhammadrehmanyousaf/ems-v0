@@ -201,6 +201,7 @@ export function LeadsRedesignedView() {
       </div>
 
       <DataTable
+        caption="Leads"
         columns={columns}
         data={leads}
         getRowId={(l) => String(l.id)}

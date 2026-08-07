@@ -116,6 +116,7 @@ export function CustomersRedesignedView() {
       </div>
 
       <DataTable
+        caption="Customers"
         columns={columns}
         data={customers}
         getRowId={(c) => c._id}

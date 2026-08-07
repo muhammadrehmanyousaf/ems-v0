@@ -175,6 +175,7 @@ export function DroneNocRedesignedView({ adminCapable = true }: { adminCapable?:
       </div>
 
       <DataTable
+        caption="Drone NOC permits"
         columns={columns}
         data={permits}
         getRowId={(p) => String(p.id)}

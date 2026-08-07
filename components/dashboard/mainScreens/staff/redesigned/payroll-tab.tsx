@@ -457,6 +457,7 @@ export function PayrollTab({ businesses }: { businesses: VendorBusinessOption[] 
       <StaffLeaveQueue />
 
       <DataTable
+        caption="Staff"
         columns={columns}
         data={shifts}
         getRowId={(s) => String(s.id)}

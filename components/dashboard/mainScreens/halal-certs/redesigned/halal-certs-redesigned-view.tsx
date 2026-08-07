@@ -226,6 +226,7 @@ export function HalalCertsRedesignedView() {
       )}
 
       <DataTable
+        caption="Halal certificates"
         columns={columns}
         data={certs}
         getRowId={(c) => String(c.id)}

@@ -29,7 +29,9 @@ export const columns = (
             <Checkbox
                 checked={row.getIsSelected()}
                 onCheckedChange={(v) => row.toggleSelected(!!v)}
-                aria-label="Select row"
+                // WWL-369/WWL-120 — every row announced the identical "Select row", so a
+                // screen-reader user could not tell which review they were about to act on.
+                aria-label={`Select review by ${row.original.reviewerName || "unknown reviewer"}`}
             />
         ),
         enableSorting: false,

@@ -71,6 +71,7 @@ const ReviewsTable = () => {
         <div className='space-y-4 w-full'>
             <ReviewsTableActions table={table} />
             <GlobalTable
+                caption="Reviews"
                 table={table}
                 paginationState={paginationState}
                 totalItems={data.length}

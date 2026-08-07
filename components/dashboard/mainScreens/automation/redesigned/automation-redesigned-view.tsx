@@ -153,6 +153,7 @@ export function AutomationRedesignedView() {
       </div>
 
       <DataTable
+        caption="Automation rules"
         columns={columns}
         data={rules}
         getRowId={(r) => String(r?.id)}

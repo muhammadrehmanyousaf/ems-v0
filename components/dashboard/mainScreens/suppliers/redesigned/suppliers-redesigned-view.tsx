@@ -387,6 +387,7 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
       )}
 
       <DataTable
+        caption="Suppliers"
         columns={columns}
         data={invoices}
         getRowId={(inv) => String(inv.id)}

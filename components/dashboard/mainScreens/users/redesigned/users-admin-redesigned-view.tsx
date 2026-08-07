@@ -147,6 +147,7 @@ export function UsersAdminRedesignedView() {
       </div>
 
       <DataTable
+        caption="Users"
         columns={columns}
         data={users}
         getRowId={(u) => String(u.id)}

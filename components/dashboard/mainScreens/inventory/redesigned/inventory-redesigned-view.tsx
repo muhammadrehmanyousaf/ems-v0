@@ -108,6 +108,7 @@ export function InventoryRedesignedView() {
       </div>
 
       <DataTable
+        caption="Inventory"
         columns={columns}
         data={items}
         getRowId={(i) => String(i.id)}

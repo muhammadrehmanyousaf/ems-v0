@@ -145,6 +145,7 @@ export function VendorsAdminRedesignedView() {
       </div>
 
       <DataTable
+        caption="Vendors"
         columns={columns}
         data={rows}
         getRowId={(r) => String(r.id)}

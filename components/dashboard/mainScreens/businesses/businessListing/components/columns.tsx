@@ -28,7 +28,8 @@ export const businessColumns = (
             <Checkbox
                 checked={row.getIsSelected()}
                 onCheckedChange={(v) => row.toggleSelected(!!v)}
-                aria-label="Select row"
+                // WWL-120 — name the row so bulk actions are not blind.
+                aria-label={`Select ${(row.original as any)?.name || "this business"}`}
             />
         ),
         enableSorting: false,
