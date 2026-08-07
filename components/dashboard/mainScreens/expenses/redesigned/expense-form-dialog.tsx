@@ -10,7 +10,7 @@
 import * as React from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { ExpensesAPI, EXPENSE_CATEGORY_LABELS, type VendorExpense, type ExpenseCategory, type ExpensePaymentMethod } from "@/lib/api/vendorExpenses"
-import { useActiveBusinessId } from "@/lib/store/active-business-store"
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueSpacesApi } from "@/lib/api/venueSpaces"
 import axiosInstance from "@/lib/axiosConfig"
 import { CustomFieldsSection } from "@/components/dashboard/shared/custom-fields-section"
@@ -143,7 +143,10 @@ export function ExpenseFormDialog({
   }
 
   // Load the active venue's spaces so the expense can be tagged to a hall/floor/partition.
-  const activeBusinessId = useActiveBusinessId()
+  // F3 — resolve through the shared primitive so the space picker still loads
+  // under "All venues" instead of silently offering nothing to tag against.
+  const [activeBusinessIdStr] = useBusinessIdField()
+  const activeBusinessId = activeBusinessIdStr ? Number(activeBusinessIdStr) : null
   const spacesQ = useQuery({
     queryKey: ["venueSpacesTree", activeBusinessId],
     queryFn: () => venueSpacesApi.publicTree(activeBusinessId as number),

@@ -13,6 +13,7 @@ import * as React from "react";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type DnfbpCard } from "@/lib/api/venueOs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DangerousAction } from "@/components/dashboard/primitives/dangerous-action";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
@@ -50,7 +51,24 @@ export function DnfbpCardView(): React.ReactElement | null {
         <div className="flex flex-wrap items-end gap-2 text-sm">
           <BusinessScopeField value={businessId} onChange={setBusinessId} />
           <Button size="sm" onClick={() => void guard(async () => setCard(await venueOsApi.dnfbpCard(bid)))} disabled={!businessId || busy}>Readiness card</Button>
-          <Button size="sm" variant="outline" onClick={() => void guard(async () => { await venueOsApi.dnfbpUpsert(bid, { fbrRegistered: true }); setCard(await venueOsApi.dnfbpCard(bid)); })} disabled={!businessId || busy}>Mark registered</Button>
+          {/* WWL-602 (S3) — one click asserted a regulatory status about this
+              business. Getting it wrong is a compliance claim, not a UI state. */}
+          <DangerousAction
+            title="Mark this business as FBR-registered?"
+            consequence={
+              <>
+                You&apos;re recording that this venue <strong>is registered with the FBR</strong>.
+                That claim feeds your DNFBP compliance card and the reports built on it — only set
+                it if the registration actually exists.
+              </>
+            }
+            confirmLabel="Yes, it's registered"
+            confirmVariant="default"
+            disabled={!businessId || busy}
+            onConfirm={() => guard(async () => { await venueOsApi.dnfbpUpsert(bid, { fbrRegistered: true }); setCard(await venueOsApi.dnfbpCard(bid)); })}
+          >
+            <Button size="sm" variant="outline" disabled={!businessId || busy}>Mark registered</Button>
+          </DangerousAction>
         </div>
 
         {card && (

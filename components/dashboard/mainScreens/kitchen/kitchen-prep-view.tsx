@@ -12,7 +12,7 @@
 import * as React from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { venueOsApi, type RecipeBom, type KitchenPrepSheet } from "@/lib/api/venueOs"
-import { useActiveBusinessId } from "@/lib/store/active-business-store"
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { Button } from "@/components/ui/button"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
@@ -23,7 +23,10 @@ const inputCls = "h-9 rounded-md border border-input bg-background px-2.5 text-s
 interface Row { dishName: string; guests: string }
 
 export function KitchenPrepView() {
-  const businessId = useActiveBusinessId()
+  // WWL-233 / F3 — the default venue scope produced a 500 because this sent
+  // no businessId under "All venues". One scoping primitive.
+  const [businessIdStr] = useBusinessIdField()
+  const businessId = businessIdStr ? Number(businessIdStr) : null
   const [rows, setRows] = React.useState<Row[]>([{ dishName: "", guests: "" }])
   const [sheet, setSheet] = React.useState<KitchenPrepSheet | null>(null)
   const [eventLabel, setEventLabel] = React.useState("")

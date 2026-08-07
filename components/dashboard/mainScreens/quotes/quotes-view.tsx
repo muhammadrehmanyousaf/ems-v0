@@ -15,8 +15,8 @@ import { QuotesAPI, isMyTurn, hasStandingOffer, formatPkr, type Quote } from "@/
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { QuoteStatusBadge } from "@/components/quotes/quote-status-badge"
 import { NegotiateDialog } from "@/components/quotes/negotiate-dialog"
-import { useActiveBusinessId } from "@/lib/store/active-business-store"
-import { useBusiness } from "@/context/BusinessContext"
+import { useBusinessIdField } from "@/lib/store/use-business-id-field"
+import { useMyBusinesses } from "@/hooks/use-my-businesses"
 import { Button } from "@/components/ui/button"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { DangerousAction } from "@/components/dashboard/primitives/dangerous-action"
@@ -46,11 +46,18 @@ function QuoteHistory({ quote }: { quote: Quote }) {
 
 export function QuotesView() {
   const qc = useQueryClient()
-  const activeBusinessId = useActiveBusinessId()
-  const { business } = useBusiness()
-  // "All venues" (null) falls back to the vendor's first business so the screen
-  // still works for single-venue vendors; multi-venue vendors scope via the switcher.
-  const businessId = activeBusinessId ?? (business ? Number(business.id) : null)
+  // WWL-610 (S3) — this screen had a THIRD venue-resolution pattern
+  // (`activeBusinessId ?? BusinessContext`), so a vendor's quotes resolved by a
+  // different rule than their spaces, expenses and leads. One primitive now, the
+  // same one the 36 Venue-OS panels use.
+  const [businessIdStr] = useBusinessIdField()
+  const businessId = businessIdStr ? Number(businessIdStr) : null
+  const { data: myBusinesses } = useMyBusinesses()
+  // WWL-611 (S3) — nothing on the page named the venue. This vendor owns three;
+  // two return [], so switching to either showed "No quote requests yet" —
+  // identical to a vendor who has never received one. A three-hall owner could
+  // not tell "none" from "wrong hall".
+  const venueName = myBusinesses?.find((b) => String(b.id) === String(businessId))?.name
 
   const [priceFor, setPriceFor] = React.useState<Quote | null>(null)
 
@@ -80,7 +87,11 @@ export function QuotesView() {
       <PageHeader
         eyebrow="Sales"
         title="Quote requests"
-        description="Customers asking for your best price. Send a quote, counter, or accept — this is where the haggling happens."
+        description={
+          venueName
+            ? `Customers asking ${venueName} for its best price. Send a quote, counter, or accept — this is where the haggling happens.`
+            : "Customers asking for your best price. Send a quote, counter, or accept — this is where the haggling happens."
+        }
       />
 
       {businessId == null ? (

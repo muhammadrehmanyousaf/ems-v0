@@ -9,7 +9,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { venueSpacesApi, type SpacePnl } from "@/lib/api/venueSpaces";
-import { useActiveBusinessId } from "@/lib/store/active-business-store";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const PKR = (n: number): string => "Rs " + Math.round(Number(n) || 0).toLocaleString("en-PK");
@@ -24,7 +24,11 @@ function Stat({ label, value }: { label: string; value: string }): React.ReactEl
 }
 
 export function SpacePnlView(): React.ReactElement | null {
-  const businessId = useActiveBusinessId();
+  // WWL-570 / F3 — read the raw store, so under the header's persisted
+  // "All venues" default this panel resolved to null and rendered nothing at
+  // all. One scoping primitive across the product.
+  const [businessIdStr] = useBusinessIdField();
+  const businessId = businessIdStr ? Number(businessIdStr) : null;
   const q = useQuery({
     queryKey: ["spacePnl", businessId],
     queryFn: () => venueSpacesApi.spacePnl(businessId as number),
