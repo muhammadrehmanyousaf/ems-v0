@@ -455,3 +455,76 @@ control that does nothing.
 `WWL-521` needs no code change: two venues scoring identically is the checklist
 being right — both have zero photographs, no advance terms, no cancellation
 policy.
+
+---
+
+## Final waves — 608 / 612 closed
+
+The last stretch worked module by module. What follows is the shape of what was
+found, not a re-listing of every id; the commit that closed each one names it.
+
+### The recurring cause
+
+More than half of these were not missing code. They were **a control that was
+never wired to an engine the backend already had**:
+
+- `/generator-fuel/burn-rate` — live, validating, precise domain refusals, and
+  **no caller anywhere in the product** (`WWL-306`).
+- `/drone-noc/upcoming` — live, documented as "booking-linked windows", **no
+  consumer** (`WWL-347`).
+- `bookingId` and `brokerId` on commissions, `bookingId` on permits,
+  `supplierId` on halal certs, `defaultSubVenueId` on staff — every one accepted
+  by its validator, **none reachable from any form** (`WWL-289`, `WWL-348`,
+  `WWL-324`, `WWL-264`).
+- `?businessId=` read by `listCerts` and the drone-NOC list handler, **never
+  sent by the client**, so the venue switcher did nothing on either screen
+  (`WWL-328`).
+- `lowStockOnly=true`, the fuel log's `type`/`from`/`to`/`generatorIdentifier`,
+  the blocked-dates `month` filter, `minGuaranteeCount` on menus — all
+  implemented server-side, none of them reachable (`WWL-258`, `WWL-310`,
+  `WWL-495`, `WWL-479`).
+
+### The second cause: a screen asserting what it cannot know
+
+- Inventory read **"Low / out of stock 0 — all good"** during an outage
+  (`WWL-259`).
+- The Today board read **"Events today: 0"** on a day all three venues were
+  blocked (`WWL-537`), and listed a Pending Rs 2.6m booking as an event the
+  venue was committed to (`WWL-532`).
+- The dispute evidence pack flagged **OK** over Rs 1,223,278 of receipts with no
+  proof on either (`WWL-511`).
+- "FBR submitted: Rs 0" on a noop adapter that files nothing, which reads as
+  "you have filed nothing" (`WWL-194`).
+- Commission and collaboration headlines summing money not yet accrued, money
+  owed *to* the vendor with money owed *by* them, and declined rows
+  (`WWL-299`, `WWL-460`).
+
+### Corrections to the sweep itself
+
+Three findings were partly wrong and are recorded as such rather than
+implemented as written:
+
+- **`WWL-479`** reads `Package.capacity` as a guest count. Its own model comment
+  (BK-017) defines it as a per-slot **concurrent-booking cap**. Validating
+  packages against the venue's guest range would have written the misreading
+  into the product. The menu half — `minGuaranteeCount`, a real guest count, in
+  no editor at all — is real and fixed.
+- **`WWL-322`** names the column `documentUrl`; it is `certPhotoUrl`, and
+  `halalCertHelpers` has accepted it since it was written.
+- **`WWL-229`** says nothing creates a recipe. True of the UI — and the live DB
+  holds **8 RecipeBoms whose ingredients reference item ids 1–3 in a
+  `CateringItems` table with zero rows.** The seeded recipes are themselves
+  unresolvable. See the open list below.
+
+### Still open — 4, all product decisions
+
+| ID | Why code cannot close it |
+|---|---|
+| `WWL-229` | Needs a CateringItem master (no CRUD endpoint exists) **and** a recipe editor. The 8 seeded BOMs point at an empty ingredient table, so the data is broken too. |
+| `WWL-420` | Promotion approval records no money anywhere. Needs a payment rail and a decision on how placements are invoiced. |
+| `WWL-436` | "Plan & billing" holds no invoice, method or payment. Same rail, same decision (D7). |
+| `WWL-352` | Three compliance registers, live and empty on all three venues. The screens now prompt with the vendor's own supplier names; filling them is the vendor's act. |
+
+`WWL-323` is closed by that prompt — the register knows the 18 suppliers the
+account buys from and now names the uncertified ones instead of offering a
+generic "add a certificate".

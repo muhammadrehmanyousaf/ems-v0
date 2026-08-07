@@ -214,6 +214,24 @@ export function PromoteRedesignedView() {
         actions={<Button onClick={() => setDialogOpen(true)}><Icon name="Plus" size={16} className="mr-1.5" /> Request placement</Button>}
       />
 
+      {/**
+        * WWL-420 — `approvePromotion` updates the request row and the business
+        * inside a transaction and stops. No invoice, no receipt, no payment
+        * reference, no ledger entry, and nothing links a promotion to Khata or
+        * Receipts. There is no payment control on this screen at all.
+        *
+        * So the marketplace's paid-placement product takes money entirely
+        * outside the product that sells it. That is a real gap and not one a QA
+        * pass can close — it needs a payment rail and a decision about how
+        * placements are invoiced. What it CAN stop doing is implying otherwise
+        * on a screen showing figures up to Rs 17,500.
+        */}
+      <p className="rounded-lg border border-dashed border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+        <span className="font-medium text-foreground">Nothing is charged here.</span> Approving a
+        placement does not raise an invoice or record a payment anywhere in your Khata — we contact
+        you and settle it the way we agree. Amounts on this page are indicative.
+      </p>
+
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Total requests" value={all.length} icon="Megaphone" />
         <StatCard label="Pending" value={pending} icon="Clock" trend={pending > 0 ? "up" : undefined} />

@@ -232,6 +232,36 @@ export function BillingRedesignedView() {
         </p>
       )}
 
+      {/**
+        * WWL-436 — "Plan & billing" contains no billing. Checked against the
+        * live screen: no invoice list, no receipt or link to Receipts, no
+        * payment method, no billing history, no amount due, no NTN or tax
+        * details, and no way to actually pay. A vendor who decides right now to
+        * pay Rs 2,500 has, from this page, a button that tells someone else to
+        * contact them — and there was no support link either, on a screen whose
+        * entire settlement model is "our team will reach out".
+        *
+        * The billing half needs a payment rail, which is a product decision and
+        * not a QA fix (D7: no payment integration). What this page can stop
+        * doing is presenting itself as a billing page while holding none of it,
+        * and it can hand the vendor the two things that do exist: the way to
+        * reach us, and the receipts ledger where their own money lives.
+        */}
+      <div className="rounded-xl border border-dashed border-border bg-muted/30 p-4 text-sm">
+        <p className="font-medium">There are no invoices or payment methods here yet.</p>
+        <p className="mt-1 text-muted-foreground">
+          Subscriptions are settled with our team directly — there is nothing to pay from this page,
+          and no card or bank details are stored against your account. When that changes, your
+          invoices will appear here.
+        </p>
+        <p className="mt-2 text-muted-foreground">
+          Looking for money you have taken from couples? That is in{" "}
+          <a href="/dashboard/receipts" className="underline underline-offset-2">Receipts</a>. Need to
+          talk to us about your plan?{" "}
+          <a href="/contact" className="underline underline-offset-2">Contact us</a>.
+        </p>
+      </div>
+
       {/* Plan cards */}
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-foreground">Plans</h2>
