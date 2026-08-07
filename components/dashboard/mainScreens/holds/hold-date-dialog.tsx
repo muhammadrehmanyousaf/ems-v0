@@ -69,6 +69,26 @@ export function HoldDateDialog({
     onSuccess: (r: any) => {
       if (r?.queuedOffline) toast.success("Held offline — will sync when you reconnect")
       else showSuccessToast(r?.alreadyHeld ? "Hold extended" : "Date held")
+
+      /**
+       * WWL-060 — a date that already carried a confirmed booking accepted a
+       * hold with no warning of any kind, so the holds list showed a slot as
+       * tentatively reserved when it had in fact already been sold. The hold
+       * still succeeds — a vendor may legitimately hold a second hall or a
+       * second function on the same day — but they are told what is there.
+       */
+      const clashes: Array<{ customerName?: string; bookingTime?: string; status?: string }> =
+        r?.conflictingBookings ?? []
+      if (clashes.length > 0) {
+        const first = clashes[0]
+        toast.warning(
+          clashes.length === 1
+            ? `Heads up — ${first.customerName || "a booking"} is already booked on this date${first.bookingTime ? ` at ${first.bookingTime}` : ""}.`
+            : `Heads up — this date already has ${clashes.length} bookings against this venue.`,
+          { duration: 8000 },
+        )
+      }
+
       onSaved?.(); onOpenChange(false)
     },
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't hold the date"),
