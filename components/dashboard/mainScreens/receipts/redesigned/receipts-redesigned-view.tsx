@@ -165,6 +165,11 @@ export function ReceiptsRedesignedView() {
                 { header: "Customer", value: (r) => payerName(r) },
                 { header: "Method", value: (r) => methodLabel(r.method) },
                 { header: "Txn ref", value: (r) => r.transactionRef ?? "" },
+                // WWL-136/155/172/188 — the export dropped a column that is on
+                // screen, so the file the vendor hands their accountant is not the
+                // table they were reading. Booking id is what actually ties a row
+                // back to an event in a spreadsheet.
+                { header: "Booking id", value: (r) => (r.bookingId != null ? `#${r.bookingId}` : "") },
                 { header: "Received", value: (r) => fmtDate(r.receivedDate) },
                 { header: "Amount", value: (r) => num(r.amount) },
               ]} />

@@ -182,7 +182,12 @@ export function ReceivablesRedesignedView() {
                 { header: "Phone", value: (c) => c.customerPhone ?? "" },
                 { header: "Bookings", value: (c) => num(c.bookingCount) },
                 { header: "Open installments", value: (c) => num(c.installmentsOpen) },
+                // WWL-136/155/172/188 — the export dropped a column that is on
+                // screen, so the file the vendor hands their accountant is not the
+                // table they were reading. Booking id is what actually ties a row
+                // back to an event in a spreadsheet.
                 { header: "Days overdue", value: (c) => num(c.oldestDaysOverdue) },
+                { header: "Aging", value: (c) => bucketLabel(c.bucket) },
                 { header: "Outstanding", value: (c) => num(c.totalOutstanding) },
               ]} />
             </div>

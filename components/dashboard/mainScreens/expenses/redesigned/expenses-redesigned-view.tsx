@@ -230,6 +230,12 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
               <ImportButton target="expenses" label="expenses" />
               <ExportMenu selectedIds={selected} getRowId={(e) => String(e.id)} rows={expenses} filename="expenses" columns={[
                 { header: "Category", value: (e) => e.category },
+                // WWL-136/155/172/188 — the export dropped a column that is on
+                // screen, so the file the vendor hands their accountant is not the
+                // table they were reading. Booking id is what actually ties a row
+                // back to an event in a spreadsheet.
+                { header: "Space", value: (e) => e.subVenue?.name ?? "" },
+                { header: "Booking id", value: (e) => (e.bookingId != null ? `#${e.bookingId}` : "") },
                 { header: "Paid to", value: (e) => e.vendorName ?? "" },
                 { header: "Note", value: (e) => e.description ?? "" },
                 { header: "Method", value: (e) => methodLabel(e.paymentMethod) },

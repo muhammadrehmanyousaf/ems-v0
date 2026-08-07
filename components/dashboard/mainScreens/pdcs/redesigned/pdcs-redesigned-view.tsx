@@ -150,6 +150,11 @@ export function PdcsRedesignedView() {
                 { header: "Cheque #", value: (p) => p.chequeNumber },
                 { header: "Bank", value: (p) => p.bankName ?? "" },
                 { header: "Customer", value: (p) => p.customer?.fullName ?? "" },
+                // WWL-136/155/172/188 — the export dropped a column that is on
+                // screen, so the file the vendor hands their accountant is not the
+                // table they were reading. Booking id is what actually ties a row
+                // back to an event in a spreadsheet.
+                { header: "Booking id", value: (p) => (p.bookingId != null ? `#${p.bookingId}` : "") },
                 { header: "Cheque date", value: (p) => fmtDate(p.chequeDate) },
                 { header: "Amount", value: (p) => num(p.amount) },
                 { header: "Status", value: (p) => p.status },
