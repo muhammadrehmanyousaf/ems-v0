@@ -253,3 +253,70 @@ still enforced by the endpoint; a flag was never what protected it.
   migration has not been run. The claims are backed by 28 new unit tests and the
   live evidence in `LIVE-MODULE-TEST-PLAN.md`, not by a browser session against
   weddingwala.pk.
+
+---
+
+## Wave 7 — the 16 open S2s, and the migration is live
+
+Every S2 remaining in the sweep is closed. They clustered into eight pieces of
+work, two of which were systemic and fixed once rather than per screen.
+
+| Findings | What it was |
+|---|---|
+| `WWL-302` `303` `304` `305` | `litres > 0` applied to all four generator entry types: **Maintenance** involves no fuel and **a tank reading of 0** is the reading that stops an event mid-baraat, so neither could be saved. Meanwhile the cost guard covered deliveries only, so a consumption row saved with `costPerLitre: -99`, `runHours: -40`. The **server was already correct on all three** — the form was stricter where it should be permissive and looser where it should refuse. |
+| `WWL-231` `232` `234` | Any rejection — unroutable host, HTTP 500 — rendered *"the kitchen-BOM engine isn't enabled for your account yet"*. Rows with a bad head count were silently dropped, so the cook sheet came out missing a dish with nothing saying so. At 360px the guests input and Remove were **entirely off-screen**. |
+| `WWL-242` `262` | Both create dialogs were handed `businesses?.[0]?.id`, so under "All venues" a stock item or a new hire landed on whichever venue came first, with no venue field to notice it. |
+| `WWL-244` `245` | 108 inventory action buttons in the DOM, **0 reachable on a phone** — and Adjust stock is the only path that changes a count. Separately the app told the vendor to *"record an adjustment movement to zero it first"* and then refused to save a stock-take of 0. |
+| `WWL-274` `275` `276` | Chip counts came from the filtered query, so clicking Overdue turned `All(23)` into `All(3)`. **"Credit available" was the sum of credit *limits*** — Rs 8,800,000 against Rs 1,469,250 already drawn, 20% high, on the number a vendor uses to decide whether to place another order. |
+| `WWL-113` `114` | An absolute sanity cap and nothing relative to the booking, so Rs 99,999,999 against a Rs 1,673,250 booking saved silently. And the venue switcher **lied about scope**. |
+| `WWL-321` | A lapsed halal certificate could be reactivated with no new number and no new expiry — an expired certificate reading as current to an inspector. |
+| `WWL-263` | Already closed by the earlier numeric/phone sweep. Verified, not redone. |
+
+### The two systemic ones
+
+**`WWL-114` was not a payments bug.** Venue scope is applied by the axios
+interceptor, so switching venues changes every *request* and no TanStack cache
+*key* — and **42 dashboard views key their queries by name alone**. Live and
+offline, switching to Grand Marquee showed all 25 rows across 3 venues under its
+name, with its real total a third of the figure on screen. Fixing 42 keys would
+have fixed the ones somebody remembered; `VenueScopeSync` removes the
+possibility instead. `removeQueries`, not `invalidateQueries` — invalidation
+keeps serving the stale entry, which is the lie.
+
+**`WWL-113` is confirmed, not refused.** Vendors do take genuine overpayments,
+and a real payment that cannot be recorded makes the khata disagree with the
+cash box — which is worse than the typo. The likely extra zero is named
+("that is about 60× the balance — did you mean Rs X?"), and the tolerance is 1%
+or Rs 1,000 so that rounding up in cash never trains anyone to tick a box
+without reading it.
+
+**`WWL-321` is enforced server-side.** A compliance state is not something a
+client should be guaranteeing.
+
+### Shipped
+
+Both PRs are open and carry every wave: **backend #54**, **frontend #187**.
+
+**The migration ran against live production on 2026-08-07**, with the operator's
+go-ahead, in the correct prod-first order — schema before code. Verified after:
+
+| | |
+|---|---|
+| `BookingDetails.subVenueId` | integer, nullable |
+| Index + FK | present · `ON DELETE SET NULL` |
+| Rows backfilled | **2** (only venues with a single bookable space) |
+| `WWL-260` legacy attendance rows | **0** — the staff-route repair landed in the same run |
+| Live backend / public site after | **200** / **200** |
+
+What the live numbers show: **3,270 single-space venues and 8 multi-space**. So
+`WWL-100` only ever bit those 8 — but for them it was the whole product, and the
+grid is now truthful for all 3,278 either way.
+
+### Still open
+
+- **Nothing is deployed.** Both PRs need merging; the migration is deliberately
+  ahead of the code, which is safe (every read probes for the column).
+- **Not verified in a browser on live.** That is the next step once the PRs
+  merge, using a QA vendor on the owner's own email so OTPs can be relayed.
+- The **S3/S4 tail** (285) and the **18 product gaps** are untouched and need a
+  product decision, not a fix.
