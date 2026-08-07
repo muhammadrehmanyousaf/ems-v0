@@ -47,7 +47,10 @@ export interface StatusPillProps {
 }
 
 export function StatusPill({ tone, children, variant = "dot", className }: StatusPillProps) {
-  const t = TONE[tone]
+  // WWL-260 — an unknown tone used to throw on `t.cls` and take the whole route
+  // down through the error boundary. A status pill must never be able to do that:
+  // the worst a bad tone can now cost is a neutral pill.
+  const t = TONE[tone] ?? TONE.neutral
   return (
     <span
       className={cn(

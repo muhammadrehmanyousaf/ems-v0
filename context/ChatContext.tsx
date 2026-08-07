@@ -30,6 +30,12 @@ interface ChatContextType {
   messages: ChatMessageItem[];
   isLoadingConversations: boolean;
   isLoadingMessages: boolean;
+  /**
+   * WWL-019 — a failed load used to be indistinguishable from an empty inbox,
+   * because ChatAPI answered with [] on every error.
+   */
+  conversationsError: string | null;
+  messagesError: string | null;
   hasMoreMessages: boolean;
   totalUnread: number;
   onlineStatuses: OnlineStatuses;
@@ -52,6 +58,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [conversationsError, setConversationsError] = useState<string | null>(null);
+  const [messagesError, setMessagesError] = useState<string | null>(null);
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [totalUnread, setTotalUnread] = useState(0);
   const [onlineStatuses, setOnlineStatuses] = useState<OnlineStatuses>({});
@@ -148,7 +156,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         });
 
         // Update total unread
-        ChatAPI.getTotalUnread().then(setTotalUnread);
+        ChatAPI.getTotalUnread().then(setTotalUnread).catch(() => {});
       }
     );
 
@@ -216,7 +224,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
     // Load initial data
     loadConversations();
-    ChatAPI.getTotalUnread().then(setTotalUnread);
+    ChatAPI.getTotalUnread().then(setTotalUnread).catch(() => {});
 
     return () => {
       socket.disconnect();
@@ -226,6 +234,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   const loadConversations = async () => {
     setIsLoadingConversations(true);
+    setConversationsError(null);
     try {
       const convos = await ChatAPI.getConversations();
       setConversations(convos);
@@ -237,6 +246,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (err) {
       console.error("[Chat] Failed to load conversations:", err);
+      setConversationsError("Couldn't load your conversations.");
     } finally {
       setIsLoadingConversations(false);
     }
@@ -264,6 +274,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
       // Load messages
       setIsLoadingMessages(true);
+      setMessagesError(null);
       try {
         const result = await ChatAPI.getMessages(id);
         setMessages(result.messages);
@@ -273,9 +284,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         setConversations((prev) =>
           prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c))
         );
-        ChatAPI.getTotalUnread().then(setTotalUnread);
+        ChatAPI.getTotalUnread().then(setTotalUnread).catch(() => {});
       } catch (err) {
         console.error("[Chat] Failed to load messages:", err);
+        setMessagesError("Couldn't load this conversation.");
       } finally {
         setIsLoadingMessages(false);
       }
@@ -429,6 +441,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         messages,
         isLoadingConversations,
         isLoadingMessages,
+        conversationsError,
+        messagesError,
         hasMoreMessages,
         totalUnread,
         onlineStatuses,

@@ -43,48 +43,47 @@ export interface ChatMessageItem {
   };
 }
 
+/**
+ * WWL-019 — every read here used to answer with an empty result on failure, so
+ * a broken conversation load looked exactly like "you have no messages" and the
+ * `catch` blocks already written in ChatContext were unreachable. Reads now
+ * throw; the callers' existing handling shows the failure.
+ *
+ * `getTotalUnread` is the one exception: it is fired-and-forgotten from four
+ * places as a badge count, so it keeps returning 0 rather than producing an
+ * unhandled rejection. It logs instead of failing silently.
+ */
 export class ChatAPI {
   static async getConversations(): Promise<ConversationItem[]> {
-    try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}api/v1/chat/conversations`
-      );
-      return response.data.data || [];
-    } catch (error) {
-      console.error("Error fetching conversations:", error);
-      return [];
-    }
+    const response = await axiosInstance.get(
+      `${BACKEND_URL}api/v1/chat/conversations`
+    );
+    return response.data?.data || [];
   }
 
   static async createOrGetConversation(
     otherUserId: number,
     bookingId?: number
   ): Promise<ConversationItem | null> {
-    try {
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}api/v1/chat/conversations`,
-        { otherUserId, bookingId }
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error("Error creating conversation:", error);
-      return null;
-    }
+    const response = await axiosInstance.post(
+      `${BACKEND_URL}api/v1/chat/conversations`,
+      { otherUserId, bookingId }
+    );
+    return response.data?.data ?? null;
   }
 
   static async getMessages(
     conversationId: number,
     before?: number
   ): Promise<{ messages: ChatMessageItem[]; hasMore: boolean }> {
-    try {
-      let url = `${BACKEND_URL}api/v1/chat/conversations/${conversationId}/messages?limit=50`;
-      if (before) url += `&before=${before}`;
-      const response = await axiosInstance.get(url);
-      return response.data.data || { messages: [], hasMore: false };
-    } catch (error) {
-      console.error("Error fetching messages:", error);
-      return { messages: [], hasMore: false };
+    let url = `${BACKEND_URL}api/v1/chat/conversations/${conversationId}/messages?limit=50`;
+    if (before) url += `&before=${before}`;
+    const response = await axiosInstance.get(url);
+    const payload = response.data?.data;
+    if (!payload || !Array.isArray(payload.messages)) {
+      throw new Error("Message list response was malformed");
     }
+    return payload;
   }
 
   static async getTotalUnread(): Promise<number> {
@@ -94,20 +93,17 @@ export class ChatAPI {
       );
       return response.data.data?.count || 0;
     } catch (error) {
+      // Badge count only — never worth breaking a screen for.
+      console.error("Error fetching unread chat total:", error);
       return 0;
     }
   }
 
   static async getContacts(): Promise<ChatUser[]> {
-    try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}api/v1/chat/contacts`
-      );
-      return response.data.data || [];
-    } catch (error) {
-      console.error("Error fetching contacts:", error);
-      return [];
-    }
+    const response = await axiosInstance.get(
+      `${BACKEND_URL}api/v1/chat/contacts`
+    );
+    return response.data?.data || [];
   }
 
   /**

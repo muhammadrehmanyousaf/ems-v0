@@ -26,6 +26,14 @@ interface NotificationContextType {
   isConnected: boolean;
   isLoading: boolean;
   hasMore: boolean;
+  /**
+   * WWL-400 — the load used to fail silently and render as "you have no
+   * notifications". A failed load is now distinguishable from an empty inbox.
+   */
+  loadError: string | null;
+  /** WWL-390 — set when a mark-read / delete was reverted, so the UI can say so. */
+  actionError: string | null;
+  clearActionError: () => void;
   loadMore: () => Promise<void>;
   markAsRead: (id: number) => Promise<void>;
   markAllAsRead: () => Promise<void>;
@@ -46,7 +54,10 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  const clearActionError = useCallback(() => setActionError(null), []);
 
   // Connect socket when user authenticates
   useEffect(() => {
@@ -133,6 +144,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
   const loadInitialNotifications = async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const result = await NotificationAPI.getNotifications(1, 20);
       setNotifications(result.notifications);
@@ -144,6 +156,8 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       setUnreadCount(count);
     } catch (err) {
       console.error("[Notifications] Failed to load:", err);
+      // WWL-400 — an empty list and a failed load must not look the same.
+      setLoadError("Couldn't load your notifications.");
     } finally {
       setIsLoading(false);
     }
@@ -159,8 +173,10 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       setTotalCount(result.total);
       setHasMore(result.hasMore);
       setPage(nextPage);
+      setLoadError(null);
     } catch (err) {
       console.error("[Notifications] Failed to load more:", err);
+      setLoadError("Couldn't load more notifications.");
     } finally {
       setIsLoading(false);
     }
@@ -182,11 +198,13 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
           await NotificationAPI.markAsRead(id);
         }
       } catch {
-        // Revert optimistic update on failure
+        // Revert optimistic update on failure. WWL-390 — this branch was
+        // unreachable until NotificationAPI stopped swallowing its errors.
         setNotifications((prev) =>
           prev.map((n) => (n.id === id ? { ...n, isRead: false } : n))
         );
         setUnreadCount((prev) => prev + 1);
+        setActionError("Couldn't mark that as read — it's still unread.");
       }
     },
     []
@@ -209,6 +227,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       // Revert on failure
       setNotifications(prevNotifications);
       setUnreadCount(prevCount);
+      setActionError("Couldn't mark everything as read — nothing was changed.");
     }
   }, [notifications, unreadCount]);
 
@@ -223,6 +242,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     } catch {
       // Revert optimistic delete on failure
       setNotifications(prev);
+      setActionError("Couldn't delete that notification — it's still here.");
     }
   }, [notifications]);
 
@@ -239,6 +259,9 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         isConnected,
         isLoading,
         hasMore,
+        loadError,
+        actionError,
+        clearActionError,
         loadMore,
         markAsRead,
         markAllAsRead,

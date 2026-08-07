@@ -45,6 +45,59 @@ export type AttendanceStatus =
   | "excused"
   | "replaced";
 
+/**
+ * WWL-260 — production carries `attendanceStatus: "present"` on shifts that were
+ * seeded/imported rather than created through the API. The column is STRING(20)
+ * with no constraint, so nothing rejected it, and every map keyed by
+ * AttendanceStatus returned `undefined` for it — which took the whole
+ * /dashboard/staff route down.
+ *
+ * `present` means the same thing as `completed` ("they worked the shift"), so it
+ * is normalised to that everywhere rather than being given a status of its own.
+ * Anything else unrecognised falls back to `scheduled`, which is the column's own
+ * default and the safest thing to show.
+ */
+const LEGACY_ATTENDANCE_ALIASES: Record<string, AttendanceStatus> = {
+  present: "completed",
+  worked: "completed",
+  attended: "completed",
+  no_show: "absent",
+  noshow: "absent",
+  "checked-in": "checked_in",
+  checkedin: "checked_in",
+};
+
+const KNOWN_ATTENDANCE_STATUSES: AttendanceStatus[] = [
+  "scheduled",
+  "checked_in",
+  "completed",
+  "absent",
+  "excused",
+  "replaced",
+];
+
+export function normalizeAttendanceStatus(value: unknown): AttendanceStatus {
+  if (typeof value !== "string") return "scheduled";
+  const v = value.trim().toLowerCase();
+  if ((KNOWN_ATTENDANCE_STATUSES as string[]).includes(v)) return v as AttendanceStatus;
+  return LEGACY_ATTENDANCE_ALIASES[v] ?? "scheduled";
+}
+
+const KNOWN_PAYMENT_STATUSES: PaymentStatus[] = [
+  "pending",
+  "partial",
+  "paid",
+  "disputed",
+  "void",
+];
+
+/** Same guard for the payment column, which has the same STRING/no-constraint shape. */
+export function normalizePaymentStatus(value: unknown): PaymentStatus {
+  if (typeof value !== "string") return "pending";
+  const v = value.trim().toLowerCase();
+  return (KNOWN_PAYMENT_STATUSES as string[]).includes(v) ? (v as PaymentStatus) : "pending";
+}
+
 export interface ReplacementDetails {
   name: string;
   phone?: string | null;

@@ -680,8 +680,16 @@ export class PaymentsAPI {
     if (params?.dateFrom) qs.set('dateFrom', params.dateFrom);
     if (params?.dateTo)   qs.set('dateTo',   params.dateTo);
     const res = await axiosInstance.get(`/api/v1/payments/vendor-revenue?${qs.toString()}`);
-    const empty = { count: 0, total: 0, received: 0, due: 0 };
-    return res.data?.data ?? { payments: [], stats: { offline: empty, online: empty, all: empty } };
+    // WWL-108 — this used to fall back to a fully-formed empty ledger, so a 200
+    // that carried no `data` (the WWL-107 catch-all banner, a proxy page, a
+    // deploy skew) rendered as "Rs 0 billed · Rs 0 received · no payments yet"
+    // on a venue holding Rs 11.7m. TanStack Query saw a success, so the Retry UI
+    // — which works — could never appear. A malformed response is now an error.
+    const payload = res.data?.data;
+    if (!payload || !Array.isArray(payload.payments) || !payload.stats) {
+      throw new Error("Revenue response was malformed — refusing to render an empty ledger");
+    }
+    return payload;
   }
 }
 
