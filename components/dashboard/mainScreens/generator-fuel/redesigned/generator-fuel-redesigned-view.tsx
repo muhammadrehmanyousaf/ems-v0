@@ -134,8 +134,21 @@ export function GeneratorFuelRedesignedView() {
     },
     { key: "type", header: "Type", render: (e) => <StatusPill tone={typeTone(e.type)}>{typeLabel(e.type)}</StatusPill> },
     { key: "fuel", header: "Fuel", cellClassName: "text-muted-foreground", render: (e) => cap(e.fuelType) },
-    { key: "litres", header: "Litres", align: "right", cellClassName: "tabular-nums", render: (e) => num(e.litres).toLocaleString("en-PK") },
+    /**
+     * WWL-314 — `num(e.litres)` coerced null to 0, so a tank-reading or
+     * maintenance row with no litres read "0" — a measurement — rather than
+     * "not applicable". The Total cost column beside it already got this right.
+     */
+    { key: "litres", header: "Litres", align: "right", cellClassName: "tabular-nums", render: (e) => (e.litres == null ? <span className="text-muted-foreground">—</span> : num(e.litres).toLocaleString("en-PK")) },
+    /**
+     * WWL-313 — cost per litre and supplier were captured by the form and
+     * exported to CSV, and neither was a column. The search matches
+     * `supplierName`, so searching a supplier filtered the log down to rows
+     * that never showed which supplier they came from.
+     */
+    { key: "perLitre", header: "Rs / litre", align: "right", render: (e) => <MoneyCell amount={e.costPerLitre == null ? null : num(e.costPerLitre)} tone="muted" /> },
     { key: "cost", header: "Total cost", align: "right", render: (e) => <MoneyCell amount={e.totalCost == null ? null : num(e.totalCost)} /> },
+    { key: "supplier", header: "Supplier", cellClassName: "text-muted-foreground", render: (e) => e.supplierName || "—" },
     { key: "occurred", header: "Occurred", cellClassName: "text-muted-foreground", render: (e) => fmtDate(e.occurredAt) },
     {
       key: "actions", header: "", align: "right",
@@ -241,7 +254,11 @@ export function GeneratorFuelRedesignedView() {
               </span>
               <div className="min-w-0">
                 <div className="truncate font-medium">{e.generatorIdentifier || "—"}</div>
-                <div className="text-xs text-muted-foreground">{cap(e.fuelType)} · {num(e.litres).toLocaleString("en-PK")} L · {e.totalCost == null ? "—" : formatPkr(num(e.totalCost))}</div>
+                {/* WWL-313/314 — same fields as the table, same null handling. */}
+                <div className="text-xs text-muted-foreground">
+                  {cap(e.fuelType)} · {e.litres == null ? "—" : `${num(e.litres).toLocaleString("en-PK")} L`} · {e.totalCost == null ? "—" : formatPkr(num(e.totalCost))}
+                </div>
+                {e.supplierName && <div className="truncate text-xs text-muted-foreground">from {e.supplierName}</div>}
               </div>
             </div>
             <StatusPill tone={typeTone(e.type)}>{typeLabel(e.type)}</StatusPill>

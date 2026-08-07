@@ -37,7 +37,8 @@ const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(
 const fmtDate = (v?: string | null) => {
   if (!v) return "—"
   const d = new Date(v)
-  return isNaN(d.getTime()) ? "—" : d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+  return isNaN(d.getTime()) ? "—" : // WWL-334 — en-GB on a screen inside a dashboard that uses en-PK everywhere else.
+    d.toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })
 }
 const daysFromNow = (v?: string | null): number | null => {
   if (!v) return null
