@@ -9,12 +9,11 @@ import ViewDialog from './view-dialog';
 import { ReplyDialog } from './reply-dialog';
 import { ReviewsAPI } from '@/lib/api/dashboard';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ConfirmDeleteDialog } from '@/components/dashboard/globalComponents/confirm-delete-dialog';
 import { toast } from 'sonner';
 
 const ReviewsTable = () => {
     const [viewReview, setViewReview] = useState<Review | null>(null);
-    const [deleteReview, setDeleteReview] = useState<Review | null>(null);
+    // WWL-356 — no delete state: a business cannot erase a review about itself.
     const [replyReview, setReplyReview] = useState<Review | null>(null);
     const [data, setData] = useState<Review[]>([]);
     const [loading, setLoading] = useState(true);
@@ -31,21 +30,15 @@ const ReviewsTable = () => {
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
-    const handleDelete = async () => {
-        if (!deleteReview) return;
-        try {
-            await ReviewsAPI.delete(deleteReview.id);
-            toast.success('Review deleted successfully');
-            fetchData();
-        } catch {
-            toast.error('Failed to delete review');
-        }
-    };
-
     const handlePin = async (review: Review) => {
+        const intended = !review.isPinned;
         try {
-            const res = await ReviewsAPI.togglePin(review.id, !review.isPinned);
-            toast.success(res?.isPinned ? 'Review pinned — it’ll showcase first' : 'Review unpinned');
+            const res = await ReviewsAPI.togglePin(review.id, intended);
+            // WWL-369 — this used to read `res?.isPinned` directly, so a response
+            // that carried no `isPinned` made pressing "Pin" announce
+            // "Review unpinned". Fall back to what was actually asked for.
+            const nowPinned = typeof res?.isPinned === 'boolean' ? res.isPinned : intended;
+            toast.success(nowPinned ? 'Review pinned — it’ll showcase first' : 'Review unpinned');
             fetchData();
         } catch {
             toast.error('Failed to update pin');
@@ -56,7 +49,6 @@ const ReviewsTable = () => {
         data,
         columns: columns(
             (review) => setViewReview(review),
-            (review) => setDeleteReview(review),
             (review) => setReplyReview(review),
             handlePin,
         ),
@@ -95,14 +87,6 @@ const ReviewsTable = () => {
                 onOpenChange={(v) => !v && setReplyReview(null)}
                 review={replyReview}
                 onSuccess={fetchData}
-            />
-
-            <ConfirmDeleteDialog
-                open={!!deleteReview}
-                onOpenChange={(v) => !v && setDeleteReview(null)}
-                title="Delete Review"
-                description={`Are you sure you want to delete this review by "${deleteReview?.reviewerName}"? This action cannot be undone.`}
-                onConfirm={handleDelete}
             />
         </div>
     );

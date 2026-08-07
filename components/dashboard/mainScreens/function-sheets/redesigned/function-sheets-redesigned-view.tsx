@@ -213,8 +213,7 @@ export function FunctionSheetsRedesignedView() {
               ? `${unpricedCount} of ${all.length} not yet priced — booking total used`
               : undefined
           }
-          trend={unpricedCount > 0 ? "flat" : undefined}
-        />
+          trend={unpricedCount > 0 ? "flat" : undefined} error={isError} />
       </div>
 
       <DataTable

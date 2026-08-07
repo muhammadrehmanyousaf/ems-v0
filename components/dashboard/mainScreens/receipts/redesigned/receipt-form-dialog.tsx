@@ -28,9 +28,10 @@ import {
   validateTransactionRef,
   validateOptionalText,
 } from "@/components/dashboard/primitives/field-error"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
 const METHODS = Object.keys(RECEIPT_METHOD_LABELS) as ReceiptMethod[]
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => todayInKarachi()
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
 function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
@@ -163,7 +164,7 @@ export function ReceiptFormDialog({
                 type="date"
                 /* Native ceiling as well as the JS check — the picker itself
                    should not offer a future date for money already received. */
-                max={new Date().toISOString().slice(0, 10)}
+                max={todayInKarachi()}
                 className={cn(inputCls, shown.receivedDate && ERROR_INPUT_CLS)}
                 value={form.receivedDate}
                 onChange={(e) => { set("receivedDate", e.target.value); touch("receivedDate") }}

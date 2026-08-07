@@ -9,6 +9,7 @@
 import * as React from "react"
 import { useMutation } from "@tanstack/react-query"
 import { StaffAPI, type StaffMember, type StaffRole, type EmploymentType } from "@/lib/api/staff"
+import { RecordVenueField } from "@/components/dashboard/shared/record-venue-field"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
@@ -68,6 +69,14 @@ export function StaffFormDialog({
     // fields are flagged red before this vendor has typed anything.
     if (open) { const k = member?.id ?? "new"; if (loaded.current !== k) { setForm(blank(member)); setTouched({}); loaded.current = k } } else { loaded.current = null }
   }, [open, member])
+  /**
+   * WWL-262 — a new hire was filed under `businesses?.[0]?.id`, so under
+   * "All venues" a waiter landed on whichever venue happened to be first and
+   * the vendor was never asked and never told. The venue is now part of the
+   * form, and the record cannot be saved without one.
+   */
+  const [venueId, setVenueId] = React.useState<string>(businessId != null ? String(businessId) : "")
+  const effectiveBusinessId = member?.businessId ?? (venueId ? Number(venueId) : businessId)
   const [touched, setTouched] = React.useState<Record<string, boolean>>({})
   const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }))
   const set = (k: keyof FormState, v: string | boolean) => { setForm((f) => ({ ...f, [k]: v })); touch(String(k)) }
@@ -75,7 +84,7 @@ export function StaffFormDialog({
   const saveMut = useMutation({
     mutationFn: () => {
       const body = {
-        businessId: member?.businessId ?? businessId!,
+        businessId: effectiveBusinessId!,
         fullName: form.fullName.trim(),
         role: form.role, employmentType: form.employmentType,
         phoneNumber: form.phoneNumber.trim() || undefined,
@@ -146,7 +155,7 @@ export function StaffFormDialog({
   ) as Record<string, string | undefined>
 
   const hasError = Object.values(errs).some(Boolean)
-  const canSave = form.fullName.trim() && !hasError && (isEdit || businessId != null)
+  const canSave = form.fullName.trim() && !hasError && (isEdit || effectiveBusinessId != null)
 
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
   const blockedReason = canSave
@@ -162,6 +171,9 @@ export function StaffFormDialog({
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader><DialogTitle>{isEdit ? "Edit staff member" : "Add staff member"}</DialogTitle><DialogDescription>Team member details, pay and payout.</DialogDescription></DialogHeader>
         <div className="space-y-5 py-1">
+          {/* WWL-262 — say which venue this hire is filed under, and ask when
+              the vendor is on "All venues". */}
+          {!isEdit && <RecordVenueField value={venueId} onChange={setVenueId} noun="staff member" />}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Full name"><input className={inputCls} value={form.fullName} onChange={(e) => set("fullName", e.target.value)} autoFocus /></Field>
             <Field label="Role">

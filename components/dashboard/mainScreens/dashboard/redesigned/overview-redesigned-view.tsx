@@ -4,7 +4,7 @@
  * Dashboard home (Overview) — redesigned (Track C, flagship landing surface).
  * Wired to AnalyticsAPI.getDashboardKpis() + getRecentBookings(); rendered
  * through the primitives. Read-only; original /dashboard home untouched.
- * Route /dashboard/overview-new.
+ * Route /dashboard.
  */
 
 import * as React from "react"
@@ -126,6 +126,15 @@ function VendorOverviewRedesignedView() {
   const k = kpisQ.data
   const recent = (recentQ.data?.bookings ?? []) as RecentRow[]
 
+  // WWL-018 — any of the three money reads failing means the figures on this
+  // page are missing rather than zero, and the vendor has to be told so.
+  const moneyFailed = kpisQ.isError || recentQ.isError || breakdownsQ.isError
+  const retryMoney = () => {
+    if (kpisQ.isError) kpisQ.refetch()
+    if (recentQ.isError) recentQ.refetch()
+    if (breakdownsQ.isError) breakdownsQ.refetch()
+  }
+
   const halls = React.useMemo(
     () => [...(breakdownsQ.data?.byBusiness ?? [])].sort((a, b) => (b.totalRevenue || 0) - (a.totalRevenue || 0)),
     [breakdownsQ.data],
@@ -181,11 +190,30 @@ function VendorOverviewRedesignedView() {
       {/* Phase-1 EPIC 5 — action-first "Ghar" panel above the KPI tiles (pilot; self-hides on 404). */}
       {<ActionOverviewView />}
 
+      {/* WWL-018 — with the money endpoints failing, this page rendered
+          "Rs 0 collected · Rs 0 owed · 0 events" with full confidence: no error
+          message anywhere, no retry affordance, and Rs 0 collected even carried
+          a green upward trend arrow. Nothing distinguished it from a truthful
+          zero. The tiles show "—" now; this says why, and offers the way back. */}
+      {moneyFailed && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3">
+          <div className="text-sm">
+            <p className="font-medium text-destructive">Couldn&apos;t load your figures.</p>
+            <p className="text-muted-foreground">
+              The numbers below are missing, not zero. Nothing has changed in your account.
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onClick={retryMoney}>
+            <Icon name="RefreshCw" size={14} className="mr-1.5" /> Try again
+          </Button>
+        </div>
+      )}
+
       {/* KPI row */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard label="Total bookings" value={kpisQ.isLoading ? "…" : kpisQ.isError ? "—" :num(k?.totalBookings?.value)} icon="Calendar" />
-        <StatCard label="Revenue collected" value={kpisQ.isLoading ? "…" : kpisQ.isError ? "—" :formatPkr(num(k?.totalRevenue?.value))} icon="Wallet" trend="up" delta="received" />
-        <StatCard label="Revenue due" value={kpisQ.isLoading ? "…" : kpisQ.isError ? "—" :formatPkr(num(k?.revenueDue?.value))} icon="Clock" delta="to chase" />
+        <StatCard label="Revenue collected" value={kpisQ.isLoading ? "…" : kpisQ.isError ? "—" :formatPkr(num(k?.totalRevenue?.value))} icon="Wallet" trend={kpisQ.isError ? undefined : "up"} delta={kpisQ.isError ? "couldn't load" : "received"} />
+        <StatCard label="Revenue due" value={kpisQ.isLoading ? "…" : kpisQ.isError ? "—" :formatPkr(num(k?.revenueDue?.value))} icon="Clock" delta={kpisQ.isError ? "couldn't load" : "to chase"} />
         <StatCard label="Today's events" value={kpisQ.isLoading ? "…" : kpisQ.isError ? "—" :num(k?.todaysEvents?.value)} icon="Star" />
         <StatCard label="Upcoming (7d)" value={kpisQ.isLoading ? "…" : kpisQ.isError ? "—" :num(k?.upcomingBookings?.value)} icon="TrendingUp" />
       </div>

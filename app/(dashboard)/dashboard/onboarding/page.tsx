@@ -16,7 +16,7 @@ export default function Page() {
     <div>
       <PageContainer>
         <div className="space-y-4">
-          <Heading title="Onboarding checklist" />
+          <Heading title="Setup checklist" />
           <Separator />
           {/* Operational migration step (CSV imports) — flag-aware,
               dismissible. Renders nothing if both import flags are off.

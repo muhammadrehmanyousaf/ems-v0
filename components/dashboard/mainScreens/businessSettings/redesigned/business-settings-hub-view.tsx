@@ -133,6 +133,8 @@ export function BusinessSettingsHubView() {
   const [dirty, setDirty] = React.useState(false)
   const loadedId = React.useRef<number | null>(null)
   const [form, setForm] = React.useState<Record<string, any>>({})
+  // WWL-472 — what was loaded, so the save can send only what changed.
+  const [baseline, setBaseline] = React.useState<Record<string, any>>({})
 
   React.useEffect(() => {
     if (biz && loadedId.current !== biz.id) {
@@ -146,10 +148,38 @@ export function BusinessSettingsHubView() {
         minimumPrice: biz.minimumPrice ?? "",
         minCapacity: biz.minCapacity ?? "",
         maxCapacity: biz.maxCapacity ?? "",
-        downPaymentType: biz.downPaymentType ?? "Percentage",
+        /**
+         * WWL-472 — this used to be `biz.downPaymentType ?? "Percentage"`, so
+         * a venue with NO advance terms loaded as though it had chosen a
+         * percentage advance, and any save wrote "Percentage" to the record.
+         * The paired `downPayment` stays null, leaving "10% of nothing"-shaped
+         * state on a live listing. An empty string keeps "not set" as "not set".
+         */
+        downPaymentType: biz.downPaymentType ?? "",
         downPayment: biz.downPayment ?? "",
         cancelationPolicy: biz.cancelationPolicy ?? "",
-        ...Object.fromEntries(BOOLS.map((b) => [b.key, Boolean(biz[b.key])])),
+        /**
+         * `Boolean(null)` is `false`, so an amenity nobody has answered loaded
+         * as an explicit "we do not provide this". Kept as null here, and the
+         * save below only sends what actually changed — on a public listing
+         * "not specified" and "we don't provide this" are different statements,
+         * and this used to convert the first into the second invisibly.
+         */
+        ...Object.fromEntries(BOOLS.map((b) => [b.key, biz[b.key] ?? null])),
+      })
+      setBaseline({
+        name: biz.name ?? "",
+        description: biz.description ?? "",
+        city: biz.city ?? "",
+        subArea: biz.subArea ?? "",
+        brandLogo: biz.brandLogo ?? "",
+        minimumPrice: biz.minimumPrice ?? "",
+        minCapacity: biz.minCapacity ?? "",
+        maxCapacity: biz.maxCapacity ?? "",
+        downPaymentType: biz.downPaymentType ?? "",
+        downPayment: biz.downPayment ?? "",
+        cancelationPolicy: biz.cancelationPolicy ?? "",
+        ...Object.fromEntries(BOOLS.map((b) => [b.key, biz[b.key] ?? null])),
       })
       setDirty(false)
     }
@@ -235,22 +265,62 @@ export function BusinessSettingsHubView() {
     }
   })
 
+  /**
+   * WWL-472 — the save used to send every owned field on every save, so
+   * toggling one amenity switch on a venue with eight unanswered ones wrote
+   * seven explicit `false`s and a `downPaymentType` the vendor never chose.
+   * Verified live on 3359: one click on *Sound system* produced a PATCH that
+   * answered eight questions. The same payload went from EVERY tab, so a
+   * vendor correcting a typo in their venue's name silently declared they
+   * provide no seating, no waiters, no plates, no decoration, no food testing,
+   * no travel and no COVID compliance — and picked an advance type.
+   *
+   * This is what PATCH means: send the fields that changed. Everything else is
+   * left exactly as the record has it, including "not answered".
+   */
+  const buildPatch = React.useCallback(() => {
+    const next: Record<string, any> = {
+      name: form.name,
+      description: form.description || null,
+      city: form.city || null,
+      subArea: form.subArea || null,
+      brandLogo: form.brandLogo || null,
+      minimumPrice: numOrNull(String(form.minimumPrice)),
+      minCapacity: numOrNull(String(form.minCapacity)),
+      maxCapacity: numOrNull(String(form.maxCapacity)),
+      downPaymentType: form.downPaymentType || null,
+      downPayment: numOrNull(String(form.downPayment)),
+      cancelationPolicy: form.cancelationPolicy || null,
+      // A boolean the vendor has not touched stays null — unanswered — rather
+      // than becoming an explicit "we don't provide this".
+      ...Object.fromEntries(
+        BOOLS.map((b) => [b.key, form[b.key] == null ? null : Boolean(form[b.key])]),
+      ),
+    }
+    const prev: Record<string, any> = {
+      ...baseline,
+      minimumPrice: numOrNull(String(baseline.minimumPrice ?? "")),
+      minCapacity: numOrNull(String(baseline.minCapacity ?? "")),
+      maxCapacity: numOrNull(String(baseline.maxCapacity ?? "")),
+      downPayment: numOrNull(String(baseline.downPayment ?? "")),
+      description: baseline.description || null,
+      city: baseline.city || null,
+      subArea: baseline.subArea || null,
+      brandLogo: baseline.brandLogo || null,
+      downPaymentType: baseline.downPaymentType || null,
+      cancelationPolicy: baseline.cancelationPolicy || null,
+    }
+    const patch: Record<string, any> = {}
+    for (const [k, v] of Object.entries(next)) {
+      if (v !== prev[k]) patch[k] = v
+    }
+    // The name is the one field the API treats as required on this route.
+    if (Object.keys(patch).length > 0 && patch.name === undefined) patch.name = form.name
+    return patch
+  }, [form, baseline])
+
   const saveMut = useMutation({
-    mutationFn: () =>
-      BusinessesAPI.update(biz!.id, {
-        name: form.name,
-        description: form.description || null,
-        city: form.city || null,
-        subArea: form.subArea || null,
-        brandLogo: form.brandLogo || null,
-        minimumPrice: numOrNull(String(form.minimumPrice)),
-        minCapacity: numOrNull(String(form.minCapacity)),
-        maxCapacity: numOrNull(String(form.maxCapacity)),
-        downPaymentType: form.downPaymentType || null,
-        downPayment: numOrNull(String(form.downPayment)),
-        cancelationPolicy: form.cancelationPolicy || null,
-        ...Object.fromEntries(BOOLS.map((b) => [b.key, Boolean(form[b.key])])),
-      } as Partial<ApiBusiness>),
+    mutationFn: () => BusinessesAPI.update(biz!.id, buildPatch() as Partial<ApiBusiness>),
     onSuccess: () => { showSuccessToast("Business profile saved"); setDirty(false); qc.invalidateQueries({ queryKey: ["biz-settings-hub"] }) },
     // Surface the SERVER's reason, not axios's generic wrapper.
     //
@@ -435,7 +505,13 @@ export function BusinessSettingsHubView() {
                   <label key={String(b.key)} className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2.5 hover:bg-accent/50">
                     <span className="min-w-0">
                       <span className="block text-sm font-medium">{b.label}</span>
-                      <span className="block text-xs text-muted-foreground">{b.hint}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {/* WWL-472 — an off switch and an unanswered question look
+                            identical, and on a public listing they say different
+                            things. Only the ones you have actually answered are
+                            published as "we don't provide this". */}
+                        {form[b.key] == null ? "Not answered yet" : b.hint}
+                      </span>
                     </span>
                     <Switch checked={Boolean(form[b.key])} onCheckedChange={(v) => set(String(b.key), v)} aria-label={b.label} />
                   </label>

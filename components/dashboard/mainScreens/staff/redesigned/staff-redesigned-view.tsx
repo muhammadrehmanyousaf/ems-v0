@@ -2,7 +2,7 @@
 
 /**
  * Staff — redesigned (Track C). Wired to StaffAPI.listMembers(); rendered through
- * the primitives. Read-only; original screen untouched. Route /dashboard/staff-new.
+ * the primitives. Route /dashboard/staff.
  */
 
 import * as React from "react"
@@ -127,7 +127,7 @@ export function StaffRedesignedView() {
       <TabsContent value="roster" className="space-y-6">
       <PageHeader
         eyebrow="Operate"
-        title="Team & Shooters"
+        title="Staff & payroll"
         description="Your crew, roles and pay rates."
         actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Add staff</Button>}
       />

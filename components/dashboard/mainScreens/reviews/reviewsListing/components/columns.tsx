@@ -9,7 +9,7 @@ import { StartComponent } from "./star-component";
 
 export const columns = (
     onView: (review: Review) => void,
-    onDelete: (review: Review) => void,
+    // WWL-356 — no onDelete. A business cannot delete a review written about it.
     onReply: (review: Review) => void,
     onPin?: (review: Review) => void,
 ): ColumnDef<Review>[] => [
@@ -64,7 +64,22 @@ export const columns = (
             return <span className="whitespace-nowrap">{id ? `#${id}` : "—"}</span>
         },
     },
+    /**
+     * WWL-357 — these three were declared with an `id` and a `cell` renderer
+     * and NO `accessorKey`. `exportTableToCSV` reads `row.getValue(col.id)`,
+     * and with no accessor there is nothing for `getValue` to call, so every
+     * cell resolved to `undefined` → "". Three of the six promised columns
+     * came out empty in every row of the export:
+     *
+     *   Full Name,Phone Number,Booking Id,Business,Rating,Date
+     *   Zeeshan Akram,0335755699,#165,,,
+     *
+     * One of the empty ones is the rating — the only number the file exists to
+     * carry. `accessorKey` gives `getValue` something to read; the `cell`
+     * renderers are untouched, so the grid looks exactly as it did.
+     */
     {
+        accessorKey: "businessName",
         id: "businessName",
         header: "Business",
         cell: ({ row }) => (
@@ -72,11 +87,13 @@ export const columns = (
         ),
     },
     {
+        accessorKey: "rating",
         id: 'rating',
         header: "Rating",
         cell: ({ row }) => <StartComponent value={row.original.rating} />
     },
     {
+        accessorKey: "createdAt",
         id: 'createdAt',
         header: "Date",
         cell: ({ row }) => (
@@ -90,7 +107,6 @@ export const columns = (
             <RowActions
                 data={row.original}
                 onView={onView}
-                onDelete={onDelete}
                 onReply={onReply}
                 onPin={onPin}
             />

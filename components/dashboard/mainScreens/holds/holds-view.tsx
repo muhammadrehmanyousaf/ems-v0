@@ -18,6 +18,7 @@ import { OutboxConflicts, type ReenterPayload } from "@/components/dashboard/sha
 import { HoldDateDialog, type HoldPrefill } from "@/components/dashboard/mainScreens/holds/hold-date-dialog"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { Button } from "@/components/ui/button"
+import { DangerousAction } from "@/components/dashboard/primitives/dangerous-action"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
@@ -103,7 +104,19 @@ export function HoldsView() {
                 <div className="font-medium">{fmtDate(h.holdDate)} · {h.holdTime}</div>
                 <div className="text-xs text-muted-foreground">Expires {fmtWhen(h.expiresAt)}{h.bookingId ? " · converting to a booking" : ""}</div>
               </div>
-              <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => releaseMut.mutate(h.id)} disabled={releaseMut.isPending}>Release</Button>
+              {/* WWL-063 — Release destroyed the hold on one click, with no
+                  confirmation and no undo. A hold is the only thing standing
+                  between a tentatively-promised date and someone else booking
+                  it, and the button sat inches from the row it belongs to. */}
+              <DangerousAction
+                title="Release this hold?"
+                consequence={`${fmtDate(h.holdDate)} · ${h.holdTime} goes back on sale immediately. There is no undo — you would have to place the hold again, and someone else may take the date first.`}
+                confirmLabel="Release hold"
+                disabled={releaseMut.isPending}
+                onConfirm={() => releaseMut.mutate(h.id)}
+              >
+                <Button size="sm" variant="ghost" className="text-muted-foreground" disabled={releaseMut.isPending}>Release</Button>
+              </DangerousAction>
             </li>
           ))}
         </ul>

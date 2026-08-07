@@ -21,6 +21,7 @@ import { VendorAPI } from "@/lib/api/vendors"
 import { getVendorTypeFromPath, getVendorTypeDisplayName, getVendorTypeDescription } from "@/lib/vendor-types"
 import { VENDOR_TYPES } from "@/lib/vendor-types"
 import { getVendorTypeConfig } from "@/lib/vendor-type-config"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
 interface VendorSearchProps {
   vendorType: string
@@ -449,7 +450,7 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
                         <input
                           type="date"
                           value={availableOn}
-                          min={new Date().toISOString().slice(0, 10)}
+                          min={todayInKarachi()}
                           onChange={(e) => setAvailableOn(e.target.value)}
                           className="h-10 flex-1 rounded-[4px] border border-bridal-beige bg-bridal-ivory px-3 text-sm font-bridal text-bridal-charcoal outline-none focus:ring-1 focus:ring-bridal-gold"
                         />

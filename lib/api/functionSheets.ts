@@ -25,12 +25,45 @@ export type PdfVariant =
   | "invoice"
   | "receipt";
 
+/**
+ * WWL-071 / WWL-081 — two spellings exist in the wild. Everything that has ever
+ * been *stored* uses `description` + `amount`; this interface, the composer and
+ * the PDF generator were written against `label` + `total`. The generator's
+ * `total` had a qty × unitPrice fallback so it looked fine; `label` had none, so
+ * every customer document printed "(no label)" against a real amount.
+ *
+ * Both are optional here and both are written on save. Read through
+ * `lineItemLabel` / `lineItemTotal`, never off the raw field.
+ */
 export interface FunctionSheetLineItem {
-  label: string;
+  label?: string;
+  /** Canonical stored spelling. */
+  description?: string;
   qty: number | string;
   unitPrice: number | string;
   total?: number | string;
+  /** Canonical stored spelling. */
+  amount?: number | string;
   notes?: string | null;
+}
+
+const asNum = (v: unknown): number => {
+  const n = typeof v === "number" ? v : parseFloat(String(v ?? ""));
+  return Number.isFinite(n) ? n : 0;
+};
+
+/** The item's description, whichever spelling it was stored under. */
+export function lineItemLabel(it: FunctionSheetLineItem | null | undefined): string {
+  if (!it) return "";
+  return (it.label || "").trim() || (it.description || "").trim();
+}
+
+/** The item's line total, whichever spelling it was stored under. */
+export function lineItemTotal(it: FunctionSheetLineItem | null | undefined): number {
+  if (!it) return 0;
+  if (it.total != null) return asNum(it.total);
+  if (it.amount != null) return asNum(it.amount);
+  return asNum(it.qty) * asNum(it.unitPrice);
 }
 
 // Deliverables tracker — per-booking deliverable pipeline (photos/video/

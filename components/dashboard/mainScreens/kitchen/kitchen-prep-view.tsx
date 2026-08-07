@@ -12,7 +12,7 @@
 import * as React from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { venueOsApi, type RecipeBom, type KitchenPrepSheet } from "@/lib/api/venueOs"
-import { useActiveBusinessId } from "@/lib/store/active-business-store"
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { Button } from "@/components/ui/button"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
@@ -23,7 +23,10 @@ const inputCls = "h-9 rounded-md border border-input bg-background px-2.5 text-s
 interface Row { dishName: string; guests: string }
 
 export function KitchenPrepView() {
-  const businessId = useActiveBusinessId()
+  // WWL-233 / F3 — the default venue scope produced a 500 because this sent
+  // no businessId under "All venues". One scoping primitive.
+  const [businessIdStr] = useBusinessIdField()
+  const businessId = businessIdStr ? Number(businessIdStr) : null
   const [rows, setRows] = React.useState<Row[]>([{ dishName: "", guests: "" }])
   const [sheet, setSheet] = React.useState<KitchenPrepSheet | null>(null)
   const [eventLabel, setEventLabel] = React.useState("")
@@ -40,11 +43,34 @@ export function KitchenPrepView() {
   const addRow = () => setRows((r) => [...r, { dishName: "", guests: "" }])
   const removeRow = (i: number) => setRows((r) => (r.length > 1 ? r.filter((_, j) => j !== i) : r))
 
+  /**
+   * WWL-234 — rows were silently dropped by
+   * `filter(r => r.dishName.trim() && Number(r.guests) > 0)`. A blank, zero,
+   * negative or non-numeric head count vanished with no warning, and the
+   * unmatched-dish banner covers only dishes with no recipe — so the printed
+   * sheet came out missing a dish and nothing on the page said so.
+   *
+   * On a cook sheet a silently missing dish is a dish that never gets cooked.
+   * Incomplete rows are now named on screen and block generation instead.
+   */
+  const rowProblem = (r: Row): string | null => {
+    const hasDish = !!r.dishName.trim()
+    const raw = r.guests.trim()
+    const n = Number(raw)
+    if (!hasDish && !raw) return null // an untouched spare row is not an error
+    if (!hasDish) return "pick a dish"
+    if (!raw) return "add a head count"
+    if (!Number.isFinite(n)) return "head count must be a number"
+    if (n <= 0) return "head count must be more than 0"
+    return null
+  }
+  const rowProblems = rows.map(rowProblem)
+  const usableRows = rows.filter((r, i) => rowProblems[i] === null && r.dishName.trim() && Number(r.guests) > 0)
+  const incompleteCount = rowProblems.filter(Boolean).length
+
   const genMut = useMutation({
     mutationFn: () => {
-      const dishes = rows
-        .filter((r) => r.dishName.trim() && Number(r.guests) > 0)
-        .map((r) => ({ dishName: r.dishName.trim(), guests: Number(r.guests) }))
+      const dishes = usableRows.map((r) => ({ dishName: r.dishName.trim(), guests: Number(r.guests) }))
       if (dishes.length === 0) throw new Error("Add at least one dish with a guest count")
       return venueOsApi.kitchenPrep(businessId as number, dishes)
     },
@@ -57,11 +83,38 @@ export function KitchenPrepView() {
   // deghs on the page even if the user edits a row after generating.
   const sheetGuests = sheet ? sheet.dishes.reduce((s, d) => s + (Number(d.guests) || 0), 0) : 0
 
+  /**
+   * WWL-231 — ANY rejection rendered "the kitchen-BOM engine isn't enabled for
+   * your account yet", with no error text, no Retry and no way back but a
+   * manual reload. Driven live with the engine verified enabled: an unroutable
+   * host and an HTTP 500 both produced that sentence. A vendor who hits one
+   * flaky moment concludes the feature is not in their plan and never returns.
+   *
+   * Only a 404 means "dark". Everything else is a failure, and says so with a
+   * way to try again.
+   */
   if (bomsQ.isError) {
+    const status = (bomsQ.error as any)?.response?.status
+    const isDark = status === 404
     return (
       <div className="p-4 md:p-6 max-w-3xl mx-auto">
         <PageHeader eyebrow="Kitchen" title="Kitchen prep sheet" description="Turn the menu into deghs to cook and a shopping list." />
-        <div className="mt-6 rounded-lg border p-6 text-center text-sm text-muted-foreground">The kitchen-BOM engine isn&apos;t enabled for your account yet.</div>
+        <div className="mt-6 rounded-lg border p-6 text-center text-sm">
+          {isDark ? (
+            <p className="text-muted-foreground">The kitchen-BOM engine isn&apos;t enabled for your account yet.</p>
+          ) : (
+            <div className="space-y-3">
+              <p className="font-medium">Couldn&apos;t load your recipes.</p>
+              <p className="text-muted-foreground">
+                {status ? `The server answered ${status}.` : "The request didn't get through — check your connection."}{" "}
+                Your recipes are safe; this is a loading problem.
+              </p>
+              <Button size="sm" variant="outline" onClick={() => bomsQ.refetch()}>
+                <Icon name="RefreshCw" size={14} className="mr-1.5" /> Try again
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     )
   }
@@ -81,21 +134,64 @@ export function KitchenPrepView() {
           <label className="text-xs font-medium text-muted-foreground">Event (optional)</label>
           <input className={cn(inputCls, "w-full")} value={eventLabel} onChange={(e) => setEventLabel(e.target.value)} placeholder="e.g. Khan Walima · 14 Feb" />
         </div>
+        {/* WWL-232 — at 360px this row was a single flex line: the dish select
+            alone took 342px of the 296px available, pushing the guests input
+            (383→495) and Remove (503→535) entirely off-screen, with 22 elements
+            overflowing the viewport. Two of the three controls were unreachable
+            on a phone. It stacks below `sm` and only becomes a row when there is
+            room for one; `min-w-0` lets the select shrink instead of forcing the
+            track wide. */}
         <div className="space-y-2">
           {rows.map((r, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <select className={cn(inputCls, "flex-1")} value={r.dishName} onChange={(e) => setRow(i, "dishName", e.target.value)}>
-                <option value="">{boms.length ? "Pick a dish…" : "No recipes yet — add them in kitchen settings"}</option>
-                {boms.map((b) => <option key={b.id} value={b.dishName}>{b.dishName}</option>)}
-              </select>
-              <input className={cn(inputCls, "w-28 tabular-nums")} type="number" inputMode="numeric" value={r.guests} onChange={(e) => setRow(i, "guests", e.target.value)} placeholder="guests" />
-              <Button size="sm" variant="ghost" className="h-9 px-2" onClick={() => removeRow(i)} aria-label="Remove"><Icon name="Trash2" size={14} /></Button>
+            <div key={i} className="space-y-1">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <select
+                  className={cn(inputCls, "w-full min-w-0 sm:flex-1")}
+                  value={r.dishName}
+                  onChange={(e) => setRow(i, "dishName", e.target.value)}
+                  aria-label={`Dish ${i + 1}`}
+                >
+                  <option value="">{boms.length ? "Pick a dish…" : "No recipes yet — add them in kitchen settings"}</option>
+                  {boms.map((b) => <option key={b.id} value={b.dishName}>{b.dishName}</option>)}
+                </select>
+                <div className="flex items-center gap-2">
+                  <input
+                    className={cn(inputCls, "w-full min-w-0 tabular-nums sm:w-28")}
+                    type="number"
+                    min={1}
+                    inputMode="numeric"
+                    value={r.guests}
+                    onChange={(e) => setRow(i, "guests", e.target.value)}
+                    placeholder="guests"
+                    aria-label={`Head count for dish ${i + 1}`}
+                  />
+                  <Button size="sm" variant="ghost" className="h-9 shrink-0 px-2" onClick={() => removeRow(i)} aria-label={`Remove dish ${i + 1}`}>
+                    <Icon name="Trash2" size={14} />
+                  </Button>
+                </div>
+              </div>
+              {/* WWL-234 — say it, rather than dropping the row on generate. */}
+              {rowProblems[i] && (
+                <p className="text-xs text-amber-700 dark:text-amber-400">This row won&apos;t be cooked — {rowProblems[i]}.</p>
+              )}
             </div>
           ))}
         </div>
-        <div className="flex items-center justify-between">
+        {incompleteCount > 0 && (
+          <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+            {incompleteCount === 1 ? "One row isn't ready" : `${incompleteCount} rows aren't ready`} — fix or remove
+            {incompleteCount === 1 ? " it" : " them"} so nothing is left off the cook sheet.
+          </p>
+        )}
+        <div className="flex items-center justify-between gap-2">
           <Button size="sm" variant="outline" onClick={addRow}><Icon name="Plus" size={14} className="mr-1" /> Add dish</Button>
-          <Button size="sm" disabled={genMut.isPending} onClick={() => genMut.mutate()}>
+          {/* WWL-234 — an incomplete row must not be quietly left out of a cook
+              sheet, so it blocks the build until it is fixed or removed. */}
+          <Button
+            size="sm"
+            disabled={genMut.isPending || incompleteCount > 0 || usableRows.length === 0}
+            onClick={() => genMut.mutate()}
+          >
             {genMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Building…</> : <>Generate prep sheet</>}
           </Button>
         </div>

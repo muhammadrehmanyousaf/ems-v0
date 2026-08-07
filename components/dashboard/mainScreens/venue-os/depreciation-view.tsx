@@ -129,11 +129,11 @@ export function DepreciationView(): React.ReactElement | null {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-xs text-muted-foreground">
-                  <th className="py-2 pr-3">Asset</th>
-                  <th className="py-2 pr-3">Category</th>
-                  <th className="py-2 pr-3 text-right">Cost</th>
-                  <th className="py-2 pr-3 text-right">Life</th>
-                  <th className="py-2 pr-3">In service</th>
+                  <th scope="col" className="py-2 pr-3">Asset</th>
+                  <th scope="col" className="py-2 pr-3">Category</th>
+                  <th scope="col" className="py-2 pr-3 text-right">Cost</th>
+                  <th scope="col" className="py-2 pr-3 text-right">Life</th>
+                  <th scope="col" className="py-2 pr-3">In service</th>
                 </tr>
               </thead>
               <tbody>

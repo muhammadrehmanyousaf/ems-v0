@@ -10,7 +10,7 @@
 import * as React from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { ExpensesAPI, EXPENSE_CATEGORY_LABELS, type VendorExpense, type ExpenseCategory, type ExpensePaymentMethod } from "@/lib/api/vendorExpenses"
-import { useActiveBusinessId } from "@/lib/store/active-business-store"
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueSpacesApi } from "@/lib/api/venueSpaces"
 import axiosInstance from "@/lib/axiosConfig"
 import { CustomFieldsSection } from "@/components/dashboard/shared/custom-fields-section"
@@ -35,11 +35,12 @@ import {
   validateNotFutureDate,
   validateOptionalText,
 } from "@/components/dashboard/primitives/field-error"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
 const CATEGORIES = Object.keys(EXPENSE_CATEGORY_LABELS) as ExpenseCategory[]
 const METHODS: ExpensePaymentMethod[] = ["cash", "bank_transfer", "cheque", "jazzcash", "easypaisa", "raast", "ibft", "card", "other"]
 const methodLabel = (m: string) => m.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => todayInKarachi()
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
@@ -142,7 +143,10 @@ export function ExpenseFormDialog({
   }
 
   // Load the active venue's spaces so the expense can be tagged to a hall/floor/partition.
-  const activeBusinessId = useActiveBusinessId()
+  // F3 — resolve through the shared primitive so the space picker still loads
+  // under "All venues" instead of silently offering nothing to tag against.
+  const [activeBusinessIdStr] = useBusinessIdField()
+  const activeBusinessId = activeBusinessIdStr ? Number(activeBusinessIdStr) : null
   const spacesQ = useQuery({
     queryKey: ["venueSpacesTree", activeBusinessId],
     queryFn: () => venueSpacesApi.publicTree(activeBusinessId as number),
@@ -296,7 +300,7 @@ export function ExpenseFormDialog({
               <input
                 id="exp-date"
                 type="date"
-                max={new Date().toISOString().slice(0, 10)}
+                max={todayInKarachi()}
                 className={cn(inputCls, shown.spentDate && ERROR_INPUT_CLS)}
                 value={form.spentDate}
                 onChange={(e) => { set("spentDate", e.target.value); touch("spentDate") }}

@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
+import { DangerousAction } from "@/components/dashboard/primitives/dangerous-action";
 
 const PKR = (n: string | number): string => "Rs " + Math.round(Number(n) || 0).toLocaleString("en-PK");
 
@@ -84,9 +85,29 @@ export function CashFloatClose(): React.ReactElement | null {
               Opening float
               <input type="number" value={openingFloat} onChange={(e) => setOpeningFloat(e.target.value)} className="ml-2 w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
             </label>
-            <Button size="sm" onClick={() => void open()} disabled={!businessId || busy}>
-              Open drawer
-            </Button>
+            {/* WWL-583 (S3) — "Open drawer" opens a real galla for the day on
+                one click. Opening the wrong venue's drawer, or opening one
+                twice, is a reconciliation problem the vendor then has to unpick
+                by hand. */}
+            <DangerousAction
+              title="Open the cash drawer for today?"
+              consequence={
+                <>
+                  This starts today&apos;s galla with an opening float of{" "}
+                  <strong>Rs {Math.round(Number(openingFloat) || 0).toLocaleString("en-PK")}</strong>.
+                  Every cash movement from now until you close it is reconciled against that figure,
+                  so check the venue and the float before you open.
+                </>
+              }
+              confirmLabel="Open the drawer"
+              confirmVariant="default"
+              disabled={!businessId || busy}
+              onConfirm={() => open()}
+            >
+              <Button size="sm" disabled={!businessId || busy}>
+                Open drawer
+              </Button>
+            </DangerousAction>
           </div>
         ) : (
           <div className="space-y-4">

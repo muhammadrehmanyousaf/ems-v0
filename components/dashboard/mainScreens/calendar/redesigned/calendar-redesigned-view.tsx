@@ -3,11 +3,14 @@
 /**
  * Calendar — redesigned (Track C, bespoke). A clean month grid + day agenda,
  * wired to the real /api/v1/bookings. Read-only; original calendar untouched.
- * Route /dashboard/calendar-new. Token-only so it themes with the palette.
+ * Route /dashboard/calendar. Token-only so it themes with the palette.
  */
 
 import * as React from "react"
+import { useQuery } from "@tanstack/react-query"
 import { useFetchData } from "@/hooks/use-fetch-data"
+import { VendorHoldsAPI, type VendorHold } from "@/lib/api/vendorHolds"
+import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import type { BookingData, BookingStatus } from "@/lib/dashboard-types"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { StatusPill, type StatusTone } from "@/components/dashboard/primitives/status-pill"
@@ -44,12 +47,58 @@ export function CalendarRedesignedView() {
   const [selected, setSelected] = React.useState<string>(ymd(now))
   const [createOpen, setCreateOpen] = React.useState(false)
 
+  /**
+   * WWL-103 / WWL-101 — this asked for `bucket: "active"`, which the API
+   * defines as "hide Completed and Cancelled". So a calendar whose own
+   * description promises "every event on one grid" had no past at all —
+   * every completed wedding was invisible — and no cancelled bookings either,
+   * while the iCal feed exported both. The status colours for Completed and
+   * Cancelled were already written here and could never be reached.
+   *
+   * Also windowed to the month on screen instead of asking for a flat 200
+   * rows. The server caps a page at 100, so a venue past that line was
+   * silently losing dates off its calendar — the one screen where a missing
+   * date means the vendor sells it twice.
+   */
+  const monthFrom = React.useMemo(
+    () => ymd(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1)),
+    [cursor],
+  )
+  const monthTo = React.useMemo(
+    () => ymd(new Date(cursor.getFullYear(), cursor.getMonth() + 2, 0)),
+    [cursor],
+  )
+
   const { data, isLoading, refetch } = useFetchData({
     endpoint: "/api/v1/bookings",
-    queryKey: ["calendar-redesigned"],
-    Params: { page: 1, limit: 200, sortBy: "bookingDate", sortOrder: "ASC", bucket: "active" },
+    queryKey: ["calendar-redesigned", monthFrom, monthTo],
+    Params: {
+      page: 1, limit: 100, sortBy: "bookingDate", sortOrder: "ASC",
+      bucket: "all", dateFrom: monthFrom, dateTo: monthTo,
+    },
   })
   const bookings: BookingData[] = data?.data?.data ?? []
+  const truncated: boolean = Boolean(data?.data?.filters?.hasMore)
+
+  // WWL-059 — the vendor's active holds, so the calendar knows about the thing
+  // its own product copy calls "a tentative reservation on your calendar".
+  const activeBusinessId = useActiveBusinessId()
+  const holdsQ = useQuery({
+    queryKey: ["calendar-holds", activeBusinessId],
+    queryFn: () => VendorHoldsAPI.list(activeBusinessId ?? undefined),
+    retry: false,
+  })
+  const holdsByDay = React.useMemo(() => {
+    const m = new Map<string, VendorHold[]>()
+    for (const h of holdsQ.data ?? []) {
+      const d = parseYmd(h.holdDate)
+      if (!d) continue
+      const k = ymd(d)
+      if (!m.has(k)) m.set(k, [])
+      m.get(k)!.push(h)
+    }
+    return m
+  }, [holdsQ.data])
 
   // Group bookings by YYYY-MM-DD
   const byDay = React.useMemo(() => {
@@ -105,6 +154,13 @@ export function CalendarRedesignedView() {
             <div className="flex items-center gap-2">
               <h2 className="text-base font-semibold">{MONTHS[cursor.getMonth()]} {cursor.getFullYear()}</h2>
               <span className="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">{monthEvents.length} events</span>
+              {/* A calendar that is quietly missing dates is worse than one that
+                  says so — a date the vendor cannot see is a date they sell twice. */}
+              {truncated && (
+                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-700 dark:text-amber-500">
+                  too many events to show all — narrow the month
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-1">
               <Button size="sm" variant="outline" onClick={goToday}>Today</Button>
@@ -128,6 +184,7 @@ export function CalendarRedesignedView() {
               const key = ymd(d)
               const inMonth = d.getMonth() === cursor.getMonth()
               const events = byDay.get(key) ?? []
+              const dayHolds = holdsByDay.get(key) ?? []
               const isToday = key === todayKey
               const isSelected = key === selected
               return (
@@ -160,6 +217,17 @@ export function CalendarRedesignedView() {
                       </div>
                     ))}
                     {events.length > 2 && <div className="text-[10px] text-muted-foreground">+{events.length - 2} more</div>}
+                    {/* WWL-059 — a hold existed nowhere but its own screen. This
+                        page calls itself the calendar a hold is placed "on",
+                        and the word "hold" appeared on it exactly once: in the
+                        sidebar nav. A tentatively-reserved date that looks free
+                        is a date the vendor promises to two customers. */}
+                    {dayHolds.map((h) => (
+                      <div key={`hold-${h.id}`} className="flex items-center gap-1 truncate text-[10px]">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full border border-dashed border-amber-500 bg-amber-500/30" />
+                        <span className="truncate italic text-amber-700 dark:text-amber-500">Held · {h.holdTime}</span>
+                      </div>
+                    ))}
                   </div>
                 </button>
               )

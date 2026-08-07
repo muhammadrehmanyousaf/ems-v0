@@ -65,7 +65,7 @@ export function AmlRegistersView(): React.ReactElement | null {
 
         <div className="flex flex-wrap items-end gap-2 rounded-md border p-3 text-sm">
           <span className="font-medium">Bank a deposit</span>
-          <input type="number" placeholder="amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Amount<input min={0} type="number" placeholder="amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
           <Button size="sm" variant="outline" onClick={() => void guard(async () => setVerdict((await venueOsApi.preDepositCheck(bid, { proposedDepositPkr: Number(amount) }))))} disabled={!businessId || !amount || busy}>Check</Button>
           <Button size="sm" onClick={() => void guard(async () => { const r = await venueOsApi.recordBankDeposit({ businessId: bid, amountPkr: Number(amount) }); setVerdict(r.structuring); })} disabled={!businessId || !amount || busy}>Record</Button>
         </div>

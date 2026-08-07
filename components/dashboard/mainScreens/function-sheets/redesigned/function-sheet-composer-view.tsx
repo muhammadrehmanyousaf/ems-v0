@@ -83,7 +83,11 @@ export function FunctionSheetComposerView() {
         notes: sheet.notes ?? "",
         terms: Array.isArray(sheet.termsJson?.lines) ? sheet.termsJson.lines.join("\n") : "",
       })
-      setItems((sheet.lineItemsJson ?? []).map((i: any) => ({ label: i.label ?? "", qty: i.qty ?? 1, unitPrice: i.unitPrice ?? 0, notes: i.notes ?? "", _rid: newRid() })))
+      // WWL-081 (S1) — this read `i.label`, which no stored item has: every one
+      // uses `description`. So the composer rendered empty Description inputs
+      // over real data, and Save wrote those empties back (see below),
+      // permanently destroying the descriptions on a live contract.
+      setItems((sheet.lineItemsJson ?? []).map((i: any) => ({ label: i.label ?? i.description ?? "", qty: i.qty ?? 1, unitPrice: i.unitPrice ?? 0, notes: i.notes ?? "", _rid: newRid() })))
       setDirty(false)
     }
   }, [sheet])
@@ -127,7 +131,20 @@ export function FunctionSheetComposerView() {
         customerPhone: form.customerPhone,
         eventDate: form.eventDate || null,
         validUntil: form.validUntil || null,
-        lineItemsJson: items.map((i) => ({ label: i.label, qty: num(i.qty), unitPrice: num(i.unitPrice), total: num(i.qty) * num(i.unitPrice), notes: i.notes || null })),
+        // WWL-081 — write BOTH spellings. `description`/`amount` is what the
+        // rest of the platform stores and what every historic row uses;
+        // `label`/`total` is what the PDF generator and this view were written
+        // against. Emitting both means no reader loses data whichever it reads,
+        // and a save can no longer drop a description on the floor.
+        lineItemsJson: items.map((i) => ({
+          label: i.label,
+          description: i.label,
+          qty: num(i.qty),
+          unitPrice: num(i.unitPrice),
+          total: num(i.qty) * num(i.unitPrice),
+          amount: num(i.qty) * num(i.unitPrice),
+          notes: i.notes || null,
+        })),
         discountAmount: num(form.discountAmount),
         taxAmount: num(form.taxAmount),
         termsJson: { lines: form.terms.split("\n").map((s) => s.trim()).filter(Boolean) },

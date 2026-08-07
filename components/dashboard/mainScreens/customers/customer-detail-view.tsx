@@ -383,14 +383,21 @@ export default function CustomerDetailView({
 
       {/* ─── Stats strip ────────────────────────────────────────── */}
       <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+        {/* WWL-089 — this said "Lifetime revenue Rs 350,000" at the top of a
+            page that says "Payments received 0 — no payments recorded against
+            this customer's bookings yet" further down. It was summing booking
+            VALUE. Revenue is money that arrived; the booked figure is still
+            here, under its own name. */}
         <StatCard
           icon={<TrendingUp className="h-4 w-4 text-emerald-600" />}
-          label="Lifetime revenue"
+          label="Received from them"
           value={fmtPKR(stats.lifetimeRevenue)}
           sub={
-            stats.cancelledRevenue > 0
-              ? `${fmtPKR(stats.cancelledRevenue)} cancelled`
-              : null
+            stats.lifetimeBooked != null && stats.lifetimeBooked > stats.lifetimeRevenue
+              ? `of ${fmtPKR(stats.lifetimeBooked)} booked`
+              : stats.cancelledRevenue > 0
+                ? `${fmtPKR(stats.cancelledRevenue)} cancelled`
+                : null
           }
         />
         <StatCard

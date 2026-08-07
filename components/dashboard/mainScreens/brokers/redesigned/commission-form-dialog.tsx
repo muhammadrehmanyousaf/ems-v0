@@ -17,9 +17,10 @@ import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
 const BROKER_TYPES = Object.keys(BROKER_TYPE_LABELS) as BrokerType[]
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => todayInKarachi()
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
 

@@ -3,7 +3,7 @@
 /**
  * Receivables (A/R) — redesigned (Track C, computed). Wired to
  * AnalyticsAPI.getReceivables(); rendered through the primitives. Read-only;
- * original screen untouched. Route /dashboard/receivables-new.
+ * Route /dashboard/receivables.
  */
 
 import * as React from "react"
@@ -17,6 +17,7 @@ import { MoneyCell, formatPkr } from "@/components/dashboard/primitives/money-ce
 import { ExportMenu } from "@/components/dashboard/shared/export-menu"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
+import { useActiveBusinessId } from "@/lib/store/active-business-store"
 
 type ReceivablesCustomer = ReceivablesData["customers"][number]
 
@@ -37,22 +38,38 @@ const waLink = (phone: string | null | undefined, name: string | null | undefine
   return `https://wa.me/${p}?text=${text}`
 }
 
-const bucketTone = (b?: string): StatusTone => {
-  const v = (b || "").toLowerCase()
-  if (v.includes("current") || v.includes("0")) return "success"
-  if (v.includes("90") || v.includes("over")) return "error"
-  if (v.includes("60")) return "warning"
-  if (v.includes("30")) return "info"
-  return "neutral"
+/**
+ * WWL-131 — the whole aging column rendered green, including customers 99 days
+ * overdue. The old test was `v.includes("current") || v.includes("0")`, and it
+ * ran first: every bucket the API emits — `days_1_30`, `days_31_60`,
+ * `days_61_90`, `days_90_plus` — contains a "0", so every row matched the
+ * success branch and nothing ever reached the error branch below it. On a
+ * screen whose entire job is showing who is late, nobody was ever late.
+ *
+ * Keyed off the exact values the API sends (analyticsController `bucketKey`)
+ * rather than substring guesses.
+ */
+const BUCKETS: Record<string, { tone: StatusTone; label: string }> = {
+  current: { tone: "success", label: "Current" },
+  days_1_30: { tone: "info", label: "1–30 days" },
+  days_31_60: { tone: "warning", label: "31–60 days" },
+  days_61_90: { tone: "error", label: "61–90 days" },
+  days_90_plus: { tone: "error", label: "90+ days" },
 }
+
+const bucketTone = (b?: string): StatusTone => BUCKETS[(b || "").toLowerCase()]?.tone ?? "neutral"
+const bucketLabel = (b?: string): string => BUCKETS[(b || "").toLowerCase()]?.label ?? "—"
 
 export function ReceivablesRedesignedView() {
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
 
+  // WWL-129 — the venue in the header scopes the chase list, and is part of
+  // the key so switching venue refetches instead of showing the last one's book.
+  const activeBusinessId = useActiveBusinessId()
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["receivables-redesigned"],
-    queryFn: () => AnalyticsAPI.getReceivables(),
+    queryKey: ["receivables-redesigned", activeBusinessId],
+    queryFn: () => AnalyticsAPI.getReceivables(activeBusinessId),
   })
 
   const t = data?.totals
@@ -69,7 +86,7 @@ export function ReceivablesRedesignedView() {
     { key: "bookings", header: "Bookings", align: "right", cellClassName: "tabular-nums", render: (c) => num(c.bookingCount) },
     { key: "open", header: "Open installments", align: "right", cellClassName: "tabular-nums", render: (c) => num(c.installmentsOpen) },
     { key: "overdue", header: "Days overdue", align: "right", cellClassName: "tabular-nums", render: (c) => num(c.oldestDaysOverdue) },
-    { key: "bucket", header: "Aging", render: (c) => <StatusPill tone={bucketTone(c.bucket)}>{cap(c.bucket) || "—"}</StatusPill> },
+    { key: "bucket", header: "Aging", render: (c) => <StatusPill tone={bucketTone(c.bucket)}>{bucketLabel(c.bucket)}</StatusPill> },
     { key: "outstanding", header: "Outstanding", align: "right", render: (c) => <MoneyCell amount={num(c.totalOutstanding)} tone="warning" /> },
     {
       key: "actions",
@@ -104,7 +121,7 @@ export function ReceivablesRedesignedView() {
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Outstanding" value={isLoading ? "…" : formatPkr(num(t?.grandOutstanding))} icon="Wallet" trend="down" delta="to chase" />
+        <StatCard label="Outstanding" value={isLoading ? "…" : formatPkr(num(t?.grandOutstanding))} icon="Wallet" trend="down" delta="to chase" error={isError} />
         <StatCard label="Customers owing" value={isLoading ? "…" : num(t?.customerCount)} icon="Users" />
         <StatCard label="Open installments" value={isLoading ? "…" : num(t?.installmentsOpen)} icon="Clock" />
         <StatCard label="Oldest overdue" value={isLoading ? "…" : `${num(t?.oldestDaysOverdue)} days`} icon="AlertTriangle" trend={num(t?.oldestDaysOverdue) > 0 ? "down" : "flat"} />
@@ -152,7 +169,7 @@ export function ReceivablesRedesignedView() {
             <div className="min-w-0">
               <div className="truncate font-medium">{c.customerName}</div>
               <div className="text-xs text-muted-foreground">{c.customerPhone} · {num(c.oldestDaysOverdue)}d overdue</div>
-              <div className="mt-1"><StatusPill tone={bucketTone(c.bucket)}>{cap(c.bucket)}</StatusPill></div>
+              <div className="mt-1"><StatusPill tone={bucketTone(c.bucket)}>{bucketLabel(c.bucket)}</StatusPill></div>
             </div>
             <div className="flex flex-col items-end gap-1.5">
               <MoneyCell amount={num(c.totalOutstanding)} tone="warning" className="text-sm font-medium" />

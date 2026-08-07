@@ -65,13 +65,20 @@ interface PublicVendor {
   email: string | null;
   logoUrl: string | null;
 }
+// WWL-071 — stored items use `description`/`amount`; this page read `label`, so
+// the customer's own contract listed blank descriptions against real money.
 interface PublicLineItem {
-  label: string;
+  label?: string;
+  description?: string;
   qty: number | string;
   unitPrice: number | string;
   total?: number | string;
+  amount?: number | string;
   notes?: string | null;
 }
+
+const itemLabel = (it: PublicLineItem): string =>
+  (it.label || "").trim() || (it.description || "").trim();
 interface PublicSignatureSnapshot {
   name: string | null;
   signedAt: string | null;
@@ -327,10 +334,10 @@ export default function PublicSignPage() {
                 <table className="w-full text-xs">
                   <thead className="bg-neutral-50">
                     <tr>
-                      <th className="px-3 py-2 text-left">Description</th>
-                      <th className="px-2 py-2 text-right">Qty</th>
-                      <th className="px-2 py-2 text-right">Unit</th>
-                      <th className="px-3 py-2 text-right">Total</th>
+                      <th scope="col" className="px-3 py-2 text-left">Description</th>
+                      <th scope="col" className="px-2 py-2 text-right">Qty</th>
+                      <th scope="col" className="px-2 py-2 text-right">Unit</th>
+                      <th scope="col" className="px-3 py-2 text-right">Total</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -342,7 +349,7 @@ export default function PublicSignPage() {
                         }
                       >
                         <td className="px-3 py-2">
-                          <div>{it.label}</div>
+                          <div>{itemLabel(it) || <span className="text-neutral-400">Untitled item</span>}</div>
                           {it.notes && (
                             <div className="text-[10px] text-muted-foreground">
                               {it.notes}

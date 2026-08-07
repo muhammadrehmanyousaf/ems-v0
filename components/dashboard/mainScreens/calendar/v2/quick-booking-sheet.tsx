@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { parseUrduAmount } from "@/lib/urdu-amount";
 import { BookingsAPI } from "@/lib/api/dashboard";
+import { SpacePicker } from "@/components/dashboard/shared/space-picker";
 
 const FUNCTIONS = ["Barat", "Walima", "Mehndi", "Milad", "Other"];
 
@@ -42,6 +43,10 @@ export function QuickBookingSheet({
   const [defTime, setDefTime] = useState("18:00"); // Shaam — matches the default allowed slots
   const [slotId, setSlotId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  // WWL-100 — which hall this booking is in. Without it a quick-add lands as
+  // an unassigned booking, which is exactly what the grid then has to report
+  // instead of showing one hall booked and the rest sellable.
+  const [spaceId, setSpaceId] = useState<string>("");
 
   const parsed = parseUrduAmount(rakam);
 
@@ -60,7 +65,7 @@ export function QuickBookingSheet({
     ? (slots!.find((s) => s.id === slotId) ?? slots![0]).startTime.slice(0, 5)
     : defTime;
 
-  const reset = () => { setName(""); setPhone(""); setRakam(""); setFn("Barat"); setDefTime("18:00"); setSlotId(null); };
+  const reset = () => { setName(""); setPhone(""); setRakam(""); setFn("Barat"); setDefTime("18:00"); setSlotId(null); setSpaceId(""); };
 
   const submit = async () => {
     if (!name.trim() || !phone.trim()) { toast.error("Naam aur phone likhein"); return; }
@@ -72,7 +77,14 @@ export function QuickBookingSheet({
         bookingDate: date,
         bookingTime: chosenTime,
         isOfflineBooking: true,
-        vendors: [{ businessId, totalAmount: parsed ?? 0, downPayment: 0 }],
+        vendors: [{
+          businessId,
+          totalAmount: parsed ?? 0,
+          downPayment: 0,
+          // WWL-050 / WWL-100 — record the hall when the venue has more than
+          // one. A single-space venue needs no pick; the server assigns it.
+          ...(spaceId ? { subVenueId: Number(spaceId) } : {}),
+        }],
         eventType: fn,
         notes: `${fn} · ${chosenTime}`,
       } as any);
@@ -112,6 +124,16 @@ export function QuickBookingSheet({
               </p>
             )}
           </div>
+
+          {/* WWL-100 — the hall. Renders only when the venue has more than one;
+              a single-hall venue has nothing to choose and the server assigns. */}
+          <SpacePicker
+            businessId={businessId}
+            value={spaceId}
+            onChange={setSpaceId}
+            label="Hall / Space"
+            hint="Kaunsa hall? Isi se calendar par ek hall booked aur baaki sellable dikhte hain."
+          />
 
           <div>
             <label className="text-xs text-muted-foreground">Function</label>

@@ -87,11 +87,11 @@ export function OrgRollupView(): React.ReactElement | null {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-xs text-muted-foreground">
-                    <th className="py-2 pr-3">Venue</th>
-                    <th className="py-2 pr-3 text-right">Revenue</th>
-                    <th className="py-2 pr-3 text-right">COGS</th>
-                    <th className="py-2 pr-3 text-right">Overheads</th>
-                    <th className="py-2 pr-3 text-right">Net</th>
+                    <th scope="col" className="py-2 pr-3">Venue</th>
+                    <th scope="col" className="py-2 pr-3 text-right">Revenue</th>
+                    <th scope="col" className="py-2 pr-3 text-right">COGS</th>
+                    <th scope="col" className="py-2 pr-3 text-right">Overheads</th>
+                    <th scope="col" className="py-2 pr-3 text-right">Net</th>
                   </tr>
                 </thead>
                 <tbody>

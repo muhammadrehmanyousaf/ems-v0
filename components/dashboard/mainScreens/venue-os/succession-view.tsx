@@ -31,6 +31,9 @@ export function SuccessionView(): React.ReactElement | null {
   const [faraid, setFaraid] = React.useState<FaraidResult | null>(null);
   const [businessId, setBusinessId] = useBusinessIdField();
   const [partnerId, setPartnerId] = React.useState<string>("");
+  // WWL-599 / F11 — "Partner #" asked for a primary key nobody can know. The cap
+  // table already names every partner and their share; load it and list them.
+  const [partners, setPartners] = React.useState<{ id: number; partnerName: string; sharePercent: number | string }[]>([]);
   const [goodwill, setGoodwill] = React.useState<string>("");
   const [exit, setExit] = React.useState<ExitValuation | null>(null);
   const [busy, setBusy] = React.useState<boolean>(false);
@@ -57,7 +60,7 @@ export function SuccessionView(): React.ReactElement | null {
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2 rounded-md border p-3 text-sm">
           <span className="font-medium">Faraid calculator</span>
-          <input type="number" placeholder="estate Rs" value={estate} onChange={(e) => setEstate(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Estate Rs<input min={0} type="number" placeholder="estate Rs" value={estate} onChange={(e) => setEstate(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
           <label className="flex items-center gap-1"><input type="checkbox" checked={husband} onChange={(e) => setHusband(e.target.checked)} /> husband</label>
           <label>wives<input type="number" value={wives} onChange={(e) => setWives(e.target.value)} className="ml-1 w-14 rounded border px-1 py-1" /></label>
           <label>sons<input type="number" value={sons} onChange={(e) => setSons(e.target.value)} className="ml-1 w-14 rounded border px-1 py-1" /></label>
@@ -82,9 +85,32 @@ export function SuccessionView(): React.ReactElement | null {
 
         <div className="flex flex-wrap items-end gap-2 rounded-md border p-3 text-sm">
           <span className="font-medium">Partner exit</span>
-          <input type="number" placeholder="business #" value={businessId} onChange={(e) => setBusinessId(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-          <input type="number" placeholder="partner #" value={partnerId} onChange={(e) => setPartnerId(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-          <input type="number" placeholder="goodwill Rs" value={goodwill} onChange={(e) => setGoodwill(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          {/* WWL-599 / F11 — raw "Business #" box for a venue already chosen by
+              name at the top of this panel. Removed. */}
+          <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">
+            Partner
+            <select
+              value={partnerId}
+              onChange={(e) => setPartnerId(e.target.value)}
+              onFocus={() => {
+                if (partners.length === 0 && businessId) {
+                  void guard(async () => {
+                    const ct = await venueOsApi.getCapTable(Number(businessId));
+                    setPartners(ct.partners as never[]);
+                  });
+                }
+              }}
+              className="w-52 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="">{partners.length ? "Choose a partner…" : "Click to load partners…"}</option>
+              {partners.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.partnerName} · {p.sharePercent}%
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Goodwill Rs<input min={0} type="number" placeholder="goodwill Rs" value={goodwill} onChange={(e) => setGoodwill(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
           <Button size="sm" variant="outline" onClick={() => void guard(async () => setExit(await venueOsApi.exitValuation(Number(businessId), { partnerEquityId: Number(partnerId), goodwillPkr: goodwill ? Number(goodwill) : 0 })))} disabled={!businessId || !partnerId || busy}>Value exit</Button>
         </div>
 

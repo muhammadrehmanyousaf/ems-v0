@@ -81,8 +81,11 @@ export class FavoritesAPI {
       const rows: FavoriteBusiness[] = response.data?.data?.results ?? [];
       return rows.map(f => f.businessId);
     } catch (error) {
+      // WWL-019 — this used to return [], which reads as "you have no
+      // favourites". It also made the caller's 403 branch (which disables the
+      // feature for the session) unreachable. Failures now propagate.
       console.error('Error fetching user favorites:', error);
-      return [];
+      throw error;
     }
   }
 
@@ -133,8 +136,9 @@ export class FavoritesAPI {
           };
         });
     } catch (error) {
+      // WWL-019 — a failed load must not render as an empty favourites page.
       console.error('Error fetching favorite vendors:', error);
-      return [];
+      throw error;
     }
   }
 

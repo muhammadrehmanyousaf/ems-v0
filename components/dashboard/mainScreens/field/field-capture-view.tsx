@@ -12,7 +12,7 @@
 
 import * as React from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { useActiveBusinessId } from "@/lib/store/active-business-store"
+import { useBusinessIdField } from "@/lib/store/use-business-id-field"
 import { OutboxStatus, useOutboxStatus } from "@/components/dashboard/shared/outbox-status"
 import { OutboxConflicts, type ReenterPayload } from "@/components/dashboard/shared/outbox-conflicts"
 import type { OutboxOpType } from "@/lib/outbox"
@@ -39,7 +39,13 @@ const ACTIONS: Action[] = [
 
 export function FieldCaptureView() {
   const qc = useQueryClient()
-  const businessId = useActiveBusinessId() ?? undefined
+  // WWL-608 (S3) — this read `useActiveBusinessId() ?? undefined`, and the
+  // dashboard header's persisted default is "All venues", under which that is
+  // null. So a lead captured at a bridal expo attached to no venue at all.
+  // `useBusinessIdField` is the shared primitive from the Module 36 fix: header
+  // selection first, the vendor's first venue only as a last resort.
+  const [businessIdStr] = useBusinessIdField()
+  const businessId = businessIdStr ? Number(businessIdStr) : undefined
   const { online, pending } = useOutboxStatus()
   const [active, setActive] = React.useState<Kind>(null)
   const [prefill, setPrefill] = React.useState<ReenterPayload | undefined>(undefined)
@@ -47,8 +53,15 @@ export function FieldCaptureView() {
   const open = (kind: Exclude<Kind, null>) => { setPrefill(undefined); setActive(kind) }
   const close = () => setActive(null)
   const onReenter = (p: ReenterPayload, opType: OutboxOpType) => { setPrefill(p); setActive(OP_TO_KIND[opType]) }
-  // Any capture refreshes the relevant screens' data when the user next visits them.
-  const onSaved = () => { qc.invalidateQueries(); close() }
+  // WWL-543 family — this was a blanket `invalidateQueries()`, which refetches
+  // EVERY cached query in the app after a single capture. Scope it to the four
+  // things a field capture can actually change.
+  const onSaved = () => {
+    for (const key of [["leads"], ["receipts"], ["expenses"], ["vendor-holds"], ["dashboard"]]) {
+      qc.invalidateQueries({ queryKey: key })
+    }
+    close()
+  }
 
   return (
     <div className="space-y-6 p-4 md:p-6 max-w-2xl mx-auto">

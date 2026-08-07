@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react";
+import { toCsv } from "@/lib/utils/csv-escape";
 import Link from "next/link";
 import { Clock, Plus, Trash2, Download, Share2, ArrowLeft, Calendar, Users, MapPin, Search, Filter, Edit3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -141,13 +142,13 @@ export default function TimelinePage() {
       notes: item.notes
     }));
     
-    const csv = [
+    const csv = toCsv([
       ['Time', 'Event', 'Duration', 'Responsible', 'Location', 'Category', 'Priority', 'Notes'],
       ...data.map(row => [
         row.time, row.event, row.duration, row.responsible, 
         row.location, row.category, row.priority, row.notes
       ])
-    ].map(row => row.join(',')).join('\n');
+    ]);
     
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);

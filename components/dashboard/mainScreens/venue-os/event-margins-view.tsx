@@ -94,13 +94,13 @@ export function EventMarginsView(): React.ReactElement | null {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left text-xs text-muted-foreground">
-                      <th className="py-2 pr-3">#</th>
-                      <th className="py-2 pr-3">Booking</th>
-                      <th className="py-2 pr-3 text-right">Revenue</th>
-                      <th className="py-2 pr-3 text-right">Direct net</th>
-                      <th className="py-2 pr-3 text-right">− Overhead</th>
-                      <th className="py-2 pr-3 text-right">Fully-costed</th>
-                      <th className="py-2 pr-3 text-right">Margin</th>
+                      <th scope="col" className="py-2 pr-3">#</th>
+                      <th scope="col" className="py-2 pr-3">Booking</th>
+                      <th scope="col" className="py-2 pr-3 text-right">Revenue</th>
+                      <th scope="col" className="py-2 pr-3 text-right">Direct net</th>
+                      <th scope="col" className="py-2 pr-3 text-right">− Overhead</th>
+                      <th scope="col" className="py-2 pr-3 text-right">Fully-costed</th>
+                      <th scope="col" className="py-2 pr-3 text-right">Margin</th>
                     </tr>
                   </thead>
                   <tbody>

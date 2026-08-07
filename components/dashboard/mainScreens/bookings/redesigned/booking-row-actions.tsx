@@ -46,6 +46,7 @@ import { BookingDetailSheet } from "@/components/dashboard/mainScreens/bookings/
 import { RecordPaymentDialog } from "@/components/dashboard/mainScreens/bookings/bookingListing/components/record-payment-dialog"
 import { RecordRefundDialog } from "@/components/dashboard/mainScreens/bookings/bookingListing/components/record-refund-dialog"
 import { EditBookingDialog } from "@/components/dashboard/mainScreens/bookings/bookingListing/components/edit-booking-dialog"
+import { derivedPaymentStatus, receivedOn } from "@/lib/utils/booking-money"
 
 interface BookingRowActionsProps {
   data: BookingData
@@ -65,10 +66,17 @@ export function BookingRowActions({ data, onRefresh }: BookingRowActionsProps) {
   // Keep the quick-view sheet in sync when the table data updates.
   useEffect(() => { setSheetData(data) }, [data])
 
+  // WWL-037/040 — these gates read the stored `paymentStatus` flag, which on
+  // live data can say `Paid` on a booking with Rs 1,159,500 still outstanding.
+  // The consequence was worse than a wrong label: "Record payment" was hidden
+  // on exactly the booking whose balance most needed collecting, and the
+  // vendor had no way to enter it. The gates follow the money now.
+  const settled = derivedPaymentStatus(data) === "Paid"
+
   // Mirrors the original gating exactly so behavior matches.
   const canEdit =
     (data.status === "Confirmed" || data.status === "Pending" || data.status === "Awaiting Payment") &&
-    data.paymentStatus !== "Paid"
+    !settled
   const canCancel =
     data.status === "Pending" || data.status === "Confirmed" || data.status === "Awaiting Payment"
   // "Awaiting Payment" used to be excluded here, which meant the ONE state where
@@ -85,11 +93,9 @@ export function BookingRowActions({ data, onRefresh }: BookingRowActionsProps) {
   //
   // Consistent with the rest of this file too — canEdit and canCancel both
   // already include "Awaiting Payment".
-  const canRecordPayment =
-    data.paymentStatus !== "Paid" && data.status !== "Cancelled"
-  const canRefund =
-    (data.paymentStatus === "Partial" || data.paymentStatus === "Paid") && data.status !== "Cancelled"
-  const canComplete = data.status === "Confirmed" && data.paymentStatus === "Paid"
+  const canRecordPayment = !settled && data.status !== "Cancelled"
+  const canRefund = receivedOn(data) > 0 && data.status !== "Cancelled"
+  const canComplete = data.status === "Confirmed" && settled
 
   const handleEditSuccess = (updated: Partial<BookingData> | null) => {
     if (updated) {

@@ -112,6 +112,8 @@ export function OrderBuilderCard({ bookingId }: { bookingId: number }) {
   const [finalOverride, setFinalOverride] = useState<number | null>(null);
   const [eventType, setEventType] = useState<string>("");
   const [orderStage, setOrderStage] = useState<OrderStage>("tentative");
+  // WWL-044 — the server refuses order writes on a cancelled booking.
+  const [locked, setLocked] = useState(false);
 
   const hydrate = useCallback((o: BookingOrder) => {
     setEnabled(true);
@@ -120,6 +122,7 @@ export function OrderBuilderCard({ bookingId }: { bookingId: number }) {
     setFinalOverride(o.totals?.finalOverride ?? null);
     setEventType(o.header?.eventType ?? "");
     setOrderStage((o.header?.orderStage as OrderStage) ?? "tentative");
+    setLocked(Boolean(o.header?.locked));
   }, []);
 
   useEffect(() => {
@@ -430,10 +433,21 @@ export function OrderBuilderCard({ bookingId }: { bookingId: number }) {
           </div>
         )}
 
-        <Button onClick={save} disabled={saving} className="w-full">
-          {saving ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Save className="size-4 mr-2" />}
-          Save order
-        </Button>
+        {/* WWL-044 — a cancelled booking used to present the full edit surface,
+            Save order included, and writing rewrote the money snapshot on a
+            wedding that is not happening. The server refuses it now; saying so
+            here is better than letting the vendor type an order and be told no. */}
+        {locked ? (
+          <p className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            This booking is cancelled, so its order is locked. Reinstate the booking
+            first if the wedding is going ahead after all.
+          </p>
+        ) : (
+          <Button onClick={save} disabled={saving} className="w-full">
+            {saving ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Save className="size-4 mr-2" />}
+            Save order
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

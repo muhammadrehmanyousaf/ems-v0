@@ -17,6 +17,7 @@ import {
   STATE_LABELS,
   PDF_VARIANT_LABELS,
   variantsAvailable,
+  lineItemLabel,
   type FunctionSheet,
   type FunctionSheetState,
   type PdfVariant,
@@ -280,17 +281,21 @@ export function FunctionSheetDetailRedesignedView({ id }: { id?: number } = {}) 
               <div className="overflow-x-auto"><table className="w-full min-w-[420px] text-sm" style={{ fontVariantNumeric: "tabular-nums" }}>
                 <thead>
                   <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                    <th className="py-2 font-medium">Description</th>
-                    <th className="py-2 text-right font-medium">Qty</th>
-                    <th className="py-2 text-right font-medium">Unit</th>
-                    <th className="py-2 text-right font-medium">Total</th>
+                    <th scope="col" className="py-2 font-medium">Description</th>
+                    <th scope="col" className="py-2 text-right font-medium">Qty</th>
+                    <th scope="col" className="py-2 text-right font-medium">Unit</th>
+                    <th scope="col" className="py-2 text-right font-medium">Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((it: any, i: number) => (
                     <tr key={i} className="border-b border-border/60 last:border-0">
                       <td className="py-2.5">
-                        <div className="font-medium">{it.label}</div>
+                        {/* WWL-071 — read through the helper: stored items use
+                            `description`, this view was reading `label`, so the
+                            vendor saw an empty Description column on their own
+                            Rs 1,092,200 quote. */}
+                        <div className="font-medium">{lineItemLabel(it) || <span className="text-muted-foreground">Untitled item</span>}</div>
                         {it.notes && <div className="text-xs text-muted-foreground">{it.notes}</div>}
                       </td>
                       <td className="py-2.5 text-right text-muted-foreground">{num(it.qty)}</td>

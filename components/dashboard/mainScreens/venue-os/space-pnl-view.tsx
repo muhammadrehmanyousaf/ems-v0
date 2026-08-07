@@ -9,7 +9,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { venueSpacesApi, type SpacePnl } from "@/lib/api/venueSpaces";
-import { useActiveBusinessId } from "@/lib/store/active-business-store";
+import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const PKR = (n: number): string => "Rs " + Math.round(Number(n) || 0).toLocaleString("en-PK");
@@ -24,7 +24,11 @@ function Stat({ label, value }: { label: string; value: string }): React.ReactEl
 }
 
 export function SpacePnlView(): React.ReactElement | null {
-  const businessId = useActiveBusinessId();
+  // WWL-570 / F3 — read the raw store, so under the header's persisted
+  // "All venues" default this panel resolved to null and rendered nothing at
+  // all. One scoping primitive across the product.
+  const [businessIdStr] = useBusinessIdField();
+  const businessId = businessIdStr ? Number(businessIdStr) : null;
   const q = useQuery({
     queryKey: ["spacePnl", businessId],
     queryFn: () => venueSpacesApi.spacePnl(businessId as number),
@@ -53,11 +57,11 @@ export function SpacePnlView(): React.ReactElement | null {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs text-muted-foreground">
-                    <th className="py-1.5 font-medium">Space</th>
-                    <th className="py-1.5 text-right font-medium">Revenue</th>
-                    <th className="py-1.5 text-right font-medium">Cost</th>
-                    <th className="py-1.5 text-right font-medium">Margin</th>
-                    <th className="py-1.5 text-right font-medium">%</th>
+                    <th scope="col" className="py-1.5 font-medium">Space</th>
+                    <th scope="col" className="py-1.5 text-right font-medium">Revenue</th>
+                    <th scope="col" className="py-1.5 text-right font-medium">Cost</th>
+                    <th scope="col" className="py-1.5 text-right font-medium">Margin</th>
+                    <th scope="col" className="py-1.5 text-right font-medium">%</th>
                   </tr>
                 </thead>
                 <tbody>

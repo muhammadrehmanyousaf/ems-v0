@@ -164,9 +164,9 @@ export function WageCostingView(): React.ReactElement | null {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-xs text-muted-foreground">
-                  <th className="py-2 pr-3">Booking</th>
-                  <th className="py-2 pr-3 text-right">Shifts</th>
-                  <th className="py-2 pr-3 text-right">Labour paid</th>
+                  <th scope="col" className="py-2 pr-3">Booking</th>
+                  <th scope="col" className="py-2 pr-3 text-right">Shifts</th>
+                  <th scope="col" className="py-2 pr-3 text-right">Labour paid</th>
                 </tr>
               </thead>
               <tbody>

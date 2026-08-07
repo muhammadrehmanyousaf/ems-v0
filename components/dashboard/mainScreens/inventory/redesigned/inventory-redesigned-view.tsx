@@ -2,8 +2,8 @@
 
 /**
  * Inventory — redesigned (Track C). Wired to InventoryAPI.listItems(); rendered
- * through the primitives. Read-only presentation; original screen untouched.
- * Route /dashboard/inventory-new.
+ * through the primitives. Read-only presentation; 
+ * Route /dashboard/inventory.
  */
 
 import * as React from "react"
@@ -103,7 +103,7 @@ export function InventoryRedesignedView() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Total items" value={all.length} icon="Package" />
         <StatCard label="Low / out of stock" value={lowCount} icon="AlertTriangle" trend={lowCount ? "down" : "flat"} delta={lowCount ? "reorder" : "all good"} />
-        <StatCard label="Stock value" value={formatPkr(Math.round(stockValue))} icon="Wallet" />
+        <StatCard label="Stock value" value={formatPkr(Math.round(stockValue))} icon="Wallet" error={isError} />
         <StatCard label="Categories" value={categories} icon="LayoutGrid" />
       </div>
 
@@ -148,13 +148,32 @@ export function InventoryRedesignedView() {
         renderCard={(i) => {
           const s = stockState(i)
           return (
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="truncate font-medium">{i.name}</div>
-                <div className="text-xs text-muted-foreground">{cap(i.category)} · {num(i.currentStock)} {String(i.unit)}</div>
-                <div className="mt-1"><StatusPill tone={s.tone}>{s.label}</StatusPill></div>
+            <div className="space-y-2.5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{i.name}</div>
+                  <div className="text-xs text-muted-foreground">{cap(i.category)} · {num(i.currentStock)} {String(i.unit)}</div>
+                  <div className="mt-1"><StatusPill tone={s.tone}>{s.label}</StatusPill></div>
+                </div>
+                <MoneyCell amount={i.lastRestockCostPerUnit != null ? num(i.lastRestockCostPerUnit) : null} tone="muted" className="text-sm" />
               </div>
-              <MoneyCell amount={i.lastRestockCostPerUnit != null ? num(i.lastRestockCostPerUnit) : null} tone="muted" className="text-sm" />
+              {/* WWL-244 — this card emitted no buttons, and the table it
+                  replaces is `hidden md:block`. Adjust stock is the only path
+                  that can change a count, so on a phone the module's entire
+                  purpose was unreachable: 108 action buttons in the DOM, 0
+                  visible. Full-width targets, comfortably over the 24px
+                  WCAG 2.2 minimum. */}
+              <div className="flex flex-wrap gap-2 pt-0.5">
+                <Button size="sm" variant="secondary" className="h-9 flex-1 min-w-[7rem]" onClick={() => setMoving(i)}>
+                  <Icon name="RefreshCw" size={14} className="mr-1.5" /> Adjust stock
+                </Button>
+                <Button size="sm" variant="outline" className="h-9 flex-1 min-w-[5rem]" onClick={() => openEdit(i)}>
+                  <Icon name="Pencil" size={14} className="mr-1.5" /> Edit
+                </Button>
+                <Button size="sm" variant="ghost" className="h-9 w-9 shrink-0 p-0" onClick={() => setDeleting(i)} aria-label={`Remove ${i.name}`}>
+                  <Icon name="Trash2" size={15} className="text-muted-foreground" />
+                </Button>
+              </div>
             </div>
           )
         }}

@@ -247,10 +247,10 @@ export function ExpenseCockpit(): React.ReactElement {
             <table className="w-full min-w-[560px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                  <th className="px-4 py-2 font-medium">Function / event</th>
-                  <th className="px-4 py-2 text-right font-medium">Revenue</th>
-                  <th className="px-4 py-2 text-right font-medium">Spent</th>
-                  <th className="px-4 py-2 text-right font-medium">Net</th>
+                  <th scope="col" className="px-4 py-2 font-medium">Function / event</th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">Revenue</th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">Spent</th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">Net</th>
                 </tr>
               </thead>
               <tbody>

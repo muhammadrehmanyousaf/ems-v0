@@ -44,6 +44,10 @@ export interface OrderHeader {
   guaranteedPax?: number | null;
   expectedPax?: number | null;
   orderStage?: OrderStage | null;
+  /** Booking lifecycle status. WWL-044 — the editor needs to know. */
+  status?: string | null;
+  /** True when the booking is cancelled: the server refuses order writes. */
+  locked?: boolean | null;
 }
 
 export interface OrderTotals {
@@ -276,9 +280,24 @@ export async function applyRefundRequest(bookingId: number, reqId: number) {
 
 // Cancellation-policy management (5.4)
 export interface PolicySlab { daysToEvent: number; pctForfeit: number }
-export interface PolicyTemplate { key: string; name: string; labelEn: string; forceMajeureRule: string; slabs: PolicySlab[] }
+export interface PolicyTemplate {
+  key: string; name: string; labelEn: string; forceMajeureRule: string; slabs: PolicySlab[];
+  /** The engine's non-refundable deposit for this template, for display (WWL-501). */
+  depositPct?: number;
+}
 export interface ActivePolicy { id: number; name: string; slabs: PolicySlab[]; forceMajeureRule: string; partialRefundPct: number | null; isDefault: boolean; effectiveFrom: string }
-export interface CancellationPolicyState { businessId: number | null; active: ActivePolicy | null; templates: PolicyTemplate[] }
+export interface CancellationPolicyState {
+  businessId: number | null;
+  /** The business's OWN policy. Null when they have never chosen one. */
+  active: ActivePolicy | null;
+  /**
+   * WWL-502 — the policy that will actually govern a refund, including the
+   * platform default a vendor inherits without ever having seen it.
+   */
+  effective?: ActivePolicy | null;
+  effectiveSource?: "business" | "platform_default" | "none";
+  templates: PolicyTemplate[];
+}
 
 export async function getCancellationPolicy(): Promise<CancellationPolicyState | null> {
   try {

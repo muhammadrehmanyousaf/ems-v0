@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Star } from "lucide-react"
 import type { Review } from "@/lib/types"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
 interface AddReviewProps {
   venueId: number
@@ -26,7 +27,7 @@ export default function AddReview({ venueId, onAddReview }: AddReviewProps) {
       userName,
       rating,
       comment,
-      date: new Date().toISOString().split("T")[0],
+      date: todayInKarachi(),
     }
     onAddReview(newReview)
     setRating(0)

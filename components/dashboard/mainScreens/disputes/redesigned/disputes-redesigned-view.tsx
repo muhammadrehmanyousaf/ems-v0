@@ -115,7 +115,7 @@ export function DisputesRedesignedView() {
         <StatCard label="Total disputes" value={isLoading ? "…" : all.length} icon="FileText" />
         <StatCard label="Open" value={isLoading ? "…" : openCount} icon="AlertTriangle" trend="flat" />
         <StatCard label="Resolved" value={isLoading ? "…" : resolvedCount} icon="CheckCircle2" trend="up" />
-        <StatCard label="Total value" value={isLoading ? "…" : formatPkr(totalValue)} icon="Wallet" />
+        <StatCard label="Total value" value={isLoading ? "…" : formatPkr(totalValue)} icon="Wallet" error={isError} />
       </div>
 
       <DataTable

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
+import { escapeCsv, neutraliseFormula } from "@/lib/utils/csv-escape"
 import { Icon } from "@/components/dashboard/shared/icon"
 import {
   DropdownMenu,
@@ -37,9 +38,12 @@ export interface ExportMenuProps<T> {
   getRowId?: (row: T) => string
 }
 
-function escapeCsv(v: string): string {
-  return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v
-}
+// WWL-123 — the escaper here was RFC-4180 correct for quotes, commas and
+// newlines and did nothing about a leading `=`, `+`, `-`, `@`, tab or CR.
+// Several of the columns this shared menu exports are customer-supplied
+// (customerName, notes, review text), so a vendor opening their own export in
+// Excel could execute whatever the customer typed. One implementation now, in
+// lib/utils/csv-escape.ts, used by every export path in the product.
 
 function toMatrix<T>(rows: T[], columns: ExportColumn<T>[]): (string | number)[][] {
   const header = columns.map((c) => c.header)
@@ -99,7 +103,12 @@ export function ExportMenu<T>({
     try {
       const data = await resolveRows(selectedOnly)
       const XLSX = await import("xlsx")
-      const matrix = toMatrix(data, columns)
+      // WWL-123 — the xlsx path has the same exposure as the CSV one: a string
+      // cell beginning with a formula trigger is evaluated on open. Numbers are
+      // written through untouched so they stay right-aligned and sortable.
+      const matrix = toMatrix(data, columns).map((row) =>
+        row.map((c) => (typeof c === "number" ? c : neutraliseFormula(String(c)))),
+      )
       const ws = XLSX.utils.aoa_to_sheet(matrix)
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, "Export")

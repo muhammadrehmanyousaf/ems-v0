@@ -11,7 +11,7 @@
 import * as React from "react"
 import { useMutation } from "@tanstack/react-query"
 import { VendorHoldsAPI, HOLD_SLOT_PRESETS } from "@/lib/api/vendorHolds"
-import { useActiveBusinessId } from "@/lib/store/active-business-store"
+import { useBusinessIdField } from "@/lib/store/use-business-id-field"
 import { enqueue as outboxEnqueue, isOutboxEnabled, isOffline } from "@/lib/outbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -20,9 +20,14 @@ import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { FormBlockedHint } from "@/components/dashboard/primitives/field-error"
+import { DangerousAction } from "@/components/dashboard/primitives/dangerous-action"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
-const today = () => new Date().toISOString().slice(0, 10)
+// WWL-062 / F10 — `new Date().toISOString()` is UTC, so for the first five hours
+// of every Pakistani day this returned YESTERDAY and used it as the `min`,
+// making today unselectable at 2am in Lahore.
+const today = () => todayInKarachi()
 const fmtDate = (s?: string | null) => {
   if (!s) return "—"
   const d = new Date(s)
@@ -39,7 +44,12 @@ export function HoldDateDialog({
   prefill?: HoldPrefill
   onSaved?: () => void
 }) {
-  const activeBusinessId = useActiveBusinessId()
+  // WWL-608 / F3 — `useActiveBusinessId() ?? undefined` sends NO venue under the
+  // header's persisted "All venues" default, so a hold captured at an expo
+  // attached to nothing. `useBusinessIdField` falls back to the vendor's first
+  // venue without ever overriding an active header selection.
+  const [businessIdStr] = useBusinessIdField()
+  const resolvedBusinessId = businessIdStr ? Number(businessIdStr) : undefined
   const [form, setForm] = React.useState({ holdDate: prefill?.holdDate || today(), holdTime: prefill?.holdTime || "Evening" })
   const loaded = React.useRef<string | null>(null)
   React.useEffect(() => {
@@ -49,9 +59,9 @@ export function HoldDateDialog({
 
   const placeMut = useMutation({
     mutationFn: async () => {
-      const body = { businessId: activeBusinessId ?? undefined, holdDate: form.holdDate, holdTime: form.holdTime.trim() }
+      const body = { businessId: resolvedBusinessId, holdDate: form.holdDate, holdTime: form.holdTime.trim() }
       if (isOutboxEnabled() && isOffline()) {
-        await outboxEnqueue("hold_date", { businessId: activeBusinessId ?? undefined, holdDate: body.holdDate, holdTime: body.holdTime }, `${fmtDate(body.holdDate)} · ${body.holdTime}`)
+        await outboxEnqueue("hold_date", { businessId: resolvedBusinessId, holdDate: body.holdDate, holdTime: body.holdTime }, `${fmtDate(body.holdDate)} · ${body.holdTime}`)
         return { queuedOffline: true as const }
       }
       return VendorHoldsAPI.place(body)
@@ -59,6 +69,26 @@ export function HoldDateDialog({
     onSuccess: (r: any) => {
       if (r?.queuedOffline) toast.success("Held offline — will sync when you reconnect")
       else showSuccessToast(r?.alreadyHeld ? "Hold extended" : "Date held")
+
+      /**
+       * WWL-060 — a date that already carried a confirmed booking accepted a
+       * hold with no warning of any kind, so the holds list showed a slot as
+       * tentatively reserved when it had in fact already been sold. The hold
+       * still succeeds — a vendor may legitimately hold a second hall or a
+       * second function on the same day — but they are told what is there.
+       */
+      const clashes: Array<{ customerName?: string; bookingTime?: string; status?: string }> =
+        r?.conflictingBookings ?? []
+      if (clashes.length > 0) {
+        const first = clashes[0]
+        toast.warning(
+          clashes.length === 1
+            ? `Heads up — ${first.customerName || "a booking"} is already booked on this date${first.bookingTime ? ` at ${first.bookingTime}` : ""}.`
+            : `Heads up — this date already has ${clashes.length} bookings against this venue.`,
+          { duration: 8000 },
+        )
+      }
+
       onSaved?.(); onOpenChange(false)
     },
     onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't hold the date"),
@@ -96,9 +126,28 @@ export function HoldDateDialog({
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
           <FormBlockedHint message={blockedReason} />
-          <Button disabled={!canSave || placeMut.isPending} onClick={() => placeMut.mutate()}>
-            {placeMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Holding…</> : <><Icon name="CalendarCheck" size={15} className="mr-1.5" /> Hold date</>}
-          </Button>
+          {/* WWL-604 (S2) — this form arrives already valid (date = today,
+              slot = Evening), so one click on an untouched dialog placed a real
+              hold on a real calendar. Confirm names the date it is about to
+              take. */}
+          <DangerousAction
+            title="Hold this date?"
+            consequence={
+              <>
+                <strong>{fmtDate(form.holdDate)} · {form.holdTime || "—"}</strong> will be marked as
+                held on your calendar, so it stops showing as free. Holds expire on their own if you
+                don&apos;t confirm a booking, and you can release one from Date holds.
+              </>
+            }
+            confirmLabel="Hold the date"
+            confirmVariant="default"
+            disabled={!canSave || placeMut.isPending}
+            onConfirm={() => placeMut.mutateAsync()}
+          >
+            <Button disabled={!canSave || placeMut.isPending}>
+              {placeMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Holding…</> : <><Icon name="CalendarCheck" size={15} className="mr-1.5" /> Hold date</>}
+            </Button>
+          </DangerousAction>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -4,7 +4,7 @@
  * Collaborations — redesigned (Track C). Wired to CollaborationsAPI for both
  * directions: Incoming (invites to you — Accept/Decline) and Outgoing (invites
  * you sent — Cancel). Rendered through the redesign primitives. Original screen
- * untouched. Route /dashboard/collaborations-new.
+ * untouched. Route /dashboard/collaborations.
  */
 
 import * as React from "react"
@@ -210,7 +210,7 @@ export function CollaborationsRedesignedView() {
         <StatCard label="Total invites" value={allInvites.length} icon="Users" />
         <StatCard label="Pending" value={pending} icon="Clock" trend="flat" />
         <StatCard label="Accepted" value={accepted} icon="CheckCircle2" trend="up" />
-        <StatCard label="Agreed value" value={formatPkr(agreedTotal)} icon="Wallet" />
+        <StatCard label="Agreed value" value={formatPkr(agreedTotal)} icon="Wallet" error={isError} />
       </div>
 
       <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 w-fit">

@@ -75,14 +75,23 @@ import { Icon, type IconName } from "@/components/dashboard/shared/icon";
 
 // Everyday tabs a normal hall owner needs; the accountant/CFO tools live under
 // "Advanced" so they never wall off the day-to-day surface.
+/**
+ * WWL-530 (S3) — the sidebar and these tabs disagreed on ALL SEVEN names, and
+ * the page heading said "Venue-OS" whichever tab you were on. A vendor clicking
+ * "Halls & spaces" in the sidebar landed on a page headed "Venue-OS" with a tab
+ * called "Spaces" — three names, none of them matching.
+ *
+ * These labels are now the sidebar's, verbatim. Keep them in step with
+ * `vendorVenueOs` in components/dashboard/layout/nav-data.ts.
+ */
 const PRIMARY_TABS: { value: string; label: string; icon: IconName }[] = [
-  { value: "today", label: "Today", icon: "CalendarCheck" },
-  { value: "profit", label: "Bookings & Profit", icon: "TrendingUp" },
-  { value: "money", label: "Money & Expenses", icon: "Wallet" },
-  { value: "spaces", label: "Spaces", icon: "LayoutGrid" },
-  { value: "cash", label: "Cash & Cheques", icon: "CreditCard" },
+  { value: "today", label: "Tonight", icon: "CalendarCheck" },
+  { value: "profit", label: "Event profit", icon: "TrendingUp" },
+  { value: "money", label: "Venue money", icon: "Wallet" },
+  { value: "spaces", label: "Halls & spaces", icon: "LayoutGrid" },
+  { value: "cash", label: "Cash & cheques", icon: "CreditCard" },
   { value: "kitchen", label: "Kitchen", icon: "Utensils" },
-  { value: "advanced", label: "Advanced", icon: "Settings2" },
+  { value: "advanced", label: "Accounting", icon: "Settings2" },
 ];
 
 function Section({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }): React.ReactElement {

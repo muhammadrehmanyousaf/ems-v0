@@ -63,6 +63,7 @@ import {
   type PaymentMethod,
   type CreateShiftInput,
 } from '@/lib/api/staff';
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
 export interface VendorBusinessOption {
   id: number;
@@ -111,7 +112,7 @@ export function ShiftDialog({
     resolver: zodResolver(shiftSchema),
     defaultValues: {
       businessId: businesses[0]?.id,
-      shiftDate: new Date().toISOString().slice(0, 10),
+      shiftDate: todayInKarachi(),
       dihariRate: 1500,
     },
   });
@@ -121,7 +122,7 @@ export function ShiftDialog({
     if (open) {
       form.reset({
         businessId: businesses[0]?.id,
-        shiftDate: new Date().toISOString().slice(0, 10),
+        shiftDate: todayInKarachi(),
         dihariRate: 1500,
       });
     }

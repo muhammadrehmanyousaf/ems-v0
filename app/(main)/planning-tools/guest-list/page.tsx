@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react";
+import { toCsv } from "@/lib/utils/csv-escape";
 import Link from "next/link";
 import { Users, Plus, Trash2, Download, Share2, ArrowLeft, Mail, Phone, UserCheck, UserX, Clock, Search, Filter, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -154,13 +155,13 @@ export default function GuestListPage() {
       notes: guest.notes || ''
     }));
     
-    const csv = [
+    const csv = toCsv([
       ['Name', 'Email', 'Phone', 'RSVP', 'Plus One', 'Plus One Name', 'Dietary Restrictions', 'Group', 'Table Number', 'Notes'],
       ...data.map(row => [
         row.name, row.email, row.phone, row.rsvp, row.plusOne, 
         row.plusOneName, row.dietaryRestrictions, row.group, row.tableNumber, row.notes
       ])
-    ].map(row => row.join(',')).join('\n');
+    ]);
     
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);

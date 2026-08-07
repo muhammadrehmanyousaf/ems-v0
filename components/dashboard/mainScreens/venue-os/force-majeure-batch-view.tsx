@@ -67,7 +67,7 @@ export function ForceMajeureBatchView(): React.ReactElement | null {
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2 text-sm">
           <BusinessScopeField value={businessId} onChange={setBusinessId} />
-          <input type="text" placeholder="govt order ref" value={govtOrderRef} onChange={(e) => setGovtOrderRef(e.target.value)} className="w-36 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Govt order ref<input type="text" placeholder="govt order ref" value={govtOrderRef} onChange={(e) => setGovtOrderRef(e.target.value)} className="w-36 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
           <select value={rule} onChange={(e) => setRule(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
             <option value="CARRY_FORWARD">CARRY_FORWARD</option>
             <option value="FULL_REFUND">FULL_REFUND</option>

@@ -112,10 +112,10 @@ export function CateringRecost(): React.ReactElement | null {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left text-xs text-muted-foreground">
-                      <th className="py-2 pr-3">Dish</th>
-                      <th className="py-2 pr-3 text-right">Degh cost</th>
-                      <th className="py-2 pr-3 text-right">Plates/degh</th>
-                      <th className="py-2 pr-3 text-right">Cost/plate</th>
+                      <th scope="col" className="py-2 pr-3">Dish</th>
+                      <th scope="col" className="py-2 pr-3 text-right">Degh cost</th>
+                      <th scope="col" className="py-2 pr-3 text-right">Plates/degh</th>
+                      <th scope="col" className="py-2 pr-3 text-right">Cost/plate</th>
                     </tr>
                   </thead>
                   <tbody>

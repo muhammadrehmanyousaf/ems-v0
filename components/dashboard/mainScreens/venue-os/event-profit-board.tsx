@@ -24,7 +24,7 @@ const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v
 const fmtDate = (s?: string | null) =>
   s ? new Date(s).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
-type SortKey = "date" | "net" | "revenue";
+type SortKey = "date" | "cash" | "net" | "revenue";
 const MAX_ROWS = 40;
 
 export function EventProfitBoard(): React.ReactElement {
@@ -74,18 +74,32 @@ export function EventProfitBoard(): React.ReactElement {
           name: b.customerName || `Booking #${b.id}`,
           date: b.bookingDate,
           status: b.status,
+          cancelled,
           revenue,
           received,
           outstanding: Math.max(0, revenue - received),
           spent,
           net,
-          margin: revenue > 0 ? net / revenue : 0,
+          /**
+           * WWL-009 — `net` is booked minus spent, and when nothing is tagged
+           * it is simply the booking total. That produced rows reading
+           * "Net Rs 1,546,000 · 100% margin" on a wedding that had received
+           * Rs 386,500 and had no recorded cost at all. A margin computed from
+           * no cost is not a margin, so rows with nothing tagged report null
+           * and the column shows "—" rather than a fabricated 100%.
+           */
+          margin: spent > 0 && revenue > 0 ? net / revenue : null,
+          /** What this function has actually put in the account, less what it took out. */
+          cash: received - spent,
         };
       })
       // drop empty shells (no money either side) so the board stays signal-only
       .filter((x) => x.revenue > 0 || x.spent > 0);
     r.sort((a, b) =>
-      sort === "net" ? b.net - a.net : sort === "revenue" ? b.revenue - a.revenue : (b.date || "").localeCompare(a.date || ""),
+      sort === "cash" ? b.cash - a.cash
+        : sort === "net" ? b.net - a.net
+        : sort === "revenue" ? b.revenue - a.revenue
+        : (b.date || "").localeCompare(a.date || ""),
     );
     return r;
   }, [bookings, spentByBooking, sort]);
@@ -95,7 +109,49 @@ export function EventProfitBoard(): React.ReactElement {
     const received = rows.reduce((s, r) => s + r.received, 0);
     const spent = rows.reduce((s, r) => s + r.spent, 0);
     const net = booked - spent;
-    return { booked, received, spent, net, outstanding: rows.reduce((s, r) => s + r.outstanding, 0), margin: booked > 0 ? net / booked : 0 };
+
+    /**
+     * WWL-541 / WWL-542 / WWL-554 — the headline read "Net profit
+     * Rs 25,508,850 · 76% margin" and was wrong three independent ways:
+     *
+     *   WWL-541  it is BOOKED minus spent, and Rs 13,417,229 of that had not
+     *            arrived. It is not profit until it is collected.
+     *   WWL-542  seven functions showed 100% margin because nothing was tagged
+     *            to them — Rs 9,702,750 of "profit" with no recorded cost at all.
+     *   WWL-554  it ignores the Money tab's Rs 8,847,000 of fixed overheads
+     *            entirely, which are real money leaving the account.
+     *
+     * The number is not deleted — it is a useful gross figure — but it is
+     * labelled for what it actually is, and the two distortions are counted and
+     * disclosed underneath instead of being silently baked in.
+     */
+    const untagged = rows.filter((r) => r.spent <= 0 && r.revenue > 0);
+    const untaggedRevenue = untagged.reduce((s, r) => s + r.revenue, 0);
+    const costedRows = rows.filter((r) => r.spent > 0);
+    const costedBooked = costedRows.reduce((s, r) => s + r.revenue, 0);
+    const costedNet = costedRows.reduce((s, r) => s + r.net, 0);
+
+    return {
+      booked,
+      received,
+      spent,
+      net,
+      /**
+       * WWL-009 — the one figure on this board that is neither a projection
+       * nor an average: money in, less money out. Live that is Rs 20,076,621
+       * received against Rs 7,985,000 spent — Rs 12,091,621 — while the "Net
+       * profit" headline read Rs 29,363,900, overstating the realised
+       * position by roughly Rs 17.3M.
+       */
+      cash: received - spent,
+      outstanding: rows.reduce((s, r) => s + r.outstanding, 0),
+      // Margin over the functions that actually have a cost against them.
+      // Averaging in rows with zero recorded cost is what produced "76%".
+      margin: costedBooked > 0 ? costedNet / costedBooked : 0,
+      untaggedCount: untagged.length,
+      untaggedRevenue,
+      costedCount: costedRows.length,
+    };
   }, [rows]);
 
   const shown = rows.slice(0, MAX_ROWS);
@@ -109,12 +165,53 @@ export function EventProfitBoard(): React.ReactElement {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
         <StatCard label="Booked" value={formatPkr(totals.booked)} icon="CalendarCheck" />
         <StatCard label="Received" value={formatPkr(totals.received)} icon="Wallet" delta={totals.booked > 0 ? `${Math.round((totals.received / totals.booked) * 100)}% collected` : undefined} trend="up" />
         <StatCard label="Outstanding" value={formatPkr(totals.outstanding)} icon="Clock" delta="to collect" />
         <StatCard label="Spent (tagged)" value={formatPkr(totals.spent)} icon="TrendingDown" />
-        <StatCard label="Net profit" value={formatPkr(totals.net)} icon="TrendingUp" delta={`${Math.round(totals.margin * 100)}% margin`} trend={totals.net >= 0 ? "up" : "down"} />
+        {/* WWL-009 — the figure the owner can actually act on: money in less
+            money out. It sits beside the gross number rather than replacing it,
+            because both are useful and only one of them is cash. */}
+        <StatCard
+          label="Cash position"
+          value={formatPkr(totals.cash)}
+          icon="Wallet"
+          delta="received − tagged spend"
+          trend={totals.cash >= 0 ? "up" : "down"}
+        />
+        <StatCard
+          label="Booked − tagged spend"
+          value={formatPkr(totals.net)}
+          icon="TrendingUp"
+          delta={totals.costedCount > 0 ? `${Math.round(totals.margin * 100)}% margin on costed events` : "no costed events yet"}
+          trend={totals.net >= 0 ? "up" : "down"}
+        />
+      </div>
+
+      {/* WWL-541 / 542 / 554 — say what this number is not, in the vendor's own
+          figures, rather than presenting it as net profit. */}
+      <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+        <p className="font-medium">This is not your net profit.</p>
+        <ul className="mt-1 list-disc space-y-0.5 pl-5 text-[13px]">
+          <li>
+            It counts <strong>{formatPkr(totals.outstanding)}</strong> you have booked but not yet
+            received.
+          </li>
+          {totals.untaggedCount > 0 && (
+            <li>
+              <strong>
+                {totals.untaggedCount} function{totals.untaggedCount === 1 ? "" : "s"}
+              </strong>{" "}
+              worth <strong>{formatPkr(totals.untaggedRevenue)}</strong> have no expense tagged to
+              them, so they count as pure profit. Tag their costs and this figure will drop.
+            </li>
+          )}
+          <li>
+            It does not include fixed overheads — rent, salaries, utilities. Those are on the{" "}
+            <strong>Money</strong> tab.
+          </li>
+        </ul>
       </div>
 
       <div className="rounded-xl border border-border bg-card shadow-sm">
@@ -122,7 +219,11 @@ export function EventProfitBoard(): React.ReactElement {
           <span className="text-sm font-semibold">Per function</span>
           <div className="inline-flex items-center gap-1 text-xs">
             <span className="text-muted-foreground">Sort:</span>
-            {([["date", "Recent"], ["net", "Most profit"], ["revenue", "Biggest"]] as [SortKey, string][]).map(([k, lbl]) => (
+            {/* WWL-008/009 — "Most profit" sorted by booked-minus-spent, so the
+                top of the list was the functions with the least cost recorded
+                against them, and a cancelled wedding at Rs 0 received led it.
+                Each control now names the column it actually sorts. */}
+            {([["date", "Recent"], ["cash", "Most cash"], ["net", "Booked − spent"], ["revenue", "Biggest"]] as [SortKey, string][]).map(([k, lbl]) => (
               <button
                 key={k}
                 type="button"
@@ -148,12 +249,13 @@ export function EventProfitBoard(): React.ReactElement {
             <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                  <th className="px-4 py-2 font-medium">Function</th>
-                  <th className="px-4 py-2 text-right font-medium">Revenue</th>
-                  <th className="px-4 py-2 text-right font-medium">Received</th>
-                  <th className="px-4 py-2 text-right font-medium">Spent</th>
-                  <th className="px-4 py-2 text-right font-medium">Net</th>
-                  <th className="px-4 py-2 text-right font-medium">Margin</th>
+                  <th scope="col" className="px-4 py-2 font-medium">Function</th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">Revenue</th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">Received</th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">Spent</th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">Cash</th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">Booked − spent</th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">Margin</th>
                 </tr>
               </thead>
               <tbody>
@@ -166,10 +268,22 @@ export function EventProfitBoard(): React.ReactElement {
                     <td className="px-4 py-2.5 text-right tabular-nums">{formatPkr(r.revenue)}</td>
                     <td className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">{formatPkr(r.received)}</td>
                     <td className="px-4 py-2.5 text-right tabular-nums text-rose-600 dark:text-rose-400">{r.spent > 0 ? formatPkr(r.spent) : "—"}</td>
-                    <td className={cn("px-4 py-2.5 text-right font-semibold tabular-nums", r.net >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
+                    <td className={cn("px-4 py-2.5 text-right font-semibold tabular-nums", r.cash >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
+                      {formatPkr(r.cash)}
+                    </td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">
                       {formatPkr(r.net)}
                     </td>
-                    <td className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">{r.revenue > 0 ? `${Math.round(r.margin * 100)}%` : "—"}</td>
+                    {/* WWL-009 — "—" where nothing is tagged. A margin computed
+                        from no cost is not a margin; printing 100% told the
+                        owner their least-documented events were their best. */}
+                    <td className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">
+                      {r.margin == null ? (
+                        <span title="No expenses tagged to this function yet">—</span>
+                      ) : (
+                        `${Math.round(r.margin * 100)}%`
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

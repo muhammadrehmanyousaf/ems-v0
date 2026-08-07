@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { QuickBookingSheet } from "./quick-booking-sheet";
+import { AssignSpaceDialog } from "@/components/dashboard/shared/assign-space-dialog";
 
 const WINDOW = 14; // two-week window per page (≤60d endpoint cap)
 
@@ -46,6 +47,8 @@ export function CalendarSlotGridView() {
   const [page, setPage] = useState(0);
   const [sel, setSel] = useState<{ row: string; day: string; state: CellState } | null>(null);
   const [quickDate, setQuickDate] = useState<string | null>(null); // free-cell tap → quick-add
+  // WWL-100 — the booking whose hall the vendor is recording.
+  const [assignBookingId, setAssignBookingId] = useState<number | null>(null);
 
   const from = useMemo(() => format(addDays(new Date(), page * WINDOW), "yyyy-MM-dd"), [page]);
   const to = useMemo(() => format(addDays(new Date(), page * WINDOW + WINDOW - 1), "yyyy-MM-dd"), [page]);
@@ -92,21 +95,40 @@ export function CalendarSlotGridView() {
 
   if (!businessId) return null;
 
-  const rows: { key: string; kind: "hall" | "slot"; name: string; cellFor: (day: string) => CellState }[] = [];
+  // Rows: the venue's halls, then its time-slots. Depth indents a Hall → Floor
+  // → Partition tree so the shape of the venue is readable.
+  const rows: {
+    key: string; kind: "hall" | "slot"; name: string; depth: number;
+    cellFor: (day: string) => CellState;
+    bookingsFor?: (day: string) => number[];
+  }[] = [];
   if (data) {
     data.halls.forEach((h) =>
       rows.push({
-        key: `h${h.subVenueId}`, kind: "hall", name: h.name,
+        key: `h${h.subVenueId}`, kind: "hall", name: h.name, depth: h.depth || 0,
         cellFor: (day) => (data.days[day]?.halls.find((c) => c.subVenueId === h.subVenueId)?.state ?? "free"),
+        bookingsFor: (day) => data.days[day]?.halls.find((c) => c.subVenueId === h.subVenueId)?.bookingIds ?? [],
       }),
     );
     data.slots.forEach((s) =>
       rows.push({
-        key: `s${s.slotTemplateId}`, kind: "slot", name: `${s.label} (${s.startTime?.slice(0, 5)})`,
+        key: `s${s.slotTemplateId}`, kind: "slot", name: `${s.label} (${s.startTime?.slice(0, 5)})`, depth: 0,
         cellFor: (day) => (data.days[day]?.slots.find((c) => c.slotTemplateId === s.slotTemplateId)?.state ?? "free"),
       }),
     );
   }
+
+  // WWL-100 — bookings that carry no hall.
+  //
+  // These used to be spread across every row: any day with a booking had all
+  // its free cells painted Booked, which is why five halls and two slots showed
+  // seven identical columns and the vendor could not sell the four halls that
+  // were still empty. They get their own row now — the booking is never hidden,
+  // no sellable hall is ever walled, and tapping the cell records the hall.
+  const unassignedFor = (day: string) => data?.days[day]?.unassignedBookingIds ?? [];
+  const unassignedCount = (day: string) =>
+    data?.days[day]?.unassignedCount ?? data?.days[day]?.unassignedBookingIds?.length ?? 0;
+  const anyUnassigned = days.some((d) => unassignedCount(d) > 0);
 
   const fmtCol = (d: string) => {
     const dt = new Date(d + "T00:00:00");
@@ -138,12 +160,21 @@ export function CalendarSlotGridView() {
 
         {/* Legend */}
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-          {(["free", "booked", "held", "blocked"] as CellState[]).map((s) => (
+          {/* `partial` is now a real, reachable state — a hall with one of its
+              sessions sold, or one of its partitions taken — so it belongs in
+              the legend rather than being an unexplained colour. */}
+          {(["free", "booked", "partial", "held", "blocked"] as CellState[]).map((s) => (
             <span key={s} className="flex items-center gap-1">
               <span className={cn("size-3 rounded-sm", CELL[s].split(" ").slice(0, 2).join(" "))} />
               {LABEL[s]}
             </span>
           ))}
+          {anyUnassigned && (
+            <span className="flex items-center gap-1">
+              <span className="size-3 rounded-sm bg-amber-100 dark:bg-amber-900/40" />
+              No hall recorded
+            </span>
+          )}
         </div>
 
         {/* Dead-month + Islamic-event strip — 1-click block (writes a vendor block). */}
@@ -167,7 +198,9 @@ export function CalendarSlotGridView() {
                   const c = fmtCol(d);
                   const hj = gregorianToHijri(new Date(d + "T00:00:00"));
                   const blocked = data.days[d]?.isBlocked || blockedSet.has(d);
-                  const booked = data.days[d]?.bookedCount ?? 0;
+                  // Bookings with no hall recorded — badged so the column is
+                  // visibly incomplete even before the row below is read.
+                  const booked = unassignedCount(d);
                   return (
                     <div key={d} className={cn("w-9 shrink-0 text-center", blocked && "opacity-60")}>
                       <div className="text-[10px] text-muted-foreground uppercase">{c.dow}</div>
@@ -185,15 +218,20 @@ export function CalendarSlotGridView() {
               {/* Rows */}
               {rows.map((r) => (
                 <div key={r.key} className="flex items-center py-0.5">
-                  <div className="w-40 shrink-0 pr-2 truncate text-xs font-medium" title={r.name}>{r.name}</div>
+                  <div
+                    className="w-40 shrink-0 pr-2 truncate text-xs font-medium"
+                    style={{ paddingLeft: `${r.depth * 10}px` }}
+                    title={r.name}
+                  >
+                    {r.name}
+                  </div>
                   {days.map((d) => {
-                    const base: CellState = blockedSet.has(d) || data.days[d]?.isBlocked ? "blocked" : r.cellFor(d);
-                    // A plain (offline/quick-add/migrated) booking isn't tied to a
-                    // specific hall/slot, so it arrives only as a per-day count.
-                    // Paint otherwise-free cells booked so a booked day is never
-                    // shown as Free (never HIDE a booking).
-                    const st: CellState = base === "free" && (data.days[d]?.bookedCount ?? 0) > 0 ? "booked" : base;
+                    // The cell says what is true of THIS hall on THIS day. It
+                    // used to be overwritten to Booked whenever the day held any
+                    // booking at all, which is what made every row identical.
+                    const st: CellState = blockedSet.has(d) || data.days[d]?.isBlocked ? "blocked" : r.cellFor(d);
                     const isSel = sel && sel.row === r.key && sel.day === d;
+                    const ids = r.bookingsFor?.(d) ?? [];
                     return (
                       <button
                         key={d}
@@ -206,14 +244,41 @@ export function CalendarSlotGridView() {
                           CELL[st],
                           isSel && "ring-2 ring-offset-1 ring-primary",
                         )}
+                        title={ids.length ? `${r.name} · ${LABEL[st]} · booking${ids.length > 1 ? "s" : ""} #${ids.join(", #")}` : undefined}
                         aria-label={`${r.name} · ${d} · ${LABEL[st]}`}
                       >
-                        {st === "booked" ? "•" : st === "blocked" ? "×" : ""}
+                        {st === "booked" ? "•" : st === "blocked" ? "×" : st === "partial" ? "◐" : ""}
                       </button>
                     );
                   })}
                 </div>
               ))}
+
+              {/* WWL-100 — the unassigned row. Only appears when there is
+                  something to resolve, and every cell is a one-tap fix. */}
+              {anyUnassigned && (
+                <div className="flex items-center py-0.5 mt-1 border-t pt-1.5">
+                  <div className="w-40 shrink-0 pr-2 truncate text-xs font-medium text-amber-700 dark:text-amber-400" title="Bookings with no hall recorded">
+                    No hall recorded
+                  </div>
+                  {days.map((d) => {
+                    const n = unassignedCount(d);
+                    const ids = unassignedFor(d);
+                    if (n === 0) return <div key={d} className="w-9 h-9 shrink-0 mx-px" />;
+                    return (
+                      <button
+                        key={d}
+                        onClick={() => ids[0] && setAssignBookingId(ids[0])}
+                        className="w-9 h-9 shrink-0 mx-px rounded-md text-[10px] font-semibold flex items-center justify-center transition bg-amber-100 text-amber-900 hover:ring-2 hover:ring-amber-400 dark:bg-amber-900/40 dark:text-amber-200"
+                        title={`${n} booking${n > 1 ? "s" : ""} on this date with no hall recorded (#${ids.join(", #")}). Tap to record it.`}
+                        aria-label={`${d} · ${n} booking${n > 1 ? "s" : ""} with no hall recorded · record it`}
+                      >
+                        {n}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -230,6 +295,14 @@ export function CalendarSlotGridView() {
             </span>
           </div>
         )}
+
+        {/* WWL-100 — record the hall for a booking that has none. */}
+        <AssignSpaceDialog
+          bookingId={assignBookingId}
+          businessId={businessId}
+          open={assignBookingId != null}
+          onOpenChange={(o) => { if (!o) setAssignBookingId(null); }}
+        />
 
         {/* Tap a free date → register-fast quick-add (T6.3). */}
         {quickDate && (

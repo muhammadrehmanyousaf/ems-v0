@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 import { BookingData } from "@/lib/dashboard-types"
@@ -10,6 +11,9 @@ import { InstallmentsCard } from "@/components/bookings/installments-card"
 // BK-100.4 — vendor "report no-show" CTA. Only renders inside the
 // 7-day reporting window enforced server-side.
 import { VendorNoShowDialog } from "@/components/bookings/vendor-no-show-dialog"
+import { outstandingOn, derivedPaymentStatus } from "@/lib/utils/booking-money"
+// WWL-050 / WWL-100 — record which hall a booking is in.
+import { AssignSpaceDialog } from "@/components/dashboard/shared/assign-space-dialog"
 
 interface BookingDetailSheetProps {
   open: boolean
@@ -44,13 +48,17 @@ const formatTime = (t?: string) => {
 
 export function BookingDetailSheet({ open, onOpenChange, booking }: BookingDetailSheetProps) {
   const details = booking.bookingDetails || []
+  // WWL-050 — the venue whose hall the vendor is recording, or null.
+  const [assignFor, setAssignFor] = React.useState<number | null>(null)
   const vendorTotal = details.reduce((sum, d) => sum + (Number(d.totalAmount) || 0), 0)
   const vendorDownPayment = details.reduce((sum, d) => sum + (Number(d.downPayment) || 0), 0)
   const amount = vendorTotal > 0 ? vendorTotal : Number(booking.totalAmount) || 0
   const dp = vendorDownPayment > 0 ? vendorDownPayment : Number(booking.downPayment) || 0
-  const isPaid = booking.paymentStatus === 'Paid'
-  const isPartial = booking.paymentStatus === 'Partial'
-  const remaining = isPaid ? 0 : isPartial ? Math.max(0, amount - dp) : amount
+  // WWL-037 — balance is arithmetic on the amounts, not a reading of the flag.
+  const remaining = outstandingOn(booking)
+  const derivedStatus = derivedPaymentStatus(booking)
+  const isPaid = derivedStatus === 'Paid'
+  const isPartial = derivedStatus === 'Partial'
 
   // BK-100.4 — show "Report no-show" only when the booking is in a status
   // where a no-show can apply AND the event has occurred. Backend
@@ -151,6 +159,26 @@ export function BookingDetailSheet({ open, onOpenChange, booking }: BookingDetai
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold text-neutral-800">{detail.business?.name || 'Business'}</p>
                       <p className="text-sm font-bold text-bridal-gold-dark">Rs. {Number(detail.totalAmount || 0).toLocaleString()}</p>
+                    </div>
+                    {/* WWL-050 — which hall this event is in. The booking
+                        carried no space at all, so the vendor had to open the
+                        calendar (which could not tell them either) to find out
+                        where an event was actually happening. */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-neutral-500">Hall / Space:</span>
+                      {detail.subVenue?.name || detail.resource?.label ? (
+                        <span className="text-xs font-medium text-neutral-700">
+                          {detail.subVenue?.name || detail.resource?.label}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setAssignFor(detail.businessId)}
+                          className="text-xs font-medium text-amber-700 underline underline-offset-2 hover:text-amber-800"
+                        >
+                          Not recorded — set it
+                        </button>
+                      )}
                     </div>
                     {detail.package && (
                       <div className="flex items-center gap-2">
@@ -293,6 +321,14 @@ export function BookingDetailSheet({ open, onOpenChange, booking }: BookingDetai
           )}
 
         </div>
+
+        {/* WWL-050 — record the hall for a booking that has none. */}
+        <AssignSpaceDialog
+          bookingId={booking.id}
+          businessId={assignFor}
+          open={assignFor != null}
+          onOpenChange={(o) => { if (!o) setAssignFor(null) }}
+        />
       </SheetContent>
     </Sheet>
   )

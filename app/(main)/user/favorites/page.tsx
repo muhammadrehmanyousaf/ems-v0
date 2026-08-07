@@ -31,6 +31,7 @@ export default function FavoritesPage() {
 
   const [vendors, setVendors] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("name");
@@ -38,11 +39,15 @@ export default function FavoritesPage() {
 
   const loadVendors = useCallback(async () => {
     setIsLoading(true);
+    setLoadFailed(false);
     try {
       const data = await FavoritesAPI.getFavoriteVendors();
       setVendors(data);
     } catch {
+      // WWL-019 — a failed load used to render as "No favourites yet", which is
+      // a claim about the user's data rather than about the request.
       setVendors([]);
+      setLoadFailed(true);
     } finally {
       setIsLoading(false);
     }
@@ -157,7 +162,18 @@ export default function FavoritesPage() {
         actions={headerActions}
       />
 
-      {vendors.length === 0 ? (
+      {loadFailed ? (
+        <EmptyState
+          icon={<Heart className="size-6" />}
+          title="Couldn't load your favourites"
+          description="Something went wrong on our side — your saved vendors are still there."
+          action={
+            <Button onClick={loadVendors} size="sm">
+              Try again
+            </Button>
+          }
+        />
+      ) : vendors.length === 0 ? (
         <EmptyState
           icon={<Heart className="size-6" />}
           title="No favourites yet"

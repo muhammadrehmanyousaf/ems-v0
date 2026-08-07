@@ -65,6 +65,13 @@ export interface SpaceAvailability {
 export interface DateAvailability {
   businessId: number;
   date: string;
+  /**
+   * WWL-569 — committed bookings the venue holds on this date that were never
+   * mapped to a specific space. They still occupy the venue, so they downgrade
+   * every space to PARTIAL (or UNAVAILABLE when there are as many as there are
+   * bookable spaces). Surfaced so the UI can say why a date isn't simply green.
+   */
+  unmappedBookings?: number;
   spaces: { subVenueId: number; name: string; kind: string; depth: number; parentSubVenueId: number | null; basePricePkr: string | null; bookingMode: BookingMode; status: SpaceStatus }[];
 }
 export interface AvailabilityGrid {

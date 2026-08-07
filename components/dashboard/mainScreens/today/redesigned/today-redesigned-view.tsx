@@ -3,7 +3,7 @@
 /**
  * Today (day-of timeline) — redesigned (Track C, computed). Wired to
  * BookingTimelineAPI.today(); rendered through the primitives. Read-only;
- * original screen untouched. Route /dashboard/today-new.
+ * Route /dashboard/today.
  *
  * Note: the live API returns events as { booking: {...}, tasks: [] } — we
  * normalise each into the flat row shape the screen renders against.
@@ -23,6 +23,8 @@ import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { RunSheetDialog } from "@/components/dashboard/mainScreens/today/run-sheet-dialog"
 import { TimelineManagerDialog } from "@/components/dashboard/mainScreens/today/timeline-manager-dialog"
+import { useActiveBusinessId } from "@/lib/store/active-business-store"
+import { outstandingOn } from "@/lib/utils/booking-money"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
@@ -49,6 +51,7 @@ interface TodayRow {
   bookingTime: string | null
   status: string
   totalAmount: number | string | null
+  downPayment: number | string | null
   orderStage: string | null
   orderGrand: number | null
   orderBalance: number | null
@@ -59,19 +62,34 @@ interface TodayRow {
 /** Prefer the vendor's real order total over the legacy sticker when present. */
 const amountOf = (e: TodayRow) => (e.orderGrand != null ? e.orderGrand : num(e.totalAmount))
 
+/**
+ * WWL-020 — the "due" line was gated on `orderBalance != null`, which only
+ * exists once a booking has an order snapshot. A booking without one showed no
+ * amount due at all, so on the day-of screen a customer owing Rs 315,000 read
+ * as owing nothing — while the vendor was standing in front of them. Falls back
+ * to the shared money rule, which is the same arithmetic the snapshot holds.
+ */
+const balanceOf = (e: TodayRow) =>
+  e.orderBalance != null ? e.orderBalance : outstandingOn(e)
+
 export function TodayRedesignedView() {
   const qc = useQueryClient()
   const [runSheet, setRunSheet] = React.useState<TodayRow | null>(null)
   const [manage, setManage] = React.useState<TodayRow | null>(null)
+  // WWL-024 — this screen ignored the venue switcher completely: neither query
+  // sent a businessId, and neither key contained one, so selecting a venue did
+  // not even trigger a refetch. A vendor standing in one marquee was shown
+  // every marquee's day.
+  const activeBusinessId = useActiveBusinessId()
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["today-redesigned"],
-    queryFn: () => BookingTimelineAPI.today(),
+    queryKey: ["today-redesigned", activeBusinessId],
+    queryFn: () => BookingTimelineAPI.today(activeBusinessId),
   })
   // Outstanding is a running book-wide A/R balance, not a today figure — source
   // it from the receivables endpoint (same as the Receivables screen).
-  const { data: receivables } = useQuery({
-    queryKey: ["today-outstanding"],
-    queryFn: () => AnalyticsAPI.getReceivables(),
+  const { data: receivables, isError: receivablesError } = useQuery({
+    queryKey: ["today-outstanding", activeBusinessId],
+    queryFn: () => AnalyticsAPI.getReceivables(activeBusinessId),
   })
 
   // Normalise the live { booking, tasks } events into flat rows.
@@ -85,6 +103,7 @@ export function TodayRedesignedView() {
         bookingTime: e?.booking?.bookingTime ?? null,
         status: e?.booking?.status ?? "",
         totalAmount: e?.booking?.totalAmount ?? null,
+        downPayment: (e?.booking as { downPayment?: number | string | null })?.downPayment ?? null,
         orderStage: e?.booking?.orderStage ?? null,
         orderGrand: e?.booking?.orderGrand ?? null,
         orderBalance: e?.booking?.orderBalance ?? null,
@@ -108,14 +127,17 @@ export function TodayRedesignedView() {
     { key: "time", header: "Time", cellClassName: "text-muted-foreground", render: (e) => e.bookingTime || "—" },
     {
       key: "amount", header: "Amount", align: "right",
-      render: (e) => (
-        <div className="flex flex-col items-end">
-          <MoneyCell amount={amountOf(e)} />
-          {e.orderBalance != null && e.orderBalance > 0 && (
-            <span className="text-[11px] text-amber-600 dark:text-amber-500">{formatPkr(e.orderBalance)} due</span>
-          )}
-        </div>
-      ),
+      render: (e) => {
+        const due = balanceOf(e)
+        return (
+          <div className="flex flex-col items-end">
+            <MoneyCell amount={amountOf(e)} />
+            {due > 0 && (
+              <span className="text-[11px] text-amber-600 dark:text-amber-500">{formatPkr(due)} due</span>
+            )}
+          </div>
+        )
+      },
     },
     { key: "status", header: "Status", render: (e) => <StatusPill tone={bookingTone(e.status)}>{e.status || "—"}</StatusPill> },
     { key: "tasks", header: "Tasks", align: "right", cellClassName: "tabular-nums", render: (e) => num(e.tasks?.length) },
@@ -147,8 +169,18 @@ export function TodayRedesignedView() {
         <StatCard label="Events today" value={isLoading ? "…" : eventsToday} icon="Calendar" />
         <StatCard label="Total tasks" value={isLoading ? "…" : totalTasks} icon="CheckCircle2" />
         <StatCard label="Open tasks" value={isLoading ? "…" : openTasks} icon="Clock" delta="to complete" trend={openTasks > 0 ? "down" : "flat"} />
-        <StatCard label="Revenue today" value={isLoading ? "…" : formatPkr(revenueToday)} icon="Wallet" />
-        <StatCard label="Outstanding" value={isLoading ? "…" : formatPkr(outstandingBalance)} icon="Clock" delta={outstandingBalance > 0 ? "to collect" : undefined} />
+        <StatCard label="Revenue today" value={isLoading ? "…" : formatPkr(revenueToday)} icon="Wallet" error={isError} />
+        {/* WWL-021 — this is the whole book's A/R, not today's. It sat in a row
+            of four cards that are all "today" figures, under a bare label, so
+            it read as money owed on today's events. It now says which it is,
+            and a failed load says so instead of quoting Rs 0. */}
+        <StatCard
+          label="Outstanding (all dates)"
+          value={formatPkr(outstandingBalance)}
+          icon="Clock"
+          delta={outstandingBalance > 0 ? "to collect" : undefined}
+          error={receivablesError}
+        />
       </div>
 
       <DataTable

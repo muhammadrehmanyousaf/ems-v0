@@ -680,8 +680,16 @@ export class PaymentsAPI {
     if (params?.dateFrom) qs.set('dateFrom', params.dateFrom);
     if (params?.dateTo)   qs.set('dateTo',   params.dateTo);
     const res = await axiosInstance.get(`/api/v1/payments/vendor-revenue?${qs.toString()}`);
-    const empty = { count: 0, total: 0, received: 0, due: 0 };
-    return res.data?.data ?? { payments: [], stats: { offline: empty, online: empty, all: empty } };
+    // WWL-108 — this used to fall back to a fully-formed empty ledger, so a 200
+    // that carried no `data` (the WWL-107 catch-all banner, a proxy page, a
+    // deploy skew) rendered as "Rs 0 billed · Rs 0 received · no payments yet"
+    // on a venue holding Rs 11.7m. TanStack Query saw a success, so the Retry UI
+    // — which works — could never appear. A malformed response is now an error.
+    const payload = res.data?.data;
+    if (!payload || !Array.isArray(payload.payments) || !payload.stats) {
+      throw new Error("Revenue response was malformed — refusing to render an empty ledger");
+    }
+    return payload;
   }
 }
 
@@ -829,7 +837,10 @@ export interface CustomerProfileResponse {
     confirmedBookings: number;
     cancelledBookings: number;
     upcomingBookings: number;
+    /** Money actually received from this customer (WWL-089). */
     lifetimeRevenue: number;
+    /** Value of their non-cancelled bookings, paid or not. */
+    lifetimeBooked?: number;
     cancelledRevenue: number;
     avgTicketSize: number;
     repeatCustomer: boolean;
@@ -921,13 +932,26 @@ export class CommunityTrustAPI {
     if (params.phone) qs.set("phone", params.phone);
     if (params.email) qs.set("email", params.email);
     if (qs.toString() === "") return null;
+    /**
+     * WWL-092 — this used to `catch { return null }`, and the panel renders
+     * nothing for null AND nothing for `hasData: false`. So a 500, a dropped
+     * connection and a genuine "not enough vendors have rated this person" all
+     * presented identically: an absent panel. The moment ratings exist, an API
+     * failure would read as a clean record — on a named private individual,
+     * which is the highest-consequence version of this pattern in the product.
+     *
+     * A 403 is the one case that is genuinely "nothing to show": the vendor has
+     * no relationship with this contact, so there is no answer to give them.
+     * Everything else reaches the caller.
+     */
     try {
       const res = await axiosInstance.get(
         `/api/v1/offlineCustomers/community-trust?${qs.toString()}`,
       );
       return res.data?.data ?? null;
-    } catch {
-      return null;
+    } catch (e) {
+      if ((e as { response?: { status?: number } })?.response?.status === 403) return null;
+      throw e;
     }
   }
 }
@@ -1129,6 +1153,14 @@ export interface CreateBookingVendor {
   // specific hall / lawn for this line. Triggers PARTITION_CONFLICT
   // server-side if the hall is already booked on that date.
   resourceId?: number;
+  // WWL-050 / WWL-100 — the SubVenue (hall / lawn / floor / partition) this
+  // line occupies, from the venue's own space tree. This is the assignment the
+  // availability grid, the Space column, the CSV export and the per-space P&L
+  // all read; `resourceId` above remains supported and bridges to it. Omit when
+  // the vendor did not pick: the server pins a single-space venue to its one
+  // space, and leaves a multi-space booking unassigned rather than guessing.
+  // A hall already taken on that date is refused with SPACE_CONFLICT.
+  subVenueId?: number;
   // DRIFT-09 — optional because the SERVER computes both from packages / menu /
   // minimumPrice / add-ons and overwrites whatever the client sends before it's
   // read (bookingController overwrites vendors[].totalAmount/downPayment from

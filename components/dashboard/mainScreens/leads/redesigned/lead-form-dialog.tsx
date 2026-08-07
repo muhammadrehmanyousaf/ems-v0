@@ -104,8 +104,36 @@ export function LeadFormDialog({
       else showSuccessToast(isEdit ? "Lead updated" : "Lead added")
       onSaved?.(); onOpenChange(false)
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save lead"),
+    /**
+     * WWL-031 — the server now returns EVERY bad field in one response
+     * (`data.errors[] = { field, label, message }`). Landing them on the
+     * inputs closes the last part of the loop: previously a server rejection
+     * was a bare toast naming an API field like `contactWhatsapp`, which the
+     * vendor had to map to a box on screen by guesswork — five times over.
+     */
+    onError: (e: any) => {
+      const payload = e?.response?.data
+      const list: Array<{ field: string; label?: string; message: string }> =
+        payload?.data?.errors ?? payload?.errors ?? []
+      if (Array.isArray(list) && list.length > 0) {
+        const map: Record<string, string> = {}
+        for (const f of list) map[f.field] = f.message
+        setServerErrs(map)
+        setTouched((t) => ({ ...t, ...Object.fromEntries(list.map((f) => [f.field, true])) }))
+        toast.error(
+          list.length === 1
+            ? `${list[0].label ? `${list[0].label}: ` : ""}${list[0].message}`
+            : `${list.length} fields need fixing — they're marked below.`,
+        )
+        return
+      }
+      toast.error(payload?.message || e?.message || "Couldn't save lead")
+    },
   })
+
+  // Server-reported field errors, cleared as soon as the vendor edits anything.
+  const [serverErrs, setServerErrs] = React.useState<Record<string, string>>({})
+  React.useEffect(() => { setServerErrs({}) }, [form])
   /*
    * Every field except the contact name accepted anything at all.
    *
@@ -134,8 +162,13 @@ export function LeadFormDialog({
   }
   // Errors only after a field is touched, so opening the dialog doesn't flag
   // the empty phone the vendor is about to type.
+  // A server-reported error wins over the local one: it is the reason the save
+  // actually failed, and it is what the vendor has to act on (WWL-031).
   const shown = Object.fromEntries(
-    Object.entries(errs).map(([k, v]) => [k, touched[k] ? v : undefined]),
+    Object.entries({ ...errs, ...serverErrs }).map(([k, v]) => [
+      k,
+      serverErrs[k] ?? (touched[k] ? v : undefined),
+    ]),
   ) as Record<string, string | undefined>
 
   const hasError = Object.values(errs).some(Boolean)

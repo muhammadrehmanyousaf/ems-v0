@@ -12,6 +12,18 @@ import type { NextRequest } from "next/server"
  * Canonical host (L1 apex) and trailing-slash (L2 none) are handled at the
  * CDN / next.config layer, not here — keeps middleware fast and cacheable.
  */
+/**
+ * Paths whose trailing segment is a case-sensitive secret, not content.
+ * The §L3 lowercase rule MUST NOT touch these — see WWL-079.
+ *
+ *   /sign/<token>    — customer contract signing (43-char base64url)
+ *   /review/<token>  — review invitation
+ *   /wedding/<token> — shared wedding plan
+ *
+ * Anything added here must be a non-indexable, token-bearing route.
+ */
+const CASE_SENSITIVE_PATHS = /^\/(sign|review|wedding)\/[^/]+/;
+
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
@@ -22,8 +34,19 @@ export function middleware(request: NextRequest) {
   // request with uppercase characters is a duplicate-content risk and a
   // potential cache-key fragmentation. 301 once, cache forever.
   //
-  // Skipped for: API routes (already excluded via matcher), Next.js internals.
-  if (pathname !== pathname.toLowerCase()) {
+  // Skipped for: API routes (already excluded via matcher), Next.js internals,
+  // and any path whose segment IS a case-sensitive secret (see below).
+  //
+  // WWL-079 (S1) — this rule silently destroyed every customer share link.
+  // `/sign/<token>` carries a 43-character base64url token; lowercasing it
+  // mangles every uppercase character, so the 301 landed the customer on
+  // "Link not found — double-check the URL or ask the vendor to resend", and
+  // resending produced another link that died the same way. No customer could
+  // ever open a contract, which is WWL-080. Same shape for the review-invite
+  // and wedding-share tokens.
+  //
+  // These paths are not indexable content, so they were never what §L3 was for.
+  if (!CASE_SENSITIVE_PATHS.test(pathname) && pathname !== pathname.toLowerCase()) {
     const url = request.nextUrl.clone();
     url.pathname = pathname.toLowerCase();
     return NextResponse.redirect(url, 301);

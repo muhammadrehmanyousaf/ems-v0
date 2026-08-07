@@ -26,6 +26,7 @@ import {
     type ApiBusiness, type ApiPackage, type ApiMenu,
 } from '@/lib/api/dashboard';
 import { BusinessResourcesAPI, type BusinessResource } from '@/lib/api/businessResources';
+import { SpacePicker, useVenueSpaces } from '@/components/dashboard/shared/space-picker';
 // WW-PRICE0b — mirrors the server's unpriced-business rule so we ask for an
 // agreed amount in exactly the case the server would otherwise refuse.
 import { isUnpricedVendor, isMoneyUnset } from '@/lib/pricing/unpriced';
@@ -56,6 +57,14 @@ interface OfflineBookingDialogProps {
      * dialog's original behaviour for callers that don't care.
      */
     onCreated?: (bookingId: number) => void;
+    /**
+     * WWL-034 — the agreed price for this booking, prefilled when converting a
+     * lead. This dialog had no price, amount, total or budget field of any
+     * kind, so a lead worth Rs 1,175,000 became a booking that captured no
+     * amount at all: the one number that made the lead worth chasing was
+     * dropped at the exact moment it became money.
+     */
+    initialAmount?: number | null;
 }
 
 const TIME_SLOTS = [
@@ -210,11 +219,12 @@ function PackageOption({ pkg }: { pkg: ApiPackage }) {
     );
 }
 
-export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDate, initialCustomer, onCreated }: OfflineBookingDialogProps) {
+export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDate, initialCustomer, initialAmount, onCreated }: OfflineBookingDialogProps) {
     // Customer fields
     const [customerName, setCustomerName] = useState('');
     const [customerEmail, setCustomerEmail] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
+
 
     // Issue #27 — existing customer picker. Fetched on dialog open.
     // Vendor either picks one (autofills name/phone/email) or types a
@@ -295,6 +305,7 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, initialCustomer]);
+
     const [guestCount, setGuestCount] = useState('');
     const [quantity, setQuantity] = useState(1);
     // Issue #47 — per-day rate multiplier. Default 1 = single-day,
@@ -312,6 +323,10 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
     // hall and triggers PARTITION_CONFLICT checking on the BE.
     const [venueResources, setVenueResources] = useState<BusinessResource[]>([]);
     const [selectedResourceId, setSelectedResourceId] = useState<string>('');
+    // WWL-050 / WWL-100 — the SubVenue (hall / lawn / floor / partition) this
+    // booking occupies. '' = not decided; the server pins single-space venues
+    // automatically and leaves a multi-space venue honestly unassigned.
+    const [selectedSubVenueId, setSelectedSubVenueId] = useState<string>('');
 
     // Service selection
     const [selectedBusinessId, setSelectedBusinessId] = useState('');
@@ -380,9 +395,14 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
         if (!selectedBusinessId) {
             setVenueResources([]);
             setSelectedResourceId('');
+            setSelectedSubVenueId('');
             return;
         }
         setSelectedResourceId('');
+        // A hall belongs to one venue — carrying the previous venue's pick over
+        // would pin the booking to a space the new venue does not own (the
+        // server refuses it, but the vendor should never see that).
+        setSelectedSubVenueId('');
         let cancelled = false;
         BusinessResourcesAPI.list(Number(selectedBusinessId))
             .then((res) => {
@@ -403,7 +423,7 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
         setGuestCount(''); setQuantity(1);
         setNumberOfDays(1);
         setPickupAddress(''); setDropoffAddress(''); setTravelDistanceKm('');
-        setSelectedResourceId(''); setVenueResources([]);
+        setSelectedResourceId(''); setVenueResources([]); setSelectedSubVenueId('');
         setSelectedBusinessId(''); setSelectedPackageId(''); setSelectedMenuId(''); setAgreedAmount('');
         setSpecialRequests('');
         setCarMode('package');
@@ -437,6 +457,12 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
     const showMenu = MENU_TYPES.includes(vendorType);
     const isCarRental = vendorType === 'Car rental';
     const showQuantity = isCarRental ? carMode === 'single' : QUANTITY_TYPES.includes(vendorType);
+    // WWL-050 — does this venue have more than one bookable space? Decides
+    // which of the two hall pickers is the right one to show.
+    const { hasChoice: spaceHasChoice } = useVenueSpaces(
+        selectedBusinessId ? Number(selectedBusinessId) : null,
+    );
+
     const qtyLabel = getQuantityLabel(vendorType);
     // Issue #47 — only surface per-day rate input for vendor types
     // that genuinely charge per day. Keeps the dialog uncluttered for
@@ -444,8 +470,12 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
     const showNumberOfDays = PER_DAY_TYPES.includes(vendorType);
     // Issue #23 / #34 — only render the partition picker when the
     // business is a Wedding venue AND has at least one configured hall.
+    // WWL-050 — the SubVenue picker takes precedence when the venue has a real
+    // space tree, so a vendor is never shown two hall pickers backed by two
+    // different tables. Venues that only ever used the older capacity screen
+    // keep this one.
     const showResourcePicker =
-        vendorType === 'Wedding venue' && venueResources.length > 0;
+        vendorType === 'Wedding venue' && venueResources.length > 0 && !spaceHasChoice;
 
     // For car rental: filter packages by mode
     const filteredPackages = isCarRental
@@ -465,6 +495,28 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
         [selectedBusiness, packages],
     );
     const needsAgreedAmount = businessUnpriced && !selectedPackageId && !selectedMenuId;
+
+    /**
+     * WWL-034 — carry the lead's budget across.
+     *
+     * The agreed-amount field already existed, but only appears when the
+     * business has no published price. Converting a lead against a business
+     * that DOES have one showed no price field at all, so the lead's
+     * Rs 1,175,000 budget was dropped at the exact moment it became a booking
+     * and Create Booking stayed enabled with no amount captured.
+     *
+     * Two halves: prefill the field when it is shown, and — when it is not —
+     * still put the number in front of the vendor next to the computed price,
+     * so a listing priced at Rs 300,000 against a Rs 1,175,000 lead is visible
+     * rather than silently applied.
+     */
+    useEffect(() => {
+        if (!open) return;
+        if (initialAmount != null && Number(initialAmount) > 0 && !agreedAmount) {
+            setAgreedAmount(String(initialAmount));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, initialAmount, needsAgreedAmount]);
     // A package or menu is what gives an offline booking its price. When the
     // business has no starting price (raw NULL — an explicit 0 is a real "free"
     // price and MUST stay allowed, hence isMoneyUnset not truthiness) and we are
@@ -640,6 +692,11 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                         showResourcePicker && selectedResourceId
                             ? Number(selectedResourceId)
                             : undefined,
+                    // WWL-050 / WWL-100 — the hall this event is in. Omitted
+                    // when the vendor did not pick one: the server assigns the
+                    // venue's only space when there is exactly one, and leaves
+                    // a multi-space booking unassigned rather than guessing.
+                    subVenueId: selectedSubVenueId ? Number(selectedSubVenueId) : undefined,
                     // totalAmount / downPayment intentionally omitted — the
                     // server computes both and overwrites anything sent (DRIFT-09).
                     specialRequests: combinedRequests,
@@ -891,6 +948,19 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                                 whole" (legacy behaviour); a specific id
                                 pins to one hall and triggers PARTITION_
                                 CONFLICT checking on the BE. */}
+                            {/* WWL-050 / WWL-100 — the hall the event is in.
+                                Reads the SubVenue tree the vendor actually
+                                builds; the BusinessResource picker below only
+                                renders for the venues that used the older
+                                capacity screen, so exactly one appears. */}
+                            <SpacePicker
+                                businessId={selectedBusinessId ? Number(selectedBusinessId) : null}
+                                value={selectedSubVenueId}
+                                onChange={setSelectedSubVenueId}
+                                label="Hall / Space"
+                                hint="Recording the hall is what lets the calendar show one hall booked while the others stay sellable."
+                            />
+
                             {showResourcePicker && (
                                 <div className="space-y-1.5">
                                     <Label>Hall / Lawn</Label>
@@ -1235,6 +1305,21 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                             </div>
                             <Separator />
                         </>
+                    )}
+
+                    {/* WWL-034 — when the agreed-amount field is hidden (the
+                        listing has its own price) the lead's budget would
+                        otherwise vanish without trace. Put it next to the
+                        price the server is about to apply. */}
+                    {!needsAgreedAmount && initialAmount != null && Number(initialAmount) > 0 && (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+                            This lead&apos;s budget was <strong>Rs {Number(initialAmount).toLocaleString()}</strong>.
+                            This booking will be priced from the listing
+                            {priceBreakdown && priceBreakdown.subtotal > 0
+                                ? ` at Rs ${priceBreakdown.subtotal.toLocaleString()}`
+                                : ""}
+                            . Adjust the order after creating it if you agreed something different.
+                        </div>
                     )}
 
                     {/* ── Notes ── */}

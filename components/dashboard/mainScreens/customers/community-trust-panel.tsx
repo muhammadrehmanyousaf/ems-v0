@@ -65,15 +65,31 @@ export default function CommunityTrustPanel({
 }) {
   const [data, setData] = useState<CommunityTrustData | null>(null);
   const [loading, setLoading] = useState(true);
+  // WWL-092 — a failed lookup must not be silently indistinguishable from
+  // "nothing recorded". The subject is a named private individual and the
+  // vendor may be about to decide whether to trust them.
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     if (!phone && !email) { setLoading(false); return; }
+    setFailed(false);
     CommunityTrustAPI.get({ phone, email })
       .then((r) => setData(r))
+      .catch(() => setFailed(true))
       .finally(() => setLoading(false));
   }, [phone, email]);
 
   if (loading) return <Skeleton className="h-28 w-full" />;
+
+  if (failed) {
+    return (
+      <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+        Couldn&apos;t check what other vendors have recorded about this customer.
+        This is not a clean record — the check itself failed.
+      </p>
+    );
+  }
+
   // Render nothing when there's no data OR k-anonymity not met — never
   // show a partial signal that could identify a single rater.
   if (!data || !data.hasData) return null;

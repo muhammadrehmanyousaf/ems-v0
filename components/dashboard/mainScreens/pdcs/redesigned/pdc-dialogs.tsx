@@ -29,8 +29,9 @@ import {
   validateNotFutureDate,
   validateOptionalText,
 } from "@/components/dashboard/primitives/field-error"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => todayInKarachi()
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
 function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
@@ -202,7 +203,7 @@ export function PdcTransitionDialog({ open, onOpenChange, pdc, onSaved }: { open
                 <Field label="Deposit date">
                   {/* A cheque cannot have been banked tomorrow — unlike the
                       cheque date above, this one IS bounded to today. */}
-                  <input id="pdc-dep" type="date" max={new Date().toISOString().slice(0, 10)}
+                  <input id="pdc-dep" type="date" max={todayInKarachi()}
                     className={cn(inputCls, depositErr && ERROR_INPUT_CLS)} value={depositDate}
                     onChange={(e) => setDepositDate(e.target.value)} {...fieldAria("pdc-dep", depositErr)} />
                   <FieldError id="pdc-dep" message={depositErr} />

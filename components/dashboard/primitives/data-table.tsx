@@ -53,6 +53,58 @@ export interface DataTableProps<T> {
 const alignCls = (a?: Column<any>["align"]) =>
   a === "right" ? "text-right" : a === "center" ? "text-center" : "text-left"
 
+/**
+ * F4 / WWL-053, 086, 093, 146, 160, 244, 265, 280, 296, 377, 391, 459 — "on a
+ * phone, nothing on a row can be done at all".
+ *
+ * The mobile card view only existed when a screen passed `renderCard`. Screens
+ * that didn't fell back to a horizontally scrolling table, and the actions
+ * column sits at the far right of that scroll — so on a 360px phone the vendor
+ * could read the row and do nothing with it. The sweep found whole modules inert
+ * this way: Bookings (three times over), Function sheets, Customers, Receipts,
+ * the entire cheque lifecycle, Inventory stock changes, every staff row, every
+ * supplier and broker row.
+ *
+ * A table now always has a mobile form. `renderCard` is still honoured where a
+ * screen wants a bespoke card; where it doesn't, this builds one from the same
+ * column config — label/value pairs, with the actions column pulled out and
+ * given the full width at the bottom so it is reachable by thumb.
+ */
+const ACTION_KEYS = new Set(["actions", "action", "row-actions", "rowActions", "menu"])
+
+function defaultCard<T>(columns: Column<T>[], row: T, index: number): React.ReactNode {
+  const actions = columns.filter((c) => ACTION_KEYS.has(c.key))
+  const fields = columns.filter((c) => !ACTION_KEYS.has(c.key) && c.key !== "select")
+
+  return (
+    <div className="space-y-2">
+      <dl className="space-y-1.5">
+        {fields.map((c) => {
+          const value = c.render ? c.render(row, index) : (row as Record<string, unknown>)[c.key] as React.ReactNode
+          if (value == null || value === "") return null
+          return (
+            <div key={c.key} className="flex items-start justify-between gap-3">
+              <dt className="shrink-0 text-xs text-muted-foreground">{c.header}</dt>
+              <dd className="min-w-0 text-right text-sm">{value}</dd>
+            </div>
+          )
+        })}
+      </dl>
+      {actions.length > 0 && (
+        <div
+          className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-2"
+          // The row itself may be clickable; an action must not also navigate.
+          onClick={(e) => e.stopPropagation()}
+        >
+          {actions.map((c) => (
+            <React.Fragment key={c.key}>{c.render ? c.render(row, index) : null}</React.Fragment>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function DataTable<T>({
   columns,
   data,
@@ -122,13 +174,15 @@ export function DataTable<T>({
 
     return (
       <>
-        {/* Desktop / tablet table */}
-        <div className={cn("w-full overflow-x-auto", renderCard && "hidden md:block")}>
+        {/* Desktop / tablet table. Always hidden below md now — every table has a
+            card form, so a phone never gets a sideways-scrolling grid whose
+            actions column is off the right edge. */}
+        <div className="hidden w-full overflow-x-auto md:block">
           <table className="w-full text-sm" style={{ fontVariantNumeric: "tabular-nums" }}>
             <thead>
               <tr className="border-b border-border">
                 {selectable && (
-                  <th className="w-10 px-4 py-2.5">
+                  <th scope="col" className="w-10 px-4 py-2.5">
                     <input
                       type="checkbox"
                       aria-label="Select all"
@@ -142,7 +196,7 @@ export function DataTable<T>({
                   </th>
                 )}
                 {columns.map((c) => (
-                  <th
+                  <th scope="col"
                     key={c.key}
                     style={c.width ? { width: c.width } : undefined}
                     className={cn(
@@ -195,23 +249,22 @@ export function DataTable<T>({
           </table>
         </div>
 
-        {/* Mobile cards */}
-        {renderCard && (
-          <div className="space-y-2 p-3 md:hidden">
-            {data.map((row, i) => (
-              <div
-                key={getRowId(row)}
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={cn(
-                  "rounded-lg border border-border bg-card p-3",
-                  onRowClick && "cursor-pointer active:bg-muted/50",
-                )}
-              >
-                {renderCard(row, i)}
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Mobile cards — bespoke when the screen supplies one, otherwise built
+            from the column config so the row's actions are reachable. */}
+        <div className="space-y-2 p-3 md:hidden">
+          {data.map((row, i) => (
+            <div
+              key={getRowId(row)}
+              onClick={onRowClick ? () => onRowClick(row) : undefined}
+              className={cn(
+                "rounded-lg border border-border bg-card p-3",
+                onRowClick && "cursor-pointer active:bg-muted/50",
+              )}
+            >
+              {renderCard ? renderCard(row, i) : defaultCard(columns, row, i)}
+            </div>
+          ))}
+        </div>
       </>
     )
   })()

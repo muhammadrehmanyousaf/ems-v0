@@ -18,6 +18,8 @@ import { DataTable, type Column } from "@/components/dashboard/primitives/data-t
 import { StatusPill, type StatusTone } from "@/components/dashboard/primitives/status-pill"
 import { MoneyCell, formatPkr } from "@/components/dashboard/primitives/money-cell"
 import { ExportMenu } from "@/components/dashboard/shared/export-menu"
+import { bookedOn, receivedOn, outstandingOn, derivedPaymentStatus } from "@/lib/utils/booking-money"
+import { spaceNameOf } from "@/lib/utils/booking-space"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
@@ -51,6 +53,20 @@ const fmtDate = (s?: string) => {
   return isNaN(d.getTime()) ? s : d.toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })
 }
 
+const PAGE_SIZE = 50
+
+const BUCKETS = [
+  { value: "active", label: "Active" },
+  { value: "completed", label: "Archive" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "all", label: "All" },
+] as const
+
+type BucketValue = (typeof BUCKETS)[number]["value"]
+
+const isBucket = (v: string | null | undefined): v is BucketValue =>
+  !!v && BUCKETS.some((b) => b.value === v)
+
 export function BookingsRedesignedView() {
   const [search, setSearch] = React.useState("")
   // Seed the bucket from the URL so the sidebar panel can link straight to a
@@ -59,20 +75,29 @@ export function BookingsRedesignedView() {
   // afterwards; this only decides where you land.
   const searchParams = useSearchParams()
   const urlBucket = searchParams?.get("bucket")
-  const [bucket, setBucket] = React.useState<"active" | "completed">(
-    urlBucket === "completed" ? "completed" : "active",
+  const [bucket, setBucket] = React.useState<BucketValue>(
+    isBucket(urlBucket) ? urlBucket : "active",
   )
+  const [page, setPage] = React.useState(1)
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
   const [createOpen, setCreateOpen] = React.useState(false)
 
   const { data, isLoading, isError, refetch } = useFetchData({
     endpoint: "/api/v1/bookings",
-    queryKey: ["bookings-redesigned", bucket],
-    Params: { page: 1, limit: 50, sortBy: "createdAt", sortOrder: "DESC", search: search || undefined, bucket },
+    queryKey: ["bookings-redesigned", bucket, String(page)],
+    Params: { page, limit: PAGE_SIZE, sortBy: "createdAt", sortOrder: "DESC", search: search || undefined, bucket },
   })
 
   const bookings: BookingData[] = data?.data?.data ?? []
-  const total: number = data?.data?.filters?.total ?? bookings.length
+  const filters = data?.data?.filters
+  const total: number = filters?.total ?? bookings.length
+  // WWL-043 — the server caps a page at 100 rows and this screen had no
+  // pagination control of any kind, so a venue past that line lost rows with
+  // no message while "Collected (shown)" and "Due (shown)" quietly understated
+  // the money. The tiles were honestly labelled, but nothing told the vendor
+  // that "shown" had been capped by the server rather than by their filter.
+  const totalPages: number = filters?.totalPages ?? 1
+  const isTruncated = total > bookings.length
 
   // Stats computed from the loaded page (labelled honestly).
   const collected = bookings.reduce((s, b) => s + (Number(b.downPayment) || 0), 0)
@@ -85,13 +110,29 @@ export function BookingsRedesignedView() {
 
   const columns: Column<BookingData>[] = [
     { key: "service", header: "Booking", render: (b) => <span className="font-medium">{serviceLabel(b)}</span> },
-    { key: "space", header: "Space", cellClassName: "text-muted-foreground", render: (b) => b.bookingDetails?.[0]?.resource?.label || "—" },
+    // WWL-050 — this rendered "—" on all 22 rows and exported an empty column
+    // in every CSV. It read `resource.label`, which only ever resolves for
+    // venues that built BusinessResource rows in the older capacity screen; the
+    // halls a vendor actually builds live in the SubVenue tree, and that is what
+    // a booking now records. `resource` stays as the fallback for the venues
+    // that did use it.
+    {
+      key: "space",
+      header: "Space",
+      cellClassName: "text-muted-foreground",
+      render: (b) => spaceNameOf(b) || <span title="No hall recorded for this booking">—</span>,
+    },
     { key: "customer", header: "Customer", cellClassName: "text-muted-foreground", render: (b) => b.customerName || "—" },
     { key: "date", header: "Date", cellClassName: "text-muted-foreground whitespace-nowrap", render: (b) => fmtDate(b.bookingDate) },
-    { key: "amount", header: "Amount", align: "right", render: (b) => <MoneyCell amount={Number(b.totalAmount) || 0} /> },
-    { key: "paid", header: "Paid", align: "right", render: (b) => <MoneyCell amount={Number(b.downPayment) || 0} tone="muted" /> },
+    { key: "amount", header: "Amount", align: "right", render: (b) => <MoneyCell amount={bookedOn(b)} /> },
+    { key: "paid", header: "Paid", align: "right", render: (b) => <MoneyCell amount={receivedOn(b)} tone="muted" /> },
+    // WWL-037 — a row showing Rs 1,546,000 booked and Rs 386,500 paid also
+    // carried a green "Paid" chip, because the chip printed the stored flag
+    // while the two columns beside it printed the amounts. The chip now
+    // describes the same arithmetic the row already shows.
+    { key: "balance", header: "Balance", align: "right", render: (b) => <MoneyCell amount={outstandingOn(b)} /> },
     { key: "status", header: "Status", render: (b) => <StatusPill tone={statusTone(b.status)}>{b.status}</StatusPill> },
-    { key: "payment", header: "Payment", render: (b) => <StatusPill tone={payTone(b.paymentStatus)} variant="icon">{b.paymentStatus || "—"}</StatusPill> },
+    { key: "payment", header: "Payment", render: (b) => { const d = derivedPaymentStatus(b); return <StatusPill tone={payTone(d)} variant="icon">{d}</StatusPill> } },
     {
       key: "actions", header: "", align: "right",
       render: (b) => <BookingRowActions data={b} onRefresh={() => refetch()} />,
@@ -111,12 +152,33 @@ export function BookingsRedesignedView() {
         }
       />
 
+      {/* WWL-052 — on a failed load the money tiles printed Rs 0 with a green
+          upward arrow beside the word "received", which is indistinguishable
+          from a vendor who has collected nothing. */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total bookings" value={total} icon="Calendar" />
-        <StatCard label="Collected (shown)" value={formatPkr(collected)} icon="Wallet" trend="up" delta="received" />
-        <StatCard label="Due (shown)" value={formatPkr(due)} icon="Clock" delta="to chase" />
-        <StatCard label="This month" value={thisMonth} icon="TrendingUp" />
+        <StatCard label="Total bookings" value={isError ? "—" : total} icon="Calendar" />
+        <StatCard
+          label={isTruncated ? `Collected (this page)` : "Collected"}
+          value={isError ? "—" : formatPkr(collected)}
+          icon="Wallet"
+          trend={isError ? undefined : "up"}
+          delta={isError ? "couldn't load" : "received"}
+        />
+        <StatCard
+          label={isTruncated ? `Due (this page)` : "Due"}
+          value={isError ? "—" : formatPkr(due)}
+          icon="Clock"
+          delta={isError ? "couldn't load" : "to chase"}
+        />
+        <StatCard label="This month" value={isError ? "—" : thisMonth} icon="TrendingUp" />
       </div>
+
+      {isTruncated && (
+        <p className="rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm text-amber-700 dark:text-amber-500">
+          Showing {bookings.length} of {total} bookings. The two money figures above
+          cover this page only — page through to see the rest.
+        </p>
+      )}
 
       <DataTable
         columns={columns}
@@ -147,18 +209,23 @@ export function BookingsRedesignedView() {
                 className="h-9 w-56 rounded-md border border-input bg-background pl-8 pr-3 text-sm outline-none ring-ring placeholder:text-muted-foreground focus-visible:ring-2"
               />
             </div>
-            <div className="flex rounded-md border border-input p-0.5">
-              {(["active", "completed"] as const).map((b) => (
+            {/* WWL-036 — there were only two tabs, and Cancelled bookings are
+                hidden from "active" and absent from "completed". Three real
+                cancelled bookings were therefore unreachable from anywhere in
+                the entire Bookings module. */}
+            <div className="flex rounded-md border border-input p-0.5" role="group" aria-label="Filter bookings">
+              {BUCKETS.map((b) => (
                 <button
-                  key={b}
+                  key={b.value}
                   type="button"
-                  onClick={() => setBucket(b)}
+                  aria-pressed={bucket === b.value}
+                  onClick={() => { setBucket(b.value); setPage(1) }}
                   className={cn(
-                    "h-8 rounded px-3 text-sm capitalize transition-colors",
-                    bucket === b ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent",
+                    "h-8 rounded px-3 text-sm transition-colors",
+                    bucket === b.value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent",
                   )}
                 >
-                  {b === "active" ? "Active" : "Archive"}
+                  {b.label}
                 </button>
               ))}
             </div>
@@ -169,14 +236,21 @@ export function BookingsRedesignedView() {
                 filename="bookings"
                 columns={[
                   { header: "Booking", value: serviceLabel },
-                  { header: "Space", value: (b) => b.bookingDetails?.[0]?.resource?.label || "" },
+                  // WWL-048/WWL-050 — exported blank in every row because the
+                  // payload carried no space at all.
+                  { header: "Space", value: (b) => spaceNameOf(b) || "" },
                   { header: "Customer", value: (b) => b.customerName },
                   { header: "Phone", value: (b) => b.customerPhone },
                   { header: "Date", value: (b) => fmtDate(b.bookingDate) },
-                  { header: "Amount", value: (b) => Number(b.totalAmount) || 0 },
-                  { header: "Paid", value: (b) => Number(b.downPayment) || 0 },
+                  // WWL-047 — the export carried the stored flag, so the wrong
+                  // "Paid" travelled out of the product and into whatever the
+                  // vendor's accountant opened the file with. Balance is now a
+                  // column in its own right and Payment states the arithmetic.
+                  { header: "Amount", value: (b) => bookedOn(b) },
+                  { header: "Paid", value: (b) => receivedOn(b) },
+                  { header: "Balance", value: (b) => outstandingOn(b) },
                   { header: "Status", value: (b) => b.status },
-                  { header: "Payment", value: (b) => b.paymentStatus },
+                  { header: "Payment", value: (b) => derivedPaymentStatus(b) },
                 ]}
               />
             </div>
@@ -190,12 +264,36 @@ export function BookingsRedesignedView() {
               <div className="mt-1"><StatusPill tone={statusTone(b.status)}>{b.status}</StatusPill></div>
             </div>
             <div className="text-right">
-              <MoneyCell amount={Number(b.totalAmount) || 0} className="block text-sm font-medium" />
-              <StatusPill tone={payTone(b.paymentStatus)} className="mt-1">{b.paymentStatus}</StatusPill>
+              <MoneyCell amount={bookedOn(b)} className="block text-sm font-medium" />
+              {outstandingOn(b) > 0 && (
+                <span className="block text-xs text-muted-foreground">
+                  Rs {outstandingOn(b).toLocaleString()} due
+                </span>
+              )}
+              <StatusPill tone={payTone(derivedPaymentStatus(b))} className="mt-1">{derivedPaymentStatus(b)}</StatusPill>
             </div>
           </div>
         )}
       />
+
+      {/* WWL-043 — the only way past row 100 of the ledger. */}
+      {totalPages > 1 && (
+        <nav className="flex items-center justify-between gap-3" aria-label="Bookings pages">
+          <span className="text-sm text-muted-foreground">
+            Page {page} of {totalPages} · {total} bookings
+          </span>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" disabled={page <= 1 || isLoading}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}>
+              <Icon name="ChevronLeft" size={14} className="mr-1" /> Previous
+            </Button>
+            <Button size="sm" variant="outline" disabled={page >= totalPages || isLoading}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+              Next <Icon name="ChevronRight" size={14} className="ml-1" />
+            </Button>
+          </div>
+        </nav>
+      )}
 
       {/* Phase-1 SPINE — owner money ledger. Moved BELOW the table: it repeats
           the money the stat strip already shows (booked / received / baqaya),

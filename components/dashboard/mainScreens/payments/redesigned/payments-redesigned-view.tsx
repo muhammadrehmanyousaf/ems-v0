@@ -3,15 +3,19 @@
 /**
  * Payments (revenue) — redesigned (Track C, computed). Wired to
  * PaymentsAPI.getVendorRevenue(); rendered through the primitives. Read-only;
- * original screen untouched. Route /dashboard/payments-new.
+ * Route /dashboard/payments.
  */
 
 import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { PaymentsAPI } from "@/lib/api/dashboard"
+// WWL-114 — the venue the header is scoped to. The request already carries it
+// via the axios interceptor; the cache key has to as well.
+import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import type { VendorPayment } from "@/lib/dashboard-types"
 import { ReceiptFormDialog } from "@/components/dashboard/mainScreens/receipts/redesigned/receipt-form-dialog"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
+import { cn } from "@/lib/utils"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
 import { StatusPill, type StatusTone } from "@/components/dashboard/primitives/status-pill"
@@ -42,18 +46,82 @@ export function PaymentsRedesignedView() {
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const invalidate = () => qc.invalidateQueries({ queryKey: ["payments-redesigned"] })
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["payments-redesigned"],
+  /**
+   * WWL-114 — offline, the venue switcher lied about scope.
+   *
+   * Switching to Rehman Grand Marquee updated the switcher label and the
+   * persisted store, but the table still showed all 25 rows across 3 venues and
+   * the cards still read Rs 37,348,900 — Grand Marquee's real total is
+   * Rs 12,873,800. No error, no toast, no offline banner: one venue named,
+   * three venues' money.
+   *
+   * The scope is applied by the axios interceptor from the active-business
+   * store, so the REQUEST changed but the cache key did not — TanStack handed
+   * back the previous venue's entry, and a failed refetch left it on screen.
+   *
+   * Keying by the active venue makes each venue its own cache entry, so a
+   * switch can only ever show that venue's data or an honest loading state.
+   */
+  const activeBusinessId = useActiveBusinessId()
+
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
+    queryKey: ["payments-redesigned", activeBusinessId ?? "all"],
     queryFn: () => PaymentsAPI.getVendorRevenue(),
   })
 
   const stats = data?.stats
   const all = (data?.payments ?? []) as VendorPayment[]
+
+  /**
+   * WWL-118 (S3) — this table had no sorting and no money filters. Fixed order
+   * was event-date DESC, so future events sat on top, and search matched neither
+   * an amount nor a status. A vendor could not ask the two questions a money
+   * screen exists to answer: "who owes me the most" and "who is overdue".
+   *
+   * WWL-115 (S3) — the stat cards read `stats` while the table read `payments`,
+   * so filtering to one venue showed 7 rows under a headline describing all 25.
+   * The cards below are now computed from the rows on screen.
+   */
+  const [dueOnly, setDueOnly] = React.useState(false)
+  const [sort, setSort] = React.useState<"date" | "due" | "total">("date")
+
   const payments = React.useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return all
-    return all.filter((p) => [p.customerName, p.customerPhone, p.businessName].some((v) => (v ?? "").toLowerCase().includes(q)))
-  }, [all, search])
+    let rows = all
+    if (q) {
+      rows = rows.filter((p) =>
+        [p.customerName, p.customerPhone, p.businessName, p.paymentStatus].some((v) =>
+          (v ?? "").toLowerCase().includes(q),
+        ) ||
+        // Amounts are what a vendor actually searches for on a money screen.
+        [p.totalAmount, p.received, p.due].some((v) => String(Math.round(num(v))).includes(q.replace(/[,\s]/g, ""))),
+      )
+    }
+    if (dueOnly) rows = rows.filter((p) => num(p.due) > 0)
+    const sorted = [...rows]
+    if (sort === "due") sorted.sort((a, b) => num(b.due) - num(a.due))
+    else if (sort === "total") sorted.sort((a, b) => num(b.totalAmount) - num(a.totalAmount))
+    return sorted
+  }, [all, search, dueOnly, sort])
+
+  // WWL-115 — headline describes exactly the rows beneath it.
+  const shownStats = React.useMemo(
+    () => ({
+      total: payments.reduce((s, p) => s + num(p.totalAmount), 0),
+      received: payments.reduce((s, p) => s + num(p.received), 0),
+      due: payments.reduce((s, p) => s + num(p.due), 0),
+      count: payments.length,
+    }),
+    [payments],
+  )
+
+  // WWL-128 (S3) — the endpoint computes an offline/online split on every
+  // response (live: 11 offline / Rs 18,183,350 vs 14 online / Rs 19,165,550) and
+  // the UI rendered it nowhere. For a Pakistani venue the cash-vs-digital split
+  // is one of the most useful numbers on the screen.
+  const offline = stats?.offline
+  const online = stats?.online
+  const hasSplit = num(offline?.count) > 0 || num(online?.count) > 0
 
   // Show a Venue column only when the rows actually span more than one venue
   // (the "All venues" view for a multi-hall owner) — otherwise it's redundant.
@@ -84,10 +152,61 @@ export function PaymentsRedesignedView() {
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total billed" value={isLoading ? "…" : formatPkr(num(stats?.all?.total))} icon="Wallet" />
-        <StatCard label="Received" value={isLoading ? "…" : formatPkr(num(stats?.all?.received))} icon="CheckCircle2" trend="up" delta="collected" />
-        <StatCard label="Due" value={isLoading ? "…" : formatPkr(num(stats?.all?.due))} icon="Clock" delta="to chase" />
-        <StatCard label="Payments" value={isLoading ? "…" : num(stats?.all?.count)} icon="FileText" />
+        <StatCard label="Total billed" value={isLoading ? "…" : formatPkr(shownStats.total)} icon="Wallet" error={isError} />
+        <StatCard label="Received" value={isLoading ? "…" : formatPkr(shownStats.received)} icon="CheckCircle2" trend="up" delta="collected" error={isError} />
+        <StatCard label="Due" value={isLoading ? "…" : formatPkr(shownStats.due)} icon="Clock" delta="to chase" error={isError} />
+        <StatCard label="Payments" value={isLoading ? "…" : shownStats.count} icon="FileText" />
+      </div>
+
+      {/* WWL-128 — cash vs digital, which the API has always returned. */}
+      {hasSplit && !isLoading && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="text-xs text-muted-foreground">Cash / offline</div>
+            <div className="text-xl font-semibold tabular-nums">{formatPkr(num(offline?.total))}</div>
+            <div className="text-xs text-muted-foreground">
+              {num(offline?.count)} payment{num(offline?.count) === 1 ? "" : "s"} · {formatPkr(num(offline?.received))} received
+            </div>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="text-xs text-muted-foreground">Card / online</div>
+            <div className="text-xl font-semibold tabular-nums">{formatPkr(num(online?.total))}</div>
+            <div className="text-xs text-muted-foreground">
+              {num(online?.count)} payment{num(online?.count) === 1 ? "" : "s"} · {formatPkr(num(online?.received))} received
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WWL-118 — the two questions a money screen exists to answer. */}
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="text-muted-foreground">Show:</span>
+        <button
+          type="button"
+          onClick={() => setDueOnly((v) => !v)}
+          aria-pressed={dueOnly}
+          className={cn(
+            "rounded-md border px-2.5 py-1 transition-colors",
+            dueOnly ? "border-amber-400 bg-amber-50 font-medium text-amber-900" : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          Still owed
+        </button>
+        <span className="ml-2 text-muted-foreground">Sort:</span>
+        {([["date", "Event date"], ["due", "Most owed"], ["total", "Biggest"]] as const).map(([k, lbl]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setSort(k)}
+            aria-pressed={sort === k}
+            className={cn(
+              "rounded-md px-2.5 py-1 transition-colors",
+              sort === k ? "bg-primary font-medium text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {lbl}
+          </button>
+        ))}
       </div>
 
       <DataTable

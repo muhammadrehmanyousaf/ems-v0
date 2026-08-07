@@ -2,8 +2,8 @@
 
 /**
  * Drone NOC permits — redesigned (Track C). Wired to DroneNocAPI.list();
- * rendered through the primitives. Read-only; original screen untouched.
- * Route /dashboard/drone-noc-new.
+ * rendered through the primitives. 
+ * Route /dashboard/drone-noc.
  */
 
 import * as React from "react"
@@ -171,7 +171,7 @@ export function DroneNocRedesignedView({ adminCapable = true }: { adminCapable?:
         <StatCard label="Total permits" value={all.length} icon="ShieldCheck" />
         <StatCard label="Approved" value={approved} icon="CheckCircle2" trend="up" />
         <StatCard label="Needs attention" value={attention} icon="AlertTriangle" />
-        <StatCard label="Fees paid" value={formatPkr(feesPaid)} icon="Wallet" />
+        <StatCard label="Fees paid" value={formatPkr(feesPaid)} icon="Wallet" error={isError} />
       </div>
 
       <DataTable

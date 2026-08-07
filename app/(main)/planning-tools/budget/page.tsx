@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react";
+import { toCsv } from "@/lib/utils/csv-escape";
 import Link from "next/link";
 import { Calculator, Plus, Trash2, Download, Share2, ArrowLeft, TrendingUp, TrendingDown, DollarSign, PieChart, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -145,13 +146,13 @@ export default function BudgetPage() {
       notes: item.notes
     }));
     
-    const csv = [
+    const csv = toCsv([
       ['Category', 'Item', 'Estimated', 'Actual', 'Difference', 'Priority', 'Notes'],
       ...data.map(row => [
         row.category, row.item, row.estimated, row.actual, 
         row.difference, row.priority, row.notes
       ])
-    ].map(row => row.join(',')).join('\n');
+    ]);
     
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);

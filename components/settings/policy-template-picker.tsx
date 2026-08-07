@@ -48,6 +48,20 @@ export function PolicyTemplatePicker() {
     return data.templates.find((t) => sameSlabs(t.slabs, data.active!.slabs))?.key ?? "custom";
   }, [data]);
 
+  /**
+   * WWL-502 — when a vendor has picked nothing, `active` is null and every card
+   * rendered unselected, which reads as "no policy applies". It does: the
+   * refund engine falls back to the platform default, and on a live Rs 1.4m
+   * booking that default forfeited the entire Rs 1,223,278. The vendor was
+   * looking at a page that said nothing was set while a policy they had never
+   * seen governed their money.
+   */
+  const inherited = !data?.active && data?.effective ? data.effective : null;
+  const inheritedKey = useMemo(() => {
+    if (!inherited || !data) return null;
+    return data.templates.find((t) => sameSlabs(t.slabs, inherited.slabs))?.key ?? null;
+  }, [inherited, data]);
+
   if (isLoading) {
     return <div className="flex items-center gap-2 text-muted-foreground py-10 justify-center"><Loader2 className="size-4 animate-spin" /> Loading…</div>;
   }
@@ -68,6 +82,21 @@ export function PolicyTemplatePicker() {
             className="ml-2 w-32 rounded-md border bg-transparent px-2 py-1 text-sm tabular-nums" />
         </label>
       </div>
+
+      {inherited && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+          <p className="font-medium">
+            You haven&apos;t chosen a policy, so the platform default applies —{" "}
+            <strong>{inherited.name}</strong>.
+          </p>
+          <p className="mt-1 text-[13px]">
+            {inheritedKey
+              ? "It matches one of the cards below. Pick it (or another) to make the choice yours."
+              : "It is not one of the three cards below. Choose one to replace it."}{" "}
+            Until you do, this is what governs refunds on your bookings.
+          </p>
+        </div>
+      )}
 
       <div className="grid md:grid-cols-3 gap-4">
         {data.templates.map((t) => {

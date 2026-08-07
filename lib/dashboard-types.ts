@@ -208,6 +208,11 @@ export interface BookingDetail {
   package: Package;
   // Which hall / lawn / partition this line booked (BusinessResource).
   resource?: { id: number; label: string; kind: string } | null;
+  // WWL-050 — the space this line occupies, from the venue's own SubVenue tree.
+  // `resource` above only ever resolves for venues that built rows in the older
+  // capacity screen, which is why the Space column was blank on every booking.
+  subVenueId?: number | null;
+  subVenue?: { id: number; name: string; kind: string; depth: number; parentSubVenueId: number | null } | null;
   createdAt: string;
   updatedAt: string;
 }

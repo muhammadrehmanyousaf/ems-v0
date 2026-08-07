@@ -22,7 +22,10 @@ const CARD: Record<string, string> = {
   UNAVAILABLE: "border-gray-200 bg-gray-50 opacity-60",
 };
 const DOT: Record<string, string> = { AVAILABLE: "bg-emerald-500", PARTIAL: "bg-amber-400", UNAVAILABLE: "bg-gray-400" };
-const LABEL: Record<string, string> = { AVAILABLE: "Available", PARTIAL: "Partly available", UNAVAILABLE: "Booked" };
+// WWL-569 — "Partly available" now also covers "the venue has an event that day
+// that isn't pinned to one space", so the wording has to be a prompt to check
+// rather than a soft yes.
+const LABEL: Record<string, string> = { AVAILABLE: "Available", PARTIAL: "Check with venue", UNAVAILABLE: "Booked" };
 
 export function VenueSpaceSelector({ businessId, hasMultiSpace }: { businessId: number; hasMultiSpace?: boolean }): React.ReactElement | null {
   const [date, setDate] = React.useState<string>("");
@@ -30,6 +33,7 @@ export function VenueSpaceSelector({ businessId, hasMultiSpace }: { businessId: 
   const [picked, setPicked] = React.useState<number[]>([]);
   const [busy, setBusy] = React.useState<boolean>(false);
   const [loaded, setLoaded] = React.useState<boolean>(false);
+  const [failed, setFailed] = React.useState<boolean>(false);
   // Only surface for venues that actually built a multi-space tree — otherwise a
   // single-hall venue would show a pointless one-item "Choose your space" section.
   // The parent (server component) normally passes `hasMultiSpace` (decided once,
@@ -59,6 +63,7 @@ export function VenueSpaceSelector({ businessId, hasMultiSpace }: { businessId: 
     if (!date) return;
     let cancelled = false;
     setBusy(true);
+    setFailed(false);
     venueSpacesApi
       .publicAvailability(businessId, date)
       .then((a) => {
@@ -68,7 +73,13 @@ export function VenueSpaceSelector({ businessId, hasMultiSpace }: { businessId: 
         setLoaded(true);
       })
       .catch(() => {
-        if (!cancelled) setAvail(null);
+        // WWL-019 family — a failed check used to render as nothing at all,
+        // which on this screen reads as "no answer" rather than "we couldn't
+        // check". Never let a failure look like a clean result.
+        if (!cancelled) {
+          setAvail(null);
+          setFailed(true);
+        }
       })
       .finally(() => !cancelled && setBusy(false));
     return () => {
@@ -96,6 +107,21 @@ export function VenueSpaceSelector({ businessId, hasMultiSpace }: { businessId: 
 
       {!date && <p className="text-sm text-gray-500">Pick a date to see which halls, floors and partitions are free.</p>}
       {busy && <p className="text-sm text-gray-500">Checking availability…</p>}
+      {failed && !busy && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          We couldn’t check this date just now. Please try again, or message the venue to confirm.
+        </p>
+      )}
+
+      {/* WWL-569 — the venue holds committed events on this date that aren't
+          tied to one space. Saying nothing here is how a couple ended up
+          enquiring for a hall with a wedding already in it. */}
+      {loaded && date && (avail?.unmappedBookings ?? 0) > 0 && (
+        <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          This venue already has {avail?.unmappedBookings === 1 ? "an event" : `${avail?.unmappedBookings} events`} booked on{" "}
+          {date}. Some spaces may not be free — please confirm with the venue before you plan around this date.
+        </p>
+      )}
 
       {loaded && date && (
         <div className="space-y-2">

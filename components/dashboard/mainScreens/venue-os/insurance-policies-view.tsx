@@ -90,9 +90,9 @@ export function InsurancePoliciesView(): React.ReactElement | null {
               <option key={t} value={t}>{t}</option>
             ))}
           </select>
-          <input type="text" placeholder="insurer" value={insurer} onChange={(e) => setInsurer(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Insurer<input type="text" placeholder="insurer" value={insurer} onChange={(e) => setInsurer(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
           <input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-          <input type="number" placeholder="premium" value={premium} onChange={(e) => setPremium(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Premium<input min={0} type="number" placeholder="premium" value={premium} onChange={(e) => setPremium(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
           <Button size="sm" onClick={() => void guard(async () => { await venueOsApi.createPolicy({ businessId: bid, policyType, insurer: insurer || undefined, expiryDate, premiumAmount: premium ? Number(premium) : undefined }); await refresh(bid); })} disabled={!businessId || !expiryDate || busy}>
             Add policy
           </Button>

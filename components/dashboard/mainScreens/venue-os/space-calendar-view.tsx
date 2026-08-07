@@ -72,9 +72,9 @@ export function SpaceCalendarView(): React.ReactElement | null {
             <table className="border-collapse text-[10px]">
               <thead>
                 <tr>
-                  <th className="sticky left-0 z-10 bg-background px-2 py-1 text-left">Space</th>
+                  <th scope="col" className="sticky left-0 z-10 bg-background px-2 py-1 text-left">Space</th>
                   {grid.days.map((d) => (
-                    <th key={d} className="w-4 px-0 py-1 text-center font-normal text-muted-foreground">{Number(d.slice(-2))}</th>
+                    <th scope="col" key={d} className="w-4 px-0 py-1 text-center font-normal text-muted-foreground">{Number(d.slice(-2))}</th>
                   ))}
                 </tr>
               </thead>

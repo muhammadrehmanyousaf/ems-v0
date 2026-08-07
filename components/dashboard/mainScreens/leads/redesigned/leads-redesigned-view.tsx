@@ -32,6 +32,7 @@ import { MoneyCell } from "@/components/dashboard/primitives/money-cell"
 import { ExportMenu } from "@/components/dashboard/shared/export-menu"
 import { ImportButton } from "@/components/dashboard/shared/import-button"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
+import { cn } from "@/lib/utils"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 
@@ -48,10 +49,27 @@ const TONE: Record<LeadStatus, StatusTone> = {
 const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
 const pretty = (s?: string | null) => (s ? cap(s.replace(/_/g, " ")) : "—")
 
+/**
+ * WWL-032 — this rendered "01 Jan" with no year, so a lead for January 2020
+ * was visually identical to one for January 2027. This inbox holds leads
+ * spanning multiple years (Jan/Feb dates are next season), so a vendor could
+ * not tell a stale or mistyped lead from a live one by looking at it.
+ */
 const fmtDate = (s?: string | null) => {
   if (!s) return "—"
   const d = new Date(s)
-  return isNaN(d.getTime()) ? s : d.toLocaleDateString("en-PK", { day: "2-digit", month: "short" })
+  if (isNaN(d.getTime())) return s
+  return d.toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })
+}
+
+/** True when the event date has already gone by — a lead worth double-checking. */
+const isPastDate = (s?: string | null) => {
+  if (!s) return false
+  const d = new Date(s)
+  if (isNaN(d.getTime())) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return d < today
 }
 
 export function LeadsRedesignedView() {
@@ -62,6 +80,8 @@ export function LeadsRedesignedView() {
   const [editing, setEditing] = React.useState<Lead | undefined>(undefined)
   const [prefill, setPrefill] = React.useState<LeadPrefill | undefined>(undefined)
   const [deleting, setDeleting] = React.useState<Lead | null>(null)
+  // WWL-033 — archived leads are out of the working inbox unless asked for.
+  const [showArchived, setShowArchived] = React.useState(false)
   // Phase 5 — lead whose "Draft reply" was clicked. Null when AI is dark.
   const [replyLead, setReplyLead] = React.useState<Lead | null>(null)
   const aiReply = useAiFeature("leadReply")
@@ -86,13 +106,22 @@ export function LeadsRedesignedView() {
   })
 
   const all = data?.leads ?? []
+  const archivedCount = React.useMemo(
+    () => all.filter((l) => l.status === "archived").length,
+    [all],
+  )
   const leads = React.useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return all
-    return all.filter((l) =>
+    // WWL-033 — archived leads were rendered in the main table alongside live
+    // ones with no status filter anywhere on the screen, so they permanently
+    // padded an inbox the vendor is meant to work top-down. Hidden by default;
+    // one click brings them back.
+    const base = showArchived ? all : all.filter((l) => l.status !== "archived")
+    if (!q) return base
+    return base.filter((l) =>
       [l.contactName, l.contactPhone, l.inquiry, l.eventType].some((v) => (v ?? "").toLowerCase().includes(q)),
     )
-  }, [all, search])
+  }, [all, search, showArchived])
 
   const byStatus = data?.summary?.byStatus ?? {}
   const count = (s: LeadStatus) => byStatus[s] ?? all.filter((l) => l.status === s).length
@@ -117,7 +146,15 @@ export function LeadsRedesignedView() {
     { key: "phone", header: "Phone", cellClassName: "text-muted-foreground", render: (l) => l.contactPhone || "—" },
     { key: "source", header: "Source", render: (l) => <StatusPill tone="neutral">{pretty(l.source)}</StatusPill> },
     { key: "event", header: "Event", cellClassName: "text-muted-foreground", render: (l) => pretty(l.eventType) },
-    { key: "date", header: "Event date", cellClassName: "text-muted-foreground", render: (l) => fmtDate(l.eventDate) },
+    {
+      key: "date", header: "Event date", cellClassName: "text-muted-foreground",
+      render: (l) => (
+        <span className={cn("whitespace-nowrap", isPastDate(l.eventDate) && "text-muted-foreground/70 line-through")}
+          title={isPastDate(l.eventDate) ? "This date has already passed" : undefined}>
+          {fmtDate(l.eventDate)}
+        </span>
+      ),
+    },
     { key: "budget", header: "Budget", align: "right", render: (l) => <MoneyCell amount={l.estimatedBudget != null ? Number(l.estimatedBudget) || null : null} tone="muted" /> },
     { key: "status", header: "Status", render: (l) => <StatusPill tone={TONE[l.status] ?? "neutral"}>{cap(l.status)}</StatusPill> },
     {
@@ -192,6 +229,18 @@ export function LeadsRedesignedView() {
                 className="h-9 w-56 rounded-md border border-input bg-background pl-8 pr-3 text-sm outline-none ring-ring placeholder:text-muted-foreground focus-visible:ring-2"
               />
             </div>
+            {/* WWL-033 — the only way to get archived leads out of the inbox. */}
+            {archivedCount > 0 && (
+              <Button
+                size="sm"
+                variant={showArchived ? "secondary" : "ghost"}
+                aria-pressed={showArchived}
+                onClick={() => setShowArchived((v) => !v)}
+              >
+                <Icon name="Inbox" size={14} className="mr-1" />
+                {showArchived ? `Hide archived (${archivedCount})` : `Show archived (${archivedCount})`}
+              </Button>
+            )}
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
               <ImportButton target="leads" label="leads" />
@@ -241,6 +290,15 @@ export function LeadsRedesignedView() {
             phone: convertLead.contactPhone || undefined,
             email: convertLead.contactEmail || undefined,
           }}
+          // WWL-034 — the lead's budget is the one number that made it worth
+          // chasing. It used to be dropped at the exact moment the lead became
+          // a booking, so a Rs 1,175,000 lead converted into a booking with no
+          // amount captured at all.
+          initialAmount={
+            convertLead.estimatedBudget != null && Number(convertLead.estimatedBudget) > 0
+              ? Number(convertLead.estimatedBudget)
+              : null
+          }
           onCreated={async (bookingId) => {
             try {
               await LeadAPI.linkBooking(convertLead.id, bookingId)

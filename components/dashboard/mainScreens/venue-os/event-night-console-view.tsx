@@ -81,8 +81,8 @@ export function EventNightConsoleView(): React.ReactElement | null {
         <div className="space-y-2 rounded-md border p-3">
           <div className="flex flex-wrap items-end gap-2 text-sm">
             <span className="font-medium">Valet</span>
-            <input type="text" placeholder="tag #" value={tag} onChange={(e) => setTag(e.target.value)} className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-            <input type="text" placeholder="plate" value={plate} onChange={(e) => setPlate(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Tag #<span className="font-normal opacity-70"> — the number written on the physical tag</span><input type="text" placeholder="tag #" value={tag} onChange={(e) => setTag(e.target.value)} className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
+            <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Plate<input type="text" placeholder="plate" value={plate} onChange={(e) => setPlate(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
             <Button size="sm" onClick={() => void guard(async () => { await venueOsApi.valetIn(nid, { tagNumber: tag, vehiclePlate: plate, inPhotoUrl: "in.jpg", inSignatureRef: "sig" }); setTickets(await venueOsApi.listValet(nid)); })} disabled={!nightId || !tag || busy}>
               Park
             </Button>
@@ -112,9 +112,9 @@ export function EventNightConsoleView(): React.ReactElement | null {
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
-            <input type="number" placeholder="value" value={lfValue} onChange={(e) => setLfValue(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-            <input type="number" placeholder="found by user#" value={lfFound} onChange={(e) => setLfFound(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-            {highValue && <input type="number" placeholder="witness user#" value={lfWitness} onChange={(e) => setLfWitness(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />}
+            <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Value<input min={0} type="number" placeholder="value" value={lfValue} onChange={(e) => setLfValue(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
+            <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Found by user #<span className="font-normal opacity-70"> — the staff member's id, from Staff › Roster</span><input min={0} type="number" placeholder="found by user#" value={lfFound} onChange={(e) => setLfFound(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
+            {highValue && <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Witness user #<span className="font-normal opacity-70"> — required for high-value items; a second staff id</span><input min={0} type="number" placeholder="witness user#" value={lfWitness} onChange={(e) => setLfWitness(e.target.value)} className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>}
             <Button size="sm" onClick={() => void guard(async () => { await venueOsApi.recordLostFound(nid, { category: lfCategory, declaredValuePkr: lfValue ? Number(lfValue) : undefined, photoUrl: highValue ? "item.jpg" : undefined, foundByUserId: Number(lfFound) || undefined, custodyWitnessUserId: lfWitness ? Number(lfWitness) : undefined }); })} disabled={!nightId || busy}>
               Hold
             </Button>
@@ -131,7 +131,7 @@ export function EventNightConsoleView(): React.ReactElement | null {
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
-            <input type="number" placeholder="est. loss" value={incLoss} onChange={(e) => setIncLoss(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Est. loss<input min={0} type="number" placeholder="est. loss" value={incLoss} onChange={(e) => setIncLoss(e.target.value)} className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
             <Button size="sm" onClick={() => void guard(async () => { const r = await venueOsApi.recordIncident(nid, { type: incType, severity: "HIGH", estimatedLossPkr: incLoss ? Number(incLoss) : undefined, policeCalled: true }); setIncident(r); setChain(null); })} disabled={!nightId || busy}>
               Log incident
             </Button>

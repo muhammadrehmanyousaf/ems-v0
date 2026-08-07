@@ -25,6 +25,8 @@ import {
   PAYMENT_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
   ATTENDANCE_STATUS_LABELS,
+  normalizeAttendanceStatus,
+  normalizePaymentStatus,
   type StaffShift,
   type PaymentStatus,
   type AttendanceStatus,
@@ -307,11 +309,12 @@ export function PayrollTab({ businesses }: { businesses: VendorBusinessOption[] 
       key: 'status',
       header: 'Status',
       render: (s) => {
-        const att = s.attendanceStatus || 'scheduled';
+        const att = normalizeAttendanceStatus(s.attendanceStatus);
+        const pay = normalizePaymentStatus(s.paymentStatus);
         return (
           <div className="flex flex-col items-start gap-1">
-            <StatusPill tone={PAYMENT_TONE[s.paymentStatus]} variant="icon">
-              {PAYMENT_STATUS_LABELS[s.paymentStatus]}
+            <StatusPill tone={PAYMENT_TONE[pay]} variant="icon">
+              {PAYMENT_STATUS_LABELS[pay]}
             </StatusPill>
             <StatusPill tone={ATTENDANCE_TONE[att]}>
               {ATTENDANCE_STATUS_LABELS[att]}
@@ -325,13 +328,14 @@ export function PayrollTab({ businesses }: { businesses: VendorBusinessOption[] 
       header: '',
       align: 'right',
       render: (s) => {
-        const att = s.attendanceStatus || 'scheduled';
+        const att = normalizeAttendanceStatus(s.attendanceStatus);
+        const pay = normalizePaymentStatus(s.paymentStatus);
         const attNext = NEXT_ATTENDANCE_OPTIONS[att] || [];
         return (
           <div className="flex flex-col items-end gap-1">
             {/* Payment transitions */}
             <div className="flex flex-wrap items-center justify-end gap-1">
-              {NEXT_STATUS_OPTIONS[s.paymentStatus].map((to) => (
+              {(NEXT_STATUS_OPTIONS[pay] || []).map((to) => (
                 <Button
                   key={to}
                   size="sm"
@@ -524,7 +528,8 @@ export function PayrollTab({ businesses }: { businesses: VendorBusinessOption[] 
           </>
         }
         renderCard={(s) => {
-          const att = s.attendanceStatus || 'scheduled';
+          const att = normalizeAttendanceStatus(s.attendanceStatus);
+          const pay = normalizePaymentStatus(s.paymentStatus);
           return (
             <div className="space-y-2">
               <div className="flex items-start justify-between gap-2">
@@ -537,13 +542,13 @@ export function PayrollTab({ businesses }: { businesses: VendorBusinessOption[] 
                 <MoneyCell amount={Math.round(num(s.netPayable))} />
               </div>
               <div className="flex flex-wrap gap-1.5">
-                <StatusPill tone={PAYMENT_TONE[s.paymentStatus]} variant="icon">
-                  {PAYMENT_STATUS_LABELS[s.paymentStatus]}
+                <StatusPill tone={PAYMENT_TONE[pay]} variant="icon">
+                  {PAYMENT_STATUS_LABELS[pay]}
                 </StatusPill>
                 <StatusPill tone={ATTENDANCE_TONE[att]}>{ATTENDANCE_STATUS_LABELS[att]}</StatusPill>
               </div>
               <div className="flex flex-wrap gap-1">
-                {NEXT_STATUS_OPTIONS[s.paymentStatus].map((to) => (
+                {(NEXT_STATUS_OPTIONS[pay] || []).map((to) => (
                   <Button
                     key={to}
                     size="sm"
