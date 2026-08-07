@@ -17,6 +17,7 @@ import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { cn } from "@/lib/utils"
+import { DangerousAction } from "@/components/dashboard/primitives/dangerous-action"
 
 const TIER_RANK: Record<SubscriptionTier, number> = { free: 0, pro: 1, premium: 2 }
 
@@ -137,16 +138,31 @@ export function BillingRedesignedView() {
                 ) : isPending ? (
                   <Button variant="outline" className="w-full" disabled>Upgrade requested</Button>
                 ) : (
-                  <Button
-                    className="w-full"
+                  /* WWL-432 — the button said "Upgrade", the toast said
+                     "Upgrade requested", and the server said "our team will
+                     reach out to set it up". Three descriptions of the same
+                     act, and only the two that appear AFTER the click say it
+                     is a request. On a Rs 2,500/mo commitment the vendor is
+                     entitled to know which one it is before pressing it. */
+                  <DangerousAction
+                    title={`Request the ${p.name} plan?`}
+                    consequence={
+                      p.pricePkrMonthly > 0
+                        ? `This sends a request to switch to ${p.name} at Rs ${p.pricePkrMonthly.toLocaleString()}/month. Nothing is charged now — the team reviews it and contacts you to set it up.`
+                        : `This sends a request to switch to ${p.name}. The team reviews it and contacts you to set it up.`
+                    }
+                    confirmLabel="Send request"
+                    confirmVariant="default"
                     disabled={upgrade.isPending}
-                    onClick={() => upgrade.mutate(p.tier as SubscriptionTier)}
+                    onConfirm={() => upgrade.mutate(p.tier as SubscriptionTier)}
                   >
-                    {upgrade.isPending && upgrade.variables === p.tier && (
-                      <Spinner size={14} className="mr-2" />
-                    )}
-                    {p.pricePkrMonthly > 0 ? "Upgrade" : "Switch"}
-                  </Button>
+                    <Button className="w-full" disabled={upgrade.isPending}>
+                      {upgrade.isPending && upgrade.variables === p.tier && (
+                        <Spinner size={14} className="mr-2" />
+                      )}
+                      {p.pricePkrMonthly > 0 ? "Request upgrade" : "Request switch"}
+                    </Button>
+                  </DangerousAction>
                 )}
               </div>
             </div>
