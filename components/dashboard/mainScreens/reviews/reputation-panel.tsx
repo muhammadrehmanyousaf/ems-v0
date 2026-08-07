@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AnalyticsAPI, type ReputationData } from "@/lib/api/analytics";
+import { useActiveBusinessId } from "@/lib/store/active-business-store";
 
 function Stars({ value, size = 14 }: { value: number; size?: number }) {
   const r = Math.round(value);
@@ -36,11 +37,20 @@ export default function ReputationPanel() {
   const [data, setData] = useState<ReputationData | null>(null);
   const [loading, setLoading] = useState(true);
 
+  /**
+   * WWL-362 — this loaded once on mount with an empty dependency array, so
+   * switching venue changed nothing until a full page reload. The axios
+   * interceptor appends the active `businessId` to the request, but nothing
+   * re-fired the request, so the vendor sat looking at another venue's
+   * reputation under this venue's name.
+   */
+  const activeBusinessId = useActiveBusinessId();
   useEffect(() => {
+    setLoading(true);
     // .catch so a failed/slow fetch (429/500 under load) resolves to the
     // "no data → return null" path instead of leaving an unhandled rejection.
     AnalyticsAPI.getReputation().then(setData).catch(() => setData(null)).finally(() => setLoading(false));
-  }, []);
+  }, [activeBusinessId]);
 
   const maxDist = useMemo(
     () => Math.max(1, ...(data?.distribution || []).map((d) => d.count)),

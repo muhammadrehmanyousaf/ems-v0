@@ -31,6 +31,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useActiveBusinessId } from "@/lib/store/active-business-store";
 
 interface SilentRecent {
   id: number;
@@ -191,9 +192,12 @@ export function ReviewAutomationStatsCard() {
     }
   };
 
+  // WWL-362 — refetch when the venue changes, not only on mount.
+  const activeBusinessId = useActiveBusinessId();
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBusinessId]);
 
   if (loading) {
     return <Skeleton className="h-44 w-full" />;
@@ -279,11 +283,23 @@ export function ReviewAutomationStatsCard() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
+                    {/* WWL-358 — the Call pill emitted `tel:0304537951` for a
+                        number a phone cannot connect to. It still offers the
+                        dial (the vendor may know how to complete it), but it
+                        no longer presents an incomplete number as callable. */}
                     {s.customerPhone && (
                       <a
                         href={`tel:${s.customerPhone}`}
-                        className="inline-flex items-center gap-1 rounded-full border border-neutral-200 px-2 py-1 text-[10px] hover:bg-neutral-50"
-                        title="Call"
+                        className={
+                          isValidWaTarget(s.customerPhone)
+                            ? "inline-flex items-center gap-1 rounded-full border border-neutral-200 px-2 py-1 text-[10px] hover:bg-neutral-50"
+                            : "inline-flex items-center gap-1 rounded-full border border-neutral-200 px-2 py-1 text-[10px] text-neutral-400 hover:bg-neutral-50"
+                        }
+                        title={
+                          isValidWaTarget(s.customerPhone)
+                            ? "Call"
+                            : `Call ${s.customerPhone} — this number looks incomplete and may not connect`
+                        }
                       >
                         <Phone className="h-3 w-3" />
                         Call
@@ -328,6 +344,25 @@ export function ReviewAutomationStatsCard() {
                           <X className="h-3 w-3" />
                         </button>
                       </>
+                    )}
+                    {/* WWL-358 — the card is headed "nudge them on WhatsApp"
+                        and on production it rendered ZERO WhatsApp pills,
+                        because every stored number on this account is ten
+                        digits where a Pakistani mobile is eleven
+                        (0304537951). The guard is right; the data is one
+                        digit short. Rendering nothing left the vendor with a
+                        call to action that silently applied to nobody — and a
+                        Call pill beside it dialling a number that cannot
+                        connect. Saying so is the only thing that gets it
+                        fixed. */}
+                    {s.customerPhone && !isValidWaTarget(s.customerPhone) && (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] text-amber-800"
+                        title={`"${s.customerPhone}" is not a complete Pakistani mobile number — a mobile is 11 digits (03xx-xxxxxxx). WhatsApp and Call will not reach it.`}
+                      >
+                        <X className="h-3 w-3" />
+                        Number incomplete
+                      </span>
                     )}
                     {/* Issue #20 — vendor-controlled dismiss. Removes
                         this booking from the silent pool when the
