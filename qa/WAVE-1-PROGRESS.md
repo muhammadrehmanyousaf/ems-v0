@@ -54,6 +54,41 @@ that closed it. Nothing is marked closed without a code change behind it.
 | **§3** hidden features | `WWL-128` | The offline/online payment split has always been computed and was rendered nowhere. Now two cards |
 | Money screen | `WWL-118` `115` | A "Still owed" filter, sort by Most owed / Biggest / Event date, search that matches amounts and statuses, and stat cards that describe the rows actually on screen |
 
+## Wave 4 — derived state, naming, engines with no UI
+
+| ID | Sev | Fix | Where |
+|---|---|---|---|
+| `WWL-286` | S2 | Brokers' Overdue card counted `status === "overdue"`, a status **no production commission carries**, so it read 0 while Rs 138,750 was 36–122 days late. Now derived from `dueDate`, and the card shows the amount too | `brokers-redesigned-view.tsx` |
+| `WWL-287` | S2 | Added the **Due** column. Every row carries a `dueDate` and the CSV export wrote it — the screen showed only the accrual date | `brokers-redesigned-view.tsx` |
+| `WWL-288` | S2 | All / Overdue / Still owed / Paid filter with live counts. The Overdue card was inert, so there was no path from "something is late" to "which ones" short of opening the CSV | `brokers-redesigned-view.tsx` |
+| `WWL-273` | S2 | Same root cause in Suppliers, where it produced a *wrong set* rather than a flat zero | `suppliers-redesigned-view.tsx` |
+| `WWL-285` | S3 | `daysFromNow` counts in Karachi, not against UTC midnight | `suppliers-redesigned-view.tsx` |
+| `WWL-276` `277` | S3 | The aging endpoint **ranks suppliers by what's outstanding** and the UI discarded it — now a top-six list, with the grand total the vendor had been adding up by hand | `suppliers-redesigned-view.tsx` |
+| `WWL-307` `308` | S3 | Generator tank status is computed server-side and rendered nowhere. Now a per-generator panel | `generator-fuel-redesigned-view.tsx` |
+| **F12** naming | 13 screens | Sidebar name vs rendered page title disagreed on **13 routes**. Venue-OS was worst: the heading said "Venue-OS" whichever tab you were on, and all seven tab labels differed from the sidebar — click *"Halls & spaces"*, land on *"Venue-OS"*, see a tab called *"Spaces"*. Three names, none matching | `venue-os/page.tsx` · `venue-os-hub-view.tsx` + 11 |
+| Docblocks | — | 22 component headers claimed `/dashboard/<x>-new` routes. **Zero of them exist** | 22 files |
+
+## Wave 5 — the money engine, and the seams underneath it
+
+The largest single root cause in the backlog: **five surfaces derived cash from a
+flag instead of from the amount columns.**
+
+| Family / ID | Findings | What was done |
+|---|---|---|
+| **Money truth** | `WWL-001` `002` `005` `037` `040` `047` `109` `110` `111` | `paymentStatus === "Paid"` credited the FULL total as received; `!== "Partial"` credited nothing. On live data they disagree on 2 bookings of 22, and those two rows **are** the entire Rs 1,124,500 by which the four money screens differed. One rule now, in `utils/bookingMoney.js` + `lib/utils/booking-money.ts`. Tests reproduce the wrong Rs 21,201,121 from the old code and the true Rs 20,076,621 from the new |
+| **Counter screen** | `WWL-040` | Record Payment told a vendor to collect **Rs 350,000 from a customer who owed Rs 315,000**, with the customer at the counter. It also *hid* "Record payment" on the one booking with Rs 1,159,500 outstanding, because the stale flag said Paid |
+| **Venue scoping** | `WWL-006` `129` | `?businessId` was accepted by the action summary and applied to the calendar strip **alone**. And receivables scoped-to-one-venue matched via `BookingDetails` while scoped-to-all matched only `vendorIds`, so one venue could report **95% more** than all three combined |
+| **Aging** | `WWL-131` | Every aging row rendered green, including 99 days overdue: the tone test was `v.includes("0")` and every bucket name contains a zero. On the screen whose job is showing who is late, nobody was ever late |
+| **Bookings list** | `WWL-036` `042` `043` `044` | `bucket=cancelled` returned the **entire** ledger (25 rows vs 10/12) because unknown values fell through to no filter. Cancelled is a real bucket now, unknown values narrow rather than widen, there is pagination, and a cancelled booking's order is locked |
+| **Profit board** | `WWL-008` `009` | Rows with nothing tagged reported **100% margin**; "Most profit" therefore ranked the least-documented events highest and put a cancelled wedding at Rs 0 received on top. Margin is now `—` where there is no cost, and a **Cash position** column states what each function actually put in the account |
+| **Availability** | `WWL-057` `058` `060` `061` | Two slot vocabularies with **no translation between them**: `"Mehndi"` can never equal `"18:00"`, so a held date came back fully available and a vendor's hold blocked no booking at all. Plus: a space-managed venue with unmapped bookings returned `{}` for a month containing a Rs 1,546,000 wedding |
+| **Calendar** | `WWL-059` `099` `101` `103` | The subscription URL addressed the **frontend** host, so every subscription 503'd — the feed itself was always valid. The grid asked for `bucket=active`, which is defined as "hide Completed and Cancelled", so "every event on one grid" had no past. Holds now render |
+| **Leads** | `WWL-031` `032` `033` `034` | Six bad fields took six submits, each naming an API field the vendor had to map to a box by guesswork. A lead's **budget was dropped at the moment it became a booking** |
+| **Customers** | `WWL-088` `089` `091` `092` | The client book showed each person's **platform-wide** bookings and spend — wrong figures, and a cross-vendor disclosure. `/community-trust` answered for **any** phone number |
+| **Policy** | `WWL-501` `502` | Three named templates existed twice; two had drifted, so "Aam" promised the customer Rs 611,639 while the engine returned Rs 1,223,278. Derived from one table now, with 13 tests |
+| **Sheets** | `WWL-072` | Every sheet's payment schedule is correct to the rupee and reached **nobody** — gated to two PDF variants no sheet has ever reached |
+| **F13** false zeros | `WWL-004` `018` `052` | A failed load rendered `Rs 0` with a **green upward arrow**. 24 money tiles across 14 screens now render `—` and "couldn't load" via a new `StatCard error` prop |
+
 ## Shared primitives built (the leverage)
 
 | Primitive | Closes | What it guarantees |
@@ -62,6 +97,9 @@ that closed it. Nothing is marked closed without a code change behind it.
 | `components/dashboard/primitives/dangerous-action.tsx` | F5 — 23 one-click irreversibles | Wraps the trigger, states the consequence in the vendor's terms, and can require the vendor to type a word for the truly unundoable (period close, journal posting) |
 | `components/dashboard/primitives/labelled-field.tsx` | F2 + F8 — 63 findings | Every input gets a real `<label for>`, required marked in the accessible tree, errors with `role="alert"`; number fields default to `min=0` so a negative day-rate can't be typed |
 | `lib/utils/pk-date.ts` | F10 — 10 findings | `todayInKarachi()` and friends. For the first five hours of every Pakistani day, `toISOString().slice(0,10)` returns yesterday — which is how a receipt dialog came to refuse today's date at 2am |
+| `utils/bookingMoney.js` + `lib/utils/booking-money.ts` | 9 money findings | Received is the amount column; outstanding is arithmetic on the two amounts; the flag is a label *about* that arithmetic and never an input to it. Both sides of the wire share one rule, pinned to the live figures by 19 tests |
+| `utils/slotVocabulary.js` | `WWL-058` + the long-standing RP-14 | The translation between named slots (Mehndi, Baraat, Evening) and clock slots (09:00, 14:00, 18:00) that never existed. Ambiguous function names hold the whole day: over-blocking a hold the vendor placed on purpose costs an enquiry; under-blocking costs two baraats in one hall |
+| `StatCard error` prop | F13 — 24 tiles | A missing figure cannot render as a number. Em dash, no trend arrow, "couldn't load" |
 
 ## Notes
 
@@ -93,11 +131,29 @@ to its wedding (`WWL-348`) · collaboration stops at "accepted" (`WWL-463`) · t
 اردو toggle is inert (`WWL-011`) · `Toggle Sidebar` is dead (`WWL-013`) · ⌘K
 finds no data (`WWL-015`).
 
-**Backend engines with no UI** (§3, ~8): generator burn-rate (`WWL-306`), tank
-status (`WWL-307`), the broker directory (`WWL-295`), the supplier
-who-is-owed-most ranking (`WWL-276`), four server-side filters wired to nothing
-(`WWL-310`), the `/upcoming` permits endpoint (`WWL-347`), and five groups of
-fetched-but-unrendered fields.
+These are the ones that need a decision rather than a fix. Each is a screen to
+design, not a defect to correct, and guessing at what the feature should be is
+the wrong way to spend the trust the rest of this work has earned.
+
+**Documents that are still the same document** (`WWL-073`, `WWL-075`): the
+Service Contract and the BEO now differ from the Quotation by more than a title
+— the contract carries the payment schedule and a signature block — but the BEO
+still has no guest timings, no menu, no setup instructions and no kitchen notes.
+It is an operations document that contains no operations. That is a content
+design job.
+
+**Per-space availability** (`WWL-100`): the halls × days grid renders 98 cells
+whose columns are all identical, because bookings carry no space assignment
+(`WWL-050`). One booking marks the whole property unavailable, so the vendor
+cannot sell the Terrace Lawn on a day the Main Hall is taken. A matrix that
+implies a granularity the data does not have is worse than no matrix; fixing it
+means assigning spaces at booking time, which is a flow change.
+
+**Backend engines with no UI** (§3, remaining): the broker directory
+(`WWL-295`), four server-side filters wired to nothing (`WWL-310`), the
+`/upcoming` permits endpoint (`WWL-347`), and five groups of
+fetched-but-unrendered fields. (`WWL-276`, `WWL-277`, `WWL-306`–`308` closed in
+wave 4.)
 
 **Unreachable screens** (§4 remainder): `WWL-229` (unreachable for every
 vendor), `WWL-528` (four Venue-OS tabs render only a heading), `WWL-352` (the
