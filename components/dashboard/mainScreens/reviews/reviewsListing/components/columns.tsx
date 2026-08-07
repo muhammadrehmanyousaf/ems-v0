@@ -4,7 +4,21 @@ import { ColumnDef } from "@tanstack/react-table";
 import { RowActions } from "./row-actions";
 import { Review } from "@/lib/dashboard-types";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { formatDateTime } from "@/lib/utils";
+/**
+ * WWL-384 — dates only, in Karachi. `createdAt` on a review carries no
+ * meaningful clock time; printing one invents precision that was never there.
+ */
+const fmtReviewDate = (v?: string | null): string => {
+    if (!v) return "—";
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return "—";
+    return new Intl.DateTimeFormat("en-PK", {
+        timeZone: "Asia/Karachi",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    }).format(d);
+};
 import { StartComponent } from "./star-component";
 import { ArrowUpDown } from "lucide-react";
 import type { Column } from "@tanstack/react-table";
@@ -129,8 +143,14 @@ export const columns = (
         accessorKey: "createdAt",
         id: 'createdAt',
         header: ({ column }) => <SortableHeader column={column} label="Date" />,
+        /**
+         * WWL-384 — `formatDateTime` printed a clock time from a date-only
+         * value, so all eight rows read "05:00 am" — UTC midnight rendered in
+         * PKT — giving a column of eight identical times beside eight different
+         * dates. A time nobody recorded is worse than no time.
+         */
         cell: ({ row }) => (
-            <span className="whitespace-nowrap">{formatDateTime(row.original.createdAt)}</span>
+            <span className="whitespace-nowrap">{fmtReviewDate(row.original.createdAt)}</span>
         )
     },
     /**
