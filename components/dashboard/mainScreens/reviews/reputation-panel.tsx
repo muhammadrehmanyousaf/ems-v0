@@ -45,12 +45,26 @@ export default function ReputationPanel() {
    * reputation under this venue's name.
    */
   const activeBusinessId = useActiveBusinessId();
+  /**
+   * WWL-376 — a failed fetch called `setData(null)` and the render below then
+   * returned null, so the ENTIRE panel vanished: no error, no retry, nothing to
+   * say it had ever been there. "Your reputation card failed to load" and "you
+   * have no reviews yet" were the same screen — and the second one is a
+   * reassuring message to show someone whose data just did not arrive.
+   */
+  const [failed, setFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   useEffect(() => {
     setLoading(true);
-    // .catch so a failed/slow fetch (429/500 under load) resolves to the
-    // "no data → return null" path instead of leaving an unhandled rejection.
-    AnalyticsAPI.getReputation().then(setData).catch(() => setData(null)).finally(() => setLoading(false));
-  }, [activeBusinessId]);
+    setFailed(false);
+    AnalyticsAPI.getReputation()
+      .then(setData)
+      .catch(() => {
+        setData(null);
+        setFailed(true);
+      })
+      .finally(() => setLoading(false));
+  }, [activeBusinessId, reloadKey]);
 
   const maxDist = useMemo(
     () => Math.max(1, ...(data?.distribution || []).map((d) => d.count)),
@@ -59,6 +73,23 @@ export default function ReputationPanel() {
   const maxTrend = 5;
 
   if (loading) return <Skeleton className="h-64 w-full" />;
+  if (failed) {
+    return (
+      <div className="rounded-xl border bg-card p-5 text-sm">
+        <p className="font-medium">Couldn&apos;t load your reputation summary.</p>
+        <p className="mt-1 text-muted-foreground">
+          This is a loading problem, not a change to your reviews — nothing has been lost.
+        </p>
+        <button
+          type="button"
+          onClick={() => setReloadKey((k) => k + 1)}
+          className="mt-3 rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
   if (!data || !data.hasData) return null; // no reviews yet → don't clutter
 
   const vsBenchmark =
@@ -126,14 +157,36 @@ export default function ReputationPanel() {
     let y = 360;
     for (const ln of shown) { ctx.fillText(ln, S / 2, y); y += 64; }
 
+    /**
+     * WWL-386 — only the quote was wrapped. The attribution and the business
+     * name were drawn with a bare centred `fillText`, so anything past about 36
+     * characters ran off both edges of the 1080px board: a 55-character venue
+     * name measured 1223px, 143px over. Shrink to fit, then truncate — the
+     * vendor is posting this publicly and a clipped name is worse than a small
+     * one.
+     */
+    const fitText = (text: string, maxW: number, basePx: number, weight: string) => {
+      let px = basePx;
+      ctx.font = `${weight}${px}px Georgia, serif`;
+      while (px > 20 && ctx.measureText(text).width > maxW) {
+        px -= 2;
+        ctx.font = `${weight}${px}px Georgia, serif`;
+      }
+      let out = text;
+      while (out.length > 1 && ctx.measureText(out).width > maxW) {
+        out = out.slice(0, -2) + "…";
+      }
+      return out;
+    };
+    const boardW = S - 120;
+
     // Attribution
     ctx.fillStyle = "#7A7A7A";
-    ctx.font = "34px Georgia, serif";
-    ctx.fillText(r.reviewerName ? `— ${r.reviewerName}` : "— Verified customer", S / 2, Math.min(y + 60, S - 180));
+    const attribution = r.reviewerName ? `— ${r.reviewerName}` : "— Verified customer";
+    ctx.fillText(fitText(attribution, boardW, 34, ""), S / 2, Math.min(y + 60, S - 180));
     if (r.businessName) {
-      ctx.font = "bold 38px Georgia, serif";
       ctx.fillStyle = "#2B2B2B";
-      ctx.fillText(r.businessName, S / 2, S - 110);
+      ctx.fillText(fitText(r.businessName, boardW, 38, "bold "), S / 2, S - 110);
     }
     ctx.fillStyle = "#C9956C";
     ctx.font = "28px Georgia, serif";
@@ -145,8 +198,11 @@ export default function ReputationPanel() {
       const a = document.createElement("a");
       a.href = url; a.download = `wedding-wala-review-${r.id}.png`;
       a.click();
-      URL.revokeObjectURL(url);
-      toast.success("Review card downloaded");
+      // WWL-386 — this revoked the URL on the very next line, racing the
+      // browser's read of it. Give the download a turn of the event loop.
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      // The browser owns whether a file is actually saved; say what we know.
+      toast.success("Review card ready — check your downloads");
     }, "image/png");
   };
 
@@ -211,7 +267,11 @@ export default function ReputationPanel() {
             {data.responseRate != null && (
               <p className="mt-1.5 text-[11px] text-muted-foreground flex items-center gap-1">
                 <MessageCircle className="h-3 w-3" />
-                Replied to <span className="font-semibold text-foreground tabular-nums">{data.responseRate}%</span> ({data.repliedCount}/{data.total})
+                {/* WWL-387 — the automation card ~400px below says "RESPONSE
+                    RATE 73%" and this said 100%. They measure opposite
+                    directions: replies the vendor SENT, versus reviews
+                    customers LEFT. Nothing on the page said so. */}
+                You replied to <span className="font-semibold text-foreground tabular-nums">{data.responseRate}%</span> of reviews ({data.repliedCount}/{data.total})
               </p>
             )}
           </div>
@@ -238,19 +298,55 @@ export default function ReputationPanel() {
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1.5 flex items-center gap-1">
               <TrendingUp className="h-3 w-3" /> 6-month trend
             </p>
-            <div className="flex items-end justify-between gap-1 h-20">
-              {(data.trend ?? []).map((t) => (
-                <div key={t.key} className="flex flex-col items-center gap-1 flex-1" title={t.average != null ? `${t.label}: ${t.average} (${t.count})` : `${t.label}: no reviews`}>
-                  <div className="w-full flex items-end justify-center" style={{ height: 56 }}>
-                    <div
-                      className={`w-full max-w-[16px] rounded-t ${t.average != null ? "bg-bridal-gold-dark/70" : "bg-muted"}`}
-                      style={{ height: t.average != null ? `${(t.average / maxTrend) * 100}%` : "4px" }}
-                    />
+            {/**
+              * WWL-385 — six bars scaled `average / 5` with no axis, no
+              * gridline and no number on the face: a 4.0 and a 5.0 differed by
+              * a fifth of a bar. The month's count lived only in a `title`
+              * attribute, which a touch user can never reach, and a month with
+              * no reviews rendered as a 4px stub that reads as a broken bar
+              * rather than as absence.
+              *
+              * Bars are now scaled from 3.0, where the readable range actually
+              * is, with the value printed on the face and absence stated in
+              * words. The axis says what the scale is, because a chart that
+              * does not is a picture.
+              */}
+            <div className="relative flex items-end justify-between gap-1 h-24">
+              <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 border-t border-dashed border-border" />
+              <span aria-hidden className="pointer-events-none absolute inset-x-0 top-1/2 border-t border-dashed border-border/60" />
+              {(data.trend ?? []).map((t) => {
+                const TREND_FLOOR = 3
+                const pct =
+                  t.average != null
+                    ? Math.max(6, ((t.average - TREND_FLOOR) / (maxTrend - TREND_FLOOR)) * 100)
+                    : 0
+                return (
+                  <div
+                    key={t.key}
+                    className="flex flex-1 flex-col items-center gap-1"
+                    title={t.average != null ? `${t.label}: ${t.average} stars from ${t.count} review${t.count === 1 ? "" : "s"}` : `${t.label}: no reviews`}
+                  >
+                    <span className="text-[9px] tabular-nums text-muted-foreground">
+                      {t.average != null ? t.average.toFixed(1) : "—"}
+                    </span>
+                    <div className="flex w-full items-end justify-center" style={{ height: 48 }}>
+                      {t.average != null ? (
+                        <div
+                          className="w-full max-w-[16px] rounded-t bg-bridal-gold-dark/70"
+                          style={{ height: `${pct}%` }}
+                        />
+                      ) : (
+                        <span className="w-full max-w-[16px] self-end border-b-2 border-dotted border-muted-foreground/40" />
+                      )}
+                    </div>
+                    <span className="text-[9px] text-muted-foreground">{t.label}</span>
                   </div>
-                  <span className="text-[9px] text-muted-foreground">{t.label}</span>
-                </div>
-              ))}
+                )
+              })}
             </div>
+            <p className="mt-1 text-[9px] text-muted-foreground">
+              Scale 3.0–5.0 · a dotted line means no reviews that month
+            </p>
           </div>
         </div>
 
@@ -290,12 +386,39 @@ export default function ReputationPanel() {
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold flex items-center gap-1">
               <Tag className="h-3 w-3" /> What customers mention
             </p>
+            {/**
+              * WWL-383 — nine identical neutral badges, so "Issue" carried the
+              * same weight and the same styling as "Food". Each word now shows
+              * the average rating of the reviews it appears in, which is what
+              * decides its colour — the vendor's own data, not a dictionary.
+              */}
             <div className="flex flex-wrap gap-1.5">
-              {data.keywords.map((k) => (
-                <Badge key={k.word} variant="outline" className="text-[11px] capitalize">
-                  {k.word}<span className="ml-1 text-muted-foreground tabular-nums">{k.count}</span>
-                </Badge>
-              ))}
+              {data.keywords.map((k) => {
+                const tone =
+                  k.sentiment === "positive"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200"
+                    : k.sentiment === "negative"
+                      ? "border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
+                      : ""
+                return (
+                  <Badge
+                    key={k.word}
+                    variant="outline"
+                    className={`text-[11px] capitalize ${tone}`}
+                    title={
+                      k.avgRating != null
+                        ? `Mentioned in ${k.count} review${k.count === 1 ? "" : "s"}, averaging ${k.avgRating} stars`
+                        : `Mentioned in ${k.count} review${k.count === 1 ? "" : "s"}`
+                    }
+                  >
+                    {k.word}
+                    <span className="ml-1 tabular-nums opacity-70">{k.count}</span>
+                    {k.avgRating != null && (
+                      <span className="ml-1 tabular-nums opacity-70">· {k.avgRating}★</span>
+                    )}
+                  </Badge>
+                )
+              })}
             </div>
           </div>
         )}
