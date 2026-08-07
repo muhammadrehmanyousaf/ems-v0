@@ -313,7 +313,10 @@ export function DroneNocRedesignedView({ adminCapable = true }: { adminCapable?:
         onSelectionChange={setSelected}
         empty={{
           icon: "ShieldCheck",
-          title: "No permits yet",
+          /* WWL-352 — three compliance registers, built and live and empty on
+             all three venues. An empty register is not neutral: it is the
+             answer a vendor gives when an authority asks. */
+          title: "No permits on file",
           description: "Track your drone NOCs, issuing authorities and validity windows so aerial shoots stay compliant.",
           action: <Button size="sm" onClick={openCreate}><Icon name="Plus" size={14} className="mr-1" /> Add permit</Button>,
         }}

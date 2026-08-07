@@ -10,6 +10,8 @@ import * as React from "react"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useRecordBusinessId } from "@/hooks/use-record-business-id"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { SupplierAPI } from "@/lib/api/suppliers"
+import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import {
   HalalCertAPI,
   type HalalCert,
@@ -65,6 +67,7 @@ const supplierName = (c: HalalCert) => c.supplier?.name ?? c.supplierNameSnapsho
 
 export function HalalCertsRedesignedView() {
   const qc = useQueryClient()
+  const activeBusinessId = useActiveBusinessId()
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
   const [dialogOpen, setDialogOpen] = React.useState(false)
@@ -118,6 +121,25 @@ export function HalalCertsRedesignedView() {
    * is a renewal you forgot, the second is a finding against you, and a caterer
    * facing an inspector needs to know which of the two they are holding.
    */
+  /**
+   * Food suppliers with no certificate on file — the specific gap, not a
+   * generic nudge (WWL-323).
+   */
+  const { data: supplierData } = useQuery({
+    queryKey: ["suppliers-for-halal-gap", activeBusinessId],
+    queryFn: () => SupplierAPI.list(activeBusinessId ? { businessId: activeBusinessId } : {}),
+    staleTime: 5 * 60_000,
+  })
+  const unCertifiedSuppliers = React.useMemo(() => {
+    const covered = new Set(
+      all.map((c) => (c.supplier?.name ?? c.supplierNameSnapshot ?? "").trim().toLowerCase()).filter(Boolean),
+    )
+    return (supplierData?.suppliers ?? [])
+      .filter((sup) => !covered.has((sup.name ?? "").trim().toLowerCase()))
+      .map((sup) => sup.name)
+      .filter(Boolean) as string[]
+  }, [supplierData, all])
+
   const [showAllExpiring, setShowAllExpiring] = React.useState(false)
   const expiredCount = all.filter((c) => c.status === "expired").length
   const revokedCount = all.filter((c) => c.status === "revoked").length
@@ -294,10 +316,22 @@ export function HalalCertsRedesignedView() {
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
+        /**
+          * WWL-323 — the register is empty on all three venues while the same
+          * account holds 18 supplier records, Bismillah Meat Supply among them
+          * on each one. The sweep was right that this is the compliance
+          * POSITION rather than a code defect — and right that the screen
+          * offered nothing that would prompt a vendor to close it.
+          *
+          * It knows who they buy from. Naming them turns "add a certificate"
+          * from an abstract instruction into a specific one.
+          */
         empty={{
           icon: "ShieldCheck",
-          title: "No certificates yet",
-          description: "Add supplier halal certificates to track authorities, expiry dates and renewals.",
+          title: "No certificates on file",
+          description: unCertifiedSuppliers.length > 0
+            ? `You buy from ${unCertifiedSuppliers.slice(0, 3).join(", ")}${unCertifiedSuppliers.length > 3 ? ` and ${unCertifiedSuppliers.length - 3} more` : ""}. If an inspector or a client asks for their halal certificate today, there is nothing here to show them.`
+            : "Keep supplier halal certificates here so you can produce one on the day, and see expiry dates before they pass.",
           action: <Button size="sm" onClick={openCreate}><Icon name="Plus" size={14} className="mr-1" /> Add certificate</Button>,
         }}
         toolbar={
