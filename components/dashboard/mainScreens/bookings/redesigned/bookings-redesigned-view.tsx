@@ -18,6 +18,7 @@ import { DataTable, type Column } from "@/components/dashboard/primitives/data-t
 import { StatusPill, type StatusTone } from "@/components/dashboard/primitives/status-pill"
 import { MoneyCell, formatPkr } from "@/components/dashboard/primitives/money-cell"
 import { ExportMenu } from "@/components/dashboard/shared/export-menu"
+import { bookedOn, receivedOn, outstandingOn, derivedPaymentStatus } from "@/lib/utils/booking-money"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
@@ -88,10 +89,15 @@ export function BookingsRedesignedView() {
     { key: "space", header: "Space", cellClassName: "text-muted-foreground", render: (b) => b.bookingDetails?.[0]?.resource?.label || "—" },
     { key: "customer", header: "Customer", cellClassName: "text-muted-foreground", render: (b) => b.customerName || "—" },
     { key: "date", header: "Date", cellClassName: "text-muted-foreground whitespace-nowrap", render: (b) => fmtDate(b.bookingDate) },
-    { key: "amount", header: "Amount", align: "right", render: (b) => <MoneyCell amount={Number(b.totalAmount) || 0} /> },
-    { key: "paid", header: "Paid", align: "right", render: (b) => <MoneyCell amount={Number(b.downPayment) || 0} tone="muted" /> },
+    { key: "amount", header: "Amount", align: "right", render: (b) => <MoneyCell amount={bookedOn(b)} /> },
+    { key: "paid", header: "Paid", align: "right", render: (b) => <MoneyCell amount={receivedOn(b)} tone="muted" /> },
+    // WWL-037 — a row showing Rs 1,546,000 booked and Rs 386,500 paid also
+    // carried a green "Paid" chip, because the chip printed the stored flag
+    // while the two columns beside it printed the amounts. The chip now
+    // describes the same arithmetic the row already shows.
+    { key: "balance", header: "Balance", align: "right", render: (b) => <MoneyCell amount={outstandingOn(b)} /> },
     { key: "status", header: "Status", render: (b) => <StatusPill tone={statusTone(b.status)}>{b.status}</StatusPill> },
-    { key: "payment", header: "Payment", render: (b) => <StatusPill tone={payTone(b.paymentStatus)} variant="icon">{b.paymentStatus || "—"}</StatusPill> },
+    { key: "payment", header: "Payment", render: (b) => { const d = derivedPaymentStatus(b); return <StatusPill tone={payTone(d)} variant="icon">{d}</StatusPill> } },
     {
       key: "actions", header: "", align: "right",
       render: (b) => <BookingRowActions data={b} onRefresh={() => refetch()} />,
@@ -173,10 +179,15 @@ export function BookingsRedesignedView() {
                   { header: "Customer", value: (b) => b.customerName },
                   { header: "Phone", value: (b) => b.customerPhone },
                   { header: "Date", value: (b) => fmtDate(b.bookingDate) },
-                  { header: "Amount", value: (b) => Number(b.totalAmount) || 0 },
-                  { header: "Paid", value: (b) => Number(b.downPayment) || 0 },
+                  // WWL-047 — the export carried the stored flag, so the wrong
+                  // "Paid" travelled out of the product and into whatever the
+                  // vendor's accountant opened the file with. Balance is now a
+                  // column in its own right and Payment states the arithmetic.
+                  { header: "Amount", value: (b) => bookedOn(b) },
+                  { header: "Paid", value: (b) => receivedOn(b) },
+                  { header: "Balance", value: (b) => outstandingOn(b) },
                   { header: "Status", value: (b) => b.status },
-                  { header: "Payment", value: (b) => b.paymentStatus },
+                  { header: "Payment", value: (b) => derivedPaymentStatus(b) },
                 ]}
               />
             </div>
@@ -190,8 +201,13 @@ export function BookingsRedesignedView() {
               <div className="mt-1"><StatusPill tone={statusTone(b.status)}>{b.status}</StatusPill></div>
             </div>
             <div className="text-right">
-              <MoneyCell amount={Number(b.totalAmount) || 0} className="block text-sm font-medium" />
-              <StatusPill tone={payTone(b.paymentStatus)} className="mt-1">{b.paymentStatus}</StatusPill>
+              <MoneyCell amount={bookedOn(b)} className="block text-sm font-medium" />
+              {outstandingOn(b) > 0 && (
+                <span className="block text-xs text-muted-foreground">
+                  Rs {outstandingOn(b).toLocaleString()} due
+                </span>
+              )}
+              <StatusPill tone={payTone(derivedPaymentStatus(b))} className="mt-1">{derivedPaymentStatus(b)}</StatusPill>
             </div>
           </div>
         )}

@@ -76,6 +76,7 @@ import { VendorChangeRequestsCard } from '@/components/bookings/vendor-change-re
 import { VendorNoShowDialog } from '@/components/bookings/vendor-no-show-dialog';
 import EventWeatherChip from '@/components/dashboard/mainScreens/bookings/event-weather-chip';
 import type { BookingData } from '@/lib/dashboard-types';
+import { outstandingOn, derivedPaymentStatus } from '@/lib/utils/booking-money';
 
 const statusColors: Record<string, string> = {
   'Awaiting Payment': 'bg-orange-50 text-orange-700 border-orange-200',
@@ -265,9 +266,14 @@ export default function BookingDetailView({
     vendorTotal > 0 ? vendorTotal : Number(booking.totalAmount) || 0;
   const dp =
     vendorDownPayment > 0 ? vendorDownPayment : Number(booking.downPayment) || 0;
-  const isPaid = booking.paymentStatus === 'Paid';
-  const isPartial = booking.paymentStatus === 'Partial';
-  const remaining = isPaid ? 0 : isPartial ? Math.max(0, amount - dp) : amount;
+  // WWL-037 — this block printed `Remaining Rs 0` on a Rs 1,546,000 booking
+  // with Rs 386,500 received, because it read the `Paid` flag instead of
+  // subtracting. The order editor further down the very same page already
+  // derived the correct Rs 1,159,500; both now share one rule.
+  const remaining = outstandingOn(booking);
+  const derivedStatus = derivedPaymentStatus(booking);
+  const isPaid = derivedStatus === 'Paid';
+  const isPartial = derivedStatus === 'Partial';
 
   // BK-100.4 — same gates as the side-drawer (status + within 14d post-event).
   const noShowCandidate = (() => {

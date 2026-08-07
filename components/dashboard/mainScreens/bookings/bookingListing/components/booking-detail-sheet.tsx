@@ -10,6 +10,7 @@ import { InstallmentsCard } from "@/components/bookings/installments-card"
 // BK-100.4 — vendor "report no-show" CTA. Only renders inside the
 // 7-day reporting window enforced server-side.
 import { VendorNoShowDialog } from "@/components/bookings/vendor-no-show-dialog"
+import { outstandingOn, derivedPaymentStatus } from "@/lib/utils/booking-money"
 
 interface BookingDetailSheetProps {
   open: boolean
@@ -48,9 +49,11 @@ export function BookingDetailSheet({ open, onOpenChange, booking }: BookingDetai
   const vendorDownPayment = details.reduce((sum, d) => sum + (Number(d.downPayment) || 0), 0)
   const amount = vendorTotal > 0 ? vendorTotal : Number(booking.totalAmount) || 0
   const dp = vendorDownPayment > 0 ? vendorDownPayment : Number(booking.downPayment) || 0
-  const isPaid = booking.paymentStatus === 'Paid'
-  const isPartial = booking.paymentStatus === 'Partial'
-  const remaining = isPaid ? 0 : isPartial ? Math.max(0, amount - dp) : amount
+  // WWL-037 — balance is arithmetic on the amounts, not a reading of the flag.
+  const remaining = outstandingOn(booking)
+  const derivedStatus = derivedPaymentStatus(booking)
+  const isPaid = derivedStatus === 'Paid'
+  const isPartial = derivedStatus === 'Partial'
 
   // BK-100.4 — show "Report no-show" only when the booking is in a status
   // where a no-show can apply AND the event has occurred. Backend

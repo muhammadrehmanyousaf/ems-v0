@@ -16,6 +16,9 @@ import { BookingsAPI, type PaymentType } from '@/lib/api/dashboard';
 import { ReceiptsAPI, type ReceiptMethod } from '@/lib/api/paymentReceipts';
 import type { BookingData } from '@/lib/dashboard-types';
 import { todayInKarachi } from "@/lib/utils/pk-date"
+import {
+    bookedOn, receivedOn, outstandingOn, derivedPaymentStatus,
+} from "@/lib/utils/booking-money"
 
 /* The three preset types below post to /bookings/:id/record-payment, which
    accepts ONLY "down_payment" | "remaining" | "full_payment" and carries no
@@ -97,16 +100,19 @@ export function RecordPaymentDialog({ open, onOpenChange, booking, onSuccess }: 
 
     if (!booking) return null;
 
-    const isPaid = booking.paymentStatus === 'Paid';
-    const isPartial = booking.paymentStatus === 'Partial';
-
-    // Derive accurate amounts from bookingDetails (booking-level fields can be 0)
-    const details = booking.bookingDetails || [];
-    const vendorTotal = details.reduce((sum, d) => sum + (Number(d.totalAmount) || 0), 0);
-    const vendorDP    = details.reduce((sum, d) => sum + (Number(d.downPayment)  || 0), 0);
-    const total       = vendorTotal > 0 ? vendorTotal : Number(booking.totalAmount)  || 0;
-    const dp          = vendorDP    > 0 ? vendorDP    : Number(booking.downPayment)  || 0;
-    const remaining   = isPaid ? 0 : isPartial ? Math.max(0, total - dp) : total;
+    // WWL-040 — `remaining` used to be read off `paymentStatus`: a booking
+    // flagged `Pending` was assumed to have collected nothing, so this dialog
+    // told the vendor to take the full Rs 350,000 from a customer who had
+    // already handed over Rs 35,000 and owed Rs 315,000. It is the one screen
+    // in the product that is open while the customer is at the counter, so it
+    // is the one that must not guess. Balance is now the arithmetic, and the
+    // `Paid`/`Partial` gates below follow the money rather than the flag.
+    const total     = bookedOn(booking);
+    const dp        = receivedOn(booking);
+    const remaining = outstandingOn(booking);
+    const derived   = derivedPaymentStatus(booking);
+    const isPaid    = derived === 'Paid';
+    const isPartial = derived === 'Partial';
 
     // Filter payment types based on current status
     const availableTypes = PAYMENT_TYPES.filter((t) => {
