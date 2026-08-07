@@ -1353,6 +1353,14 @@ export interface ApiMenu {
   price: number;
   data: Record<string, unknown> | null;
   businessId: number;
+  /** WW-053. null = legacy per_event (flat price). */
+  pricingUnit?: "per_event" | "per_head" | null;
+  /**
+   * Smallest guest count the vendor will bill for on a per-head menu. Stored,
+   * accepted by the controller on create AND update, and — until WWL-479 — never
+   * offered by any editor, so live values could only ever have come from seed.
+   */
+  minGuaranteeCount?: number | null;
   createdAt: string;
   updatedAt: string;
   business?: { id: number; name: string };
@@ -1372,6 +1380,8 @@ export class MenusAPI {
     price: number;
     businessId: number;
     data?: Record<string, unknown>;
+    pricingUnit?: "per_event" | "per_head" | null;
+    minGuaranteeCount?: number | null;
   }): Promise<ApiMenu> {
     const res = await axiosInstance.post("/api/v1/menus/single-menu", data);
     return res.data?.data;
@@ -1379,7 +1389,14 @@ export class MenusAPI {
 
   static async update(
     id: number,
-    data: { title?: string; price?: number; businessId?: number; data?: Record<string, unknown> },
+    data: {
+      title?: string;
+      price?: number;
+      businessId?: number;
+      data?: Record<string, unknown>;
+      pricingUnit?: "per_event" | "per_head" | null;
+      minGuaranteeCount?: number | null;
+    },
   ): Promise<ApiMenu> {
     const res = await axiosInstance.patch(`/api/v1/menus/${id}`, data);
     return res.data?.data;
