@@ -837,7 +837,10 @@ export interface CustomerProfileResponse {
     confirmedBookings: number;
     cancelledBookings: number;
     upcomingBookings: number;
+    /** Money actually received from this customer (WWL-089). */
     lifetimeRevenue: number;
+    /** Value of their non-cancelled bookings, paid or not. */
+    lifetimeBooked?: number;
     cancelledRevenue: number;
     avgTicketSize: number;
     repeatCustomer: boolean;
@@ -929,13 +932,26 @@ export class CommunityTrustAPI {
     if (params.phone) qs.set("phone", params.phone);
     if (params.email) qs.set("email", params.email);
     if (qs.toString() === "") return null;
+    /**
+     * WWL-092 — this used to `catch { return null }`, and the panel renders
+     * nothing for null AND nothing for `hasData: false`. So a 500, a dropped
+     * connection and a genuine "not enough vendors have rated this person" all
+     * presented identically: an absent panel. The moment ratings exist, an API
+     * failure would read as a clean record — on a named private individual,
+     * which is the highest-consequence version of this pattern in the product.
+     *
+     * A 403 is the one case that is genuinely "nothing to show": the vendor has
+     * no relationship with this contact, so there is no answer to give them.
+     * Everything else reaches the caller.
+     */
     try {
       const res = await axiosInstance.get(
         `/api/v1/offlineCustomers/community-trust?${qs.toString()}`,
       );
       return res.data?.data ?? null;
-    } catch {
-      return null;
+    } catch (e) {
+      if ((e as { response?: { status?: number } })?.response?.status === 403) return null;
+      throw e;
     }
   }
 }
