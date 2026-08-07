@@ -57,7 +57,7 @@ import {
   type SupplierPaymentMethod,
   type CreateInvoiceInput,
 } from "@/lib/api/suppliers"
-import { todayInKarachi } from "@/lib/utils/pk-date"
+import { todayInKarachi, addDaysToDateString } from "@/lib/utils/pk-date"
 
 export interface VendorBusinessOption {
   id: number
@@ -130,9 +130,10 @@ export function LogInvoiceDialog({
     if (s) {
       form.setValue("supplierNameSnapshot", s.name)
       if (s.defaultPaymentTermsDays > 0) {
-        const invDate = new Date(form.getValues("invoiceDate") || new Date())
-        invDate.setUTCDate(invDate.getUTCDate() + s.defaultPaymentTermsDays)
-        form.setValue("dueDate", invDate.toISOString().slice(0, 10))
+        // WWL-455 — falling back to `new Date()` and formatting in UTC put the
+        // due date one day early for anything entered before 5am Karachi.
+        const base = form.getValues("invoiceDate") || todayInKarachi()
+        form.setValue("dueDate", addDaysToDateString(base, s.defaultPaymentTermsDays))
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -499,7 +499,12 @@ export type ReceivablesBucketKey =
   | "days_90_plus";
 
 export interface ReceivablesBucket {
+  /** @deprecated WWL-140 — alias of `installments`. Read the explicit key. */
   count: number;
+  /** Unpaid installments falling in this age band. Sums to totals.installmentsOpen. */
+  installments?: number;
+  /** People to ring, bucketed by their oldest unpaid installment. Sums to totals.customerCount. */
+  customers?: number;
   total: number;
 }
 
