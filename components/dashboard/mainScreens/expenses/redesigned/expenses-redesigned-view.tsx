@@ -8,7 +8,7 @@
 
 import * as React from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { ExpensesAPI, type VendorExpense } from "@/lib/api/vendorExpenses"
+import { ExpensesAPI, EXPENSE_PAYMENT_METHOD_LABELS, type VendorExpense } from "@/lib/api/vendorExpenses"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
 import { StatusPill } from "@/components/dashboard/primitives/status-pill"
@@ -43,6 +43,17 @@ const fmtCf = (v: unknown, d: CustomFieldDef): string => {
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
+
+/**
+ * WWL-183 — the Pakistani payment rails were title-cased raw keys here:
+ * "Jazzcash", "Ibft", "Bank Transfer". `Ibft` in particular reads as a word
+ * rather than the initialism it is, and the Receipts module already rendered
+ * the same rails correctly. The canonical map has existed all along.
+ */
+const methodLabel = (m?: string | null): string => {
+  if (!m) return "—"
+  return (EXPENSE_PAYMENT_METHOD_LABELS as Record<string, string>)[m] ?? cap(m)
+}
 const fmtDate = (s?: string | null) => {
   if (!s) return "—"
   const d = new Date(s)
@@ -114,7 +125,7 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
     { key: "space", header: "Space", cellClassName: "text-muted-foreground", render: (e) => e.subVenue?.name || "—" },
     { key: "payee", header: "Paid to", cellClassName: "text-muted-foreground", render: (e) => e.vendorName || "—" },
     { key: "note", header: "Note", cellClassName: "max-w-[260px] truncate text-muted-foreground", render: (e) => e.description || "—" },
-    { key: "method", header: "Method", render: (e) => <StatusPill tone="neutral">{cap(e.paymentMethod)}</StatusPill> },
+    { key: "method", header: "Method", render: (e) => <StatusPill tone="neutral">{methodLabel(e.paymentMethod)}</StatusPill> },
     { key: "date", header: "Date", cellClassName: "text-muted-foreground", render: (e) => fmtDate(e.spentDate) },
     // Reverse link back to the event. A vendor looking at "Rs 45,000 catering"
     // needs to know WHICH wedding it was for; without this the money screens
@@ -202,7 +213,7 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
                 { header: "Category", value: (e) => e.category },
                 { header: "Paid to", value: (e) => e.vendorName ?? "" },
                 { header: "Note", value: (e) => e.description ?? "" },
-                { header: "Method", value: (e) => e.paymentMethod ?? "" },
+                { header: "Method", value: (e) => methodLabel(e.paymentMethod) },
                 { header: "Date", value: (e) => fmtDate(e.spentDate) },
                 { header: "Amount", value: (e) => num(e.amount) },
               ]} />
@@ -214,7 +225,7 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
             <div className="min-w-0">
               <div className="truncate font-medium">{cap(e.category)}</div>
               <div className="truncate text-xs text-muted-foreground">{e.vendorName || e.description || "—"} · {fmtDate(e.spentDate)}</div>
-              <div className="mt-1"><StatusPill tone="neutral">{cap(e.paymentMethod)}</StatusPill></div>
+              <div className="mt-1"><StatusPill tone="neutral">{methodLabel(e.paymentMethod)}</StatusPill></div>
             </div>
             <MoneyCell amount={num(e.amount)} tone="error" className="text-sm font-medium" />
           </div>
