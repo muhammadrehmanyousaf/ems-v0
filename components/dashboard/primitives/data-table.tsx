@@ -329,14 +329,22 @@ export function DataTable<T>({
         </div>
 
         {/* Mobile cards — bespoke when the screen supplies one, otherwise built
-            from the column config so the row's actions are reachable. */}
-        <div className="space-y-2 p-3 md:hidden">
+            from the column config so the row's actions are reachable.
+
+            WWL-471 — the density toggle read as "missing on mobile". It was in
+            the toolbar the whole time; it simply had no effect, because density
+            only ever changed table row padding and the table is hidden below
+            md. A visible control that does nothing is the worse half of that
+            bug, so density now applies to the card list too — the setting means
+            the same thing on a phone as on a desktop. */}
+        <div className={cn("p-3 md:hidden", density === "compact" ? "space-y-1.5" : "space-y-2")}>
           {data.map((row, i) => (
             <div
               key={getRowId(row)}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
               className={cn(
-                "rounded-lg border border-border bg-card p-3",
+                "rounded-lg border border-border bg-card",
+                density === "compact" ? "p-2.5" : "p-3",
                 onRowClick && "cursor-pointer active:bg-muted/50",
               )}
             >

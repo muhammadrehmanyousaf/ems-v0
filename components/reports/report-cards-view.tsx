@@ -5,13 +5,20 @@
  *
  * Big Urdu label · big number · one colour · one arrow — no tables on the front,
  * each card shares to WhatsApp. This is the vendor's glanceable business at a
- * glance. Behind REPORT_CARDS_ENABLED (self-hides on 404).
+ * glance.
+ *
+ * The REPORT_CARDS_ENABLED gate is gone (see bookingOrderController) — it
+ * answered 404 to most vendors for a read-only projection of their own
+ * bookings. The 404 branch below is kept as a defensive fallback for an older
+ * backend, not as a product state.
  */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUp, ArrowDown, MessageCircle, Loader2, Image as ImageIcon } from "lucide-react";
 import { getReportCards, type ReportCard } from "@/lib/api/bookingOrder";
 import { useBusiness } from "@/context/BusinessContext";
+import { useActiveBusinessId } from "@/lib/store/active-business-store";
+import { BusinessesAPI } from "@/lib/api/dashboard";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { shareCard, type ShareRow } from "@/lib/whatsappShare";
@@ -34,9 +41,36 @@ const VAL_TONE: Record<string, string> = {
 
 export function ReportCardsView() {
   const { business } = useBusiness();
-  const vendor = business?.name ?? "Wedding Wala";
   const [period, setPeriod] = useState<"month" | "year">("month");
-  const { data, isLoading } = useQuery({ queryKey: ["report-cards", period], queryFn: () => getReportCards(period) });
+
+  /**
+   * WWL-204 — the byline came from `useBusiness()`, which is not the venue
+   * switcher. With the switcher on **All venues** every WhatsApp message and
+   * every generated image went out headed "Rehman Grand Marquee" while
+   * carrying all three venues' combined numbers. On the one screen designed to
+   * be sent to somebody else, the name and the figures disagreed.
+   *
+   * The byline now follows the same selection the figures do: the active
+   * venue's name when one is selected, and an explicit all-venues heading when
+   * none is — never one venue's name over the group's totals.
+   */
+  const activeBusinessId = useActiveBusinessId();
+  const { data: businesses } = useQuery({
+    queryKey: ["my-businesses"],
+    queryFn: () => BusinessesAPI.getUserBusinesses(),
+  });
+  const activeVenue = businesses?.find((b) => b.id === activeBusinessId);
+  const multiVenue = (businesses?.length ?? 0) > 1;
+  const vendor =
+    activeVenue?.name ??
+    (multiVenue ? "Sab venues (all venues)" : business?.name ?? businesses?.[0]?.name ?? "Wedding Wala");
+
+  const { data, isLoading } = useQuery({
+    // WWL-204 — the venue belongs in the key, or switching venue re-renders
+    // the previous venue's numbers under the new venue's name.
+    queryKey: ["report-cards", period, activeBusinessId],
+    queryFn: () => getReportCards(period),
+  });
 
   if (isLoading) {
     return <div className="flex items-center justify-center gap-2 text-muted-foreground py-16"><Loader2 className="size-4 animate-spin" /> Loading…</div>;
@@ -98,7 +132,27 @@ export function ReportCardsView() {
             <CardContent className="p-4">
               <div className="flex items-start justify-between gap-1">
                 <p className="text-xs font-medium text-muted-foreground">{c.labelUr}</p>
-                <a href={share(c)} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-emerald-600 shrink-0" title="Share on WhatsApp">
+                {/**
+                  * WWL-205 — the tap target was the 14×14px icon itself, on the
+                  * one screen in the portal whose entire purpose is sharing
+                  * from a phone. Below WCAG 2.2's 24×24 floor and nowhere near
+                  * the 44px touch guidance. The icon stays the same size; the
+                  * hit area is grown around it with negative margin so nothing
+                  * in the card layout shifts.
+                  *
+                  * WWL-206 — all eight links fell back to an identical
+                  * `title="Share on WhatsApp"`, so a screen-reader user heard
+                  * the same name eight times and could not tell which figure
+                  * each one shared. The label now names the card.
+                  */}
+                <a
+                  href={share(c)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="-m-2 inline-flex size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-emerald-50 hover:text-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-emerald-950"
+                  aria-label={`Share ${c.labelUr} on WhatsApp`}
+                  title={`Share ${c.labelUr} on WhatsApp`}
+                >
                   <MessageCircle className="size-3.5" />
                 </a>
               </div>

@@ -12,6 +12,7 @@ import { InventoryAPI, type InventoryItem } from "@/lib/api/inventory"
 import { BusinessesAPI } from "@/lib/api/dashboard"
 import { InventoryFormDialog } from "@/components/dashboard/mainScreens/inventory/redesigned/inventory-form-dialog"
 import { InventoryMovementDialog } from "@/components/dashboard/mainScreens/inventory/redesigned/inventory-movement-dialog"
+import { InventoryHistoryDialog } from "@/components/dashboard/mainScreens/inventory/redesigned/inventory-history-dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
@@ -44,6 +45,8 @@ export function InventoryRedesignedView() {
   const [editing, setEditing] = React.useState<InventoryItem | undefined>(undefined)
   const [deleting, setDeleting] = React.useState<InventoryItem | null>(null)
   const [moving, setMoving] = React.useState<InventoryItem | undefined>(undefined)
+  // WWL-248 — the read side of the audit trail, reachable from any row.
+  const [history, setHistory] = React.useState<InventoryItem | undefined>(undefined)
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["inventory-redesigned"],
@@ -52,7 +55,12 @@ export function InventoryRedesignedView() {
   const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
   const businessId = businesses?.[0]?.id
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["inventory-redesigned"] })
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["inventory-redesigned"] })
+    // WWL-248 — a movement that just landed must appear in the history the
+    // vendor opens next, not the version cached before they recorded it.
+    qc.invalidateQueries({ queryKey: ["inventory-movements"] })
+  }
   const openCreate = () => { setEditing(undefined); setDialogOpen(true) }
   const openEdit = (i: InventoryItem) => { setEditing(i); setDialogOpen(true) }
   const removeMut = useMutation({
@@ -90,8 +98,9 @@ export function InventoryRedesignedView() {
       key: "actions", header: "", align: "right",
       render: (i) => (
         <div className="flex items-center justify-end gap-0.5">
-          <Button size="sm" variant="ghost" onClick={() => setMoving(i)} aria-label="Adjust stock"><Icon name="RefreshCw" size={14} /></Button>
-          <Button size="sm" variant="ghost" onClick={() => openEdit(i)} aria-label="Edit item"><Icon name="Pencil" size={14} /></Button>
+          <Button size="sm" variant="ghost" onClick={() => setHistory(i)} aria-label={`Stock history for ${i.name}`}><Icon name="Clock" size={14} /></Button>
+          <Button size="sm" variant="ghost" onClick={() => setMoving(i)} aria-label={`Adjust stock for ${i.name}`}><Icon name="RefreshCw" size={14} /></Button>
+          <Button size="sm" variant="ghost" onClick={() => openEdit(i)} aria-label={`Edit ${i.name}`}><Icon name="Pencil" size={14} /></Button>
           <Button size="sm" variant="ghost" onClick={() => setDeleting(i)} aria-label="Remove item"><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
         </div>
       ),
@@ -180,6 +189,9 @@ export function InventoryRedesignedView() {
                 <Button size="sm" variant="outline" className="h-9 flex-1 min-w-[5rem]" onClick={() => openEdit(i)}>
                   <Icon name="Pencil" size={14} className="mr-1.5" /> Edit
                 </Button>
+                <Button size="sm" variant="ghost" className="h-9 w-9 shrink-0 p-0" onClick={() => setHistory(i)} aria-label={`Stock history for ${i.name}`}>
+                  <Icon name="Clock" size={15} className="text-muted-foreground" />
+                </Button>
                 <Button size="sm" variant="ghost" className="h-9 w-9 shrink-0 p-0" onClick={() => setDeleting(i)} aria-label={`Remove ${i.name}`}>
                   <Icon name="Trash2" size={15} className="text-muted-foreground" />
                 </Button>
@@ -191,6 +203,7 @@ export function InventoryRedesignedView() {
 
       <InventoryFormDialog open={dialogOpen} onOpenChange={setDialogOpen} item={editing} businessId={businessId} onSaved={invalidate} />
       <InventoryMovementDialog open={!!moving} onOpenChange={(v) => !v && setMoving(undefined)} item={moving} onSaved={invalidate} />
+      <InventoryHistoryDialog open={!!history} onOpenChange={(v) => !v && setHistory(undefined)} item={history} />
 
       <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
         <AlertDialogContent>
