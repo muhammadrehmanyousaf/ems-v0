@@ -29,4 +29,10 @@
 // NEXT_PUBLIC_* vars are inlined by Next at build time, so each must be a full
 // static process.env access — no dynamic key lookups.
 export const PK_PAYMENTS_ENABLED = process.env.NEXT_PUBLIC_FEAT_PK_PAYMENTS === "true"
-export const PHONE_OTP_ENABLED = process.env.NEXT_PUBLIC_FEAT_PHONE_OTP === "true"
+
+// PHONE_OTP_ENABLED (NEXT_PUBLIC_FEAT_PHONE_OTP) deleted — one fewer flag.
+// Whether phone sign-in works is a fact about whether an SMS gateway exists,
+// not a per-deploy preference, and as an env var production was pointed at a
+// door with nothing behind it: "Send code" answered "OTP delivery is not
+// configured". The single consumer (components/login-form.tsx) now states the
+// availability plainly in one place, next to the flow it governs.

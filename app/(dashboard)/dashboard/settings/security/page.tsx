@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { VerificationBadge, TwoFactorBadge } from "@/components/ui/verification-badge"
 import { EmailVerifyModal } from "@/components/auth/EmailVerifyModal"
 import { PhoneVerifyModal } from "@/components/auth/PhoneVerifyModal"
+import { PHONE_OTP_AVAILABLE } from "@/lib/auth/phone-otp"
 import { TwoFactorEnrolModal } from "@/components/auth/TwoFactorEnrolModal"
 import { TwoFactorDisableModal } from "@/components/auth/TwoFactorDisableModal"
 import { SessionList } from "@/components/auth/SessionList"
@@ -40,7 +41,9 @@ export default function SecuritySettingsPage() {
         <CardHeader>
           <CardTitle>Verification</CardTitle>
           <CardDescription>
-            Verifying your email and phone unlocks bookings, payouts, and trust badges.
+            {PHONE_OTP_AVAILABLE
+              ? "Verifying your email and phone unlocks bookings, payouts, and trust badges."
+              : "Verifying your email unlocks bookings, payouts, and trust badges."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -74,10 +77,21 @@ export default function SecuritySettingsPage() {
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <VerificationBadge verified={phoneVerified} label="Phone verified" />
+              {/* Offer Verify only when a code can actually be delivered. With
+                  no SMS gateway this button opened a modal that answered "OTP
+                  delivery is not configured" — the platform explaining its own
+                  missing infrastructure to a vendor who did nothing wrong. Say
+                  it is unavailable instead of pretending it is their move. */}
               {!phoneVerified && (
-                <Button size="sm" variant="outline" onClick={() => setPhoneOpen(true)}>
-                  Verify
-                </Button>
+                PHONE_OTP_AVAILABLE ? (
+                  <Button size="sm" variant="outline" onClick={() => setPhoneOpen(true)}>
+                    Verify
+                  </Button>
+                ) : (
+                  <span className="text-xs text-bridal-text-soft">
+                    Phone verification isn&apos;t available yet
+                  </span>
+                )
               )}
             </div>
           </div>
