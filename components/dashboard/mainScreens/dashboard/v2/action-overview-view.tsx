@@ -15,7 +15,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus, Wallet, CalendarClock, Inbox, ChevronRight } from "lucide-react";
 import { useActiveBusinessId } from "@/lib/store/active-business-store";
 import { getActionSummary } from "@/lib/api/bookingOrder";
-import { RemindersDueCard } from "@/components/bookings/reminders-due-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -149,7 +148,17 @@ export function ActionOverviewView() {
       )}
 
       {/* Phase-2 EPIC 8 — recovery reminders (self-hides when WHATSAPP_TIER1_ENABLED is off / 404). */}
-      <RemindersDueCard />
+      {/* RemindersDueCard removed from Home.
+          
+          Measured live: it listed the SAME ELEVEN customers already shown by
+          "Who to chase" above it — 1,070px on top of that list's 780px, on a
+          dashboard that was eight screens long. Two lists of the same people,
+          in two languages, a screen apart.
+
+          Nothing is lost. Its one unique capability — recording that a reminder
+          went out, and showing when it last did — moved INTO the chase rows in
+          today-board.tsx, so a vendor now rings, messages and notes it from a
+          single row instead of scrolling between two lists to do one job. */}
     </div>
   );
 }
