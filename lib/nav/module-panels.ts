@@ -285,7 +285,24 @@ export const NAV_MODULES: NavModule[] = [
       {
         label: "Records",
         items: [
-          { label: "Cheque ledger", href: "/dashboard/pdcs", icon: Wallet, i18nKey: "nav.cheque_ledger" },
+          /**
+           * Through the hub, like the other four money views.
+           *
+           * This pointed at `/dashboard/pdcs` while Payments, Receipts,
+           * Receivables and Expenses all went to `/dashboard/money?tab=…`. It
+           * did not matter while the money screen carried its own tab row —
+           * `?tab=cheques` was reachable from there. With that duplicate tab
+           * row removed, Cheques would have been the one money view the panel
+           * could not reach OR highlight: a vendor on `?tab=cheques` would see
+           * nothing lit in the panel, and clicking Cheque ledger would jump
+           * them out of the hub to a different URL rendering the same screen.
+           *
+           * `/dashboard/pdcs` still exists and still works — both routes mount
+           * the identical `PdcsRedesignedView`, verified — so every existing
+           * bookmark and deep link is unaffected. This only makes the panel
+           * consistent with itself.
+           */
+          { label: "Cheque ledger", href: "/dashboard/money?tab=cheques", icon: Wallet, i18nKey: "nav.cheque_ledger" },
           { label: "Tax report", href: "/dashboard/tax", icon: Receipt, i18nKey: "nav.tax" },
           { label: "Reports", href: "/dashboard/reports", icon: BarChart3, i18nKey: "nav.reports" },
         ],
