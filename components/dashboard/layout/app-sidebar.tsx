@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { Suspense } from "react"
-import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Wallet } from "lucide-react"
 
@@ -15,10 +14,6 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { data } from "./nav-data"
@@ -50,12 +45,7 @@ const TAB_LABELS: Record<SettingsTabKey, string> = {
   "type-specific": "Details",
 }
 
-const ROLE_LABEL: Record<DashboardRole, string> = {
-  superAdmin: "Super admin",
-  admin: "Admin",
-  vendor: "Vendor",
-  none: "Workspace",
-}
+// ROLE_LABEL moved to nav-user.tsx with the role line itself.
 
 // Items inside `adminPlatform` that are super-admin only.
 const SUPER_ONLY_PLATFORM = new Set(["Audit logs", "Roles", "Users"])
@@ -320,30 +310,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible="icon" className={railOffset} {...props}>
-      {/* Brand block — flat dark monogram + clean wordmark + role label. */}
-      <SidebarHeader className="border-b border-sidebar-border h-14 px-2">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild className="data-[state=open]:bg-sidebar-accent">
-              <Link href="/dashboard" className="flex items-center gap-2">
-                {/* Brand mark (lotus + W). SVG → crisp at the collapsed icon size. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/icon-mark.png" alt="Wedding Wala" className="size-8 shrink-0" />
-                <div className="grid flex-1 text-left leading-tight">
-                  <span className="text-[15px] font-semibold tracking-tight text-foreground">
-                    Wedding Wala
-                  </span>
-                  <span className="text-[11px] text-muted-foreground -mt-0.5">
-                    {ROLE_LABEL[role]}
-                  </span>
-                </div>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
+      {/* No brand block here.
 
-      <SidebarContent className="gap-0">
+          It held the mark, the wordmark and the role label — 56px at the top of
+          every module panel, on every screen, to repeat identity the rail states
+          permanently two inches to the left. It also pushed the module's own
+          navigation down, which on a short window put the last items below the
+          fold for no return.
+
+          The mark now lives in the rail (see module-rail.tsx). The role label
+          moved to the account menu in the footer, where "who am I signed in as"
+          already lives. The panel starts with the module's own content, which
+          is the only thing on this column that is actually about the module. */}
+      <SidebarContent className="gap-0 pt-2">
         {/* The business switcher used to sit here, vendor-only. It has moved to
             the rail: it scopes every module, so it belongs beside all of them
             rather than inside a panel whose contents change underneath it.
