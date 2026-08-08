@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { usePagedRows, PaginationBar } from "./pagination"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Spinner } from "@/components/dashboard/shared/icon"
 import { EmptyState, type EmptyStateProps } from "./empty-state"
@@ -98,7 +98,6 @@ export interface DataTableProps<T> {
   pageParam?: string
 }
 
-const PAGE_SIZES = [25, 50, 100]
 
 const alignCls = (a?: Column<any>["align"]) =>
   a === "right" ? "text-right" : a === "center" ? "text-center" : "text-left"
@@ -183,52 +182,10 @@ export function DataTable<T>({
   const sel = selectedIds ?? new Set<string>()
 
   // ── Paging ──────────────────────────────────────────────────────────
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-
-  const [size, setSize] = React.useState<number>(
-    typeof pageSize === "number" ? pageSize : 0,
-  )
-  const paging = pageSize !== false && size > 0
-  const total = data.length
-  const pageCount = paging ? Math.max(1, Math.ceil(total / size)) : 1
-
-  const urlPage = Number(searchParams?.get(pageParam) ?? 1)
-  // A page number out of range is not an error to shout about — clamp and show
-  // the nearest real page. It happens whenever a filter shrinks the list under
-  // someone standing on page 5.
-  const page = Math.min(Math.max(Number.isFinite(urlPage) ? urlPage : 1, 1), pageCount)
-
-  const setPage = React.useCallback(
-    (next: number) => {
-      const qs = new URLSearchParams(searchParams?.toString() ?? "")
-      if (next <= 1) qs.delete(pageParam)
-      else qs.set(pageParam, String(next))
-      const q = qs.toString()
-      router.replace(q ? `${pathname ?? ""}?${q}` : (pathname ?? ""), { scroll: false })
-    },
-    [router, pathname, searchParams, pageParam],
-  )
-
-  /**
-   * Filtering while standing on a later page used to leave a vendor looking at
-   * an empty table: three matches exist, they are on page 1, and the URL still
-   * says page 5. Drop back to the first page whenever the query changes.
-   */
-  const lastQuery = React.useRef(filterQuery)
-  React.useEffect(() => {
-    if (lastQuery.current === filterQuery) return
-    lastQuery.current = filterQuery
-    if (page !== 1) setPage(1)
-  }, [filterQuery, page, setPage])
-
-  const pageRows = React.useMemo(
-    () => (paging ? data.slice((page - 1) * size, page * size) : data),
-    [data, paging, page, size],
-  )
-  const firstShown = total === 0 ? 0 : (page - 1) * size + 1
-  const lastShown = paging ? Math.min(page * size, total) : total
+  // Shared with the card lists (holds, quotes) via the same hook, so a vendor
+  // does not have to learn paging twice in one product.
+  const paged = usePagedRows(data, { pageSize, pageParam, filterKey: filterQuery })
+  const { pageRows, total, page, pageCount } = paged
 
   // Select-all covers the rows a person can actually SEE. Selecting 3,331
   // invisible rows from a checkbox above 25 of them is a trap, not a shortcut —
@@ -468,7 +425,7 @@ export function DataTable<T>({
           <span className="font-medium text-foreground">{sel.size} selected</span>
           {/* The header checkbox takes the page. When there is more beyond it,
               say so and offer the whole set explicitly — never silently. */}
-          {paging && allSelected && pageCount > 1 && sel.size < total && (
+          {paged.showBar && allSelected && sel.size < total && (
             <button
               type="button"
               onClick={() => onSelectionChange?.(new Set(allIds))}
@@ -490,52 +447,7 @@ export function DataTable<T>({
       {body}
       {/* Hidden entirely on a single page — "1–5 of 5" beside a pair of dead
           arrows is furniture, not information. */}
-      {paging && total > 0 && pageCount > 1 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-sm">
-          {/* The range AND the total. A page number alone tells a vendor
-              nothing about how much is left. */}
-          <p className="text-muted-foreground tabular-nums">
-            Showing {firstShown.toLocaleString("en-PK")}–{lastShown.toLocaleString("en-PK")} of{" "}
-            <span className="font-medium text-foreground">{total.toLocaleString("en-PK")}</span>
-          </p>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-1.5 text-muted-foreground">
-              <span className="sr-only sm:not-sr-only">Rows</span>
-              <select
-                value={size}
-                onChange={(e) => { setSize(Number(e.target.value)); setPage(1) }}
-                className="h-8 rounded-md border border-input bg-background px-1.5 text-sm outline-none ring-ring focus-visible:ring-2"
-                aria-label="Rows per page"
-              >
-                {PAGE_SIZES.map((n) => <option key={n} value={n}>{n}</option>)}
-              </select>
-            </label>
-
-            <div className="flex items-center gap-1">
-              <Button
-                size="sm" variant="outline" className="h-8 px-2"
-                disabled={page <= 1}
-                onClick={() => setPage(page - 1)}
-                aria-label="Previous page"
-              >
-                <Icon name="ChevronLeft" size={15} />
-              </Button>
-              <span className="px-1 text-muted-foreground tabular-nums" aria-live="polite">
-                Page {page} of {pageCount}
-              </span>
-              <Button
-                size="sm" variant="outline" className="h-8 px-2"
-                disabled={page >= pageCount}
-                onClick={() => setPage(page + 1)}
-                aria-label="Next page"
-              >
-                <Icon name="ChevronRight" size={15} />
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <PaginationBar p={paged} />
       {loading && data.length > 0 && (
         <div className="flex items-center justify-center gap-2 border-t border-border py-2 text-xs text-muted-foreground">
           <Spinner size={12} /> Loading…
