@@ -340,7 +340,23 @@ export function DataTable<T>({
                 table with 0 of N `<th>` carrying `scope` and no `<caption>`.
                 Fixed once, here, so no screen can regress it individually. */}
             {caption && <caption className="sr-only">{caption}</caption>}
-            <thead>
+            {/* Sticky column headers.
+                
+                Measured on production: /dashboard/leads is 4,514px of table on a
+                674px window, and `thead` computed to `position: static` — so a
+                vendor six screens down a ledger is reading a grid of numbers
+                with no idea which column is which, and has to scroll back up to
+                find out.
+
+                This is only possible now that the shell owns the scrolling: the
+                content region is the scroll container, so `sticky top-0` parks
+                the header row at the top of that region, just under the fixed
+                top bar. While the PAGE was the scroller there was nothing to
+                stick to.
+
+                `bg-card` is required, not decorative — a transparent sticky row
+                lets the data scroll visibly through the header text. */}
+            <thead className="sticky top-0 z-10 bg-card">
               <tr className="border-b border-border">
                 {selectable && (
                   <th scope="col" className="w-10 px-4 py-2.5">
