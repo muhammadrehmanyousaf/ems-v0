@@ -249,7 +249,20 @@ export function ReceivablesRedesignedView() {
             })}
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          {/* One row of chips, not five stacked cards.
+              
+              Measured on production: this section was 165px tall on a 732px
+              window, sitting between the KPI cards and the ledger — so the
+              first row of "who owes me", the daily question this screen exists
+              for, began at y=696 and showed a 36px sliver.
+
+              The bands are NOT decoration: each one filters the table, so this
+              is the screen's main segmentation control and hiding it would cost
+              more than it saves. Compressed instead. The colour dot, the label
+              and the amount are what a vendor reads; the customer/installment
+              split moves to the title attribute and to the row itself, which is
+              where they are going next anyway. ~165px -> ~44px. */}
+          <div className="flex flex-wrap gap-1.5">
             {BUCKET_ORDER.map((k) => {
               const b = data.buckets[k]
               // `installments` / `customers` are the explicit keys; `count` is
@@ -263,16 +276,13 @@ export function ReceivablesRedesignedView() {
                   type="button"
                   aria-pressed={active}
                   onClick={() => setBucketFilter(active ? null : k)}
-                  className={`rounded-lg border p-2.5 text-left transition-colors ${active ? "border-foreground/40 bg-muted" : "hover:bg-muted/60"} ${people === 0 ? "opacity-60" : ""}`}
+                  title={`${bucketLabel(k)} — ${people} ${people === 1 ? "customer" : "customers"}, ${inst} ${inst === 1 ? "installment" : "installments"}`}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${active ? "border-foreground/40 bg-muted font-medium" : "hover:bg-muted/60"} ${people === 0 ? "opacity-60" : ""}`}
                 >
-                  <div className="flex items-center gap-1.5">
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${BUCKET_BAR[k]}`} />
-                    <span className="truncate text-xs font-medium">{bucketLabel(k)}</span>
-                  </div>
-                  <div className="mt-1 tabular-nums text-sm font-semibold">{formatPkr(num(b?.total))}</div>
-                  <div className="text-[11px] text-muted-foreground">
-                    {people} {people === 1 ? "customer" : "customers"} · {inst} {inst === 1 ? "installment" : "installments"}
-                  </div>
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${BUCKET_BAR[k]}`} />
+                  <span>{bucketLabel(k)}</span>
+                  <span className="tabular-nums font-semibold">{formatPkr(num(b?.total))}</span>
+                  <span className="text-muted-foreground">· {people}</span>
                 </button>
               )
             })}
