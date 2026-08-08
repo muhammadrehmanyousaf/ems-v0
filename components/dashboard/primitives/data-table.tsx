@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Spinner } from "@/components/dashboard/shared/icon"
@@ -79,7 +80,25 @@ export interface DataTableProps<T> {
    * text content, then to the row id.
    */
   getRowLabel?: (row: T) => string
+  /**
+   * Rows per page. `false` renders everything — only correct for a list with a
+   * hard, small ceiling (a vendor's own venues, the 8 growth-checklist steps).
+   *
+   * Every screen used to render every row it was handed, because this primitive
+   * had no page state at all: 31 screens, one of them the admin directory at
+   * 3,331 businesses. NN/g is explicit that endless lists fail exactly the task
+   * this product is for — finding a specific record and RE-finding it later,
+   * which needs page landmarks to be possible at all.
+   */
+  pageSize?: number | false
+  /**
+   * URL parameter carrying the page number, so a page survives a reload and can
+   * be sent to an accountant. Give two tables on one screen different names.
+   */
+  pageParam?: string
 }
+
+const PAGE_SIZES = [25, 50, 100]
 
 const alignCls = (a?: Column<any>["align"]) =>
   a === "right" ? "text-right" : a === "center" ? "text-center" : "text-left"
@@ -156,16 +175,79 @@ export function DataTable<T>({
   getRowLabel,
   filterQuery,
   onClearFilter,
+  pageSize = 25,
+  pageParam = "page",
 }: DataTableProps<T>) {
   const density = useUiStore((s) => s.density)
   const rowPad = density === "compact" ? "py-2" : "py-3"
   const sel = selectedIds ?? new Set<string>()
-  const allIds = React.useMemo(() => data.map(getRowId), [data, getRowId])
-  const allSelected = data.length > 0 && allIds.every((id) => sel.has(id))
-  const someSelected = allIds.some((id) => sel.has(id)) && !allSelected
 
-  const toggleAll = () =>
-    onSelectionChange?.(allSelected ? new Set() : new Set(allIds))
+  // ── Paging ──────────────────────────────────────────────────────────
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  const [size, setSize] = React.useState<number>(
+    typeof pageSize === "number" ? pageSize : 0,
+  )
+  const paging = pageSize !== false && size > 0
+  const total = data.length
+  const pageCount = paging ? Math.max(1, Math.ceil(total / size)) : 1
+
+  const urlPage = Number(searchParams?.get(pageParam) ?? 1)
+  // A page number out of range is not an error to shout about — clamp and show
+  // the nearest real page. It happens whenever a filter shrinks the list under
+  // someone standing on page 5.
+  const page = Math.min(Math.max(Number.isFinite(urlPage) ? urlPage : 1, 1), pageCount)
+
+  const setPage = React.useCallback(
+    (next: number) => {
+      const qs = new URLSearchParams(searchParams?.toString() ?? "")
+      if (next <= 1) qs.delete(pageParam)
+      else qs.set(pageParam, String(next))
+      const q = qs.toString()
+      router.replace(q ? `${pathname ?? ""}?${q}` : (pathname ?? ""), { scroll: false })
+    },
+    [router, pathname, searchParams, pageParam],
+  )
+
+  /**
+   * Filtering while standing on a later page used to leave a vendor looking at
+   * an empty table: three matches exist, they are on page 1, and the URL still
+   * says page 5. Drop back to the first page whenever the query changes.
+   */
+  const lastQuery = React.useRef(filterQuery)
+  React.useEffect(() => {
+    if (lastQuery.current === filterQuery) return
+    lastQuery.current = filterQuery
+    if (page !== 1) setPage(1)
+  }, [filterQuery, page, setPage])
+
+  const pageRows = React.useMemo(
+    () => (paging ? data.slice((page - 1) * size, page * size) : data),
+    [data, paging, page, size],
+  )
+  const firstShown = total === 0 ? 0 : (page - 1) * size + 1
+  const lastShown = paging ? Math.min(page * size, total) : total
+
+  // Select-all covers the rows a person can actually SEE. Selecting 3,331
+  // invisible rows from a checkbox above 25 of them is a trap, not a shortcut —
+  // so the header box takes the page, and the bulk bar offers the whole set
+  // explicitly when there is more than one page.
+  const pageIds = React.useMemo(() => pageRows.map(getRowId), [pageRows, getRowId])
+  const allIds = React.useMemo(() => data.map(getRowId), [data, getRowId])
+  const allSelected = pageRows.length > 0 && pageIds.every((id) => sel.has(id))
+  const someSelected = pageIds.some((id) => sel.has(id)) && !allSelected
+
+  const toggleAll = () => {
+    if (allSelected) {
+      const next = new Set(sel)
+      pageIds.forEach((id) => next.delete(id))
+      onSelectionChange?.(next)
+    } else {
+      onSelectionChange?.(new Set([...Array.from(sel), ...pageIds]))
+    }
+  }
   /**
    * Best-effort human name for a row, for the checkbox's accessible name.
    * Prefers an explicit `getRowLabel`, then the first column that renders a
@@ -264,7 +346,7 @@ export function DataTable<T>({
                   <th scope="col" className="w-10 px-4 py-2.5">
                     <input
                       type="checkbox"
-                      aria-label={caption ? `Select all ${data.length} rows of ${caption}` : "Select all rows"}
+                      aria-label={caption ? `Select the ${pageRows.length} rows shown of ${caption}` : "Select the rows shown"}
                       checked={allSelected}
                       ref={(el) => {
                         if (el) el.indeterminate = someSelected
@@ -290,7 +372,7 @@ export function DataTable<T>({
               </tr>
             </thead>
             <tbody>
-              {data.map((row, i) => {
+              {pageRows.map((row, i) => {
                 const id = getRowId(row)
                 return (
                   <tr
@@ -341,7 +423,7 @@ export function DataTable<T>({
             bug, so density now applies to the card list too — the setting means
             the same thing on a phone as on a desktop. */}
         <div className={cn("p-3 md:hidden", density === "compact" ? "space-y-1.5" : "space-y-2")}>
-          {data.map((row, i) => (
+          {pageRows.map((row, i) => (
             <div
               key={getRowId(row)}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
@@ -368,6 +450,17 @@ export function DataTable<T>({
       {selectable && sel.size > 0 && (
         <div className="flex flex-wrap items-center gap-2 border-b border-border bg-primary/5 px-4 py-2 text-sm">
           <span className="font-medium text-foreground">{sel.size} selected</span>
+          {/* The header checkbox takes the page. When there is more beyond it,
+              say so and offer the whole set explicitly — never silently. */}
+          {paging && allSelected && pageCount > 1 && sel.size < total && (
+            <button
+              type="button"
+              onClick={() => onSelectionChange?.(new Set(allIds))}
+              className="font-medium text-primary hover:underline"
+            >
+              Select all {total.toLocaleString("en-PK")}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => onSelectionChange?.(new Set())}
@@ -379,6 +472,54 @@ export function DataTable<T>({
         </div>
       )}
       {body}
+      {/* Hidden entirely on a single page — "1–5 of 5" beside a pair of dead
+          arrows is furniture, not information. */}
+      {paging && total > 0 && pageCount > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-sm">
+          {/* The range AND the total. A page number alone tells a vendor
+              nothing about how much is left. */}
+          <p className="text-muted-foreground tabular-nums">
+            Showing {firstShown.toLocaleString("en-PK")}–{lastShown.toLocaleString("en-PK")} of{" "}
+            <span className="font-medium text-foreground">{total.toLocaleString("en-PK")}</span>
+          </p>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-1.5 text-muted-foreground">
+              <span className="sr-only sm:not-sr-only">Rows</span>
+              <select
+                value={size}
+                onChange={(e) => { setSize(Number(e.target.value)); setPage(1) }}
+                className="h-8 rounded-md border border-input bg-background px-1.5 text-sm outline-none ring-ring focus-visible:ring-2"
+                aria-label="Rows per page"
+              >
+                {PAGE_SIZES.map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </label>
+
+            <div className="flex items-center gap-1">
+              <Button
+                size="sm" variant="outline" className="h-8 px-2"
+                disabled={page <= 1}
+                onClick={() => setPage(page - 1)}
+                aria-label="Previous page"
+              >
+                <Icon name="ChevronLeft" size={15} />
+              </Button>
+              <span className="px-1 text-muted-foreground tabular-nums" aria-live="polite">
+                Page {page} of {pageCount}
+              </span>
+              <Button
+                size="sm" variant="outline" className="h-8 px-2"
+                disabled={page >= pageCount}
+                onClick={() => setPage(page + 1)}
+                aria-label="Next page"
+              >
+                <Icon name="ChevronRight" size={15} />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       {loading && data.length > 0 && (
         <div className="flex items-center justify-center gap-2 border-t border-border py-2 text-xs text-muted-foreground">
           <Spinner size={12} /> Loading…
