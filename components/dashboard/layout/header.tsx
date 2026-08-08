@@ -10,7 +10,20 @@ import { CommandTrigger } from "./command-trigger"
 
 const Header = () => {
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    // Fixed furniture, not a sticky element. The shell is one viewport tall and
+    // only the content region below scrolls, so this is simply the first row of
+    // a fixed-height column — it cannot scroll away because nothing around it
+    // moves. `shrink-0` keeps it at 56px when the content region is full.
+    //
+    // It was `sticky top-0` before and still left the screen: `overflow-x-hidden`
+    // on the parent made that parent a scroll container, and sticky is confined
+    // to its nearest scroll-container ancestor. Removing the stickiness is the
+    // fix, not a workaround — this is what it was trying to approximate.
+    //
+    // Opaque, not translucent. A backdrop-blur bar over a scrolling region shows
+    // rows sliding underneath it, which reads as a rendering fault rather than a
+    // material.
+    <header className="z-30 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border bg-background">
       {/* `min-w-0` + `overflow-hidden` let the breadcrumb yield space on narrow
           screens. Without it this group refused to shrink, pushed the right-hand
           cluster past the viewport, and — because the page has no horizontal
