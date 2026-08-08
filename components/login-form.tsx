@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { PHONE_OTP_AVAILABLE } from "@/lib/auth/phone-otp"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -15,7 +16,6 @@ import { toast } from "./ui/use-toast"
 import { useUser } from "@/context/UserContext"
 import { loginErrorMessage, loginErrorCode, requestPhoneOtp, verifyPhoneOtp } from "@/lib/api/auth"
 // FEAT_PHONE_OTP — additional phone+OTP sign-in path (email/password unchanged).
-import { PHONE_OTP_ENABLED } from "@/lib/payment-flags"
 import { safeRedirect } from "@/lib/auth/safe-redirect"
 
 import { BridalButton } from "@/components/bridal/bridal-button"
@@ -423,7 +423,7 @@ export function LoginForm() {
         </div>
       )}
 
-      {PHONE_OTP_ENABLED && (
+      {PHONE_OTP_AVAILABLE && (
         <div className="mt-5 text-center">
           <button
             type="button"
