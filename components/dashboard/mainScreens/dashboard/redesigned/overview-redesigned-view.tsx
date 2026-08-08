@@ -187,9 +187,6 @@ function VendorOverviewRedesignedView() {
           never see it. */}
       <FamiliarityPrompt />
 
-      {/* Phase-1 EPIC 5 — action-first "Ghar" panel above the KPI tiles (pilot; self-hides on 404). */}
-      {<ActionOverviewView />}
-
       {/* WWL-018 — with the money endpoints failing, this page rendered
           "Rs 0 collected · Rs 0 owed · 0 events" with full confidence: no error
           message anywhere, no retry affordance, and Rs 0 collected even carried
@@ -221,6 +218,24 @@ function VendorOverviewRedesignedView() {
       {/* What needs you today — upcoming events + who to chase (flag-free, off
           the booking list). KPI row hidden here; the tiles above already cover it. */}
       <TodayBoard hideKpis />
+
+      {/* The "Ghar" action panel used to sit ABOVE the KPI tiles.
+          
+          Measured on production at 1536x864: it is 1,488px tall — more than two
+          full screens — so a vendor opening their dashboard scrolled past two
+          screens of Baqaya chasing before reaching the five numbers the screen
+          exists to show. The whole page is 5,403px, eight screens.
+
+          A dashboard's job is an at-a-glance answer. Stripe puts four KPI cards
+          above the fold with nothing competing; Linear answers its lead question
+          in a single header. The ordering here inverted that: the deepest,
+          longest analysis first, the summary underneath it.
+
+          Nothing is removed — the panel is intact and one scroll away. It now
+          sits after the tiles and after "what needs me today", which is the
+          order a vendor actually asks the questions in: how am I doing, what
+          needs me now, then who do I chase. */}
+      {<ActionOverviewView />}
 
       {/* Per-hall performance — the owner's "which hall wins?" league table.
           Only shown for multi-venue owners; single-hall vendors don't need it. */}
@@ -304,9 +319,36 @@ function VendorOverviewRedesignedView() {
         />
       </div>
 
-      {/* Per-shaadi profit — revenue vs received vs spent vs net. Keeps its KPIs;
-          they add profit + margin that the tiles above don't show. */}
-      <EventProfitBoard />
+      {/* Per-shaadi profit — revenue vs received vs spent vs net.
+          
+          1,639px on production, the single largest block on the page, sitting
+          at the very bottom of an 8-screen dashboard where almost nobody
+          reaches it. It is genuinely valuable — profit and margin are the one
+          thing the tiles above cannot tell you — but "did each wedding make
+          money" is a question a vendor asks at the end of a month, not at 9am
+          with a marquee to run.
+
+          Behind a disclosure rather than deleted or moved: open it and the full
+          board is exactly as it was, and the browser remembers nothing to
+          re-learn. Closed, the page stops spending a fifth of its height on a
+          monthly question. Reports is where this ultimately belongs; moving it
+          is a routing decision, so it is one summary line here for now. */}
+      <details className="group rounded-xl border border-border bg-card">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium">
+          <Icon
+            name="ChevronRight"
+            size={16}
+            className="shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
+          />
+          Did each shaadi make money?
+          <span className="font-normal text-muted-foreground">
+            · revenue, spend and margin per event
+          </span>
+        </summary>
+        <div className="border-t border-border p-4">
+          <EventProfitBoard />
+        </div>
+      </details>
     </div>
   )
 }

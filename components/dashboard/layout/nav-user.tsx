@@ -27,6 +27,14 @@ import {
 } from "@/components/ui/sidebar"
 import { useUser } from "@/context/UserContext"
 import { useRouter } from "next/navigation"
+import { getDashboardRole, type DashboardRole } from "@/lib/dashboard-role"
+
+const ROLE_LABEL: Record<DashboardRole, string> = {
+  superAdmin: "Super admin",
+  admin: "Admin",
+  vendor: "Vendor",
+  none: "Workspace",
+}
 
 export function NavUser() {
   const { isMobile } = useSidebar()
@@ -79,6 +87,14 @@ export function NavUser() {
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{displayName}</span>
                   <span className="truncate text-xs">{displayEmail}</span>
+                  {/* The role moved here from the sidebar's brand block, which
+                      was removed. It matters most for a super-admin, who needs
+                      to know which set of powers they are holding — and this is
+                      where "who am I signed in as" already lives, so it is one
+                      answer in one place rather than two. */}
+                  <span className="truncate text-[11px] text-muted-foreground">
+                    {ROLE_LABEL[getDashboardRole(user)]}
+                  </span>
                 </div>
               </div>
             </DropdownMenuLabel>

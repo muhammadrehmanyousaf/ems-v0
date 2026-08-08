@@ -27,14 +27,13 @@
  */
 
 import * as React from "react"
-import { useSearchParams, useRouter, usePathname } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { ReceivablesRedesignedView } from "@/components/dashboard/mainScreens/receivables/redesigned/receivables-redesigned-view"
 import { PaymentsRedesignedView } from "@/components/dashboard/mainScreens/payments/redesigned/payments-redesigned-view"
 import { ReceiptsRedesignedView } from "@/components/dashboard/mainScreens/receipts/redesigned/receipts-redesigned-view"
 import { PdcsRedesignedView } from "@/components/dashboard/mainScreens/pdcs/redesigned/pdcs-redesigned-view"
 import { ExpensesRedesignedView } from "@/components/dashboard/mainScreens/expenses/redesigned/expenses-redesigned-view"
 import { useNavPersona } from "@/lib/nav/nav-persona"
-import { cn } from "@/lib/utils"
 
 type TabKey = "receivables" | "payments" | "receipts" | "cheques" | "expenses"
 
@@ -54,52 +53,36 @@ const TABS: Array<{ key: TabKey; simple: string; pro: string; hint: string }> = 
 
 export function MoneyHubView() {
   const search = useSearchParams()
-  const router = useRouter()
-  const pathname = usePathname()
   const { persona } = useNavPersona()
 
   const raw = search?.get("tab")
   const active: TabKey = TABS.some((t) => t.key === raw) ? (raw as TabKey) : "receivables"
 
-  // Tab lives in the URL so a vendor can bookmark "Money → Cheques", refresh
-  // without losing their place, and send the link to their accountant.
-  const setTab = (key: TabKey) => {
-    const params = new URLSearchParams(search?.toString() ?? "")
-    params.set("tab", key)
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-  }
 
   return (
     <div className="space-y-4">
-      <div
-        role="tablist"
-        aria-label="Money"
-        className="flex flex-wrap gap-1 border-b border-border px-4 pt-4 md:px-6"
-      >
-        {TABS.map((t) => {
-          const isActive = t.key === active
-          return (
-            <button
-              key={t.key}
-              role="tab"
-              type="button"
-              aria-selected={isActive}
-              onClick={() => setTab(t.key)}
-              className={cn(
-                "-mb-px rounded-t-md border-b-2 px-3 py-2 text-left transition-colors",
-                isActive
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <span className="block text-sm font-medium">
-                {persona === "professional" ? t.pro : t.simple}
-              </span>
-              <span className="block text-[11px] text-muted-foreground">{t.hint}</span>
-            </button>
-          )
-        })}
-      </div>
+      {/* The tab row that used to be here is gone.
+          
+          Measured on production at 1538x732: it was 70px tall with a 40px gap
+          under it, and it listed Receivables / Payments / Receipts / Cheques /
+          Expenses — the SAME five destinations, in the same order, that the
+          module panel two inches to its left was already showing under MONEY IN
+          / MONEY OUT / RECORDS. Two navigations for one set of screens, one of
+          them charging 110px of the content area for the privilege.
+
+          The panel wins on every count: it is always on screen, it groups the
+          five semantically instead of listing them flat, and it costs the
+          content area nothing. NN/g's rule against tabs is about hiding content
+          behind a toggle when the grouping is not real; here the grouping is
+          real and the panel already expresses it.
+
+          `?tab=` is UNCHANGED and still the source of truth, so every bookmark,
+          every link sent to an accountant, and every panel row keeps working.
+          Only the duplicate control is gone.
+
+          On this screen that moved the first row of the receivables ledger from
+          y=696 (a 36px sliver on a 732px window) up by 110px, before the header
+          and aging changes below. */}
 
       {/* The existing screens, untouched. Only one mounts at a time, so this
           costs no more to render than the single page it replaces. */}

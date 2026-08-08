@@ -11,6 +11,7 @@ import { useUser } from "@/context/UserContext"
 import { Button } from "@/components/ui/button"
 import { EmailVerifyModal } from "./EmailVerifyModal"
 import { PhoneVerifyModal } from "./PhoneVerifyModal"
+import { PHONE_OTP_AVAILABLE } from "@/lib/auth/phone-otp"
 
 export function VerificationBanner() {
   const { flags } = useUser()
@@ -19,7 +20,11 @@ export function VerificationBanner() {
 
   if (!flags) return null
   const needsEmail = !flags.emailVerified
-  const needsPhone = !flags.phoneVerified
+  // Phone verification is only "needed" if it is possible. Without an SMS
+  // gateway this banner told every vendor, on every screen, that their bookings
+  // were locked behind a step the platform cannot deliver — and the button
+  // under it answered "OTP delivery is not configured".
+  const needsPhone = !flags.phoneVerified && PHONE_OTP_AVAILABLE
   if (!needsEmail && !needsPhone) return null
 
   return (
