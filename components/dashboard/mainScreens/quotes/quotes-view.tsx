@@ -10,6 +10,7 @@
  */
 
 import * as React from "react"
+import { usePagedRows, PaginationBar } from "@/components/dashboard/primitives/pagination"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { QuotesAPI, isMyTurn, hasStandingOffer, formatPkr, type Quote } from "@/lib/api/quotes"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
@@ -82,6 +83,14 @@ export function QuotesView() {
 
   const list = quotes ?? []
 
+  /**
+   * Quote requests grow for the life of the business and this list had no
+   * ceiling — `list.map(...)` straight over everything the API returned. Card
+   * lists inherited nothing when paging went into DataTable, so they use the
+   * same hook directly and behave identically.
+   */
+  const paged = usePagedRows(list, { pageSize: 25 })
+
   return (
     <div className="space-y-6 p-4 md:p-6 max-w-3xl mx-auto">
       <PageHeader
@@ -107,7 +116,7 @@ export function QuotesView() {
         </div>
       ) : (
         <ul className="space-y-3">
-          {list.map((q) => {
+          {paged.pageRows.map((q) => {
             const myTurn = isMyTurn(q, "vendor")
             const terminal = q.status === "accepted" || q.status === "declined"
             const customerName = q.customer?.fullName || "Customer"
@@ -199,6 +208,7 @@ export function QuotesView() {
           })}
         </ul>
       )}
+      <PaginationBar p={paged} />
 
       <NegotiateDialog
         open={priceFor != null}

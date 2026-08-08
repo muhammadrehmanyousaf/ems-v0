@@ -13,7 +13,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getDueReminders, logReminder } from "@/lib/api/bookingOrder";
 import { useVendorBookings, bookingVenue, type VendorBookingLite } from "@/hooks/use-vendor-bookings";
 import { useUser } from "@/context/UserContext";
 import { BlockedDatesAPI } from "@/lib/api/dashboard";
@@ -93,12 +94,58 @@ const isCommitted = (status?: string | null) => COMMITTED.has((status || "").tri
  * owner to copy a name into the bookings screen, search it, open the booking and
  * find the number. Both are plain links: WhatsApp opens composed, it never sends.
  */
+/**
+ * Measured on live production: the Home dashboard listed THE SAME ELEVEN
+ * customers twice — "Who to chase" (780px) and, further down inside the Baqaya
+ * panel, "Aaj kis ko yaad dilana hai" (1,070px). 1,850px of an already
+ * eight-screen page spent showing eleven people two ways.
+ *
+ * They were not identical in function, which is why one could not simply be
+ * deleted: this list had Call and WhatsApp, the other RECORDED that a reminder
+ * was sent (`logReminder`) and showed the date it last went out — the thing
+ * that stops a vendor chasing the same family twice in a week.
+ *
+ * So the capability moves here rather than dying with the duplicate. One row,
+ * three jobs: ring them, message them, and note that you did.
+ */
 function ChaseActions({ row }: { row: Row }): React.ReactElement | null {
+  const qc = useQueryClient();
+  const { data: due } = useQuery({
+    queryKey: ["reminders-due"],
+    queryFn: getDueReminders,
+    staleTime: 60_000,
+  });
+  const [justSent, setJustSent] = React.useState(false);
+  const reminder = due?.reminders?.find((r) => r.bookingId === row.id);
+  const logMut = useMutation({
+    mutationFn: () =>
+      logReminder(row.id, { trigger: reminder?.trigger, channel: "whatsapp", body: reminder?.message }),
+    onSuccess: () => {
+      setJustSent(true);
+      qc.invalidateQueries({ queryKey: ["reminders-due"] });
+    },
+  });
+
   const phone = (row.customerPhone || "").trim();
   if (!phone) return null;
   const msg = `Assalam-o-Alaikum ${row.customerName || ""}. Aap ki booking ${fmtDate(row.bookingDate)} ki hai. Baqaya ${formatPkr(row.outstanding)} function se pehle jama karwa dein. Shukriya.`;
+  const lastSent = justSent ? "just now" : reminder?.lastRemindedAt ? fmtDate(reminder.lastRemindedAt) : null;
   return (
     <span className="flex shrink-0 items-center gap-0.5">
+      {/* Only offered where the reminder engine actually knows this booking —
+          a button that silently no-ops is worse than no button. */}
+      {reminder && (
+        <button
+          type="button"
+          onClick={() => logMut.mutate()}
+          disabled={logMut.isPending}
+          aria-label={`Note that you reminded ${row.customerName || `booking ${row.id}`}`}
+          title={lastSent ? `Last reminded ${lastSent}` : "Note that you have reminded them"}
+          className="grid h-9 w-9 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+        >
+          <Icon name={lastSent ? "CheckCircle2" : "Clock"} size={15} className={lastSent ? "text-emerald-600" : undefined} />
+        </button>
+      )}
       <a
         href={`tel:${phone}`}
         aria-label={`Call ${row.customerName || `booking ${row.id}`}`}

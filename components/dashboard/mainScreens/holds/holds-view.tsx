@@ -10,6 +10,7 @@
  */
 
 import * as React from "react"
+import { usePagedRows, PaginationBar } from "@/components/dashboard/primitives/pagination"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { VendorHoldsAPI, type VendorHold } from "@/lib/api/vendorHolds"
@@ -56,6 +57,14 @@ export function HoldsView() {
 
   const list = holds ?? []
 
+  /**
+   * Holds grow for the life of the business and this list had no
+   * ceiling — `list.map(...)` straight over everything the API returned. Card
+   * lists inherited nothing when paging went into DataTable, so they use the
+   * same hook directly and behave identically.
+   */
+  const paged = usePagedRows(list, { pageSize: 25 })
+
   return (
     <div className="space-y-6 p-4 md:p-6 max-w-3xl mx-auto">
       <PageHeader
@@ -99,7 +108,7 @@ export function HoldsView() {
         </div>
       ) : (
         <ul className="space-y-2">
-          {list.map((h) => (
+          {paged.pageRows.map((h) => (
             <li key={h.id} className="flex items-center justify-between gap-3 rounded-lg border bg-card px-4 py-3">
               <div className="min-w-0">
                 <div className="font-medium">{fmtDate(h.holdDate)} · {h.holdTime}</div>
@@ -122,6 +131,7 @@ export function HoldsView() {
           ))}
         </ul>
       )}
+      <PaginationBar p={paged} />
 
       <HoldDateDialog open={open} onOpenChange={setOpen} prefill={prefill} onSaved={invalidate} />
     </div>
