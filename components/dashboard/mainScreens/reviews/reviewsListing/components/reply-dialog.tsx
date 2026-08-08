@@ -11,6 +11,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+
+/** WWL-374 — mirrors replyToReview's server-side cap. */
+const REPLY_MAX = 1500;
 import { StartComponent } from './star-component';
 import { Review } from '@/lib/dashboard-types';
 import axiosInstance from '@/lib/axiosConfig';
@@ -81,18 +84,34 @@ export function ReplyDialog({ open, onOpenChange, review, onSuccess }: ReplyDial
                         </p>
                     </div>
 
+                    {/**
+                      * WWL-374 — `replyToReview` rejects anything over 1500
+                      * characters with a 400, and this box had maxLength -1, no
+                      * counter, no warning and an enabled Submit. A vendor wrote
+                      * a long, careful reply and got "Failed to post reply" with
+                      * nothing to say that length was the problem.
+                      */}
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Your Reply</label>
+                        <label className="text-sm font-medium" htmlFor="review-reply">Your Reply</label>
                         <Textarea
+                            id="review-reply"
                             value={reply}
                             onChange={(e) => setReply(e.target.value)}
                             placeholder="Write a professional response to this review..."
                             rows={4}
+                            maxLength={REPLY_MAX}
                             className="resize-none"
                         />
-                        <p className="text-xs text-muted-foreground">
-                            Your reply will be visible to all customers viewing this review.
-                        </p>
+                        <div className="flex items-start justify-between gap-2">
+                            <p className="text-xs text-muted-foreground">
+                                Your reply will be visible to all customers viewing this review.
+                            </p>
+                            {reply.length > REPLY_MAX - 200 && (
+                                <span className={`shrink-0 text-xs tabular-nums ${reply.length >= REPLY_MAX ? "text-destructive" : "text-muted-foreground"}`}>
+                                    {reply.length} / {REPLY_MAX}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
 

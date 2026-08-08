@@ -685,6 +685,12 @@ export class FunctionSheetAPI {
   static async list(filters: {
     state?: FunctionSheetState;
     bookingId?: number;
+    /**
+     * WWL-149/171 — comma-separated ids, so a page of ledger rows resolves its
+     * function-sheet chips in ONE request instead of one per booking. Ignored
+     * when `bookingId` is also present.
+     */
+    bookingIds?: string;
     customerUserId?: number;
     eventFrom?: string;
     eventTo?: string;

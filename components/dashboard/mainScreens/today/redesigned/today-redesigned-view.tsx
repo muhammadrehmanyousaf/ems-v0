@@ -184,6 +184,7 @@ export function TodayRedesignedView() {
       </div>
 
       <DataTable
+        caption="Today"
         columns={columns}
         data={rows}
         getRowId={(e) => String(e.id)}

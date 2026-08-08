@@ -141,9 +141,27 @@ export function TeamSwitcher({ variant = "panel" }: { variant?: "panel" | "rail"
               </DropdownMenuLabel>
               {/* Combined roll-up across every venue the vendor owns. Only
                   meaningful with 2+, so it stays gated on `multi`. */}
+              {/**
+                * WWL-007 — the tick beside the current venue was a decorative
+                * <Check> icon and nothing else: the items carried no
+                * `aria-checked` and no `data-state`, so nothing in the
+                * accessibility tree said which venue was selected. A
+                * screen-reader user opening the switcher could not tell what
+                * they were switching FROM — on the control that scopes every
+                * number in the portal.
+                *
+                * These are mutually exclusive selections, so the items are
+                * menuitemradio and carry aria-checked. The icon stays; it is
+                * now the visual half of something that is also announced.
+                */}
               {multi && (
                 <>
-                  <DropdownMenuItem onClick={() => pickVenue(null)} className="gap-2 p-2">
+                  <DropdownMenuItem
+                    role="menuitemradio"
+                    aria-checked={activeBusinessId == null}
+                    onClick={() => pickVenue(null)}
+                    className="gap-2 p-2"
+                  >
                     <div className="flex size-6 items-center justify-center rounded-md border">
                       <Layers className="size-3.5 shrink-0" />
                     </div>
@@ -164,6 +182,8 @@ export function TeamSwitcher({ variant = "panel" }: { variant?: "panel" | "rail"
                 return (
                   <DropdownMenuItem
                     key={biz.id}
+                    role="menuitemradio"
+                    aria-checked={activeBusinessId === biz.id}
                     onClick={() => pickVenue(biz.id)}
                     className="gap-2 p-2"
                   >

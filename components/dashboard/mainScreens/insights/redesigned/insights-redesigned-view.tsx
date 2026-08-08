@@ -75,6 +75,7 @@ export function InsightsRedesignedView() {
       <div className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Lead source funnel</h2>
         <DataTable
+          caption="Insights"
           columns={columns}
           data={rows}
           getRowId={(r) => r.source}

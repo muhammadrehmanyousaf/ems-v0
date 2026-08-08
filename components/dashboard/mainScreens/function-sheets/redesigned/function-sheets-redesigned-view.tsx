@@ -7,6 +7,8 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
+import { useRecordBusinessId } from "@/hooks/use-record-business-id"
 import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
@@ -110,12 +112,18 @@ export function FunctionSheetsRedesignedView() {
     queryFn: () => FunctionSheetAPI.list(),
   })
   const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
-  const businessId = businesses?.[0]?.id
+  /**
+   * WWL-293/311/332/350 — this was `businesses?.[0]?.id`, so under "All venues"
+   * a new record landed on whichever venue happened to be first in the array,
+   * silently. The hook returns undefined rather than guessing when there is no
+   * right answer; the create dialog then asks.
+   */
+  const businessId = useRecordBusinessId()
   const toComposer = (id: number) => router.push(`/dashboard/function-sheet-composer?id=${id}`)
   const removeMut = useMutation({
     mutationFn: (id: number) => FunctionSheetAPI.remove(id),
     onSuccess: () => { showSuccessToast("Function sheet removed"); setDeleting(null); qc.invalidateQueries({ queryKey: ["function-sheets-redesigned"] }) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove function sheet"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove function sheet")),
   })
 
   const all = data?.functionSheets ?? []
@@ -217,6 +225,9 @@ export function FunctionSheetsRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
+        caption="Function sheets"
         columns={columns}
         data={sheets}
         getRowId={(f) => String(f.id)}

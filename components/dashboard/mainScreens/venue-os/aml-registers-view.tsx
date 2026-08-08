@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
+import { lastDayOfPeriod } from "@/lib/utils/pk-date";
 
 const PKR = (n: number | string | null | undefined): string => "Rs " + Math.round(Number(n || 0)).toLocaleString("en-PK");
 function readErr(e: unknown, fallback: string): string {
@@ -47,10 +48,13 @@ export function AmlRegistersView(): React.ReactElement | null {
   }
 
   const bid = Number(businessId);
-  const monthRange = (): { from: string; to: string } => {
-    const [y, m] = period.split("-").map(Number);
-    return { from: `${period}-01`, to: new Date(y, m, 0).toISOString().slice(0, 10) };
-  };
+  // WWL-455 — `new Date(y, m, 0).toISOString()` is local midnight rendered in
+  // UTC, so east of Greenwich it returns the SECOND-to-last day: every AML
+  // register silently excluded the final day of the month it claimed to cover.
+  const monthRange = (): { from: string; to: string } => ({
+    from: `${period}-01`,
+    to: lastDayOfPeriod(period),
+  });
 
   return (
     <Card>

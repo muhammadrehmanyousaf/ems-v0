@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { MenusAPI, type ApiMenu } from "@/lib/api/dashboard"
 import { formatPkr } from "@/components/dashboard/primitives/money-cell"
@@ -28,18 +29,29 @@ import {
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
 
-export function MenusManager({ businessId }: { businessId: number }) {
+export function MenusManager({
+  businessId, minCapacity, maxCapacity,
+}: {
+  businessId: number
+  /**
+   * WWL-479 — the venue's own guest range, so a menu's minimum guarantee can be
+   * checked against the bookings this business actually takes. Optional: a
+   * caterer with no capacity set simply gets no check.
+   */
+  minCapacity?: number | null
+  maxCapacity?: number | null
+}) {
   const qc = useQueryClient()
   const { data: menus, isLoading } = useQuery<ApiMenu[]>({ queryKey: ["menus", businessId], queryFn: () => MenusAPI.getAll(businessId) })
   const [adding, setAdding] = React.useState(false)
   const [editingId, setEditingId] = React.useState<number | null>(null)
-  const [form, setForm] = React.useState({ title: "", price: "", items: "" })
+  const [form, setForm] = React.useState({ title: "", price: "", items: "", minGuarantee: "" })
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
   // Errors show only after a field is touched, so a blank new form doesn't open
   // covered in red.
   const [touched, setTouched] = React.useState<Record<string, boolean>>({})
   const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }))
-  const reset = () => { setForm({ title: "", price: "", items: "" }); setTouched({}); setAdding(false); setEditingId(null) }
+  const reset = () => { setForm({ title: "", price: "", items: "", minGuarantee: "" }); setTouched({}); setAdding(false); setEditingId(null) }
   const invalidate = () => qc.invalidateQueries({ queryKey: ["menus", businessId] })
 
   const itemsOf = (m: ApiMenu): string[] => {
@@ -47,29 +59,38 @@ export function MenusManager({ businessId }: { businessId: number }) {
     return Array.isArray(it) ? it.map(String) : []
   }
   const startEdit = (m: ApiMenu) => {
-    setForm({ title: m.title ?? "", price: String(m.price ?? ""), items: itemsOf(m).join("\n") })
+    setForm({
+      title: m.title ?? "",
+      price: String(m.price ?? ""),
+      items: itemsOf(m).join("\n"),
+      minGuarantee: m.minGuaranteeCount != null ? String(m.minGuaranteeCount) : "",
+    })
     setEditingId(m.id); setAdding(true)
   }
 
   const saveMut = useMutation({
     mutationFn: () => {
       const items = form.items.split("\n").map((s) => s.trim()).filter(Boolean)
+      const guarantee = form.minGuarantee.trim()
       const body = {
         title: form.title.trim(),
         price: Number(form.price) || 0,
         businessId,
         data: items.length ? { items } : {},
+        // Only sent when the vendor gave one — the controller writes these
+        // fields only if defined, so an untouched menu keeps what it had.
+        ...(guarantee ? { minGuaranteeCount: Number(guarantee), pricingUnit: "per_head" as const } : {}),
       }
       return editingId ? MenusAPI.update(editingId, body) : MenusAPI.create(body)
     },
     onSuccess: () => { showSuccessToast(editingId ? "Menu updated" : "Menu added"); reset(); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save menu"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save menu")),
   })
   const removeMut = useMutation({
     mutationFn: (id: number) => MenusAPI.delete(id),
     onSuccess: () => { showSuccessToast("Menu removed"); invalidate() },
     onError: (e: any) => toast.error(
-        e?.response?.data?.message || e?.message || "Couldn't remove menu",
+        errorMessage(e, "Couldn't remove menu"),
         { duration: 8000 },
       ),
   })
@@ -84,6 +105,29 @@ export function MenusManager({ businessId }: { businessId: number }) {
     price: touched.price ? errs.price : undefined,
   }
   const canSave = !errs.title && !errs.price
+
+  /**
+   * WWL-479 — read live from Rehman Grand Marquee, whose own capacity range is
+   * 250–900: its three menus carry minimum guarantees of 128, 198 and 148. Every
+   * one sits BELOW the smallest booking the venue will accept, so the guarantee
+   * can never bind — it is a floor no booking can fall through. Nothing in the
+   * editor related a menu to the venue it belongs to, which is unsurprising
+   * given the field was not in the editor at all.
+   *
+   * A note, not a block: an unusual guarantee may be deliberate, and refusing
+   * the save would be this screen overruling the vendor about their own pricing.
+   */
+  const guaranteeNote = (() => {
+    const g = Number(form.minGuarantee)
+    if (!form.minGuarantee.trim() || !Number.isFinite(g) || g <= 0) return undefined
+    if (minCapacity != null && g < minCapacity) {
+      return `Your smallest booking is ${minCapacity} guests, so a guarantee of ${g} never applies — every booking already clears it.`
+    }
+    if (maxCapacity != null && g > maxCapacity) {
+      return `Your venue holds ${maxCapacity} guests, so a guarantee of ${g} can never be met — no booking here could reach it.`
+    }
+    return undefined
+  })()
 
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
   const blockedReason =
@@ -120,7 +164,23 @@ export function MenusManager({ businessId }: { businessId: number }) {
                 <FieldError id="menu-price" message={shown.price} />
               </div>
             </div>
-            <div className="space-y-1.5"><label className={labelCls}>Dishes (one per line)</label><textarea className={inputCls + " h-24 resize-y py-2"} value={form.items} onChange={(e) => set("items", e.target.value)} placeholder={"Chicken Biryani\nMutton Karahi\nSeekh Kebab\nZarda"} /></div>
+            <div className="space-y-1.5">
+              <label className={labelCls} htmlFor="menu-guarantee">Minimum guarantee (guests)</label>
+              <input
+                id="menu-guarantee" type="number" min={1} step={1} inputMode="numeric"
+                className={cn(inputCls, "sm:max-w-[180px]")} value={form.minGuarantee}
+                onChange={(e) => set("minGuarantee", e.target.value)}
+                placeholder="e.g. 300"
+              />
+              <p className="text-xs text-muted-foreground">
+                The smallest guest count you&apos;ll bill for on this menu, even if fewer turn up. Leave
+                blank if you don&apos;t hold one.
+              </p>
+              {guaranteeNote && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">{guaranteeNote}</p>
+              )}
+            </div>
+            <div className="space-y-1.5"><label className={labelCls} htmlFor="menu-items">Dishes (one per line)</label><textarea id="menu-items" className={inputCls + " h-24 resize-y py-2"} value={form.items} onChange={(e) => set("items", e.target.value)} placeholder={"Chicken Biryani\nMutton Karahi\nSeekh Kebab\nZarda"} /></div>
             <div className="flex gap-2">
               <FormBlockedHint message={blockedReason} />
               <Button size="sm" disabled={!canSave || saveMut.isPending} onClick={() => saveMut.mutate()}>{saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={14} className="mr-1.5" /> {editingId ? "Update menu" : "Save menu"}</>}</Button>
@@ -141,6 +201,16 @@ export function MenusManager({ businessId }: { businessId: number }) {
                   <div className="truncate text-sm font-semibold">{m.title}</div>
                   <div className="whitespace-nowrap text-right text-sm font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{formatPkr(m.price)}<span className="text-xs font-normal text-muted-foreground">/head</span></div>
                 </div>
+                {m.minGuaranteeCount != null && (
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    Minimum {m.minGuaranteeCount} guests
+                    {minCapacity != null && m.minGuaranteeCount < minCapacity && (
+                      <span className="text-amber-600 dark:text-amber-400">
+                        {" "}· below your {minCapacity}-guest minimum, so it never applies
+                      </span>
+                    )}
+                  </div>
+                )}
                 {itemsOf(m).length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1">
                     {itemsOf(m).slice(0, 8).map((d, i) => <span key={`${m.id}-${i}-${d}`} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{d}</span>)}

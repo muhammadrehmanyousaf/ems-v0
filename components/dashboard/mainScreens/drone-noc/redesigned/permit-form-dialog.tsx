@@ -7,6 +7,9 @@
  */
 
 import * as React from "react"
+import { useVendorBookings, formatBookingLabel, isCancelledBooking } from "@/hooks/use-vendor-bookings"
+import { errorMessage } from "@/lib/utils/api-error"
+import { RecordVenueField } from "@/components/dashboard/shared/record-venue-field"
 import { useMutation } from "@tanstack/react-query"
 import { DroneNocAPI, PERMIT_TYPE_LABELS, PERMIT_AUTHORITY_LABELS, type DroneNOC, type PermitType, type IssuingAuthority } from "@/lib/api/droneNoc"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -25,11 +28,13 @@ const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 t
 const labelCls = "text-xs font-medium text-muted-foreground"
 
 interface FormState {
+  bookingId: string;
   referenceNumber: string; permitType: PermitType; issuingAuthority: IssuingAuthority
   droneModel: string; droneRegNumber: string; pilotName: string; pilotLicense: string
   eventDescription: string; venueAddress: string; validFrom: string; validUntil: string; feePaid: string; notes: string
 }
 const blank = (p?: DroneNOC): FormState => ({
+  bookingId: p?.bookingId != null ? String(p.bookingId) : "",
   referenceNumber: p?.referenceNumber ?? "",
   permitType: (p?.permitType as PermitType) ?? TYPES[0],
   issuingAuthority: (p?.issuingAuthority as IssuingAuthority) ?? AUTHORITIES[0],
@@ -54,17 +59,39 @@ export function PermitFormDialog({
   onSaved?: () => void
 }) {
   const isEdit = !!permit
+  /**
+   * WWL-293/311/332/350 — the record used to be filed under whichever venue was
+   * first in the array. `businessId` now arrives undefined when the header is
+   * on "All venues" and the vendor owns more than one, so the dialog asks
+   * instead of guessing. RecordVenueField renders nothing for a single-venue
+   * vendor, who has nothing to get wrong.
+   */
+  const [venueId, setVenueId] = React.useState<string>(businessId != null ? String(businessId) : "")
+  React.useEffect(() => {
+    if (businessId != null) setVenueId(String(businessId))
+  }, [businessId])
+  const effectiveBusinessId = venueId ? Number(venueId) : businessId
   const [form, setForm] = React.useState<FormState>(blank(permit))
   const loadedId = React.useRef<number | "new" | null>(null)
   React.useEffect(() => {
     if (open) { const key = permit?.id ?? "new"; if (loadedId.current !== key) { setForm(blank(permit)); loadedId.current = key } } else { loadedId.current = null }
   }, [open, permit])
   const set = (k: keyof FormState, v: string) => setForm((f) => ({ ...f, [k]: v }))
+  const { data: bookings } = useVendorBookings(open)
 
   const saveMut = useMutation({
     mutationFn: () => {
       const body = {
-        businessId: permit?.businessId ?? businessId!,
+        businessId: permit?.businessId ?? effectiveBusinessId!,
+        /**
+         * WWL-348 — a permit could not be tied to the wedding it was obtained
+         * for: no booking picker in the 12-field form and no bookingId in the
+         * captured body, though the model carries one and the unused
+         * `/upcoming` endpoint is built entirely around "booking-linked
+         * windows". A drone permit exists FOR an event; that was the one thing
+         * the form could not record.
+         */
+        bookingId: form.bookingId ? Number(form.bookingId) : null,
         referenceNumber: form.referenceNumber.trim(),
         permitType: form.permitType,
         issuingAuthority: form.issuingAuthority,
@@ -82,12 +109,22 @@ export function PermitFormDialog({
       return isEdit ? DroneNocAPI.update(permit!.id, body) : DroneNocAPI.create(body)
     },
     onSuccess: () => { showSuccessToast(isEdit ? "Permit updated" : "Permit added"); onSaved?.(); onOpenChange(false) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save permit"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save permit")),
   })
-  const canSave = form.referenceNumber.trim() && form.validFrom && form.validUntil && (isEdit || businessId != null)
+  const canSave = form.referenceNumber.trim() && form.validFrom && form.validUntil && (isEdit || effectiveBusinessId != null)
 
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
-  const blockedReason = canSave ? undefined : "Add a reference number, a start date and an end date to save."
+  /**
+   * WWL-290 — the hint listed the content fields and never the venue, so a
+   * vendor on "All venues" who had filled the form correctly read a list of
+   * things they had already done and a Save button that stayed dead. Name the
+   * thing that is actually missing first.
+   */
+  const blockedReason = canSave
+    ? undefined
+    : !isEdit && effectiveBusinessId == null
+      ? "Choose which venue this permit belongs to."
+      : "Add a reference number, a start date and an end date to save."
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -97,7 +134,17 @@ export function PermitFormDialog({
           <DialogDescription>Track your drone permit, validity and pilot.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-1">
+          <RecordVenueField value={venueId} onChange={setVenueId} noun="permit" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* WWL-348 — the wedding this permit is for. */}
+            <Field label="Event / booking" className="sm:col-span-2">
+              <select className={inputCls} value={form.bookingId} onChange={(e) => set("bookingId", e.target.value)}>
+                <option value="">Not tied to one booking</option>
+                {(bookings ?? []).filter((b) => !isCancelledBooking(b)).map((b) => (
+                  <option key={b.id} value={b.id}>{formatBookingLabel(b)}</option>
+                ))}
+              </select>
+            </Field>
             <Field label="Reference number"><input className={inputCls} value={form.referenceNumber} onChange={(e) => set("referenceNumber", e.target.value)} autoFocus /></Field>
             <Field label="Permit type">
               <select className={inputCls} value={form.permitType} onChange={(e) => set("permitType", e.target.value as PermitType)}>

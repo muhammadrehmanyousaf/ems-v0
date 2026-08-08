@@ -167,8 +167,14 @@ export interface UpdateBrokerInput extends Partial<CreateBrokerInput> {}
 
 export interface CreateCommissionInput {
   businessId: number;
-  brokerId?: number;
-  bookingId?: number;
+  /**
+   * WWL-289 — `null` clears the link and is distinct from omitting the field.
+   * The validator already treats null and "" as "not linked", so the client can
+   * say "this commission belongs to no saved broker" explicitly rather than
+   * leaving the server to guess from an absent key.
+   */
+  brokerId?: number | null;
+  bookingId?: number | null;
   brokerNameSnapshot?: string;
   brokerTypeSnapshot?: BrokerType;
   accruedDate: string;
@@ -279,7 +285,16 @@ export class BrokerAPI {
     body: CreateCommissionInput,
   ): Promise<BrokerCommission> {
     const res = await axiosInstance.post(`/api/v1/brokers/commissions`, body);
-    return res.data?.data?.commission;
+    const created = res.data?.data?.commission;
+    /**
+     * WWL-292 — two dialogs on one screen disagreed about failure. Driven with
+     * the write diverted, Record payment kept its dialog open and showed an
+     * error (correct) while Add commission toasted "Commission added" and
+     * closed — because this returned `undefined` and the mutation resolved
+     * happily. A 200 with no record in it is not a successful write.
+     */
+    if (!created) throw new Error("The commission wasn't saved — nothing came back from the server.");
+    return created;
   }
 
   static async updateCommission(
@@ -290,7 +305,10 @@ export class BrokerAPI {
       `/api/v1/brokers/commissions/${id}`,
       body,
     );
-    return res.data?.data?.commission;
+    const updated = res.data?.data?.commission;
+    // Same reasoning as createCommission (WWL-292).
+    if (!updated) throw new Error("The change wasn't saved — nothing came back from the server.");
+    return updated;
   }
 
   static async recordPayment(

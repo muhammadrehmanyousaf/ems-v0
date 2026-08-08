@@ -33,7 +33,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
           },
           mutations: {
             /**
-             * WWL-411 / WWL-432 / WWL-451 — this was `retry: 1`, which
+             * WWL-411 / WWL-432 / WWL-451 / WWL-493 — this was `retry: 1`, which
              * automatically re-sends a failed mutation. Mutations in this app
              * are POSTs that create things, and almost none of them are
              * idempotent, so a flaky network turned one click into two writes.
@@ -45,6 +45,9 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
              *                                             notifications to a real
              *                                             vendor, each separately
              *                                             acceptable
+             *   DELETE (availability block)          x2  — the second one frees
+             *                                             a date the vendor
+             *                                             never asked to free
              *
              * A retry is only safe when repeating the call is harmless. That is
              * true of reads, which is why `queries` above still retries; it is

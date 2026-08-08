@@ -278,6 +278,7 @@ function VendorOverviewRedesignedView() {
           </a>
         </div>
         <DataTable
+          caption="Overview"
           columns={columns}
           data={recent}
           getRowId={(b) => String(b.id)}

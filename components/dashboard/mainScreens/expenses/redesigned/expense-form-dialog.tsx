@@ -8,6 +8,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { ExpensesAPI, EXPENSE_CATEGORY_LABELS, type VendorExpense, type ExpenseCategory, type ExpensePaymentMethod } from "@/lib/api/vendorExpenses"
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
@@ -44,6 +45,16 @@ const today = () => todayInKarachi()
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
+
+/** WWL-117 — matches the `max` passed to validateOptionalText. */
+/**
+ * WWL-180 — WWL-117's third recurrence. A note of 1001 characters silently
+ * disabled Save with no field error and the false hint "Add an amount above 0
+ * and the date it was spent to save", while both of those were valid. The
+ * "Paid to" field on the same form got it right, with an excellent message; the
+ * notes field simply had no FieldError and no maxLength.
+ */
+const NOTES_MAX = 1000
 
 interface FormState { amount: string; category: ExpenseCategory; vendorName: string; description: string; spentDate: string; paymentMethod: ExpensePaymentMethod; subcategory: string; subVenueId: string; bookingId: string }
 // `bookingId` lets a caller pre-tag the expense to an event — used when this
@@ -218,7 +229,7 @@ export function ExpenseFormDialog({
       else showSuccessToast(isEdit ? "Expense updated" : "Expense added")
       onSaved?.(); onOpenChange(false)
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save expense"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save expense")),
   })
 
   // Same ledger discipline as receipts: amount had NO min (the browser spinner
@@ -243,7 +254,7 @@ export function ExpenseFormDialog({
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
   const blockedReason =
     !canSave && !Object.values(shown).some(Boolean)
-      ? "Add an amount above 0 and the date it was spent to save."
+      ? errs.description ?? "Add an amount above 0 and the date it was spent to save."
       : undefined
 
   return (
@@ -355,7 +366,32 @@ export function ExpenseFormDialog({
               {bookingsQ.isLoading && <p className="text-[11px] text-muted-foreground">Loading your bookings…</p>}
             </Field>
           </div>
-          <Field label="Note"><textarea className={cn(inputCls, "h-20 resize-y py-2")} value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="What was this for?" /></Field>
+          {/**
+            * WWL-117 recurrence — `errs.description` gated `canSave` while this field
+            * rendered no FieldError and never called `touch("description")`, so the
+            * message could never appear. At 1001 characters Save went dead and
+            * the hint named a different field entirely. No maxLength either, so
+            * nothing stopped the paste that caused it.
+            */}
+          <Field label="Note">
+            <textarea
+              id="exp-note"
+              className={cn(inputCls, "h-20 resize-y py-2", shown.description && ERROR_INPUT_CLS)}
+              value={form.description}
+              maxLength={NOTES_MAX}
+              onChange={(e) => { set("description", e.target.value); touch("description") }}
+              onBlur={() => touch("description")} placeholder="What was this for?"
+              {...fieldAria("exp-note", shown.description)}
+            />
+            <div className="flex items-start justify-between gap-2">
+              <FieldError id="exp-note" message={shown.description} />
+              {form.description.length > NOTES_MAX - 100 && (
+                <span className={cn("shrink-0 text-[11px] tabular-nums", form.description.length >= NOTES_MAX ? "text-destructive" : "text-muted-foreground")}>
+                  {form.description.length} / {NOTES_MAX}
+                </span>
+              )}
+            </div>
+          </Field>
           <CustomFieldsSection entityType="expense" businessId={activeBusinessId} values={cf} onChange={setCf} heading="Your custom fields" />
         </div>
 

@@ -7,6 +7,8 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
+import { useRecordBusinessId } from "@/hooks/use-record-business-id"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   BrokerAPI,
@@ -31,6 +33,7 @@ import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { LinkedFunctionSheetBadge } from "@/components/shared/linked-function-sheet-badge"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 import { daysOverdueInKarachi } from "@/lib/utils/pk-date"
 import { cn } from "@/lib/utils"
 
@@ -81,14 +84,41 @@ export function BrokersRedesignedView() {
     queryFn: () => BrokerAPI.listCommissions(),
   })
   const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
-  const businessId = businesses?.[0]?.id
+
+  /**
+   * WWL-295 — `GET /api/v1/brokers` returns 12 full records and the product
+   * rendered exactly one field from them: the broker's name, and then only as a
+   * SNAPSHOT STRING copied onto a commission. Agency, contact person, WhatsApp,
+   * address, NTN, CNIC, bank account, JazzCash, Easypaisa and the default
+   * commission rate were all fetched and shown nowhere — and 4 of the 12
+   * brokers have no commission at all, so they appeared nowhere in the
+   * interface whatsoever. Suppliers gives its trading partners a directory;
+   * brokers had a ledger and no address book.
+   *
+   * The bank fields matter most: the payment dialog asks how a broker was paid
+   * and could not tell the vendor the account to pay into, which is the one
+   * thing they open this screen holding a phone for.
+   */
+  const [showDirectory, setShowDirectory] = React.useState(false)
+  const { data: brokerDir } = useQuery({
+    queryKey: ["broker-directory"],
+    queryFn: () => BrokerAPI.list(),
+    staleTime: 5 * 60_000,
+  })
+  /**
+   * WWL-293/311/332/350 — this was `businesses?.[0]?.id`, so under "All venues"
+   * a new record landed on whichever venue happened to be first in the array,
+   * silently. The hook returns undefined rather than guessing when there is no
+   * right answer; the create dialog then asks.
+   */
+  const businessId = useRecordBusinessId()
   const invalidate = () => qc.invalidateQueries({ queryKey: ["brokers-redesigned"] })
   const openCreate = () => { setEditing(undefined); setDialogOpen(true) }
   const openEdit = (c: BrokerCommission) => { setEditing(c); setDialogOpen(true) }
   const removeMut = useMutation({
     mutationFn: (id: number) => BrokerAPI.removeCommission(id),
     onSuccess: () => { showSuccessToast("Commission removed"); setDeleting(null); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove commission"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove commission")),
   })
 
   const all = data?.commissions ?? []
@@ -128,8 +158,24 @@ export function BrokersRedesignedView() {
     return list
   }, [all, search, statusFilter, isLate])
 
-  const totalCommission = all.reduce((s, c) => s + num(c.commissionAmount), 0)
-  const totalPaid = all.reduce((s, c) => s + num(c.amountPaid), 0)
+  /**
+   * WWL-299 — "Total commission Rs 667,000" included two commissions that
+   * accrue in the FUTURE (Rs 117,000 on 24 Aug and Rs 50,000 on 22 Sep), so
+   * Rs 167,000 of the headline was not owed to anyone yet. A broker ledger's
+   * headline is a debt figure; money that has not accrued is not a debt.
+   *
+   * Not hidden — a commission booked for next month is real and the vendor
+   * should see it — but counted separately, so "what do I owe" and "what will
+   * I owe" are never one number.
+   */
+  const todayStr = todayInKarachi()
+  const hasAccrued = (c: BrokerCommission) => (c.accruedDate ?? "").slice(0, 10) <= todayStr
+  const accrued = all.filter(hasAccrued)
+  const future = all.filter((c) => !hasAccrued(c))
+
+  const totalCommission = accrued.reduce((s, c) => s + num(c.commissionAmount), 0)
+  const futureCommission = future.reduce((s, c) => s + num(c.commissionAmount), 0)
+  const totalPaid = accrued.reduce((s, c) => s + num(c.amountPaid), 0)
   const outstanding = Math.max(0, totalCommission - totalPaid)
   const lateRows = all.filter(isLate)
   const overdueCount = lateRows.length
@@ -149,7 +195,16 @@ export function BrokersRedesignedView() {
       ),
     },
     { key: "type", header: "Type", cellClassName: "text-muted-foreground", render: (c) => brokerTypeLabel(c) },
-    { key: "event", header: "Event", render: (c) => <LinkedFunctionSheetBadge bookingId={c.bookingId} variant="inline" /> },
+    {
+      key: "event", header: "Event",
+      /* WWL-298 — where a booking has no linked function sheet the badge
+         rendered NOTHING: not a dash, not a placeholder, just an empty cell
+         that reads as data we failed to load. */
+      render: (c) =>
+        c.bookingId == null
+          ? <span className="text-xs text-muted-foreground">Not tied to a booking</span>
+          : <LinkedFunctionSheetBadge bookingId={c.bookingId} variant="inline" />,
+    },
     {
       key: "commission",
       header: "Commission",
@@ -162,7 +217,20 @@ export function BrokersRedesignedView() {
       header: "Paid",
       align: "right",
       cellClassName: "tabular-nums",
-      render: (c) => <MoneyCell amount={num(c.amountPaid)} tone="success" />,
+      /* WWL-294 — the column was toned `success` unconditionally, so five
+         pending commissions where NOTHING had been paid rendered Rs 0 in the
+         same emerald as a settled amount. Green is a claim; it has to be
+         earned. */
+      render: (c) => {
+        const paid = num(c.amountPaid)
+        const owed = num(c.commissionAmount)
+        return (
+          <MoneyCell
+            amount={paid}
+            tone={paid <= 0 ? "muted" : paid >= owed ? "success" : "warning"}
+          />
+        )
+      },
     },
     {
       key: "accrued",
@@ -236,12 +304,97 @@ export function BrokersRedesignedView() {
         eyebrow="Money"
         title="Brokers"
         description="Broker commission ledger — accruals, payments and outstanding."
-        actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Add commission</Button>}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={() => setShowDirectory((v) => !v)}>
+              <Icon name="Users" size={16} className="mr-1.5" />
+              {showDirectory ? "Hide brokers" : `Brokers (${brokerDir?.brokers.length ?? 0})`}
+            </Button>
+            <Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Add commission</Button>
+          </div>
+        }
       />
+
+      {/* WWL-295 — the address book the ledger never had. */}
+      {showDirectory && (
+        <section className="rounded-xl border border-border bg-card shadow-sm">
+          <div className="border-b border-border px-4 py-3">
+            <h2 className="text-sm font-semibold">Your brokers</h2>
+            <p className="text-xs text-muted-foreground">
+              Everyone you work with, including the ones with no commission yet.
+            </p>
+          </div>
+          {!brokerDir?.brokers.length ? (
+            <p className="px-4 py-8 text-center text-sm text-muted-foreground">No brokers saved yet.</p>
+          ) : (
+            <ul className="divide-y divide-border/60">
+              {brokerDir.brokers.map((b) => {
+                const count = all.filter((c) => c.brokerId === b.id).length
+                const pay = [
+                  b.bankName && b.bankAccountNumber ? `${b.bankName} ${b.bankAccountNumber}` : null,
+                  b.jazzcashNumber ? `JazzCash ${b.jazzcashNumber}` : null,
+                  b.easypaisaNumber ? `Easypaisa ${b.easypaisaNumber}` : null,
+                ].filter(Boolean)
+                return (
+                  <li key={b.id} className="flex flex-wrap items-start gap-x-6 gap-y-1 px-4 py-3 text-sm">
+                    <div className="min-w-[180px] flex-1">
+                      <div className="font-medium">
+                        {b.name}
+                        {b.brokerType && (
+                          <span className="ml-2 text-xs font-normal text-muted-foreground">
+                            {BROKER_TYPE_LABELS[b.brokerType] ?? b.brokerType}
+                          </span>
+                        )}
+                      </div>
+                      {(b.agencyName || b.contactPerson) && (
+                        <div className="text-xs text-muted-foreground">
+                          {[b.agencyName, b.contactPerson].filter(Boolean).join(" · ")}
+                        </div>
+                      )}
+                      {b.address && <div className="text-xs text-muted-foreground">{b.address}</div>}
+                    </div>
+                    <div className="min-w-[150px] text-xs">
+                      {b.phoneNumber && (
+                        <a href={`tel:${b.phoneNumber}`} className="block tabular-nums hover:underline">{b.phoneNumber}</a>
+                      )}
+                      {b.whatsappNumber && b.whatsappNumber !== b.phoneNumber && (
+                        <span className="block tabular-nums text-muted-foreground">WhatsApp {b.whatsappNumber}</span>
+                      )}
+                      {(b.ntn || b.cnic) && (
+                        <span className="block text-muted-foreground">
+                          {[b.ntn && `NTN ${b.ntn}`, b.cnic && `CNIC ${b.cnic}`].filter(Boolean).join(" · ")}
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-w-[170px] text-xs text-muted-foreground">
+                      {pay.length ? pay.map((x) => <span key={x} className="block tabular-nums">{x}</span>)
+                        : <span className="italic">No payout details saved</span>}
+                    </div>
+                    <div className="min-w-[110px] text-right text-xs">
+                      {b.defaultCommissionPct != null && (
+                        <span className="block tabular-nums">{b.defaultCommissionPct}% default</span>
+                      )}
+                      <span className={cn("block", count === 0 && "text-muted-foreground")}>
+                        {count === 0 ? "No commissions yet" : `${count} commission${count === 1 ? "" : "s"}`}
+                      </span>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </section>
+      )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Commissions" value={all.length} icon="Users" />
-        <StatCard label="Total commission" value={formatPkr(totalCommission)} icon="Wallet" error={isError} />
+        <StatCard
+          label="Commission accrued"
+          value={formatPkr(totalCommission)}
+          delta={futureCommission > 0 ? `+${formatPkr(futureCommission)} not yet accrued` : undefined}
+          icon="Wallet"
+          error={isError}
+        />
         <StatCard label="Outstanding" value={formatPkr(outstanding)} icon="DollarSign" trend={outstanding > 0 ? "up" : undefined} error={isError} />
         <StatCard
           label="Overdue"
@@ -273,6 +426,9 @@ export function BrokersRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
+        caption="Brokers"
         columns={columns}
         data={rows}
         getRowId={(c) => String(c.id)}

@@ -199,3 +199,17 @@ export const EXPENSE_PAYMENT_METHOD_LABELS: Record<ExpensePaymentMethod, string>
   card: "Card",
   other: "Other",
 };
+
+/**
+ * WWL-179 — the Expenses screen fetched its entire ledger TWICE on every load:
+ * the table asked under `["expenses-redesigned", businessId, bookingId]` and
+ * the cockpit sitting directly above it asked under `["expense-cockpit"]`.
+ * Same endpoint, same rows, two different cache keys, so TanStack had no way to
+ * know they were the same question. 165 rows shipped twice.
+ *
+ * One key, exported, so the two cannot drift apart again.
+ */
+export const expensesQueryKey = (
+  businessId?: number | null,
+  bookingId?: number | null,
+) => ["expenses", businessId ?? null, bookingId ?? null] as const;

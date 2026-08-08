@@ -116,6 +116,9 @@ export function CustomersRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
+        caption="Customers"
         columns={columns}
         data={customers}
         getRowId={(c) => c._id}

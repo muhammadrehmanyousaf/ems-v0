@@ -6,6 +6,9 @@
  */
 
 import * as React from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { errorMessage } from "@/lib/utils/api-error"
+import { useRecordBusinessId } from "@/hooks/use-record-business-id"
 import Link from "next/link"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { StaffAPI, type StaffMember } from "@/lib/api/staff"
@@ -20,6 +23,8 @@ import { DataTable, type Column } from "@/components/dashboard/primitives/data-t
 import { StatusPill } from "@/components/dashboard/primitives/status-pill"
 import { formatPkr } from "@/components/dashboard/primitives/money-cell"
 import { ExportMenu } from "@/components/dashboard/shared/export-menu"
+import { useActiveBusinessId } from "@/lib/store/active-business-store"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 import { ImportButton } from "@/components/dashboard/shared/import-button"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
@@ -45,20 +50,39 @@ export function StaffRedesignedView() {
   const [editing, setEditing] = React.useState<StaffMember | undefined>(undefined)
   const [deleting, setDeleting] = React.useState<StaffMember | null>(null)
   const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
-  const businessId = businesses?.[0]?.id
+  /**
+   * WWL-293/311/332/350 — this was `businesses?.[0]?.id`, so under "All venues"
+   * a new record landed on whichever venue happened to be first in the array,
+   * silently. The hook returns undefined rather than guessing when there is no
+   * right answer; the create dialog then asks.
+   */
+  const businessId = useRecordBusinessId()
+  const activeBusinessId = useActiveBusinessId()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const tab = searchParams?.get("tab") === "payroll" ? "payroll" : "roster"
+  const activeBusinessName =
+    businesses?.find((b) => b.id === activeBusinessId)?.name ?? null
   const invalidate = () => qc.invalidateQueries({ queryKey: ["staff-redesigned"] })
   const openCreate = () => { setEditing(undefined); setDialogOpen(true) }
   const openEdit = (m: StaffMember) => { setEditing(m); setDialogOpen(true) }
   const removeMut = useMutation({
     mutationFn: (id: number) => StaffAPI.removeMember(id),
     onSuccess: () => { showSuccessToast("Staff removed"); setDeleting(null); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove staff"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove staff")),
   })
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["staff-redesigned"],
+    /**
+     * WWL-272 — `/api/v1/staff` is in BUSINESS_SCOPED_PREFIXES, so the axios
+     * interceptor appends `?businessId=` to every GET and the request is
+     * correctly scoped. The cache key did not mention the venue, so venue A's
+     * crew and venue B's crew shared one entry — a structural collision waiting
+     * for a slow network to expose it.
+     */
+    queryKey: ["staff-redesigned", activeBusinessId ?? "all"],
     queryFn: () => StaffAPI.listMembers(),
   })
 
@@ -114,7 +138,23 @@ export function StaffRedesignedView() {
   )
 
   return (
-    <Tabs defaultValue="roster" className="space-y-6 p-4 md:p-6">
+    /**
+      * WWL-267 — `<Tabs defaultValue="roster">` with no onValueChange and no
+      * URL sync, so switching to Shifts & payroll left the address bar at
+      * /dashboard/staff: a vendor could not bookmark payroll or send their
+      * accountant a link to it, and every reload threw the choice away.
+      */
+    <Tabs
+      value={tab}
+      onValueChange={(v) => {
+        const qs = new URLSearchParams(searchParams?.toString() ?? "")
+        if (v === "roster") qs.delete("tab")
+        else qs.set("tab", v)
+        const q = qs.toString()
+        router.replace(q ? `?${q}` : "?", { scroll: false })
+      }}
+      className="space-y-6 p-4 md:p-6"
+    >
       <TabsList>
         <TabsTrigger value="roster">
           <Icon name="Users" size={15} className="mr-1.5" /> Roster
@@ -140,6 +180,9 @@ export function StaffRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
+        caption="Staff"
         columns={columns}
         data={members}
         getRowId={(m) => String(m.id)}
@@ -167,15 +210,38 @@ export function StaffRedesignedView() {
             <div className="ml-auto flex items-center gap-2">
               <DensityToggle />
               <ImportButton target="staff" label="staff" />
-              <ExportMenu selectedIds={selected} getRowId={(m) => String(m.id)} rows={members} filename="staff" columns={[
-                { header: "Name", value: (m) => m.fullName },
-                { header: "Role", value: (m) => m.role ?? "" },
-                { header: "Type", value: (m) => m.employmentType ?? "" },
-                { header: "Phone", value: (m) => m.phoneNumber ?? "" },
-                { header: "Monthly salary", value: (m) => num(m.monthlySalary) },
-                { header: "Dihari rate", value: (m) => num(m.defaultDihariRate) },
-                { header: "Active", value: (m) => (m.isActive ? "Yes" : "No") },
-              ]} />
+              {/**
+                * WWL-266 — `staff.csv` carried 33 people's names, mobile
+                * numbers and pay with nothing to say it was personal data.
+                * Three defects in one file:
+                *   - a null salary exported as 0, so every dihari worker read
+                *     as being on a Rs 0 salary and every salaried one as having
+                *     a Rs 0 day rate — a blank is not a zero on a pay column;
+                *   - no venue column, so "Arshad Ali" appeared three times
+                *     distinguishable only by phone number;
+                *   - role and type exported raw snake_case where the table
+                *     capitalises them.
+                * The filename now carries the venue and the date too, so two
+                * downloads a minute apart are not the same file.
+                */}
+              <ExportMenu
+                selectedIds={selected}
+                getRowId={(m) => String(m.id)}
+                rows={members}
+                filename={`staff-${activeBusinessName ? activeBusinessName.replace(/\s+/g, "-").toLowerCase() : "all-venues"}-${todayInKarachi()}`}
+                sensitiveNote="This file contains staff names, mobile numbers and pay. Treat it like a payslip — don't forward it in a group."
+                columns={[
+                  { header: "Name", value: (m) => m.fullName },
+                  { header: "Venue", value: () => activeBusinessName ?? "" },
+                  { header: "Role", value: (m) => cap(m.role) },
+                  { header: "Type", value: (m) => cap(m.employmentType) },
+                  { header: "Phone", value: (m) => m.phoneNumber ?? "" },
+                  // A blank stays blank: 0 is a claim about someone's pay.
+                  { header: "Monthly salary", value: (m) => (m.monthlySalary == null ? "" : num(m.monthlySalary)) },
+                  { header: "Dihari rate", value: (m) => (m.defaultDihariRate == null ? "" : num(m.defaultDihariRate)) },
+                  { header: "Active", value: (m) => (m.isActive ? "Yes" : "No") },
+                ]}
+              />
             </div>
           </>
         }

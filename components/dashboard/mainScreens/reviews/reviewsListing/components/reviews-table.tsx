@@ -18,15 +18,28 @@ const ReviewsTable = () => {
     const [data, setData] = useState<Review[]>([]);
     const [loading, setLoading] = useState(true);
 
+    /**
+     * WWL-380 — `getAll(1, 100)` was hard-coded and the table was built with
+     * `totalItems: data.length`, so the server's own `pagination.total` and
+     * `totalPages` were fetched and thrown away. A vendor with 101 reviews saw
+     * 100, was TOLD the total was 100, and had no page 2 to reach the rest. The
+     * server caps `limit` at 100 too, so raising the number alone would not
+     * have helped — it needed real paging.
+     */
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const PAGE_SIZE = 50;
+
     const fetchData = useCallback(() => {
         setLoading(true);
-        ReviewsAPI.getAll(1, 100)
+        ReviewsAPI.getAll(page, PAGE_SIZE)
             .then((result) => {
                 setData(result.reviews as Review[]);
+                setTotal(Number(result?.pagination?.total ?? (result.reviews as Review[]).length));
             })
             .catch(() => { setData([]); toast.error('Failed to load reviews'); })
             .finally(() => setLoading(false));
-    }, []);
+    }, [page]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -52,7 +65,7 @@ const ReviewsTable = () => {
             (review) => setReplyReview(review),
             handlePin,
         ),
-        totalItems: data.length,
+        totalItems: total,
     });
 
     if (loading) {
@@ -71,6 +84,7 @@ const ReviewsTable = () => {
         <div className='space-y-4 w-full'>
             <ReviewsTableActions table={table} />
             <GlobalTable
+                caption="Reviews"
                 table={table}
                 paginationState={paginationState}
                 totalItems={data.length}
@@ -80,6 +94,7 @@ const ReviewsTable = () => {
                 open={!!viewReview}
                 setOpen={(v) => !v && setViewReview(null)}
                 review={viewReview}
+                onReply={(review) => setReplyReview(review)}
             />
 
             <ReplyDialog

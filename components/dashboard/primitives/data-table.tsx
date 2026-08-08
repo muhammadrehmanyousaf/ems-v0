@@ -7,6 +7,7 @@ import { Spinner } from "@/components/dashboard/shared/icon"
 import { EmptyState, type EmptyStateProps } from "./empty-state"
 import { TableSkeleton } from "./skeletons"
 import { useUiStore } from "@/lib/store/ui-store"
+import { Button } from "@/components/ui/button"
 
 /**
  * DataTable<T> — the shared list surface. Column-config driven, token-only, with
@@ -48,6 +49,36 @@ export interface DataTableProps<T> {
   bulkActions?: (ids: Set<string>) => React.ReactNode
   onRowClick?: (row: T) => void
   className?: string
+  /**
+   * WWL-120/137/153/170/187 — table a11y, unchanged across five modules.
+   *
+   * `caption` names the table for a screen reader ("Payments, 25 rows"), which
+   * is otherwise a grid of numbers with no announced purpose. It is visually
+   * hidden — sighted users already have the page heading.
+   */
+  caption?: string
+  /**
+   * WWL-116/135/… — a no-match search asserted a financial falsehood.
+   *
+   * A vendor with 25 payments and Rs 23.9m on the books who searched `zzzqqq`
+   * was told "No payments yet — payments against your bookings will appear here
+   * as they come in". Same on Customers, Receipts and the rest: the screen said
+   * the business is empty when the FILTER is empty. One is a fact about the
+   * account; the other is a fact about a text box.
+   *
+   * Pass the active query and the table says "No matches for …" with a way back
+   * instead. Omit it and nothing changes.
+   */
+  filterQuery?: string
+  onClearFilter?: () => void
+  /**
+   * A per-row name for the selection checkbox. Every row previously carried the
+   * identical accessible name "Select row", so a screen-reader user heard it
+   * ten times with nothing to tell the rows apart — they could not know WHICH
+   * booking they were about to bulk-delete. Falls back to the first column's
+   * text content, then to the row id.
+   */
+  getRowLabel?: (row: T) => string
 }
 
 const alignCls = (a?: Column<any>["align"]) =>
@@ -121,6 +152,10 @@ export function DataTable<T>({
   bulkActions,
   onRowClick,
   className,
+  caption,
+  getRowLabel,
+  filterQuery,
+  onClearFilter,
 }: DataTableProps<T>) {
   const density = useUiStore((s) => s.density)
   const rowPad = density === "compact" ? "py-2" : "py-3"
@@ -131,6 +166,25 @@ export function DataTable<T>({
 
   const toggleAll = () =>
     onSelectionChange?.(allSelected ? new Set() : new Set(allIds))
+  /**
+   * Best-effort human name for a row, for the checkbox's accessible name.
+   * Prefers an explicit `getRowLabel`, then the first column that renders a
+   * plain string (the name/customer column in every table here), then the id.
+   */
+  const rowLabel = React.useCallback((row: T, id: string): string => {
+    if (getRowLabel) {
+      const v = getRowLabel(row)
+      if (v) return v
+    }
+    for (const c of columns) {
+      if (c.key === "select" || c.key === "actions") continue
+      const raw = (row as any)?.[c.key]
+      if (typeof raw === "string" && raw.trim()) return raw.trim()
+      if (typeof raw === "number") return String(raw)
+    }
+    return `row ${id}`
+  }, [columns, getRowLabel])
+
   const toggleOne = (id: string) => {
     const next = new Set(sel)
     next.has(id) ? next.delete(id) : next.add(id)
@@ -160,7 +214,27 @@ export function DataTable<T>({
       )
     }
     if (loading) return <TableSkeleton rows={6} cols={columns.length + (selectable ? 1 : 0)} className="border-0" />
-    if (data.length === 0)
+    if (data.length === 0) {
+      // Filtered-empty is a different fact from account-empty, and saying the
+      // wrong one on a money screen is a falsehood about the business.
+      const q = (filterQuery ?? "").trim()
+      if (q) {
+        return (
+          <EmptyState
+            className="border-0 bg-transparent"
+            icon="Search"
+            title={`No matches for “${q}”`}
+            description="Nothing on this screen matches that search. Your records are unchanged — try a different term, or clear the search."
+            action={
+              onClearFilter ? (
+                <Button size="sm" variant="outline" onClick={onClearFilter}>
+                  Clear search
+                </Button>
+              ) : undefined
+            }
+          />
+        )
+      }
       return (
         <EmptyState
           className="border-0 bg-transparent"
@@ -171,6 +245,7 @@ export function DataTable<T>({
           secondaryAction={empty?.secondaryAction}
         />
       )
+    }
 
     return (
       <>
@@ -179,13 +254,17 @@ export function DataTable<T>({
             actions column is off the right edge. */}
         <div className="hidden w-full overflow-x-auto md:block">
           <table className="w-full text-sm" style={{ fontVariantNumeric: "tabular-nums" }}>
+            {/* WWL-196 and its five siblings — module after module shipped a
+                table with 0 of N `<th>` carrying `scope` and no `<caption>`.
+                Fixed once, here, so no screen can regress it individually. */}
+            {caption && <caption className="sr-only">{caption}</caption>}
             <thead>
               <tr className="border-b border-border">
                 {selectable && (
                   <th scope="col" className="w-10 px-4 py-2.5">
                     <input
                       type="checkbox"
-                      aria-label="Select all"
+                      aria-label={caption ? `Select all ${data.length} rows of ${caption}` : "Select all rows"}
                       checked={allSelected}
                       ref={(el) => {
                         if (el) el.indeterminate = someSelected
@@ -225,12 +304,15 @@ export function DataTable<T>({
                   >
                     {selectable && (
                       <td className={cn("px-4", rowPad)} onClick={(e) => e.stopPropagation()}>
+                        {/* WWL-120 — a 16x16 target is under the WCAG 2.2
+                            24x24 minimum, so the box is padded out to a 24px
+                            hit area without changing how it looks. */}
                         <input
                           type="checkbox"
-                          aria-label="Select row"
+                          aria-label={`Select ${rowLabel(row, id)}`}
                           checked={sel.has(id)}
                           onChange={() => toggleOne(id)}
-                          className="h-4 w-4 rounded border-input accent-[hsl(var(--primary))]"
+                          className="h-4 w-4 rounded border-input accent-[hsl(var(--primary))] p-[4px] -m-[4px] box-content cursor-pointer"
                         />
                       </td>
                     )}
@@ -250,14 +332,22 @@ export function DataTable<T>({
         </div>
 
         {/* Mobile cards — bespoke when the screen supplies one, otherwise built
-            from the column config so the row's actions are reachable. */}
-        <div className="space-y-2 p-3 md:hidden">
+            from the column config so the row's actions are reachable.
+
+            WWL-471 — the density toggle read as "missing on mobile". It was in
+            the toolbar the whole time; it simply had no effect, because density
+            only ever changed table row padding and the table is hidden below
+            md. A visible control that does nothing is the worse half of that
+            bug, so density now applies to the card list too — the setting means
+            the same thing on a phone as on a desktop. */}
+        <div className={cn("p-3 md:hidden", density === "compact" ? "space-y-1.5" : "space-y-2")}>
           {data.map((row, i) => (
             <div
               key={getRowId(row)}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
               className={cn(
-                "rounded-lg border border-border bg-card p-3",
+                "rounded-lg border border-border bg-card",
+                density === "compact" ? "p-2.5" : "p-3",
                 onRowClick && "cursor-pointer active:bg-muted/50",
               )}
             >

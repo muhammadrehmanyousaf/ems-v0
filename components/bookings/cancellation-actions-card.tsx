@@ -76,12 +76,34 @@ export function CancellationActionsCard({ bookingId }: { bookingId: number }) {
             <span className={cn(
               "inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full",
               exposure.flag === "OK" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
-            )} title="Legal defensibility: policy accepted + audit chain verified">
+            )} title="Legal defensibility: policy accepted, audit chain verified, and the money evidenced">
               {exposure.flag === "OK" ? <ShieldCheck className="size-3" /> : <ShieldAlert className="size-3" />}
               {exposure.flag === "OK" ? "Defensible" : "Review"}
             </span>
           )}
         </div>
+
+        {/* WWL-511 — the pack listed Rs 1,223,278 collected across two receipts
+            with no proof on either, and said nothing: exposure weighed policy
+            acceptance and the audit chain, never the money a forfeit is
+            computed from. Shown whenever any receipt is unevidenced, not only
+            once a forfeit has been applied — by then it is too late to go and
+            find the screenshot. */}
+        {exposure && (exposure.receiptsWithoutProof ?? 0) > 0 && (
+          <div className="flex items-start gap-2 rounded-lg border border-amber-300/70 bg-amber-50 p-3 text-sm dark:border-amber-900/60 dark:bg-amber-950/30">
+            <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div>
+              <p className="font-medium">
+                {exposure.receiptsWithoutProof} of {exposure.receiptsTotalCount} payments have no proof attached
+                {exposure.unproofedAmount ? ` — Rs ${exposure.unproofedAmount.toLocaleString("en-PK")}` : ""}
+              </p>
+              <p className="mt-0.5 text-muted-foreground">
+                If this booking is disputed, that is the money you would have to evidence. Attach the
+                screenshot or slip to each receipt while you still have it.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Policy acceptance */}
         <div className="rounded-lg border p-3 text-sm">

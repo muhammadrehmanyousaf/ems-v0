@@ -148,14 +148,16 @@ export function PaymentsRedesignedView() {
         eyebrow="Money"
         title="Payments"
         description="Revenue collected and outstanding per booking."
-        actions={<Button onClick={() => setDialogOpen(true)}><Icon name="Plus" size={16} className="mr-1.5" /> Record payment</Button>}
+        actions={<Button onClick={() => setDialogOpen(true)}><Icon name="Plus" size={16} className="mr-1.5" /> Record a receipt</Button>}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Total billed" value={isLoading ? "…" : formatPkr(shownStats.total)} icon="Wallet" error={isError} />
         <StatCard label="Received" value={isLoading ? "…" : formatPkr(shownStats.received)} icon="CheckCircle2" trend="up" delta="collected" error={isError} />
         <StatCard label="Due" value={isLoading ? "…" : formatPkr(shownStats.due)} icon="Clock" delta="to chase" error={isError} />
-        <StatCard label="Payments" value={isLoading ? "…" : shownStats.count} icon="FileText" />
+        {/* WWL-121 — with the table correctly showing "Couldn't load payments", the
+            headline cards read Rs 0 / Rs 0 / Rs 0 / 0. An error is not a zero. */}
+        <StatCard label="Payments" value={isLoading ? "…" : shownStats.count} icon="FileText" error={isError} />
       </div>
 
       {/* WWL-128 — cash vs digital, which the API has always returned. */}
@@ -210,6 +212,9 @@ export function PaymentsRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
+        caption="Payments"
         columns={columns}
         data={payments}
         getRowId={(p) => String(p.bookingId)}

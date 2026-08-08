@@ -8,8 +8,9 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { PdcAPI, type PostDatedCheque, type PdcStatus } from "@/lib/api/postDatedCheques"
+import { PDC_STATUS_LABELS, PdcAPI, type PostDatedCheque, type PdcStatus } from "@/lib/api/postDatedCheques"
 import axiosInstance from "@/lib/axiosConfig"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -41,6 +42,9 @@ function Field({ label, children, className }: { label: string; children: React.
 // ─── Create / edit ───────────────────────────────────────────────
 interface BookingOption { id: number; customerName: string; bookingDate: string }
 interface FormState { chequeNumber: string; bankName: string; branchCode: string; amount: string; chequeDate: string; bookingId: string; notes: string }
+
+/** WWL-117 — matches the `max` passed to validateOptionalText. */
+const NOTES_MAX = 1000
 const blank = (p?: PostDatedCheque): FormState => ({
   chequeNumber: p?.chequeNumber ?? "", bankName: p?.bankName ?? "", branchCode: p?.branchCode ?? "",
   amount: p?.amount != null ? String(p.amount) : "", chequeDate: (p?.chequeDate ?? today()).slice(0, 10),
@@ -78,7 +82,7 @@ export function PdcFormDialog({ open, onOpenChange, pdc, onSaved }: { open: bool
       return isEdit ? PdcAPI.update(pdc!.id, body) : PdcAPI.create(body)
     },
     onSuccess: () => { showSuccessToast(isEdit ? "Cheque updated" : "Cheque logged"); onSaved?.(); onOpenChange(false) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save cheque"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save cheque")),
   })
   // NOTE: chequeDate deliberately does NOT use validateNotFutureDate. A PDC is a
   // POST-dated cheque, so a future date is the entire point. What matters here
@@ -104,7 +108,7 @@ export function PdcFormDialog({ open, onOpenChange, pdc, onSaved }: { open: bool
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
   const blockedReason =
     !canSave && !Object.values(shown).some(Boolean)
-      ? errs.bookingId ?? "Add a cheque number, a bank name, an amount above 0 and a cheque date to save."
+      ? errs.bookingId ?? errs.notes ?? "Add a cheque number, a bank name, an amount above 0 and a cheque date to save."
       : undefined
 
   return (
@@ -115,7 +119,14 @@ export function PdcFormDialog({ open, onOpenChange, pdc, onSaved }: { open: bool
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Cheque number">
               <input id="pdc-num" className={cn(inputCls, shown.chequeNumber && ERROR_INPUT_CLS)} inputMode="numeric" maxLength={20}
-                value={form.chequeNumber} onChange={(e) => { set("chequeNumber", e.target.value.replace(/\D/g, "")); touch("chequeNumber") }}
+                /* WWL-173 — this stripped non-digits as you typed, so "ABC123XYZ"
+                   became "123" with no explanation and the form then said the
+                   cheque number "looks too short". The vendor saw their input
+                   silently rewritten and then blamed for it. `validateChequeNumber`
+                   already carries the honest message ("should contain digits
+                   only"), which the stripping made unreachable. Keep what was
+                   typed and let the rule explain itself. */
+                value={form.chequeNumber} onChange={(e) => { set("chequeNumber", e.target.value); touch("chequeNumber") }}
                 onBlur={() => touch("chequeNumber")} placeholder="4–20 digits" autoFocus {...fieldAria("pdc-num", shown.chequeNumber)} />
               <FieldError id="pdc-num" message={shown.chequeNumber} />
             </Field>
@@ -149,7 +160,32 @@ export function PdcFormDialog({ open, onOpenChange, pdc, onSaved }: { open: bool
               <p className="text-[11px] text-muted-foreground">A cheque must be tied to a booking whose customer has a registered account.</p>
             </Field>
           )}
-          <Field label="Notes"><textarea className={cn(inputCls, "h-20 resize-y py-2")} value={form.notes} onChange={(e) => set("notes", e.target.value)} /></Field>
+          {/**
+            * WWL-164 (WWL-117's second recurrence) — `errs.notes` gated `canSave` while this field
+            * rendered no FieldError and never called `touch("notes")`, so the
+            * message could never appear. At 1001 characters Save went dead and
+            * the hint named a different field entirely. No maxLength either, so
+            * nothing stopped the paste that caused it.
+            */}
+          <Field label="Notes">
+            <textarea
+              id="pdc-notes"
+              className={cn(inputCls, "h-20 resize-y py-2", shown.notes && ERROR_INPUT_CLS)}
+              value={form.notes}
+              maxLength={NOTES_MAX}
+              onChange={(e) => { set("notes", e.target.value); touch("notes") }}
+              onBlur={() => touch("notes")}
+              {...fieldAria("pdc-notes", shown.notes)}
+            />
+            <div className="flex items-start justify-between gap-2">
+              <FieldError id="pdc-notes" message={shown.notes} />
+              {form.notes.length > NOTES_MAX - 100 && (
+                <span className={cn("shrink-0 text-[11px] tabular-nums", form.notes.length >= NOTES_MAX ? "text-destructive" : "text-muted-foreground")}>
+                  {form.notes.length} / {NOTES_MAX}
+                </span>
+              )}
+            </div>
+          </Field>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -179,11 +215,22 @@ export function PdcTransitionDialog({ open, onOpenChange, pdc, onSaved }: { open
   }, [open, pdc])
   const mut = useMutation({
     mutationFn: () => PdcAPI.transition(pdc!.id, { to, depositDate: to === "deposited" ? depositDate : undefined, bounceReason: to === "bounced" ? bounceReason.trim() : undefined }),
-    onSuccess: () => { showSuccessToast(`Cheque marked ${to}`); onSaved?.(); onOpenChange(false) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't update cheque"),
+    // WWL-174 — this interpolated the raw enum, so the toast read "Cheque
+    // marked deposited" while every pill, filter and column in the module reads
+    // "Deposited (awaiting clearance)". The canonical map already existed.
+    onSuccess: () => { showSuccessToast(`Cheque marked ${PDC_STATUS_LABELS[to] ?? to}`); onSaved?.(); onOpenChange(false) },
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't update cheque")),
   })
   const depositErr = to === "deposited" ? validateNotFutureDate(depositDate, { label: "Deposit date" }) : undefined
-  const canSave = !!pdc && options.length > 0 && !depositErr && (to !== "bounced" || bounceReason.trim().length > 0)
+  /**
+   * WWL-166 — this checked `options.length > 0` but never `options.includes(to)`,
+   * so it only asked "does this cheque have ANY legal next status", not "is the
+   * one selected legal". The initial `to` is "deposited" before the effect
+   * seeds it, so a cheque whose only legal move is elsewhere could be submitted
+   * with a transition the server would refuse.
+   */
+  const targetAllowed = !!pdc && options.includes(to)
+  const canSave = !!pdc && targetAllowed && !depositErr && (to !== "bounced" || bounceReason.trim().length > 0)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

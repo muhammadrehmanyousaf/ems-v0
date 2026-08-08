@@ -7,8 +7,10 @@
  */
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { ReceiptsAPI, type PaymentReceipt } from "@/lib/api/paymentReceipts"
+import { ReceiptsAPI, type PaymentReceipt, type ReceiptMethod } from "@/lib/api/paymentReceipts"
 import { ReceiptFormDialog, type ReceiptPrefill } from "@/components/dashboard/mainScreens/receipts/redesigned/receipt-form-dialog"
 import { OutboxStatus } from "@/components/dashboard/shared/outbox-status"
 import { OutboxConflicts } from "@/components/dashboard/shared/outbox-conflicts"
@@ -25,6 +27,7 @@ import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { LinkedFunctionSheetBadge } from "@/components/shared/linked-function-sheet-badge"
+import { DestructiveConfirm } from "@/components/dashboard/primitives/destructive-confirm"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const fmtDate = (s?: string | null) => {
@@ -40,8 +43,12 @@ const methodTone = (m: string): StatusTone => (m === "cash" ? "success" : m === 
 // the linked account, fall back to the booking, never show the vendor.
 const payerName = (r: PaymentReceipt) => r.customer?.fullName || r.booking?.customerName || ""
 
+/** WWL-157 — one screenful and a bit; "Load more" doubles it. */
+const PAGE_SIZE = 100
+
 export function ReceiptsRedesignedView() {
   const qc = useQueryClient()
+  const router = useRouter()
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
   const [dialogOpen, setDialogOpen] = React.useState(false)
@@ -49,9 +56,21 @@ export function ReceiptsRedesignedView() {
   const [prefill, setPrefill] = React.useState<ReceiptPrefill | undefined>(undefined)
   const [deleting, setDeleting] = React.useState<PaymentReceipt | null>(null)
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["receipts-redesigned"],
-    queryFn: () => ReceiptsAPI.list(),
+  /**
+   * WWL-157 — the endpoint had no limit and no paging, so the entire ledger
+   * shipped on every load and every total was summed in the browser. Fine at
+   * 39 rows; it degrades linearly and silently.
+   *
+   * The screen now asks for a page and grows it on demand. The money headline
+   * does NOT come from the page — the server computes it in SQL across the
+   * whole filtered ledger, so "Total received" stays true no matter how much
+   * of the table has been loaded.
+   */
+  const [pageSize, setPageSize] = React.useState(PAGE_SIZE)
+  const { data, isLoading, isError, isFetching, refetch } = useQuery({
+    queryKey: ["receipts-redesigned", pageSize],
+    queryFn: () => ReceiptsAPI.list({ limit: pageSize }),
+    placeholderData: (prev) => prev,
   })
   const invalidate = () => qc.invalidateQueries({ queryKey: ["receipts-redesigned"] })
   const openCreate = () => { setEditing(undefined); setPrefill(undefined); setDialogOpen(true) }
@@ -61,7 +80,7 @@ export function ReceiptsRedesignedView() {
   const removeMut = useMutation({
     mutationFn: (id: number) => ReceiptsAPI.remove(id),
     onSuccess: () => { showSuccessToast("Receipt removed"); setDeleting(null); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove receipt"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove receipt")),
   })
 
   const all = data?.receipts ?? []
@@ -71,14 +90,50 @@ export function ReceiptsRedesignedView() {
     return all.filter((r) => [payerName(r), r.transactionRef, r.method, r.notes].some((v) => (v ?? "").toLowerCase().includes(q)))
   }, [all, search])
 
-  const total = all.reduce((s, r) => s + num(r.amount), 0)
+  /**
+   * WWL-151 — the cards read `all` while the table rendered the filtered rows,
+   * so filtering 13 receipts down to 2 (or to 0) left the headline frozen at
+   * Rs 7,704,813 every time. Third consecutive money module with this. A
+   * headline that describes a different set than the rows under it is not a
+   * summary; it is two answers to one question.
+   *
+   * The cards describe what is on screen, and say so when a filter is on.
+   */
+  const filtering = search.trim().length > 0
+  const scope = receipts
   const now = new Date()
-  const thisMonth = all.filter((r) => {
+  const thisMonth = scope.filter((r) => {
     const d = new Date(r.receivedDate)
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
   })
   const thisMonthTotal = thisMonth.reduce((s, r) => s + num(r.amount), 0)
-  const cashTotal = all.filter((r) => r.method === "cash").reduce((s, r) => s + num(r.amount), 0)
+
+  /**
+   * WWL-157 — with paging on, a total summed from the loaded rows would go up
+   * as the vendor scrolls, which is the same lie in a new costume. Unfiltered
+   * headlines come from the server's whole-ledger aggregate; only a filter,
+   * which is genuinely about the rows on screen, is summed locally.
+   */
+  const ledgerTotal = num(data?.summary?.total)
+  const ledgerCount = data?.total ?? all.length
+  const ledgerCash = num(data?.summary?.byMethod?.cash)
+
+  const total = filtering ? scope.reduce((s, r) => s + num(r.amount), 0) : ledgerTotal
+  const cashTotal = filtering
+    ? scope.filter((r) => r.method === "cash").reduce((s, r) => s + num(r.amount), 0)
+    : ledgerCash
+  const shownCount = filtering ? scope.length : ledgerCount
+  const scopeNote = filtering ? `of ${ledgerCount} total` : undefined
+
+  // How much of the ledger is actually in the browser right now.
+  const loaded = all.length
+  const hasMore = loaded < ledgerCount
+
+  // WWL-150 — the server's per-rail breakdown, biggest first.
+  const byMethodRows = Object.entries(data?.summary?.byMethod ?? {})
+    .filter(([, v]) => num(v) > 0)
+    .sort((a, b) => num(b[1]) - num(a[1]))
+    .map(([k, v]) => [k, num(v)] as [string, number])
   // Drop the Txn-ref column entirely when every row is cash (no reference), so
   // the table doesn't carry an all-dashes dead column.
   const hasRef = all.some((r) => (r.transactionRef ?? "").trim().length > 0)
@@ -113,13 +168,74 @@ export function ReceiptsRedesignedView() {
       <OutboxConflicts onReenter={openReenter} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total received" value={formatPkr(total)} icon="Wallet" trend="up" error={isError} />
-        <StatCard label="This month" value={formatPkr(thisMonthTotal)} icon="Calendar" trend="up" delta={`${thisMonth.length} receipts`} error={isError} />
-        <StatCard label="Cash collected" value={formatPkr(cashTotal)} icon="DollarSign" error={isError} />
-        <StatCard label="Receipts" value={all.length} icon="FileText" />
+        <StatCard label={filtering ? "Total received (filtered)" : "Total received"} value={formatPkr(total)} icon="Wallet" trend="up" delta={scopeNote} error={isError} />
+        <StatCard label="This month" value={formatPkr(thisMonthTotal)} icon="Calendar" trend="up" delta={`${thisMonth.length} ${thisMonth.length === 1 ? "receipt" : "receipts"}`} error={isError} />
+        <StatCard label={filtering ? "Cash collected (filtered)" : "Cash collected"} value={formatPkr(cashTotal)} icon="DollarSign" error={isError} />
+        <StatCard label={filtering ? "Receipts (filtered)" : "Receipts"} value={shownCount} icon="FileText" delta={scopeNote} />
       </div>
 
+      {/* WWL-157 — never let the table imply it is the whole book. If a search
+          is running while rows are still unloaded, say so plainly: a vendor
+          who searches for a customer and sees nothing must not conclude the
+          receipt was never recorded. */}
+      {hasMore && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed bg-muted/30 px-3 py-2 text-xs">
+          <span className="text-muted-foreground">
+            Showing the {loaded} most recent of {ledgerCount} receipts.
+            {filtering && " Search only covers what is loaded."}
+          </span>
+          <Button size="sm" variant="secondary" className="h-7" disabled={isFetching} onClick={() => setPageSize((n) => n + PAGE_SIZE)}>
+            {isFetching ? "Loading…" : "Load more"}
+          </Button>
+        </div>
+      )}
+
+      {/*
+        WWL-150 — every response already carries `summary.byMethod`:
+        cash 6,314,023 · JazzCash 5,558,585 · bank_transfer 3,175,730 ·
+        Easypaisa 2,990,946 · Raast 2,002,337 · other 1,159,500. The screen
+        surfaced ONLY cash and recomputed that client-side.
+
+        For a Pakistani vendor the JazzCash / Easypaisa / Raast split IS the
+        reconciliation view -- it is what they check each rail's app against at
+        the end of a wedding week -- and it was being sent and thrown away.
+
+        Server-computed, so it describes the whole ledger; labelled as such so
+        it is never confused with the filtered cards above.
+      */}
+      {byMethodRows.length > 0 && (
+        <div className="rounded-xl border bg-card p-4">
+          <div className="mb-3 flex items-baseline justify-between gap-2">
+            <h3 className="text-sm font-semibold">Received by method</h3>
+            <span className="text-[11px] text-muted-foreground">whole ledger</span>
+          </div>
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            {byMethodRows.map(([method, amount]) => (
+              <div key={method} className="min-w-[8rem]">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  {methodLabel(method as ReceiptMethod)}
+                </div>
+                <div className="text-sm font-semibold tabular-nums">{formatPkr(amount)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
+        /**
+         * WWL-119 — every row was a navigational dead end: a `<tr>` with no
+         * onRowClick, no link, no button, tabIndex -1 and cursor: auto. From a
+         * payment a vendor could not reach the booking it belongs to, the
+         * customer who made it, or the rest of that booking's receipts — on a
+         * ledger whose whole job is answering "what is this Rs 489,311 against?"
+         *
+         * Rows without a bookingId stay inert rather than navigating nowhere.
+         */
+        onRowClick={(r) => { if (r.bookingId != null) router.push(`/dashboard/bookings/${r.bookingId}`) }}
+        caption="Receipts"
         columns={columns}
         data={receipts}
         getRowId={(r) => String(r.id)}
@@ -129,6 +245,12 @@ export function ReceiptsRedesignedView() {
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
+        /* WWL-152 — with `filterQuery` passed, DataTable renders a "no matches"
+           state instead of this one. Searching zzzqqq used to render "No
+           receipts yet" plus a Record receipt button, presenting a populated
+           ledger as first-run onboarding — worse than the sibling cases because
+           it also offered a primary call-to-action. This `empty` is now only
+           what a genuinely empty ledger sees. */
         empty={{
           icon: "FileText",
           title: "No receipts yet",
@@ -150,6 +272,11 @@ export function ReceiptsRedesignedView() {
                 { header: "Customer", value: (r) => payerName(r) },
                 { header: "Method", value: (r) => methodLabel(r.method) },
                 { header: "Txn ref", value: (r) => r.transactionRef ?? "" },
+                // WWL-136/155/172/188 — the export dropped a column that is on
+                // screen, so the file the vendor hands their accountant is not the
+                // table they were reading. Booking id is what actually ties a row
+                // back to an event in a spreadsheet.
+                { header: "Booking id", value: (r) => (r.bookingId != null ? `#${r.bookingId}` : "") },
                 { header: "Received", value: (r) => fmtDate(r.receivedDate) },
                 { header: "Amount", value: (r) => num(r.amount) },
               ]} />
@@ -170,18 +297,30 @@ export function ReceiptsRedesignedView() {
 
       <ReceiptFormDialog open={dialogOpen} onOpenChange={setDialogOpen} receipt={editing} prefill={prefill} onSaved={invalidate} />
 
-      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove this receipt?</AlertDialogTitle>
-            <AlertDialogDescription>This {deleting ? formatPkr(num(deleting.amount)) : ""} receipt will be removed. This can't be undone.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleting && removeMut.mutate(deleting.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remove</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* WWL-145 — the confirm named only the amount, on a ledger where this
+          vendor has two "Barat — Salman Rauf" receipts. WWL-156 — it also said
+          "can't be undone" while PaymentReceipt is paranoid: true. */}
+      <DestructiveConfirm
+        open={!!deleting}
+        onOpenChange={(v) => !v && setDeleting(null)}
+        title="Remove this receipt?"
+        reversibility="soft"
+        pending={removeMut.isPending}
+        onConfirm={() => deleting && removeMut.mutate(deleting.id)}
+        fields={[
+          { label: "Amount", value: deleting ? formatPkr(num(deleting.amount)) : "" },
+          { label: "From", value: deleting ? payerName(deleting) : "" },
+          { label: "Method", value: deleting ? methodLabel(deleting.method) : "" },
+          { label: "Received", value: deleting ? fmtDate(deleting.receivedDate) : "" },
+          { label: "Txn ref", value: deleting?.transactionRef || "" },
+          { label: "Booking", value: deleting?.bookingId ? `#${deleting.bookingId}` : "" },
+        ]}
+        consequence={
+          deleting?.bookingId
+            ? "The booking's paid total and payment status will be recalculated without it."
+            : undefined
+        }
+      />
     </div>
   )
 }

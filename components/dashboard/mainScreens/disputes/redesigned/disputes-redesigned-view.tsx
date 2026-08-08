@@ -119,6 +119,9 @@ export function DisputesRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
+        caption="Disputes"
         columns={columns}
         data={rows}
         getRowId={(r) => String(r.id)}

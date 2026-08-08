@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import Link from "next/link"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { VendorsAPI, UsersAPI, type ApiUser } from "@/lib/api/dashboard"
@@ -44,12 +45,12 @@ export function VendorsAdminRedesignedView() {
   const reviewMut = useMutation({
     mutationFn: ({ id, approve }: { id: number; approve: boolean }) => VendorsAPI.changeProfileStatus(id, approve),
     onSuccess: (_d, v) => { showSuccessToast(v.approve ? "Vendor approved" : "Approval revoked"); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't update approval"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't update approval")),
   })
   const removeMut = useMutation({
     mutationFn: (id: number) => UsersAPI.delete(id),
     onSuccess: () => { showSuccessToast("Vendor removed"); setDeleting(null); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove vendor"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove vendor")),
   })
 
   // Server-side paging. The endpoint defaults to limit=10, so the unpaged read
@@ -145,6 +146,9 @@ export function VendorsAdminRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
+        caption="Vendors"
         columns={columns}
         data={rows}
         getRowId={(r) => String(r.id)}

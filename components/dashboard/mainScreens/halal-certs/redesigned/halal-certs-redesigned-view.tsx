@@ -7,7 +7,11 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
+import { useRecordBusinessId } from "@/hooks/use-record-business-id"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { SupplierAPI } from "@/lib/api/suppliers"
+import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import {
   HalalCertAPI,
   type HalalCert,
@@ -36,7 +40,8 @@ const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(
 const fmtDate = (v?: string | null) => {
   if (!v) return "—"
   const d = new Date(v)
-  return isNaN(d.getTime()) ? "—" : d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+  return isNaN(d.getTime()) ? "—" : // WWL-334 — en-GB on a screen inside a dashboard that uses en-PK everywhere else.
+    d.toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })
 }
 const daysFromNow = (v?: string | null): number | null => {
   if (!v) return null
@@ -62,6 +67,7 @@ const supplierName = (c: HalalCert) => c.supplier?.name ?? c.supplierNameSnapsho
 
 export function HalalCertsRedesignedView() {
   const qc = useQueryClient()
+  const activeBusinessId = useActiveBusinessId()
   const [search, setSearch] = React.useState("")
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
   const [dialogOpen, setDialogOpen] = React.useState(false)
@@ -79,7 +85,13 @@ export function HalalCertsRedesignedView() {
     queryFn: () => HalalCertAPI.expiring(),
   })
   const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
-  const businessId = businesses?.[0]?.id
+  /**
+   * WWL-293/311/332/350 — this was `businesses?.[0]?.id`, so under "All venues"
+   * a new record landed on whichever venue happened to be first in the array,
+   * silently. The hook returns undefined rather than guessing when there is no
+   * right answer; the create dialog then asks.
+   */
+  const businessId = useRecordBusinessId()
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["halal-certs-redesigned"] })
     qc.invalidateQueries({ queryKey: ["halal-certs-expiring"] })
@@ -89,7 +101,7 @@ export function HalalCertsRedesignedView() {
   const removeMut = useMutation({
     mutationFn: (id: number) => HalalCertAPI.remove(id),
     onSuccess: () => { showSuccessToast("Certificate removed"); setDeleting(null); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove certificate"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove certificate")),
   })
 
   const all = data?.certs ?? []
@@ -103,7 +115,34 @@ export function HalalCertsRedesignedView() {
 
   const active = all.filter((c) => c.status === "active").length
   const expiringSoon = all.filter((c) => c.status === "expiring_soon").length
-  const expiredOrRevoked = all.filter((c) => c.status === "expired" || c.status === "revoked").length
+  /**
+   * WWL-335 — "Expired / revoked" merged a certificate that quietly LAPSED with
+   * one an authority WITHDREW. Operationally those are nothing alike: the first
+   * is a renewal you forgot, the second is a finding against you, and a caterer
+   * facing an inspector needs to know which of the two they are holding.
+   */
+  /**
+   * Food suppliers with no certificate on file — the specific gap, not a
+   * generic nudge (WWL-323).
+   */
+  const { data: supplierData } = useQuery({
+    queryKey: ["suppliers-for-halal-gap", activeBusinessId],
+    queryFn: () => SupplierAPI.list(activeBusinessId ? { businessId: activeBusinessId } : {}),
+    staleTime: 5 * 60_000,
+  })
+  const unCertifiedSuppliers = React.useMemo(() => {
+    const covered = new Set(
+      all.map((c) => (c.supplier?.name ?? c.supplierNameSnapshot ?? "").trim().toLowerCase()).filter(Boolean),
+    )
+    return (supplierData?.suppliers ?? [])
+      .filter((sup) => !covered.has((sup.name ?? "").trim().toLowerCase()))
+      .map((sup) => sup.name)
+      .filter(Boolean) as string[]
+  }, [supplierData, all])
+
+  const [showAllExpiring, setShowAllExpiring] = React.useState(false)
+  const expiredCount = all.filter((c) => c.status === "expired").length
+  const revokedCount = all.filter((c) => c.status === "revoked").length
   const expiring = expiringData?.certs ?? []
 
   const columns: Column<HalalCert>[] = [
@@ -128,6 +167,27 @@ export function HalalCertsRedesignedView() {
     },
     { key: "authority", header: "Authority", cellClassName: "text-muted-foreground", render: (c) => authorityLabel(c) },
     { key: "expiry", header: "Expires", align: "right", cellClassName: "tabular-nums", render: (c) => fmtDate(c.expiryDate) },
+    {
+      /* WWL-322 — the register held the certificate NUMBER and no way to
+         produce the certificate. Now that the dialog can attach one, the table
+         is where an inspector's question gets answered. */
+      key: "doc", header: "Document", align: "center",
+      render: (c) =>
+        c.certPhotoUrl ? (
+          <a
+            href={c.certPhotoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-primary underline underline-offset-2"
+            title="Open the attached certificate"
+          >
+            View
+          </a>
+        ) : (
+          <span className="text-xs text-muted-foreground">Not attached</span>
+        ),
+    },
     { key: "status", header: "Status", render: (c) => <StatusPill tone={statusTone(c.status)}>{statusLabel(c.status)}</StatusPill> },
     {
       key: "actions", header: "", align: "right",
@@ -192,7 +252,12 @@ export function HalalCertsRedesignedView() {
         <StatCard label="Total certificates" value={all.length} icon="ShieldCheck" />
         <StatCard label="Active" value={active} icon="CheckCircle2" trend="up" />
         <StatCard label="Expiring soon" value={expiringSoon} icon="Clock" trend={expiringSoon > 0 ? "down" : "flat"} />
-        <StatCard label="Expired / revoked" value={expiredOrRevoked} icon="AlertTriangle" />
+        <StatCard
+          label="Expired"
+          value={expiredCount}
+          icon="AlertTriangle"
+          delta={revokedCount > 0 ? `${revokedCount} revoked` : undefined}
+        />
       </div>
 
       {expiring.length > 0 && (
@@ -200,9 +265,22 @@ export function HalalCertsRedesignedView() {
           <div className="flex items-center gap-2 text-sm font-semibold text-amber-900 dark:text-amber-200">
             <Icon name="AlertTriangle" size={16} />
             {expiring.length} certificate{expiring.length === 1 ? "" : "s"} expiring soon or already expired
+            {expiring.length > 6 && (
+              <button
+                type="button"
+                onClick={() => setShowAllExpiring((v) => !v)}
+                className="ml-auto text-xs font-medium underline underline-offset-2"
+              >
+                {showAllExpiring ? "Show fewer" : `Show all ${expiring.length}`}
+              </button>
+            )}
           </div>
           <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {expiring.slice(0, 6).map((c) => {
+            {/* WWL-330 — `slice(0, 6)` with no "and N more": the heading was
+                honest ("twenty certificates expiring") and the panel showed six,
+                and there is no status filter on the table either, so the other
+                fourteen could only be found by reading every row. */}
+            {expiring.slice(0, showAllExpiring ? expiring.length : 6).map((c) => {
               const dueIn = daysFromNow(c.expiryDate)
               return (
                 <button
@@ -226,6 +304,9 @@ export function HalalCertsRedesignedView() {
       )}
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
+        caption="Halal certificates"
         columns={columns}
         data={certs}
         getRowId={(c) => String(c.id)}
@@ -235,10 +316,22 @@ export function HalalCertsRedesignedView() {
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
+        /**
+          * WWL-323 — the register is empty on all three venues while the same
+          * account holds 18 supplier records, Bismillah Meat Supply among them
+          * on each one. The sweep was right that this is the compliance
+          * POSITION rather than a code defect — and right that the screen
+          * offered nothing that would prompt a vendor to close it.
+          *
+          * It knows who they buy from. Naming them turns "add a certificate"
+          * from an abstract instruction into a specific one.
+          */
         empty={{
           icon: "ShieldCheck",
-          title: "No certificates yet",
-          description: "Add supplier halal certificates to track authorities, expiry dates and renewals.",
+          title: "No certificates on file",
+          description: unCertifiedSuppliers.length > 0
+            ? `You buy from ${unCertifiedSuppliers.slice(0, 3).join(", ")}${unCertifiedSuppliers.length > 3 ? ` and ${unCertifiedSuppliers.length - 3} more` : ""}. If an inspector or a client asks for their halal certificate today, there is nothing here to show them.`
+            : "Keep supplier halal certificates here so you can produce one on the day, and see expiry dates before they pass.",
           action: <Button size="sm" onClick={openCreate}><Icon name="Plus" size={14} className="mr-1" /> Add certificate</Button>,
         }}
         toolbar={
@@ -257,8 +350,14 @@ export function HalalCertsRedesignedView() {
                 { header: "Supplier", value: (c) => supplierName(c) },
                 { header: "Item", value: (c) => c.itemDescription ?? "" },
                 { header: "Authority", value: (c) => authorityLabel(c) },
-                { header: "Issued", value: (c) => fmtDate(c.issuedDate) },
-                { header: "Expires", value: (c) => fmtDate(c.expiryDate) },
+                /* WWL-329 — `fmtDate` returns "06 Aug 2026", which a
+                   spreadsheet cannot sort or filter as a date. On an EXPIRY
+                   register, sorting by expiry is the first thing anyone does.
+                   Brokers and Suppliers already export raw ISO from the same
+                   ExportMenu. */
+                { header: "Issued", value: (c) => c.issuedDate ?? "" },
+                { header: "Expires", value: (c) => c.expiryDate ?? "" },
+                { header: "Document", value: (c) => c.certPhotoUrl ?? "" },
                 { header: "Status", value: (c) => statusLabel(c.status) },
               ]} />
             </div>

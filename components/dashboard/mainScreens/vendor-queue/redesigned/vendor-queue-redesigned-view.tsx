@@ -11,6 +11,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   listVendorQueue,
@@ -156,7 +157,7 @@ export function VendorQueueRedesignedView() {
       invalidate()
     },
     onError: (e: any) =>
-      toast.error(e?.response?.data?.message || e?.message || "Action failed"),
+      toast.error(errorMessage(e, "Action failed")),
   })
 
   const confirmAction = (notes: string | undefined) => {
@@ -173,7 +174,7 @@ export function VendorQueueRedesignedView() {
       invalidate()
     },
     onError: (e: any) =>
-      toast.error(e?.response?.data?.message || e?.message || "Bulk approve failed"),
+      toast.error(errorMessage(e, "Bulk approve failed")),
   })
 
   const handleBulkApprove = () => {
@@ -314,6 +315,9 @@ export function VendorQueueRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
+        caption="Vendor queue"
         columns={columns}
         data={rows}
         getRowId={(r) => String(r.id)}

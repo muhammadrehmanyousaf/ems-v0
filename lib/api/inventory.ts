@@ -59,6 +59,8 @@ export interface InventoryBookingInfo {
   id: number;
   bookingDate: string | null;
   status: string | null;
+  /** WWL-248 — "#180" is not an answer a vendor recognises; a name is. */
+  customerName?: string | null;
 }
 
 export interface InventoryMovement {

@@ -4,8 +4,45 @@ import { ColumnDef } from "@tanstack/react-table";
 import { RowActions } from "./row-actions";
 import { Review } from "@/lib/dashboard-types";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { formatDateTime } from "@/lib/utils";
+/**
+ * WWL-384 — dates only, in Karachi. `createdAt` on a review carries no
+ * meaningful clock time; printing one invents precision that was never there.
+ */
+const fmtReviewDate = (v?: string | null): string => {
+    if (!v) return "—";
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return "—";
+    return new Intl.DateTimeFormat("en-PK", {
+        timeZone: "Asia/Karachi",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    }).format(d);
+};
 import { StartComponent } from "./star-component";
+import { ArrowUpDown } from "lucide-react";
+import type { Column } from "@tanstack/react-table";
+
+/**
+ * WWL-368 — `getSortedRowModel` was wired into the shared hook and no header
+ * exposed a control to reach it, so all eight headers were plain strings with
+ * `cursor: auto` and no `aria-sort`. A reviews screen that cannot be sorted by
+ * rating or date cannot answer either question it is opened to answer.
+ */
+function SortableHeader({ column, label }: { column: Column<Review, unknown>; label: string }) {
+    const dir = column.getIsSorted();
+    return (
+        <button
+            type="button"
+            onClick={() => column.toggleSorting(dir === "asc")}
+            aria-label={`Sort by ${label}${dir === "asc" ? ", currently ascending" : dir === "desc" ? ", currently descending" : ""}`}
+            className="-mx-1 inline-flex items-center gap-1 rounded px-1 py-0.5 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+            {label}
+            <ArrowUpDown className={dir ? "h-3 w-3 text-foreground" : "h-3 w-3 opacity-40"} />
+        </button>
+    );
+}
 
 export const columns = (
     onView: (review: Review) => void,
@@ -29,7 +66,9 @@ export const columns = (
             <Checkbox
                 checked={row.getIsSelected()}
                 onCheckedChange={(v) => row.toggleSelected(!!v)}
-                aria-label="Select row"
+                // WWL-369/WWL-120 — every row announced the identical "Select row", so a
+                // screen-reader user could not tell which review they were about to act on.
+                aria-label={`Select review by ${row.original.reviewerName || "unknown reviewer"}`}
             />
         ),
         enableSorting: false,
@@ -60,8 +99,16 @@ export const columns = (
         accessorKey: "bookingId",
         header: "Booking Id",
         cell: ({ row }) => {
+            /**
+             * WWL-363 — the API used to send `#165` under a field named
+             * `bookingId`, and this prefixed it again: every row read `##165`.
+             * A review with no booking arrived as the STRING "#null", which is
+             * truthy, so this em-dash was unreachable. The wire carries the
+             * number now; the hash belongs here, once.
+             */
             const id = row.original.bookingId
-            return <span className="whitespace-nowrap">{id ? `#${id}` : "—"}</span>
+            const n = typeof id === "string" ? id.replace(/^#/, "") : id
+            return <span className="whitespace-nowrap">{n && n !== "null" ? `#${n}` : "—"}</span>
         },
     },
     /**
@@ -89,16 +136,53 @@ export const columns = (
     {
         accessorKey: "rating",
         id: 'rating',
-        header: "Rating",
+        header: ({ column }) => <SortableHeader column={column} label="Rating" />,
         cell: ({ row }) => <StartComponent value={row.original.rating} />
     },
     {
         accessorKey: "createdAt",
         id: 'createdAt',
-        header: "Date",
+        header: ({ column }) => <SortableHeader column={column} label="Date" />,
+        /**
+         * WWL-384 — `formatDateTime` printed a clock time from a date-only
+         * value, so all eight rows read "05:00 am" — UTC midnight rendered in
+         * PKT — giving a column of eight identical times beside eight different
+         * dates. A time nobody recorded is worse than no time.
+         */
         cell: ({ row }) => (
-            <span className="whitespace-nowrap">{formatDateTime(row.original.createdAt)}</span>
+            <span className="whitespace-nowrap">{fmtReviewDate(row.original.createdAt)}</span>
         )
+    },
+    /**
+     * WWL-368 — the review itself had no column: reading one meant opening the
+     * row menu and choosing View, one at a time, on the screen whose entire
+     * purpose is reading reviews. And "which have I not replied to?" was
+     * unanswerable — the panel above says 100% and the table could not show the
+     * other 0%.
+     *
+     * The text column is also what makes the global search (WWL-366) able to
+     * reach the words inside a review, which is what a vendor actually types.
+     */
+    {
+        accessorKey: "reviewText",
+        id: "reviewText",
+        header: "Review",
+        cell: ({ row }) => (
+            <p className="max-w-[320px] truncate text-muted-foreground" title={row.original.reviewText || undefined}>
+                {row.original.reviewText || "—"}
+            </p>
+        ),
+    },
+    {
+        accessorKey: "vendorReply",
+        id: "vendorReply",
+        header: "Replied",
+        cell: ({ row }) =>
+            row.original.vendorReply ? (
+                <span className="whitespace-nowrap text-xs font-medium text-emerald-700 dark:text-emerald-400">Replied</span>
+            ) : (
+                <span className="whitespace-nowrap text-xs text-amber-700 dark:text-amber-400">Awaiting reply</span>
+            ),
     },
     {
         id: "actions",

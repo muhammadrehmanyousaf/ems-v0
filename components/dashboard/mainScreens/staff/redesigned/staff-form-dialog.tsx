@@ -7,7 +7,9 @@
  */
 
 import * as React from "react"
-import { useMutation } from "@tanstack/react-query"
+import { errorMessage } from "@/lib/utils/api-error"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { venueSpacesApi, type SubVenueNode } from "@/lib/api/venueSpaces"
 import { StaffAPI, type StaffMember, type StaffRole, type EmploymentType } from "@/lib/api/staff"
 import { RecordVenueField } from "@/components/dashboard/shared/record-venue-field"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -77,6 +79,38 @@ export function StaffFormDialog({
    */
   const [venueId, setVenueId] = React.useState<string>(businessId != null ? String(businessId) : "")
   const effectiveBusinessId = member?.businessId ?? (venueId ? Number(venueId) : businessId)
+
+  /**
+   * WWL-264 — the roster has a Space column (Rooftop, Terrace Lawn, Marquee B,
+   * Zenana Section…) and this dialog had no space field, so a member added
+   * through the UI could never be given one — the column could only ever have
+   * been populated by SQL. The tree has always been readable; the server-side
+   * whitelist that dropped the field is fixed alongside this.
+   *
+   * Flat list, indented by depth: a crew member belongs to one space, and a
+   * tree widget for picking one of a handful of halls is more machinery than
+   * the choice deserves.
+   */
+  const [spaceId, setSpaceId] = React.useState<string>(
+    member?.defaultSubVenueId != null ? String(member.defaultSubVenueId) : "",
+  )
+  const { data: spaceTree } = useQuery({
+    queryKey: ["venue-space-tree", effectiveBusinessId],
+    queryFn: () => venueSpacesApi.getTree(effectiveBusinessId!),
+    enabled: open && effectiveBusinessId != null,
+    staleTime: 5 * 60_000,
+  })
+  const spaceOptions = React.useMemo(() => {
+    const out: { id: number; label: string }[] = []
+    const walk = (nodes: SubVenueNode[] | undefined, depth: number) => {
+      for (const n of nodes ?? []) {
+        if (n.active !== false) out.push({ id: n.id, label: `${"  ".repeat(depth)}${n.name}` })
+        walk(n.children, depth + 1)
+      }
+    }
+    walk(spaceTree?.tree, 0)
+    return out
+  }, [spaceTree])
   const [touched, setTouched] = React.useState<Record<string, boolean>>({})
   const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }))
   const set = (k: keyof FormState, v: string | boolean) => { setForm((f) => ({ ...f, [k]: v })); touch(String(k)) }
@@ -85,6 +119,7 @@ export function StaffFormDialog({
     mutationFn: () => {
       const body = {
         businessId: effectiveBusinessId!,
+        defaultSubVenueId: spaceId ? Number(spaceId) : null,
         fullName: form.fullName.trim(),
         role: form.role, employmentType: form.employmentType,
         phoneNumber: form.phoneNumber.trim() || undefined,
@@ -105,7 +140,7 @@ export function StaffFormDialog({
       return isEdit ? StaffAPI.updateMember(member!.id, body) : StaffAPI.createMember(body)
     },
     onSuccess: () => { showSuccessToast(isEdit ? "Staff updated" : "Staff added"); onSaved?.(); onOpenChange(false) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't save staff member"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't save staff member")),
   })
   /*
    * Every field except the full name accepted anything at all.
@@ -179,6 +214,14 @@ export function StaffFormDialog({
             <Field label="Role">
               <select className={inputCls} value={form.role} onChange={(e) => set("role", e.target.value as StaffRole)}>{ROLES.map((r) => <option key={r} value={r}>{lbl(r)}</option>)}</select>
             </Field>
+            {spaceOptions.length > 0 && (
+              <Field label="Home space (optional)">
+                <select className={inputCls} value={spaceId} onChange={(e) => setSpaceId(e.target.value)}>
+                  <option value="">Floating — works anywhere</option>
+                  {spaceOptions.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </select>
+              </Field>
+            )}
             <Field label="Employment">
               <select className={inputCls} value={form.employmentType} onChange={(e) => set("employmentType", e.target.value as EmploymentType)}>{EMPLOYMENT.map((r) => <option key={r} value={r}>{lbl(r)}</option>)}</select>
             </Field>

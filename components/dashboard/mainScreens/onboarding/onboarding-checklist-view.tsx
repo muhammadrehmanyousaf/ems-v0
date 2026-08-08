@@ -12,7 +12,7 @@
  */
 
 import * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import {
@@ -28,6 +28,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface Item {
@@ -54,6 +55,14 @@ interface Activation {
   futureConfirmed: number;
   baaqiTracked: number;
   shieldOn: boolean;
+  // WWL-519 — all five arrive on every response and were typed nowhere, so no
+  // caller could reach them even to try. Optional because an older backend
+  // deploy omits them; the panel degrades to the original three stats.
+  leadsTotal?: number;
+  leadsAwaitingReply?: number;
+  leadsWorked?: number;
+  receipts?: number;
+  functionSheets?: number;
 }
 interface BizCompleteness {
   businessId: number;
@@ -82,19 +91,27 @@ function tierFor(score: number): {
 export default function OnboardingChecklistView() {
   const [data, setData] = useState<BizCompleteness[]>([]);
   const [loading, setLoading] = useState(true);
+  // WWL-523 — see the render branch below.
+  const [failed, setFailed] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
+    setFailed(null);
     axiosInstance
       .get('/api/v1/businesses/my-completeness')
       .then((r) => setData(r.data?.data?.businesses ?? []))
-      .catch((e) =>
-        toast.error(
-          e?.response?.data?.message ||
-            'Failed to load onboarding checklist',
-        ),
-      )
+      .catch((e) => {
+        const msg =
+          e?.response?.data?.message || 'Failed to load onboarding checklist';
+        setFailed(msg);
+        toast.error(msg);
+      })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   if (loading) {
     return (
@@ -102,6 +119,29 @@ export default function OnboardingChecklistView() {
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-96 w-full" />
       </div>
+    );
+  }
+
+  /**
+   * WWL-523 — a failed fetch left `data` at `[]`, which fell straight through
+   * to "No businesses yet. Create one…". A vendor who owns three venues was
+   * told they own none, and invited to create one they already have, because
+   * the network hiccuped. Failure and emptiness are different answers and only
+   * one of them has a retry.
+   */
+  if (failed) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-start gap-3 p-5 text-sm">
+          <p className="font-medium">Couldn&apos;t load your onboarding checklist.</p>
+          <p className="text-muted-foreground">
+            This is a loading problem, not a change to your account — your businesses are safe.
+          </p>
+          <Button size="sm" variant="secondary" onClick={load}>
+            Try again
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -142,7 +182,25 @@ function BusinessChecklistCard({ biz }: { biz: BizCompleteness }) {
               {t.label}
             </Badge>
           </div>
+          {/**
+            * WWL-520 — the activation panel below states "activation first:
+            * reward a WORKING venue, not photos", and the score does the
+            * opposite: all 100 points come from the six PROFILE categories and
+            * activation contributes nothing. Live, 3358 is the most active
+            * venue by leads (28) and receipts (15) and scored the LOWEST (44),
+            * while two quieter venues scored 52. One page, two contradictory
+            * principles.
+            *
+            * Fixed by naming the score for what it measures, not by changing
+            * the formula: re-weighting it would silently move the score of
+            * every listing on a live marketplace, which is a product decision
+            * and not a QA fix. The number is honest now, and the activation
+            * panel is labelled as the separate thing it is.
+            */}
           <div className="text-right shrink-0">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+              Profile completeness
+            </div>
             <div className="text-4xl font-bold tracking-tight text-bridal-gold-dark tabular-nums">
               {biz.score}
               <span className="text-base text-neutral-400 font-normal">
@@ -158,13 +216,47 @@ function BusinessChecklistCard({ biz }: { biz: BizCompleteness }) {
           </div>
         </div>
 
-        {/* Phase-1 EPIC 6 · T6.5 — activation first: reward a WORKING venue, not photos. */}
+        {/* Phase-1 EPIC 6 · T6.5 — how much of the venue's real work is
+            actually running through the portal. Tracked and shown, but NOT part
+            of the completeness score above (WWL-520) — the two answer different
+            questions and used to imply they were the same one. */}
         {biz.activation && (
           <div className="rounded-lg border p-3">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-500 mb-1.5">
+              How much you&apos;re using it · counted separately from the score
+            </div>
             <div className="flex items-center gap-1.5 text-xs font-semibold mb-2">
               <ShieldCheck className={cn("h-3.5 w-3.5", biz.activation.shieldOn ? "text-emerald-600" : "text-muted-foreground")} />
               {biz.activation.shieldOn ? "Booking shield ON" : "Booking shield off — add your future dates"}
             </div>
+            {/**
+              * WWL-519 — the API returns nine activation fields and this panel
+              * rendered four. The one it dropped that matters most is
+              * `leadsAwaitingReply`: on the live account that was 22 people
+              * across three venues who had asked about a wedding and heard
+              * nothing back. A block whose entire job is answering "what should
+              * I do next?" was showing how many bookings had been LOGGED —
+              * bookkeeping — while the actual next action sat unrendered on the
+              * same payload.
+              *
+              * It goes first, and it is a link, because reading the number is
+              * not the point; replying is.
+              */}
+            {(biz.activation.leadsAwaitingReply ?? 0) > 0 && (
+              <Link
+                href="/dashboard/leads"
+                className="mb-2 flex items-center justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 px-2.5 py-2 text-amber-900 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100"
+              >
+                <span className="text-xs font-semibold">
+                  {biz.activation.leadsAwaitingReply}{" "}
+                  {biz.activation.leadsAwaitingReply === 1 ? "lead is" : "leads are"} waiting on a reply
+                </span>
+                <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-medium">
+                  Reply now <ArrowRight className="h-3 w-3" />
+                </span>
+              </Link>
+            )}
+
             <div className="grid grid-cols-3 gap-2 text-center">
               {[
                 { n: biz.activation.bookings, label: "bookings logged" },
@@ -177,6 +269,30 @@ function BusinessChecklistCard({ biz }: { biz: BizCompleteness }) {
                 </div>
               ))}
             </div>
+
+            {/* The remaining four, as a secondary line — they describe how much
+                of the venue's real work already lives in the portal. */}
+            {(() => {
+              const a = biz.activation!;
+              const extra = [
+                { n: a.leadsTotal, label: "leads received" },
+                { n: a.leadsWorked, label: "leads worked" },
+                { n: a.receipts, label: "receipts recorded" },
+                { n: a.functionSheets, label: "function sheets" },
+              ].filter((s) => s.n != null);
+              if (extra.length === 0) return null;
+              return (
+                <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] sm:grid-cols-4">
+                  {extra.map((s) => (
+                    <div key={s.label} className="flex items-baseline justify-between gap-1 sm:flex-col sm:items-start sm:gap-0">
+                      <dt className="text-muted-foreground leading-tight">{s.label}</dt>
+                      <dd className="font-semibold tabular-nums">{s.n}</dd>
+                    </div>
+                  ))}
+                </dl>
+              );
+            })()}
+
             {!biz.activation.shieldOn && (
               <Link href="/dashboard/migrate" className="inline-flex items-center gap-1 mt-2 text-[11px] font-medium text-emerald-700 hover:underline">
                 Switch on the shield <ArrowRight className="h-3 w-3" />
@@ -191,16 +307,52 @@ function BusinessChecklistCard({ biz }: { biz: BizCompleteness }) {
               <Sparkles className="h-3.5 w-3.5" />
               Highest-impact next moves
             </div>
+            {/**
+              * WWL-518 — `suggestions` is a string[], rendered as plain text
+              * with an arrow glyph. So the block designed to answer "what
+              * should I do first?" was the ONE part of the page a vendor could
+              * not act on — while the very same items appeared again in the
+              * category lists below, each with a working link to the field that
+              * fixes it.
+              *
+              * The links were never missing; they were just in the other list.
+              * Matching a suggestion to its checklist item by label reuses the
+              * href the item already carries, so the two lists cannot point
+              * anywhere different.
+              */}
             <ul className="space-y-1">
-              {biz.suggestions.map((s, i) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-2 text-sm text-neutral-800"
-                >
-                  <ArrowRight className="h-3.5 w-3.5 mt-0.5 text-bridal-gold-dark shrink-0" />
-                  {s}
-                </li>
-              ))}
+              {biz.suggestions.map((s, i) => {
+                const item = biz.categories
+                  .flatMap((c) => c.items)
+                  .find((it) => it.label.trim().toLowerCase() === s.trim().toLowerCase());
+                const body = (
+                  <>
+                    <ArrowRight className="h-3.5 w-3.5 mt-0.5 text-bridal-gold-dark shrink-0" />
+                    <span className="min-w-0">
+                      <span className="block leading-snug">{s}</span>
+                      {item?.why && (
+                        <span className="mt-0.5 block text-[11px] leading-snug text-neutral-500">
+                          {item.why}
+                        </span>
+                      )}
+                    </span>
+                  </>
+                );
+                return (
+                  <li key={i}>
+                    {item?.href ? (
+                      <Link
+                        href={item.href}
+                        className="flex items-start gap-2 rounded-md px-1 py-0.5 text-sm text-neutral-800 hover:bg-bridal-gold/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        {body}
+                      </Link>
+                    ) : (
+                      <span className="flex items-start gap-2 px-1 py-0.5 text-sm text-neutral-800">{body}</span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
             <Link
               href={`/dashboard/business/${biz.businessId}`}
@@ -231,7 +383,23 @@ function BusinessChecklistCard({ biz }: { biz: BizCompleteness }) {
                     {cat.earned} / {cat.max} pts
                   </span>
                 </div>
-                <Progress value={pct} className="h-1" />
+                {/**
+                  * WWL-522 — six of these per card, each on a 1-pixel track,
+                  * and nothing reached the accessibility tree: no
+                  * `aria-valuenow`, no `aria-valuetext`. So the visual channel
+                  * was a hairline and the non-visual channel was the adjacent
+                  * text only. Both channels now carry the value, and the track
+                  * is thick enough to read.
+                  */}
+                <Progress
+                  value={pct}
+                  className="h-1.5"
+                  aria-label={`${cat.label} completeness`}
+                  aria-valuenow={cat.earned}
+                  aria-valuemin={0}
+                  aria-valuemax={cat.max}
+                  aria-valuetext={`${cat.earned} of ${cat.max} points`}
+                />
                 {/* Each row is a link to the field that fixes it, and carries
                     the reason it matters. A checklist that names a gap without
                     naming its fix is a scoreboard, not a checklist — and the

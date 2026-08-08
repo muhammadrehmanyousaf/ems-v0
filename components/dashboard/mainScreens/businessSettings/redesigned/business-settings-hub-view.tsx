@@ -1,18 +1,19 @@
 "use client"
 
 /**
- * Business settings HUB (redesigned, Track C — interactive editor).
- * ClickUp-style tab rail over the business profile. Three core tabs are fully
- * wired to BusinessesAPI.update (Profile, Capacity & Pricing, Amenities &
- * Services) with a shared dirty-tracked sticky save bar. The dialog/separate-API
- * tabs (Images, Packages, Menus, Bank, Team, Availability) link to the existing
- * functional screens rather than duplicate their dialogs. Route
- * /dashboard/business-settings-new. Loads the vendor's first business.
- * Original businessSettings screens untouched.
+ * Business settings HUB. Tab rail over the business profile. Three core tabs
+ * are wired to BusinessesAPI.update (Profile, Capacity & Pricing, Amenities &
+ * Services) behind a shared dirty-tracked sticky save bar; the rest render
+ * their own managers, which save themselves.
+ *
+ * Route /dashboard/settings, on whichever business `?biz=` names.
  */
 
 import * as React from "react"
-import { useSearchParams } from "next/navigation"
+import { errorMessage } from "@/lib/utils/api-error"
+import { useRouter, useSearchParams } from "next/navigation"
+import { CITIES } from "@/lib/seo/constants"
+import { useBeforeUnloadGuard } from "@/lib/hooks/useBeforeUnloadGuard"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { BusinessesAPI, type ApiBusiness } from "@/lib/api/dashboard"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
@@ -29,11 +30,15 @@ import { ImagesManager } from "@/components/dashboard/mainScreens/businessSettin
 import { TypeSpecificManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/type-specific-manager"
 import { ProfileContentManager } from "@/components/dashboard/mainScreens/businessSettings/redesigned/profile-content-manager"
 import { getVendorTypeConfig } from "@/lib/vendor-type-config"
+import { VENDOR_TYPES } from "@/lib/vendor-types"
 import { PersonaPreference } from "@/components/dashboard/layout/persona-preference"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { TourLauncherCard } from "@/components/dashboard/tour/tour-launcher"
+// WWL-486 — TourLauncherCard was imported here and never rendered. page.tsx
+// renders it deliberately, OUTSIDE this component, so the offer of help
+// survives the hub's loading and failure states. The stray import made it look
+// as though the card appeared twice; it appears exactly once.
 import { FieldError, fieldAria, ERROR_INPUT_CLS } from "@/components/dashboard/primitives/field-error"
 
 const numOrNull = (v: string) => (v.trim() === "" ? null : Number(v) || 0)
@@ -81,19 +86,54 @@ const PARAM_TO_TAB: Record<string, TabKey> = {
   availability: "availability",
 }
 
-// The editable scalar/boolean fields we own (the rest are separate APIs/dialogs).
-const BOOLS: { key: keyof ApiBusiness; label: string; hint: string }[] = [
-  { key: "catering", label: "Catering", hint: "We provide food service" },
-  { key: "parking", label: "Parking", hint: "On-site parking available" },
-  { key: "provideSoundSystem", label: "Sound system", hint: "PA / DJ setup included" },
-  { key: "provideSeatingArrangement", label: "Seating arrangement", hint: "Chairs & tables provided" },
-  { key: "provideWaiter", label: "Waiters", hint: "Serving staff provided" },
-  { key: "providePlate", label: "Crockery & plates", hint: "Tableware provided" },
-  { key: "provideDecorationItem", label: "Decoration", hint: "Decor items provided" },
-  { key: "provideFoodTesting", label: "Food tasting", hint: "Pre-event tasting offered" },
-  { key: "travelToClientHome", label: "Travel to client", hint: "We come to the venue/home" },
+/**
+ * The editable scalar/boolean fields we own (the rest are separate APIs).
+ *
+ * WWL-478 — this list was fixed for all 23 vendor types, so a **Wedding venue**
+ * was asked *"Travel to client — we come to the venue/home"*, a question a venue
+ * cannot meaningfully answer, in the same grid as ones it must. `appliesTo`
+ * names the vendor types for which each amenity is a real question; `undefined`
+ * means everyone.
+ *
+ * Two deliberate rules, because this is a live listing and hiding a control is
+ * destructive:
+ *   - an unknown vendor type sees EVERYTHING (we only hide what we're sure of);
+ *   - an amenity the vendor has already answered is always shown, so no stored
+ *     answer can become uneditable.
+ */
+const V = VENDOR_TYPES
+const PREMISES = [V.WEDDING_VENUE, V.MARQUEE_RENTAL] as string[]
+const FOOD = [V.CATERING, V.LIVE_COOKING_STALL, V.WEDDING_CAKES, V.MITHAI_SWEETS] as string[]
+
+const BOOLS: { key: keyof ApiBusiness; label: string; hint: string; appliesTo?: string[] }[] = [
+  { key: "catering", label: "Catering", hint: "We provide food service", appliesTo: [...PREMISES, ...FOOD] },
+  { key: "parking", label: "Parking", hint: "On-site parking available", appliesTo: PREMISES },
+  {
+    key: "provideSoundSystem", label: "Sound system", hint: "PA / DJ setup included",
+    appliesTo: [...PREMISES, V.SOUND_SYSTEM_RENTAL, V.DHOL_PLAYER, V.QAWWALI_NAAT, V.CHOREOGRAPHER, V.EVENT_HOST, V.LIVE_STREAMING],
+  },
+  {
+    key: "provideSeatingArrangement", label: "Seating arrangement", hint: "Chairs & tables provided",
+    appliesTo: [...PREMISES, V.CATERING, V.FURNITURE_RENTAL],
+  },
+  { key: "provideWaiter", label: "Waiters", hint: "Serving staff provided", appliesTo: [...PREMISES, V.CATERING, V.LIVE_COOKING_STALL] },
+  { key: "providePlate", label: "Crockery & plates", hint: "Tableware provided", appliesTo: [...PREMISES, V.CATERING, V.LIVE_COOKING_STALL, V.FURNITURE_RENTAL] },
+  { key: "provideDecorationItem", label: "Decoration", hint: "Decor items provided", appliesTo: [...PREMISES, V.DECORATOR, V.FLORIST] },
+  { key: "provideFoodTesting", label: "Food tasting", hint: "Pre-event tasting offered", appliesTo: [...PREMISES, ...FOOD] },
+  {
+    key: "travelToClientHome", label: "Travel to client", hint: "We come to the venue/home",
+    // Everyone who is not a fixed venue. A hall cannot travel to you.
+    appliesTo: Object.values(V).filter((t) => t !== V.WEDDING_VENUE) as string[],
+  },
   { key: "covidComplaint", label: "SOP compliant", hint: "Follows safety SOPs" },
 ]
+
+/** Which amenities this vendor should be asked about. See the note above. */
+function amenitiesFor(vendorType: string | null | undefined, form: Record<string, any>) {
+  const known = vendorType && (Object.values(V) as string[]).includes(vendorType)
+  if (!known) return BOOLS
+  return BOOLS.filter((b) => !b.appliesTo || b.appliesTo.includes(vendorType!) || form[b.key] != null)
+}
 
 export function BusinessSettingsHubView() {
   const qc = useQueryClient()
@@ -130,6 +170,30 @@ export function BusinessSettingsHubView() {
     const mapped = tabParam ? PARAM_TO_TAB[tabParam] : undefined
     if (mapped) setActive(mapped)
   }, [tabParam])
+
+  /**
+   * WWL-475 — `?tab=` and `?biz=` were both READ on mount and neither was ever
+   * written back. The note on `?biz` says it "makes the choice linkable and
+   * survives a reload", and it does — for whoever constructs the link by hand.
+   * A vendor who clicked to Bank details on their second venue still had
+   * `/dashboard/settings` in the address bar: nothing to bookmark, nothing to
+   * send to support, and both choices lost on reload.
+   */
+  const router = useRouter()
+  const syncUrl = React.useCallback(
+    (next: { tab?: TabKey; biz?: number }) => {
+      const qs = new URLSearchParams(searchParams?.toString() ?? "")
+      if (next.tab !== undefined) {
+        if (next.tab === "profile") qs.delete("tab")
+        else qs.set("tab", next.tab)
+      }
+      if (next.biz !== undefined) qs.set("biz", String(next.biz))
+      const s = qs.toString()
+      router.replace(s ? `?${s}` : "?", { scroll: false })
+    },
+    [router, searchParams],
+  )
+  const goTab = React.useCallback((key: TabKey) => { setActive(key); syncUrl({ tab: key }) }, [syncUrl])
   const [dirty, setDirty] = React.useState(false)
   const loadedId = React.useRef<number | null>(null)
   const [form, setForm] = React.useState<Record<string, any>>({})
@@ -235,6 +299,52 @@ export function BusinessSettingsHubView() {
   })()
   const hasPricingError = Object.values(pricingErrs).some(Boolean)
 
+  /**
+   * WWL-477 — Brand logo is a text field asking a venue owner to paste a URL,
+   * one tab away from Images, which is a real uploader with size limits, type
+   * checks and mapped errors. Two image-input paradigms in one hub, and the one
+   * a vendor is least equipped to use guards their brand. Replacing it with an
+   * uploader is a bigger change than this sweep should make; validating it is
+   * not. `http://` is rejected outright — the site is https, so an insecure
+   * image is a broken image.
+   */
+  const logoErr = (() => {
+    const raw = String(form.brandLogo ?? "").trim()
+    if (!raw) return undefined
+    let u: URL
+    try { u = new URL(raw) } catch { return "Paste a full web address, starting with https://" }
+    if (u.protocol === "http:") return "Use an https:// address — an http image won't load on your listing."
+    if (u.protocol !== "https:") return "Paste a full web address, starting with https://"
+    return undefined
+  })()
+
+  /**
+   * City is free text on a marketplace whose public URLs are
+   * /{type}/{city}/{slug} and whose whole SEO programme is city pages. A typo
+   * doesn't fail — it files the listing under a city that does not exist.
+   *
+   * Not blocking: Pakistan has more cities than CITIES lists, and refusing to
+   * save would lock out a genuinely unlisted vendor. Saying what the cost is,
+   * with the canonical list one keystroke away, is the honest middle.
+   */
+  const cityKnown = (() => {
+    const raw = String(form.city ?? "").trim().toLowerCase()
+    if (!raw) return true
+    return CITIES.some((c) => c.name.toLowerCase() === raw || c.slug === raw.replace(/\s+/g, "-"))
+  })()
+
+  const hasBlockingError = hasPricingError || !!logoErr
+
+  /**
+   * WWL-483 — BankAccountsManager deliberately arms this guard while a field is
+   * typed, and wrote down why: an IBAN is "24 characters typed off a chequebook,
+   * gone" on an accidental refresh. The hub's own tabs had no guard at all and
+   * no draft layer either, so a vendor who rewrote their description, their
+   * pricing and their amenities and then hit reload lost all three silently.
+   */
+  const [listingDirty, setListingDirty] = React.useState(false)
+  useBeforeUnloadGuard({ enabled: dirty || listingDirty })
+
   // Publish this bar's height as --ww-bottom-bar so nothing else can sit on top
   // of it. The PWA install prompt is `fixed bottom` at z-50 while this bar is
   // z-20, so it physically covered "Save changes" — verified on production with
@@ -319,6 +429,21 @@ export function BusinessSettingsHubView() {
     return patch
   }, [form, baseline])
 
+  /** Which wired tab the unsaved edit is on — so the save bar can name it. */
+  const dirtyTabLabel = React.useMemo(() => {
+    if (!dirty) return null
+    const patch = buildPatch()
+    const changed = Object.keys(patch).filter((k) => k !== "name" || patch.name !== baseline.name)
+    const inTab: Record<string, string[]> = {
+      Profile: ["name", "description", "city", "subArea", "brandLogo"],
+      "Capacity & pricing": ["minimumPrice", "minCapacity", "maxCapacity", "downPaymentType", "downPayment", "cancelationPolicy"],
+      "Amenities & services": BOOLS.map((b) => String(b.key)),
+    }
+    const hit = Object.entries(inTab).filter(([, keys]) => changed.some((c) => keys.includes(c)))
+    if (hit.length === 1) return hit[0][0]
+    return hit.length > 1 ? "this business" : null
+  }, [dirty, buildPatch, baseline.name])
+
   const saveMut = useMutation({
     mutationFn: () => BusinessesAPI.update(biz!.id, buildPatch() as Partial<ApiBusiness>),
     onSuccess: () => { showSuccessToast("Business profile saved"); setDirty(false); qc.invalidateQueries({ queryKey: ["biz-settings-hub"] }) },
@@ -334,7 +459,7 @@ export function BusinessSettingsHubView() {
     // something the vendor has to read and act on.
     onError: (e: any) =>
       toast.error(
-        e?.response?.data?.message || e?.message || "Couldn't save your changes.",
+        errorMessage(e, "Couldn't save your changes."),
         { duration: 8000 },
       ),
   })
@@ -379,9 +504,16 @@ export function BusinessSettingsHubView() {
                   aria-current={isActive ? "true" : undefined}
                   onClick={() => {
                     if (b.id === biz.id) return
-                    if (dirty && !window.confirm("You have unsaved changes on this business. Switch anyway and lose them?")) return
+                    /* WWL-484 — the guard only knew about the hub's own `dirty`
+                       flag, so unsaved edits in Listing content (which keeps its
+                       own state and its own save button) were carried away
+                       without a word. */
+                    if ((dirty || listingDirty) &&
+                        !window.confirm("You have unsaved changes on this business. Switch anyway and lose them?")) return
                     setDirty(false)
+                    setListingDirty(false)
                     setPickedId(b.id)
+                    syncUrl({ biz: b.id })
                   }}
                   className={cn(
                     "rounded-lg border px-3 py-1.5 text-left text-xs transition-colors",
@@ -407,15 +539,20 @@ export function BusinessSettingsHubView() {
 
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">
-        {/* Tab rail */}
-        <nav className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible" aria-label="Settings sections">
+        {/* WWL-482 — eleven tabs in a horizontal scroller. Measured at 360×740:
+            scrollWidth 1,516px against clientWidth 296px, so Availability sat
+            over four screen-widths to the right of Profile with no shadow, no
+            chevron and nothing to suggest eight more tabs existed. Wrapping
+            costs a little vertical space and makes every section visible at
+            once; the rail is unchanged from `lg` up. */}
+        <nav className="flex flex-wrap gap-1 lg:flex-col lg:flex-nowrap" aria-label="Settings sections">
           {TABS.map((t) => (
             <button
               key={t.key}
-              onClick={() => setActive(t.key)}
+              onClick={() => goTab(t.key)}
               aria-current={active === t.key}
               className={cn(
-                "flex shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "flex min-h-11 shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors lg:w-full",
                 active === t.key ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground",
               )}
             >
@@ -429,15 +566,64 @@ export function BusinessSettingsHubView() {
         {/* Panel */}
         <div className="min-w-0 space-y-6">
           {active === "profile" && (
-            <Section icon="Building2" title="Profile" desc="How your business appears to couples.">
-              <Row label="Business name"><input className={inputCls} value={form.name ?? ""} onChange={(e) => set("name", e.target.value)} /></Row>
-              <Row label="Description"><textarea className={cn(inputCls, "h-28 resize-y py-2")} value={form.description ?? ""} onChange={(e) => set("description", e.target.value)} placeholder="Tell couples what makes you special…" /></Row>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Row label="City"><input className={inputCls} value={form.city ?? ""} onChange={(e) => set("city", e.target.value)} /></Row>
-                <Row label="Area / locality"><input className={inputCls} value={form.subArea ?? ""} onChange={(e) => set("subArea", e.target.value)} /></Row>
-              </div>
-              <Row label="Brand logo URL"><input className={inputCls} value={form.brandLogo ?? ""} onChange={(e) => set("brandLogo", e.target.value)} placeholder="https://…" /></Row>
-            </Section>
+            <>
+              <ListingHealth biz={biz} form={form} onGo={goTab} />
+              {/* WWL-480 — Capacity & pricing was given proper field wiring when
+                  its validation was added; the tabs beside it were not, so all
+                  five Profile labels had htmlFor null and no input carried an
+                  id. Two labelling conventions in one hub. */}
+              <Section icon="Building2" title="Profile" desc="How your business appears to couples.">
+                <Row id="biz-name" label="Business name">
+                  <input id="biz-name" className={inputCls} value={form.name ?? ""} onChange={(e) => set("name", e.target.value)} />
+                </Row>
+                <Row id="biz-desc" label="Description">
+                  <textarea id="biz-desc" className={cn(inputCls, "h-28 resize-y py-2")} value={form.description ?? ""} onChange={(e) => set("description", e.target.value)} placeholder="Tell couples what makes you special…" />
+                </Row>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Row id="biz-city" label="City">
+                    <input
+                      id="biz-city"
+                      list="ww-cities"
+                      className={inputCls}
+                      value={form.city ?? ""}
+                      onChange={(e) => set("city", e.target.value)}
+                      placeholder="Start typing…"
+                    />
+                    <datalist id="ww-cities">
+                      {CITIES.map((c) => <option key={c.slug} value={c.name} />)}
+                    </datalist>
+                    {!cityKnown && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        We don&apos;t have a city page for &ldquo;{String(form.city).trim()}&rdquo;. Your listing still
+                        works, but couples browsing by city won&apos;t find it there — pick from the list if one matches.
+                      </p>
+                    )}
+                  </Row>
+                  <Row id="biz-subarea" label="Area / locality">
+                    <input id="biz-subarea" className={inputCls} value={form.subArea ?? ""} onChange={(e) => set("subArea", e.target.value)} />
+                  </Row>
+                </div>
+                <Row id="biz-logo" label="Brand logo URL">
+                  <input
+                    id="biz-logo"
+                    type="url"
+                    inputMode="url"
+                    className={cn(inputCls, logoErr && ERROR_INPUT_CLS)}
+                    value={form.brandLogo ?? ""}
+                    onChange={(e) => set("brandLogo", e.target.value)}
+                    placeholder="https://…"
+                    {...fieldAria("biz-logo", logoErr)}
+                  />
+                  <FieldError id="biz-logo" message={logoErr} />
+                  <p className="text-xs text-muted-foreground">
+                    A link to an image you already host. To upload one instead, use{" "}
+                    <button type="button" className="underline underline-offset-2" onClick={() => goTab("images")}>
+                      Images
+                    </button>.
+                  </p>
+                </Row>
+              </Section>
+            </>
           )}
 
           {active === "pricing" && (
@@ -501,7 +687,7 @@ export function BusinessSettingsHubView() {
           {active === "amenities" && (
             <Section icon="SlidersHorizontal" title="Amenities & services" desc="What's included with your service.">
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {BOOLS.map((b) => (
+                {amenitiesFor(biz.vendor?.vendorType, form).map((b) => (
                   <label key={String(b.key)} className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2.5 hover:bg-accent/50">
                     <span className="min-w-0">
                       <span className="block text-sm font-medium">{b.label}</span>
@@ -528,11 +714,26 @@ export function BusinessSettingsHubView() {
             />
           )}
           {active === "listing" && (
-            <ProfileContentManager business={biz} onSaved={() => qc.invalidateQueries({ queryKey: ["biz-settings-hub"] })} />
+            /* Keyed on the business id: this manager seeds ~30 useState
+               initialisers from the business prop, and those run once per
+               mount — without the key, switching venue left venue A's listing
+               content sitting in venue B's form. */
+            <ProfileContentManager
+              key={biz.id}
+              business={biz}
+              onDirtyChange={setListingDirty}
+              onSaved={() => qc.invalidateQueries({ queryKey: ["biz-settings-hub"] })}
+            />
           )}
           {active === "bank" && <BankAccountsManager />}
           {active === "packages" && <PackagesManager businessId={biz.id} />}
-          {active === "menus" && <MenusManager businessId={biz.id} />}
+          {active === "menus" && (
+            <MenusManager
+              businessId={biz.id}
+              minCapacity={biz.minCapacity ?? null}
+              maxCapacity={biz.maxCapacity ?? null}
+            />
+          )}
           {active === "availability" && <AvailabilityManager businessId={biz.id} />}
           {active === "images" && <ImagesManager businessId={biz.id} images={biz.images || []} />}
 
@@ -547,8 +748,14 @@ export function BusinessSettingsHubView() {
         </div>
       </div>
 
-      {/* Sticky save bar — only meaningful on wired tabs */}
-      {tab.wired && (
+      {/* Sticky save bar.
+          WWL-484 — this used to render on wired tabs only, so a vendor who
+          edited Profile and then opened Images watched their save button
+          disappear: the edit was still there, held in hub-level state, with
+          nothing on screen to say so. Switching BUSINESS prompted, switching
+          TAB was silent, and the two were indistinguishable. The bar now
+          follows the unsaved work instead of the tab, and names where it is. */}
+      {(tab.wired || dirty) && (
         <div
           ref={saveBarRef}
           style={{ bottom: "var(--ww-mobile-nav, 0px)" }}
@@ -557,13 +764,17 @@ export function BusinessSettingsHubView() {
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 md:px-6">
             {/* A disabled Save must say WHY, or it reads as a broken button. */}
             <div className="text-sm text-muted-foreground">
-              {hasPricingError
+              {hasBlockingError
                 ? <span className="text-destructive">Fix the highlighted fields above to save.</span>
                 : dirty
-                  ? <span className="text-amber-600 dark:text-amber-400">Unsaved changes</span>
+                  ? (
+                    <span className="text-amber-600 dark:text-amber-400">
+                      Unsaved changes{!tab.wired && dirtyTabLabel ? ` on ${dirtyTabLabel}` : ""}
+                    </span>
+                  )
                   : "All changes saved"}
             </div>
-            <Button disabled={!dirty || hasPricingError || saveMut.isPending} onClick={() => saveMut.mutate()}>
+            <Button disabled={!dirty || hasBlockingError || saveMut.isPending} onClick={() => saveMut.mutate()}>
               {saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={15} className="mr-1.5" /> Save changes</>}
             </Button>
           </div>
@@ -585,8 +796,73 @@ function Section({ icon, title, desc, children }: { icon: IconName; title: strin
   )
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="space-y-1.5"><label className={labelCls}>{label}</label>{children}</div>
+function Row({ id, label, children }: { id?: string; label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className={labelCls}>{label}</label>
+      {children}
+    </div>
+  )
+}
+
+/**
+ * WWL-476 — read live from this account's three approved, publicly listed
+ * venues: two had NO photographs at all and the third had one; all three had an
+ * empty cancellation policy and no brand logo; two had no advance terms. All
+ * three are live on a marketplace where couples choose by looking.
+ *
+ * That is the vendor's own data rather than a code defect — but this is the
+ * screen it belongs to, and the screen said nothing. No completeness meter, no
+ * "your listing is missing photos" prompt, nothing. Each gap links to the tab
+ * that fixes it, because a prompt that doesn't hand you the tool is just a
+ * complaint.
+ */
+function ListingHealth({
+  biz, form, onGo,
+}: { biz: ApiBusiness; form: Record<string, any>; onGo: (t: TabKey) => void }) {
+  const photos = biz.images?.length ?? 0
+  const gaps: { label: string; tab: TabKey; severe?: boolean }[] = []
+  if (photos === 0) gaps.push({ label: "No photographs — couples choose by looking", tab: "images", severe: true })
+  else if (photos < 5) gaps.push({ label: `Only ${photos} photograph${photos === 1 ? "" : "s"} — aim for at least 5`, tab: "images" })
+  if (!String(form.description ?? "").trim()) gaps.push({ label: "No description", tab: "profile", severe: true })
+  if (!String(form.cancelationPolicy ?? "").trim()) gaps.push({ label: "No cancellation policy — couples ask before they book", tab: "pricing" })
+  if (!String(form.downPayment ?? "").trim()) gaps.push({ label: "No advance terms set", tab: "pricing" })
+  if (!String(form.brandLogo ?? "").trim()) gaps.push({ label: "No brand logo", tab: "profile" })
+  if (!String(form.minimumPrice ?? "").trim()) gaps.push({ label: "No starting price", tab: "pricing" })
+
+  if (gaps.length === 0) {
+    return (
+      <div className="flex items-center gap-2 rounded-xl border border-emerald-300/70 bg-emerald-50 px-4 py-3 text-sm dark:border-emerald-900/60 dark:bg-emerald-950/30">
+        <Icon name="CheckCircle2" size={16} className="text-emerald-600 dark:text-emerald-400" />
+        Your listing has everything couples look for.
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-xl border border-amber-300/70 bg-amber-50 p-4 dark:border-amber-900/60 dark:bg-amber-950/30">
+      <div className="flex items-center gap-2">
+        <Icon name="AlertTriangle" size={16} className="text-amber-600 dark:text-amber-400" />
+        <h2 className="text-sm font-semibold">
+          {gaps.length} thing{gaps.length === 1 ? "" : "s"} missing from this listing
+        </h2>
+      </div>
+      <ul className="mt-2 space-y-1.5 text-sm">
+        {gaps.map((g) => (
+          <li key={g.label} className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span className={cn(g.severe && "font-medium")}>{g.label}</span>
+            <button
+              type="button"
+              className="underline underline-offset-2 text-muted-foreground hover:text-foreground"
+              onClick={() => onGo(g.tab)}
+            >
+              Fix it
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }
 
 export default BusinessSettingsHubView

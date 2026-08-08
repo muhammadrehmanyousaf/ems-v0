@@ -253,3 +253,278 @@ still enforced by the endpoint; a flag was never what protected it.
   migration has not been run. The claims are backed by 28 new unit tests and the
   live evidence in `LIVE-MODULE-TEST-PLAN.md`, not by a browser session against
   weddingwala.pk.
+
+---
+
+## Wave 7 — the 16 open S2s, and the migration is live
+
+Every S2 remaining in the sweep is closed. They clustered into eight pieces of
+work, two of which were systemic and fixed once rather than per screen.
+
+| Findings | What it was |
+|---|---|
+| `WWL-302` `303` `304` `305` | `litres > 0` applied to all four generator entry types: **Maintenance** involves no fuel and **a tank reading of 0** is the reading that stops an event mid-baraat, so neither could be saved. Meanwhile the cost guard covered deliveries only, so a consumption row saved with `costPerLitre: -99`, `runHours: -40`. The **server was already correct on all three** — the form was stricter where it should be permissive and looser where it should refuse. |
+| `WWL-231` `232` `234` | Any rejection — unroutable host, HTTP 500 — rendered *"the kitchen-BOM engine isn't enabled for your account yet"*. Rows with a bad head count were silently dropped, so the cook sheet came out missing a dish with nothing saying so. At 360px the guests input and Remove were **entirely off-screen**. |
+| `WWL-242` `262` | Both create dialogs were handed `businesses?.[0]?.id`, so under "All venues" a stock item or a new hire landed on whichever venue came first, with no venue field to notice it. |
+| `WWL-244` `245` | 108 inventory action buttons in the DOM, **0 reachable on a phone** — and Adjust stock is the only path that changes a count. Separately the app told the vendor to *"record an adjustment movement to zero it first"* and then refused to save a stock-take of 0. |
+| `WWL-274` `275` `276` | Chip counts came from the filtered query, so clicking Overdue turned `All(23)` into `All(3)`. **"Credit available" was the sum of credit *limits*** — Rs 8,800,000 against Rs 1,469,250 already drawn, 20% high, on the number a vendor uses to decide whether to place another order. |
+| `WWL-113` `114` | An absolute sanity cap and nothing relative to the booking, so Rs 99,999,999 against a Rs 1,673,250 booking saved silently. And the venue switcher **lied about scope**. |
+| `WWL-321` | A lapsed halal certificate could be reactivated with no new number and no new expiry — an expired certificate reading as current to an inspector. |
+| `WWL-263` | Already closed by the earlier numeric/phone sweep. Verified, not redone. |
+
+### The two systemic ones
+
+**`WWL-114` was not a payments bug.** Venue scope is applied by the axios
+interceptor, so switching venues changes every *request* and no TanStack cache
+*key* — and **42 dashboard views key their queries by name alone**. Live and
+offline, switching to Grand Marquee showed all 25 rows across 3 venues under its
+name, with its real total a third of the figure on screen. Fixing 42 keys would
+have fixed the ones somebody remembered; `VenueScopeSync` removes the
+possibility instead. `removeQueries`, not `invalidateQueries` — invalidation
+keeps serving the stale entry, which is the lie.
+
+**`WWL-113` is confirmed, not refused.** Vendors do take genuine overpayments,
+and a real payment that cannot be recorded makes the khata disagree with the
+cash box — which is worse than the typo. The likely extra zero is named
+("that is about 60× the balance — did you mean Rs X?"), and the tolerance is 1%
+or Rs 1,000 so that rounding up in cash never trains anyone to tick a box
+without reading it.
+
+**`WWL-321` is enforced server-side.** A compliance state is not something a
+client should be guaranteeing.
+
+### Shipped
+
+Both PRs are open and carry every wave: **backend #54**, **frontend #187**.
+
+**The migration ran against live production on 2026-08-07**, with the operator's
+go-ahead, in the correct prod-first order — schema before code. Verified after:
+
+| | |
+|---|---|
+| `BookingDetails.subVenueId` | integer, nullable |
+| Index + FK | present · `ON DELETE SET NULL` |
+| Rows backfilled | **2** (only venues with a single bookable space) |
+| `WWL-260` legacy attendance rows | **0** — the staff-route repair landed in the same run |
+| Live backend / public site after | **200** / **200** |
+
+What the live numbers show: **3,270 single-space venues and 8 multi-space**. So
+`WWL-100` only ever bit those 8 — but for them it was the whole product, and the
+grid is now truthful for all 3,278 either way.
+
+### Still open
+
+- **Nothing is deployed.** Both PRs need merging; the migration is deliberately
+  ahead of the code, which is safe (every read probes for the column).
+- **Not verified in a browser on live.** That is the next step once the PRs
+  merge, using a QA vendor on the owner's own email so OTPs can be relayed.
+- The **S3/S4 tail** (285) and the **18 product gaps** are untouched and need a
+  product decision, not a fix.
+
+---
+
+## Wave 8 — the S3 tail, swept as families
+
+**Every S1 and every S2 in the 612-finding sweep is now addressed.** What is
+left is 281 findings: **210 S3** (confusing / inaccessible) and **71 S4**
+(cosmetic). Nothing left in the backlog is "broken" or "shows the wrong
+number" — those two classes are closed.
+
+Wave 8 goes after the tail the same way waves 2–3 did: at the source, not
+screen by screen.
+
+| Findings | What it was | Where it was fixed |
+|---|---|---|
+| `WWL-120` `137` `153` `170` `187` + repeats | The sweep recorded "Table a11y, unchanged from Module 10 … third module … fourth … fifth" because the defect lives in two shared components. No `<caption>`, so a screen reader met an unnamed grid of numbers. Every row checkbox announced the identical **"Select row"** — ten rows, ten identical names, so nobody could tell which booking they were bulk-deleting. 16×16 hit area, under the WCAG 2.2 24×24 floor. | Both table layers + all 34 call sites |
+| `WWL-116` `135` `152` `186` + repeats | A no-match search asserted a financial falsehood: a vendor with 25 payments and Rs 23.9m on the books searching `zzzqqq` was told *"No payments yet."* The screen stated a fact about the **account** when the only empty thing was a **text box**. | `DataTable` primitive + 26 screens |
+| `WWL-183` | "Jazzcash", "Ibft", "Bank Transfer" — title-cased raw keys — while `EXPENSE_PAYMENT_METHOD_LABELS` had defined JazzCash / IBFT / Bank transfer all along, and Receipts already rendered them correctly. | Expenses table, card and CSV |
+
+### Live verification this wave
+
+`WWL-100` and `WWL-569` were both **driven on live production**, not argued
+from tests:
+
+- **Rehman Grand Marquee (3358)** — the venue from the original finding.
+  13-Aug (one booking): all five halls PARTIAL, non-sellable, warning banner.
+  12-Aug (no booking): all five AVAILABLE. The customer is never offered a hall
+  the venue may have committed, and a clear day is not over-blocked.
+- **A QA fixture with a real Hall → Floor → Partition tree** — assigning one
+  booking to one leaf turned **three previously-unsellable spaces back into
+  sellable inventory**: self UNAVAILABLE, ancestors PARTIAL, siblings AVAILABLE.
+- The live booking form sent **`subVenueId: 3356`** through the real UI.
+
+Live production shape, worth recording: **3,270 single-space venues, 8
+multi-space.** `WWL-100` only ever bit those 8 — but for them it was the whole
+product.
+
+### Still open
+
+The 281 S3/S4 findings are mostly per-screen from here — the systemic families
+are swept. They are polish and clarity, not broken behaviour.
+
+Plus the **18 product gaps** (features never built) which need a product
+decision, and the **1,864 unrun cases** which need a seeded staging vendor.
+
+---
+
+## Wave 9 — the per-screen tail
+
+Counted with the qa/ docs excluded from the source grep (scanning them made
+every id look addressed, because that is where findings are *described*):
+
+**405 of 612 addressed · 207 remaining — 0 S1, 0 S2, 145 S3, 62 S4.**
+
+### Rendering what was already being fetched
+
+| Finding | What changed |
+|---|---|
+| `WWL-140` | Receivables grows an aging band: five buckets, both counts, a proportional bar, an "As of HH:mm PKT" line off the `generatedAt` that was never surfaced, and click-to-filter. The wire also contradicted its own docstring — `buckets[].count` counted **installments** while the header comment promised customers, so the five counts summed to 51 on a board headlined 34. Both counts are now named for what they hold; `count` stays as an alias. |
+| `WWL-141` | The Outstanding card drew an unconditional falling arrow. No prior period exists on the payload, so the honest render is no arrow. |
+| `WWL-247` | The movement dialog offered 4 of the 9 fields the API accepts, and its own placeholder advertised two it did not have. Without `bookingId` consumption could never be attributed to an event; without `occurredAt` every movement was stamped `now()`. |
+| `WWL-248` | The audit ledger was **write-only** — `listMovements` existed, `getItem` returned 30 movements, the model snapshots `stockBefore`/`stockAfter` in a transaction, and none of it rendered anywhere. Added the read side, reachable from every row and card. |
+| `WWL-519` | The activation panel rendered 4 of 9 fields. The one it dropped that matters is `leadsAwaitingReply` — 22 people across three venues who asked about a wedding and heard nothing back. |
+| `WWL-127` | The booking picker read `name · date`, so three options all said "Waheed Jutt" and cancelled bookings looked identical to live ones. |
+
+### Requests
+
+| Finding | What changed |
+|---|---|
+| `WWL-149` `WWL-171` | The function-sheet badge asked one booking per request — 14 round-trips for 13 rows. The endpoint takes a set now, and the FE micro-batches on a microtask: **14 requests → 1**. Parsing is a pure helper with 9 tests, because both failure modes are quiet (an empty id set must match *nothing*; a hand-built query must not build an unbounded `IN`). |
+| `WWL-157` | Receipts shipped the whole ledger with no limit. Paging is **opt-in** — a default cap would have silently truncated the customer profile — and the summary is computed in SQL over the whole filtered set, so a page never moves the headline. |
+
+### Venue scope
+
+`WWL-204` — the report card was never venue-scoped. The client *had* been
+sending `businessId` all along; the service ignored it. Scoping it surfaced a
+worse bug underneath: the expense rollup's untagged branch was scoped by
+`createdByUserId` alone, so **"Staff Kharcha" reported the whole group's payroll
+under every single venue** — all three read Rs 4,306,800, exactly
+1,433,700 + 1,495,500 + 1,377,600.
+
+Verified on live production — all five money cards partition exactly:
+
+| Card | 3358 | 3359 | 3360 | Sum | All-venues |
+|---|---|---|---|---|---|
+| `month_money` | 11,761,150 | 12,748,550 | 8,984,150 | 33,493,850 | **33,493,850** |
+| `baqaya` | 4,368,287 | 5,043,737 | 4,005,205 | 13,417,229 | **13,417,229** |
+| `aaj_vasooli` | 1,673,250 | 0 | 0 | 1,673,250 | **1,673,250** |
+| `bookings` | 8 | 8 | 6 | 22 | **22** |
+| `staff_cost` | 1,433,700 | 1,495,500 | 1,377,600 | 4,306,800 | **4,306,800** |
+
+The `REPORT_CARDS_ENABLED` gate is removed — it answered 404 to most vendors
+for a read-only projection of their own bookings.
+
+### Money input
+
+`WWL-126` — every money column is `NUMERIC(12,2)`, verified on the live
+database, and the shared validator did not know it:
+
+| Typed | Was stored as | Now |
+|---|---|---|
+| `0.001` | **0.00** — a receipt for Rs 0 | rejected |
+| `100.999` | 101.00 — a number nobody entered | rejected |
+| `1e5` | 100000, silently | rejected |
+
+`1000`, `1000.5`, `.5`, `99999999.99` still accepted; commas, hex, `Infinity`,
+negatives, zero and over-cap still rejected.
+
+### Friction where it belongs
+
+`WWL-491` Free went straight to the DELETE · `WWL-492` both writes reported
+success unconditionally (the API now returns `newlyBlocked`/`deleted` and the UI
+says which happened) · `WWL-507` cancellation policy saved in one click, with
+nothing said about existing bookings — the confirmation now shows old → new, the
+rupee delta at each window, and that accepted bookings keep their frozen
+snapshot · `WWL-509` the policy cards were bare `<div onClick>`, now a radiogroup.
+
+### Dates, a11y, mobile
+
+`WWL-455` — three surviving UTC derivations, each one day wrong east of
+Greenwich: the dashboard calendar filter returned **yesterday** for every
+Pakistani vendor all day every day; the AML register silently excluded the last
+day of the month it claimed to cover; supplier due dates landed a day early
+before 5am.
+
+`WWL-007` venue switcher items are `menuitemradio` with `aria-checked` ·
+`WWL-522` progress bars carry their value · `WWL-523` a failed fetch no longer
+tells a vendor who owns three venues that they own none · `WWL-205`/`WWL-206`
+14px share targets grown to 44px and each named · `WWL-471` density now applies
+to the mobile card list, so the control that was "missing" is no longer a
+control that does nothing.
+
+`WWL-521` needs no code change: two venues scoring identically is the checklist
+being right — both have zero photographs, no advance terms, no cancellation
+policy.
+
+---
+
+## Final waves — 608 / 612 closed
+
+The last stretch worked module by module. What follows is the shape of what was
+found, not a re-listing of every id; the commit that closed each one names it.
+
+### The recurring cause
+
+More than half of these were not missing code. They were **a control that was
+never wired to an engine the backend already had**:
+
+- `/generator-fuel/burn-rate` — live, validating, precise domain refusals, and
+  **no caller anywhere in the product** (`WWL-306`).
+- `/drone-noc/upcoming` — live, documented as "booking-linked windows", **no
+  consumer** (`WWL-347`).
+- `bookingId` and `brokerId` on commissions, `bookingId` on permits,
+  `supplierId` on halal certs, `defaultSubVenueId` on staff — every one accepted
+  by its validator, **none reachable from any form** (`WWL-289`, `WWL-348`,
+  `WWL-324`, `WWL-264`).
+- `?businessId=` read by `listCerts` and the drone-NOC list handler, **never
+  sent by the client**, so the venue switcher did nothing on either screen
+  (`WWL-328`).
+- `lowStockOnly=true`, the fuel log's `type`/`from`/`to`/`generatorIdentifier`,
+  the blocked-dates `month` filter, `minGuaranteeCount` on menus — all
+  implemented server-side, none of them reachable (`WWL-258`, `WWL-310`,
+  `WWL-495`, `WWL-479`).
+
+### The second cause: a screen asserting what it cannot know
+
+- Inventory read **"Low / out of stock 0 — all good"** during an outage
+  (`WWL-259`).
+- The Today board read **"Events today: 0"** on a day all three venues were
+  blocked (`WWL-537`), and listed a Pending Rs 2.6m booking as an event the
+  venue was committed to (`WWL-532`).
+- The dispute evidence pack flagged **OK** over Rs 1,223,278 of receipts with no
+  proof on either (`WWL-511`).
+- "FBR submitted: Rs 0" on a noop adapter that files nothing, which reads as
+  "you have filed nothing" (`WWL-194`).
+- Commission and collaboration headlines summing money not yet accrued, money
+  owed *to* the vendor with money owed *by* them, and declined rows
+  (`WWL-299`, `WWL-460`).
+
+### Corrections to the sweep itself
+
+Three findings were partly wrong and are recorded as such rather than
+implemented as written:
+
+- **`WWL-479`** reads `Package.capacity` as a guest count. Its own model comment
+  (BK-017) defines it as a per-slot **concurrent-booking cap**. Validating
+  packages against the venue's guest range would have written the misreading
+  into the product. The menu half — `minGuaranteeCount`, a real guest count, in
+  no editor at all — is real and fixed.
+- **`WWL-322`** names the column `documentUrl`; it is `certPhotoUrl`, and
+  `halalCertHelpers` has accepted it since it was written.
+- **`WWL-229`** says nothing creates a recipe. True of the UI — and the live DB
+  holds **8 RecipeBoms whose ingredients reference item ids 1–3 in a
+  `CateringItems` table with zero rows.** The seeded recipes are themselves
+  unresolvable. See the open list below.
+
+### Still open — 4, all product decisions
+
+| ID | Why code cannot close it |
+|---|---|
+| `WWL-229` | Needs a CateringItem master (no CRUD endpoint exists) **and** a recipe editor. The 8 seeded BOMs point at an empty ingredient table, so the data is broken too. |
+| `WWL-420` | Promotion approval records no money anywhere. Needs a payment rail and a decision on how placements are invoiced. |
+| `WWL-436` | "Plan & billing" holds no invoice, method or payment. Same rail, same decision (D7). |
+| `WWL-352` | Three compliance registers, live and empty on all three venues. The screens now prompt with the vendor's own supplier names; filling them is the vendor's act. |
+
+`WWL-323` is closed by that prompt — the register knows the 18 suppliers the
+account buys from and now names the uncertified ones instead of offering a
+generic "add a certificate".

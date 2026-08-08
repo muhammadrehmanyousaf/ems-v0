@@ -13,6 +13,7 @@
 //     Easypaisa      backend's "not configured yet" message; never fakes success
 
 import { useState } from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import axiosInstance from "@/lib/axiosConfig"
 import { BACKEND_URL } from "@/lib/backend-url"
 import { toast } from "@/hooks/use-toast"
@@ -75,7 +76,7 @@ export default function PaymentMethodChooser(props: Props) {
     } catch (e: any) {
       toast({
         title: "Couldn't confirm",
-        description: e?.response?.data?.message || e?.message || "Please try again.",
+        description: errorMessage(e, "Please try again."),
       })
     } finally {
       setBusy(false)

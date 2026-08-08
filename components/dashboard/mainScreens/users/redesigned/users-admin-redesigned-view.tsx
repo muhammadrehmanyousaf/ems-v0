@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { UsersAPI, type ApiUser } from "@/lib/api/dashboard"
 import { UserFormDialog } from "@/components/dashboard/mainScreens/users/redesigned/user-form-dialog"
@@ -46,7 +47,7 @@ export function UsersAdminRedesignedView() {
   const removeMut = useMutation({
     mutationFn: (id: number) => UsersAPI.delete(id),
     onSuccess: () => { showSuccessToast("User removed"); setDeleting(null); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove user"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove user")),
   })
 
   // Server-side paging. The endpoint defaults to limit=10, so reading the
@@ -147,6 +148,9 @@ export function UsersAdminRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
+        caption="Users"
         columns={columns}
         data={users}
         getRowId={(u) => String(u.id)}

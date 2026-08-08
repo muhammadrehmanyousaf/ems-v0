@@ -81,6 +81,7 @@ const BusinessTable = () => {
         <div className='space-y-4'>
             <BusinessTableActions table={table} />
             <GlobalTable
+                caption="Businesses"
                 table={table}
                 totalItems={total}
                 paginationState={paginationState}

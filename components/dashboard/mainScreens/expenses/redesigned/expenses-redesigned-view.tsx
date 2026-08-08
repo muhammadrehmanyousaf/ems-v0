@@ -7,8 +7,9 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { ExpensesAPI, type VendorExpense } from "@/lib/api/vendorExpenses"
+import { ExpensesAPI, EXPENSE_PAYMENT_METHOD_LABELS, expensesQueryKey, type VendorExpense } from "@/lib/api/vendorExpenses"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
 import { StatusPill } from "@/components/dashboard/primitives/status-pill"
@@ -30,6 +31,7 @@ import { CustomFieldsManager } from "@/components/dashboard/shared/custom-fields
 import { useCustomFieldDefs } from "@/components/dashboard/shared/custom-fields-section"
 import type { CustomFieldDef } from "@/lib/api/customFields"
 import { LinkedFunctionSheetBadge } from "@/components/shared/linked-function-sheet-badge"
+import { DestructiveConfirm } from "@/components/dashboard/primitives/destructive-confirm"
 
 const fmtCf = (v: unknown, d: CustomFieldDef): string => {
   if (v == null || v === "") return "—"
@@ -43,6 +45,17 @@ const fmtCf = (v: unknown, d: CustomFieldDef): string => {
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
+
+/**
+ * WWL-183 — the Pakistani payment rails were title-cased raw keys here:
+ * "Jazzcash", "Ibft", "Bank Transfer". `Ibft` in particular reads as a word
+ * rather than the initialism it is, and the Receipts module already rendered
+ * the same rails correctly. The canonical map has existed all along.
+ */
+const methodLabel = (m?: string | null): string => {
+  if (!m) return "—"
+  return (EXPENSE_PAYMENT_METHOD_LABELS as Record<string, string>)[m] ?? cap(m)
+}
 const fmtDate = (s?: string | null) => {
   if (!s) return "—"
   const d = new Date(s)
@@ -78,11 +91,13 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
   const { data, isLoading, isError, refetch } = useQuery({
     // bookingId is part of the key: without it, opening two bookings' financials
     // in one session would serve the first booking's expenses for the second.
-    queryKey: ["expenses-redesigned", activeBusinessId, bookingId ?? null],
+    // WWL-179 — shared with ExpenseCockpit above, which asked the same
+    // question under its own key and doubled every load.
+    queryKey: expensesQueryKey(activeBusinessId, bookingId ?? null),
     queryFn: () => ExpensesAPI.list(bookingId != null ? { bookingId } : {}),
   })
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["expenses-redesigned"] })
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["expenses"] })
   // Recording an expense from inside an event pre-tags it to that event, so the
   // vendor never has to remember to attach it — and the Costing tab reflects it.
   const openCreate = () => {
@@ -97,7 +112,7 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
     mutationFn: (id: number) => ExpensesAPI.remove(id),
     onSuccess: () => { showSuccessToast("Expense removed"); setDeleting(null); invalidate() },
     onError: (e: any) => toast.error(
-        e?.response?.data?.message || e?.message || "Couldn't remove expense",
+        errorMessage(e, "Couldn't remove expense"),
         { duration: 8000 },
       ),
   })
@@ -114,7 +129,7 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
     { key: "space", header: "Space", cellClassName: "text-muted-foreground", render: (e) => e.subVenue?.name || "—" },
     { key: "payee", header: "Paid to", cellClassName: "text-muted-foreground", render: (e) => e.vendorName || "—" },
     { key: "note", header: "Note", cellClassName: "max-w-[260px] truncate text-muted-foreground", render: (e) => e.description || "—" },
-    { key: "method", header: "Method", render: (e) => <StatusPill tone="neutral">{cap(e.paymentMethod)}</StatusPill> },
+    { key: "method", header: "Method", render: (e) => <StatusPill tone="neutral">{methodLabel(e.paymentMethod)}</StatusPill> },
     { key: "date", header: "Date", cellClassName: "text-muted-foreground", render: (e) => fmtDate(e.spentDate) },
     // Reverse link back to the event. A vendor looking at "Rs 45,000 catering"
     // needs to know WHICH wedding it was for; without this the money screens
@@ -156,13 +171,35 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
           & overheads), and per-function profit. The detailed ledger follows. */}
       <ExpenseCockpit />
 
+      {/*
+        WWL-185 — "Spent · month stayed at Rs 745,200 while the ledger filtered
+        from 55 rows to 5, to 0, and back."
+
+        The cockpit above is a PERIOD summary and is labelled as one, so making
+        it follow a text search would trade one wrong headline for another. What
+        was missing is the ledger saying what it is currently showing, so the two
+        numbers stop looking like they disagree. The divider carries that now.
+      */}
       <div className="flex items-center gap-2 pt-1">
         <div className="h-px flex-1 bg-border" />
-        <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Full ledger</span>
+        <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          {search.trim()
+            ? `Full ledger — showing ${expenses.length} of ${all.length}`
+            : "Full ledger"}
+        </span>
         <div className="h-px flex-1 bg-border" />
       </div>
+      {search.trim() && (
+        <p className="-mt-3 text-center text-[11px] text-muted-foreground">
+          The summary above covers the whole period, not just these {expenses.length}
+          {expenses.length === 1 ? " row" : " rows"}.
+        </p>
+      )}
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
+        caption="Expenses"
         columns={tableColumns}
         data={expenses}
         getRowId={(e) => String(e.id)}
@@ -172,6 +209,10 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
         selectable
         selectedIds={selected}
         onSelectionChange={setSelected}
+        /* WWL-186 — same as WWL-152: a no-match search rendered "No expenses
+           logged" with an Add expense button, telling a vendor with a full
+           ledger they had never used the feature. `filterQuery` above routes a
+           filtered-empty result to the search-specific state instead. */
         empty={{
           icon: "Wallet",
           title: "No expenses logged",
@@ -197,9 +238,15 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
               <ImportButton target="expenses" label="expenses" />
               <ExportMenu selectedIds={selected} getRowId={(e) => String(e.id)} rows={expenses} filename="expenses" columns={[
                 { header: "Category", value: (e) => e.category },
+                // WWL-136/155/172/188 — the export dropped a column that is on
+                // screen, so the file the vendor hands their accountant is not the
+                // table they were reading. Booking id is what actually ties a row
+                // back to an event in a spreadsheet.
+                { header: "Space", value: (e) => e.subVenue?.name ?? "" },
+                { header: "Booking id", value: (e) => (e.bookingId != null ? `#${e.bookingId}` : "") },
                 { header: "Paid to", value: (e) => e.vendorName ?? "" },
                 { header: "Note", value: (e) => e.description ?? "" },
-                { header: "Method", value: (e) => e.paymentMethod ?? "" },
+                { header: "Method", value: (e) => methodLabel(e.paymentMethod) },
                 { header: "Date", value: (e) => fmtDate(e.spentDate) },
                 { header: "Amount", value: (e) => num(e.amount) },
               ]} />
@@ -211,7 +258,7 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
             <div className="min-w-0">
               <div className="truncate font-medium">{cap(e.category)}</div>
               <div className="truncate text-xs text-muted-foreground">{e.vendorName || e.description || "—"} · {fmtDate(e.spentDate)}</div>
-              <div className="mt-1"><StatusPill tone="neutral">{cap(e.paymentMethod)}</StatusPill></div>
+              <div className="mt-1"><StatusPill tone="neutral">{methodLabel(e.paymentMethod)}</StatusPill></div>
             </div>
             <MoneyCell amount={num(e.amount)} tone="error" className="text-sm font-medium" />
           </div>
@@ -230,18 +277,32 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
         />
       )}
 
-      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove this expense?</AlertDialogTitle>
-            <AlertDialogDescription>This {deleting ? formatPkr(num(deleting.amount)) : ""} entry will be removed. This can't be undone.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleting && removeMut.mutate(deleting.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remove</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* WWL-182 — "This Rs 46,400 entry will be removed" on a 55-row ledger,
+          with no category, payee, date or event. WWL-156's other half: the
+          model is paranoid, so "can't be undone" was false in the database. */}
+      <DestructiveConfirm
+        open={!!deleting}
+        onOpenChange={(v) => !v && setDeleting(null)}
+        title="Remove this expense?"
+        reversibility="soft"
+        pending={removeMut.isPending}
+        onConfirm={() => deleting && removeMut.mutate(deleting.id)}
+        fields={[
+          { label: "Amount", value: deleting ? formatPkr(num(deleting.amount)) : "" },
+          { label: "Category", value: deleting ? cap(deleting.category) : "" },
+          { label: "Paid to", value: deleting?.vendorName || "" },
+          { label: "Spent on", value: deleting?.spentDate || "" },
+          { label: "Method", value: deleting?.paymentMethod ? methodLabel(deleting.paymentMethod) : "" },
+          { label: "Space", value: deleting?.subVenue?.name || "" },
+          {
+            label: "Event",
+            value: deleting?.booking
+              ? deleting.booking.customerName || `#${deleting.booking.id}`
+              : "",
+          },
+          { label: "Note", value: deleting?.description || "" },
+        ]}
+      />
     </div>
   )
 }

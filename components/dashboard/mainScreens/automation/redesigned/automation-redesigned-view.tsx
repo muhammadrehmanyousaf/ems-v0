@@ -7,6 +7,8 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
+import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { AutomationRulesAPI, type AutomationRule } from "@/lib/api/automationRules"
 import { RuleFormDialog } from "@/components/dashboard/mainScreens/automation/redesigned/rule-form-dialog"
@@ -31,7 +33,10 @@ const fmtDate = (v?: string | null) => {
   const d = new Date(v)
   return Number.isNaN(d.getTime())
     ? "—"
-    : d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
+    // WWL-226 — `undefined` locale means "whatever the browser is set to", so
+    // a vendor on a US-configured phone read "Aug 6" where every other module
+    // in the portal reads "06 Aug 2026". Pinned like the rest.
+    : d.toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })
 }
 
 const triggerLabel = (r: AutomationRule) => {
@@ -49,9 +54,12 @@ export function AutomationRedesignedView() {
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<AutomationRule | undefined>(undefined)
   const [deleting, setDeleting] = React.useState<AutomationRule | null>(null)
+  const activeBusinessId = useActiveBusinessId()
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["automation-redesigned"],
+    // WWL-224 — the venue is part of the key now that the server scopes by it,
+    // or switching venue would keep serving the previous venue's rule list.
+    queryKey: ["automation-redesigned", activeBusinessId],
     queryFn: () => AutomationRulesAPI.list(),
   })
 
@@ -64,14 +72,14 @@ export function AutomationRedesignedView() {
     mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) => AutomationRulesAPI.toggle(id, enabled),
     onSuccess: () => { invalidate() },
     onError: (e: any) => toast.error(
-        e?.response?.data?.message || e?.message || "Couldn't toggle rule",
+        errorMessage(e, "Couldn't toggle rule"),
         { duration: 8000 },
       ),
   })
   const removeMut = useMutation({
     mutationFn: (id: number) => AutomationRulesAPI.remove(id),
     onSuccess: () => { showSuccessToast("Rule removed"); setDeleting(null); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove rule"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove rule")),
   })
 
   const all = data?.rules ?? []
@@ -109,7 +117,15 @@ export function AutomationRedesignedView() {
       key: "actions", header: "", align: "right",
       render: (r) => (
         <div className="flex items-center justify-end gap-2">
-          <Switch checked={!!r?.enabled} onCheckedChange={(v) => toggleMut.mutate({ id: r.id, enabled: v })} aria-label="Enabled" />
+          {/* WWL-227 — every custom rule's switch announced the identical name
+              "Enabled", so a screen-reader user tabbing the list heard it once
+              per row with nothing to say which rule they were about to turn
+              off. The built-in switches already do this properly. */}
+          <Switch
+            checked={!!r?.enabled}
+            onCheckedChange={(v) => toggleMut.mutate({ id: r.id, enabled: v })}
+            aria-label={`${r?.enabled ? "Disable" : "Enable"} ${r?.name || `rule #${r?.id}`}`}
+          />
           <Button size="sm" variant="ghost" onClick={() => openEdit(r)} aria-label="Edit rule"><Icon name="Pencil" size={14} /></Button>
           <Button size="sm" variant="ghost" onClick={() => setDeleting(r)} aria-label="Remove rule"><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
         </div>
@@ -153,6 +169,9 @@ export function AutomationRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
+        caption="Automation rules"
         columns={columns}
         data={rules}
         getRowId={(r) => String(r?.id)}

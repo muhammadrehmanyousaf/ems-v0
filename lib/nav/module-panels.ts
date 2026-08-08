@@ -325,7 +325,10 @@ export const NAV_MODULES: NavModule[] = [
       {
         label: "My business",
         items: [
-          { label: "Business Settings", href: "/dashboard/settings?tab=overview", icon: Settings, i18nKey: "nav.business_settings" },
+          // WWL-526 — one address for one destination. The hub writes no
+          // `tab` param for Profile, so neither does this. `?tab=overview`
+          // still resolves for anything already linking that way.
+          { label: "Business Settings", href: "/dashboard/settings", icon: Settings, i18nKey: "nav.business_settings" },
           { label: "Setup checklist", href: "/dashboard/onboarding", icon: ListChecks, i18nKey: "nav.onboarding" },
           { label: "Automation", href: "/dashboard/automation", icon: Zap, i18nKey: "nav.automation" },
           { label: "Field capture", href: "/dashboard/field", icon: Zap, i18nKey: "nav.field_capture" },

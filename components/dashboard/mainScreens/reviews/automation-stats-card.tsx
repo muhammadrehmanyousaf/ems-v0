@@ -165,24 +165,60 @@ export function ReviewAutomationStatsCard() {
   // Issue #20 — dismiss a silent customer from the automation pool.
   // Optimistic local update keeps the list responsive; on failure
   // we toast + re-fetch to put the row back.
+  /**
+   * WWL-365 — the optimistic update decremented `prompted` and `silent` (which
+   * matches the server: a dismissed booking leaves every bucket) but never
+   * recomputed `responseRate`. Driven live, dismissing one customer left the
+   * card reading 10 prompted / 8 responded / 73% — its own arithmetic says 80%.
+   * An optimistic update has one job: look exactly like the refetch that
+   * follows it.
+   *
+   * The backend has always supported `action: 'restore'` and nothing in the UI
+   * ever sent it, so a customer dismissed by a mis-click could not be put back
+   * from any screen. The undo lives on the toast, where it is reachable at the
+   * moment the mistake is noticed.
+   */
+  const restoreBooking = async (bookingId: number) => {
+    try {
+      await axiosInstance.post(
+        `/api/v1/reviews/automation/${bookingId}/dismiss`,
+        { action: 'restore' },
+      );
+      toast.success('Put back in the follow-up list');
+    } catch (e) {
+      const err = e as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message || 'Could not restore');
+    } finally {
+      load();
+    }
+  };
+
   const dismissBooking = async (bookingId: number) => {
     setDismissingId(bookingId);
-    setData((d) =>
-      d
-        ? {
-            ...d,
-            silent: Math.max(0, d.silent - 1),
-            prompted: Math.max(0, d.prompted - 1),
-            silentRecent: d.silentRecent.filter((s) => s.id !== bookingId),
-          }
-        : d,
-    );
+    setData((d) => {
+      if (!d) return d;
+      const prompted = Math.max(0, d.prompted - 1);
+      const silent = Math.max(0, d.silent - 1);
+      const responded = Math.max(0, prompted - silent);
+      return {
+        ...d,
+        prompted,
+        silent,
+        responded,
+        // Same formula as the server (reviewController getAutomationStats).
+        responseRate: prompted > 0 ? Math.round((responded / prompted) * 100) : 0,
+        silentRecent: d.silentRecent.filter((s) => s.id !== bookingId),
+      };
+    });
     try {
       await axiosInstance.post(
         `/api/v1/reviews/automation/${bookingId}/dismiss`,
         { action: 'dismiss' },
       );
-      toast.success('Removed from silent list');
+      toast.success('Removed from follow-ups', {
+        action: { label: 'Undo', onClick: () => void restoreBooking(bookingId) },
+        duration: 8000,
+      });
     } catch (e) {
       const err = e as { response?: { data?: { message?: string } } };
       toast.error(err.response?.data?.message || 'Could not dismiss');

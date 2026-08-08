@@ -15,6 +15,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useRouter } from "next/navigation"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -108,7 +109,7 @@ export function AddBusinessView() {
     // The backend writes these messages for humans (duplicate name, rate limit,
     // vendor-only, business cap). Show them verbatim rather than a generic error.
     onError: (e: any) =>
-      toast.error(e?.response?.data?.message || e?.message || "Couldn't add the business"),
+      toast.error(errorMessage(e, "Couldn't add the business")),
   })
 
   // A customer account would be 403'd by the API; don't show them a form that fails.

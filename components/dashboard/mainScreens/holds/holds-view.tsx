@@ -10,6 +10,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { VendorHoldsAPI, type VendorHold } from "@/lib/api/vendorHolds"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
@@ -50,7 +51,7 @@ export function HoldsView() {
   const releaseMut = useMutation({
     mutationFn: (id: number) => VendorHoldsAPI.release(id),
     onSuccess: () => { showSuccessToast("Hold released"); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't release"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't release")),
   })
 
   const list = holds ?? []

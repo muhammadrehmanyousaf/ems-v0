@@ -9,6 +9,8 @@
  */
 
 import * as React from 'react';
+import { MarkdownLite } from "@/components/dashboard/mainScreens/reviews/markdown-lite"
+import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Sparkles, Loader2 } from 'lucide-react';
@@ -37,6 +39,15 @@ export function AiReviewSummaryCard() {
   const [reviewCount, setReviewCount] = useState<number>(0);
   const [busy, setBusy] = useState(false);
 
+  /**
+   * WWL-364 — the picker defaulted to `businesses[0]`, so the AI summary
+   * described whichever venue happened to be first while the three surfaces
+   * around it described the venue in the header. Eighth module in the sweep
+   * with that mechanism; here it was at least recoverable, because the vendor
+   * could change it — but they had to notice first.
+   */
+  const activeBusinessId = useActiveBusinessId();
+
   useEffect(() => {
     AiAPI.status()
       .then((s) => setAvailable(!!(s.configured && s.features.reviewSummary)))
@@ -51,10 +62,20 @@ export function AiReviewSummaryCard() {
           name: b.name || `Business #${b.id}`,
         }));
         setBusinesses(opts);
-        if (opts.length > 0) setSelected(opts[0].id);
+        if (opts.length === 0) return;
+        const matchesHeader = opts.find((o: BizOption) => o.id === activeBusinessId);
+        setSelected(matchesHeader ? matchesHeader.id : opts[0].id);
       })
       .catch(() => undefined);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBusinessId]);
+
+  // A summary belongs to the venue it was run for; switching venue must not
+  // leave the previous venue's report on screen under the new venue's name.
+  useEffect(() => {
+    setSummary(null);
+    setReviewCount(0);
+  }, [selected]);
 
   if (!available || businesses.length === 0) return null;
 
@@ -117,8 +138,14 @@ export function AiReviewSummaryCard() {
           </Button>
         </div>
         {summary && (
-          <div className="rounded-md border border-bridal-gold/30 bg-bridal-gold/5 p-4 text-sm leading-relaxed whitespace-pre-line">
-            {summary}
+          <div className="rounded-md border border-bridal-gold/30 bg-bridal-gold/5 p-4 text-sm leading-relaxed">
+            {/* WWL-371 — this was a `whitespace-pre-line` div with no parser, so
+                the vendor read `#`, `**` and `- ` instead of the emphasis they
+                stand for: 1 literal hash, 8 literal double-asterisks and 5
+                literal dashes in the live node, against zero <strong>, <h1> or
+                <li>. MarkdownLite builds React elements and never HTML, so
+                model output cannot inject markup. */}
+            <MarkdownLite source={summary} />
             <p className="text-[10px] text-muted-foreground mt-3 italic">
               Based on {reviewCount} recent review
               {reviewCount === 1 ? '' : 's'}.

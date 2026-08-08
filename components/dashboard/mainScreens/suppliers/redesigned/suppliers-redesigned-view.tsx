@@ -17,6 +17,10 @@
  */
 
 import * as React from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { errorMessage } from "@/lib/utils/api-error"
+import { useRecordBusinessId } from "@/hooks/use-record-business-id"
+import { todayInKarachi } from "@/lib/utils/pk-date"
 import Link from "next/link"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
@@ -33,6 +37,7 @@ import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
 import { StatusPill, type StatusTone } from "@/components/dashboard/primitives/status-pill"
 import { MoneyCell, formatPkr } from "@/components/dashboard/primitives/money-cell"
+import { DestructiveConfirm } from "@/components/dashboard/primitives/destructive-confirm"
 import { ExportMenu } from "@/components/dashboard/shared/export-menu"
 import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
@@ -88,12 +93,35 @@ const INVOICE_TONE: Record<InvoiceStatus, StatusTone> = {
 }
 
 export function SuppliersRedesignedView() {
+  /**
+   * WWL-282 — `<Tabs defaultValue="invoices">` with no onValueChange and no URL
+   * sync: the tab choice never reached the address bar, so a vendor could not
+   * bookmark the supplier directory or send an accountant a link to the ledger,
+   * and every reload came back to A/P invoices.
+   */
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const tab = searchParams?.get("tab") === "suppliers" ? "suppliers" : "invoices"
+  const setTab = (v: string) => {
+    const qs = new URLSearchParams(searchParams?.toString() ?? "")
+    if (v === "invoices") qs.delete("tab")
+    else qs.set("tab", v)
+    const q = qs.toString()
+    router.replace(q ? `?${q}` : "?", { scroll: false })
+  }
+
   const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
   const businessOptions: VendorBusinessOption[] = React.useMemo(
     () => (businesses ?? []).map((b) => ({ id: b.id, name: b.name || `Business #${b.id}` })),
     [businesses],
   )
-  const businessId = businesses?.[0]?.id
+  /**
+   * WWL-293/311/332/350 — this was `businesses?.[0]?.id`, so under "All venues"
+   * a new record landed on whichever venue happened to be first in the array,
+   * silently. The hook returns undefined rather than guessing when there is no
+   * right answer; the create dialog then asks.
+   */
+  const businessId = useRecordBusinessId()
 
   return (
     <div className="space-y-6 p-4 md:p-6">
@@ -102,7 +130,7 @@ export function SuppliersRedesignedView() {
         title="Suppliers"
         description="Your A/P ledger and vendor network."
       />
-      <Tabs defaultValue="invoices" className="space-y-6">
+      <Tabs value={tab} onValueChange={setTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="invoices">
             <Icon name="FileText" size={15} className="mr-1.5" /> A/P invoices
@@ -171,7 +199,7 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
   const removeMut = useMutation({
     mutationFn: (id: number) => SupplierAPI.removeInvoice(id),
     onSuccess: () => { showSuccessToast("Invoice removed"); setDeleting(null); refetchAll() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove invoice"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove invoice")),
   })
 
   const allInvoices = invQuery.data?.invoices ?? []
@@ -220,6 +248,9 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
     return c
   }, [ledgerInvoices])
 
+  /** An invoice dated after today — check the date before you trust the ageing. */
+  const isFutureDated = (d?: string | null) => !!d && d.slice(0, 10) > todayInKarachi()
+
   const columns: Column<SupplierInvoice>[] = [
     {
       key: "supplier",
@@ -231,6 +262,17 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
             <div className="truncate font-medium">{inv.supplierNameSnapshot}</div>
             <div className="text-xs text-muted-foreground">
               {inv.invoiceNumber ? `#${inv.invoiceNumber} · ` : ""}{fmtDate(inv.invoiceDate)}
+              {/* WWL-284 — four live invoices carry an invoice date AFTER today
+                  and render as ordinary bills; one of them is the invoice
+                  marked Overdue, which cannot be true of a bill dated next
+                  week. Almost certainly a typo when it was entered, and the
+                  vendor is the only one who can say — so it is flagged rather
+                  than hidden or corrected. */}
+              {isFutureDated(inv.invoiceDate) && (
+                <span className="ml-1.5 rounded border border-amber-500/40 bg-amber-500/10 px-1 text-[10px] font-medium text-amber-700 dark:text-amber-400">
+                  dated in the future
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -387,6 +429,9 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
       )}
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
+        caption="Suppliers"
         columns={columns}
         data={invoices}
         getRowId={(inv) => String(inv.id)}
@@ -487,18 +532,32 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
       <DisputeInvoiceDialog invoice={disputing} onOpenChange={(o) => !o && setDisputing(null)} onSaved={() => { setDisputing(null); refetchAll() }} />
       <VoidInvoiceDialog invoice={voiding} onOpenChange={(o) => !o && setVoiding(null)} onSaved={() => { setVoiding(null); refetchAll() }} />
 
-      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove this invoice?</AlertDialogTitle>
-            <AlertDialogDescription>Soft delete. Paid invoices cannot be removed.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleting && removeMut.mutate(deleting.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remove</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* WWL-278 — the confirm named nothing at all: no supplier, no invoice
+          number, no amount. "Paid invoices cannot be removed" was buried in the
+          description as a general note rather than checked against THIS row, so
+          a vendor could confirm a delete the server was certain to refuse. */}
+      <DestructiveConfirm
+        open={!!deleting}
+        onOpenChange={(v) => !v && setDeleting(null)}
+        title="Remove this invoice?"
+        reversibility="soft"
+        pending={removeMut.isPending}
+        onConfirm={() => deleting && removeMut.mutate(deleting.id)}
+        blockedReason={
+          deleting && Number(deleting.amountPaid) > 0
+            ? `This invoice has ${formatPkr(Number(deleting.amountPaid) || 0)} recorded against it, so it can't be removed. Void it instead if it was raised in error — that keeps the payment history intact.`
+            : null
+        }
+        fields={[
+          { label: "Supplier", value: deleting?.supplierNameSnapshot || "" },
+          { label: "Invoice no.", value: deleting?.invoiceNumber || "" },
+          { label: "Total", value: deleting ? formatPkr(Number(deleting.totalAmount) || 0) : "" },
+          { label: "Paid", value: deleting && Number(deleting.amountPaid) > 0 ? formatPkr(Number(deleting.amountPaid) || 0) : "" },
+          { label: "Invoice date", value: deleting?.invoiceDate || "" },
+          { label: "Due", value: deleting?.dueDate || "" },
+          { label: "Note", value: deleting?.description || "" },
+        ]}
+      />
     </div>
   )
 }
@@ -528,7 +587,7 @@ function SuppliersDirectoryTab({ businessId }: { businessId?: number }) {
     mutationFn: (id: number) => SupplierAPI.remove(id),
     onSuccess: () => { showSuccessToast("Supplier removed"); setDeleting(null); invalidate() },
     onError: (e: any) => toast.error(
-        e?.response?.data?.message || e?.message || "Couldn't remove supplier",
+        errorMessage(e, "Couldn't remove supplier"),
         { duration: 8000 },
       ),
   })

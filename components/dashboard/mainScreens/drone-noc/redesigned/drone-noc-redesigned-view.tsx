@@ -7,6 +7,10 @@
  */
 
 import * as React from "react"
+import Link from "next/link"
+import { errorMessage } from "@/lib/utils/api-error"
+import { useRecordBusinessId } from "@/hooks/use-record-business-id"
+import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   DroneNocAPI,
@@ -79,14 +83,21 @@ export function DroneNocRedesignedView({ adminCapable = true }: { adminCapable?:
     queryFn: () => DroneNocAPI.list(),
   })
   const { data: businesses } = useQuery({ queryKey: ["my-businesses"], queryFn: () => BusinessesAPI.getUserBusinesses() })
-  const businessId = businesses?.[0]?.id
+  /**
+   * WWL-293/311/332/350 — this was `businesses?.[0]?.id`, so under "All venues"
+   * a new record landed on whichever venue happened to be first in the array,
+   * silently. The hook returns undefined rather than guessing when there is no
+   * right answer; the create dialog then asks.
+   */
+  const businessId = useRecordBusinessId()
+  const activeBusinessId = useActiveBusinessId()
   const invalidate = () => qc.invalidateQueries({ queryKey: ["drone-noc-redesigned"] })
   const openCreate = () => { setEditing(undefined); setDialogOpen(true) }
   const openEdit = (p: DroneNOC) => { setEditing(p); setDialogOpen(true) }
   const removeMut = useMutation({
     mutationFn: (id: number) => DroneNocAPI.remove(id),
     onSuccess: () => { showSuccessToast("Permit removed"); setDeleting(null); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove permit"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove permit")),
   })
 
   const all = data?.permits ?? []
@@ -101,7 +112,31 @@ export function DroneNocRedesignedView({ adminCapable = true }: { adminCapable?:
   }, [all, search])
 
   const approved = all.filter((p) => p.status === "approved").length
-  const attention = all.filter((p) => p.status === "pending" || p.status === "expiring_soon").length
+  /**
+   * WWL-343 — "Needs attention" merged `pending` with `expiring_soon`. An
+   * application sitting with a regulator and an approved permit about to lapse
+   * are different situations with different remedies: one you chase the CAA
+   * about, the other you renew. One number for both told a vendor neither.
+   */
+  /**
+   * WWL-347 — `GET /api/v1/drone-noc/upcoming` is live, returns cleanly, and
+   * the controller documents it as "pending + expiring-soon + booking-linked
+   * windows". The app's only requests on this route were two bare
+   * `GET /drone-noc` calls; the endpoint that answers "what is coming up and
+   * which wedding is it for" had no consumer at all.
+   *
+   * It answers a different question from the table: the table is a register,
+   * this is a diary.
+   */
+  const { data: upcomingData } = useQuery({
+    queryKey: ["drone-noc-upcoming", activeBusinessId],
+    queryFn: () => DroneNocAPI.upcoming(activeBusinessId ? { businessId: activeBusinessId } : {}),
+    staleTime: 60_000,
+  })
+  const upcoming = upcomingData?.permits ?? []
+
+  const pendingCount = all.filter((p) => p.status === "pending").length
+  const expiringCount = all.filter((p) => p.status === "expiring_soon").length
   const feesPaid = all.reduce((sum, p) => sum + num(p.feePaid), 0)
 
   const columns: Column<DroneNOC>[] = [
@@ -121,7 +156,39 @@ export function DroneNocRedesignedView({ adminCapable = true }: { adminCapable?:
       ),
     },
     { key: "authority", header: "Authority", cellClassName: "text-muted-foreground", render: (p) => authorityLabel(p) },
-    { key: "pilot", header: "Pilot", cellClassName: "text-muted-foreground", render: (p) => p.pilotName || "—" },
+    /**
+     * WWL-344 — five captured fields were columns in nothing: valid-from, drone
+     * registration, pilot licence, venue/area and drone model. The search
+     * matches `droneRegNumber` and `venueAddress`, so searching either filtered
+     * the table down to rows that never showed the thing being searched for.
+     *
+     * WWL-355 — the pilot licence is the field an inspector asks for, and it
+     * was captured, stored, and absent from both the table and the export.
+     */
+    {
+      key: "pilot",
+      header: "Pilot",
+      cellClassName: "text-muted-foreground",
+      render: (p) => (
+        <div className="min-w-0">
+          <div className="truncate">{p.pilotName || "—"}</div>
+          {p.pilotLicense && <div className="truncate text-xs">Licence {p.pilotLicense}</div>}
+        </div>
+      ),
+    },
+    {
+      key: "drone",
+      header: "Drone",
+      cellClassName: "text-muted-foreground",
+      render: (p) => (
+        <div className="min-w-0">
+          <div className="truncate">{p.droneModel || "—"}</div>
+          {p.droneRegNumber && <div className="truncate text-xs">Reg {p.droneRegNumber}</div>}
+        </div>
+      ),
+    },
+    { key: "venue", header: "Venue / area", cellClassName: "max-w-[200px] truncate text-muted-foreground", render: (p) => p.venueAddress || "—" },
+    { key: "validFrom", header: "Valid from", cellClassName: "text-muted-foreground", render: (p) => fmtDate(p.validFrom) },
     { key: "validUntil", header: "Valid until", cellClassName: "text-muted-foreground", render: (p) => fmtDate(p.validUntil) },
     {
       key: "fee",
@@ -151,8 +218,20 @@ export function DroneNocRedesignedView({ adminCapable = true }: { adminCapable?:
           {canCancel(p.status) && (
             <Button size="sm" variant="ghost" onClick={() => setCancelling(p)} aria-label="Cancel permit"><Icon name="XCircle" size={14} /></Button>
           )}
-          <Button size="sm" variant="ghost" onClick={() => openEdit(p)} aria-label="Edit permit"><Icon name="Pencil" size={14} /></Button>
-          <Button size="sm" variant="ghost" onClick={() => setDeleting(p)} aria-label="Remove permit"><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
+          {/**
+            * WWL-345 — Edit and Remove rendered on EVERY status, approved
+            * included. The backend guards only the status field
+            * (`delete patch.status`), so an approved permit's reference number
+            * and validity window could be rewritten afterwards with no trace.
+            * A permit is a document an authority issued; once approved, the
+            * way to change it is a fresh application, not a quiet edit.
+            */}
+          {p.status !== "approved" && (
+            <Button size="sm" variant="ghost" onClick={() => openEdit(p)} aria-label={`Edit permit ${p.referenceNumber}`}><Icon name="Pencil" size={14} /></Button>
+          )}
+          {p.status !== "approved" && (
+            <Button size="sm" variant="ghost" onClick={() => setDeleting(p)} aria-label={`Remove permit ${p.referenceNumber}`}><Icon name="Trash2" size={14} className="text-muted-foreground hover:text-destructive" /></Button>
+          )}
         </div>
       ),
     },
@@ -167,14 +246,62 @@ export function DroneNocRedesignedView({ adminCapable = true }: { adminCapable?:
         actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Add permit</Button>}
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {/* WWL-347 */}
+      {upcoming.length > 0 && (
+        <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <h2 className="text-sm font-semibold">Coming up</h2>
+          <p className="text-xs text-muted-foreground">
+            Permits awaiting a decision, expiring soon, or attached to a booked event.
+          </p>
+          <ul className="mt-3 divide-y divide-border/60">
+            {upcoming.slice(0, 8).map((p: DroneNOC) => (
+              <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 py-2 text-sm">
+                <span className="font-medium">#{p.referenceNumber}</span>
+                <StatusPill tone={STATUS_TONE[p.status] ?? "neutral"}>{statusLabel(p.status)}</StatusPill>
+                <span className="text-xs text-muted-foreground">
+                  {p.validFrom ? `from ${fmtDate(p.validFrom)}` : ""}
+                  {p.validUntil ? ` · until ${fmtDate(p.validUntil)}` : ""}
+                </span>
+                {p.bookingId && (
+                  <Link
+                    href={`/dashboard/bookings/${p.bookingId}`}
+                    className="ml-auto text-xs font-medium text-primary hover:underline"
+                  >
+                    Open the event
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+          {upcoming.length > 8 && (
+            <p className="mt-2 text-xs text-muted-foreground">and {upcoming.length - 8} more below.</p>
+          )}
+        </section>
+      )}
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard label="Total permits" value={all.length} icon="ShieldCheck" />
         <StatCard label="Approved" value={approved} icon="CheckCircle2" trend="up" />
-        <StatCard label="Needs attention" value={attention} icon="AlertTriangle" />
+        <StatCard
+          label="With the regulator"
+          value={pendingCount}
+          icon="Clock"
+          delta={pendingCount > 0 ? "awaiting a decision" : undefined}
+        />
+        <StatCard
+          label="Expiring soon"
+          value={expiringCount}
+          icon="AlertTriangle"
+          trend={expiringCount > 0 ? "down" : "flat"}
+          delta={expiringCount > 0 ? "renew before the event" : undefined}
+        />
         <StatCard label="Fees paid" value={formatPkr(feesPaid)} icon="Wallet" error={isError} />
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
+        caption="Drone NOC permits"
         columns={columns}
         data={permits}
         getRowId={(p) => String(p.id)}
@@ -186,7 +313,10 @@ export function DroneNocRedesignedView({ adminCapable = true }: { adminCapable?:
         onSelectionChange={setSelected}
         empty={{
           icon: "ShieldCheck",
-          title: "No permits yet",
+          /* WWL-352 — three compliance registers, built and live and empty on
+             all three venues. An empty register is not neutral: it is the
+             answer a vendor gives when an authority asks. */
+          title: "No permits on file",
           description: "Track your drone NOCs, issuing authorities and validity windows so aerial shoots stay compliant.",
           action: <Button size="sm" onClick={openCreate}><Icon name="Plus" size={14} className="mr-1" /> Add permit</Button>,
         }}
@@ -206,7 +336,12 @@ export function DroneNocRedesignedView({ adminCapable = true }: { adminCapable?:
                 { header: "Type", value: (p) => typeLabel(p) },
                 { header: "Authority", value: (p) => authorityLabel(p) },
                 { header: "Pilot", value: (p) => p.pilotName ?? "" },
+                // WWL-355 — the licence is the field an inspector asks for. It
+                // was captured, stored, and missing from the export.
+                { header: "Pilot licence", value: (p) => p.pilotLicense ?? "" },
+                { header: "Drone model", value: (p) => p.droneModel ?? "" },
                 { header: "Drone reg #", value: (p) => p.droneRegNumber ?? "" },
+                { header: "Venue / area", value: (p) => p.venueAddress ?? "" },
                 { header: "Valid from", value: (p) => p.validFrom ?? "" },
                 { header: "Valid until", value: (p) => p.validUntil ?? "" },
                 { header: "Fee paid", value: (p) => num(p.feePaid) },

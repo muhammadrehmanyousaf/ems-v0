@@ -499,7 +499,12 @@ export type ReceivablesBucketKey =
   | "days_90_plus";
 
 export interface ReceivablesBucket {
+  /** @deprecated WWL-140 — alias of `installments`. Read the explicit key. */
   count: number;
+  /** Unpaid installments falling in this age band. Sums to totals.installmentsOpen. */
+  installments?: number;
+  /** People to ring, bucketed by their oldest unpaid installment. Sums to totals.customerCount. */
+  customers?: number;
   total: number;
 }
 
@@ -649,7 +654,18 @@ export interface ReputationData {
   responseRate: number | null;
   trend: ReputationTrendPoint[];
   categoryBenchmark: ReputationCategoryBenchmark | null;
-  keywords: { word: string; count: number }[];
+  /**
+   * WWL-383 — sentiment is derived from the ratings of the reviews each word
+   * appears in, not from a good/bad wordlist, so it works for Roman Urdu and
+   * Urdu script without either being enumerated. Optional: an older backend
+   * deploy sends word+count only and the panel renders them neutral.
+   */
+  keywords: {
+    word: string;
+    count: number;
+    sentiment?: "positive" | "negative" | "neutral";
+    avgRating?: number | null;
+  }[];
   topReview: ReputationTopReview | null;
 }
 

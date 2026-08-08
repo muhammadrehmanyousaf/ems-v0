@@ -12,6 +12,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation } from "@tanstack/react-query"
 import {
   BrokerAPI,
@@ -34,7 +35,21 @@ const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 t
 const labelCls = "text-xs font-medium text-muted-foreground"
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const today = () => todayInKarachi()
-const errMsg = (e: any, fallback: string) => e?.response?.data?.message || e?.message || fallback
+/**
+ * WWL-291 — this preferred `e.message` over the human fallback, and with the
+ * payment write diverted the toast read, verbatim:
+ *
+ *   Cannot read properties of undefined (reading 'result')
+ *
+ * — because `onSuccess` also dereferenced `res.result.newStatus` before
+ * checking it existed. The sibling Suppliers dialog has the identical
+ * dereference and ignores `e.message`, so it shows "Could not record payment":
+ * one bug, two error handlers, and only one of them leaks the stack.
+ *
+ * `errorMessage` is the shared helper (WWL-425): the server's own sentence
+ * wins, axios's plumbing strings never reach a vendor.
+ */
+const errMsg = (e: unknown, fallback: string) => errorMessage(e, fallback)
 
 function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
   return <div className={cn("space-y-1.5", className)}><label className={labelCls}>{label}</label>{children}</div>
@@ -77,8 +92,12 @@ export function RecordPaymentDialog({
         paymentDate: paymentDate || undefined,
       }),
     onSuccess: (res) => {
-      if (res.result.newStatus === "paid") showSuccessToast("Commission fully paid")
-      else showSuccessToast(`Payment recorded — outstanding ${formatPkr(res.result.newAmountOutstanding)}`)
+      // The shape is only assumed after it is checked — a diverted or reshaped
+      // response is a failed write, not a crash inside the success path.
+      const r = res?.result
+      if (!r) showSuccessToast("Payment recorded")
+      else if (r.newStatus === "paid") showSuccessToast("Commission fully paid")
+      else showSuccessToast(`Payment recorded — outstanding ${formatPkr(r.newAmountOutstanding)}`)
       onSaved?.()
       onOpenChange(false)
     },

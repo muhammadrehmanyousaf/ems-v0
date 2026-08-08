@@ -135,7 +135,11 @@ export const ISSUING_AUTHORITY_LABELS: Record<IssuingAuthority, string> = {
   pha: "PHA (Punjab Halal Authority)",
   shdb_sindh: "Sindh Halal Dept",
   kpk_halal: "KPK Halal Authority",
-  sfa_pakistan: "HFA Federal Pakistan",
+  // WWL-336 — the key is `sfa_pakistan` and the label read "HFA Federal
+  // Pakistan". Two different acronyms for one authority, on a compliance
+  // record. The key is the stored enum value, so the label is the side that
+  // can be corrected without a data migration.
+  sfa_pakistan: "SFA (Federal, Pakistan)",
   sanha: "SANHA (South Africa)",
   juh_india: "JUH (India)",
   muis: "MUIS (Singapore)",

@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { PdcAPI, type PostDatedCheque, type PdcStatus } from "@/lib/api/postDatedCheques"
 import { PdcFormDialog, PdcTransitionDialog } from "@/components/dashboard/mainScreens/pdcs/redesigned/pdc-dialogs"
@@ -58,7 +59,7 @@ export function PdcsRedesignedView() {
   const removeMut = useMutation({
     mutationFn: (id: number) => PdcAPI.remove(id),
     onSuccess: () => { showSuccessToast("Cheque removed"); setDeleting(null); invalidate() },
-    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || "Couldn't remove cheque"),
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't remove cheque")),
   })
 
   const all = data?.pdcs ?? []
@@ -68,9 +69,17 @@ export function PdcsRedesignedView() {
     return all.filter((p) => [p.chequeNumber, p.bankName, p.customer?.fullName].some((v) => (v ?? "").toLowerCase().includes(q)))
   }, [all, search])
 
-  const heldCount = all.filter((p) => p.status === "held" || p.status === "deposited").length
-  const clearedValue = all.filter((p) => p.status === "cleared").reduce((s, p) => s + num(p.amount), 0)
-  const bounced = all.filter((p) => p.status === "bounced").length
+  /**
+   * WWL-168 — `Total cheques 5` / `Bounced 2` stayed frozen while the table
+   * filtered to 1 row, or to 0. Fourth consecutive money module where the
+   * headline described a different set than the rows beneath it.
+   */
+  const filtering = search.trim().length > 0
+  const scope = pdcs
+  const scopeNote = filtering ? `of ${all.length} total` : undefined
+  const heldCount = scope.filter((p) => p.status === "held" || p.status === "deposited").length
+  const clearedValue = scope.filter((p) => p.status === "cleared").reduce((s, p) => s + num(p.amount), 0)
+  const bounced = scope.filter((p) => p.status === "bounced").length
 
   const columns: Column<PostDatedCheque>[] = [
     { key: "cheque", header: "Cheque #", render: (p) => <span className="font-medium tabular-nums">{p.chequeNumber}</span> },
@@ -102,13 +111,16 @@ export function PdcsRedesignedView() {
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total cheques" value={all.length} icon="FileText" />
-        <StatCard label="Held / deposited" value={heldCount} icon="Clock" delta="awaiting" />
-        <StatCard label="Cleared value" value={formatPkr(clearedValue)} icon="Wallet" trend="up" error={isError} />
+        <StatCard label={filtering ? "Cheques (filtered)" : "Total cheques"} value={scope.length} icon="FileText" delta={scopeNote} />
+        <StatCard label="Held / deposited" value={heldCount} icon="Clock" delta={scopeNote ?? "awaiting"} />
+        <StatCard label={filtering ? "Cleared value (filtered)" : "Cleared value"} value={formatPkr(clearedValue)} icon="Wallet" trend="up" error={isError} />
         <StatCard label="Bounced" value={bounced} icon="AlertTriangle" trend={bounced ? "down" : "flat"} delta={bounced ? "follow up" : "none"} />
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
+        caption="Cheque ledger"
         columns={columns}
         data={pdcs}
         getRowId={(p) => String(p.id)}
@@ -139,6 +151,11 @@ export function PdcsRedesignedView() {
                 { header: "Cheque #", value: (p) => p.chequeNumber },
                 { header: "Bank", value: (p) => p.bankName ?? "" },
                 { header: "Customer", value: (p) => p.customer?.fullName ?? "" },
+                // WWL-136/155/172/188 — the export dropped a column that is on
+                // screen, so the file the vendor hands their accountant is not the
+                // table they were reading. Booking id is what actually ties a row
+                // back to an event in a spreadsheet.
+                { header: "Booking id", value: (p) => (p.bookingId != null ? `#${p.bookingId}` : "") },
                 { header: "Cheque date", value: (p) => fmtDate(p.chequeDate) },
                 { header: "Amount", value: (p) => num(p.amount) },
                 { header: "Status", value: (p) => p.status },

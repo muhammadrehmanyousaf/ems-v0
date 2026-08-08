@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator'
 import { Calendar } from '@/components/ui/calendar'
 import type { DateRange } from '@/lib/api/analytics'
 import { cn } from '@/lib/utils'
+import { calendarDateString } from '@/lib/utils/pk-date'
 
 const PRESET_RANGES: { label: string; value: DateRange }[] = [
     { label: 'Today', value: 'today' },
@@ -86,7 +87,11 @@ const DashboardDateFilter = ({ value, onChange }: DashboardDateFilterProps) => {
                             onSelect={(date) => {
                                 setCustomDate(date);
                                 if (date) {
-                                    const dateStr = date.toISOString().split('T')[0];
+                                    // WWL-455 — the calendar hands back LOCAL midnight, so
+                                    // `toISOString()` landed on the previous evening in UTC and
+                                    // this filtered to YESTERDAY for every Pakistani vendor,
+                                    // all day, every day. Read the clicked square's own fields.
+                                    const dateStr = calendarDateString(date);
                                     onChange('custom', dateStr, dateStr);
                                     setOpen(false);
                                 }

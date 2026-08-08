@@ -101,6 +101,9 @@ export function AuditLogsRedesignedView() {
       </div>
 
       <DataTable
+        filterQuery={search}
+        onClearFilter={() => setSearch("")}
+        caption="Audit log"
         columns={columns}
         data={rows}
         getRowId={(l) => String(l.id)}

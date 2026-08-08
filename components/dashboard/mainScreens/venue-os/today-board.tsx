@@ -13,11 +13,16 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useVendorBookings, type VendorBookingLite } from "@/hooks/use-vendor-bookings";
+import { useQuery } from "@tanstack/react-query";
+import { useVendorBookings, bookingVenue, type VendorBookingLite } from "@/hooks/use-vendor-bookings";
+import { useUser } from "@/context/UserContext";
+import { BlockedDatesAPI } from "@/lib/api/dashboard";
+import { useActiveBusinessId } from "@/lib/store/active-business-store";
 import { StatCard } from "@/components/dashboard/primitives/stat-card";
 import { formatPkr } from "@/components/dashboard/primitives/money-cell";
 import { Icon } from "@/components/dashboard/shared/icon";
 import { waLink } from "@/lib/whatsapp";
+import { todayInKarachi } from "@/lib/utils/pk-date";
 import { cn } from "@/lib/utils";
 
 /** How many rows each list shows before it defers to the full screen. */
@@ -50,8 +55,37 @@ const CHIP_CLS: Record<ReturnType<typeof dayChip>["tone"], string> = {
   none: "bg-muted text-muted-foreground border-border",
 };
 
-const fmtDate = (s?: string | null) =>
-  s ? new Date(s).toLocaleDateString("en-PK", { weekday: "short", day: "2-digit", month: "short" }) : "—";
+/**
+ * WWL-538 — this rendered "Thu, 13 Aug" with no year, on lists that already
+ * span 93 days forward and 100 back. Nothing is ambiguous inside one calendar
+ * year; a booking a year out or a balance overdue since last season rendered
+ * identically to one this month. The year appears only when it is not the
+ * current one, so the common case stays short.
+ */
+const fmtDate = (s?: string | null) => {
+  if (!s) return "—";
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return "—";
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleDateString("en-PK", {
+    weekday: "short", day: "2-digit", month: "short",
+    ...(sameYear ? {} : { year: "numeric" }),
+  });
+};
+
+/**
+ * WWL-532 — only `cancelled` was filtered, so Pending and Awaiting-Payment
+ * bookings sat in "Upcoming events" beside Confirmed ones with nothing but a
+ * word at the end of a line to tell them apart. The board told a venue owner
+ * they had an event on 7 October worth Rs 2.6 million, on a booking nobody had
+ * paid a rupee against and whose own status said it was not confirmed.
+ *
+ * They are NOT hidden — an unconfirmed Rs 2.6m enquiry is exactly what an owner
+ * should be looking at. They are marked, and counted separately, so a held date
+ * and a hoped-for one are never the same number.
+ */
+const COMMITTED = new Set(["confirmed", "completed", "in progress", "ongoing"]);
+const isCommitted = (status?: string | null) => COMMITTED.has((status || "").trim().toLowerCase());
 
 /**
  * Chase actions — a call and a pre-filled WhatsApp, on the row that names the
@@ -127,6 +161,21 @@ function ListFooter({
 
 export function TodayBoard({ hideKpis = false }: { hideKpis?: boolean } = {}): React.ReactElement {
   const { data, isLoading } = useVendorBookings();
+  const { user } = useUser();
+  const activeBusinessId = useActiveBusinessId();
+
+  /**
+   * WWL-537 — the board read "Events today: 0", which was true of the booking
+   * list and false of the venue: all three halls carried a blocked date for
+   * that same day. On a screen whose job is "what's happening at your hall
+   * right now", every hall being closed did not appear anywhere.
+   */
+  const todayStr = todayInKarachi();
+  const { data: blockedToday } = useQuery({
+    queryKey: ["blocked-dates", activeBusinessId ?? "all", "today", todayStr],
+    queryFn: () => BlockedDatesAPI.getAll(undefined, activeBusinessId, { from: todayStr, to: todayStr }),
+    staleTime: 5 * 60_000,
+  });
 
   const rows: Row[] = React.useMemo(() => {
     const today = startOfDayMs(new Date());
@@ -141,8 +190,31 @@ export function TodayBoard({ hideKpis = false }: { hideKpis?: boolean } = {}): R
       });
   }, [data]);
 
+  /**
+   * WWL-533 — the account holder's own name was the customer on a Confirmed
+   * Rs 665,000 booking seven days out, appearing in Upcoming events, in Who to
+   * chase at 0% paid, and inside both the "Next 7 days" count and the "To
+   * collect" total. Almost certainly a test row, and it is on production.
+   *
+   * Not filtered — deleting a real vendor's data on a guess would be far worse
+   * than showing it. It is marked, so an owner can see why a figure looks
+   * wrong, and act on it themselves.
+   */
+  const isSelfBooking = React.useCallback(
+    (r: Row) => {
+      const name = (user?.fullName || "").trim().toLowerCase();
+      const email = (user?.email || "").trim().toLowerCase();
+      if (name && (r.customerName || "").trim().toLowerCase() === name) return true;
+      if (email && (r.customerEmail || "").trim().toLowerCase() === email) return true;
+      return false;
+    },
+    [user?.fullName, user?.email],
+  );
+
   const todayEvents = rows.filter((r) => r.days === 0);
   const next7 = rows.filter((r) => r.days != null && r.days >= 0 && r.days <= 7);
+  const next7Committed = next7.filter((r) => isCommitted(r.status)).length;
+  const next7Provisional = next7.length - next7Committed;
   const upcomingAll = rows.filter((r) => r.days != null && r.days >= 0).sort((a, b) => (a.days as number) - (b.days as number));
   const upcoming = upcomingAll.slice(0, LIST_CAP);
   const chaseAll = rows.filter((r) => r.outstanding > 0).sort((a, b) => (a.days ?? 99999) - (b.days ?? 99999));
@@ -170,10 +242,38 @@ export function TodayBoard({ hideKpis = false }: { hideKpis?: boolean } = {}): R
         <p className="text-sm text-muted-foreground">Your events coming up and the payments to chase — straight off your bookings.</p>
       </div>
 
+      {/* WWL-537 */}
+      {(blockedToday?.length ?? 0) > 0 && (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-300/70 bg-amber-50 px-4 py-3 text-sm dark:border-amber-900/60 dark:bg-amber-950/30">
+          <Icon name="CalendarCheck" size={16} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div>
+            <p className="font-medium">
+              Today is blocked{blockedToday!.length > 1 ? ` on ${blockedToday!.length} of your venues` : ""} —
+              couples cannot book it.
+            </p>
+            {blockedToday!.some((b) => b.reason) && (
+              <p className="text-muted-foreground">
+                {blockedToday!.filter((b) => b.reason).map((b) => b.reason).join(" · ")}
+              </p>
+            )}
+            <Link href="/dashboard/settings?tab=availability" className="text-xs font-medium text-primary hover:underline">
+              Open availability
+            </Link>
+          </div>
+        </div>
+      )}
+
       {!hideKpis && (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatCard label="Events today" value={todayEvents.length} icon="CalendarCheck" />
-          <StatCard label="Next 7 days" value={next7.length} icon="Clock" delta="events" />
+          {/* WWL-532 — one number for "events" mixed dates the venue is
+              committed to with dates it merely hopes for. */}
+          <StatCard
+            label="Next 7 days"
+            value={next7Committed}
+            icon="Clock"
+            delta={next7Provisional > 0 ? `+${next7Provisional} not yet confirmed` : "confirmed events"}
+          />
           <StatCard label="To collect" value={formatPkr(totalOutstanding)} icon="Wallet" delta="across open bookings" />
           <StatCard label="Overdue payments" value={overdue} icon="AlertTriangle" trend={overdue > 0 ? "down" : "flat"} delta={overdue > 0 ? "event passed, unpaid" : "all clear"} />
         </div>
@@ -189,7 +289,10 @@ export function TodayBoard({ hideKpis = false }: { hideKpis?: boolean } = {}): R
         <div className="rounded-xl border border-border bg-card shadow-sm">
           <div className="border-b border-border px-4 py-3">
             <h4 className="text-sm font-semibold">Upcoming events</h4>
-            <p className="text-xs text-muted-foreground">Soonest first.</p>
+            <p className="text-xs text-muted-foreground">
+              Soonest first. Anything not yet confirmed is marked — it is a date you hope for, not one
+              you hold.
+            </p>
           </div>
           {isLoading ? (
             <p className="px-4 py-8 text-center text-sm text-muted-foreground">Loading your bookings…</p>
@@ -209,9 +312,27 @@ export function TodayBoard({ hideKpis = false }: { hideKpis?: boolean } = {}): R
                     >
                       <Chip days={r.days} />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium">{r.customerName || `Booking #${r.id}`}</div>
-                        <div className="text-xs text-muted-foreground">{fmtDate(r.bookingDate)}{r.status ? ` · ${r.status}` : ""}</div>
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <span className="truncate text-sm font-medium">{r.customerName || `Booking #${r.id}`}</span>
+                          {isSelfBooking(r) && (
+                            <span
+                              title="The customer on this booking is your own account — check whether it is a test row."
+                              className="shrink-0 rounded-full border border-border px-1.5 text-[10px] font-medium text-muted-foreground"
+                            >
+                              your account
+                            </span>
+                          )}
+                        </div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {fmtDate(r.bookingDate)}
+                          {bookingVenue(r).name ? ` · ${bookingVenue(r).name}` : ""}
+                        </div>
                       </div>
+                      {!isCommitted(r.status) && (
+                        <span className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+                          {r.status || "Not confirmed"}
+                        </span>
+                      )}
                       <div className="shrink-0 text-right text-sm tabular-nums">{r.revenue > 0 ? formatPkr(r.revenue) : "—"}</div>
                       <Icon name="ChevronRight" size={15} className="shrink-0 text-muted-foreground" />
                     </Link>
@@ -249,9 +370,21 @@ export function TodayBoard({ hideKpis = false }: { hideKpis?: boolean } = {}): R
                     <Link href={`/dashboard/bookings/${r.id}`} className="flex min-w-0 flex-1 items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                       <Chip days={r.days} />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium">{r.customerName || `Booking #${r.id}`}</div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <span className="truncate text-sm font-medium">{r.customerName || `Booking #${r.id}`}</span>
+                          {isSelfBooking(r) && (
+                            <span
+                              title="The customer on this booking is your own account — check whether it is a test row."
+                              className="shrink-0 rounded-full border border-border px-1.5 text-[10px] font-medium text-muted-foreground"
+                            >
+                              your account
+                            </span>
+                          )}
+                        </div>
+                        <div className="truncate text-xs text-muted-foreground">
                           {fmtDate(r.bookingDate)} · {r.revenue > 0 ? `${Math.round((r.received / r.revenue) * 100)}% paid` : "unpriced"}
+                          {bookingVenue(r).name ? ` · ${bookingVenue(r).name}` : ""}
+                          {!isCommitted(r.status) ? ` · ${r.status || "not confirmed"}` : ""}
                         </div>
                       </div>
                       <div className="shrink-0 text-right text-sm font-semibold tabular-nums text-rose-600 dark:text-rose-400">{formatPkr(r.outstanding)}</div>

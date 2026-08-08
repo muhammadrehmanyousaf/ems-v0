@@ -31,11 +31,16 @@ const MAX_FILES = 20
  * invisible and the vendor simply could not delete a photo — and most Pakistani
  * vendors run this dashboard on a phone. An unreachable control is a broken
  * feature, so touch now gets an always-visible button while pointer devices keep
- * the hover-reveal polish. Also bumped 7→8 (32px) to clear the 44px-ish minimum
- * comfortable tap target as closely as this tile size allows.
+ * the hover-reveal polish.
+ *
+ * WWL-487 — the size fix stopped at 32px, "as closely as this tile size
+ * allows", and 32px is what the sweep measured on a 360px viewport. But the
+ * 44px minimum is a TOUCH guideline, and touch is the case where this button is
+ * always visible: it gets the full 44px, while a mouse — which is precise, and
+ * only reveals this on hover anyway — keeps the 32px chip that suits the tile.
  */
 const REMOVE_BTN_CLASS =
-  "absolute right-1.5 top-1.5 grid h-8 w-8 place-items-center rounded-md bg-black/55 text-white transition-opacity hover:bg-red-600 focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
+  "absolute right-1.5 top-1.5 grid h-11 w-11 place-items-center rounded-md bg-black/55 text-white transition-opacity hover:bg-red-600 focus-visible:opacity-100 md:h-8 md:w-8 md:opacity-0 md:group-hover:opacity-100"
 
 /**
  * Turn a server/network error into something a venue owner can act on.
