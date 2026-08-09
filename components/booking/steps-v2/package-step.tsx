@@ -28,7 +28,28 @@ function flattenFeatures(features: any): string[] {
 
 export default function PackageStep({ formData, updateFormData, venue, vendorDetails }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
-  const venuePackages = venue?.packages || []
+  /**
+   * Only the packages that exist in the space the customer picked.
+   *
+   * A package now records which hall it is sold in (`subVenueId`, NULL =
+   * venue-wide). Without this filter, a couple booking the 120-seat Terrace
+   * Lawn was still shown — and could still buy — the Main Hall's 500-guest
+   * walima package, which is not a thing the venue can deliver in the room
+   * they are paying for.
+   *
+   * Space-specific packages are shown only when their space is chosen;
+   * venue-wide ones are always shown, so nothing disappears for a venue that
+   * has not divided its packages up. And if narrowing would leave the customer
+   * with NOTHING to choose, the full list stands: an empty package step is a
+   * dead end, and a slightly wrong list beats no list at all on a live booking
+   * flow.
+   */
+  const allPackages = venue?.packages || []
+  const chosenSpaceId = Number((formData as any).selectedSubVenueId) || null
+  const scoped = chosenSpaceId
+    ? allPackages.filter((p: any) => p?.subVenueId == null || Number(p.subVenueId) === chosenSpaceId)
+    : allPackages
+  const venuePackages = scoped.length > 0 ? scoped : allPackages
   const isCarRental = venue?.vendor?.vendorType === "Car rental"
   const isBridalWear = venue?.vendor?.vendorType === "Bridal wearing"
   const isWeddingStationery = venue?.vendor?.vendorType === "Wedding Invitations and Stationery"

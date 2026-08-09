@@ -111,7 +111,18 @@ export default function VendorInquiryDialog({
         ? `Add your phone or email so ${vendorName} can reply.`
         : "Check your phone number or email — the vendor replies there."
 
-  const reset = () => { setForm({ name: "", phone: "", email: "", eventType: "", eventDate: "", guests: "", message: "", website: "" }); setSent(false); setError(null) }
+  /**
+   * Did the enquiry reach a vendor, or a listing nobody has claimed?
+   *
+   * 98% of the listings on the marketplace are OSM imports whose owner account
+   * has never been logged into. The confirmation below told every one of those
+   * customers "<vendor> has it in their inbox and will get back to you. Keep an
+   * eye on your phone." — a promise nobody was in a position to keep. The API
+   * now says which case this is; the screen says the matching thing.
+   */
+  const [vendorOnPlatform, setVendorOnPlatform] = useState(true)
+
+  const reset = () => { setForm({ name: "", phone: "", email: "", eventType: "", eventDate: "", guests: "", message: "", website: "" }); setSent(false); setError(null); setVendorOnPlatform(true) }
 
   const submit = async () => {
     if (!canSend || submitting) return
@@ -134,6 +145,9 @@ export default function VendorInquiryDialog({
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json?.message || "Couldn't send your inquiry")
+      // Absent on an older backend deploy → assume the vendor is on the
+      // platform, which is the behaviour that shipped before this field existed.
+      setVendorOnPlatform(json?.data?.vendorOnPlatform !== false)
       setSent(true)
     } catch (e: any) {
       setError(e?.message || "Couldn't send your inquiry — please try again")
@@ -150,8 +164,14 @@ export default function VendorInquiryDialog({
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
               <CheckCircle2 className="h-8 w-8" />
             </span>
-            <h3 className="text-lg font-semibold">Inquiry sent</h3>
-            <p className="text-sm text-muted-foreground">{vendorName} has it in their inbox and will get back to you. Keep an eye on your phone.</p>
+            <h3 className="text-lg font-semibold">
+              {vendorOnPlatform ? "Inquiry sent" : "We’ve got your enquiry"}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {vendorOnPlatform
+                ? `${vendorName} has it in their inbox and will get back to you. Keep an eye on your phone.`
+                : `${vendorName} hasn’t joined Wedding Wala yet, so we’ll contact them for you and come back with their answer. It usually takes a day or two.`}
+            </p>
             <Button className="mt-2" onClick={() => onOpenChange(false)}>Done</Button>
           </div>
         ) : (

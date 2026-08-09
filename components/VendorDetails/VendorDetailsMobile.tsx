@@ -434,30 +434,79 @@ export default function VendorDetailsMobile({
     [hasMenus],
   );
 
-  // Scroll-spy IntersectionObserver
+  /**
+   * Scroll-spy.
+   *
+   * THE GLITCH ON CLICK. Reported as "the profile tab glitches when you click
+   * it after scrolling", and there were three faults stacked on one another:
+   *
+   *  1. A click set NOTHING. `activeSection` was only ever written by the
+   *     observer, so clicking Reviews from the top of the page started a smooth
+   *     scroll that crossed Overview, Gallery and Packages on the way — each
+   *     firing, each stealing the pill, and the shared `layoutId` underline
+   *     animating across all four. The nav is also a horizontal scroller, so
+   *     the strip skated sideways while it happened.
+   *
+   *  2. One observer PER SECTION, each calling `setActiveSection` on its own
+   *     `isIntersecting`. When two sections are in the band at once — routine,
+   *     since the band is 10% of the viewport — the winner is whichever
+   *     observer happens to fire last. Non-deterministic, and not "the section
+   *     you are looking at".
+   *
+   *  3. `rootMargin: "-30% 0px -60% 0px"` leaves a 10%-tall band. A section
+   *     shorter than that never intersects it at all, so short sections could
+   *     not become active by scrolling — the pill stayed on the previous one.
+   *
+   * Now: ONE observer over every section, picking the topmost entry that is
+   * actually in view, so the answer is deterministic and short sections
+   * qualify. A click sets its own section immediately and suppresses the spy
+   * until the scroll settles, so the pill moves once, to where it was sent.
+   */
+  const spyLocked = useRef(false);
+  const spyUnlockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
-    const observers: IntersectionObserver[] = [];
-    const entries = Object.entries(sectionRefs) as [
+    const refs = Object.entries(sectionRefs) as [
       string,
       React.RefObject<HTMLDivElement | null>,
     ][];
+    const nodes = refs
+      .map(([id, ref]) => (ref.current ? ([id, ref.current] as const) : null))
+      .filter(Boolean) as (readonly [string, HTMLDivElement])[];
+    if (!nodes.length) return;
 
-    entries.forEach(([id, ref]) => {
-      if (!ref.current) return;
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) {
-            setActiveSection(id);
-          }
-        },
-        { rootMargin: "-30% 0px -60% 0px", threshold: 0 },
-      );
-      observer.observe(ref.current);
-      observers.push(observer);
-    });
+    const byNode = new Map<Element, string>(nodes.map(([id, el]) => [el, id]));
+    const visible = new Set<Element>();
 
-    return () => observers.forEach((o) => o.disconnect());
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) visible.add(e.target);
+          else visible.delete(e.target);
+        }
+        if (spyLocked.current) return;
+        // Topmost section currently in view — one answer, always the same one.
+        let best: { id: string; top: number } | null = null;
+        for (const el of visible) {
+          const id = byNode.get(el);
+          if (!id) continue;
+          const top = el.getBoundingClientRect().top;
+          if (!best || top < best.top) best = { id, top };
+        }
+        if (best) setActiveSection(best.id);
+      },
+      // A band from just under the sticky nav to 55% down the viewport. Tall
+      // enough that a short section still lands inside it.
+      { rootMargin: "-15% 0px -55% 0px", threshold: 0 },
+    );
+
+    nodes.forEach(([, el]) => observer.observe(el));
+    return () => observer.disconnect();
   }, [sectionRefs]);
+
+  useEffect(() => () => {
+    if (spyUnlockTimer.current) clearTimeout(spyUnlockTimer.current);
+  }, []);
 
   const handleFavoriteToggle = async () => {
     const isLoggedIn =
@@ -873,14 +922,49 @@ export default function VendorDetailsMobile({
   const scrollToSection = useCallback(
     (sectionId: string) => {
       const ref = sectionRefs[sectionId as keyof typeof sectionRefs];
-      if (ref?.current) {
-        const yOffset = -80;
-        const y =
-          ref.current.getBoundingClientRect().top +
-          window.pageYOffset +
-          yOffset;
-        window.scrollTo({ top: y, behavior: "smooth" });
-      }
+      if (!ref?.current) return;
+
+      // The pill moves once, now, to the section that was clicked — and the spy
+      // stays muted until the smooth scroll actually SETTLES.
+      //
+      // A fixed timeout is not good enough, and measuring proved it: with a
+      // 900ms mute, clicking Availability from the top produced the sequence
+      // OVERVIEW → AVAILABILITY → REVIEWS → AVAILABILITY, because a ~6,000px
+      // smooth scroll is still travelling when the timer expires and the
+      // observer grabs whatever is passing. The distance is not knowable in
+      // advance, so the release is driven by the scroll position going quiet
+      // instead. The timeout survives only as a ceiling, so a scroll that never
+      // settles cannot mute the spy forever.
+      setActiveSection(sectionId);
+      spyLocked.current = true;
+      if (spyUnlockTimer.current) clearTimeout(spyUnlockTimer.current);
+      spyUnlockTimer.current = setTimeout(() => { spyLocked.current = false; }, 4000);
+
+      let lastY = -1;
+      let stillFrames = 0;
+      const releaseWhenSettled = () => {
+        if (!spyLocked.current) return; // ceiling already fired
+        const y = window.scrollY;
+        stillFrames = Math.abs(y - lastY) < 1 ? stillFrames + 1 : 0;
+        lastY = y;
+        if (stillFrames >= 4) {
+          spyLocked.current = false;
+          if (spyUnlockTimer.current) clearTimeout(spyUnlockTimer.current);
+          return;
+        }
+        requestAnimationFrame(releaseWhenSettled);
+      };
+      requestAnimationFrame(releaseWhenSettled);
+
+      // Offset by the real height of the sticky nav rather than a hard-coded
+      // -80: the bar wraps to two rows on narrow screens, where 80 left the
+      // section heading hidden underneath it.
+      const navH = scrollSpyNavRef.current?.getBoundingClientRect().height ?? 0;
+      const y =
+        ref.current.getBoundingClientRect().top +
+        window.pageYOffset -
+        (navH + 12);
+      window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
     },
     [sectionRefs],
   );
@@ -1132,6 +1216,17 @@ export default function VendorDetailsMobile({
               <button
                 key={section.id}
                 type="button"
+                data-section={section.id}
+                /* The nav is a horizontal scroller. On a phone the later
+                   sections sit off-screen, so the pill could become active
+                   while remaining invisible — the vendor page appeared to have
+                   three sections, not six. `nearest` so it only moves when it
+                   has to. */
+                ref={(el) => {
+                  if (el && activeSection === section.id) {
+                    el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+                  }
+                }}
                 onClick={() => scrollToSection(section.id)}
                 className={`relative px-4 py-2 font-bridal text-[11px] uppercase tracking-[0.22em] font-medium rounded-full whitespace-nowrap transition-all duration-300 ${
                   activeSection === section.id

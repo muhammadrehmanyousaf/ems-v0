@@ -152,6 +152,21 @@ export function CollaborationsRedesignedView() {
     onSuccess: () => { showSuccessToast("Invite declined"); invalidate() },
     onError: (e: any) => toast.error(errorMessage(e, "Couldn't decline")),
   })
+  /**
+   * Chase an invite that went to someone with no account.
+   *
+   * The only action a sender had on a pending off-platform invite was
+   * "Withdraw". Since nothing was ever sent to the invitee in the first place,
+   * "pending" meant "sitting in our database, unseen" — and the sender's only
+   * way to try again was to create a second invite, i.e. a duplicate row. Now
+   * the first send emails them, and this re-sends the same invite.
+   */
+  const resendMut = useMutation({
+    mutationFn: (id: number) => CollaborationsAPI.resend(id),
+    onSuccess: () => { showSuccessToast("Invitation re-sent"); invalidate() },
+    onError: (e: any) => toast.error(errorMessage(e, "Couldn't resend the invitation")),
+  })
+
   const cancelMut = useMutation({
     mutationFn: (id: number) => CollaborationsAPI.cancel(id),
     onSuccess: () => { showSuccessToast("Invite withdrawn — we've let them know"); setCancelTarget(null); invalidate() },
@@ -241,8 +256,15 @@ export function CollaborationsRedesignedView() {
               <span className="italic">No name given</span>
             )}
             {contact && <span className="block text-[11px] tabular-nums">{contact}</span>}
+            {/* "Not on Wedding Wala yet" was true and useless — it named the
+                problem and left the sender with nothing to do about it. Say
+                whether an invitation actually went out. */}
             {tab === "outgoing" && !c.toUserId && (
-              <span className="block text-[11px] italic">Not on Wedding Wala yet</span>
+              <span className="block text-[11px] italic text-muted-foreground">
+                {c.toEmail
+                  ? "Not on Wedding Wala yet — invitation emailed"
+                  : "Not on Wedding Wala yet — no email, so we can't invite them"}
+              </span>
             )}
           </span>
         )
@@ -308,6 +330,11 @@ export function CollaborationsRedesignedView() {
         }
         return (
           <div className="flex items-center justify-end gap-1">
+            {!c.toUserId && c.toEmail && (
+              <Button size="sm" variant="outline" disabled={resendMut.isPending} onClick={() => resendMut.mutate(c.id)}>
+                <Icon name="Send" size={14} className="mr-1" /> Resend
+              </Button>
+            )}
             <Button size="sm" variant="ghost" disabled={cancelMut.isPending} onClick={() => setCancelTarget(c)}>
               <Icon name="XCircle" size={14} className="mr-1 text-muted-foreground" /> Withdraw
             </Button>
