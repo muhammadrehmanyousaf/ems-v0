@@ -38,6 +38,7 @@ export function SpaceSlotsEditor(): React.ReactElement | null {
   const [start, setStart] = React.useState<string>("");
   const [end, setEnd] = React.useState<string>("");
   const [cap, setCap] = React.useState<string>("1");
+  const [guestCap, setGuestCap] = React.useState<string>("");
   const [busy, setBusy] = React.useState<boolean>(false);
   const [err, setErr] = React.useState<string | null>(null);
   const bid = Number(businessId);
@@ -106,7 +107,11 @@ export function SpaceSlotsEditor(): React.ReactElement | null {
             {slots.map((s) => (
               <div key={s.id} className="flex items-center gap-2 border-t pt-1 text-xs">
                 <span className="font-medium">{s.label}</span>
-                <span className="text-muted-foreground">{String(s.startTime).slice(0, 5)}–{String(s.endTime).slice(0, 5)} · cap {s.capacity}</span>
+                <span className="text-muted-foreground">
+                  {String(s.startTime).slice(0, 5)}–{String(s.endTime).slice(0, 5)}
+                  {" · "}{s.capacity} booking{s.capacity === 1 ? "" : "s"} at once
+                  {s.unitGuestCapacity ? ` · ${s.unitGuestCapacity} guests each` : ""}
+                </span>
                 {scope === "SPACE" && (
                   <Button size="sm" variant="ghost" className="ml-auto text-destructive" onClick={() => void guard(async () => { await venueSpacesApi.deleteSlot(s.id); await loadSlots(spaceId); })} disabled={busy}>remove</Button>
                 )}
@@ -116,8 +121,46 @@ export function SpaceSlotsEditor(): React.ReactElement | null {
               <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Label (e.g. Morning)<input type="text" placeholder="label (e.g. Morning)" value={label} onChange={(e) => setLabel(e.target.value)} className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
               <input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
               <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-              <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">Cap<input min={0} type="number" placeholder="cap" value={cap} onChange={(e) => setCap(e.target.value)} className="w-16 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
-              <Button size="sm" onClick={() => void guard(async () => { await venueSpacesApi.createSlot(bid, { subVenueId: spaceId, label, startTime: start, endTime: end, capacity: Number(cap) || 1 }); setLabel(""); setStart(""); setEnd(""); await loadSlots(spaceId); })} disabled={!label || !start || !end || busy}>
+              {/**
+                * This was a bare number box labelled "Cap".
+                *
+                * `capacity` counts CONCURRENT BOOKINGS — the model says each
+                * booking consumes 1 of it — and `unitGuestCapacity` is where a
+                * headcount belongs. A three-letter label asked no question, so
+                * a vendor typed their guest capacity into it and produced a
+                * live slot with capacity 150: a hall advertising a hundred and
+                * fifty simultaneous weddings, which the public booking page
+                * rendered as "150 of 150 left".
+                *
+                * The field now asks the question it means, defaults to 1, and
+                * gives the guest number its own home so there is somewhere
+                * right to put it.
+                */}
+              <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">
+                Bookings at once
+                <input
+                  min={1}
+                  max={50}
+                  type="number"
+                  value={cap}
+                  onChange={(e) => setCap(e.target.value)}
+                  title="How many separate bookings can run in this slot at the same time. For one hall this is 1."
+                  className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </label>
+              <label className="flex flex-col gap-0.5 text-[11px] font-medium text-muted-foreground">
+                Guests per booking
+                <input
+                  min={1}
+                  type="number"
+                  placeholder="optional"
+                  value={guestCap}
+                  onChange={(e) => setGuestCap(e.target.value)}
+                  title="Optional. The headcount one booking can bring. Leave blank if you do not cap guests per booking."
+                  className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </label>
+              <Button size="sm" onClick={() => void guard(async () => { await venueSpacesApi.createSlot(bid, { subVenueId: spaceId, label, startTime: start, endTime: end, capacity: Number(cap) || 1, ...(guestCap.trim() ? { unitGuestCapacity: Number(guestCap) } : {}) }); setLabel(""); setStart(""); setEnd(""); setCap("1"); setGuestCap(""); await loadSlots(spaceId); })} disabled={!label || !start || !end || busy}>
                 Add slot
               </Button>
             </div>

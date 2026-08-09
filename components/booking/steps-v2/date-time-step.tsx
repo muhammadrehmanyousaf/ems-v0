@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, useCallback } from "react"
+import { useEffect, useMemo, useState, useCallback, useRef } from "react"
 import type { BookingFormData, EventVenue } from "@/lib/types"
 import { ChevronLeft, ChevronRight, Sun, Sunset, Moon, Minus, Plus, AlertTriangle, Timer, XCircle } from "lucide-react"
 import { VendorAPI } from "@/lib/api/vendors"
@@ -192,22 +192,50 @@ export default function DateTimeStep({
   // fixed periods so existing vendors are completely unaffected.
   const [templateDays, setTemplateDays] = useState<Record<string, SlotAvailabilityRow[]>>({})
   const [hasTemplates, setHasTemplates] = useState(false)
+  /**
+   * The chosen space, so the slots offered are the ones that exist WHERE the
+   * customer is sitting.
+   *
+   * This used to ask for the whole business. Caught live on business 3358:
+   * five spaces, and a slot belonging only to the space "afsana" was offered to
+   * a customer who had picked a different hall — a bookable time that does not
+   * exist in the room they chose. The backend now scopes on `subVenueId`, with
+   * a space that defines no slots of its own inheriting the venue-wide set, so
+   * single-hall vendors are untouched.
+   */
+  const selectedSubVenueId = Number((formData as any).selectedSubVenueId) || null
+
   const fetchTemplateMonth = useCallback(async (d: Date) => {
     if (!SLOT_TEMPLATES_ENABLED || !venue?.id) return
     try {
       const res = await BusinessAvailabilityAPI.getBulkAvailability(
-        venue.id as number, toKey(startOfMonth(d)), toKey(endOfMonth(d)),
+        venue.id as number, toKey(startOfMonth(d)), toKey(endOfMonth(d)), selectedSubVenueId,
       )
       const days = res?.days || {}
       setTemplateDays((prev) => ({ ...prev, ...days }))
       if (Object.values(days).some((rows) => rows && rows.length > 0)) setHasTemplates(true)
     } catch { /* silent → fall back to fixed periods */ }
-  }, [venue?.id])
+  }, [venue?.id, selectedSubVenueId])
   useEffect(() => {
     if (!SLOT_TEMPLATES_ENABLED) return
     fetchTemplateMonth(viewMonth)
     fetchTemplateMonth(addMonths(viewMonth, 1))
   }, [viewMonth, fetchTemplateMonth])
+
+  /**
+   * Changing the space invalidates a slot already picked under the previous
+   * one — the times on offer are different, and silently keeping the old
+   * selection is how a customer ends up booked into a slot the new hall does
+   * not have. The month cache is dropped for the same reason.
+   */
+  const lastSpace = useRef<number | null>(selectedSubVenueId)
+  useEffect(() => {
+    if (lastSpace.current === selectedSubVenueId) return
+    lastSpace.current = selectedSubVenueId
+    setTemplateDays({})
+    setHasTemplates(false)
+    updateFormData((prev) => ({ ...(prev as any), slotTemplateId: null, timeOfDay: "" }))
+  }, [selectedSubVenueId, updateFormData])
   // Drive the UI from templates only when the vendor actually has some.
   const useTemplates = SLOT_TEMPLATES_ENABLED && hasTemplates
 
