@@ -248,6 +248,14 @@ export interface ApiBusiness {
   languagesSpoken?: string[] | null;
   awards?: { title: string; year?: number | null }[] | null;
   press?: { title: string; url?: string; publishedAt?: string | null }[] | null;
+  /**
+   * Past clients who will vouch for this vendor. Written at registration since
+   * VR-050 and, until now, editable nowhere — the column was never on the update
+   * whitelist and no screen rendered it, while the onboarding checklist scored
+   * it at 3 points and pointed at a tab that had no such editor. Live, all 3,331
+   * businesses have it NULL. Max 5, enforced server-side.
+   */
+  references?: { customerName: string; weddingDate?: string | null; contact?: string }[] | null;
   acceptsCash?: boolean | null;
   acceptsBankTransfer?: boolean | null;
   providesTaxInvoice?: boolean | null;
@@ -1288,9 +1296,17 @@ export interface ApiPackage {
   features: PackageFeatures;
   images: string[] | null;
   businessId: number;
+  /**
+   * The space this package is sold in. NULL = offered across the whole venue,
+   * which is what every package meant before the column existed. A five-hall
+   * venue was offering the Main Hall's 500-guest package to a customer booking
+   * the 120-seat Terrace Lawn.
+   */
+  subVenueId?: number | null;
   createdAt: string;
   updatedAt: string;
   business?: { id: number; name: string };
+  subVenue?: { id: number; name: string } | null;
 }
 
 export class PackagesAPI {

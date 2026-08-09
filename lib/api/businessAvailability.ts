@@ -137,6 +137,12 @@ export interface SlotAvailabilityRow {
   capacity: number;
   used: number;
   free: number;
+  /** Guests ONE booking of this slot may bring. NULL = no per-booking limit.
+   *  Distinct from `capacity`, which counts concurrent bookings — the pair the
+   *  vendor form conflated badly enough to publish "150 bookings at once". */
+  unitGuestCapacity?: number | null;
+  /** The space this slot belongs to; NULL = venue-wide. */
+  subVenueId?: number | null;
   blocked: boolean;
   blockReason: string | null;
   runsThisWeekday: boolean;

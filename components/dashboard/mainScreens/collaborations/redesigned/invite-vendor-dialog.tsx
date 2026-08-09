@@ -12,8 +12,8 @@
 
 import * as React from "react"
 import { errorMessage } from "@/lib/utils/api-error"
-import { useMutation } from "@tanstack/react-query"
-import { CollaborationsAPI } from "@/lib/api/collaborations"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { CollaborationsAPI, type DirectoryVendor } from "@/lib/api/collaborations"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
@@ -61,10 +61,45 @@ export function InviteVendorDialog({
   const [agreedAmount, setAgreedAmount] = React.useState("")
   const [touched, setTouched] = React.useState<Record<string, boolean>>({})
 
+  /**
+   * WHO to invite — the question this dialog never asked.
+   *
+   * It asked for a name, a phone and an email, and its own note warned that a
+   * typo in either contact field "produces a permanently unmatched invite that
+   * the success toast still reports as sent". Validating the FORMAT of a
+   * stranger's contact details cannot fix that: 0300 1234567 is a perfectly
+   * valid number belonging to somebody else. The only real fix is to stop
+   * making the sender retype details the platform already holds.
+   *
+   * Search picks the vendor, the contact fields fill themselves, and the match
+   * is exact by construction. Typing them by hand still works — that is how you
+   * invite someone with no account, which is what the email invitation is for.
+   */
+  const [query, setQuery] = React.useState("")
+  const [picked, setPicked] = React.useState<DirectoryVendor | null>(null)
+  const debounced = useDebounced(query, 250)
+
+  const { data: matches = [], isFetching: searching } = useQuery({
+    queryKey: ["collab-directory", debounced],
+    queryFn: () => CollaborationsAPI.directory(debounced),
+    enabled: open && !picked && debounced.trim().length >= 2,
+    staleTime: 30_000,
+  })
+
+  const choose = (v: DirectoryVendor) => {
+    setPicked(v)
+    setToName(v.fullName ?? "")
+    setToEmail(v.email ?? "")
+    setToPhone(v.phoneNumber ?? "")
+    setQuery("")
+    setTouched({})
+  }
+  const clearPick = () => { setPicked(null); setToName(""); setToEmail(""); setToPhone("") }
+
   React.useEffect(() => {
     if (open) {
       setToName(""); setToPhone(""); setToEmail(""); setEventLabel(""); setScope(""); setAgreedAmount("")
-      setTouched({})
+      setTouched({}); setQuery(""); setPicked(null)
     }
   }, [open])
 
@@ -80,8 +115,10 @@ export function InviteVendorDialog({
     onSuccess: (res: any) => {
       showSuccessToast(
         res?.matched
-          ? "Invite sent — vendor matched, they've been notified"
-          : "Invite saved — that vendor isn't on Wedding Wala yet, so they won't see it in-app",
+          ? "Invite sent — they've been notified in the app"
+          : res?.emailed
+            ? "They're not on Wedding Wala yet — we've emailed them an invitation to join"
+            : "Invite saved. Add an email address and we'll send them an invitation",
       )
       onSaved?.()
       onOpenChange(false)
@@ -90,9 +127,17 @@ export function InviteVendorDialog({
   })
 
   /* WWL-456 — the email was a bare text box: no type, no pattern, no
-     validation. Driven live, `not-an-email` left Save enabled. */
-  const phoneErr = toPhone.trim() ? validatePkPhone(toPhone, { required: false }) : undefined
-  const emailErr = toEmail.trim() ? validateEmail(toEmail) : undefined
+     validation. Driven live, `not-an-email` left Save enabled.
+
+     But these checks exist to catch a TYPO in a stranger's contact details, and
+     a vendor chosen from the directory was not typed — they are matched by the
+     record we already hold. Validating our own stored data and then refusing to
+     send is the wrong way round: driven live, picking a real vendor whose
+     phone is stored as "3274811220" (ten digits, no leading zero — perfectly
+     dialable, just not the format this regex wants) disabled Send with no way
+     forward. So the format checks apply to hand-typed details only. */
+  const phoneErr = !picked && toPhone.trim() ? validatePkPhone(toPhone, { required: false }) : undefined
+  const emailErr = !picked && toEmail.trim() ? validateEmail(toEmail) : undefined
   /* WWL-455 — the amount input was type="number" with no min and no step, and
      nothing checked it. −5000 was accepted and transmitted, then clamped to 0
      server-side; an extra digit pushed it past DECIMAL(12,2) and was stored as
@@ -129,8 +174,61 @@ export function InviteVendorDialog({
           <DialogDescription>Bring another vendor onto a job. They&apos;ll get an invite to accept.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-1">
+          {picked ? (
+            <div className="flex items-start justify-between gap-3 rounded-lg border border-primary/40 bg-primary/5 px-3 py-2.5">
+              <span className="min-w-0">
+                <span className="block text-sm font-medium">{picked.fullName || `Vendor #${picked.id}`}</span>
+                <span className="block text-[11px] text-muted-foreground">
+                  {[picked.vendorType, picked.email, picked.phoneNumber].filter(Boolean).join(" \u00b7 ")}
+                </span>
+                <span className="mt-0.5 block text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+                  On Wedding Wala — they&apos;ll be notified in the app
+                </span>
+              </span>
+              <Button variant="ghost" size="sm" className="shrink-0" onClick={clearPick}>Change</Button>
+            </div>
+          ) : (
+            <Field id="collab-invite-search" label="Find a vendor on Wedding Wala">
+              <input
+                id="collab-invite-search"
+                className={inputCls}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search by name, email or phone"
+                autoFocus
+                autoComplete="off"
+              />
+              {debounced.trim().length >= 2 && (
+                <div className="max-h-48 overflow-y-auto rounded-lg border border-border">
+                  {searching && <p className="px-3 py-2 text-xs text-muted-foreground">Searching…</p>}
+                  {!searching && matches.length === 0 && (
+                    <p className="px-3 py-2 text-xs leading-snug text-muted-foreground">
+                      Nobody on Wedding Wala matches that. Fill in their details below and we&apos;ll email
+                      them an invitation to join.
+                    </p>
+                  )}
+                  {matches.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => choose(v)}
+                      className="flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-accent"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm">{v.fullName || `Vendor #${v.id}`}</span>
+                        <span className="block truncate text-[11px] text-muted-foreground">
+                          {[v.vendorType, v.email].filter(Boolean).join(" \u00b7 ")}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </Field>
+          )}
+
           <Field id="collab-name" label="Vendor name">
-            <input id="collab-name" className={inputCls} value={toName} onChange={(e) => setToName(e.target.value)} autoFocus />
+            <input id="collab-name" className={inputCls} value={toName} onChange={(e) => setToName(e.target.value)} />
           </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field id="collab-phone" label="Phone">
@@ -186,8 +284,9 @@ export function InviteVendorDialog({
             </Field>
           </div>
           <p className="text-[11px] text-muted-foreground">
-            The phone or email is how we match them to their Wedding Wala account. If neither matches
-            one, the invite is saved but they won&apos;t be notified in the app.
+            The phone or email is how we match them to their Wedding Wala account. If neither matches one,
+            we email that address an invitation with a link to join — and the moment they sign up, this
+            invite lands in front of them and you get told.
           </p>
         </div>
         <DialogFooter>
@@ -205,3 +304,13 @@ export function InviteVendorDialog({
 }
 
 export default InviteVendorDialog
+
+/** Debounce, so the directory is searched per pause rather than per keystroke. */
+function useDebounced<T>(value: T, ms: number): T {
+  const [v, setV] = React.useState(value)
+  React.useEffect(() => {
+    const id = setTimeout(() => setV(value), ms)
+    return () => clearTimeout(id)
+  }, [value, ms])
+  return v
+}

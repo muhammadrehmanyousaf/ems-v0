@@ -11,6 +11,7 @@ import * as React from "react"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { PackagesAPI, type ApiPackage } from "@/lib/api/dashboard"
+import { venueSpacesApi, type SubVenueNode } from "@/lib/api/venueSpaces"
 import { formatPkr } from "@/components/dashboard/primitives/money-cell"
 import { EmptyState } from "@/components/dashboard/primitives/empty-state"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
@@ -38,15 +39,36 @@ export function PackagesManager({ businessId }: { businessId: number }) {
   const { data: packages, isLoading } = useQuery<ApiPackage[]>({ queryKey: ["pkgs", businessId], queryFn: () => PackagesAPI.getAll(businessId) })
   const [adding, setAdding] = React.useState(false)
   const [editingId, setEditingId] = React.useState<number | null>(null)
-  const [form, setForm] = React.useState({ name: "", price: "", description: "", features: "" })
+  const [form, setForm] = React.useState({ name: "", price: "", description: "", features: "", subVenueId: "" })
+
+  /**
+   * The venue's spaces, so a package can say WHERE it is sold.
+   *
+   * Slot templates have carried `subVenueId` since BK-100 and the booking line
+   * since WWL-050; packages were the one side of space → slots → packages with
+   * no answer, so every package was offered in every hall. Venues that do not
+   * model spaces get no picker at all and nothing changes for them.
+   */
+  const { data: spaceTree } = useQuery({
+    queryKey: ["venue-spaces-flat", businessId],
+    queryFn: () => venueSpacesApi.publicTree(businessId),
+    staleTime: 60_000,
+  })
+  const spaces = React.useMemo(() => {
+    const flat: { id: number; name: string; depth: number }[] = []
+    const walk = (ns: SubVenueNode[], depth: number) =>
+      (ns || []).forEach((n) => { flat.push({ id: n.id, name: n.name, depth }); if (n.children) walk(n.children, depth + 1) })
+    walk(spaceTree?.tree || [], 0)
+    return flat
+  }, [spaceTree])
   // Errors show only once a field has been touched, so a freshly-opened blank
   // form doesn't greet the vendor with red text before they've typed anything.
   const [touched, setTouched] = React.useState<Record<string, boolean>>({})
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
   const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }))
-  const reset = () => { setForm({ name: "", price: "", description: "", features: "" }); setTouched({}); setAdding(false); setEditingId(null) }
+  const reset = () => { setForm({ name: "", price: "", description: "", features: "", subVenueId: "" }); setTouched({}); setAdding(false); setEditingId(null) }
   const startEdit = (p: ApiPackage) => {
-    setForm({ name: p.name ?? "", price: String(p.price ?? ""), description: p.description ?? "", features: asFeatures(p.features).join("\n") })
+    setForm({ name: p.name ?? "", price: String(p.price ?? ""), description: p.description ?? "", features: asFeatures(p.features).join("\n"), subVenueId: p.subVenueId != null ? String(p.subVenueId) : "" })
     setTouched({}); setEditingId(p.id); setAdding(true)
   }
   const invalidate = () => qc.invalidateQueries({ queryKey: ["pkgs", businessId] })
@@ -59,6 +81,9 @@ export function PackagesManager({ businessId }: { businessId: number }) {
         description: form.description.trim() || undefined,
         features: form.features.split("\n").map((s) => s.trim()).filter(Boolean),
         businessId,
+        // Always sent, including as null, so a vendor can move a package back to
+        // venue-wide. Omitting it would make "no space" mean "leave it alone".
+        subVenueId: form.subVenueId ? Number(form.subVenueId) : null,
       }
       return editingId ? PackagesAPI.update(editingId, body) : PackagesAPI.create(body)
     },
@@ -161,6 +186,31 @@ export function PackagesManager({ businessId }: { businessId: number }) {
                 <FieldError id="pkg-price" message={shown.price} />
               </div>
             </div>
+            {/* Which hall this package is sold in.
+                Rendered only when the venue actually models spaces — a
+                single-space vendor gets no extra question. Defaults to
+                venue-wide, which is what every existing package means. */}
+            {spaces.length > 1 && (
+              <div className="space-y-1.5">
+                <label className={labelCls} htmlFor="pkg-space">Sold in</label>
+                <select
+                  id="pkg-space"
+                  className={inputCls}
+                  value={form.subVenueId}
+                  onChange={(e) => set("subVenueId", e.target.value)}
+                >
+                  <option value="">Every space in this venue</option>
+                  {spaces.map((sp) => (
+                    <option key={sp.id} value={String(sp.id)}>
+                      {" ".repeat(sp.depth * 3)}{sp.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-muted-foreground">
+                  Pick a space and this package is only offered to couples booking that space.
+                </p>
+              </div>
+            )}
             <div className="space-y-1.5">
               <label className={labelCls} htmlFor="pkg-desc">Description</label>
               <input
