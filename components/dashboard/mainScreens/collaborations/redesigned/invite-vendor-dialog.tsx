@@ -168,12 +168,28 @@ export function InviteVendorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      {/*
+        The base DialogContent sets no max-height and no overflow, so a dialog
+        simply grows past the screen and the overhang becomes unreachable —
+        there is nothing to scroll. Measured at 360x800 with the directory
+        picker in place: 914px of dialog in an 800px viewport, which put the
+        title off the top edge and clipped Cancel at the bottom. A 360x640
+        Android with browser chrome loses ~274px.
+
+        Capped here rather than in components/ui/dialog.tsx: that base is shared
+        by every dialog in a live product, and switching its overflow would clip
+        any inline dropdown the others render. dvh (not vh) so the cap follows
+        the mobile URL bar as it collapses.
+      */}
+      <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Invite a vendor</DialogTitle>
           <DialogDescription>Bring another vendor onto a job. They&apos;ll get an invite to accept.</DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-1">
+        {/* Only the body scrolls, so Send/Cancel stay on screen at every height.
+            min-h-0 is required — a flex child defaults to min-height:auto and
+            would refuse to shrink, which silently defeats the cap. */}
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-1">
           {picked ? (
             <div className="flex items-start justify-between gap-3 rounded-lg border border-primary/40 bg-primary/5 px-3 py-2.5">
               <span className="min-w-0">
