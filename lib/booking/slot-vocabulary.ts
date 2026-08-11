@@ -90,7 +90,26 @@ export function formatSlotRange(start: string | null | undefined, end: string | 
 export const LEGACY_PERIODS = [
   { value: "09:00", label: "Morning", startTime: "09:00", endTime: "12:00" },
   { value: "14:00", label: "Afternoon", startTime: "14:00", endTime: "18:00" },
-  { value: "18:00", label: "Evening", startTime: "18:00", endTime: "23:00" },
+  /**
+   * 22:00, not 23:00.
+   *
+   * This single line is where the platform's worst live booking bug came from.
+   * Wedding halls must be closed by 10 PM — Punjab writes it into law and the
+   * booking engine enforces it — but the canonical vocabulary shipped an
+   * "Evening" that ran to 23:00. Vendors read the platform's own worked example
+   * and copied it into their slot templates: 40 of 115 active slots ended after
+   * 22:00, 17 of them in Punjab cities.
+   *
+   * Nothing caught it until a CUSTOMER pressed Pay & Confirm, entered their
+   * name, phone, guest count and package, and met "Punjab enforces a 10 PM
+   * wedding-hall closure". The example was illegal, and everyone who followed
+   * it got blocked.
+   *
+   * Backend counterpart: CANONICAL_SLOTS + the SLOT_ENDS_AFTER_CLOSURE check in
+   * venueSlotService, plus migration 20260812020000 which repaired all 40 rows.
+   * This is the source that produced them.
+   */
+  { value: "18:00", label: "Evening", startTime: "18:00", endTime: "22:00" },
 ] as const;
 
 /**
