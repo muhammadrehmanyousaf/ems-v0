@@ -21,7 +21,6 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useRecordBusinessId } from "@/hooks/use-record-business-id"
 import { todayInKarachi } from "@/lib/utils/pk-date"
-import Link from "next/link"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   SupplierAPI,
@@ -255,6 +254,8 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
     {
       key: "supplier",
       header: "Supplier",
+      sortKey: "supplier",
+      sortValue: (inv) => inv.supplierNameSnapshot || "",
       render: (inv) => (
         <div className="flex items-center gap-2.5">
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{initials(inv.supplierNameSnapshot)}</span>
@@ -282,6 +283,8 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
       key: "due",
       header: "Due",
       cellClassName: "text-muted-foreground",
+      sortKey: "due",
+      sortValue: (inv) => inv.dueDate || null,
       render: (inv) => {
         const dueIn = daysFromNow(inv.dueDate)
         const overdue = inv.status !== "paid" && inv.status !== "void" && dueIn != null && dueIn < 0
@@ -323,6 +326,8 @@ function InvoicesTab({ businessOptions }: { businessOptions: VendorBusinessOptio
     },
     {
       key: "outstanding",
+      sortKey: "outstanding",
+      sortValue: (inv) => Math.max(0, num(inv.totalAmount) - num(inv.amountPaid)),
       header: "Outstanding",
       align: "right",
       render: (inv) => {
@@ -638,19 +643,27 @@ function SuppliersDirectoryTab({ businessId }: { businessId?: number }) {
     {
       key: "name",
       header: "Supplier",
+      sortKey: "name",
+      sortValue: (s) => s.name || "",
       // Opens the supplier's own page — what is outstanding, what is overdue,
       // every invoice. Without this the route exists and is unreachable.
+      //
+      // The <Link> that was here is this table's `rowHref` now: same anchor, the
+      // same first cell, plus the whole row as a target. It had to MOVE rather
+      // than be joined by one — an anchor inside an anchor is invalid and the
+      // browser resolves it by dropping the inner one, so keeping both would
+      // have killed the working link. Fourth time on this branch.
       render: (s) => (
-        <Link href={`/dashboard/suppliers/${s.id}`} className="flex items-center gap-2.5 group">
+        <span className="flex items-center gap-2.5">
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{initials(s.name)}</span>
-          <span className="font-medium group-hover:text-primary group-hover:underline">{s.name}</span>
-        </Link>
+          <span className="font-medium">{s.name}</span>
+        </span>
       ),
     },
-    { key: "category", header: "Category", cellClassName: "text-muted-foreground", render: (s) => cap(s.category) },
+    { key: "category", header: "Category", cellClassName: "text-muted-foreground", sortKey: "category", sortValue: (s) => s.category || "", render: (s) => cap(s.category) },
     { key: "contact", header: "Contact", cellClassName: "text-muted-foreground", render: (s) => s.contactPerson || "—" },
     { key: "phone", header: "Phone", cellClassName: "text-muted-foreground", render: (s) => s.phoneNumber || "—" },
-    { key: "credit", header: "Credit limit", align: "right", render: (s) => <MoneyCell amount={s.creditLimit != null ? num(s.creditLimit) : null} tone="muted" /> },
+    { key: "credit", header: "Credit limit", align: "right", sortKey: "credit", sortValue: (s) => (s.creditLimit != null ? num(s.creditLimit) : null), render: (s) => <MoneyCell amount={s.creditLimit != null ? num(s.creditLimit) : null} tone="muted" /> },
     // WWL-275 — per-supplier headroom was computable from data already on the
     // client and shown on no screen. It is the number that answers "can I place
     // another order with them", which is why the limit is recorded at all.
@@ -658,6 +671,8 @@ function SuppliersDirectoryTab({ businessId }: { businessId?: number }) {
       key: "headroom",
       header: "Available",
       align: "right",
+      sortKey: "headroom",
+      sortValue: (s) => headroomOf(s),
       render: (s) => <MoneyCell amount={headroomOf(s)} />,
     },
     { key: "status", header: "Status", render: (s) => <StatusPill tone={s.isActive ? "success" : "neutral"}>{s.isActive ? "Active" : "Inactive"}</StatusPill> },
@@ -697,6 +712,10 @@ function SuppliersDirectoryTab({ businessId }: { businessId?: number }) {
         columns={columns}
         data={suppliers}
         getRowId={(s) => String(s.id)}
+        // Directory rows open the supplier. The invoices table above gets NO
+        // rowHref: there is no /dashboard/supplier-invoices/[id] to send it to,
+        // and inventing one is how this codebase grew its dead doors.
+        rowHref={(s) => `/dashboard/suppliers/${s.id}`}
         loading={isLoading}
         error={isError ? "Couldn't load suppliers." : null}
         onRetry={() => refetch()}
