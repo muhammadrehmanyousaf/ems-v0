@@ -239,6 +239,33 @@ in the primitive, the Bookings API accepted `sortBy`, the hall-assignment
 endpoint was mounted and working — and simply not reached. The gap between
 "built" and "reachable" is where this product loses.
 
+### Sorting rollout — the per-screen call
+
+| Screen | Mode | Why |
+|---|---|---|
+| Bookings | **server** | paged at 50/page; API already accepted `sortBy` |
+| Leads | client | `listLeads` returns ≤500 rows in one call, paged locally |
+| Customers, Payments, Expenses, Staff, Function sheets, Inventory, Receivables | client | each fetches its whole list in one call, no page/limit param |
+
+Each screen was checked individually rather than swept. One rule applied to all
+of them would have made half these lists sort the 25 rows on screen and
+misreport everything past them — the failure that makes a vendor stop believing
+a number.
+
+**Receivables deserves its own line.** Heading: *"Who owes you, and how
+overdue."* Rs 13,862,229 outstanding across 14 customers, 15 open installments —
+and not one column was sortable. The entire purpose of the screen is deciding
+who to chase, and it could not be ordered by amount owed or by days overdue.
+
+### Verified live on production, 2026-08-11
+
+`/dashboard/venue-os?tab=spaces` selects **Halls & spaces** and renders the
+**"Booking slots per space"** editor. That is the destination the calendar's
+empty state now points at (SLOTS step 9) — it used to say "Add them in
+Settings → Availability", which is a blocked-dates editor with no slot control
+in it. The branch itself cannot be verified until it deploys, but the target of
+that link is confirmed real.
+
 ### Fixed so far
 
 | Screen | Row opens record | Sorting |
