@@ -261,7 +261,24 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === STORAGE_KEYS.TOKEN || event.key === STORAGE_KEYS.USER_DATA) {
+      /**
+       * Only a TOKEN change is a real auth event.
+       *
+       * USER_DATA was in this list too, and that created a cross-tab loop:
+       * verifyWithServer() writes USER_DATA on every successful verify, a
+       * `storage` event fires in every OTHER tab, that tab re-runs
+       * initializeSession(), which sets isLoading(true) — blanking its header —
+       * and then verifies and writes USER_DATA itself, bouncing the event back.
+       *
+       * With two tabs of the site open, the avatar could vanish under the
+       * cursor mid-click for a routine profile refresh that changed nothing.
+       *
+       * A token appearing, changing or disappearing is a login, a refresh or a
+       * logout, and those genuinely need the session rebuilt. A user-data write
+       * is housekeeping — the `userLogin` event already covers the case where
+       * another tab logs in.
+       */
+      if (event.key === STORAGE_KEYS.TOKEN) {
         initializeSession();
       }
     };
