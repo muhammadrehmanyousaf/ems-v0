@@ -16,6 +16,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/dashboard/primitives/empty-state";
 
 function getInitials(name: string) {
   return name
@@ -138,12 +139,12 @@ export function ConversationList() {
               <Loader2 className="h-5 w-5 animate-spin text-bridal-gold" />
             </div>
           ) : filteredContacts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-              <Users className="h-10 w-10 text-gray-300 mb-3" />
-              <p className="text-sm text-gray-500">
-                {contactSearch ? "No contacts match your search" : "No contacts available"}
-              </p>
-            </div>
+            <EmptyState
+              className="border-0 bg-transparent"
+              variant={contactSearch ? "filtered" : "first-run"}
+              icon={contactSearch ? undefined : "Users"}
+              title={contactSearch ? "No contacts match your search" : "No contacts available"}
+            />
           ) : (
             <div className="py-1">
               {filteredContacts.map((contact) => (

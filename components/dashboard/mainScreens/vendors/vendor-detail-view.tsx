@@ -45,6 +45,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { VendorsAPI, BusinessesAPI, type ApiUser, type ApiBusiness } from '@/lib/api/dashboard';
 import { listAdminDisputes, type AdminDisputeRow } from '@/lib/api/disputes';
+import { EmptyState } from "@/components/dashboard/primitives/empty-state";
 
 function fmtDate(iso: string | null | undefined): string {
   if (!iso) return '—';
@@ -247,10 +248,12 @@ export default function VendorDetailView({ vendorId }: { vendorId: number }) {
                   </Link>
                 </div>
               ) : (
-                <p className="ml-6 text-sm text-neutral-500">
-                  No business listing yet. A vendor without one cannot appear in search or
-                  take a booking — this is usually why an account looks inactive.
-                </p>
+                <EmptyState
+                  className="ml-6"
+                  size="inline"
+                  title="No business listing yet."
+                  description="A vendor without one cannot appear in search or take a booking — this is usually why an account looks inactive."
+                />
               )}
             </CardContent>
           </Card>

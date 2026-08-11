@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { BookingTrendItem } from "@/lib/api/analytics";
+import { EmptyState } from "@/components/dashboard/primitives/empty-state";
 
 const chartConfig = {
   bookings: { label: "Bookings", color: "hsl(262, 83%, 58%)" },
@@ -75,9 +76,12 @@ const BookingAreaChart: React.FC<Props> = ({
           {loading ? (
             <Skeleton className="h-full w-full rounded-lg" />
           ) : paddedData.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-              No booking data available
-            </div>
+            <EmptyState
+              className="h-full border-0 bg-transparent py-0"
+              icon="Calendar"
+              title="No bookings in this period"
+              description="Bookings you log will chart here by date."
+            />
           ) : (
             <ChartContainer config={chartConfig} className="h-full w-full">
               <AreaChart data={paddedData} accessibilityLayer margin={{ left: 0, right: 12, top: 4, bottom: 0 }}>

@@ -1,0 +1,1971 @@
+{
+  "generatedFrom": "scripts/ux-inventory.mjs",
+  "summary": {
+    "routes": 76,
+    "emptyStateDirect": 18,
+    "emptyStateViaTable": 33,
+    "showsEmptyProse": 49,
+    "unguidedEmpty": 5,
+    "usesDataTable": 35,
+    "usesStatCard": 35,
+    "usesPageHeader": 54,
+    "usesSkeleton": 22,
+    "usesStatusPill": 37,
+    "hasTabs": 7,
+    "hasDetail": 8
+  },
+  "rows": [
+    {
+      "route": "/dashboard",
+      "filesScanned": 37,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/dashboard/redesigned/overview-redesigned-view.tsx",
+          "line": 319,
+          "text": "title: \"No bookings yet\","
+        },
+        {
+          "file": "components/dashboard/mainScreens/venue-os/event-profit-board.tsx",
+          "line": 187,
+          "text": "delta={totals.costedCount > 0 ? `${Math.round(totals.margin * 100)}% margin on costed events` : \"no costed eve"
+        },
+        {
+          "file": "components/dashboard/mainScreens/venue-os/event-profit-board.tsx",
+          "line": 244,
+          "text": "<p className=\"text-sm text-muted-foreground\">No priced bookings yet.</p>"
+        },
+        {
+          "file": "components/dashboard/mainScreens/dashboard/redesigned/no-business-first-run.tsx",
+          "line": 47,
+          "text": "Your account is ready, but there&apos;s no business on it yet — so there are no enquiries to"
+        },
+        {
+          "file": "components/dashboard/mainScreens/dashboard/redesigned/no-business-first-run.tsx",
+          "line": 48,
+          "text": "answer and nothing to show in your khata. Adding one takes about two minutes."
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/admin/activity",
+      "filesScanned": 3,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": false,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": true,
+      "proseHits": [
+        {
+          "file": "components/activity/activity-feed.tsx",
+          "line": 82,
+          "text": "emptyLabel = \"No activity yet.\","
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/admin/audit-logs",
+      "filesScanned": 23,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/audit-logs/redesigned/audit-logs-redesigned-view.tsx",
+          "line": 118,
+          "text": "title: \"No audit entries yet\","
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/admin/complaints",
+      "filesScanned": 19,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": true,
+      "statusPill": false,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": true,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/admin/complaints-queue-view.tsx",
+          "line": 231,
+          "text": "<p className=\"font-medium text-neutral-900\">Nothing here</p>"
+        },
+        {
+          "file": "components/dashboard/mainScreens/admin/complaints-queue-view.tsx",
+          "line": 233,
+          "text": "No complaints match this filter."
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/admin/disputes",
+      "filesScanned": 24,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/admin/documents",
+      "filesScanned": 20,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": true,
+      "statusPill": false,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/admin/force-majeure",
+      "filesScanned": 21,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/admin/platform-pulse",
+      "filesScanned": 11,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": false,
+      "skeleton": true,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": true,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/admin/platform-pulse-view.tsx",
+          "line": 164,
+          "text": "<Row k=\"No sheets yet\" v=\"—\" />"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/admin/promotions",
+      "filesScanned": 14,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": false,
+      "skeleton": true,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/admin/subscriptions",
+      "filesScanned": 13,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": false,
+      "skeleton": true,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/admin/vendor-queue",
+      "filesScanned": 24,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/vendor-queue/redesigned/vendor-queue-redesigned-view.tsx",
+          "line": 332,
+          "text": "title: \"Nothing here\","
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/automation",
+      "filesScanned": 27,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/automation/redesigned/automation-redesigned-view.tsx",
+          "line": 186,
+          "text": "title: \"No automation rules yet\","
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/availability",
+      "filesScanned": 9,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": false,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/billing",
+      "filesScanned": 15,
+      "emptyState": true,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": true,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/billing/redesigned/billing-redesigned-view.tsx",
+          "line": 224,
+          "text": "and the API module says \"no payment integration yet\". Neither sentence"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/bookings",
+      "filesScanned": 53,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": true,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/bookings/redesigned/bookings-redesigned-view.tsx",
+          "line": 312,
+          "text": "title: \"No bookings yet\","
+        },
+        {
+          "file": "components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog.tsx",
+          "line": 602,
+          "text": "toast.error('Enter the agreed amount — this business has no starting price or packages yet');"
+        },
+        {
+          "file": "components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog.tsx",
+          "line": 841,
+          "text": "entirely when no customers exist yet. */}"
+        },
+        {
+          "file": "components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog.tsx",
+          "line": 1055,
+          "text": "This business has no starting price or packages yet, so enter the price you"
+        },
+        {
+          "file": "components/dashboard/mainScreens/bookings/bookingListing/components/booking-detail-sheet.tsx",
+          "line": 209,
+          "text": "<p className=\"ml-6 text-sm text-neutral-400\">No service details available</p>"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/bookings/[id]",
+      "filesScanned": 47,
+      "emptyState": true,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": false,
+      "skeleton": true,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": true,
+      "emptyStateDirect": true,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/bookings/bookingListing/booking-detail-view.tsx",
+          "line": 550,
+          "text": "title=\"No service details available\""
+        },
+        {
+          "file": "components/dashboard/mainScreens/bookings/bookingListing/booking-detail-view.tsx",
+          "line": 732,
+          "text": "No function sheets linked yet. Create one from{' '}"
+        },
+        {
+          "file": "components/bookings/order-builder-card.tsx",
+          "line": 215,
+          "text": "title=\"No items yet.\""
+        },
+        {
+          "file": "components/bookings/refund-preview-card.tsx",
+          "line": 38,
+          "text": "if (!data) return null; // feature off (404) or no booking money yet"
+        },
+        {
+          "file": "components/bookings/vendor-change-requests-card.tsx",
+          "line": 142,
+          "text": "? \"The new slot is no longer available.\""
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/bookings/[id]/financials",
+      "filesScanned": 36,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/shared/import-button.tsx",
+          "line": 53,
+          "text": "if (!bizId) { setErr(\"No venue found for your account.\"); return }"
+        },
+        {
+          "file": "components/dashboard/mainScreens/expenses/expense-cockpit.tsx",
+          "line": 248,
+          "text": "<p className=\"text-sm text-muted-foreground\">No expenses tagged to a function yet in this {gran === \"all\" ? \"l"
+        },
+        {
+          "file": "components/dashboard/shared/custom-fields-manager.tsx",
+          "line": 86,
+          "text": "<p className=\"text-sm font-medium\">No custom fields yet</p>"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/brokers",
+      "filesScanned": 37,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/brokers/redesigned/brokers-redesigned-view.tsx",
+          "line": 324,
+          "text": "Everyone you work with, including the ones with no commission yet."
+        },
+        {
+          "file": "components/dashboard/mainScreens/brokers/redesigned/brokers-redesigned-view.tsx",
+          "line": 328,
+          "text": "<p className=\"px-4 py-8 text-center text-sm text-muted-foreground\">No brokers saved yet.</p>"
+        },
+        {
+          "file": "components/dashboard/mainScreens/brokers/redesigned/brokers-redesigned-view.tsx",
+          "line": 378,
+          "text": "{count === 0 ? \"No commissions yet\" : `${count} commission${count === 1 ? \"\" : \"s\"}`}"
+        },
+        {
+          "file": "components/dashboard/mainScreens/brokers/redesigned/brokers-redesigned-view.tsx",
+          "line": 443,
+          "text": "title: \"No commissions yet\","
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/business",
+      "filesScanned": 16,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": true,
+      "pageHeader": false,
+      "skeleton": true,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": true,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/business/[id]/documents",
+      "filesScanned": 7,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": false,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/business/new",
+      "filesScanned": 14,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/businesses",
+      "filesScanned": 27,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/businesses/redesigned/businesses-admin-redesigned-view.tsx",
+          "line": 201,
+          "text": "title: \"No businesses yet\","
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/businesses-overview",
+      "filesScanned": 11,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": false,
+      "skeleton": true,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/calendar",
+      "filesScanned": 41,
+      "emptyState": true,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": true,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog.tsx",
+          "line": 602,
+          "text": "toast.error('Enter the agreed amount — this business has no starting price or packages yet');"
+        },
+        {
+          "file": "components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog.tsx",
+          "line": 841,
+          "text": "entirely when no customers exist yet. */}"
+        },
+        {
+          "file": "components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog.tsx",
+          "line": 1055,
+          "text": "This business has no starting price or packages yet, so enter the price you"
+        },
+        {
+          "file": "components/dashboard/mainScreens/calendar/v2/calendar-slot-grid-view.tsx",
+          "line": 194,
+          "text": "<p>No halls or time-slots set up yet.</p>"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/cancellation-policy",
+      "filesScanned": 14,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": false,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/chat",
+      "filesScanned": 17,
+      "emptyState": true,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": false,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": true,
+      "emptyStateDirect": true,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/chat/conversation-list.tsx",
+          "line": 146,
+          "text": "title={contactSearch ? \"No contacts match your search\" : \"No contacts available\"}"
+        },
+        {
+          "file": "components/chat/conversation-list.tsx",
+          "line": 223,
+          "text": "{search ? \"No conversations found\" : \"No conversations yet\"}"
+        },
+        {
+          "file": "components/chat/conversation-list.tsx",
+          "line": 311,
+          "text": ": \"No messages yet\"}"
+        },
+        {
+          "file": "components/chat/chat-message-area.tsx",
+          "line": 299,
+          "text": "title=\"No messages yet\""
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/claims",
+      "filesScanned": 17,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": true,
+      "statusPill": false,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/collaborations",
+      "filesScanned": 27,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/collaborations/redesigned/collaborations-redesigned-view.tsx",
+          "line": 445,
+          "text": "title: tab === \"incoming\" ? \"No invites to you yet\" : \"No invites sent yet\","
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/customers",
+      "filesScanned": 35,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": true,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/customers/redesigned/customers-redesigned-view.tsx",
+          "line": 150,
+          "text": "title: \"No customers yet\","
+        },
+        {
+          "file": "components/dashboard/mainScreens/customers/redesigned/add-customer-dialog.tsx",
+          "line": 260,
+          "text": "<div className=\"px-3 py-2 text-sm text-muted-foreground\">No vendors match that.</div>"
+        },
+        {
+          "file": "components/dashboard/mainScreens/customers/redesigned/add-customer-dialog.tsx",
+          "line": 297,
+          "text": "<p className=\"text-xs text-muted-foreground\">This vendor has no businesses yet.</p>"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/customers/[id]",
+      "filesScanned": 31,
+      "emptyState": true,
+      "emptyProp": false,
+      "statCard": true,
+      "dataTable": false,
+      "pageHeader": false,
+      "skeleton": true,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": true,
+      "emptyStateDirect": true,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/customers/customer-detail-view.tsx",
+          "line": 470,
+          "text": "title=\"No bookings yet.\""
+        },
+        {
+          "file": "components/dashboard/mainScreens/customers/customer-trust-card.tsx",
+          "line": 196,
+          "text": "<p>No ratings yet.</p>"
+        },
+        {
+          "file": "components/dashboard/mainScreens/customers/customer-timeline.tsx",
+          "line": 116,
+          "text": "title=\"No recorded touchpoints yet.\""
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/drone-noc",
+      "filesScanned": 34,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/expenses",
+      "filesScanned": 48,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/shared/import-button.tsx",
+          "line": 53,
+          "text": "if (!bizId) { setErr(\"No venue found for your account.\"); return }"
+        },
+        {
+          "file": "components/dashboard/mainScreens/expenses/expense-cockpit.tsx",
+          "line": 248,
+          "text": "<p className=\"text-sm text-muted-foreground\">No expenses tagged to a function yet in this {gran === \"all\" ? \"l"
+        },
+        {
+          "file": "components/dashboard/shared/custom-fields-manager.tsx",
+          "line": 86,
+          "text": "<p className=\"text-sm font-medium\">No custom fields yet</p>"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/field",
+      "filesScanned": 35,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/function-sheet-composer",
+      "filesScanned": 18,
+      "emptyState": true,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": true,
+      "skeleton": true,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": true,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/function-sheets/redesigned/function-sheet-composer-view.tsx",
+          "line": 226,
+          "text": "{items.length === 0 && <p className=\"px-1 py-3 text-sm text-muted-foreground\">No items yet — add the first.</p"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/function-sheet-operations",
+      "filesScanned": 13,
+      "emptyState": true,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": true,
+      "skeleton": true,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": true,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/function-sheets/redesigned/function-sheet-operations-view.tsx",
+          "line": 142,
+          "text": "{shots.length === 0 && <Empty>No moments yet — add the first (e.g. Nikah, Rukhsati).</Empty>}"
+        },
+        {
+          "file": "components/dashboard/mainScreens/function-sheets/redesigned/function-sheet-operations-view.tsx",
+          "line": 153,
+          "text": "{crew.length === 0 && <Empty>No crew assigned yet.</Empty>}"
+        },
+        {
+          "file": "components/dashboard/mainScreens/function-sheets/redesigned/function-sheet-operations-view.tsx",
+          "line": 171,
+          "text": "{deliverables.length === 0 && <Empty>No deliverables yet (e.g. edited album, highlight reel).</Empty>}"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/function-sheet-sign",
+      "filesScanned": 15,
+      "emptyState": true,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": true,
+      "skeleton": true,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": false,
+      "emptyStateDirect": true,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/function-sheets",
+      "filesScanned": 30,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": true,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/function-sheets/redesigned/function-sheets-redesigned-view.tsx",
+          "line": 258,
+          "text": "title: \"No function sheets yet\","
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/function-sheets/[id]",
+      "filesScanned": 24,
+      "emptyState": true,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": true,
+      "skeleton": true,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": true,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/function-sheets/redesigned/function-sheet-detail-redesigned-view.tsx",
+          "line": 141,
+          "text": "<EmptyState icon=\"FileText\" title=\"No function sheet to show\""
+        },
+        {
+          "file": "components/dashboard/mainScreens/function-sheets/redesigned/function-sheet-detail-redesigned-view.tsx",
+          "line": 181,
+          "text": "{variants.length === 0 ? \"No variants unlocked yet\" : \"Available variants\"}"
+        },
+        {
+          "file": "components/dashboard/mainScreens/function-sheets/send-whatsapp-dialog.tsx",
+          "line": 231,
+          "text": "No variants unlocked yet"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/generator-fuel",
+      "filesScanned": 33,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/generator-fuel/redesigned/generator-fuel-redesigned-view.tsx",
+          "line": 290,
+          "text": "title: \"No fuel entries yet\","
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/halal-certs",
+      "filesScanned": 34,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/halal-certs/redesigned/halal-certs-redesigned-view.tsx",
+          "line": 333,
+          "text": "? `You buy from ${unCertifiedSuppliers.slice(0, 3).join(\", \")}${unCertifiedSuppliers.length > 3 ? ` and ${unCe"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/holds",
+      "filesScanned": 22,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/insights",
+      "filesScanned": 17,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/insights/redesigned/insights-redesigned-view.tsx",
+          "line": 87,
+          "text": "title: \"No funnel data yet\","
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/inventory",
+      "filesScanned": 36,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/inventory/redesigned/inventory-redesigned-view.tsx",
+          "line": 204,
+          "text": "title: \"No inventory yet\","
+        },
+        {
+          "file": "components/dashboard/mainScreens/inventory/redesigned/inventory-history-dialog.tsx",
+          "line": 123,
+          "text": "<p className=\"text-sm font-medium\">No movements recorded yet</p>"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/kitchen-prep",
+      "filesScanned": 12,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": true,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/kitchen/kitchen-prep-view.tsx",
+          "line": 191,
+          "text": "<option value=\"\">{boms.length ? \"Pick a dish…\" : \"No recipes set up for this venue yet\"}</option>"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/leads",
+      "filesScanned": 54,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": true,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/leads/redesigned/leads-redesigned-view.tsx",
+          "line": 244,
+          "text": "title: \"No leads yet\","
+        },
+        {
+          "file": "components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog.tsx",
+          "line": 602,
+          "text": "toast.error('Enter the agreed amount — this business has no starting price or packages yet');"
+        },
+        {
+          "file": "components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog.tsx",
+          "line": 841,
+          "text": "entirely when no customers exist yet. */}"
+        },
+        {
+          "file": "components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog.tsx",
+          "line": 1055,
+          "text": "This business has no starting price or packages yet, so enter the price you"
+        },
+        {
+          "file": "components/dashboard/shared/import-button.tsx",
+          "line": 53,
+          "text": "if (!bizId) { setErr(\"No venue found for your account.\"); return }"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/leads/[id]",
+      "filesScanned": 10,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": false,
+      "skeleton": true,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/migrate",
+      "filesScanned": 13,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": false,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/money",
+      "filesScanned": 41,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/payments/redesigned/payments-redesigned-view.tsx",
+          "line": 229,
+          "text": "title: \"No payments yet\","
+        },
+        {
+          "file": "components/dashboard/mainScreens/receipts/redesigned/receipts-redesigned-view.tsx",
+          "line": 256,
+          "text": "title: \"No receipts yet\","
+        },
+        {
+          "file": "components/dashboard/shared/import-button.tsx",
+          "line": 53,
+          "text": "if (!bizId) { setErr(\"No venue found for your account.\"); return }"
+        },
+        {
+          "file": "components/dashboard/mainScreens/expenses/expense-cockpit.tsx",
+          "line": 248,
+          "text": "<p className=\"text-sm text-muted-foreground\">No expenses tagged to a function yet in this {gran === \"all\" ? \"l"
+        },
+        {
+          "file": "components/dashboard/shared/custom-fields-manager.tsx",
+          "line": 86,
+          "text": "<p className=\"text-sm font-medium\">No custom fields yet</p>"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/notifications",
+      "filesScanned": 27,
+      "emptyState": true,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": true,
+      "skeleton": true,
+      "tabs": true,
+      "statusPill": false,
+      "emptyProse": true,
+      "emptyStateDirect": true,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "app/(dashboard)/dashboard/notifications/page.tsx",
+          "line": 525,
+          "text": "title={filter === \"all\" ? \"No notifications yet\" : \"Nothing here\"}"
+        },
+        {
+          "file": "app/(dashboard)/dashboard/notifications/page.tsx",
+          "line": 529,
+          "text": ": \"No notifications match this filter.\""
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/onboarding",
+      "filesScanned": 16,
+      "emptyState": true,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": true,
+      "skeleton": true,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": true,
+      "emptyStateDirect": true,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/onboarding/onboarding-checklist-view.tsx",
+          "line": 178,
+          "text": "title=\"No business yet\""
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/packages",
+      "filesScanned": 27,
+      "emptyState": true,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": true,
+      "skeleton": true,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": true,
+      "emptyStateDirect": true,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "app/(dashboard)/dashboard/packages/page.tsx",
+          "line": 291,
+          "text": "title=\"No packages yet\""
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/payments",
+      "filesScanned": 32,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/payments/redesigned/payments-redesigned-view.tsx",
+          "line": 229,
+          "text": "title: \"No payments yet\","
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/pdcs",
+      "filesScanned": 28,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/profile",
+      "filesScanned": 20,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/promote",
+      "filesScanned": 30,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/promote/redesigned/promote-redesigned-view.tsx",
+          "line": 263,
+          "text": "title: \"No placement requests yet\","
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/quotes",
+      "filesScanned": 23,
+      "emptyState": true,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": true,
+      "emptyStateDirect": true,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/quotes/quotes-view.tsx",
+          "line": 121,
+          "text": "title=\"No quote requests yet\""
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/receipts",
+      "filesScanned": 34,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/receipts/redesigned/receipts-redesigned-view.tsx",
+          "line": 256,
+          "text": "title: \"No receipts yet\","
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/receivables",
+      "filesScanned": 22,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/reliability",
+      "filesScanned": 15,
+      "emptyState": true,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": false,
+      "skeleton": true,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": true,
+      "emptyStateDirect": true,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/reliability/reliability-view.tsx",
+          "line": 74,
+          "text": "title=\"No businesses yet\""
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/reports",
+      "filesScanned": 14,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": false,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/revenue",
+      "filesScanned": 23,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/revenue/redesigned/revenue-redesigned-view.tsx",
+          "line": 79,
+          "text": "title: \"No revenue yet\","
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/reviews",
+      "filesScanned": 27,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": true,
+      "pageHeader": false,
+      "skeleton": true,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": true,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/reviews/reputation-panel.tsx",
+          "line": 93,
+          "text": "if (!data || !data.hasData) return null; // no reviews yet → don't clutter"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/roles",
+      "filesScanned": 30,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/roles/redesigned/roles-admin-redesigned-view.tsx",
+          "line": 134,
+          "text": "title: \"No roles yet\","
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/settings",
+      "filesScanned": 40,
+      "emptyState": true,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": true,
+      "skeleton": true,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": true,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "app/(dashboard)/dashboard/settings/page.tsx",
+          "line": 18,
+          "text": "people most likely to need it. Nothing here depends on data. */}"
+        },
+        {
+          "file": "components/dashboard/mainScreens/businessSettings/redesigned/business-settings-hub-view.tsx",
+          "line": 525,
+          "text": "return <div className=\"p-4 md:p-6\"><EmptyState icon=\"Building2\" title=\"No business found\" description=\"Create "
+        },
+        {
+          "file": "components/dashboard/mainScreens/businessSettings/redesigned/bank-accounts-manager.tsx",
+          "line": 181,
+          "text": "<EmptyState icon=\"CreditCard\" title=\"No payout accounts yet\" description=\"Add a bank account so we can route y"
+        },
+        {
+          "file": "components/dashboard/mainScreens/businessSettings/redesigned/packages-manager.tsx",
+          "line": 248,
+          "text": "<EmptyState icon=\"Package\" title=\"No packages yet\" description=\"Add your first package so couples can book it."
+        },
+        {
+          "file": "components/dashboard/mainScreens/businessSettings/redesigned/menus-manager.tsx",
+          "line": 195,
+          "text": "<EmptyState icon=\"ClipboardList\" title=\"No menus yet\" description=\"Add a catering menu with its per-head price"
+        },
+        {
+          "file": "components/dashboard/mainScreens/businessSettings/redesigned/images-manager.tsx",
+          "line": 159,
+          "text": "<EmptyState icon=\"Image\" title=\"No images yet\" description=\"Upload photos of your work so couples can see what"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/settings/security",
+      "filesScanned": 16,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": false,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/staff",
+      "filesScanned": 41,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": true,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": true,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/staff/redesigned/staff-redesigned-view.tsx",
+          "line": 212,
+          "text": "title: \"No staff yet\","
+        },
+        {
+          "file": "components/dashboard/shared/import-button.tsx",
+          "line": 53,
+          "text": "if (!bizId) { setErr(\"No venue found for your account.\"); return }"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/staff/[id]",
+      "filesScanned": 10,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": false,
+      "skeleton": true,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/suppliers",
+      "filesScanned": 38,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": true,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": true,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/suppliers/redesigned/suppliers-redesigned-view.tsx",
+          "line": 727,
+          "text": "title: \"No suppliers yet\","
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/suppliers/[id]",
+      "filesScanned": 11,
+      "emptyState": false,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": false,
+      "skeleton": true,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/tax",
+      "filesScanned": 18,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": false,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/today",
+      "filesScanned": 25,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/today/run-sheet-dialog.tsx",
+          "line": 116,
+          "text": "No timeline yet. Add day-of tasks (or seed a template) on this booking, then print the run sheet."
+        },
+        {
+          "file": "components/dashboard/mainScreens/today/timeline-manager-dialog.tsx",
+          "line": 131,
+          "text": "<p className=\"text-sm font-medium\">No timeline yet</p>"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/trade-ops",
+      "filesScanned": 13,
+      "emptyState": true,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": true,
+      "skeleton": true,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": false,
+      "emptyStateDirect": true,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": []
+    },
+    {
+      "route": "/dashboard/users",
+      "filesScanned": 30,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/users/redesigned/users-admin-redesigned-view.tsx",
+          "line": 165,
+          "text": "title: \"No users yet\","
+        },
+        {
+          "file": "components/dashboard/mainScreens/users/redesigned/user-form-dialog.tsx",
+          "line": 107,
+          "text": "<p className=\"text-xs text-muted-foreground\">No assignable roles found.</p>"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/vendors",
+      "filesScanned": 30,
+      "emptyState": false,
+      "emptyProp": true,
+      "statCard": true,
+      "dataTable": true,
+      "pageHeader": true,
+      "skeleton": false,
+      "tabs": false,
+      "statusPill": true,
+      "emptyProse": true,
+      "emptyStateDirect": false,
+      "emptyStateViaTable": true,
+      "hasDetail": true,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/vendors/redesigned/vendors-admin-redesigned-view.tsx",
+          "line": 163,
+          "text": "title: \"No vendors yet\","
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/vendors/[id]",
+      "filesScanned": 15,
+      "emptyState": true,
+      "emptyProp": false,
+      "statCard": false,
+      "dataTable": false,
+      "pageHeader": false,
+      "skeleton": true,
+      "tabs": false,
+      "statusPill": false,
+      "emptyProse": true,
+      "emptyStateDirect": true,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/vendors/vendor-detail-view.tsx",
+          "line": 254,
+          "text": "title=\"No business listing yet.\""
+        },
+        {
+          "file": "components/dashboard/mainScreens/vendors/vendor-detail-view.tsx",
+          "line": 286,
+          "text": "endpoint has no per-vendor filter yet. Stated honestly rather than"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/venue-os",
+      "filesScanned": 92,
+      "emptyState": true,
+      "emptyProp": false,
+      "statCard": true,
+      "dataTable": false,
+      "pageHeader": false,
+      "skeleton": false,
+      "tabs": true,
+      "statusPill": false,
+      "emptyProse": true,
+      "emptyStateDirect": true,
+      "emptyStateViaTable": false,
+      "hasDetail": false,
+      "unguidedEmpty": false,
+      "proseHits": [
+        {
+          "file": "components/dashboard/mainScreens/venue-os/rate-contract-view.tsx",
+          "line": 83,
+          "text": "title=\"No contracts yet.\""
+        },
+        {
+          "file": "components/dashboard/mainScreens/venue-os/kitchen-bom-view.tsx",
+          "line": 73,
+          "text": "title=\"No recipe BOMs yet.\""
+        },
+        {
+          "file": "components/dashboard/mainScreens/venue-os/depreciation-view.tsx",
+          "line": 157,
+          "text": "title=\"No fixed assets registered yet.\""
+        },
+        {
+          "file": "components/dashboard/mainScreens/venue-os/venue-lease-view.tsx",
+          "line": 174,
+          "text": "title=\"No leases registered yet.\""
+        },
+        {
+          "file": "components/dashboard/mainScreens/expenses/expense-cockpit.tsx",
+          "line": 248,
+          "text": "<p className=\"text-sm text-muted-foreground\">No expenses tagged to a function yet in this {gran === \"all\" ? \"l"
+        },
+        {
+          "file": "components/dashboard/mainScreens/venue-os/event-profit-board.tsx",
+          "line": 187,
+          "text": "delta={totals.costedCount > 0 ? `${Math.round(totals.margin * 100)}% margin on costed events` : \"no costed eve"
+        }
+      ]
+    }
+  ]
+}

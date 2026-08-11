@@ -54,6 +54,7 @@ import WhatsAppQuickSend from '@/components/dashboard/shared/whatsapp-quick-send
 import CustomerTrustCard from './customer-trust-card';
 import CommunityTrustPanel from './community-trust-panel';
 import CustomerTimeline from './customer-timeline';
+import { EmptyState } from "@/components/dashboard/primitives/empty-state";
 
 import {
   CustomersAPI,
@@ -464,9 +465,11 @@ export default function CustomerDetailView({
             </Badge>
           </div>
           {bookings.length === 0 ? (
-            <p className="text-xs text-neutral-400">
-              No bookings yet. This customer has only enquired so far.
-            </p>
+            <EmptyState
+              size="inline"
+              title="No bookings yet."
+              description="This customer has only enquired so far."
+            />
           ) : (
             <ul className="divide-y divide-neutral-100">
               {bookings.map((b) => (

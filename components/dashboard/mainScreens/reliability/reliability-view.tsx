@@ -11,6 +11,7 @@
 
 import * as React from 'react';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import {
   ShieldCheck,
@@ -25,11 +26,13 @@ import {
 } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { EmptyState } from "@/components/dashboard/primitives/empty-state";
 
 import {
   ReliabilityAPI,
@@ -66,9 +69,16 @@ export default function ReliabilityView() {
   if (data.length === 0) {
     return (
       <Card>
-        <CardContent className="p-6 text-sm text-muted-foreground">
-          No businesses yet. Create one and your reliability score will
-          surface here.
+        <CardContent className="p-6">
+          <EmptyState
+            title="No businesses yet"
+            description="Create one and your reliability score will surface here."
+            action={
+              <Link href="/dashboard/business/new">
+                <Button size="sm">Create a business</Button>
+              </Link>
+            }
+          />
         </CardContent>
       </Card>
     );

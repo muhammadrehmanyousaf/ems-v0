@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { StatusDistributionItem } from "@/lib/api/analytics";
+import { EmptyState } from "@/components/dashboard/primitives/empty-state";
 
 const STATUS_COLORS: Record<string, { label: string; color: string }> = {
     Pending: { label: "Pending", color: "#f59e0b" },
@@ -75,9 +76,12 @@ const StatusPieChart: React.FC<Props> = ({ chartHeight = 320, data, total, loadi
                     {loading ? (
                         <Skeleton className="h-full w-full rounded-lg" />
                     ) : pieData.length === 0 ? (
-                        <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-                            No booking data
-                        </div>
+                        <EmptyState
+                            className="h-full border-0 bg-transparent py-0"
+                            icon="Calendar"
+                            title="No bookings to break down yet"
+                            description="Once you have bookings, this shows the split by status."
+                        />
                     ) : (
                         <ChartContainer config={chartConfig} className="h-full w-full">
                             <PieChart>

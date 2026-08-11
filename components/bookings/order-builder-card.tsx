@@ -28,6 +28,7 @@ import {
   type OrderStage,
 } from "@/lib/api/bookingOrder";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/dashboard/primitives/empty-state";
 
 const PKR = (n: number | null | undefined) =>
   "Rs " + Math.round(Number(n) || 0).toLocaleString("en-PK");
@@ -209,9 +210,11 @@ export function OrderBuilderCard({ bookingId }: { bookingId: number }) {
         {/* Lines */}
         <div className="space-y-2">
           {lines.length === 0 && (
-            <p className="text-sm text-muted-foreground py-2">
-              No items yet. Add a hall, a per-head menu, or any custom charge below.
-            </p>
+            <EmptyState
+              size="inline"
+              title="No items yet."
+              description="Add a hall, a per-head menu, or any custom charge below."
+            />
           )}
           {lines.map((l, i) => {
             const isDiscount = l.kind === "discount";

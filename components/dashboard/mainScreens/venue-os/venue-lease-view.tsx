@@ -12,6 +12,7 @@
  * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
+import { EmptyState } from "@/components/dashboard/primitives/empty-state";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type VenueLease, type LeaseScheduleItem, type RentAccrualRun } from "@/lib/api/venueOs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -167,7 +168,13 @@ export function VenueLeaseView(): React.ReactElement | null {
             </table>
           </div>
         )}
-        {leases && leases.length === 0 && <p className="text-sm text-muted-foreground">No leases registered yet.</p>}
+        {leases && leases.length === 0 && (
+          <EmptyState
+            size="inline"
+            title="No leases registered yet."
+            description="Register a venue lease to accrue rent against each period."
+          />
+        )}
 
         {/* run rent accrual */}
         <div className="flex flex-wrap items-end gap-3 border-t pt-3">
