@@ -101,6 +101,11 @@ const INHERITS_EMPTY_STATE = ["primitives/data-table.tsx", "primitives/empty-sta
 
 const SIGNALS = {
   emptyState: (s) => /primitives\/empty-state|<EmptyState[\s/>]/.test(s),
+  // Passing `empty={{ title, description, action }}` INTO DataTable is the
+  // guided path — the table renders EmptyState with it. Screens doing this are
+  // already correct, and counting their prop copy as "unguided prose" put
+  // finished screens (bookings, leads, customers, payments) on the worklist.
+  emptyProp: (s) => /empty=\{\{/.test(s),
   statCard: (s) => /primitives\/stat-card|<StatCard[\s/>]/.test(s),
   dataTable: (s) => /primitives\/data-table|<DataTable[\s/>]/.test(s),
   pageHeader: (s) => /primitives\/page-header|<PageHeader[\s/>]/.test(s),
@@ -138,9 +143,26 @@ function scanRoute({ route, file }) {
       }
       hit[key] = true;
       if (key === "emptyState") emptyStateDirect = true;
-      if (key === "emptyProse") proseFiles.push(rel);
+      if (key === "emptyProse") {
+        // Show the evidence rather than asserting. This metric has been wrong
+        // twice; a line the reader can open is worth more than a boolean.
+        src.split("\n").forEach((line, i) => {
+          // This codebase comments heavily and its comments describe empty
+          // states ("…had nothing to show but 19:00"). Those are prose about
+          // the UI, not prose in it — roughly half of every match before this.
+          if (/^\s*(\/\/|\/\*|\*)/.test(line)) return;
+          if (EMPTY_PROSE.test(line)) {
+            proseFiles.push({ file: rel, line: i + 1, text: line.trim().slice(0, 110) });
+          }
+        });
+      }
     }
   }
+
+  // The flag must agree with the evidence. Setting it from the whole-file regex
+  // let a route be "shows an empty message" on the strength of a code comment,
+  // with an empty hit list underneath it.
+  hit.emptyProse = proseFiles.length > 0;
 
   // A detail route makes a list a workspace rather than a terminus.
   const hasDetail =
@@ -159,8 +181,8 @@ function scanRoute({ route, file }) {
     // so there is no CTA and no first-run / filtered / error distinction.
     // Measured against DIRECT use — a table's inherited empty state does not
     // cover the card grid or chart sitting next to it on the same screen.
-    unguidedEmpty: hit.emptyProse && !emptyStateDirect,
-    proseFiles: proseFiles.slice(0, 4),
+    unguidedEmpty: hit.emptyProse && !emptyStateDirect && !hit.emptyProp,
+    proseHits: proseFiles.slice(0, 6),
   };
 }
 
@@ -230,9 +252,15 @@ const md = [
   "",
   "## Phase 1 worklist — routes with an unguided empty state",
   "",
+  "Each line is the actual matched string, so the call is judgeable without",
+  "re-deriving it. Some will be legitimately fine — this is triage, not a verdict.",
+  "",
   ...rows
     .filter((r) => r.unguidedEmpty)
-    .flatMap((r) => [`- \`${r.route}\``, ...r.proseFiles.map((f) => `  - ${f}`)]),
+    .flatMap((r) => [
+      `- \`${r.route}\``,
+      ...r.proseHits.map((h) => `  - \`${h.file}:${h.line}\` — ${h.text}`),
+    ]),
   "",
 ].join("\n");
 

@@ -10,6 +10,7 @@
  * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
+import { EmptyState } from "@/components/dashboard/primitives/empty-state";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type RateContract, type GrnContractCheck } from "@/lib/api/venueOs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,7 +77,13 @@ export function RateContractView(): React.ReactElement | null {
 
         {contracts && (
           <div className="space-y-0.5 text-xs">
-            {contracts.length === 0 && <p className="text-muted-foreground">No contracts yet.</p>}
+            {contracts.length === 0 && (
+              <EmptyState
+                size="inline"
+                title="No contracts yet."
+                description="Add one above to start checking supplier rates against an agreed price."
+              />
+            )}
             {contracts.map((c) => (
               <div key={c.id} className="flex justify-between border-t pt-0.5">
                 <span>{c.itemNameSnapshot} ({c.unit || "—"})</span>

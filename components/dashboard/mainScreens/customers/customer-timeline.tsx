@@ -30,6 +30,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { EmptyState } from "@/components/dashboard/primitives/empty-state";
 import {
   CustomersAPI,
   type CustomerTimelineResponse,
@@ -110,10 +111,11 @@ export default function CustomerTimeline({
             <History className="h-4 w-4 text-bridal-gold" />
             <span className="text-sm font-semibold text-neutral-700">Timeline</span>
           </div>
-          <p className="text-xs text-neutral-400">
-            No recorded touchpoints yet. Enquiries, bookings, status changes,
-            WhatsApp messages and reviews will appear here in order.
-          </p>
+          <EmptyState
+            size="inline"
+            title="No recorded touchpoints yet."
+            description="Enquiries, bookings, status changes, WhatsApp messages and reviews will appear here in order."
+          />
         </CardContent>
       </Card>
     );

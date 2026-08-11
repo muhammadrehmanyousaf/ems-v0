@@ -7,10 +7,10 @@
 | Signal | Routes | Share |
 |---|---:|---:|
 | Total dashboard routes | 76 | 100% |
-| Renders an empty message | 70 | 92% |
-| Calls `EmptyState` directly (real adoption) | 10 | 13% |
+| Renders an empty message | 49 | 64% |
+| Calls `EmptyState` directly (real adoption) | 12 | 16% |
 | Inherits it via `DataTable` only | 33 | 43% |
-| **Empty message with no guided state 🔴** | **60** | **79%** |
+| **Empty message with no guided state 🔴** | **11** | **14%** |
 | Uses `DataTable` | 35 | 46% |
 | Uses `PageHeader` | 54 | 71% |
 | Uses `StatCard` | 35 | 46% |
@@ -25,271 +25,116 @@
 
 | Route | Empty | Table | Header | Stat | Pill | Skel | Tabs | Detail |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| `/dashboard` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| `/dashboard` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
 | `/dashboard/admin/activity` | 🔴 | — | — | — | — | — | — | — |
-| `/dashboard/admin/audit-logs` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| `/dashboard/admin/audit-logs` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
 | `/dashboard/admin/complaints` | 🔴 | — | ✅ | — | — | — | ✅ | — |
 | `/dashboard/admin/disputes` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
-| `/dashboard/admin/documents` | 🔴 | — | ✅ | — | — | — | ✅ | — |
-| `/dashboard/admin/force-majeure` | 🔴 | — | ✅ | — | — | — | — | — |
+| `/dashboard/admin/documents` | — | — | ✅ | — | — | — | ✅ | — |
+| `/dashboard/admin/force-majeure` | — | — | ✅ | — | — | — | — | — |
 | `/dashboard/admin/platform-pulse` | 🔴 | — | — | — | — | ✅ | — | — |
-| `/dashboard/admin/promotions` | 🔴 | — | — | — | — | ✅ | — | — |
-| `/dashboard/admin/subscriptions` | 🔴 | — | — | — | — | ✅ | — | — |
-| `/dashboard/admin/vendor-queue` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | — |
-| `/dashboard/automation` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| `/dashboard/admin/promotions` | — | — | — | — | — | ✅ | — | — |
+| `/dashboard/admin/subscriptions` | — | — | — | — | — | ✅ | — | — |
+| `/dashboard/admin/vendor-queue` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| `/dashboard/automation` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
 | `/dashboard/availability` | — | — | — | — | — | — | — | — |
 | `/dashboard/billing` | ✅ | — | ✅ | — | ✅ | — | — | — |
-| `/dashboard/bookings` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | ✅ |
+| `/dashboard/bookings` | — | ✅ | ✅ | ✅ | ✅ | — | — | ✅ |
 | `/dashboard/bookings/[id]` | 🔴 | — | — | — | — | ✅ | — | — |
-| `/dashboard/bookings/[id]/financials` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | — |
-| `/dashboard/brokers` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | — |
-| `/dashboard/business` | 🔴 | ✅ | — | — | — | ✅ | — | ✅ |
+| `/dashboard/bookings/[id]/financials` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| `/dashboard/brokers` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| `/dashboard/business` | — | ✅ | — | — | — | ✅ | — | ✅ |
 | `/dashboard/business/[id]/documents` | — | — | — | — | — | — | — | — |
-| `/dashboard/business/new` | 🔴 | — | ✅ | — | — | — | — | — |
-| `/dashboard/businesses` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | — |
-| `/dashboard/businesses-overview` | 🔴 | — | — | — | — | ✅ | — | — |
+| `/dashboard/business/new` | — | — | ✅ | — | — | — | — | — |
+| `/dashboard/businesses` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| `/dashboard/businesses-overview` | — | — | — | — | — | ✅ | — | — |
 | `/dashboard/calendar` | ✅ | — | ✅ | — | ✅ | — | — | — |
-| `/dashboard/cancellation-policy` | 🔴 | — | — | — | — | — | — | — |
+| `/dashboard/cancellation-policy` | — | — | — | — | — | — | — | — |
 | `/dashboard/chat` | 🔴 | — | — | — | — | — | — | — |
-| `/dashboard/claims` | 🔴 | — | ✅ | — | — | — | ✅ | — |
-| `/dashboard/collaborations` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | — |
-| `/dashboard/customers` | 🔴 | ✅ | ✅ | ✅ | — | — | — | ✅ |
-| `/dashboard/customers/[id]` | 🔴 | — | — | ✅ | — | ✅ | — | — |
-| `/dashboard/drone-noc` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | — |
-| `/dashboard/expenses` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | — |
-| `/dashboard/field` | 🔴 | — | ✅ | — | — | — | — | — |
+| `/dashboard/claims` | — | — | ✅ | — | — | — | ✅ | — |
+| `/dashboard/collaborations` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| `/dashboard/customers` | — | ✅ | ✅ | ✅ | — | — | — | ✅ |
+| `/dashboard/customers/[id]` | ✅ | — | — | ✅ | — | ✅ | — | — |
+| `/dashboard/drone-noc` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| `/dashboard/expenses` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| `/dashboard/field` | — | — | ✅ | — | — | — | — | — |
 | `/dashboard/function-sheet-composer` | ✅ | — | ✅ | — | ✅ | ✅ | — | — |
 | `/dashboard/function-sheet-operations` | ✅ | — | ✅ | — | ✅ | ✅ | — | — |
 | `/dashboard/function-sheet-sign` | ✅ | — | ✅ | — | ✅ | ✅ | — | — |
-| `/dashboard/function-sheets` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | ✅ |
+| `/dashboard/function-sheets` | — | ✅ | ✅ | ✅ | ✅ | — | — | ✅ |
 | `/dashboard/function-sheets/[id]` | ✅ | — | ✅ | — | ✅ | ✅ | — | — |
-| `/dashboard/generator-fuel` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | — |
-| `/dashboard/halal-certs` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| `/dashboard/generator-fuel` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| `/dashboard/halal-certs` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
 | `/dashboard/holds` | — | — | ✅ | — | — | — | — | — |
-| `/dashboard/insights` | 🔴 | ✅ | ✅ | ✅ | — | — | — | — |
-| `/dashboard/inventory` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| `/dashboard/insights` | — | ✅ | ✅ | ✅ | — | — | — | — |
+| `/dashboard/inventory` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
 | `/dashboard/kitchen-prep` | 🔴 | — | ✅ | — | — | — | — | — |
-| `/dashboard/leads` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | ✅ |
-| `/dashboard/leads/[id]` | 🔴 | — | — | — | — | ✅ | — | — |
-| `/dashboard/migrate` | 🔴 | — | — | — | — | — | — | — |
-| `/dashboard/money` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| `/dashboard/leads` | — | ✅ | ✅ | ✅ | ✅ | — | — | ✅ |
+| `/dashboard/leads/[id]` | — | — | — | — | — | ✅ | — | — |
+| `/dashboard/migrate` | — | — | — | — | — | — | — | — |
+| `/dashboard/money` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
 | `/dashboard/notifications` | ✅ | — | ✅ | — | — | ✅ | ✅ | — |
 | `/dashboard/onboarding` | 🔴 | — | ✅ | — | — | ✅ | — | — |
 | `/dashboard/packages` | ✅ | — | ✅ | — | — | ✅ | — | — |
-| `/dashboard/payments` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | — |
-| `/dashboard/pdcs` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | — |
-| `/dashboard/profile` | 🔴 | — | ✅ | — | ✅ | — | — | — |
-| `/dashboard/promote` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| `/dashboard/payments` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| `/dashboard/pdcs` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| `/dashboard/profile` | — | — | ✅ | — | ✅ | — | — | — |
+| `/dashboard/promote` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
 | `/dashboard/quotes` | 🔴 | — | ✅ | — | — | — | — | — |
-| `/dashboard/receipts` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| `/dashboard/receipts` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
 | `/dashboard/receivables` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
 | `/dashboard/reliability` | 🔴 | — | — | — | — | ✅ | — | — |
-| `/dashboard/reports` | 🔴 | — | — | — | — | — | — | — |
-| `/dashboard/revenue` | 🔴 | ✅ | ✅ | ✅ | — | — | — | — |
+| `/dashboard/reports` | — | — | — | — | — | — | — | — |
+| `/dashboard/revenue` | — | ✅ | ✅ | ✅ | — | — | — | — |
 | `/dashboard/reviews` | 🔴 | ✅ | — | — | — | ✅ | — | — |
-| `/dashboard/roles` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| `/dashboard/roles` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
 | `/dashboard/settings` | ✅ | — | ✅ | — | ✅ | ✅ | — | — |
 | `/dashboard/settings/security` | — | — | — | — | — | — | — | — |
-| `/dashboard/staff` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ |
-| `/dashboard/staff/[id]` | 🔴 | — | — | — | — | ✅ | — | — |
-| `/dashboard/suppliers` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ |
-| `/dashboard/suppliers/[id]` | 🔴 | — | — | — | — | ✅ | — | — |
-| `/dashboard/tax` | 🔴 | ✅ | ✅ | ✅ | — | — | — | — |
-| `/dashboard/today` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| `/dashboard/staff` | — | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ |
+| `/dashboard/staff/[id]` | — | — | — | — | — | ✅ | — | — |
+| `/dashboard/suppliers` | — | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ |
+| `/dashboard/suppliers/[id]` | — | — | — | — | — | ✅ | — | — |
+| `/dashboard/tax` | — | ✅ | ✅ | ✅ | — | — | — | — |
+| `/dashboard/today` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
 | `/dashboard/trade-ops` | ✅ | — | ✅ | — | — | ✅ | — | — |
-| `/dashboard/users` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | — |
-| `/dashboard/vendors` | 🔴 | ✅ | ✅ | ✅ | ✅ | — | — | ✅ |
+| `/dashboard/users` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| `/dashboard/vendors` | — | ✅ | ✅ | ✅ | ✅ | — | — | ✅ |
 | `/dashboard/vendors/[id]` | 🔴 | — | — | — | — | ✅ | — | — |
-| `/dashboard/venue-os` | 🔴 | — | — | ✅ | — | — | ✅ | — |
+| `/dashboard/venue-os` | ✅ | — | — | ✅ | — | — | ✅ | — |
 
 ## Phase 1 worklist — routes with an unguided empty state
 
-- `/dashboard`
-  - components/dashboard/mainScreens/dashboard/redesigned/overview-redesigned-view.tsx
-  - lib/api/dashboard.ts
-  - components/dashboard/mainScreens/venue-os/event-profit-board.tsx
-  - components/dashboard/mainScreens/dashboard/redesigned/no-business-first-run.tsx
+Each line is the actual matched string, so the call is judgeable without
+re-deriving it. Some will be legitimately fine — this is triage, not a verdict.
+
 - `/dashboard/admin/activity`
-  - components/activity/activity-feed.tsx
-- `/dashboard/admin/audit-logs`
-  - components/dashboard/mainScreens/audit-logs/redesigned/audit-logs-redesigned-view.tsx
+  - `components/activity/activity-feed.tsx:82` — emptyLabel = "No activity yet.",
 - `/dashboard/admin/complaints`
-  - components/dashboard/mainScreens/admin/complaints-queue-view.tsx
-- `/dashboard/admin/documents`
-  - lib/types.ts
-- `/dashboard/admin/force-majeure`
-  - lib/types.ts
+  - `components/dashboard/mainScreens/admin/complaints-queue-view.tsx:231` — <p className="font-medium text-neutral-900">Nothing here</p>
+  - `components/dashboard/mainScreens/admin/complaints-queue-view.tsx:233` — No complaints match this filter.
 - `/dashboard/admin/platform-pulse`
-  - components/dashboard/mainScreens/admin/platform-pulse-view.tsx
-  - lib/types.ts
-- `/dashboard/admin/promotions`
-  - lib/types.ts
-- `/dashboard/admin/subscriptions`
-  - lib/types.ts
-- `/dashboard/admin/vendor-queue`
-  - components/dashboard/mainScreens/vendor-queue/redesigned/vendor-queue-redesigned-view.tsx
-- `/dashboard/automation`
-  - components/dashboard/mainScreens/automation/redesigned/automation-redesigned-view.tsx
-- `/dashboard/bookings`
-  - components/dashboard/mainScreens/bookings/redesigned/bookings-redesigned-view.tsx
-  - components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog.tsx
-  - lib/types.ts
-  - lib/api/dashboard.ts
+  - `components/dashboard/mainScreens/admin/platform-pulse-view.tsx:164` — <Row k="No sheets yet" v="—" />
 - `/dashboard/bookings/[id]`
-  - components/dashboard/mainScreens/bookings/bookingListing/booking-detail-view.tsx
-  - components/bookings/order-builder-card.tsx
-  - components/bookings/refund-preview-card.tsx
-  - components/bookings/vendor-change-requests-card.tsx
-- `/dashboard/bookings/[id]/financials`
-  - components/dashboard/mainScreens/expenses/redesigned/expenses-redesigned-view.tsx
-  - components/dashboard/shared/import-button.tsx
-  - components/dashboard/mainScreens/expenses/expense-cockpit.tsx
-  - components/dashboard/shared/custom-fields-manager.tsx
-- `/dashboard/brokers`
-  - components/dashboard/mainScreens/brokers/redesigned/brokers-redesigned-view.tsx
-  - lib/api/dashboard.ts
-  - components/shared/linked-function-sheet-badge.tsx
-  - lib/types.ts
-- `/dashboard/business`
-  - lib/api/dashboard.ts
-- `/dashboard/business/new`
-  - lib/api/dashboard.ts
-  - lib/types.ts
-- `/dashboard/businesses`
-  - components/dashboard/mainScreens/businesses/redesigned/businesses-admin-redesigned-view.tsx
-  - lib/api/dashboard.ts
-- `/dashboard/businesses-overview`
-  - lib/api/reliability.ts
-  - lib/types.ts
-- `/dashboard/cancellation-policy`
-  - lib/api/dashboard.ts
-  - lib/types.ts
+  - `components/dashboard/mainScreens/bookings/bookingListing/booking-detail-view.tsx:548` — No service details available
+  - `components/dashboard/mainScreens/bookings/bookingListing/booking-detail-view.tsx:729` — No function sheets linked yet. Create one from{' '}
+  - `components/bookings/order-builder-card.tsx:213` — No items yet. Add a hall, a per-head menu, or any custom charge below.
+  - `components/bookings/refund-preview-card.tsx:38` — if (!data) return null; // feature off (404) or no booking money yet
+  - `components/bookings/vendor-change-requests-card.tsx:142` — ? "The new slot is no longer available."
 - `/dashboard/chat`
-  - components/chat/conversation-list.tsx
-  - components/chat/chat-message-area.tsx
-  - lib/types.ts
-- `/dashboard/claims`
-  - lib/types.ts
-- `/dashboard/collaborations`
-  - components/dashboard/mainScreens/collaborations/redesigned/collaborations-redesigned-view.tsx
-  - lib/types.ts
-- `/dashboard/customers`
-  - components/dashboard/mainScreens/customers/redesigned/customers-redesigned-view.tsx
-  - lib/api/dashboard.ts
-  - components/dashboard/mainScreens/customers/redesigned/add-customer-dialog.tsx
-- `/dashboard/customers/[id]`
-  - components/dashboard/mainScreens/customers/customer-detail-view.tsx
-  - components/dashboard/mainScreens/customers/customer-trust-card.tsx
-  - components/dashboard/mainScreens/customers/customer-timeline.tsx
-  - lib/api/dashboard.ts
-- `/dashboard/drone-noc`
-  - lib/api/dashboard.ts
-- `/dashboard/expenses`
-  - components/dashboard/mainScreens/expenses/redesigned/expenses-redesigned-view.tsx
-  - components/dashboard/shared/import-button.tsx
-  - components/dashboard/mainScreens/expenses/expense-cockpit.tsx
-  - components/dashboard/shared/custom-fields-manager.tsx
-- `/dashboard/field`
-  - lib/types.ts
-- `/dashboard/function-sheets`
-  - components/dashboard/mainScreens/function-sheets/redesigned/function-sheets-redesigned-view.tsx
-  - lib/api/dashboard.ts
-- `/dashboard/generator-fuel`
-  - components/dashboard/mainScreens/generator-fuel/redesigned/generator-fuel-redesigned-view.tsx
-  - lib/api/dashboard.ts
-- `/dashboard/halal-certs`
-  - components/dashboard/mainScreens/halal-certs/redesigned/halal-certs-redesigned-view.tsx
-  - lib/api/dashboard.ts
-  - lib/types.ts
-- `/dashboard/insights`
-  - components/dashboard/mainScreens/insights/redesigned/insights-redesigned-view.tsx
-- `/dashboard/inventory`
-  - components/dashboard/mainScreens/inventory/redesigned/inventory-redesigned-view.tsx
-  - lib/api/dashboard.ts
-  - components/dashboard/mainScreens/inventory/redesigned/inventory-history-dialog.tsx
+  - `components/chat/conversation-list.tsx:144` — {contactSearch ? "No contacts match your search" : "No contacts available"}
+  - `components/chat/conversation-list.tsx:222` — {search ? "No conversations found" : "No conversations yet"}
+  - `components/chat/conversation-list.tsx:310` — : "No messages yet"}
+  - `components/chat/chat-message-area.tsx:300` — No messages yet
 - `/dashboard/kitchen-prep`
-  - components/dashboard/mainScreens/kitchen/kitchen-prep-view.tsx
-  - lib/types.ts
-- `/dashboard/leads`
-  - components/dashboard/mainScreens/leads/redesigned/leads-redesigned-view.tsx
-  - lib/api/dashboard.ts
-  - components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog.tsx
-  - components/dashboard/shared/import-button.tsx
-- `/dashboard/leads/[id]`
-  - lib/types.ts
-- `/dashboard/migrate`
-  - lib/api/dashboard.ts
-  - lib/types.ts
-- `/dashboard/money`
-  - components/dashboard/mainScreens/payments/redesigned/payments-redesigned-view.tsx
-  - components/dashboard/mainScreens/receipts/redesigned/receipts-redesigned-view.tsx
-  - components/dashboard/mainScreens/expenses/redesigned/expenses-redesigned-view.tsx
-  - lib/api/dashboard.ts
+  - `components/dashboard/mainScreens/kitchen/kitchen-prep-view.tsx:191` — <option value="">{boms.length ? "Pick a dish…" : "No recipes set up for this venue yet"}</option>
 - `/dashboard/onboarding`
-  - components/dashboard/mainScreens/onboarding/onboarding-checklist-view.tsx
-  - lib/types.ts
-- `/dashboard/payments`
-  - components/dashboard/mainScreens/payments/redesigned/payments-redesigned-view.tsx
-  - lib/api/dashboard.ts
-  - lib/types.ts
-- `/dashboard/pdcs`
-  - components/shared/linked-function-sheet-badge.tsx
-- `/dashboard/profile`
-  - lib/api/dashboard.ts
-  - lib/types.ts
-- `/dashboard/promote`
-  - components/dashboard/mainScreens/promote/redesigned/promote-redesigned-view.tsx
-  - lib/api/dashboard.ts
+  - `components/dashboard/mainScreens/onboarding/onboarding-checklist-view.tsx:176` — <p className="font-medium">No business yet.</p>
 - `/dashboard/quotes`
-  - components/dashboard/mainScreens/quotes/quotes-view.tsx
-  - lib/api/dashboard.ts
-- `/dashboard/receipts`
-  - components/dashboard/mainScreens/receipts/redesigned/receipts-redesigned-view.tsx
-  - components/shared/linked-function-sheet-badge.tsx
+  - `components/dashboard/mainScreens/quotes/quotes-view.tsx:114` — <div className="text-sm font-medium">No quote requests yet</div>
 - `/dashboard/reliability`
-  - components/dashboard/mainScreens/reliability/reliability-view.tsx
-  - lib/api/reliability.ts
-  - lib/types.ts
-- `/dashboard/reports`
-  - lib/api/dashboard.ts
-  - lib/types.ts
-- `/dashboard/revenue`
-  - components/dashboard/mainScreens/revenue/redesigned/revenue-redesigned-view.tsx
+  - `components/dashboard/mainScreens/reliability/reliability-view.tsx:70` — No businesses yet. Create one and your reliability score will
 - `/dashboard/reviews`
-  - components/dashboard/mainScreens/reviews/reputation-panel.tsx
-  - lib/api/dashboard.ts
-- `/dashboard/roles`
-  - components/dashboard/mainScreens/roles/redesigned/roles-admin-redesigned-view.tsx
-  - lib/api/dashboard.ts
-- `/dashboard/staff`
-  - components/dashboard/mainScreens/staff/redesigned/staff-redesigned-view.tsx
-  - lib/api/dashboard.ts
-  - components/dashboard/shared/import-button.tsx
-- `/dashboard/staff/[id]`
-  - lib/types.ts
-- `/dashboard/suppliers`
-  - components/dashboard/mainScreens/suppliers/redesigned/suppliers-redesigned-view.tsx
-  - lib/api/dashboard.ts
-- `/dashboard/suppliers/[id]`
-  - lib/types.ts
-- `/dashboard/tax`
-  - lib/types.ts
-- `/dashboard/today`
-  - components/dashboard/mainScreens/today/run-sheet-dialog.tsx
-  - components/dashboard/mainScreens/today/timeline-manager-dialog.tsx
-- `/dashboard/users`
-  - components/dashboard/mainScreens/users/redesigned/users-admin-redesigned-view.tsx
-  - lib/api/dashboard.ts
-  - components/dashboard/mainScreens/users/redesigned/user-form-dialog.tsx
-- `/dashboard/vendors`
-  - components/dashboard/mainScreens/vendors/redesigned/vendors-admin-redesigned-view.tsx
-  - lib/api/dashboard.ts
+  - `components/dashboard/mainScreens/reviews/reputation-panel.tsx:93` — if (!data || !data.hasData) return null; // no reviews yet → don't clutter
 - `/dashboard/vendors/[id]`
-  - components/dashboard/mainScreens/vendors/vendor-detail-view.tsx
-  - lib/api/dashboard.ts
-  - lib/types.ts
-- `/dashboard/venue-os`
-  - components/dashboard/mainScreens/venue-os/rate-contract-view.tsx
-  - components/dashboard/mainScreens/venue-os/kitchen-bom-view.tsx
-  - components/dashboard/mainScreens/venue-os/depreciation-view.tsx
-  - components/dashboard/mainScreens/venue-os/venue-lease-view.tsx
+  - `components/dashboard/mainScreens/vendors/vendor-detail-view.tsx:251` — No business listing yet. A vendor without one cannot appear in search or
+  - `components/dashboard/mainScreens/vendors/vendor-detail-view.tsx:283` — endpoint has no per-vendor filter yet. Stated honestly rather than

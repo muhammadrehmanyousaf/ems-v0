@@ -40,6 +40,15 @@ const VARIANT: Record<
 export interface EmptyStateProps {
   /** Which kind of nothing this is. Drives the default icon, tint and a11y role. */
   variant?: EmptyStateVariant
+  /**
+   * `default` — the centred, dashed card. Correct for a page-level list.
+   * `inline`  — one quiet row. Correct inside a compact sub-panel that already
+   *             has its own create control a few lines above, where a 12-line
+   *             card would be louder than the thing it is reporting on.
+   *
+   * Both carry the same icon, tone and announcement; they differ only in weight.
+   */
+  size?: "default" | "inline"
   /** Override the variant's default glyph. */
   icon?: IconName
   title: React.ReactNode
@@ -53,6 +62,7 @@ export interface EmptyStateProps {
 
 export function EmptyState({
   variant = "first-run",
+  size = "default",
   icon,
   title,
   description,
@@ -61,6 +71,27 @@ export function EmptyState({
   className,
 }: EmptyStateProps) {
   const v = VARIANT[variant] ?? VARIANT["first-run"]
+
+  if (size === "inline") {
+    return (
+      <div
+        role={v.role}
+        aria-live="polite"
+        data-variant={variant}
+        data-size="inline"
+        className={cn("flex items-center gap-2 py-1.5 text-sm text-muted-foreground", className)}
+      >
+        <span className={cn("grid h-5 w-5 shrink-0 place-items-center rounded-full", v.tile)}>
+          <Icon name={icon ?? v.icon} size={12} />
+        </span>
+        <span className="min-w-0">
+          {title}
+          {description && <span className="text-muted-foreground/80"> {description}</span>}
+        </span>
+        {action && <span className="ml-auto shrink-0">{action}</span>}
+      </div>
+    )
+  }
 
   return (
     <div

@@ -11,6 +11,7 @@
  * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
+import { EmptyState } from "@/components/dashboard/primitives/empty-state";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type RecipeBom, type YieldVariance } from "@/lib/api/venueOs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -66,7 +67,13 @@ export function KitchenBomView(): React.ReactElement | null {
 
         {boms && (
           <div className="space-y-1 text-xs">
-            {boms.length === 0 && <p className="text-muted-foreground">No recipe BOMs yet.</p>}
+            {boms.length === 0 && (
+              <EmptyState
+                size="inline"
+                title="No recipe BOMs yet."
+                description="Add a dish with its ingredients to get a standard cost per plate."
+              />
+            )}
             {boms.map((b) => (
               <div key={b.id} className="flex items-center justify-between border-t pt-0.5">
                 <span>#{b.id} {b.dishName} · {b.standardYieldPlates} plates/degh · {b.ingredients.length} ingredients</span>

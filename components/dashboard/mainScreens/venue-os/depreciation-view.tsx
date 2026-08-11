@@ -11,6 +11,7 @@
  * enabled, owner-authorized 2026-07-11.
  */
 import * as React from "react";
+import { EmptyState } from "@/components/dashboard/primitives/empty-state";
 import { useBusinessIdField } from "@/lib/store/use-business-id-field";
 import { venueOsApi, type FixedAsset, type DepreciationRun } from "@/lib/api/venueOs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -150,7 +151,13 @@ export function DepreciationView(): React.ReactElement | null {
             </table>
           </div>
         )}
-        {assets && assets.length === 0 && <p className="text-sm text-muted-foreground">No fixed assets registered yet.</p>}
+        {assets && assets.length === 0 && (
+          <EmptyState
+            size="inline"
+            title="No fixed assets registered yet."
+            description="Register generators, marquees or kitchen equipment to run depreciation."
+          />
+        )}
 
         {/* run depreciation */}
         <div className="flex flex-wrap items-end gap-3 border-t pt-3">
