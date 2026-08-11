@@ -859,11 +859,17 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                             </div>
                         )}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {/* The counter staff taking this booking is on a phone.
+                                Without type/inputMode the phone field opened a QWERTY
+                                keyboard for a number, and without autocomplete tokens
+                                nothing could be filled from the device's own contact
+                                store (WCAG 2.1 SC 1.3.5, Identify Input Purpose). */}
                             <div className="space-y-1.5">
                                 <Label htmlFor="ob-name">Full Name *</Label>
                                 <Input
                                     id="ob-name"
                                     placeholder="Customer name"
+                                    autoComplete="name"
                                     value={customerName}
                                     onChange={(e) => setCustomerName(e.target.value)}
                                     required
@@ -873,6 +879,9 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                                 <Label htmlFor="ob-phone">Phone Number *</Label>
                                 <Input
                                     id="ob-phone"
+                                    type="tel"
+                                    inputMode="tel"
+                                    autoComplete="tel"
                                     placeholder="03XX-XXXXXXX"
                                     value={customerPhone}
                                     onChange={(e) => setCustomerPhone(e.target.value)}
@@ -887,6 +896,8 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                                 <Input
                                     id="ob-email"
                                     type="email"
+                                    inputMode="email"
+                                    autoComplete="email"
                                     placeholder="customer@example.com"
                                     value={customerEmail}
                                     onChange={(e) => setCustomerEmail(e.target.value)}

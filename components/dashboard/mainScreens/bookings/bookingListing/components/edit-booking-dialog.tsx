@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
+import { LEGACY_PERIODS, formatSlotRange, slotText } from '@/lib/booking/slot-vocabulary';
 import {
     Loader2, CalendarIcon, User, CalendarDays, Building2,
     FileText, CreditCard, Minus, Plus, Receipt,
@@ -37,11 +38,21 @@ interface EditBookingDialogProps {
     onSuccess: (updated: Partial<BookingData> | null) => void;
 }
 
-const TIME_SLOTS = [
-    { value: '09:00', label: 'Morning  (9 AM – 12 PM)' },
-    { value: '14:00', label: 'Afternoon (2 PM – 6 PM)' },
-    { value: '18:00', label: 'Evening  (6 PM – 11 PM)' },
-];
+/**
+ * The twelfth private copy of the slot vocabulary, now the shared one.
+ *
+ * It also carried a third punctuation of the same sentence — "Morning  (9 AM –
+ * 12 PM)", double space, en-dash — against the funnel's "Morning · 9 AM to
+ * 12 PM". See lib/booking/slot-vocabulary.
+ */
+// `string`, not the `as const` literal union LEGACY_PERIODS carries. The union
+// is exactly the three legacy values, and this list has to be able to hold a
+// booking's real time — 19:00, or "06:00 PM – 11:00 PM" — which is the whole
+// point. TypeScript refused the widening until it was stated, correctly.
+const LEGACY_TIME_SLOTS: { value: string; label: string }[] = LEGACY_PERIODS.map((p) => ({
+    value: p.value,
+    label: `${p.label} (${formatSlotRange(p.startTime, p.endTime)})`,
+}));
 
 const GUEST_COUNT_TYPES = ['Wedding venue', 'Catering', 'Decorator'];
 const MENU_TYPES        = ['Catering'];
@@ -120,6 +131,36 @@ export function EditBookingDialog({ open, onOpenChange, booking, onSuccess }: Ed
     // Event
     const [bookingDate, setBookingDate] = useState<Date | undefined>();
     const [bookingTime, setBookingTime] = useState('');
+
+    /**
+     * A control must be able to show its own value.
+     *
+     * The list was the three legacy periods and nothing else, so for any booking
+     * whose time is not 09:00 / 14:00 / 18:00 the Radix Select matched no item
+     * and the required "Time Slot *" field rendered BLANK. Measured on
+     * production 2026-08-11: 60 of 129 live bookings — 47% — including every
+     * vendor-defined slot (13:00, 19:00, 12:00, 21:00, 18:30) and ten distinct
+     * free-text ranges such as "06:00 PM – 11:00 PM" that these three values
+     * cannot express at all.
+     *
+     * The saved payload was never wrong — it sends React state, which holds the
+     * real time — so nothing was being corrupted on save. The damage is that the
+     * field looks unset on a booking that is fine, and the obvious response to a
+     * blank required field is to pick something, which is what actually moves
+     * the event. The UI was inviting the mistake.
+     *
+     * So the current value is always an option, labelled through the shared
+     * vocabulary, and a vendor who does not mean to change the time cannot
+     * change it by accident.
+     */
+    const timeOptions = useMemo(() => {
+        const opts = [...LEGACY_TIME_SLOTS];
+        const current = (bookingTime ?? '').trim();
+        if (current && !opts.some((o) => o.value === current)) {
+            opts.unshift({ value: current, label: `${slotText({ bookingTime: current })} — current` });
+        }
+        return opts;
+    }, [bookingTime]);
     const [guestCount,  setGuestCount]  = useState('');
 
     // Service
@@ -588,7 +629,7 @@ export function EditBookingDialog({ open, onOpenChange, booking, onSuccess }: Ed
                                         <SelectValue placeholder="Select time" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {TIME_SLOTS.map((s) => (
+                                        {timeOptions.map((s) => (
                                             <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                                         ))}
                                     </SelectContent>

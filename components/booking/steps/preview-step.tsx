@@ -14,6 +14,7 @@ import {
   Clock,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { slotText } from "@/lib/booking/slot-vocabulary"
 
 interface PreviewStepProps {
   formData: BookingFormData;
@@ -151,18 +152,16 @@ export default function PreviewStep({
       maximumFractionDigits: 0,
     }).format(n);
 
-  const getTimeSlotDisplay = (timeSlot: string) => {
-    switch (timeSlot) {
-      case "09:00":
-        return "Morning (9 AM - 12 PM)";
-      case "14:00":
-        return "Afternoon (2 PM - 6 PM)";
-      case "18:00":
-        return "Evening (6 PM - 11 PM)";
-      default:
-        return timeSlot || "Not selected";
-    }
-  };
+  // SLOTS step 10 — one vocabulary. This was a local switch over the three
+  // canonical times that could not name a vendor's own slot, so a booking made
+  // against "Dinner event" previewed as a bare "19:00".
+  const timeSlotDisplay =
+    slotText({
+      bookingTime: formData.timeSlot,
+      slotLabel: formData.slotLabel,
+      slotStartTime: formData.slotStartTime,
+      slotEndTime: formData.slotEndTime,
+    }) || "Not selected";
 
   // Cancellation policies
   const policies: { name: string; policy: string }[] = [];
@@ -254,7 +253,7 @@ export default function PreviewStep({
             <div className="min-w-0">
               <p className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Time</p>
               <p className="font-bridal text-[14px] text-bridal-charcoal break-words mt-1">
-                {getTimeSlotDisplay(formData.timeSlot)}
+                {timeSlotDisplay}
               </p>
             </div>
             {["Wedding venue", "Catering", "Decorator"].includes(venue?.vendor?.vendorType ?? "") && !isBridalWear && !isWeddingStationery && (

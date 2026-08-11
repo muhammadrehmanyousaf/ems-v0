@@ -214,6 +214,22 @@ export interface BookingFormData {
   // runs the capacity-aware booking path. Null/undefined = legacy fixed
   // Morning/Afternoon/Evening period booking (unchanged).
   slotTemplateId?: number | null;
+  /**
+   * SLOTS step 10 — the chosen slot's own name and hours, carried forward.
+   *
+   * The picker used to store `timeSlot` (the start time) and the id, and drop
+   * the rest. Every screen after it — review, preview, payment, both success
+   * screens — therefore had nothing to show but "19:00", and each invented its
+   * own map from that back to a name. They disagreed with each other and none
+   * of them could say "Dinner event", which is what the customer had actually
+   * clicked.
+   *
+   * Optional and additive: absent on the legacy period path, where
+   * `describeSlot` falls back to the canonical Morning/Afternoon/Evening names.
+   */
+  slotLabel?: string | null;
+  slotStartTime?: string | null;
+  slotEndTime?: string | null;
   guestCount: number;
 
   // Package

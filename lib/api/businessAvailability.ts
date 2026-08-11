@@ -105,10 +105,18 @@ export class BusinessAvailabilityAPI {
   // per-template rows so the calendar can render "Lunch 2/3 · Dinner 1/3"
   // chips without N×templates round trips.
   /**
-   * `subVenueId` scopes the slots to one space. Omit it and the endpoint
-   * returns every slot, exactly as before — narrowing is the caller's explicit
-   * act, because a venue whose slots are all space-scoped would otherwise show
-   * a customer an empty picker.
+   * `subVenueId` scopes the slots to one space:
+   *
+   *   undefined  every slot in the business (unchanged default — a venue whose
+   *              slots are all space-scoped would otherwise show an empty picker)
+   *   null       the venue-wide set only, for "no hall chosen yet"
+   *   a number   that space's own slots, falling back to venue-wide
+   *
+   * The middle case is the one that was missing. Passing null used to be
+   * indistinguishable from omitting the param, so a customer who had not picked
+   * a hall was offered slots belonging privately to ONE hall — live on 3358,
+   * "Morning 10:58-22:58" is private to space 3355 and was shown beside the
+   * venue-wide "Lunch event" and "Dinner event", overlapping both.
    */
   static async getBulkAvailability(
     businessId: number,
@@ -120,9 +128,11 @@ export class BusinessAvailabilityAPI {
     to: string;
     days: Record<string, SlotAvailabilityRow[]>;
   }> {
+    const scope =
+      subVenueId === undefined ? {} : subVenueId === null ? { subVenueId: "none" } : { subVenueId };
     const res = await axiosInstance.get(
       `${v1}/businesses/${businessId}/slots/availability/bulk`,
-      { params: { from: fromDate, to: toDate, ...(subVenueId != null ? { subVenueId } : {}) } },
+      { params: { from: fromDate, to: toDate, ...scope } },
     );
     return res.data?.data;
   }

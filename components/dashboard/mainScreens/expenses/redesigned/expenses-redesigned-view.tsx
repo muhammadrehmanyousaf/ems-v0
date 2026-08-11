@@ -125,17 +125,17 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
   }, [all, search])
 
   const columns: Column<VendorExpense>[] = [
-    { key: "category", header: "Category", render: (e) => <span className="font-medium">{cap(e.category)}</span> },
+    { key: "category", header: "Category", sortKey: "category", sortValue: (e) => e.category || "", render: (e) => <span className="font-medium">{cap(e.category)}</span> },
     { key: "space", header: "Space", cellClassName: "text-muted-foreground", render: (e) => e.subVenue?.name || "—" },
-    { key: "payee", header: "Paid to", cellClassName: "text-muted-foreground", render: (e) => e.vendorName || "—" },
+    { key: "payee", header: "Paid to", cellClassName: "text-muted-foreground", sortKey: "payee", sortValue: (e) => e.vendorName || "", render: (e) => e.vendorName || "—" },
     { key: "note", header: "Note", cellClassName: "max-w-[260px] truncate text-muted-foreground", render: (e) => e.description || "—" },
     { key: "method", header: "Method", render: (e) => <StatusPill tone="neutral">{methodLabel(e.paymentMethod)}</StatusPill> },
-    { key: "date", header: "Date", cellClassName: "text-muted-foreground", render: (e) => fmtDate(e.spentDate) },
+    { key: "date", header: "Date", cellClassName: "text-muted-foreground", sortKey: "date", sortValue: (e) => e.spentDate || null, render: (e) => fmtDate(e.spentDate) },
     // Reverse link back to the event. A vendor looking at "Rs 45,000 catering"
     // needs to know WHICH wedding it was for; without this the money screens
     // and the event screens are two unconnected worlds.
     { key: "event", header: "Event", render: (e) => <LinkedFunctionSheetBadge bookingId={e.bookingId} variant="inline" /> },
-    { key: "amount", header: "Amount", align: "right", render: (e) => <MoneyCell amount={num(e.amount)} tone="error" /> },
+    { key: "amount", header: "Amount", align: "right", sortKey: "amount", sortValue: (e) => num(e.amount), render: (e) => <MoneyCell amount={num(e.amount)} tone="error" /> },
     {
       key: "actions", header: "", align: "right",
       render: (e) => (

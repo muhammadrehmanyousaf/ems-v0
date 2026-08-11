@@ -24,6 +24,8 @@ import {
   BUNDLED_CATEGORY_LABELS,
   type BundledService,
 } from "@/lib/api/bundledServices"
+// SLOTS step 10 — the single slot vocabulary.
+import { slotText } from "@/lib/booking/slot-vocabulary"
 
 interface Props {
   formData: BookingFormData
@@ -37,13 +39,9 @@ interface Props {
   isAuthenticated?: boolean
 }
 
-// Issue #46 — match the "X to Y" format used in date-time-step.tsx
-// PERIODS so the booking review and the date picker read identically.
-const PERIOD_LABEL: Record<string, string> = {
-  "09:00": "Morning · 9 AM to 12 PM",
-  "14:00": "Afternoon · 2 PM to 6 PM",
-  "18:00": "Evening · 6 PM to 11 PM",
-}
+// SLOTS step 10 — one vocabulary, shared with the picker the customer just
+// used. This was a local three-entry map that could not name a vendor's own
+// slot, so a booking made against "Dinner event" reviewed as a bare "19:00".
 
 const TIER_LABEL: Record<number, string> = {
   2: "2 events · 3% bundle",
@@ -74,7 +72,12 @@ export default function ReviewStep({
   const dateLabel = eventDate
     ? eventDate.toLocaleDateString("en-PK", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
     : "—"
-  const timeLabel = formData.timeSlot ? PERIOD_LABEL[formData.timeSlot] || formData.timeSlot : "—"
+  const timeLabel = slotText({
+    bookingTime: formData.timeSlot,
+    slotLabel: formData.slotLabel,
+    slotStartTime: formData.slotStartTime,
+    slotEndTime: formData.slotEndTime,
+  }) || "—"
 
   const isCarRental = venue?.vendor?.vendorType === "Car rental"
   const isBridalWear = venue?.vendor?.vendorType === "Bridal wearing"

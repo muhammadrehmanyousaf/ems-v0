@@ -15,6 +15,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { VendorAPI } from "@/lib/api/vendors";
+import { LEGACY_PERIODS, formatSlotRange } from "@/lib/booking/slot-vocabulary"
 
 interface DateSelectionStepProps {
   formData: BookingFormData;
@@ -150,13 +151,15 @@ export default function DateSelectionStep({
     });
   };
 
-  const allTimeSlots = ["09:00", "14:00", "18:00"];
-  const timeSlots = [
-    // Issue #46 — "X to Y" format for consistency with steps-v2.
-    { value: "09:00", label: "Morning", time: "9 AM to 12 PM" },
-    { value: "14:00", label: "Afternoon", time: "2 PM to 6 PM" },
-    { value: "18:00", label: "Evening", time: "6 PM to 11 PM" },
-  ];
+  // SLOTS step 10 — both lists come from the one shared definition. They were
+  // maintained here by hand alongside six other copies, and "consistency with
+  // steps-v2" was a comment rather than something the code could enforce.
+  const allTimeSlots = LEGACY_PERIODS.map((p) => p.value);
+  const timeSlots = LEGACY_PERIODS.map((p) => ({
+    value: p.value,
+    label: p.label,
+    time: formatSlotRange(p.startTime, p.endTime),
+  }));
 
   // Get availability for the selected date
   const selectedDateKey = date ? toDateKey(date) : null;

@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { X } from "lucide-react"
 
 interface BookingModalProps {
   isOpen: boolean
@@ -49,9 +48,12 @@ export function BookingModal({ isOpen, onClose, vendorId, vendorName }: BookingM
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl text-neutral-900 dark:text-neutral-100">
-        <DialogHeader className="flex flex-row items-center justify-between">
+        {/* The local X here is what caused the shared close button to be
+            commented out app-wide in Jan 2025. It was a bare icon with an
+            onClick — not a button, so it took no keyboard focus and announced
+            no name. DialogContent's own close replaces it and is reachable. */}
+        <DialogHeader>
           <DialogTitle>Book {vendorName}</DialogTitle>
-          <X className="h-4 w-4 cursor-pointer opacity-70 hover:opacity-100 transition-opacity" onClick={onClose} />
         </DialogHeader>
         <div className="mt-4">
           <div className="flex justify-between mb-4">

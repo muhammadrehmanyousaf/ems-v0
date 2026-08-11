@@ -40,6 +40,7 @@ import { CalendarClock, Loader2, Info } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { BookingAPI } from "@/lib/api/bookings";
 import { cn } from "@/lib/utils";
+import { LEGACY_PERIODS, formatSlotRange } from "@/lib/booking/slot-vocabulary";
 
 interface RescheduleBookingDialogProps {
   bookingId: number;
@@ -54,12 +55,21 @@ interface RescheduleBookingDialogProps {
   triggerVariant?: "button" | "link";
 }
 
-// Same three slots the booking funnel + detail page use.
+// SLOTS step 10 — "Same three slots the booking funnel + detail page use" was
+// the comment here, and it was a hope rather than a fact: this copy used an
+// en-dash where the funnel used the word "to". They now come from the one
+// shared definition, so the claim is enforced instead of asserted.
+//
+// Known gap, stated rather than hidden: this dialog still offers only the three
+// legacy periods. A vendor with their own slots ("Dinner event") cannot be
+// rescheduled INTO one from here — it needs the availability engine the booking
+// funnel uses, which is a larger change than a vocabulary fix.
 const TIME_SLOTS: Array<{ value: string; label: string }> = [
   { value: "", label: "Keep current time" },
-  { value: "09:00", label: "Morning · 9 AM – 12 PM" },
-  { value: "14:00", label: "Afternoon · 2 PM – 6 PM" },
-  { value: "18:00", label: "Evening · 6 PM – 11 PM" },
+  ...LEGACY_PERIODS.map((p) => ({
+    value: p.value,
+    label: `${p.label} · ${formatSlotRange(p.startTime, p.endTime)}`,
+  })),
 ];
 
 const fmtMoney = (n: number) =>

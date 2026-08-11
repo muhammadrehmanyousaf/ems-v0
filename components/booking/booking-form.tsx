@@ -78,6 +78,19 @@ export default function BookingForm() {
     available: string[]
     booked: string[]
   } | null>(null)
+  /**
+   * A submit failure the customer can still read after the toast has gone.
+   *
+   * Every error without `alternativeSlots` used to become a transient toast:
+   * the customer had filled six steps, pressed "Pay & confirm", watched a
+   * message appear and vanish, and was left on Review with no explanation and
+   * no next action. The worst case is real — a cart with a second vendor drops
+   * the venue's slotTemplateId, so the venue's own time (10:58) is validated
+   * against the legacy whitelist and rejected with "Invalid booking time.
+   * Allowed slots: 09:00, 14:00, 18:00", which names three times the customer
+   * was never offered.
+   */
+  const [submitError, setSubmitError] = useState<{ message: string; hint?: string } | null>(null)
   const [paymentReturnBookingId, setPaymentReturnBookingId] = useState<number | null>(null)
   const [paymentReturnType, setPaymentReturnType] = useState<string>("down_payment")
   const [bankTransferData, setBankTransferData] = useState<{ bookingId: number; amount: number; paymentType: string; customerEmail?: string; bookingDate?: string } | null>(null)
@@ -309,6 +322,7 @@ export default function BookingForm() {
   }, [events[activeEventIndex]?.formData.selectedVendors])
 
   const handleSubmit = async () => {
+    setSubmitError(null)
     const currentForm: BookingFormData = events.length > 0 ? events[activeEventIndex].formData : formData
     const currentVendorsDetails: Vendor[] = events.length > 0 ? (vendorsDetails[activeEventIndex] || []) : []
 
@@ -584,6 +598,20 @@ export default function BookingForm() {
           booked: Array.isArray(alt?.bookedSlots) ? alt.bookedSlots : [],
         })
       } else {
+        // Persist it on the page. A toast is the wrong container for a failure
+        // that ends a six-step journey and needs the customer to change
+        // something before trying again.
+        const code = body?.data?.code || body?.code
+        const hint =
+          code === "MIXED_SLOT_MODE" || /allowed slots/i.test(String(body?.message || ""))
+            ? "This venue sells its own time slots, which cannot be combined with extra vendors in one booking yet. Book the venue on its own, then add the other vendors as a separate booking."
+            : code === "MULTI_SLOT_TEMPLATE"
+              ? "Pick a single time slot for this booking, then book the other one separately."
+              : undefined
+        setSubmitError({
+          message: body?.message || "Something went wrong while submitting your booking.",
+          hint,
+        })
         toast({
           title: "Submission Failed",
           description: body?.message || "Something went wrong while submitting your booking.",
@@ -1159,6 +1187,27 @@ export default function BookingForm() {
                     activeEventIndex={activeEventIndex}
                     onTabChange={setActiveEventIndex}
                   />
+                </div>
+              )}
+
+              {submitError && (
+                <div
+                  role="alert"
+                  className="mx-4 mt-4 rounded-lg border border-rose-300 bg-rose-50 p-4 sm:mx-5 lg:mx-6"
+                  style={{ position: "relative", zIndex: 2 }}
+                >
+                  <p className="text-sm font-semibold text-rose-900">We couldn&rsquo;t confirm this booking</p>
+                  <p className="mt-1 text-sm text-rose-800">{submitError.message}</p>
+                  {submitError.hint && (
+                    <p className="mt-2 text-sm text-rose-800">{submitError.hint}</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSubmitError(null)}
+                    className="mt-3 rounded-md border border-rose-300 bg-white px-3 py-1.5 text-sm font-medium text-rose-900 hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+                  >
+                    Dismiss and try again
+                  </button>
                 </div>
               )}
 

@@ -25,6 +25,7 @@ import type { PendingPayment } from "@/lib/types";
 import dynamic from "next/dynamic";
 import { toast } from "@/components/ui/use-toast";
 import { getUser } from "@/hooks/getLoggedinUser";
+import { slotText, slotFromBooking } from "@/lib/booking/slot-vocabulary";
 
 import {
   PageContainer,
@@ -50,11 +51,7 @@ const fmtDate = (s: string) =>
 
 const sk = (s: string) => (s || "").toLowerCase();
 
-const TIME_LABELS: Record<string, string> = {
-  "09:00": "9 AM – 12 PM",
-  "14:00": "2 PM – 6 PM",
-  "18:00": "6 PM – 11 PM",
-};
+// SLOTS step 10 — one vocabulary; see lib/booking/slot-vocabulary.
 
 function resolvePaymentAction(booking: any): {
   type: "awaiting_down" | "remaining" | "done" | "none";
@@ -457,7 +454,7 @@ function PaymentsPageContent() {
                       {booking.bookingTime ? (
                         <span className="inline-flex items-center gap-1.5">
                           <Clock className="size-3.5 text-bridal-gold" />
-                          {TIME_LABELS[booking.bookingTime] || booking.bookingTime}
+                          {slotText(slotFromBooking(booking)) || booking.bookingTime}
                         </span>
                       ) : null}
                       {booking.businesses?.length > 0 ? (

@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { usePagedRows, PaginationBar } from "./pagination"
 import { Icon } from "@/components/dashboard/shared/icon"
@@ -27,6 +29,35 @@ export interface Column<T> {
   render?: (row: T, index: number) => React.ReactNode
   headerClassName?: string
   cellClassName?: string
+  /**
+   * The API field this column sorts by. Presence makes the header a button.
+   *
+   * It is the SERVER's field name on purpose. These lists are paged server-side,
+   * so a client-side sort would order the rows on screen and silently misreport
+   * every row beyond them — a vendor sorting 22 events by "who owes most" would
+   * get the largest debt on page one, not the largest debt they have. A column
+   * whose value is computed on the client (a balance derived from two fields)
+   * therefore has no `sortKey` and stays unsorted rather than lying.
+   */
+  sortKey?: string
+  /**
+   * The value to sort this column by, WHEN the table holds the whole set.
+   *
+   * Two list shapes exist here and they need opposite answers:
+   *
+   *   • server-paged (Bookings: 50 rows a page, `filters.totalPages` from the
+   *     API) — the screen must own the sort and refetch. Give the column a
+   *     `sortKey` and the screen an `onSort`.
+   *   • fully loaded (Leads: the endpoint returns up to 500 rows in one call
+   *     and this table pages them locally) — the client already has every row,
+   *     so sorting here is the truth. Give the column a `sortValue` and no
+   *     `onSort` is needed.
+   *
+   * Getting that backwards is how a table sorts the page you are looking at and
+   * misreports everything past it, so the mode is chosen per screen by which of
+   * the two props it supplies rather than guessed.
+   */
+  sortValue?: (row: T) => string | number | null | undefined
 }
 
 export interface DataTableProps<T> {
@@ -49,6 +80,44 @@ export interface DataTableProps<T> {
   /** Rendered in the bulk bar when rows are selected. */
   bulkActions?: (ids: Set<string>) => React.ReactNode
   onRowClick?: (row: T) => void
+  /**
+   * Where this row's record lives. Return null for a row with no detail page.
+   *
+   * Measured on production 2026-08-11: 38 screens use this table and TWO of them
+   * pass `onRowClick`. On the other 36 — Bookings among them — clicking a row
+   * does nothing at all. On Bookings that means the only route into a booking is
+   * the two icon buttons at the far right of an eleven-column row, and the
+   * "balance due" panel further down the page; a booking that is fully PAID has
+   * no link to its own detail page anywhere on the screen, even though
+   * /dashboard/bookings/173 exists and renders in full.
+   *
+   * This is a link, not another click handler, because a click handler is only
+   * half a row:
+   *   • a keyboard user can reach it and activate it
+   *   • middle-click and ⌘-click open it in a new tab, which is how anyone
+   *     works through a list of fourteen people who owe them money
+   *   • a screen reader announces "link, Ahmed Raza & Sanam Ahmed"
+   *
+   * The anchor wraps the first non-action column's content and the row keeps a
+   * whole-row click for the mouse. No stretched-overlay trick: an overlay would
+   * sit on top of the action buttons, and `position: relative` on `<tr>` is not
+   * something to rely on.
+   */
+  rowHref?: (row: T) => string | null | undefined
+  /**
+   * Current sort, and the handler that changes it. Both come from the screen
+   * because the screen owns the query — the table only renders the affordance
+   * and announces the state.
+   *
+   * Measured on /dashboard/bookings 2026-08-11: eleven columns, zero of them
+   * sortable, no `aria-sort` anywhere. The API has accepted
+   * `sortBy` ∈ {createdAt, bookingDate, status, totalAmount, customerName} with
+   * `sortOrder` the whole time; the screen sent `createdAt DESC` and nothing
+   * else, so a vendor could not order their events by date or by amount.
+   */
+  sortBy?: string
+  sortOrder?: "ASC" | "DESC"
+  onSort?: (key: string, order: "ASC" | "DESC") => void
   className?: string
   /**
    * WWL-120/137/153/170/187 — table a11y, unchanged across five modules.
@@ -121,6 +190,29 @@ const alignCls = (a?: Column<any>["align"]) =>
  */
 const ACTION_KEYS = new Set(["actions", "action", "row-actions", "rowActions", "menu"])
 
+/**
+ * The actions column is pinned to the right edge of the horizontal scroller.
+ *
+ * Measured on production 2026-08-11, /dashboard/bookings at a 1425px viewport —
+ * an ordinary laptop, not a narrow window: the table is 1166px of content in a
+ * 1036px container, and the "Booking actions" button's left edge sits at
+ * x = 1467. Off the screen. The row's only controls were reachable only by
+ * discovering that the table scrolls sideways inside the page, and until
+ * `rowHref` the row itself did nothing — so a vendor could read a booking and
+ * had no visible way to act on it at all.
+ *
+ * `bg-card` is load-bearing, not decorative: a transparent pinned cell lets the
+ * columns scroll visibly underneath it. It stays opaque through hover and
+ * selection rather than inheriting the row's tint — inheriting a semi-
+ * transparent tint paints it twice and makes the pinned column darker than the
+ * row it belongs to. The left shadow is what says "there is more to the left of
+ * this", which is the whole reason the column is allowed to cover content.
+ *
+ * On a table that fits, `sticky` has nothing to stick to and this is inert.
+ */
+const STICKY_ACTION_CELL =
+  "sticky right-0 z-[2] bg-card shadow-[-10px_0_10px_-10px_hsl(var(--foreground)/0.18)]"
+
 function defaultCard<T>(columns: Column<T>[], row: T, index: number): React.ReactNode {
   const actions = columns.filter((c) => ACTION_KEYS.has(c.key))
   const fields = columns.filter((c) => !ACTION_KEYS.has(c.key) && c.key !== "select")
@@ -169,6 +261,10 @@ export function DataTable<T>({
   onSelectionChange,
   bulkActions,
   onRowClick,
+  rowHref,
+  sortBy,
+  sortOrder = "DESC",
+  onSort,
   className,
   caption,
   getRowLabel,
@@ -180,11 +276,49 @@ export function DataTable<T>({
   const density = useUiStore((s) => s.density)
   const rowPad = density === "compact" ? "py-2" : "py-3"
   const sel = selectedIds ?? new Set<string>()
+  const router = useRouter()
+
+  /**
+   * The column the row's link goes on: the first one that is not the checkbox
+   * and not an actions menu — the booking, the customer, the receipt number.
+   * That is the cell a person reads to identify the row, so it is the one that
+   * should say where it leads.
+   */
+  const primaryKey = React.useMemo(
+    () => columns.find((c) => c.key !== "select" && !ACTION_KEYS.has(c.key))?.key ?? null,
+    [columns],
+  )
+
+  // ── Sorting ─────────────────────────────────────────────────────────
+  // `onSort` present → the screen owns it (server-paged list, it refetches).
+  // Absent → this table holds every row, so it sorts them itself.
+  const [innerSort, setInnerSort] = React.useState<{ key: string; order: "ASC" | "DESC" } | null>(null)
+  const serverSorted = !!onSort
+  const activeSortKey = serverSorted ? sortBy : innerSort?.key
+  const activeSortOrder: "ASC" | "DESC" = serverSorted ? sortOrder : (innerSort?.order ?? "DESC")
+
+  const sortedData = React.useMemo(() => {
+    if (serverSorted || !innerSort) return data
+    const col = columns.find((c) => c.sortKey === innerSort.key && c.sortValue)
+    if (!col?.sortValue) return data
+    const dir = innerSort.order === "ASC" ? 1 : -1
+    return [...data].sort((a, b) => {
+      const av = col.sortValue!(a)
+      const bv = col.sortValue!(b)
+      // Blanks sink to the bottom in BOTH directions. A lead with no event date
+      // is not "the earliest event" — sorting by date ascending should not put
+      // every unknown at the top and bury the ones that answer the question.
+      if (av == null || av === "") return bv == null || bv === "" ? 0 : 1
+      if (bv == null || bv === "") return -1
+      if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir
+      return String(av).localeCompare(String(bv), "en", { numeric: true }) * dir
+    })
+  }, [serverSorted, innerSort, data, columns])
 
   // ── Paging ──────────────────────────────────────────────────────────
   // Shared with the card lists (holds, quotes) via the same hook, so a vendor
   // does not have to learn paging twice in one product.
-  const paged = usePagedRows(data, { pageSize, pageParam, filterKey: filterQuery })
+  const paged = usePagedRows(sortedData, { pageSize, pageParam, filterKey: filterQuery })
   const { pageRows, total, page, pageCount } = paged
 
   // Select-all covers the rows a person can actually SEE. Selecting 3,331
@@ -329,31 +463,96 @@ export function DataTable<T>({
                     />
                   </th>
                 )}
-                {columns.map((c) => (
-                  <th scope="col"
-                    key={c.key}
-                    style={c.width ? { width: c.width } : undefined}
-                    className={cn(
-                      "px-4 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground",
-                      alignCls(c.align),
-                      c.headerClassName,
-                    )}
-                  >
-                    {c.header}
-                  </th>
-                ))}
+                {columns.map((c) => {
+                  const sortable = !!c.sortKey && (!!onSort || !!c.sortValue)
+                  const active = sortable && activeSortKey === c.sortKey
+                  return (
+                    <th scope="col"
+                      key={c.key}
+                      style={c.width ? { width: c.width } : undefined}
+                      // `aria-sort` is how a screen reader learns the table is
+                      // ordered and by what. Only the active column carries it —
+                      // "none" on every other column is noise, not information.
+                      aria-sort={active ? (activeSortOrder === "ASC" ? "ascending" : "descending") : undefined}
+                      className={cn(
+                        "px-4 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground",
+                        alignCls(c.align),
+                        ACTION_KEYS.has(c.key) && STICKY_ACTION_CELL,
+                        c.headerClassName,
+                      )}
+                    >
+                      {sortable ? (
+                        <button
+                          type="button"
+                          // First click on a new column sorts DESC — newest,
+                          // largest, most owed. That is the question a vendor is
+                          // asking when they click "Amount", and making them
+                          // click twice to get it is a small tax on every use.
+                          onClick={() => {
+                            const next: "ASC" | "DESC" = active && activeSortOrder === "DESC" ? "ASC" : "DESC"
+                            if (onSort) onSort(c.sortKey!, next)
+                            else setInnerSort({ key: c.sortKey!, order: next })
+                          }}
+                          className={cn(
+                            "-mx-1 inline-flex items-center gap-1 rounded px-1 py-0.5 uppercase tracking-wide hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            active && "text-foreground",
+                            c.align === "right" && "flex-row-reverse",
+                          )}
+                        >
+                          {c.header}
+                          <Icon
+                            name={active ? (activeSortOrder === "ASC" ? "ChevronUp" : "ChevronDown") : "ChevronsUpDown"}
+                            size={12}
+                            className={cn(active ? "opacity-100" : "opacity-35")}
+                          />
+                        </button>
+                      ) : (
+                        c.header
+                      )}
+                    </th>
+                  )
+                })}
               </tr>
             </thead>
             <tbody>
               {pageRows.map((row, i) => {
                 const id = getRowId(row)
+                const href = rowHref?.(row) || null
+                const activate = href
+                  ? () => router.push(href)
+                  : onRowClick
+                    ? () => onRowClick(row)
+                    : undefined
                 return (
                   <tr
                     key={id}
-                    onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    onClick={activate}
+                    /**
+                     * A row that responds to a mouse and not to a keyboard is
+                     * not an interactive row, it is a trap. `onRowClick` shipped
+                     * without this for as long as it has existed, so the two
+                     * screens using it (Receipts, Receivables) cannot be
+                     * operated from the keyboard at all. When `rowHref` is given
+                     * the anchor below carries the semantics properly and the
+                     * row needs no tabstop of its own — a second one would just
+                     * make every list twice as long to tab through.
+                     */
+                    {...(activate && !href
+                      ? {
+                          tabIndex: 0,
+                          role: "button" as const,
+                          onKeyDown: (e: React.KeyboardEvent) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault()
+                              activate()
+                            }
+                          },
+                        }
+                      : {})}
                     className={cn(
                       "border-b border-border/60 last:border-0 transition-colors",
-                      onRowClick && "cursor-pointer",
+                      activate && "cursor-pointer",
+                      activate && !href && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       sel.has(id) ? "bg-primary/5" : "hover:bg-muted/40",
                     )}
                   >
@@ -371,14 +570,37 @@ export function DataTable<T>({
                         />
                       </td>
                     )}
-                    {columns.map((c) => (
-                      <td
-                        key={c.key}
-                        className={cn("px-4 text-foreground", rowPad, alignCls(c.align), c.cellClassName)}
-                      >
-                        {c.render ? c.render(row, i) : (row as any)[c.key]}
-                      </td>
-                    ))}
+                    {columns.map((c) => {
+                      const content = c.render ? c.render(row, i) : (row as any)[c.key]
+                      return (
+                        <td
+                          key={c.key}
+                          // An action button inside a clickable row must do its
+                          // own job and nothing else — without this, "Edit
+                          // booking" also navigated to the booking underneath it.
+                          onClick={activate && ACTION_KEYS.has(c.key) ? (e) => e.stopPropagation() : undefined}
+                          className={cn(
+                            "px-4 text-foreground",
+                            rowPad,
+                            alignCls(c.align),
+                            ACTION_KEYS.has(c.key) && STICKY_ACTION_CELL,
+                            c.cellClassName,
+                          )}
+                        >
+                          {href && c.key === primaryKey ? (
+                            <Link
+                              href={href}
+                              aria-label={rowLabel(row, id)}
+                              className="rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              {content}
+                            </Link>
+                          ) : (
+                            content
+                          )}
+                        </td>
+                      )
+                    })}
                   </tr>
                 )
               })}
@@ -396,19 +618,51 @@ export function DataTable<T>({
             bug, so density now applies to the card list too — the setting means
             the same thing on a phone as on a desktop. */}
         <div className={cn("p-3 md:hidden", density === "compact" ? "space-y-1.5" : "space-y-2")}>
-          {pageRows.map((row, i) => (
-            <div
-              key={getRowId(row)}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
-              className={cn(
-                "rounded-lg border border-border bg-card",
-                density === "compact" ? "p-2.5" : "p-3",
-                onRowClick && "cursor-pointer active:bg-muted/50",
-              )}
-            >
-              {renderCard ? renderCard(row, i) : defaultCard(columns, row, i)}
-            </div>
-          ))}
+          {pageRows.map((row, i) => {
+            const href = rowHref?.(row) || null
+            const inner = renderCard ? renderCard(row, i) : defaultCard(columns, row, i)
+            const shell = cn(
+              "block rounded-lg border border-border bg-card",
+              density === "compact" ? "p-2.5" : "p-3",
+            )
+            // The whole card is the link on a phone. There is no hover to hint
+            // with and no room for a separate "open" affordance, so the card has
+            // to be the target — and as an anchor it is reachable by keyboard
+            // and by a screen reader's link list, not just by thumb.
+            if (href) {
+              return (
+                <Link
+                  key={getRowId(row)}
+                  href={href}
+                  aria-label={rowLabel(row, getRowId(row))}
+                  className={cn(shell, "active:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring")}
+                >
+                  {inner}
+                </Link>
+              )
+            }
+            return (
+              <div
+                key={getRowId(row)}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                className={cn(shell, onRowClick && "cursor-pointer active:bg-muted/50")}
+                {...(onRowClick
+                  ? {
+                      tabIndex: 0,
+                      role: "button" as const,
+                      onKeyDown: (e: React.KeyboardEvent) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault()
+                          onRowClick(row)
+                        }
+                      },
+                    }
+                  : {})}
+              >
+                {inner}
+              </div>
+            )
+          })}
         </div>
       </>
     )

@@ -126,7 +126,7 @@ export function ReceivablesRedesignedView() {
   const scopeNote = filtering ? `of ${all.length} total` : undefined
 
   const columns: Column<ReceivablesCustomer>[] = [
-    { key: "customer", header: "Customer", render: (c) => <span className="font-medium">{c.customerName || "—"}</span> },
+    { key: "customer", header: "Customer", sortKey: "customer", sortValue: (c) => c.customerName || "", render: (c) => <span className="font-medium">{c.customerName || "—"}</span> },
     { key: "phone", header: "Phone", cellClassName: "text-muted-foreground", render: (c) => c.customerPhone || "—" },
     /**
      * WWL-138 — a debtor row was a dead end: not clickable, no link to the
@@ -165,10 +165,10 @@ export function ReceivablesRedesignedView() {
         )
       },
     },
-    { key: "open", header: "Open installments", align: "right", cellClassName: "tabular-nums", render: (c) => num(c.installmentsOpen) },
-    { key: "overdue", header: "Days overdue", align: "right", cellClassName: "tabular-nums", render: (c) => num(c.oldestDaysOverdue) },
+    { key: "open", header: "Open installments", align: "right", cellClassName: "tabular-nums", sortKey: "open", sortValue: (c) => num(c.installmentsOpen), render: (c) => num(c.installmentsOpen) },
+    { key: "overdue", header: "Days overdue", align: "right", cellClassName: "tabular-nums", sortKey: "overdue", sortValue: (c) => num(c.oldestDaysOverdue), render: (c) => num(c.oldestDaysOverdue) },
     { key: "bucket", header: "Aging", render: (c) => <StatusPill tone={bucketTone(c.bucket)}>{bucketLabel(c.bucket)}</StatusPill> },
-    { key: "outstanding", header: "Outstanding", align: "right", render: (c) => <MoneyCell amount={num(c.totalOutstanding)} tone="warning" /> },
+    { key: "outstanding", header: "Outstanding", align: "right", sortKey: "outstanding", sortValue: (c) => num(c.totalOutstanding), render: (c) => <MoneyCell amount={num(c.totalOutstanding)} tone="warning" /> },
     {
       key: "actions",
       header: "",

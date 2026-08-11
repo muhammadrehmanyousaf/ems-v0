@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { parseUrduAmount } from "@/lib/urdu-amount";
 import { BookingsAPI } from "@/lib/api/dashboard";
 import { SpacePicker } from "@/components/dashboard/shared/space-picker";
+import { LEGACY_PERIODS } from "@/lib/booking/slot-vocabulary";
 
 const FUNCTIONS = ["Barat", "Walima", "Mehndi", "Milad", "Other"];
 
@@ -51,7 +52,16 @@ export function QuickBookingSheet({
   const parsed = parseUrduAmount(rakam);
 
   // Default allowed booking times when a vendor has no custom slot templates.
-  const DEFAULT_TIMES: [string, string][] = [["Subah", "09:00"], ["Dopahar", "14:00"], ["Shaam", "18:00"]];
+  //
+  // SLOTS step 10 — the TIMES come from the one shared definition so this stops
+  // being an eighth private copy of "which three slots exist". The LABELS stay
+  // Roman Urdu and stay local: this is the vendor's own quick-entry sheet and
+  // "Subah / Dopahar / Shaam" is a deliberate choice for it, not a drifted
+  // translation of Morning / Afternoon / Evening.
+  const URDU_LABEL: Record<string, string> = { "09:00": "Subah", "14:00": "Dopahar", "18:00": "Shaam" };
+  const DEFAULT_TIMES: [string, string][] = LEGACY_PERIODS.map(
+    (p) => [URDU_LABEL[p.value] ?? p.label, p.value] as [string, string],
+  );
 
   // The vendor's real slot templates — a booking's time must match one when
   // slots exist (else the create rejects). No templates → free day/night.
@@ -61,9 +71,15 @@ export function QuickBookingSheet({
     enabled: open,
   });
   const hasSlots = (slots?.length ?? 0) > 0;
-  const chosenTime = hasSlots
-    ? (slots!.find((s) => s.id === slotId) ?? slots![0]).startTime.slice(0, 5)
-    : defTime;
+  // Resolve the slot ONCE and carry its id, not just its clock time. Sending
+  // the time alone put the request on the legacy branch, where it is validated
+  // against the hardcoded ALLOWED_BOOKING_SLOTS = 09:00/14:00/18:00 — so a
+  // vendor whose own slots start at 10:58 / 12:00 / 19:00 got
+  // "Invalid booking time. Allowed slots: 09:00, 14:00, 18:00" and could not
+  // book their own venue from their own calendar. slotTemplateId is what
+  // switches the server to the slot-template branch that knows those times.
+  const chosenSlot = hasSlots ? (slots!.find((s) => s.id === slotId) ?? slots![0]) : null;
+  const chosenTime = chosenSlot ? chosenSlot.startTime.slice(0, 5) : defTime;
 
   const reset = () => { setName(""); setPhone(""); setRakam(""); setFn("Barat"); setDefTime("18:00"); setSlotId(null); setSpaceId(""); };
 
@@ -84,6 +100,9 @@ export function QuickBookingSheet({
           // WWL-050 / WWL-100 — record the hall when the venue has more than
           // one. A single-space venue needs no pick; the server assigns it.
           ...(spaceId ? { subVenueId: Number(spaceId) } : {}),
+          // Without this the server cannot tell that 10:58 is a real slot at
+          // this venue and falls back to the three-value whitelist.
+          ...(chosenSlot ? { slotTemplateId: chosenSlot.id } : {}),
         }],
         eventType: fn,
         notes: `${fn} · ${chosenTime}`,

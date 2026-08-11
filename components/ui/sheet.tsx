@@ -64,11 +64,30 @@ const SheetContent = React.forwardRef<
       className={cn(sheetVariants({ side }), className)}
       {...props}
     >
+      {/* The close sits in a zero-height sticky strip rendered BEFORE the
+          children, not absolutely inside them.
+
+          Why: two sheets put `overflow-y-auto` on SheetContent itself, which
+          makes SheetContent the scroll container — and an `absolute` child of
+          a scroll container scrolls with its content. Measured on production,
+          Calendar's quick-booking sheet at 360x600: scrolling down to reach
+          "Save booking" put the close at top -127px, so the only way out of
+          the sheet was off-screen. Sticky pins it to the top of the scroll
+          area instead; in a sheet that does not scroll it renders identically.
+
+          Rendering it first also makes it the first focusable element, which
+          is what the ARIA dialog pattern expects. The hit area is 32px so it
+          clears WCAG 2.2 SC 2.5.8 (24x24) — the bare 16px icon did not. */}
+      <div className="sticky top-0 z-20 h-0">
+        <SheetPrimitive.Close
+          aria-label="Close"
+          className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-md opacity-70 ring-offset-background transition-opacity hover:bg-accent hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary"
+        >
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </SheetPrimitive.Close>
+      </div>
       {children}
-      <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Close</span>
-      </SheetPrimitive.Close>
     </SheetPrimitive.Content>
   </SheetPortal>
 ))

@@ -9,7 +9,6 @@ import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useRecordBusinessId } from "@/hooks/use-record-business-id"
-import Link from "next/link"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { StaffAPI, type StaffMember } from "@/lib/api/staff"
 import { BusinessesAPI } from "@/lib/api/dashboard"
@@ -103,19 +102,25 @@ export function StaffRedesignedView() {
       header: "Name",
       // The name opens the member's own page — what they are still owed and
       // every shift they worked. Without this the route is unreachable.
+      sortKey: "name",
+      sortValue: (m) => m.fullName || "",
+      // The <Link> that was here is the table's `rowHref` now — same anchor, same
+      // cell, plus the whole row. Joining them was not an option: an anchor
+      // inside an anchor is invalid and the browser drops the inner one, so a
+      // row link added on top would have killed this working one.
       render: (m) => (
-        <Link href={`/dashboard/staff/${m.id}`} className="flex items-center gap-2.5 group">
+        <span className="flex items-center gap-2.5">
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{initials(m.fullName)}</span>
-          <span className="font-medium group-hover:text-primary group-hover:underline">{m.fullName}</span>
-        </Link>
+          <span className="font-medium">{m.fullName}</span>
+        </span>
       ),
     },
-    { key: "role", header: "Role", cellClassName: "text-muted-foreground", render: (m) => cap(m.role) },
+    { key: "role", header: "Role", cellClassName: "text-muted-foreground", sortKey: "role", sortValue: (m) => m.role || "", render: (m) => cap(m.role) },
     { key: "space", header: "Space", cellClassName: "text-muted-foreground", render: (m) => m.defaultSubVenue?.name || "—" },
     { key: "type", header: "Type", render: (m) => <StatusPill tone="neutral">{cap(m.employmentType)}</StatusPill> },
     { key: "phone", header: "Phone", cellClassName: "text-muted-foreground", render: (m) => m.phoneNumber || "—" },
-    { key: "rate", header: "Rate", align: "right", cellClassName: "tabular-nums", render: (m) => rateLabel(m) },
-    { key: "status", header: "Status", render: (m) => <StatusPill tone={m.isActive ? "success" : "neutral"}>{m.isActive ? "Active" : "Inactive"}</StatusPill> },
+    { key: "rate", header: "Rate", align: "right", cellClassName: "tabular-nums", sortKey: "rate", sortValue: (m) => rateLabel(m), render: (m) => rateLabel(m) },
+    { key: "status", header: "Status", sortKey: "status", sortValue: (m) => (m.isActive ? "Active" : "Inactive"), render: (m) => <StatusPill tone={m.isActive ? "success" : "neutral"}>{m.isActive ? "Active" : "Inactive"}</StatusPill> },
     {
       key: "actions", header: "", align: "right",
       render: (m) => (
@@ -186,6 +191,16 @@ export function StaffRedesignedView() {
         columns={columns}
         data={members}
         getRowId={(m) => String(m.id)}
+        /**
+         * The row opens the record.
+         *
+         * Swept across the portal: 38 screens use this table, 4 passed row
+         * navigation to it. The destination here already existed and was already
+         * linked from inside the row — so this is not a new door, it is the
+         * whole row becoming the target instead of one small control at the end
+         * of it.
+         */
+        rowHref={(m) => `/dashboard/staff/${m.id}`}
         loading={isLoading}
         error={isError ? "Couldn't load staff." : null}
         onRetry={() => refetch()}

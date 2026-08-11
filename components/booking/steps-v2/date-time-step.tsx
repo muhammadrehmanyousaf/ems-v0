@@ -15,6 +15,8 @@ import { BusinessAvailabilityAPI, type SlotAvailabilityRow } from "@/lib/api/bus
 import { ServiceLocationPicker } from "@/components/booking/service-location-picker"
 // F-2 — canonical sub-venue (venue-hierarchy) picker for the customer flow.
 import { venueSpacesApi, type SubVenueNode } from "@/lib/api/venueSpaces"
+// SLOTS step 10 — the single slot vocabulary.
+import { LEGACY_PERIODS, formatSlotRange } from "@/lib/booking/slot-vocabulary"
 
 interface Props {
   formData: BookingFormData
@@ -36,14 +38,24 @@ type DayAvailability = {
   blockReason?: string
 }
 
-// Issue #46 — shift hints use a plain "X to Y" format (per user
-// preference) instead of the en-dash version, which Pakistani vendors
-// were reading as a different symbol on some screens.
-const PERIODS = [
-  { value: "09:00", label: "Morning",   hint: "9 AM to 12 PM",  icon: Sun },
-  { value: "14:00", label: "Afternoon", hint: "2 PM to 6 PM",   icon: Sunset },
-  { value: "18:00", label: "Evening",   hint: "6 PM to 11 PM",  icon: Moon },
-] as const
+// SLOTS step 10 — the names and hours come from the one shared definition
+// (lib/booking/slot-vocabulary). Only the icon is local, because an icon is
+// presentation and does not belong in a module the success screens import.
+//
+// Issue #46 — hints use a plain "X to Y" format rather than an en-dash, which
+// Pakistani vendors were reading as a different symbol. That rule now lives in
+// formatSlotRange and applies everywhere, not just here.
+const PERIOD_ICON: Record<string, typeof Sun> = {
+  "09:00": Sun,
+  "14:00": Sunset,
+  "18:00": Moon,
+}
+const PERIODS = LEGACY_PERIODS.map((p) => ({
+  value: p.value,
+  label: p.label,
+  hint: formatSlotRange(p.startTime, p.endTime),
+  icon: PERIOD_ICON[p.value] ?? Sun,
+}))
 
 // Flag-gated rollout of the vendor-configured slot engine. Default OFF =
 // the fixed Morning/Afternoon/Evening behaviour below, byte-for-byte unchanged.
@@ -252,7 +264,14 @@ export default function DateTimeStep({
     lastSpace.current = selectedSubVenueId
     setTemplateDays({})
     setHasTemplates(false)
-    updateFormData((prev) => ({ ...(prev as any), slotTemplateId: null, timeOfDay: "" }))
+    updateFormData((prev) => ({
+      ...(prev as any),
+      slotTemplateId: null,
+      slotLabel: null,
+      slotStartTime: null,
+      slotEndTime: null,
+      timeOfDay: "",
+    }))
   }, [selectedSubVenueId, updateFormData])
   // Drive the UI from templates only when the vendor actually has some.
   const useTemplates = SLOT_TEMPLATES_ENABLED && hasTemplates
@@ -315,6 +334,13 @@ export default function DateTimeStep({
       ...prev,
       timeSlot: period,
       slotTemplateId: null,
+      // Cleared with the id, not merely left behind: a customer who picks
+      // "Dinner event" and then switches to the plain Evening period would
+      // otherwise carry the vendor's label onto a booking that is not it, and
+      // every later screen would confidently show the wrong slot name.
+      slotLabel: null,
+      slotStartTime: null,
+      slotEndTime: null,
       bookingDate: formatBookingDate(selectedDate, period),
     }))
   }
@@ -329,6 +355,12 @@ export default function DateTimeStep({
       ...prev,
       timeSlot: t,
       slotTemplateId: row.slotTemplateId,
+      // SLOTS step 10 — carry the slot's own name and hours forward. Without
+      // these, every screen after this one had only "19:00" to work from and
+      // could not name the "Dinner event" the customer just clicked.
+      slotLabel: row.label,
+      slotStartTime: row.startTime,
+      slotEndTime: row.endTime,
       bookingDate: formatBookingDate(selectedDate, t),
     }))
   }

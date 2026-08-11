@@ -15,6 +15,8 @@ import { venueSpacesApi, type SubVenueNode, type SlotTemplate } from "@/lib/api/
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 
 function readErr(e: unknown, fallback: string): string {
@@ -57,7 +59,10 @@ export function SpaceSlotsEditor(): React.ReactElement | null {
 
   async function loadSlots(id: number): Promise<void> {
     setSpaceId(id);
-    const r = await venueSpacesApi.listSlots(bid, id);
+    // includeInactive: this is the editor, so hidden slots must stay visible
+    // here — otherwise switching one off would remove the control that turns
+    // it back on.
+    const r = await venueSpacesApi.listSlots(bid, id, true);
     setScope(r.scope);
     setSlots(r.slots);
   }
@@ -104,16 +109,39 @@ export function SpaceSlotsEditor(): React.ReactElement | null {
               <span className="font-medium">Slots for this space</span>
               <Badge variant={scope === "SPACE" ? "default" : "secondary"}>{scope === "SPACE" ? "own slots" : "using business slots"}</Badge>
             </div>
+            {/* `isActive` has been on the model since BK-008 and no screen ever
+                exposed it, so a vendor's only way to stop selling a slot was to
+                delete it — which used to be a hard destroy on a row their sold
+                bookings point at. Off keeps the slot and its history and takes
+                it out of every customer picker: availability, the bulk feed and
+                listTemplates all filter on isActive. */}
             {slots.map((s) => (
-              <div key={s.id} className="flex items-center gap-2 border-t pt-1 text-xs">
+              <div key={s.id} className={cn("flex items-center gap-2 border-t pt-1 text-xs", !s.isActive && "opacity-60")}>
                 <span className="font-medium">{s.label}</span>
                 <span className="text-muted-foreground">
                   {String(s.startTime).slice(0, 5)}–{String(s.endTime).slice(0, 5)}
                   {" · "}{s.capacity} booking{s.capacity === 1 ? "" : "s"} at once
                   {s.unitGuestCapacity ? ` · ${s.unitGuestCapacity} guests each` : ""}
                 </span>
+                {!s.isActive && (
+                  <Badge variant="secondary" className="shrink-0">hidden</Badge>
+                )}
                 {scope === "SPACE" && (
-                  <Button size="sm" variant="ghost" className="ml-auto text-destructive" onClick={() => void guard(async () => { await venueSpacesApi.deleteSlot(s.id); await loadSlots(spaceId); })} disabled={busy}>remove</Button>
+                  <div className="ml-auto flex items-center gap-2">
+                    <label className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap">
+                      <Switch
+                        checked={s.isActive}
+                        disabled={busy}
+                        aria-label={`${s.isActive ? "Hide" : "Show"} ${s.label} to customers`}
+                        onCheckedChange={(next) => void guard(async () => {
+                          await venueSpacesApi.updateSlot(s.id, { isActive: next });
+                          await loadSlots(spaceId);
+                        })}
+                      />
+                      <span className="text-muted-foreground">{s.isActive ? "Live" : "Hidden"}</span>
+                    </label>
+                    <Button size="sm" variant="ghost" className="text-destructive" onClick={() => void guard(async () => { await venueSpacesApi.deleteSlot(s.id); await loadSlots(spaceId); })} disabled={busy}>remove</Button>
+                  </div>
                 )}
               </div>
             ))}

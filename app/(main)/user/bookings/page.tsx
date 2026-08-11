@@ -47,6 +47,7 @@ import {
 } from "@/components/user-dashboard";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { slotText, slotFromBooking } from "@/lib/booking/slot-vocabulary";
 
 interface BookingDetail {
   id: number;
@@ -138,11 +139,8 @@ const PAYMENT_CONFIG: Record<string, { label: string; tone: string }> = {
   },
 };
 
-const TIME_LABELS: Record<string, string> = {
-  "09:00": "9 AM – 12 PM",
-  "14:00": "2 PM – 6 PM",
-  "18:00": "6 PM – 11 PM",
-};
+// SLOTS step 10 — one vocabulary. This showed hours with no name because it
+// had no name to show for anything but the three legacy periods.
 
 const fmt = (n: number) => `Rs. ${Number(n || 0).toLocaleString()}`;
 const fmtDate = (s: string) =>
@@ -524,7 +522,7 @@ export default function BookingsPage() {
                     </span>
                     <span className="inline-flex items-center gap-1.5">
                       <Clock className="size-3.5 text-bridal-gold" />
-                      {TIME_LABELS[booking.bookingTime] || booking.bookingTime}
+                      {slotText(slotFromBooking(booking)) || booking.bookingTime}
                     </span>
                     {primaryVendor?.business?.city && (
                       <span className="inline-flex items-center gap-1.5">

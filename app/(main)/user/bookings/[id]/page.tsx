@@ -62,6 +62,7 @@ import { PostponeBookingDialog } from "@/components/bookings/postpone-booking-di
 import { RescheduleBookingDialog } from "@/components/bookings/reschedule-booking-dialog";
 // EPIC 5 · §3 — customer "Request a refund".
 import { RefundRequestCard } from "@/components/bookings/refund-request-card";
+import { slotText, slotFromBooking } from "@/lib/booking/slot-vocabulary";
 
 interface BookingDetail {
   id: number;
@@ -178,11 +179,9 @@ const PAYMENT_CONFIG: Record<string, { label: string; tone: string }> = {
   },
 };
 
-const TIME_LABELS: Record<string, string> = {
-  "09:00": "Morning · 9 AM – 12 PM",
-  "14:00": "Afternoon · 2 PM – 6 PM",
-  "18:00": "Evening · 6 PM – 11 PM",
-};
+// SLOTS step 10 — one vocabulary. This map could not name a vendor's own
+// slot, so a booking made against "Dinner event" read as a bare "19:00" on
+// the customer's own booking page.
 
 const fmt = (n: number | string | null | undefined) =>
   `Rs. ${Number(n || 0).toLocaleString()}`;
@@ -596,7 +595,7 @@ export default function BookingDetailPage() {
                     Time slot
                   </p>
                   <p className="font-display italic text-[16px] text-foreground mt-1">
-                    {TIME_LABELS[booking.bookingTime] || booking.bookingTime}
+                    {slotText(slotFromBooking(booking)) || booking.bookingTime}
                   </p>
                 </div>
               </div>

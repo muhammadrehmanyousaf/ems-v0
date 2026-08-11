@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
 import { useFetchData } from "@/hooks/use-fetch-data"
 import { VendorHoldsAPI, type VendorHold } from "@/lib/api/vendorHolds"
@@ -21,6 +22,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { OfflineBookingDialog } from "@/components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog"
 import { CalendarFeedCard } from "@/components/dashboard/calendar-feed-card"
+import { BlockDateDialog } from "./block-date-dialog"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -46,6 +48,8 @@ export function CalendarRedesignedView() {
   const [cursor, setCursor] = React.useState(new Date(now.getFullYear(), now.getMonth(), 1))
   const [selected, setSelected] = React.useState<string>(ymd(now))
   const [createOpen, setCreateOpen] = React.useState(false)
+  /** YYYY-MM-DD of the cell whose block icon was pressed, or null. */
+  const [blockFor, setBlockFor] = React.useState<string | null>(null)
 
   /**
    * WWL-103 / WWL-101 — this asked for `bucket: "active"`, which the API
@@ -187,16 +191,63 @@ export function CalendarRedesignedView() {
               const dayHolds = holdsByDay.get(key) ?? []
               const isToday = key === todayKey
               const isSelected = key === selected
+              const dayLabel = d.toLocaleDateString("en-PK", { weekday: "long", day: "numeric", month: "long" })
               return (
-                <button
+                /* The cell used to be one <button>, which is why it could only
+                   ever do one thing: select the day. A vendor looking at the
+                   date they want to sell or close had to leave for another
+                   screen to act on it. It is now a container with the select
+                   target underneath and two real buttons on top — nested
+                   buttons are invalid HTML, so these are siblings, and the
+                   content layer is pointer-events-none so a click anywhere
+                   else in the cell still falls through to "show this day". */
+                <div
                   key={i}
-                  onClick={() => setSelected(key)}
                   className={cn(
-                    "min-h-[84px] border-b border-r border-border/60 p-1.5 text-left align-top transition-colors last:border-r-0",
+                    "group relative min-h-[84px] border-b border-r border-border/60 align-top last:border-r-0",
                     !inMonth && "bg-muted/30 text-muted-foreground",
-                    isSelected ? "bg-primary/5 ring-1 ring-inset ring-primary/40" : "hover:bg-muted/40",
+                    isSelected && "bg-primary/5 ring-1 ring-inset ring-primary/40",
                   )}
                 >
+                  <button
+                    type="button"
+                    onClick={() => setSelected(key)}
+                    aria-pressed={isSelected}
+                    aria-label={`${dayLabel} — ${events.length} booking${events.length === 1 ? "" : "s"}${dayHolds.length ? `, ${dayHolds.length} held` : ""}. Show this day.`}
+                    className={cn(
+                      "absolute inset-0 z-0 h-full w-full transition-colors",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                      !isSelected && "hover:bg-muted/40",
+                    )}
+                  />
+
+                  {/* Actions. Desktop-only: at 360px a cell is ~45px wide and
+                      two 24px targets beside the date do not fit. Phones keep
+                      the availability strip and the day agenda's Add button,
+                      which are already thumb-sized. Shown on focus-within too,
+                      so they are reachable by keyboard, not hover alone. */}
+                  <div className="pointer-events-none absolute inset-x-1 top-1 z-20 hidden items-start justify-between md:flex">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setBlockFor(key) }}
+                      aria-label={`Block ${dayLabel}`}
+                      title="Block this date"
+                      className="pointer-events-auto grid h-6 w-6 translate-x-7 place-items-center rounded-md bg-background/90 text-muted-foreground opacity-0 shadow-sm transition-opacity hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100 group-focus-within:opacity-100"
+                    >
+                      <Icon name="Ban" size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setSelected(key); setCreateOpen(true) }}
+                      aria-label={`Add a booking on ${dayLabel}`}
+                      title="Add a booking"
+                      className="pointer-events-auto grid h-6 w-6 place-items-center rounded-md bg-background/90 text-muted-foreground opacity-0 shadow-sm transition-opacity hover:bg-primary/10 hover:text-primary focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100 group-focus-within:opacity-100"
+                    >
+                      <Icon name="Plus" size={14} />
+                    </button>
+                  </div>
+
+                  <div className="pointer-events-none relative z-10 p-1.5">
                   <div className="flex items-center justify-between">
                     <span
                       className={cn(
@@ -207,7 +258,11 @@ export function CalendarRedesignedView() {
                     >
                       {d.getDate()}
                     </span>
-                    {events.length > 0 && <span className="text-[10px] font-medium text-muted-foreground">{events.length}</span>}
+                    {events.length > 0 && (
+                      <span className="text-[10px] font-medium text-muted-foreground transition-opacity md:group-hover:opacity-0 md:group-focus-within:opacity-0">
+                        {events.length}
+                      </span>
+                    )}
                   </div>
                   <div className="mt-1 space-y-0.5">
                     {events.slice(0, 2).map((b) => (
@@ -229,7 +284,8 @@ export function CalendarRedesignedView() {
                       </div>
                     ))}
                   </div>
-                </button>
+                  </div>
+                </div>
               )
             })}
           </div>
@@ -251,16 +307,61 @@ export function CalendarRedesignedView() {
             <EmptyState className="border-0 bg-transparent py-8" icon="Calendar" title="Nothing scheduled" description="No events on this day." />
           ) : (
             <div className="space-y-2">
+              {/* The agenda used to be a <div>: a vendor could SEE the booking
+                  that owns their evening and had no way to open it. Every row
+                  is the booking's front door now — whole row is the target, so
+                  it works with a thumb, and the chevron says so before the
+                  hover does. */}
               {selectedBookings.map((b) => (
-                <div key={b.id} className="rounded-lg border border-border p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">{b.customerName || "Booking"}</div>
-                      <div className="text-xs text-muted-foreground">{b.bookingTime || "All day"}</div>
+                <div
+                  key={b.id}
+                  className="group overflow-hidden rounded-lg border border-border transition-colors focus-within:border-primary/40 hover:border-primary/40"
+                >
+                  <Link
+                    href={`/dashboard/bookings/${b.id}`}
+                    aria-label={`Open booking — ${b.customerName || "Booking"}, ${b.bookingTime || "all day"}, ${b.status}`}
+                    className={cn(
+                      "block p-3 transition-colors hover:bg-accent/40",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium">{b.customerName || "Booking"}</div>
+                        <div className="text-xs text-muted-foreground">{b.bookingTime || "All day"}</div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <MoneyCell amount={num(b.totalAmount)} className="text-sm font-medium" />
+                        <Icon
+                          name="ChevronRight"
+                          size={16}
+                          className="text-muted-foreground/60 transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
+                        />
+                      </div>
                     </div>
-                    <MoneyCell amount={num(b.totalAmount)} className="text-sm font-medium" />
+                    <div className="mt-2"><StatusPill tone={tone(b.status)}>{b.status}</StatusPill></div>
+                  </Link>
+
+                  {/* Named actions under the row, not only a whole-row link.
+                      A link that reveals itself on hover is invisible on the
+                      phone most of these vendors work from, and "the card is
+                      clickable" is a convention they have no reason to know.
+                      These are siblings of the Link — nesting an <a> inside an
+                      <a> is invalid and the inner one stops being clickable. */}
+                  <div className="flex divide-x divide-border border-t border-border bg-muted/20 text-xs">
+                    <Link
+                      href={`/dashboard/bookings/${b.id}`}
+                      className="flex flex-1 items-center justify-center gap-1.5 py-2 font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                    >
+                      <Icon name="FileText" size={13} /> Open booking
+                    </Link>
+                    <Link
+                      href={`/dashboard/bookings/${b.id}/financials`}
+                      className="flex flex-1 items-center justify-center gap-1.5 py-2 font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                    >
+                      <Icon name="Wallet" size={13} /> Payments
+                    </Link>
                   </div>
-                  <div className="mt-2"><StatusPill tone={tone(b.status)}>{b.status}</StatusPill></div>
                 </div>
               ))}
             </div>
@@ -279,6 +380,15 @@ export function CalendarRedesignedView() {
         onOpenChange={setCreateOpen}
         onSuccess={() => refetch()}
         initialDate={parseYmd(selected) ?? undefined}
+      />
+
+      <BlockDateDialog
+        open={blockFor !== null}
+        onOpenChange={(v) => { if (!v) setBlockFor(null) }}
+        date={blockFor ?? selected}
+        activeBusinessId={activeBusinessId}
+        bookedCount={(byDay.get(blockFor ?? "") ?? []).length}
+        onBlocked={() => refetch()}
       />
     </div>
   )
