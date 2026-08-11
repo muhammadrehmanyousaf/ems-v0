@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { usePagedRows, PaginationBar } from "./pagination"
 import { Icon } from "@/components/dashboard/shared/icon"
@@ -49,6 +51,30 @@ export interface DataTableProps<T> {
   /** Rendered in the bulk bar when rows are selected. */
   bulkActions?: (ids: Set<string>) => React.ReactNode
   onRowClick?: (row: T) => void
+  /**
+   * Where this row's record lives. Return null for a row with no detail page.
+   *
+   * Measured on production 2026-08-11: 38 screens use this table and TWO of them
+   * pass `onRowClick`. On the other 36 — Bookings among them — clicking a row
+   * does nothing at all. On Bookings that means the only route into a booking is
+   * the two icon buttons at the far right of an eleven-column row, and the
+   * "balance due" panel further down the page; a booking that is fully PAID has
+   * no link to its own detail page anywhere on the screen, even though
+   * /dashboard/bookings/173 exists and renders in full.
+   *
+   * This is a link, not another click handler, because a click handler is only
+   * half a row:
+   *   • a keyboard user can reach it and activate it
+   *   • middle-click and ⌘-click open it in a new tab, which is how anyone
+   *     works through a list of fourteen people who owe them money
+   *   • a screen reader announces "link, Ahmed Raza & Sanam Ahmed"
+   *
+   * The anchor wraps the first non-action column's content and the row keeps a
+   * whole-row click for the mouse. No stretched-overlay trick: an overlay would
+   * sit on top of the action buttons, and `position: relative` on `<tr>` is not
+   * something to rely on.
+   */
+  rowHref?: (row: T) => string | null | undefined
   className?: string
   /**
    * WWL-120/137/153/170/187 — table a11y, unchanged across five modules.
@@ -169,6 +195,7 @@ export function DataTable<T>({
   onSelectionChange,
   bulkActions,
   onRowClick,
+  rowHref,
   className,
   caption,
   getRowLabel,
@@ -180,6 +207,18 @@ export function DataTable<T>({
   const density = useUiStore((s) => s.density)
   const rowPad = density === "compact" ? "py-2" : "py-3"
   const sel = selectedIds ?? new Set<string>()
+  const router = useRouter()
+
+  /**
+   * The column the row's link goes on: the first one that is not the checkbox
+   * and not an actions menu — the booking, the customer, the receipt number.
+   * That is the cell a person reads to identify the row, so it is the one that
+   * should say where it leads.
+   */
+  const primaryKey = React.useMemo(
+    () => columns.find((c) => c.key !== "select" && !ACTION_KEYS.has(c.key))?.key ?? null,
+    [columns],
+  )
 
   // ── Paging ──────────────────────────────────────────────────────────
   // Shared with the card lists (holds, quotes) via the same hook, so a vendor
@@ -347,13 +386,42 @@ export function DataTable<T>({
             <tbody>
               {pageRows.map((row, i) => {
                 const id = getRowId(row)
+                const href = rowHref?.(row) || null
+                const activate = href
+                  ? () => router.push(href)
+                  : onRowClick
+                    ? () => onRowClick(row)
+                    : undefined
                 return (
                   <tr
                     key={id}
-                    onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    onClick={activate}
+                    /**
+                     * A row that responds to a mouse and not to a keyboard is
+                     * not an interactive row, it is a trap. `onRowClick` shipped
+                     * without this for as long as it has existed, so the two
+                     * screens using it (Receipts, Receivables) cannot be
+                     * operated from the keyboard at all. When `rowHref` is given
+                     * the anchor below carries the semantics properly and the
+                     * row needs no tabstop of its own — a second one would just
+                     * make every list twice as long to tab through.
+                     */
+                    {...(activate && !href
+                      ? {
+                          tabIndex: 0,
+                          role: "button" as const,
+                          onKeyDown: (e: React.KeyboardEvent) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault()
+                              activate()
+                            }
+                          },
+                        }
+                      : {})}
                     className={cn(
                       "border-b border-border/60 last:border-0 transition-colors",
-                      onRowClick && "cursor-pointer",
+                      activate && "cursor-pointer",
+                      activate && !href && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       sel.has(id) ? "bg-primary/5" : "hover:bg-muted/40",
                     )}
                   >
@@ -371,14 +439,31 @@ export function DataTable<T>({
                         />
                       </td>
                     )}
-                    {columns.map((c) => (
-                      <td
-                        key={c.key}
-                        className={cn("px-4 text-foreground", rowPad, alignCls(c.align), c.cellClassName)}
-                      >
-                        {c.render ? c.render(row, i) : (row as any)[c.key]}
-                      </td>
-                    ))}
+                    {columns.map((c) => {
+                      const content = c.render ? c.render(row, i) : (row as any)[c.key]
+                      return (
+                        <td
+                          key={c.key}
+                          // An action button inside a clickable row must do its
+                          // own job and nothing else — without this, "Edit
+                          // booking" also navigated to the booking underneath it.
+                          onClick={activate && ACTION_KEYS.has(c.key) ? (e) => e.stopPropagation() : undefined}
+                          className={cn("px-4 text-foreground", rowPad, alignCls(c.align), c.cellClassName)}
+                        >
+                          {href && c.key === primaryKey ? (
+                            <Link
+                              href={href}
+                              aria-label={rowLabel(row, id)}
+                              className="rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              {content}
+                            </Link>
+                          ) : (
+                            content
+                          )}
+                        </td>
+                      )
+                    })}
                   </tr>
                 )
               })}
@@ -396,19 +481,51 @@ export function DataTable<T>({
             bug, so density now applies to the card list too — the setting means
             the same thing on a phone as on a desktop. */}
         <div className={cn("p-3 md:hidden", density === "compact" ? "space-y-1.5" : "space-y-2")}>
-          {pageRows.map((row, i) => (
-            <div
-              key={getRowId(row)}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
-              className={cn(
-                "rounded-lg border border-border bg-card",
-                density === "compact" ? "p-2.5" : "p-3",
-                onRowClick && "cursor-pointer active:bg-muted/50",
-              )}
-            >
-              {renderCard ? renderCard(row, i) : defaultCard(columns, row, i)}
-            </div>
-          ))}
+          {pageRows.map((row, i) => {
+            const href = rowHref?.(row) || null
+            const inner = renderCard ? renderCard(row, i) : defaultCard(columns, row, i)
+            const shell = cn(
+              "block rounded-lg border border-border bg-card",
+              density === "compact" ? "p-2.5" : "p-3",
+            )
+            // The whole card is the link on a phone. There is no hover to hint
+            // with and no room for a separate "open" affordance, so the card has
+            // to be the target — and as an anchor it is reachable by keyboard
+            // and by a screen reader's link list, not just by thumb.
+            if (href) {
+              return (
+                <Link
+                  key={getRowId(row)}
+                  href={href}
+                  aria-label={rowLabel(row, getRowId(row))}
+                  className={cn(shell, "active:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring")}
+                >
+                  {inner}
+                </Link>
+              )
+            }
+            return (
+              <div
+                key={getRowId(row)}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                className={cn(shell, onRowClick && "cursor-pointer active:bg-muted/50")}
+                {...(onRowClick
+                  ? {
+                      tabIndex: 0,
+                      role: "button" as const,
+                      onKeyDown: (e: React.KeyboardEvent) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault()
+                          onRowClick(row)
+                        }
+                      },
+                    }
+                  : {})}
+              >
+                {inner}
+              </div>
+            )
+          })}
         </div>
       </>
     )

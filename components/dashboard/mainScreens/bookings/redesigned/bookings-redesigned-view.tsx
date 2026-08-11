@@ -9,7 +9,7 @@
  */
 
 import * as React from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { useFetchData } from "@/hooks/use-fetch-data"
 import type { BookingData, BookingStatus } from "@/lib/dashboard-types"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
@@ -79,6 +79,34 @@ export function BookingsRedesignedView() {
     isBucket(urlBucket) ? urlBucket : "active",
   )
   const [page, setPage] = React.useState(1)
+  const router = useRouter()
+  // `usePathname` is typed `string | null`; falling back to this screen's own
+  // route keeps the filter shareable even in the null case rather than throwing.
+  const pathname = usePathname() ?? "/dashboard/bookings"
+
+  /**
+   * ...and write it back, which the toggle never did.
+   *
+   * The URL only SEEDED the bucket — "the in-page toggle still owns it
+   * afterwards" — so switching to Cancelled changed 9 rows to 3 and left the
+   * address bar reading /dashboard/bookings. Reload and you are silently back on
+   * Active looking at a different set of bookings; copy the link to a colleague
+   * and they get Active too. The three cancelled bookings this filter exists to
+   * surface were reachable but not RE-reachable.
+   *
+   * `replace`, not `push`: a filter is not a destination, and four taps through
+   * the group should not cost four presses of Back to leave the page. `active`
+   * drops the parameter entirely rather than writing the default into the URL.
+   */
+  const applyBucket = React.useCallback((next: BucketValue) => {
+    setBucket(next)
+    setPage(1)
+    const params = new URLSearchParams(searchParams?.toString() ?? "")
+    if (next === "active") params.delete("bucket")
+    else params.set("bucket", next)
+    const qs = params.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+  }, [router, pathname, searchParams])
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
   const [createOpen, setCreateOpen] = React.useState(false)
 
@@ -187,6 +215,17 @@ export function BookingsRedesignedView() {
         columns={columns}
         data={bookings}
         getRowId={(b) => String(b.id)}
+        /**
+         * Clicking a booking did nothing. Measured on production: the row has no
+         * link, no handler and `cursor: auto`, so the only way into a booking
+         * was the two icon buttons at the far right of an eleven-column row that
+         * scrolls sideways at laptop width — and the "balance due" panel lower
+         * down the page, which only lists bookings that still owe money. A
+         * fully-PAID booking had no route to its own detail page from this
+         * screen at all, while /dashboard/bookings/173 has existed and rendered
+         * in full the whole time.
+         */
+        rowHref={(b) => `/dashboard/bookings/${b.id}`}
         loading={isLoading}
         error={isError ? "Couldn't load bookings." : null}
         onRetry={() => refetch()}
@@ -222,7 +261,7 @@ export function BookingsRedesignedView() {
                   key={b.value}
                   type="button"
                   aria-pressed={bucket === b.value}
-                  onClick={() => { setBucket(b.value); setPage(1) }}
+                  onClick={() => applyBucket(b.value)}
                   className={cn(
                     "h-8 rounded px-3 text-sm transition-colors",
                     bucket === b.value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent",
