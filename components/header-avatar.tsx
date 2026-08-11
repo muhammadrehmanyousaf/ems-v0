@@ -74,7 +74,25 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
       )
     : false;
 
-  if (loading) {
+  /**
+   * Spin only when there is genuinely nothing to show.
+   *
+   * This used to be `if (loading)`, full stop — so any moment the session went
+   * back into a loading state, the avatar was unmounted and replaced by a
+   * spinner. Radix renders the dropdown as a child of this component, so
+   * unmounting it takes an OPEN menu with it: the user clicks their avatar, the
+   * menu appears, a background re-validation fires, and the menu vanishes under
+   * the cursor mid-click.
+   *
+   * UserContext re-runs initializeSession() on any `storage` event for the
+   * token or user keys, and that sets isLoading(true). A `storage` event fires
+   * in every OTHER tab, so a second tab of the site — or any write to those
+   * keys — was enough to blank the header of the tab being used.
+   *
+   * Re-validating something we already know must never remove it from the
+   * screen. If we have a user, keep showing them while the check runs.
+   */
+  if (loading && !displayUser) {
     return (
       <div className="flex items-center justify-center">
         <Spinner size="sm" className="text-bridal-gold" />
