@@ -176,10 +176,41 @@ Each step is independently shippable and reversible.
 | **5** | Backfill `subVenueId` on existing templates; repair malformed rows (the 10:58 "Morning") | low | Data hygiene before the UI exposes it |
 | **6** | One slot writer. Merge `venueSlotService.createSlot` into `slotService` with the union of both validations, scoped per space. Soft delete only | medium | Kills D5 |
 | **7** | Add `UNIQUE (businessId, subVenueId, label)` + an overlap `EXCLUDE` on the template table | low | Makes D5 structurally impossible |
-| **8** | ⚠️ **Not done — deliberately.** Accepting mixed-mode carts is a *capacity redesign*, not a check to delete. `BookingDetails` has **no `slotTemplateId`** (grep: 0 occurrences); the slot is booking-level, and `usedCount` counts `Booking.slotTemplateId`. BK-029 refuses mixed carts because the legacy conflict check joins on `bookingTime` strings, so a mixed cart can **silently double-book the legacy vendors**. Doing this half-way causes the exact failure this product exists to prevent. Needs `BookingDetails.slotTemplateId` + per-line guest units + per-line counting. The customer-facing **dead end** was fixed instead (below) | **high** | Deferred until the per-line capacity model exists |
+| **8** | ✅ *(done)* The per-line capacity model. `BookingDetails` gains `slotTemplateId` + `guestUnitsConsumed`; `usedCount` counts **lines**, not bookings; the space claim and the reschedule re-claim resolve the slot window **per business**. **RACE-3 / `MULTI_SLOT_TEMPLATE` is lifted.** `MIXED_SLOT_MODE` **stays** — see below | **high** | The counter was the reason RACE-3 existed |
 | **8a** | ✅ *(done)* Submit failures persist on the page instead of vanishing into a toast, and the mixed-cart / whitelist rejections carry a hint that names the actual next action | low | The customer no longer completes six steps and is left on Review with no explanation |
-| **9** | One slot + space editor, reachable from the calendar's empty state, with the `isActive` toggle exposed | — | The vendor-facing ask |
-| **10** | Single slot vocabulary on detail / booking / review / success screens | low | Stops the four-way disagreement |
+| **9** | ✅ *(done)* One slot + space editor, reachable from the calendar's empty state, with the `isActive` toggle exposed | — | The vendor-facing ask |
+| **10** | ✅ *(done)* Single slot vocabulary — **eleven** private copies collapsed into `lib/booking/slot-vocabulary.ts`, and the vendor's slot label + hours now travel with the booking so the later screens can actually say it | low | Stops the disagreement |
+| **11** | ⏭ **Next.** `BookingDetails.bookingTime`, so `MIXED_SLOT_MODE` can be lifted too | high | See §8 below |
+
+### Why `MIXED_SLOT_MODE` is still there
+
+Step 8 moved the *slot* onto the line. It did not move `bookingTime`, which is
+still one booking-level string. A mixed cart genuinely holds two different times
+— the slot vendor's 19:00 and the legacy vendor's 18:00 period — and one column
+to write them in. Whichever wins, the other vendor is validated and
+conflict-checked against a time that is not theirs: `"19:00"` is not in
+`ALLOWED_BOOKING_SLOTS`, so the legacy vendor's whitelist **and** its date+time
+conflict query both read the wrong value.
+
+Refusing a cart is recoverable. Silently double-booking a vendor who never opted
+into slots is not.
+
+### The property step 8 rests on
+
+> For every row arrangement the write path or the migration can produce, the new
+> counter never returns **less** than the old one.
+
+Undercounting is the failure that double-books; overcounting merely refuses a
+booking that was free, which a vendor can see and report. It is asserted over
+all 48 reachable arrangements of (line slot, booking slot, line status, booking
+status, date) — singly, in pairs, and under a hall filter — and it **failed on
+first run**, which is how the cancelled-line case was found: backfilling a
+cancelled line would have handed its own slot to a row whose capacity the old
+query held, and freed a slot that yesterday was taken. The migration now skips
+those lines.
+
+Checked against production the same way: over the 121 (template, date) pairs
+that exist in live data, old and new return **identical** counts.
 
 **Not doing:** a new slot table. The target model is already in the schema; the work is to make one
 engine authoritative and delete the other two paths.
