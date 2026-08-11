@@ -180,20 +180,26 @@ Each step is independently shippable and reversible.
 | **8a** | ✅ *(done)* Submit failures persist on the page instead of vanishing into a toast, and the mixed-cart / whitelist rejections carry a hint that names the actual next action | low | The customer no longer completes six steps and is left on Review with no explanation |
 | **9** | ✅ *(done)* One slot + space editor, reachable from the calendar's empty state, with the `isActive` toggle exposed | — | The vendor-facing ask |
 | **10** | ✅ *(done)* Single slot vocabulary — **eleven** private copies collapsed into `lib/booking/slot-vocabulary.ts`, and the vendor's slot label + hours now travel with the booking so the later screens can actually say it | low | Stops the disagreement |
-| **11** | ⏭ **Next.** `BookingDetails.bookingTime`, so `MIXED_SLOT_MODE` can be lifted too | high | See §8 below |
+| **11** | ✅ *(done)* `BookingDetails.bookingTime`. The conflict read is widened to (date) and compares **per business** on `COALESCE(line, booking)`; the legacy whitelist runs per line. **`MIXED_SLOT_MODE` is lifted.** | high | Both cart guards are now gone |
 
-### Why `MIXED_SLOT_MODE` is still there
+### Both cart guards are gone, and neither was deleted
 
-Step 8 moved the *slot* onto the line. It did not move `bookingTime`, which is
-still one booking-level string. A mixed cart genuinely holds two different times
-— the slot vendor's 19:00 and the legacy vendor's 18:00 period — and one column
-to write them in. Whichever wins, the other vendor is validated and
-conflict-checked against a time that is not theirs: `"19:00"` is not in
-`ALLOWED_BOOKING_SLOTS`, so the legacy vendor's whitelist **and** its date+time
-conflict query both read the wrong value.
+`MULTI_SLOT_TEMPLATE` (step 8) and `MIXED_SLOT_MODE` (step 11) were not
+over-cautious checks. Each was preventing a real silent double-booking, and each
+was removed by removing its cause:
 
-Refusing a cart is recoverable. Silently double-booking a vendor who never opted
-into slots is not.
+| | The cause | What replaced it |
+|---|---|---|
+| `MULTI_SLOT_TEMPLATE` | one `Booking.slotTemplateId` column; a two-template cart wrote NULL and vanished from the capacity counter | the slot on the **line**, and a counter that counts lines |
+| `MIXED_SLOT_MODE` | one `Booking.bookingTime` string; the legacy vendor was conflict-checked against the slot vendor's time | the time on the **line**, and a conflict read that compares per business |
+
+**Lifting a guard is not deleting a check.** `usingSlotTemplates` is true only
+when *every* vendor carries a template, and the per-package check, the advisory
+lock and `assertSlotAvailable` were all gated on it — harmless while mixed carts
+were refused, a hole the moment they were not. They now gate on `anySlotMode`.
+`usingSlotTemplates` survives with one job: deciding whether the cart may claim
+a booking-level `slotTemplateId` (a mixed cart may not, or the legacy line would
+count against the slot vendor's template through the counter's `COALESCE`).
 
 ### The property step 8 rests on
 
