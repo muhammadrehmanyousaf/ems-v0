@@ -297,6 +297,20 @@ function VendorOverviewRedesignedView() {
           columns={columns}
           data={recent}
           getRowId={(b) => String(b.id)}
+          /**
+           * The eight bookings on the landing screen now open.
+           *
+           * "Recent bookings" is the first table a vendor sees after logging
+           * in — their newest eight events, with customer, date, amount and
+           * payment state — and not one row went anywhere. No link, `cursor:
+           * auto`. The very first thing the product shows you was a dead end.
+           *
+           * Deliberately NOT sortable, unlike the nine list screens. This is a
+           * curated "most recent eight", not a ledger; a sort control on it
+           * would let someone reorder a sample and read it as a ranking. The
+           * full, sortable list is one click away in Bookings.
+           */
+          rowHref={(b) => `/dashboard/bookings/${b.id}`}
           loading={recentQ.isLoading}
           error={recentQ.isError ? "Couldn't load recent bookings." : null}
           onRetry={() => recentQ.refetch()}
