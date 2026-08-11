@@ -29,10 +29,23 @@ const DialogOverlay = React.forwardRef<
 ))
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
+/**
+ * `hideClose` — opt a single dialog out of the shared close button, for the
+ * rare surface that must draw its own (the fullscreen gallery lightbox needs a
+ * white control on black). Default is `false`: every dialog gets a close.
+ *
+ * History worth keeping: this button was commented out wholesale in Jan 2025
+ * ("model close error resolved") because ONE dialog — booking-modal — drew its
+ * own X and the two stacked. The global control was removed instead of the
+ * local duplicate, so for the next nineteen months roughly a hundred dialogs
+ * shipped with no visible way out. Esc and overlay-click still worked, but a
+ * vendor on a phone has no Esc key and does not know the backdrop is clickable.
+ * The opt-out prop is here so the next conflict is solved locally, not globally.
+ */
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { hideClose?: boolean }
+>(({ className, children, hideClose = false, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -44,10 +57,15 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      {/* <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Close</span>
-      </DialogPrimitive.Close> */}
+      {!hideClose && (
+        <DialogPrimitive.Close
+          aria-label="Close"
+          className="absolute right-4 top-4 z-10 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground opacity-70 ring-offset-background transition-opacity hover:bg-accent hover:text-foreground hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none"
+        >
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </DialogPrimitive.Close>
+      )}
     </DialogPrimitive.Content>
   </DialogPortal>
 ))

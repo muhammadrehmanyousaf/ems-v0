@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
 import { useFetchData } from "@/hooks/use-fetch-data"
 import { VendorHoldsAPI, type VendorHold } from "@/lib/api/vendorHolds"
@@ -251,17 +252,38 @@ export function CalendarRedesignedView() {
             <EmptyState className="border-0 bg-transparent py-8" icon="Calendar" title="Nothing scheduled" description="No events on this day." />
           ) : (
             <div className="space-y-2">
+              {/* The agenda used to be a <div>: a vendor could SEE the booking
+                  that owns their evening and had no way to open it. Every row
+                  is the booking's front door now — whole row is the target, so
+                  it works with a thumb, and the chevron says so before the
+                  hover does. */}
               {selectedBookings.map((b) => (
-                <div key={b.id} className="rounded-lg border border-border p-3">
+                <Link
+                  key={b.id}
+                  href={`/dashboard/bookings/${b.id}`}
+                  aria-label={`Open booking — ${b.customerName || "Booking"}, ${b.bookingTime || "all day"}, ${b.status}`}
+                  className={cn(
+                    "group block rounded-lg border border-border p-3 transition-colors",
+                    "hover:border-primary/40 hover:bg-accent/40",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  )}
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="truncate text-sm font-medium">{b.customerName || "Booking"}</div>
                       <div className="text-xs text-muted-foreground">{b.bookingTime || "All day"}</div>
                     </div>
-                    <MoneyCell amount={num(b.totalAmount)} className="text-sm font-medium" />
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <MoneyCell amount={num(b.totalAmount)} className="text-sm font-medium" />
+                      <Icon
+                        name="ChevronRight"
+                        size={16}
+                        className="text-muted-foreground/60 transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
+                      />
+                    </div>
                   </div>
                   <div className="mt-2"><StatusPill tone={tone(b.status)}>{b.status}</StatusPill></div>
-                </div>
+                </Link>
               ))}
             </div>
           )}

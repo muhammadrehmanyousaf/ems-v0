@@ -120,15 +120,19 @@ export default function VenueGallery({ images, video }: VenueGalleryProps) {
 
       {/* Fullscreen Gallery */}
       <Dialog open={showGallery} onOpenChange={setShowGallery}>
-        <DialogContent className="max-w-7xl h-[90vh] p-0">
+        {/* hideClose: the lightbox sits on black and needs its own white
+            control, so it opts out of the shared close rather than stacking. */}
+        <DialogContent className="max-w-7xl h-[90vh] p-0" hideClose>
           <div className="relative h-full">
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Close gallery"
               className="absolute right-4 top-4 z-10 bg-white/80 hover:bg-white"
               onClick={() => setShowGallery(false)}
             >
               <X className="h-4 w-4" />
+              <span className="sr-only">Close gallery</span>
             </Button>
 
             <div className="absolute inset-0 flex items-center justify-center bg-black">
