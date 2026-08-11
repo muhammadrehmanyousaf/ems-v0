@@ -5,6 +5,7 @@ import type { BookingFormData, EventVenue, Vendor } from "@/lib/types"
 import confetti from "canvas-confetti"
 import { useEffect } from "react"
 import { motion } from "framer-motion"
+import { slotText } from "@/lib/booking/slot-vocabulary"
 
 interface SuccessStepProps {
   formData: BookingFormData
@@ -51,16 +52,16 @@ export default function SuccessStep({
     return () => clearInterval(interval)
   }, [])
 
-  const getTimeSlotText = (timeSlot: string) => {
-    switch (timeSlot) {
-      case "09:00": return "Morning (9 AM - 12 PM)"
-      case "12:00": return "Midday (12 PM - 4 PM)"
-      case "14:00": return "Afternoon (2 PM - 6 PM)"
-      case "17:00": return "Evening (5 PM - 10 PM)"
-      case "18:00": return "Evening (6 PM - 11 PM)"
-      default: return timeSlot
-    }
-  }
+  // SLOTS step 10 — one vocabulary. The local switch could not name a vendor's
+  // own slot, so the confirmation screen for a "Dinner event" booking said
+  // "19:00" — a different sentence from the one on the button the customer had
+  // pressed two screens earlier.
+  const timeSlotText = slotText({
+    bookingTime: formData.timeSlot,
+    slotLabel: formData.slotLabel,
+    slotStartTime: formData.slotStartTime,
+    slotEndTime: formData.slotEndTime,
+  })
 
   const isVendor = venue && !('menus' in venue)
 
@@ -131,7 +132,7 @@ export default function SuccessStep({
                   : []
                 ),
                 { label: "Date", value: formData.bookingDate ? new Date(formData.bookingDate).toLocaleDateString() : "N/A" },
-                { label: "Time", value: formData.timeSlot ? getTimeSlotText(formData.timeSlot) : "N/A" },
+                { label: "Time", value: timeSlotText || "N/A" },
               ].map((row) => (
                 <div key={row.label}>
                   <p className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">{row.label}</p>

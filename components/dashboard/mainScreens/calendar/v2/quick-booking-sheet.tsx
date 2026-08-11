@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { parseUrduAmount } from "@/lib/urdu-amount";
 import { BookingsAPI } from "@/lib/api/dashboard";
 import { SpacePicker } from "@/components/dashboard/shared/space-picker";
+import { LEGACY_PERIODS } from "@/lib/booking/slot-vocabulary";
 
 const FUNCTIONS = ["Barat", "Walima", "Mehndi", "Milad", "Other"];
 
@@ -51,7 +52,16 @@ export function QuickBookingSheet({
   const parsed = parseUrduAmount(rakam);
 
   // Default allowed booking times when a vendor has no custom slot templates.
-  const DEFAULT_TIMES: [string, string][] = [["Subah", "09:00"], ["Dopahar", "14:00"], ["Shaam", "18:00"]];
+  //
+  // SLOTS step 10 — the TIMES come from the one shared definition so this stops
+  // being an eighth private copy of "which three slots exist". The LABELS stay
+  // Roman Urdu and stay local: this is the vendor's own quick-entry sheet and
+  // "Subah / Dopahar / Shaam" is a deliberate choice for it, not a drifted
+  // translation of Morning / Afternoon / Evening.
+  const URDU_LABEL: Record<string, string> = { "09:00": "Subah", "14:00": "Dopahar", "18:00": "Shaam" };
+  const DEFAULT_TIMES: [string, string][] = LEGACY_PERIODS.map(
+    (p) => [URDU_LABEL[p.value] ?? p.label, p.value] as [string, string],
+  );
 
   // The vendor's real slot templates — a booking's time must match one when
   // slots exist (else the create rejects). No templates → free day/night.

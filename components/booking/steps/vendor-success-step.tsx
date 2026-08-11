@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import type { BookingFormData, Vendor } from "@/lib/types"
 import confetti from "canvas-confetti"
 import { useEffect } from "react"
+import { slotText } from "@/lib/booking/slot-vocabulary"
 
 interface VendorSuccessStepProps {
   formData: BookingFormData
@@ -62,19 +63,24 @@ export default function VendorSuccessStep({
     return () => clearInterval(interval)
   }, [])
 
-  const getTimeSlotText = (timeSlot: string) => {
-    switch (timeSlot) {
-            case "09:00":
-        return "Morning (9AM - 12PM)"
-      case "12:00":
-        return "Midday (12PM - 4PM)"
-      case "17:00":
-      case "5:00":
-        return "Evening (5PM - 10PM)"
-      default:
-        return timeSlot
-    }
-  }
+  /**
+   * SLOTS step 10 — one vocabulary.
+   *
+   * This switch was the worst of the seven: it had no case for 14:00 or 18:00,
+   * so two of the three canonical slots fell through to `default` and the
+   * vendor's own confirmation screen showed a bare "14:00". It also claimed
+   * "5:00" meant "Evening (5PM - 10PM)" — the backend parses 5:00 as five in
+   * the morning, so the label was contradicting the engine that booked it.
+   *
+   * Both are fixed by deferring to the shared module rather than by adding the
+   * two missing cases here.
+   */
+  const timeSlotText = slotText({
+    bookingTime: formData.timeSlot || bookingData?.bookingTime,
+    slotLabel: formData.slotLabel,
+    slotStartTime: formData.slotStartTime,
+    slotEndTime: formData.slotEndTime,
+  })
 
   const getVendorIcon = (vendorType?: string | string[]) => {
     const vt = Array.isArray(vendorType) ? vendorType[0] : vendorType
@@ -230,8 +236,7 @@ export default function VendorSuccessStep({
                <div className="flex items-center justify-between border-b border-dashed border-bridal-beige pb-3">
                  <span className="font-bridal text-[12.5px] text-bridal-text-soft">Time Slot:</span>
                  <span className="font-display italic text-[15px] text-bridal-charcoal">
-                   {formData.timeSlot ? getTimeSlotText(formData.timeSlot) : 
-                    bookingData?.bookingTime ? getTimeSlotText(bookingData.bookingTime) : "N/A"}
+                   {timeSlotText || "N/A"}
                  </span>
                </div>
             </div>

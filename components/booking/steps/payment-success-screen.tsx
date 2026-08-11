@@ -7,6 +7,7 @@ import type { EventVenue } from "@/lib/types"
 import axiosInstance from "@/lib/axiosConfig"
 import { BACKEND_URL } from "@/lib/backend-url"
 import Link from "next/link"
+import { slotText, slotFromBooking } from "@/lib/booking/slot-vocabulary"
 
 interface PaymentSuccessScreenProps {
   bookingId: number
@@ -55,14 +56,9 @@ export default function PaymentSuccessScreen({ bookingId, venue, paymentType = "
       .catch(() => {})
   }, [bookingId])
 
-  const formatTime = (time: string) => {
-    switch (time) {
-      case "09:00": return "Morning (9 AM – 12 PM)"
-      case "14:00": return "Afternoon (2 PM – 6 PM)"
-      case "18:00": return "Evening (6 PM – 11 PM)"
-      default: return time
-    }
-  }
+  // SLOTS step 10 — one vocabulary. This was the seventh private copy, and the
+  // only one still using an en-dash, which Issue #46 records Pakistani vendors
+  // reading as a different symbol.
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return ""
@@ -128,7 +124,7 @@ export default function PaymentSuccessScreen({ bookingId, venue, paymentType = "
               </span>
               <div className="min-w-0">
                 <p className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-text-label">Time</p>
-                <p className="font-display italic text-[15px] text-bridal-charcoal mt-0.5">{formatTime(booking.bookingTime)}</p>
+                <p className="font-display italic text-[15px] text-bridal-charcoal mt-0.5">{slotText(slotFromBooking(booking)) || booking.bookingTime}</p>
               </div>
             </div>
           )}

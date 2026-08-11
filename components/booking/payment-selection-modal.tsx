@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { CreditCard, Calendar, Building, Users, Clock, Shield, Banknote, Check, ChevronRight } from "lucide-react"
 import type { BookingFormData, EventVenue, Vendor } from "@/lib/types"
+import { slotText } from "@/lib/booking/slot-vocabulary"
 
 interface PaymentSelectionModalProps {
   isOpen: boolean
@@ -44,16 +45,15 @@ export default function PaymentSelectionModal({
     onPaymentSelect(paymentType)
   }
 
-  const getTimeSlotText = (timeSlot: string) => {
-    switch (timeSlot) {
-      case "09:00": return "Morning (9 AM - 12 PM)"
-      case "12:00": return "Midday (12 PM - 4 PM)"
-      case "14:00": return "Afternoon (2 PM - 6 PM)"
-      case "17:00": return "Evening (5 PM - 10 PM)"
-      case "18:00": return "Evening (6 PM - 11 PM)"
-      default: return timeSlot
-    }
-  }
+  // SLOTS step 10 — one vocabulary. The 12:00 and 17:00 entries this switch
+  // carried are preserved as aliases in the shared module, so no stored booking
+  // regresses to a bare clock time.
+  const timeSlotText = slotText({
+    bookingTime: formData.timeSlot,
+    slotLabel: formData.slotLabel,
+    slotStartTime: formData.slotStartTime,
+    slotEndTime: formData.slotEndTime,
+  })
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -96,7 +96,7 @@ export default function PaymentSelectionModal({
               </div>
               <div className="flex items-center gap-2 font-bridal text-[13px] text-bridal-charcoal/85">
                 <Clock className="h-3.5 w-3.5 text-bridal-gold flex-shrink-0" />
-                <span>{formData.timeSlot ? getTimeSlotText(formData.timeSlot) : "N/A"}</span>
+                <span>{timeSlotText || "N/A"}</span>
               </div>
               <div className="flex items-center gap-2 font-bridal text-[13px] text-bridal-charcoal/85">
                 <Users className="h-3.5 w-3.5 text-bridal-gold flex-shrink-0" />
