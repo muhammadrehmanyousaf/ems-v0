@@ -112,7 +112,7 @@ export function InventoryRedesignedView() {
   const categories = new Set(scope.map((i) => i.category)).size
 
   const columns: Column<InventoryItem>[] = [
-    { key: "name", header: "Item", render: (i) => <span className="font-medium">{i.name}</span> },
+    { key: "name", header: "Item", sortKey: "name", sortValue: (i) => i.name || "", render: (i) => <span className="font-medium">{i.name}</span> },
     /* WWL-258 — SKU is null on all 36 rows, so this column rendered an em dash
        36 times and exported empty. Dropped when nothing has one, and the
        supplier — searchable server-side, shown nowhere — takes the space. */
@@ -131,8 +131,8 @@ export function InventoryRedesignedView() {
       key: "category", header: "Category", cellClassName: "text-muted-foreground",
       render: (i) => INVENTORY_CATEGORY_LABELS[i.category as InventoryCategory] ?? cap(i.category),
     },
-    { key: "stock", header: "Stock", align: "right", render: (i) => <span className="tabular-nums">{num(i.currentStock)} <span className="text-muted-foreground">{String(i.unit)}</span></span> },
-    { key: "cost", header: "Last cost / unit", align: "right", render: (i) => <MoneyCell amount={i.lastRestockCostPerUnit != null ? num(i.lastRestockCostPerUnit) : null} tone="muted" /> },
+    { key: "stock", header: "Stock", align: "right", sortKey: "stock", sortValue: (i) => num(i.currentStock), render: (i) => <span className="tabular-nums">{num(i.currentStock)} <span className="text-muted-foreground">{String(i.unit)}</span></span> },
+    { key: "cost", header: "Last cost / unit", align: "right", sortKey: "cost", sortValue: (i) => (i.lastRestockCostPerUnit != null ? num(i.lastRestockCostPerUnit) : null), render: (i) => <MoneyCell amount={i.lastRestockCostPerUnit != null ? num(i.lastRestockCostPerUnit) : null} tone="muted" /> },
     { key: "status", header: "Status", render: (i) => { const s = stockState(i); return <StatusPill tone={s.tone}>{s.label}</StatusPill> } },
     {
       key: "actions", header: "", align: "right",

@@ -131,14 +131,14 @@ export function PaymentsRedesignedView() {
   )
 
   const columns: Column<VendorPayment>[] = [
-    { key: "customer", header: "Customer", render: (p) => <span className="font-medium">{p.customerName || "—"}</span> },
+    { key: "customer", header: "Customer", sortKey: "customer", sortValue: (p) => p.customerName || "", render: (p) => <span className="font-medium">{p.customerName || "—"}</span> },
     ...(multiVenue
       ? [{ key: "venue", header: "Venue", cellClassName: "text-muted-foreground", render: (p: VendorPayment) => <span className="truncate">{p.businessName || "—"}</span> }]
       : []),
-    { key: "date", header: "Event date", cellClassName: "text-muted-foreground", render: (p) => fmtDate(p.bookingDate) },
-    { key: "total", header: "Total", align: "right", render: (p) => <MoneyCell amount={num(p.totalAmount)} /> },
-    { key: "received", header: "Received", align: "right", render: (p) => <MoneyCell amount={num(p.received)} tone="success" /> },
-    { key: "due", header: "Due", align: "right", render: (p) => <MoneyCell amount={num(p.due)} tone={num(p.due) > 0 ? "warning" : "muted"} /> },
+    { key: "date", header: "Event date", cellClassName: "text-muted-foreground", sortKey: "date", sortValue: (p) => p.bookingDate || null, render: (p) => fmtDate(p.bookingDate) },
+    { key: "total", header: "Total", align: "right", sortKey: "total", sortValue: (p) => num(p.totalAmount), render: (p) => <MoneyCell amount={num(p.totalAmount)} /> },
+    { key: "received", header: "Received", align: "right", sortKey: "received", sortValue: (p) => num(p.received), render: (p) => <MoneyCell amount={num(p.received)} tone="success" /> },
+    { key: "due", header: "Due", align: "right", sortKey: "due", sortValue: (p) => num(p.due), render: (p) => <MoneyCell amount={num(p.due)} tone={num(p.due) > 0 ? "warning" : "muted"} /> },
     { key: "status", header: "Payment", render: (p) => <StatusPill tone={payTone(p.paymentStatus)} variant="icon">{p.paymentStatus || "—"}</StatusPill> },
   ]
 

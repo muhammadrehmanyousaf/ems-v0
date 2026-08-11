@@ -153,6 +153,8 @@ export function FunctionSheetsRedesignedView() {
     {
       key: "title",
       header: "Sheet",
+      sortKey: "title",
+      sortValue: (f) => f.title || "",
       render: (f) => (
         <div className="min-w-0">
           <div className="truncate font-medium">{f.title || "Untitled sheet"}</div>
@@ -163,14 +165,18 @@ export function FunctionSheetsRedesignedView() {
     {
       key: "customer",
       header: "Customer",
+      sortKey: "customer",
+      sortValue: (f) => f.customerName || f.customer?.fullName || f.booking?.customerName || "",
       cellClassName: "text-muted-foreground",
       render: (f) => f.customerName || f.customer?.fullName || f.booking?.customerName || "—",
     },
-    { key: "event", header: "Event date", cellClassName: "text-muted-foreground", render: (f) => fmtDate(f.eventDate || f.booking?.bookingDate) },
+    { key: "event", header: "Event date", cellClassName: "text-muted-foreground", sortKey: "event", sortValue: (f) => f.eventDate || f.booking?.bookingDate || null, render: (f) => fmtDate(f.eventDate || f.booking?.bookingDate) },
     {
       key: "total",
       header: "Grand total",
       align: "right",
+      sortKey: "total",
+      sortValue: (f) => sheetValue(f),
       render: (f) => (
         <div className="flex flex-col items-end">
           <MoneyCell amount={sheetValue(f)} />
@@ -231,6 +237,16 @@ export function FunctionSheetsRedesignedView() {
         columns={columns}
         data={sheets}
         getRowId={(f) => String(f.id)}
+        /**
+         * The row opens the record.
+         *
+         * Swept across the portal: 38 screens use this table, 4 passed row
+         * navigation to it. The destination here already existed and was already
+         * linked from inside the row — so this is not a new door, it is the
+         * whole row becoming the target instead of one small control at the end
+         * of it.
+         */
+        rowHref={(f) => `/dashboard/function-sheets/${f.id}`}
         loading={isLoading}
         error={isError ? "Couldn't load function sheets." : null}
         onRetry={() => refetch()}
