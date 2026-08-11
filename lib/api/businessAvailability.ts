@@ -104,10 +104,17 @@ export class BusinessAvailabilityAPI {
   // grid. Backend caps at 60 days. Returns `days` keyed by YYYY-MM-DD with
   // per-template rows so the calendar can render "Lunch 2/3 · Dinner 1/3"
   // chips without N×templates round trips.
+  /**
+   * `subVenueId` scopes the slots to one space. Omit it and the endpoint
+   * returns every slot, exactly as before — narrowing is the caller's explicit
+   * act, because a venue whose slots are all space-scoped would otherwise show
+   * a customer an empty picker.
+   */
   static async getBulkAvailability(
     businessId: number,
     fromDate: string,
     toDate: string,
+    subVenueId?: number | null,
   ): Promise<{
     from: string;
     to: string;
@@ -115,7 +122,7 @@ export class BusinessAvailabilityAPI {
   }> {
     const res = await axiosInstance.get(
       `${v1}/businesses/${businessId}/slots/availability/bulk`,
-      { params: { from: fromDate, to: toDate } },
+      { params: { from: fromDate, to: toDate, ...(subVenueId != null ? { subVenueId } : {}) } },
     );
     return res.data?.data;
   }
@@ -130,6 +137,12 @@ export interface SlotAvailabilityRow {
   capacity: number;
   used: number;
   free: number;
+  /** Guests ONE booking of this slot may bring. NULL = no per-booking limit.
+   *  Distinct from `capacity`, which counts concurrent bookings — the pair the
+   *  vendor form conflated badly enough to publish "150 bookings at once". */
+  unitGuestCapacity?: number | null;
+  /** The space this slot belongs to; NULL = venue-wide. */
+  subVenueId?: number | null;
   blocked: boolean;
   blockReason: string | null;
   runsThisWeekday: boolean;

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, useCallback } from "react"
+import { useEffect, useMemo, useState, useCallback, useRef } from "react"
 import type { BookingFormData, EventVenue } from "@/lib/types"
 import { ChevronLeft, ChevronRight, Sun, Sunset, Moon, Minus, Plus, AlertTriangle, Timer, XCircle } from "lucide-react"
 import { VendorAPI } from "@/lib/api/vendors"
@@ -153,15 +153,33 @@ export default function DateTimeStep({
   // halls as SubVenues (flag-gated), the customer picks one and we send
   // subVenueId — the canonical per-hall path. Renders only when the venue has a
   // real multi-space tree; otherwise the BusinessResource picker above stands.
-  const [subVenueSpaces, setSubVenueSpaces] = useState<Array<{ id: number; name: string; kind: string; depth: number }>>([])
+  type FlatSpace = {
+    id: number; name: string; kind: string; depth: number
+    fireRatedCapacity: number | null; comfortCapacity: number | null
+  }
+  const [subVenueSpaces, setSubVenueSpaces] = useState<FlatSpace[]>([])
   useEffect(() => {
     if (!venue?.id) return
     let cancelled = false
     venueSpacesApi.publicTree(Number(venue.id))
       .then((t) => {
         if (cancelled) return
-        const flat: Array<{ id: number; name: string; kind: string; depth: number }> = []
-        const walk = (ns: SubVenueNode[], depth: number) => (ns || []).forEach((n) => { flat.push({ id: n.id, name: n.name, kind: n.kind, depth }); if (n.children) walk(n.children, depth + 1) })
+        const flat: FlatSpace[] = []
+        /* The tree already carries `fireRatedCapacity` and `comfortCapacity`
+           per space and this flatten dropped both on the floor — so the form
+           capped guests at the WHOLE VENUE's maximum no matter which hall was
+           picked. A marquee whose venue-wide max is 1,200 would happily take
+           1,200 guests into a 300-person side hall, and nobody found out until
+           the day. The numbers were already on the wire; they just were not
+           being read. */
+        const walk = (ns: SubVenueNode[], depth: number) => (ns || []).forEach((n) => {
+          flat.push({
+            id: n.id, name: n.name, kind: n.kind, depth,
+            fireRatedCapacity: n.fireRatedCapacity ?? null,
+            comfortCapacity: n.comfortCapacity ?? null,
+          })
+          if (n.children) walk(n.children, depth + 1)
+        })
         walk(t?.tree || [], 0)
         setSubVenueSpaces(flat)
       })
@@ -192,22 +210,50 @@ export default function DateTimeStep({
   // fixed periods so existing vendors are completely unaffected.
   const [templateDays, setTemplateDays] = useState<Record<string, SlotAvailabilityRow[]>>({})
   const [hasTemplates, setHasTemplates] = useState(false)
+  /**
+   * The chosen space, so the slots offered are the ones that exist WHERE the
+   * customer is sitting.
+   *
+   * This used to ask for the whole business. Caught live on business 3358:
+   * five spaces, and a slot belonging only to the space "afsana" was offered to
+   * a customer who had picked a different hall — a bookable time that does not
+   * exist in the room they chose. The backend now scopes on `subVenueId`, with
+   * a space that defines no slots of its own inheriting the venue-wide set, so
+   * single-hall vendors are untouched.
+   */
+  const selectedSubVenueId = Number((formData as any).selectedSubVenueId) || null
+
   const fetchTemplateMonth = useCallback(async (d: Date) => {
     if (!SLOT_TEMPLATES_ENABLED || !venue?.id) return
     try {
       const res = await BusinessAvailabilityAPI.getBulkAvailability(
-        venue.id as number, toKey(startOfMonth(d)), toKey(endOfMonth(d)),
+        venue.id as number, toKey(startOfMonth(d)), toKey(endOfMonth(d)), selectedSubVenueId,
       )
       const days = res?.days || {}
       setTemplateDays((prev) => ({ ...prev, ...days }))
       if (Object.values(days).some((rows) => rows && rows.length > 0)) setHasTemplates(true)
     } catch { /* silent → fall back to fixed periods */ }
-  }, [venue?.id])
+  }, [venue?.id, selectedSubVenueId])
   useEffect(() => {
     if (!SLOT_TEMPLATES_ENABLED) return
     fetchTemplateMonth(viewMonth)
     fetchTemplateMonth(addMonths(viewMonth, 1))
   }, [viewMonth, fetchTemplateMonth])
+
+  /**
+   * Changing the space invalidates a slot already picked under the previous
+   * one — the times on offer are different, and silently keeping the old
+   * selection is how a customer ends up booked into a slot the new hall does
+   * not have. The month cache is dropped for the same reason.
+   */
+  const lastSpace = useRef<number | null>(selectedSubVenueId)
+  useEffect(() => {
+    if (lastSpace.current === selectedSubVenueId) return
+    lastSpace.current = selectedSubVenueId
+    setTemplateDays({})
+    setHasTemplates(false)
+    updateFormData((prev) => ({ ...(prev as any), slotTemplateId: null, timeOfDay: "" }))
+  }, [selectedSubVenueId, updateFormData])
   // Drive the UI from templates only when the vendor actually has some.
   const useTemplates = SLOT_TEMPLATES_ENABLED && hasTemplates
 
@@ -352,12 +398,83 @@ export default function DateTimeStep({
       )
   }
 
+  /**
+   * The guest ceiling that actually applies, which is not always the venue's.
+   *
+   * Three limits exist and the form knew about one:
+   *
+   *   1. the SPACE's fire-rated capacity — the legal occupancy of the room the
+   *      customer just picked. Sent by the API, discarded by the flatten above
+   *      until now, and the one that gets a hall sealed when it is broken;
+   *   2. the SLOT's `unitGuestCapacity` — "guests per booking" for this time
+   *      band. The vendor-side confusion between this and `capacity` is what
+   *      put "150 bookings at once" on a live listing; on this side the number
+   *      was not published at all;
+   *   3. `business.maxCapacity` — the whole venue, which is what the stepper
+   *      clamped to regardless of which hall was chosen.
+   *
+   * The tightest one wins, and the form says WHICH, because "max 300" with no
+   * explanation on a venue advertising 1,200 reads as a bug.
+   */
+  const chosenSpace = subVenueSpaces.find((sp) => sp.id === selectedSubVenueId) ?? null
+  const chosenSlotRow = useMemo(() => {
+    if (!selectedDate || !formData.slotTemplateId) return null
+    const rows = templateDays[toKey(selectedDate)] ?? []
+    return rows.find((r) => r.slotTemplateId === Number(formData.slotTemplateId)) ?? null
+  }, [selectedDate, formData.slotTemplateId, templateDays])
+
+  const guestLimits: { max: number; source: string }[] = []
+  if (chosenSpace?.fireRatedCapacity) guestLimits.push({ max: chosenSpace.fireRatedCapacity, source: `${chosenSpace.name} holds` })
+  if (chosenSlotRow?.unitGuestCapacity) guestLimits.push({ max: chosenSlotRow.unitGuestCapacity, source: `${chosenSlotRow.label} takes` })
+  if (venue?.maxCapacity) guestLimits.push({ max: venue.maxCapacity, source: "This venue holds" })
+  const activeLimit = guestLimits.length
+    ? guestLimits.reduce((a, b) => (b.max < a.max ? b : a))
+    : null
+
+  /* Comfort capacity is the vendor's own seated-comfort figure, not a legal
+     limit. Shown as a caution, never enforced — a family that wants 320 people
+     standing in a hall the vendor seats 280 is having a conversation, not
+     making a mistake. */
+  const comfortWarning =
+    chosenSpace?.comfortCapacity &&
+    (formData.guestCount || 0) > chosenSpace.comfortCapacity &&
+    (!activeLimit || (formData.guestCount || 0) <= activeLimit.max)
+      ? `${chosenSpace.name} seats ${chosenSpace.comfortCapacity} comfortably. ${formData.guestCount} will fit, but it will be tight.`
+      : null
+
+  /* The venue's minimum was displayed and never checked. A vendor who set
+     "min 200" was quoting for 10-guest bookings. Advisory, for the same reason
+     as comfort: it is a commercial preference, not a physical limit. */
+  const belowMinimum =
+    venue?.minCapacity && (formData.guestCount || 0) > 0 && (formData.guestCount || 0) < venue.minCapacity
+      ? `This venue takes bookings from ${venue.minCapacity} guests. Yours is ${formData.guestCount} — check with them before paying.`
+      : null
+
   const adjust = (delta: number) =>
     updateFormData((prev) => {
       let n = Math.max(0, (prev.guestCount || 0) + delta)
-      if (venue?.maxCapacity && n > venue.maxCapacity) n = venue.maxCapacity
+      if (activeLimit && n > activeLimit.max) n = activeLimit.max
       return { ...prev, guestCount: n }
     })
+
+  /**
+   * Changing the space can invalidate a guest count already entered: pick the
+   * 900-person main hall, type 800, switch to the 300-person side hall, and the
+   * form used to carry 800 straight through to a booking the server now
+   * refuses. Clamped down to the new ceiling instead, since the customer's last
+   * explicit act was choosing the smaller room.
+   */
+  const lastLimit = useRef<number | null>(null)
+  useEffect(() => {
+    const cap = activeLimit?.max ?? null
+    if (cap === lastLimit.current) return
+    lastLimit.current = cap
+    if (cap != null) {
+      updateFormData((prev) => (
+        (prev.guestCount || 0) > cap ? { ...prev, guestCount: cap } : prev
+      ))
+    }
+  }, [activeLimit?.max, updateFormData])
 
   /** A single day cell in the monthly grid. Airbnb-style: square, large
    *  numeral, dot indicator for partial availability. */
@@ -737,11 +854,14 @@ export default function DateTimeStep({
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="font-display italic text-[15px] text-bridal-charcoal leading-tight">How many guests?</p>
-              {(venue?.minCapacity || venue?.maxCapacity) && (
+              {/* Names the limit that is actually in force and where it comes
+                  from. "Max 1200" on a page where the chosen hall holds 300 is
+                  worse than no number at all. */}
+              {(venue?.minCapacity || activeLimit) && (
                 <p className="font-bridal text-[10.5px] text-bridal-text-soft mt-0.5">
-                  {venue?.minCapacity ? `Min ${venue.minCapacity}` : ""}
-                  {venue?.minCapacity && venue?.maxCapacity ? " · " : ""}
-                  {venue?.maxCapacity ? `Max ${venue.maxCapacity}` : ""}
+                  {venue?.minCapacity ? `From ${venue.minCapacity}` : ""}
+                  {venue?.minCapacity && activeLimit ? " · " : ""}
+                  {activeLimit ? `${activeLimit.source} ${activeLimit.max}` : ""}
                 </p>
               )}
             </div>
@@ -758,10 +878,12 @@ export default function DateTimeStep({
                 type="number"
                 min={0}
                 value={formData.guestCount || ""}
+                max={activeLimit?.max}
                 onChange={(e) => {
                   const val = e.target.value
                   let n = val === "" ? 0 : parseInt(val, 10)
-                  if (venue?.maxCapacity && n > venue.maxCapacity) n = venue.maxCapacity
+                  if (Number.isNaN(n)) n = 0
+                  if (activeLimit && n > activeLimit.max) n = activeLimit.max
                   updateFormData((prev) => ({ ...prev, guestCount: n }))
                 }}
                 placeholder="10"
@@ -777,6 +899,19 @@ export default function DateTimeStep({
               </button>
             </div>
           </div>
+
+          {/* Advisory only — both are the vendor's preferences, not physical or
+              legal limits, so they inform rather than block. */}
+          {(comfortWarning || belowMinimum) && (
+            <div className="mt-2 space-y-1">
+              {comfortWarning && (
+                <p className="font-bridal text-[10.5px] leading-snug text-bridal-mauve">{comfortWarning}</p>
+              )}
+              {belowMinimum && (
+                <p className="font-bridal text-[10.5px] leading-snug text-bridal-mauve">{belowMinimum}</p>
+              )}
+            </div>
+          )}
         </section>
       )}
 

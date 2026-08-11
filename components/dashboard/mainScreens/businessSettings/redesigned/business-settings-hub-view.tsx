@@ -40,6 +40,8 @@ import { cn } from "@/lib/utils"
 // survives the hub's loading and failure states. The stray import made it look
 // as though the card appeared twice; it appears exactly once.
 import { FieldError, fieldAria, ERROR_INPUT_CLS } from "@/components/dashboard/primitives/field-error"
+import { focusField } from "@/components/dashboard/primitives/focus-field"
+import { invalidateBusinessData } from "@/lib/query/business-keys"
 
 const numOrNull = (v: string) => (v.trim() === "" ? null : Number(v) || 0)
 
@@ -181,19 +183,48 @@ export function BusinessSettingsHubView() {
    */
   const router = useRouter()
   const syncUrl = React.useCallback(
-    (next: { tab?: TabKey; biz?: number }) => {
+    (next: { tab?: TabKey; biz?: number; field?: string | null }) => {
       const qs = new URLSearchParams(searchParams?.toString() ?? "")
       if (next.tab !== undefined) {
         if (next.tab === "profile") qs.delete("tab")
         else qs.set("tab", next.tab)
       }
       if (next.biz !== undefined) qs.set("biz", String(next.biz))
+      if (next.field !== undefined) {
+        if (next.field) qs.set("field", next.field)
+        else qs.delete("field")
+      }
       const s = qs.toString()
       router.replace(s ? `?${s}` : "?", { scroll: false })
     },
     [router, searchParams],
   )
-  const goTab = React.useCallback((key: TabKey) => { setActive(key); syncUrl({ tab: key }) }, [syncUrl])
+
+  /**
+   * Deep-link to a FIELD, not just a tab.
+   *
+   * The onboarding checklist and the Listing-health prompts below both said
+   * "fix this" and then dropped the vendor at the top of the tab. Listing
+   * content alone is thirty-odd inputs, so "add your WhatsApp number" meant
+   * "start reading". Every link now carries `&field=<id>`; this resolves it
+   * once the tab body has mounted (focus-field.ts polls, because the panel is
+   * not in the DOM at click time).
+   *
+   * The param is stripped straight afterwards: it is an instruction for this
+   * navigation, not a property of the page, and leaving it in the URL would
+   * re-yank the vendor's cursor on every reload while they were mid-edit.
+   */
+  const goTab = React.useCallback(
+    (key: TabKey, field?: string) => {
+      setActive(key)
+      syncUrl({ tab: key, field: null })
+      if (field) focusField(field)
+    },
+    [syncUrl],
+  )
+
+  const fieldParam = searchParams?.get("field") ?? null
+  const consumedField = React.useRef<string | null>(null)
   const [dirty, setDirty] = React.useState(false)
   const loadedId = React.useRef<number | null>(null)
   const [form, setForm] = React.useState<Record<string, any>>({})
@@ -444,9 +475,34 @@ export function BusinessSettingsHubView() {
     return hit.length > 1 ? "this business" : null
   }, [dirty, buildPatch, baseline.name])
 
+  /**
+   * Resolve an incoming `?field=` deep link.
+   *
+   * Deliberately gated on `biz`. The first version fired on mount and hunted
+   * for the element straight away — but the tab body does not exist until the
+   * businesses query resolves, and the fields inside it mount after that.
+   * Measured on the running app: `lc-owner-name` first appeared in the DOM
+   * roughly five seconds after navigation, by which time a poll started at
+   * hydration had already given up, so the vendor landed on the right tab at
+   * scrollTop 0 with the cursor nowhere. Waiting for the data means the hunt
+   * starts when the field can actually exist.
+   *
+   * The param survives until the field is genuinely reached (`focusField`'s
+   * callback), so a slow load cannot silently swallow the instruction.
+   */
+  React.useEffect(() => {
+    if (!fieldParam || !biz || consumedField.current === fieldParam) return
+    consumedField.current = fieldParam
+    focusField(fieldParam, () => syncUrl({ field: null }))
+  }, [fieldParam, biz, syncUrl])
+
   const saveMut = useMutation({
     mutationFn: () => BusinessesAPI.update(biz!.id, buildPatch() as Partial<ApiBusiness>),
-    onSuccess: () => { showSuccessToast("Business profile saved"); setDirty(false); qc.invalidateQueries({ queryKey: ["biz-settings-hub"] }) },
+    /* One business record is cached under three query keys across the
+       dashboard; invalidating only this screen's own is what left every other
+       screen — and the checklist that sent the vendor here — showing the old
+       value until a browser reload. See lib/query/business-keys.ts. */
+    onSuccess: () => { showSuccessToast("Business profile saved"); setDirty(false); invalidateBusinessData(qc) },
     // Surface the SERVER's reason, not axios's generic wrapper.
     //
     // This read `e?.message`, which for an axios error is the useless string
@@ -472,7 +528,25 @@ export function BusinessSettingsHubView() {
   const tab = TABS.find((t) => t.key === active)!
 
   return (
-    <div className="space-y-6 p-4 md:p-6 pb-24">
+    /**
+     * The save bar is `fixed`, so it takes no space in the flow and the page
+     * has to reserve it. `pb-24` was a guess at 96px — and the bar sits above
+     * the mobile nav, so the strip it actually occupies is its own height PLUS
+     * `--ww-mobile-nav`, which on a phone is another 64px. Measured on the
+     * Profile tab, the last field's helper text cleared the bar by 4px: not
+     * technically covered, but flush against it with nothing below, which reads
+     * as cut off and leaves no room to scroll it clear.
+     *
+     * The bar already measures itself and publishes `--ww-bottom-bar` (it has
+     * to, so the PWA prompt can get out of its way). Consuming that same value
+     * means the reservation is the real height plus a comfortable gap, on every
+     * tab and every viewport, instead of a number that happened to be nearly
+     * right on one of them.
+     */
+    <div
+      className="space-y-6 p-4 md:p-6"
+      style={{ paddingBottom: "calc(var(--ww-bottom-bar, 6rem) + 2rem)" }}
+    >
       <PageHeader
         eyebrow="Settings · Business"
         title={biz.name || "Business settings"}
@@ -545,7 +619,19 @@ export function BusinessSettingsHubView() {
             chevron and nothing to suggest eight more tabs existed. Wrapping
             costs a little vertical space and makes every section visible at
             once; the rail is unchanged from `lg` up. */}
-        <nav className="flex flex-wrap gap-1 lg:flex-col lg:flex-nowrap" aria-label="Settings sections">
+        {/* Sticky from `lg` up.
+            The rail scrolled away with the content, so a vendor eleven sections
+            deep in Listing content had to scroll the whole form back to the top
+            to reach Packages — on a screen whose entire purpose is moving
+            between sections. `self-start` is the load-bearing part: a grid item
+            stretches to the row height by default, which makes `sticky` a no-op
+            because the element is already as tall as its container. The rail
+            gets its own scrollbar too, since eleven items plus a short viewport
+            is a real combination. */}
+        <nav
+          className="flex flex-wrap gap-1 lg:sticky lg:top-0 lg:z-10 lg:max-h-[calc(100dvh-2rem)] lg:flex-col lg:flex-nowrap lg:self-start lg:overflow-y-auto lg:overflow-x-clip lg:bg-background lg:pb-2"
+          aria-label="Settings sections"
+        >
           {TABS.map((t) => (
             <button
               key={t.key}
@@ -680,13 +766,13 @@ export function BusinessSettingsHubView() {
                   <FieldError id="biz-advance" message={pricingErrs.downPayment} />
                 </Row>
               </div>
-              <Row label="Cancellation policy"><textarea className={cn(inputCls, "h-24 resize-y py-2")} value={form.cancelationPolicy ?? ""} onChange={(e) => set("cancelationPolicy", e.target.value)} placeholder="e.g. Advance non-refundable within 30 days of event." /></Row>
+              <Row id="biz-cancellation" label="Cancellation policy"><textarea id="biz-cancellation" className={cn(inputCls, "h-24 resize-y py-2")} value={form.cancelationPolicy ?? ""} onChange={(e) => set("cancelationPolicy", e.target.value)} placeholder="e.g. Advance non-refundable within 30 days of event." /></Row>
             </Section>
           )}
 
           {active === "amenities" && (
             <Section icon="SlidersHorizontal" title="Amenities & services" desc="What's included with your service.">
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div id="biz-amenities" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {amenitiesFor(biz.vendor?.vendorType, form).map((b) => (
                   <label key={String(b.key)} className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2.5 hover:bg-accent/50">
                     <span className="min-w-0">
@@ -710,7 +796,7 @@ export function BusinessSettingsHubView() {
             <TypeSpecificManager
               business={biz}
               config={getVendorTypeConfig(biz.vendor?.vendorType) ?? { displayName: biz.vendor?.vendorType || "This", typeSpecificFields: [] }}
-              onSaved={() => qc.invalidateQueries({ queryKey: ["biz-settings-hub"] })}
+              onSaved={() => invalidateBusinessData(qc)}
             />
           )}
           {active === "listing" && (
@@ -722,7 +808,7 @@ export function BusinessSettingsHubView() {
               key={biz.id}
               business={biz}
               onDirtyChange={setListingDirty}
-              onSaved={() => qc.invalidateQueries({ queryKey: ["biz-settings-hub"] })}
+              onSaved={() => invalidateBusinessData(qc)}
             />
           )}
           {active === "bank" && <BankAccountsManager />}
@@ -819,16 +905,25 @@ function Row({ id, label, children }: { id?: string; label: string; children: Re
  */
 function ListingHealth({
   biz, form, onGo,
-}: { biz: ApiBusiness; form: Record<string, any>; onGo: (t: TabKey) => void }) {
+}: { biz: ApiBusiness; form: Record<string, any>; onGo: (t: TabKey, field?: string) => void }) {
   const photos = biz.images?.length ?? 0
-  const gaps: { label: string; tab: TabKey; severe?: boolean }[] = []
+  /**
+   * Each gap carries the FIELD that fixes it, not just the tab.
+   *
+   * "Fix it" switched the tab and stopped. For photographs that is fine — the
+   * uploader is the whole tab. For "No advance terms set" it dropped the vendor
+   * on Capacity & pricing, which has six inputs, and left them to work out
+   * which two of them meant "advance". Same click, same intent, now the cursor
+   * is already in the box.
+   */
+  const gaps: { label: string; tab: TabKey; field?: string; severe?: boolean }[] = []
   if (photos === 0) gaps.push({ label: "No photographs — couples choose by looking", tab: "images", severe: true })
   else if (photos < 5) gaps.push({ label: `Only ${photos} photograph${photos === 1 ? "" : "s"} — aim for at least 5`, tab: "images" })
-  if (!String(form.description ?? "").trim()) gaps.push({ label: "No description", tab: "profile", severe: true })
-  if (!String(form.cancelationPolicy ?? "").trim()) gaps.push({ label: "No cancellation policy — couples ask before they book", tab: "pricing" })
-  if (!String(form.downPayment ?? "").trim()) gaps.push({ label: "No advance terms set", tab: "pricing" })
-  if (!String(form.brandLogo ?? "").trim()) gaps.push({ label: "No brand logo", tab: "profile" })
-  if (!String(form.minimumPrice ?? "").trim()) gaps.push({ label: "No starting price", tab: "pricing" })
+  if (!String(form.description ?? "").trim()) gaps.push({ label: "No description", tab: "profile", field: "biz-desc", severe: true })
+  if (!String(form.cancelationPolicy ?? "").trim()) gaps.push({ label: "No cancellation policy — couples ask before they book", tab: "pricing", field: "biz-cancellation" })
+  if (!String(form.downPayment ?? "").trim()) gaps.push({ label: "No advance terms set", tab: "pricing", field: "biz-advance" })
+  if (!String(form.brandLogo ?? "").trim()) gaps.push({ label: "No brand logo", tab: "profile", field: "biz-logo" })
+  if (!String(form.minimumPrice ?? "").trim()) gaps.push({ label: "No starting price", tab: "pricing", field: "biz-minprice" })
 
   if (gaps.length === 0) {
     return (
@@ -854,7 +949,7 @@ function ListingHealth({
             <button
               type="button"
               className="underline underline-offset-2 text-muted-foreground hover:text-foreground"
-              onClick={() => onGo(g.tab)}
+              onClick={() => onGo(g.tab, g.field)}
             >
               Fix it
             </button>
