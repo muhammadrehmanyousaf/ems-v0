@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button"
 import { Icon, Spinner } from "@/components/dashboard/shared/icon"
 import { DangerousAction } from "@/components/dashboard/primitives/dangerous-action"
 import { toast } from "sonner"
+import { EmptyState } from "@/components/dashboard/primitives/empty-state";
 
 const fmtDate = (s?: string | null) => {
   if (!s) return null
@@ -108,12 +109,18 @@ export function QuotesView() {
       ) : isLoading ? (
         <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground"><Spinner size={16} /> Loading…</div>
       ) : isError ? (
-        <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">Quote requests aren&apos;t enabled for your account yet.</div>
+        <EmptyState
+          variant="error"
+          title="Quote requests aren't enabled for your account yet."
+          description="Nothing is wrong with your listing — this feature just isn't switched on for you."
+        />
       ) : list.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-8 text-center">
-          <div className="text-sm font-medium">No quote requests yet</div>
-          <p className="mt-1 text-xs text-muted-foreground">When a customer taps “Request a quote” on your listing, it lands here.</p>
-        </div>
+        // No CTA on purpose: the customer starts a quote request, not the vendor.
+        // A button here would offer an action that does not exist.
+        <EmptyState
+          title="No quote requests yet"
+          description="When a customer taps “Request a quote” on your listing, it lands here."
+        />
       ) : (
         <ul className="space-y-3">
           {paged.pageRows.map((q) => {

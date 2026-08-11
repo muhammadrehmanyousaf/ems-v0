@@ -8,9 +8,9 @@
 |---|---:|---:|
 | Total dashboard routes | 76 | 100% |
 | Renders an empty message | 49 | 64% |
-| Calls `EmptyState` directly (real adoption) | 12 | 16% |
+| Calls `EmptyState` directly (real adoption) | 15 | 20% |
 | Inherits it via `DataTable` only | 33 | 43% |
-| **Empty message with no guided state 🔴** | **11** | **14%** |
+| **Empty message with no guided state 🔴** | **8** | **11%** |
 | Uses `DataTable` | 35 | 46% |
 | Uses `PageHeader` | 54 | 71% |
 | Uses `StatCard` | 35 | 46% |
@@ -74,16 +74,16 @@
 | `/dashboard/migrate` | — | — | — | — | — | — | — | — |
 | `/dashboard/money` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
 | `/dashboard/notifications` | ✅ | — | ✅ | — | — | ✅ | ✅ | — |
-| `/dashboard/onboarding` | 🔴 | — | ✅ | — | — | ✅ | — | — |
+| `/dashboard/onboarding` | ✅ | — | ✅ | — | — | ✅ | — | — |
 | `/dashboard/packages` | ✅ | — | ✅ | — | — | ✅ | — | — |
 | `/dashboard/payments` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
 | `/dashboard/pdcs` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
 | `/dashboard/profile` | — | — | ✅ | — | ✅ | — | — | — |
 | `/dashboard/promote` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
-| `/dashboard/quotes` | 🔴 | — | ✅ | — | — | — | — | — |
+| `/dashboard/quotes` | ✅ | — | ✅ | — | — | — | — | — |
 | `/dashboard/receipts` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
 | `/dashboard/receivables` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
-| `/dashboard/reliability` | 🔴 | — | — | — | — | ✅ | — | — |
+| `/dashboard/reliability` | ✅ | — | — | — | — | ✅ | — | — |
 | `/dashboard/reports` | — | — | — | — | — | — | — | — |
 | `/dashboard/revenue` | — | ✅ | ✅ | ✅ | — | — | — | — |
 | `/dashboard/reviews` | 🔴 | ✅ | — | — | — | ✅ | — | — |
@@ -127,12 +127,6 @@ re-deriving it. Some will be legitimately fine — this is triage, not a verdict
   - `components/chat/chat-message-area.tsx:300` — No messages yet
 - `/dashboard/kitchen-prep`
   - `components/dashboard/mainScreens/kitchen/kitchen-prep-view.tsx:191` — <option value="">{boms.length ? "Pick a dish…" : "No recipes set up for this venue yet"}</option>
-- `/dashboard/onboarding`
-  - `components/dashboard/mainScreens/onboarding/onboarding-checklist-view.tsx:176` — <p className="font-medium">No business yet.</p>
-- `/dashboard/quotes`
-  - `components/dashboard/mainScreens/quotes/quotes-view.tsx:114` — <div className="text-sm font-medium">No quote requests yet</div>
-- `/dashboard/reliability`
-  - `components/dashboard/mainScreens/reliability/reliability-view.tsx:70` — No businesses yet. Create one and your reliability score will
 - `/dashboard/reviews`
   - `components/dashboard/mainScreens/reviews/reputation-panel.tsx:93` — if (!data || !data.hasData) return null; // no reviews yet → don't clutter
 - `/dashboard/vendors/[id]`

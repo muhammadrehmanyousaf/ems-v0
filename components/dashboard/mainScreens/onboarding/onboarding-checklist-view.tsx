@@ -66,6 +66,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { EmptyState } from "@/components/dashboard/primitives/empty-state";
 
 /**
  * The order a listing is actually built in, which is not the order the API
@@ -172,14 +173,16 @@ export default function OnboardingChecklistView() {
   if (!biz) {
     return (
       <Card>
-        <CardContent className="flex flex-col items-start gap-3 p-5 text-sm">
-          <p className="font-medium">No business yet.</p>
-          <p className="text-muted-foreground">
-            Create your business profile and this becomes a step-by-step setup for it.
-          </p>
-          <Link href="/dashboard/business/new">
-            <Button size="sm">Create a business</Button>
-          </Link>
+        <CardContent className="p-5">
+          <EmptyState
+            title="No business yet"
+            description="Create your business profile and this becomes a step-by-step setup for it."
+            action={
+              <Link href="/dashboard/business/new">
+                <Button size="sm">Create a business</Button>
+              </Link>
+            }
+          />
         </CardContent>
       </Card>
     );

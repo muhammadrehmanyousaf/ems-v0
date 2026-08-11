@@ -2,10 +2,10 @@
   "generatedFrom": "scripts/ux-inventory.mjs",
   "summary": {
     "routes": 76,
-    "emptyStateDirect": 12,
+    "emptyStateDirect": 15,
     "emptyStateViaTable": 33,
     "showsEmptyProse": 49,
-    "unguidedEmpty": 11,
+    "unguidedEmpty": 8,
     "usesDataTable": 35,
     "usesStatCard": 35,
     "usesPageHeader": 54,
@@ -1305,8 +1305,8 @@
     },
     {
       "route": "/dashboard/onboarding",
-      "filesScanned": 14,
-      "emptyState": false,
+      "filesScanned": 16,
+      "emptyState": true,
       "emptyProp": false,
       "statCard": false,
       "dataTable": false,
@@ -1315,15 +1315,15 @@
       "tabs": false,
       "statusPill": false,
       "emptyProse": true,
-      "emptyStateDirect": false,
+      "emptyStateDirect": true,
       "emptyStateViaTable": false,
       "hasDetail": false,
-      "unguidedEmpty": true,
+      "unguidedEmpty": false,
       "proseHits": [
         {
           "file": "components/dashboard/mainScreens/onboarding/onboarding-checklist-view.tsx",
-          "line": 176,
-          "text": "<p className=\"font-medium\">No business yet.</p>"
+          "line": 178,
+          "text": "title=\"No business yet\""
         }
       ]
     },
@@ -1437,8 +1437,8 @@
     },
     {
       "route": "/dashboard/quotes",
-      "filesScanned": 22,
-      "emptyState": false,
+      "filesScanned": 23,
+      "emptyState": true,
       "emptyProp": false,
       "statCard": false,
       "dataTable": false,
@@ -1447,15 +1447,15 @@
       "tabs": false,
       "statusPill": false,
       "emptyProse": true,
-      "emptyStateDirect": false,
+      "emptyStateDirect": true,
       "emptyStateViaTable": false,
       "hasDetail": false,
-      "unguidedEmpty": true,
+      "unguidedEmpty": false,
       "proseHits": [
         {
           "file": "components/dashboard/mainScreens/quotes/quotes-view.tsx",
-          "line": 114,
-          "text": "<div className=\"text-sm font-medium\">No quote requests yet</div>"
+          "line": 121,
+          "text": "title=\"No quote requests yet\""
         }
       ]
     },
@@ -1503,8 +1503,8 @@
     },
     {
       "route": "/dashboard/reliability",
-      "filesScanned": 12,
-      "emptyState": false,
+      "filesScanned": 15,
+      "emptyState": true,
       "emptyProp": false,
       "statCard": false,
       "dataTable": false,
@@ -1513,15 +1513,15 @@
       "tabs": false,
       "statusPill": false,
       "emptyProse": true,
-      "emptyStateDirect": false,
+      "emptyStateDirect": true,
       "emptyStateViaTable": false,
       "hasDetail": false,
-      "unguidedEmpty": true,
+      "unguidedEmpty": false,
       "proseHits": [
         {
           "file": "components/dashboard/mainScreens/reliability/reliability-view.tsx",
-          "line": 70,
-          "text": "No businesses yet. Create one and your reliability score will"
+          "line": 74,
+          "text": "title=\"No businesses yet\""
         }
       ]
     },
