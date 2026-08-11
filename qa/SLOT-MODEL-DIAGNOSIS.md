@@ -172,7 +172,7 @@ Each step is independently shippable and reversible.
 | **1** | ✅ *(done)* Quick-booking sheet sends `slotTemplateId` | none | Unblocks the vendor booking their own venue |
 | **2** | ✅ *(done)* `bookingSlotToRange` reads the template's real `startTime`/`endTime` instead of the 09/14/18 buckets | low | Feeds the correct guard correct data. Must precede 3 |
 | **3** | ✅ *(done)* `slotVocabulary.clockSlotsFor` takes an optional real window and computes the sessions it spans. Whole-day stays for genuinely ambiguous **names**; **without a window nothing changes at all**, so no caller is loosened that cannot supply real hours | medium — landed only after 2 | Kills D1, the "dates conflict" |
-| **4** | `slotService.usedCount` adds the space term when the template is space-scoped | low | Kills D3 — halls stop cannibalising each other |
+| **4** | ✅ *(done)* `usedCount` + `assertSlotAvailable` take an optional `subVenueId`; the advisory lock key carries it too. Applied **only** when `defaultSpaceIdFor` says the venue has more than one bookable space | low | Kills D3 — halls stop cannibalising each other, and the write guard stops disagreeing with the read |
 | **5** | Backfill `subVenueId` on existing templates; repair malformed rows (the 10:58 "Morning") | low | Data hygiene before the UI exposes it |
 | **6** | One slot writer. Merge `venueSlotService.createSlot` into `slotService` with the union of both validations, scoped per space. Soft delete only | medium | Kills D5 |
 | **7** | Add `UNIQUE (businessId, subVenueId, label)` + an overlap `EXCLUDE` on the template table | low | Makes D5 structurally impossible |
