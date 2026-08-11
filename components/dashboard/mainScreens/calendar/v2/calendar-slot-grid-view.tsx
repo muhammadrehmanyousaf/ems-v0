@@ -11,6 +11,7 @@
  * venue_os_v2; non-pilot vendors keep the current calendar.
  */
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { addDays, format } from "date-fns";
 import { ChevronLeft, ChevronRight, Loader2, CalendarDays } from "lucide-react";
@@ -185,9 +186,19 @@ export function CalendarSlotGridView() {
             <Loader2 className="size-4 animate-spin" /> Loading calendar…
           </div>
         ) : !data || rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4">
-            No halls or time-slots set up yet. Add them in Settings → Availability and they’ll appear here.
-          </p>
+          /* This used to send vendors to "Settings → Availability", which is a
+             blocked-dates editor with no space or slot control in it. The real
+             editor is Venue-OS → Halls & spaces, and a vendor following the old
+             instruction landed on a date blocker and had no way to reach it. */
+          <div className="py-4 text-sm text-muted-foreground">
+            <p>No halls or time-slots set up yet.</p>
+            <Link
+              href="/dashboard/venue-os?tab=spaces"
+              className="mt-2 inline-flex items-center gap-1.5 rounded-md font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Set up halls &amp; time-slots
+            </Link>
+          </div>
         ) : (
           <div className="overflow-x-auto -mx-1 px-1">
             <div className="min-w-max">

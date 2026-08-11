@@ -151,8 +151,15 @@ export const venueSpacesApi = {
   maintenance: (businessId: number, body: { subVenueId: number; slot: Slot; note?: string }): Promise<BookResult> => unwrap<BookResult>(api.post(`${BASE}/business/${businessId}/maintenance`, body)),
 
   // per-space slots (onboarding + portal)
-  listSlots: (businessId: number, subVenueId?: number): Promise<{ businessId: number; subVenueId: number | null; scope: string; slots: SlotTemplate[] }> =>
-    unwrap(api.get(`${BASE}/business/${businessId}/slots`, { params: subVenueId ? { subVenueId } : {} })),
+  /**
+   * `includeInactive` is for the vendor's own editor: without it a slot the
+   * vendor switches to Hidden disappears from the only screen that could switch
+   * it back on. Customer-facing callers omit it and never see hidden slots.
+   */
+  listSlots: (businessId: number, subVenueId?: number, includeInactive = false): Promise<{ businessId: number; subVenueId: number | null; scope: string; slots: SlotTemplate[] }> =>
+    unwrap(api.get(`${BASE}/business/${businessId}/slots`, {
+      params: { ...(subVenueId ? { subVenueId } : {}), ...(includeInactive ? { includeInactive: "true" } : {}) },
+    })),
   createSlot: (businessId: number, body: Partial<SlotTemplate>): Promise<SlotTemplate> => unwrap<SlotTemplate>(api.post(`${BASE}/business/${businessId}/slots`, body)),
   bulkSetSlots: (businessId: number, body: { subVenueId?: number | null; slots: Partial<SlotTemplate>[] }): Promise<{ count: number; slots: SlotTemplate[] }> =>
     unwrap(api.put(`${BASE}/business/${businessId}/slots`, body)),
