@@ -193,6 +193,68 @@ does not.
 - **"The two money panels disagree."** They do not. The top cards are scoped to the active filter and follow it — All gives 25 / Rs 20,117,621 collected, which matches the Receivables panel's "across all events" figure exactly. Not a finding.
 - **"The actions button is invisible."** First measured `width: 0, offsetParent: null` — but the viewport had dropped to 572px, where the desktop table is deliberately not rendered at all. Re-measured at 1425px: the button is real and rendered, just off-screen (BK-A3). The artefact was mine.
 
+## THE SYSTEMIC FINDING — measured across the whole portal, 2026-08-11
+
+Bookings was not a bad module. It was a normal one.
+
+Swept every screen that renders the shared `DataTable`:
+
+| | count |
+|---|---|
+| screens using `DataTable` | **38** |
+| passing row navigation to it (`rowHref` / `onRowClick`) | **4** |
+| declaring **any** sortable column | **2** |
+
+**Two of thirty-eight lists in this product can be ordered.** Not by date, not
+by amount, not by who owes most, not by when someone last booked. That covers
+Payments, Expenses, Staff, Suppliers, Inventory, Function sheets, Disputes,
+Revenue, Tax, PDCs, Brokers, Customers, Collaborations, Audit logs — the
+operational spine of the vendor portal.
+
+### Stated precisely, because the two numbers are not equally strong
+
+The **sorting** number is unambiguous: a column is sortable or it is not, and 36
+screens have no sortable column.
+
+The **navigation** number measures use of the *primitive's* row-navigation
+props. It is not the same as "the row is unreachable" — Customers, for one,
+carries its own "Open detail" icon in an actions column, so the destination
+exists and works. What those screens share is a **half-clickable row**: one
+small target at the end, the other 95% of the row inert. That is arguably worse
+than a fully dead row, because it teaches that rows are not clickable and then
+makes one of them the exception.
+
+### Why this is the real answer to "it doesn't look mature"
+
+It is not ten thousand separate bugs. It is a small number of patterns, each
+absent from most screens:
+
+- a row that opens its record
+- a column header that orders the list
+- a filter that survives a reload
+- an actions column that is on the screen
+
+Every one of those was **already supported by the code** — `onRowClick` shipped
+in the primitive, the Bookings API accepted `sortBy`, the hall-assignment
+endpoint was mounted and working — and simply not reached. The gap between
+"built" and "reachable" is where this product loses.
+
+### Fixed so far
+
+| Screen | Row opens record | Sorting |
+|---|---|---|
+| Bookings | ✅ | ✅ server-side (API already supported it) |
+| Leads | ✅ | ✅ client-side (list is fully loaded) |
+| Customers | ✅ | ✅ client-side |
+
+### Not yet done, and why not blanket-applied
+
+Only **8 detail routes exist** under `/dashboard` (`bookings`, `business`,
+`customers`, `function-sheets`, `leads`, `staff`, `suppliers`, `vendors`).
+Wiring `rowHref` on a screen with no detail page would manufacture exactly the
+dead doors this codebase already has too many of, so each remaining screen needs
+its destination confirmed first rather than a sweep.
+
 ## Module status board
 
 `⬜ not started · 🔵 in progress · ✅ done to protocol`

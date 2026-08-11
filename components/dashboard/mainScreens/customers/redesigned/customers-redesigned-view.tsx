@@ -58,6 +58,8 @@ export function CustomersRedesignedView() {
     {
       key: "name",
       header: "Customer",
+      sortKey: "name",
+      sortValue: (c) => c.name || "",
       render: (c) => (
         <div className="flex items-center gap-2.5">
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
@@ -69,8 +71,8 @@ export function CustomersRedesignedView() {
     },
     { key: "phone", header: "Phone", cellClassName: "text-muted-foreground", render: (c) => c.phone || "—" },
     { key: "email", header: "Email", cellClassName: "text-muted-foreground", render: (c) => c.email || "—" },
-    { key: "bookings", header: "Bookings", align: "right", render: (c) => <span className="tabular-nums font-medium">{c.total_booking ?? 0}</span> },
-    { key: "last", header: "Last booking", cellClassName: "text-muted-foreground", render: (c) => fmtDate(c.last_booking) },
+    { key: "bookings", header: "Bookings", align: "right", sortKey: "bookings", sortValue: (c) => Number(c.total_booking) || 0, render: (c) => <span className="tabular-nums font-medium">{c.total_booking ?? 0}</span> },
+    { key: "last", header: "Last booking", cellClassName: "text-muted-foreground", sortKey: "last", sortValue: (c) => c.last_booking || null, render: (c) => fmtDate(c.last_booking) },
     {
       key: "actions",
       header: "",
@@ -122,6 +124,21 @@ export function CustomersRedesignedView() {
         columns={columns}
         data={customers}
         getRowId={(c) => c._id}
+        /**
+         * The row opens the customer. It already had an "Open detail" icon in
+         * the actions column — so the destination existed and worked — but the
+         * row itself was dead (`cursor: auto`), which is the same half-clickable
+         * shape Leads had: a person learns rows are inert, then one small icon
+         * at the end of the row is the exception.
+         *
+         * The actions column keeps its explicit icons; the row is now the large
+         * target for the same place. `_id` IS the email here, hence the encode.
+         *
+         * Sorting is client-side: this screen loads the customer list in one
+         * call and pages it locally, so ordering by booking count or last
+         * booking here is the whole set, not the visible page.
+         */
+        rowHref={(c) => `/dashboard/customers/${encodeURIComponent(c._id)}`}
         loading={isLoading}
         error={isError ? "Couldn't load customers." : null}
         onRetry={() => refetch()}
