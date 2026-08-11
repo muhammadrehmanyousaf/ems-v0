@@ -176,7 +176,8 @@ Each step is independently shippable and reversible.
 | **5** | Backfill `subVenueId` on existing templates; repair malformed rows (the 10:58 "Morning") | low | Data hygiene before the UI exposes it |
 | **6** | One slot writer. Merge `venueSlotService.createSlot` into `slotService` with the union of both validations, scoped per space. Soft delete only | medium | Kills D5 |
 | **7** | Add `UNIQUE (businessId, subVenueId, label)` + an overlap `EXCLUDE` on the template table | low | Makes D5 structurally impossible |
-| **8** | Accept mixed-mode carts server-side so a venue line can carry a slot while a photographer line does not | medium | Removes the multi-vendor dead end |
+| **8** | ⚠️ **Not done — deliberately.** Accepting mixed-mode carts is a *capacity redesign*, not a check to delete. `BookingDetails` has **no `slotTemplateId`** (grep: 0 occurrences); the slot is booking-level, and `usedCount` counts `Booking.slotTemplateId`. BK-029 refuses mixed carts because the legacy conflict check joins on `bookingTime` strings, so a mixed cart can **silently double-book the legacy vendors**. Doing this half-way causes the exact failure this product exists to prevent. Needs `BookingDetails.slotTemplateId` + per-line guest units + per-line counting. The customer-facing **dead end** was fixed instead (below) | **high** | Deferred until the per-line capacity model exists |
+| **8a** | ✅ *(done)* Submit failures persist on the page instead of vanishing into a toast, and the mixed-cart / whitelist rejections carry a hint that names the actual next action | low | The customer no longer completes six steps and is left on Review with no explanation |
 | **9** | One slot + space editor, reachable from the calendar's empty state, with the `isActive` toggle exposed | — | The vendor-facing ask |
 | **10** | Single slot vocabulary on detail / booking / review / success screens | low | Stops the four-way disagreement |
 
