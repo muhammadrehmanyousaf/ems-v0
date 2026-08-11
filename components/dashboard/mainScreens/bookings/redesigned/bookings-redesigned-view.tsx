@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils"
 import { OfflineBookingDialog } from "@/components/dashboard/mainScreens/bookings/bookingListing/components/offline-booking-dialog"
 import { BookingRowActions } from "./booking-row-actions"
 import { OwnerLedgerCard } from "@/components/bookings/owner-ledger-card"
+import { AssignSpaceDialog } from "@/components/dashboard/shared/assign-space-dialog"
 
 const statusTone = (s: BookingStatus): StatusTone =>
   s === "Confirmed" ? "success"
@@ -61,6 +62,18 @@ const BUCKETS = [
   { value: "cancelled", label: "Cancelled" },
   { value: "all", label: "All" },
 ] as const
+
+/**
+ * Exactly the fields `bookingController` will sort on — its `allowedSort`, no
+ * more. Asking for anything else is silently ignored by the server and would
+ * leave a header that highlights itself and changes nothing.
+ *
+ * Paid and Balance are deliberately absent: both are computed on the client
+ * from totalAmount and downPayment, so the server cannot order by them, and
+ * sorting them here would order the 50 rows on this page and misreport every
+ * row past it.
+ */
+const SERVER_SORTABLE = ["createdAt", "bookingDate", "status", "totalAmount", "customerName"]
 
 type BucketValue = (typeof BUCKETS)[number]["value"]
 
@@ -109,11 +122,41 @@ export function BookingsRedesignedView() {
   }, [router, pathname, searchParams])
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
   const [createOpen, setCreateOpen] = React.useState(false)
+  // Which booking's hall is being set, from the Space column. See that column.
+  const [assignFor, setAssignFor] = React.useState<number | null>(null)
+
+  /**
+   * Sort — server-side, because the list is paged server-side.
+   *
+   * The API has accepted sortBy/sortOrder the whole time; this screen sent
+   * `createdAt DESC` and nothing else, and none of the eleven headers was a
+   * control. A vendor could not order 22 events by date or by amount.
+   *
+   * In the URL for the same reason the bucket is: a sorted view a reload throws
+   * away is a view you cannot come back to or send to anyone.
+   */
+  const urlSort = searchParams?.get("sort")
+  const urlDir = searchParams?.get("dir")
+  const [sortBy, setSortBy] = React.useState<string>(
+    SERVER_SORTABLE.includes(urlSort ?? "") ? (urlSort as string) : "createdAt",
+  )
+  const [sortOrder, setSortOrder] = React.useState<"ASC" | "DESC">(urlDir === "ASC" ? "ASC" : "DESC")
+
+  const applySort = React.useCallback((key: string, order: "ASC" | "DESC") => {
+    setSortBy(key)
+    setSortOrder(order)
+    setPage(1)
+    const params = new URLSearchParams(searchParams?.toString() ?? "")
+    if (key === "createdAt" && order === "DESC") { params.delete("sort"); params.delete("dir") }
+    else { params.set("sort", key); params.set("dir", order) }
+    const qs = params.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+  }, [router, pathname, searchParams])
 
   const { data, isLoading, isError, refetch } = useFetchData({
     endpoint: "/api/v1/bookings",
-    queryKey: ["bookings-redesigned", bucket, String(page)],
-    Params: { page, limit: PAGE_SIZE, sortBy: "createdAt", sortOrder: "DESC", search: search || undefined, bucket },
+    queryKey: ["bookings-redesigned", bucket, String(page), sortBy, sortOrder],
+    Params: { page, limit: PAGE_SIZE, sortBy, sortOrder, search: search || undefined, bucket },
   })
 
   const bookings: BookingData[] = data?.data?.data ?? []
@@ -144,15 +187,44 @@ export function BookingsRedesignedView() {
     // halls a vendor actually builds live in the SubVenue tree, and that is what
     // a booking now records. `resource` stays as the fallback for the venues
     // that did use it.
+    /**
+     * The em-dash is now the way to fix the em-dash.
+     *
+     * 135 of 139 booking lines on the platform carry no space; this vendor has
+     * eleven halls and eight of nine bookings reading "—". The column stated a
+     * problem and offered nothing, and those same unassigned bookings downgrade
+     * every space to PARTIAL in the availability grid.
+     *
+     * The machinery to fix it was all already built and all already working —
+     * GET/PATCH /api/v1/bookings/:id/space, the BookingSpaceAPI client,
+     * AssignSpaceDialog, and `isSpaceUnassigned` in booking-space.ts described
+     * in its own comment as "the 'Assign hall' prompt". The only route to it was
+     * the row's ⋯ menu → Quick view → the sheet, and that ⋯ button sits at
+     * x = 1467 on a 1425px viewport. A finished feature behind a control that
+     * was off the edge of the screen.
+     */
     {
       key: "space",
       header: "Space",
       cellClassName: "text-muted-foreground",
-      render: (b) => spaceNameOf(b) || <span title="No hall recorded for this booking">—</span>,
+      render: (b) => {
+        const name = spaceNameOf(b)
+        if (name) return name
+        return (
+          <button
+            type="button"
+            // The row is a link now; setting a hall must not also open the booking.
+            onClick={(e) => { e.stopPropagation(); setAssignFor(b.id) }}
+            className="rounded px-1.5 py-0.5 text-xs text-muted-foreground underline decoration-dotted underline-offset-4 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Set hall
+          </button>
+        )
+      },
     },
-    { key: "customer", header: "Customer", cellClassName: "text-muted-foreground", render: (b) => b.customerName || "—" },
-    { key: "date", header: "Date", cellClassName: "text-muted-foreground whitespace-nowrap", render: (b) => fmtDate(b.bookingDate) },
-    { key: "amount", header: "Amount", align: "right", render: (b) => <MoneyCell amount={bookedOn(b)} /> },
+    { key: "customer", header: "Customer", sortKey: "customerName", cellClassName: "text-muted-foreground", render: (b) => b.customerName || "—" },
+    { key: "date", header: "Date", sortKey: "bookingDate", cellClassName: "text-muted-foreground whitespace-nowrap", render: (b) => fmtDate(b.bookingDate) },
+    { key: "amount", header: "Amount", sortKey: "totalAmount", align: "right", render: (b) => <MoneyCell amount={bookedOn(b)} /> },
     { key: "paid", header: "Paid", align: "right", render: (b) => <MoneyCell amount={receivedOn(b)} tone="muted" /> },
     // WWL-037 — a row showing Rs 1,546,000 booked and Rs 386,500 paid also
     // carried a green "Paid" chip, because the chip printed the stored flag
@@ -226,6 +298,9 @@ export function BookingsRedesignedView() {
          * in full the whole time.
          */
         rowHref={(b) => `/dashboard/bookings/${b.id}`}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSort={applySort}
         loading={isLoading}
         error={isError ? "Couldn't load bookings." : null}
         onRetry={() => refetch()}
@@ -344,6 +419,16 @@ export function BookingsRedesignedView() {
       <OwnerLedgerCard />
 
       <OfflineBookingDialog open={createOpen} onOpenChange={setCreateOpen} onSuccess={() => refetch()} />
+
+      {/* Set a hall straight from the Space column. Refetching on close rather
+          than on success because the dialog reports through its own query — a
+          list that still says "—" after you set a hall is the reason nobody
+          trusts a screen. */}
+      <AssignSpaceDialog
+        bookingId={assignFor}
+        open={assignFor != null}
+        onOpenChange={(o) => { if (!o) { setAssignFor(null); void refetch() } }}
+      />
     </div>
   )
 }

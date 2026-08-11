@@ -29,6 +29,17 @@ export interface Column<T> {
   render?: (row: T, index: number) => React.ReactNode
   headerClassName?: string
   cellClassName?: string
+  /**
+   * The API field this column sorts by. Presence makes the header a button.
+   *
+   * It is the SERVER's field name on purpose. These lists are paged server-side,
+   * so a client-side sort would order the rows on screen and silently misreport
+   * every row beyond them — a vendor sorting 22 events by "who owes most" would
+   * get the largest debt on page one, not the largest debt they have. A column
+   * whose value is computed on the client (a balance derived from two fields)
+   * therefore has no `sortKey` and stays unsorted rather than lying.
+   */
+  sortKey?: string
 }
 
 export interface DataTableProps<T> {
@@ -75,6 +86,20 @@ export interface DataTableProps<T> {
    * something to rely on.
    */
   rowHref?: (row: T) => string | null | undefined
+  /**
+   * Current sort, and the handler that changes it. Both come from the screen
+   * because the screen owns the query — the table only renders the affordance
+   * and announces the state.
+   *
+   * Measured on /dashboard/bookings 2026-08-11: eleven columns, zero of them
+   * sortable, no `aria-sort` anywhere. The API has accepted
+   * `sortBy` ∈ {createdAt, bookingDate, status, totalAmount, customerName} with
+   * `sortOrder` the whole time; the screen sent `createdAt DESC` and nothing
+   * else, so a vendor could not order their events by date or by amount.
+   */
+  sortBy?: string
+  sortOrder?: "ASC" | "DESC"
+  onSort?: (key: string, order: "ASC" | "DESC") => void
   className?: string
   /**
    * WWL-120/137/153/170/187 — table a11y, unchanged across five modules.
@@ -219,6 +244,9 @@ export function DataTable<T>({
   bulkActions,
   onRowClick,
   rowHref,
+  sortBy,
+  sortOrder = "DESC",
+  onSort,
   className,
   caption,
   getRowLabel,
@@ -391,20 +419,51 @@ export function DataTable<T>({
                     />
                   </th>
                 )}
-                {columns.map((c) => (
-                  <th scope="col"
-                    key={c.key}
-                    style={c.width ? { width: c.width } : undefined}
-                    className={cn(
-                      "px-4 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground",
-                      alignCls(c.align),
-                      ACTION_KEYS.has(c.key) && STICKY_ACTION_CELL,
-                      c.headerClassName,
-                    )}
-                  >
-                    {c.header}
-                  </th>
-                ))}
+                {columns.map((c) => {
+                  const sortable = !!c.sortKey && !!onSort
+                  const active = sortable && sortBy === c.sortKey
+                  return (
+                    <th scope="col"
+                      key={c.key}
+                      style={c.width ? { width: c.width } : undefined}
+                      // `aria-sort` is how a screen reader learns the table is
+                      // ordered and by what. Only the active column carries it —
+                      // "none" on every other column is noise, not information.
+                      aria-sort={active ? (sortOrder === "ASC" ? "ascending" : "descending") : undefined}
+                      className={cn(
+                        "px-4 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground",
+                        alignCls(c.align),
+                        ACTION_KEYS.has(c.key) && STICKY_ACTION_CELL,
+                        c.headerClassName,
+                      )}
+                    >
+                      {sortable ? (
+                        <button
+                          type="button"
+                          // First click on a new column sorts DESC — newest,
+                          // largest, most owed. That is the question a vendor is
+                          // asking when they click "Amount", and making them
+                          // click twice to get it is a small tax on every use.
+                          onClick={() => onSort!(c.sortKey!, active && sortOrder === "DESC" ? "ASC" : "DESC")}
+                          className={cn(
+                            "-mx-1 inline-flex items-center gap-1 rounded px-1 py-0.5 uppercase tracking-wide hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            active && "text-foreground",
+                            c.align === "right" && "flex-row-reverse",
+                          )}
+                        >
+                          {c.header}
+                          <Icon
+                            name={active ? (sortOrder === "ASC" ? "ChevronUp" : "ChevronDown") : "ChevronsUpDown"}
+                            size={12}
+                            className={cn(active ? "opacity-100" : "opacity-35")}
+                          />
+                        </button>
+                      ) : (
+                        c.header
+                      )}
+                    </th>
+                  )
+                })}
               </tr>
             </thead>
             <tbody>
