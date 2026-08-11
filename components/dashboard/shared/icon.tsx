@@ -139,6 +139,7 @@ import {
   Wifi,
   WifiOff,
   Printer,
+  Ban,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -233,6 +234,9 @@ const LUCIDE_MAP = {
   Wifi,
   WifiOff,
   Printer,
+  // Iconly has no "unavailable/closed" glyph; Ban is the one that reads as
+  // "this date is shut" rather than "delete" or "error".
+  Ban,
   X,
   XCircle,
   MoreHorizontal,
