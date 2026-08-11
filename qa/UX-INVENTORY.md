@@ -8,9 +8,9 @@
 |---|---:|---:|
 | Total dashboard routes | 76 | 100% |
 | Renders an empty message | 49 | 64% |
-| Calls `EmptyState` directly (real adoption) | 15 | 20% |
+| Calls `EmptyState` directly (real adoption) | 18 | 24% |
 | Inherits it via `DataTable` only | 33 | 43% |
-| **Empty message with no guided state 🔴** | **8** | **11%** |
+| **Empty message with no guided state 🔴** | **5** | **7%** |
 | Uses `DataTable` | 35 | 46% |
 | Uses `PageHeader` | 54 | 71% |
 | Uses `StatCard` | 35 | 46% |
@@ -40,7 +40,7 @@
 | `/dashboard/availability` | — | — | — | — | — | — | — | — |
 | `/dashboard/billing` | ✅ | — | ✅ | — | ✅ | — | — | — |
 | `/dashboard/bookings` | — | ✅ | ✅ | ✅ | ✅ | — | — | ✅ |
-| `/dashboard/bookings/[id]` | 🔴 | — | — | — | — | ✅ | — | — |
+| `/dashboard/bookings/[id]` | ✅ | — | — | — | — | ✅ | — | — |
 | `/dashboard/bookings/[id]/financials` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
 | `/dashboard/brokers` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
 | `/dashboard/business` | — | ✅ | — | — | — | ✅ | — | ✅ |
@@ -50,7 +50,7 @@
 | `/dashboard/businesses-overview` | — | — | — | — | — | ✅ | — | — |
 | `/dashboard/calendar` | ✅ | — | ✅ | — | ✅ | — | — | — |
 | `/dashboard/cancellation-policy` | — | — | — | — | — | — | — | — |
-| `/dashboard/chat` | 🔴 | — | — | — | — | — | — | — |
+| `/dashboard/chat` | ✅ | — | — | — | — | — | — | — |
 | `/dashboard/claims` | — | — | ✅ | — | — | — | ✅ | — |
 | `/dashboard/collaborations` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
 | `/dashboard/customers` | — | ✅ | ✅ | ✅ | — | — | — | ✅ |
@@ -99,7 +99,7 @@
 | `/dashboard/trade-ops` | ✅ | — | ✅ | — | — | ✅ | — | — |
 | `/dashboard/users` | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
 | `/dashboard/vendors` | — | ✅ | ✅ | ✅ | ✅ | — | — | ✅ |
-| `/dashboard/vendors/[id]` | 🔴 | — | — | — | — | ✅ | — | — |
+| `/dashboard/vendors/[id]` | ✅ | — | — | — | — | ✅ | — | — |
 | `/dashboard/venue-os` | ✅ | — | — | ✅ | — | — | ✅ | — |
 
 ## Phase 1 worklist — routes with an unguided empty state
@@ -114,21 +114,7 @@ re-deriving it. Some will be legitimately fine — this is triage, not a verdict
   - `components/dashboard/mainScreens/admin/complaints-queue-view.tsx:233` — No complaints match this filter.
 - `/dashboard/admin/platform-pulse`
   - `components/dashboard/mainScreens/admin/platform-pulse-view.tsx:164` — <Row k="No sheets yet" v="—" />
-- `/dashboard/bookings/[id]`
-  - `components/dashboard/mainScreens/bookings/bookingListing/booking-detail-view.tsx:548` — No service details available
-  - `components/dashboard/mainScreens/bookings/bookingListing/booking-detail-view.tsx:729` — No function sheets linked yet. Create one from{' '}
-  - `components/bookings/order-builder-card.tsx:213` — No items yet. Add a hall, a per-head menu, or any custom charge below.
-  - `components/bookings/refund-preview-card.tsx:38` — if (!data) return null; // feature off (404) or no booking money yet
-  - `components/bookings/vendor-change-requests-card.tsx:142` — ? "The new slot is no longer available."
-- `/dashboard/chat`
-  - `components/chat/conversation-list.tsx:144` — {contactSearch ? "No contacts match your search" : "No contacts available"}
-  - `components/chat/conversation-list.tsx:222` — {search ? "No conversations found" : "No conversations yet"}
-  - `components/chat/conversation-list.tsx:310` — : "No messages yet"}
-  - `components/chat/chat-message-area.tsx:300` — No messages yet
 - `/dashboard/kitchen-prep`
   - `components/dashboard/mainScreens/kitchen/kitchen-prep-view.tsx:191` — <option value="">{boms.length ? "Pick a dish…" : "No recipes set up for this venue yet"}</option>
 - `/dashboard/reviews`
   - `components/dashboard/mainScreens/reviews/reputation-panel.tsx:93` — if (!data || !data.hasData) return null; // no reviews yet → don't clutter
-- `/dashboard/vendors/[id]`
-  - `components/dashboard/mainScreens/vendors/vendor-detail-view.tsx:251` — No business listing yet. A vendor without one cannot appear in search or
-  - `components/dashboard/mainScreens/vendors/vendor-detail-view.tsx:283` — endpoint has no per-vendor filter yet. Stated honestly rather than

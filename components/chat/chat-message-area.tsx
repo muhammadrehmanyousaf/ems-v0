@@ -15,6 +15,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/dashboard/primitives/empty-state";
 
 function getInitials(name: string) {
   return name
@@ -292,17 +293,12 @@ export function ChatMessageArea() {
 
         {/* Empty state */}
         {!isLoadingMessages && messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full py-12">
-            <div className="h-16 w-16 rounded-2xl bg-bridal-cream dark:bg-bridal-charcoal/40 flex items-center justify-center mb-3">
-              <MessageCircle className="h-8 w-8 text-bridal-gold/70" />
-            </div>
-            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              No messages yet
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              Send the first message to start the conversation
-            </p>
-          </div>
+          <EmptyState
+            className="h-full border-0 bg-transparent"
+            icon="MessageCircle"
+            title="No messages yet"
+            description="Send the first message to start the conversation"
+          />
         )}
 
         {/* Loading full chat */}

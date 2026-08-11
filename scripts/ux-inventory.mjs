@@ -151,7 +151,11 @@ function scanRoute({ route, file }) {
           // states ("…had nothing to show but 19:00"). Those are prose about
           // the UI, not prose in it — roughly half of every match before this.
           if (/^\s*(\/\/|\/\*|\*)/.test(line)) return;
-          if (EMPTY_PROSE.test(line)) {
+          // Trailing comments too: `return null; // no booking money yet` is a
+          // note about an empty case, not an empty state the vendor can read.
+          // Only strip when the `//` is not inside a string or a URL.
+          const code = line.replace(/(^|[^:"'`\\])\/\/.*$/, "$1");
+          if (EMPTY_PROSE.test(code)) {
             proseFiles.push({ file: rel, line: i + 1, text: line.trim().slice(0, 110) });
           }
         });

@@ -77,6 +77,7 @@ import { VendorNoShowDialog } from '@/components/bookings/vendor-no-show-dialog'
 import EventWeatherChip from '@/components/dashboard/mainScreens/bookings/event-weather-chip';
 import type { BookingData } from '@/lib/dashboard-types';
 import { outstandingOn, derivedPaymentStatus } from '@/lib/utils/booking-money';
+import { EmptyState } from "@/components/dashboard/primitives/empty-state";
 
 const statusColors: Record<string, string> = {
   'Awaiting Payment': 'bg-orange-50 text-orange-700 border-orange-200',
@@ -544,9 +545,11 @@ export default function BookingDetailView({
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-neutral-400">
-                  No service details available
-                </p>
+                <EmptyState
+                  size="inline"
+                  title="No service details available"
+                  description="Package, menu and add-on details will show here once they are set on this booking."
+                />
               )}
             </CardContent>
           </Card>

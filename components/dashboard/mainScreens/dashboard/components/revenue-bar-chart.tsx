@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/chart"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { RevenueTrendItem } from "@/lib/api/analytics"
+import { EmptyState } from "@/components/dashboard/primitives/empty-state";
 
 const chartConfig = {
   revenue: {
@@ -49,9 +50,12 @@ export function RevenueBarChart({ chartHeight, data, period, loading }: RevenueB
           {loading ? (
             <Skeleton className="h-full w-full rounded-lg" />
           ) : data.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-              No revenue data
-            </div>
+            <EmptyState
+              className="h-full border-0 bg-transparent py-0"
+              icon="Wallet"
+              title="No revenue recorded yet"
+              description="Payments you record against bookings will chart here by month."
+            />
           ) : (
             <ChartContainer config={chartConfig}>
               <BarChart accessibilityLayer data={data} margin={{ left: 0, right: 4, top: 4, bottom: 0 }}>

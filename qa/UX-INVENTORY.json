@@ -2,10 +2,10 @@
   "generatedFrom": "scripts/ux-inventory.mjs",
   "summary": {
     "routes": 76,
-    "emptyStateDirect": 15,
+    "emptyStateDirect": 18,
     "emptyStateViaTable": 33,
     "showsEmptyProse": 49,
-    "unguidedEmpty": 8,
+    "unguidedEmpty": 5,
     "usesDataTable": 35,
     "usesStatCard": 35,
     "usesPageHeader": 54,
@@ -386,8 +386,8 @@
     },
     {
       "route": "/dashboard/bookings/[id]",
-      "filesScanned": 45,
-      "emptyState": false,
+      "filesScanned": 47,
+      "emptyState": true,
       "emptyProp": false,
       "statCard": false,
       "dataTable": false,
@@ -396,25 +396,25 @@
       "tabs": false,
       "statusPill": false,
       "emptyProse": true,
-      "emptyStateDirect": false,
+      "emptyStateDirect": true,
       "emptyStateViaTable": false,
       "hasDetail": false,
-      "unguidedEmpty": true,
+      "unguidedEmpty": false,
       "proseHits": [
         {
           "file": "components/dashboard/mainScreens/bookings/bookingListing/booking-detail-view.tsx",
-          "line": 548,
-          "text": "No service details available"
+          "line": 550,
+          "text": "title=\"No service details available\""
         },
         {
           "file": "components/dashboard/mainScreens/bookings/bookingListing/booking-detail-view.tsx",
-          "line": 729,
+          "line": 732,
           "text": "No function sheets linked yet. Create one from{' '}"
         },
         {
           "file": "components/bookings/order-builder-card.tsx",
-          "line": 213,
-          "text": "No items yet. Add a hall, a per-head menu, or any custom charge below."
+          "line": 215,
+          "text": "title=\"No items yet.\""
         },
         {
           "file": "components/bookings/refund-preview-card.tsx",
@@ -656,8 +656,8 @@
     },
     {
       "route": "/dashboard/chat",
-      "filesScanned": 15,
-      "emptyState": false,
+      "filesScanned": 17,
+      "emptyState": true,
       "emptyProp": false,
       "statCard": false,
       "dataTable": false,
@@ -666,30 +666,30 @@
       "tabs": false,
       "statusPill": false,
       "emptyProse": true,
-      "emptyStateDirect": false,
+      "emptyStateDirect": true,
       "emptyStateViaTable": false,
       "hasDetail": false,
-      "unguidedEmpty": true,
+      "unguidedEmpty": false,
       "proseHits": [
         {
           "file": "components/chat/conversation-list.tsx",
-          "line": 144,
-          "text": "{contactSearch ? \"No contacts match your search\" : \"No contacts available\"}"
+          "line": 146,
+          "text": "title={contactSearch ? \"No contacts match your search\" : \"No contacts available\"}"
         },
         {
           "file": "components/chat/conversation-list.tsx",
-          "line": 222,
+          "line": 223,
           "text": "{search ? \"No conversations found\" : \"No conversations yet\"}"
         },
         {
           "file": "components/chat/conversation-list.tsx",
-          "line": 310,
+          "line": 311,
           "text": ": \"No messages yet\"}"
         },
         {
           "file": "components/chat/chat-message-area.tsx",
-          "line": 300,
-          "text": "No messages yet"
+          "line": 299,
+          "text": "title=\"No messages yet\""
         }
       ]
     },
@@ -1891,8 +1891,8 @@
     },
     {
       "route": "/dashboard/vendors/[id]",
-      "filesScanned": 13,
-      "emptyState": false,
+      "filesScanned": 15,
+      "emptyState": true,
       "emptyProp": false,
       "statCard": false,
       "dataTable": false,
@@ -1901,19 +1901,19 @@
       "tabs": false,
       "statusPill": false,
       "emptyProse": true,
-      "emptyStateDirect": false,
+      "emptyStateDirect": true,
       "emptyStateViaTable": false,
       "hasDetail": false,
-      "unguidedEmpty": true,
+      "unguidedEmpty": false,
       "proseHits": [
         {
           "file": "components/dashboard/mainScreens/vendors/vendor-detail-view.tsx",
-          "line": 251,
-          "text": "No business listing yet. A vendor without one cannot appear in search or"
+          "line": 254,
+          "text": "title=\"No business listing yet.\""
         },
         {
           "file": "components/dashboard/mainScreens/vendors/vendor-detail-view.tsx",
-          "line": 283,
+          "line": 286,
           "text": "endpoint has no per-vendor filter yet. Stated honestly rather than"
         }
       ]
