@@ -105,6 +105,45 @@ check("a vendor with no business is prompted, not scored", () => {
   eq(r.nextAction?.href, "/dashboard/business/new", "href");
 });
 
+console.log("\nunknown signals lower confidence, never the score");
+check("nothing known → score is null, not 0", () => {
+  // A 0 here would be a claim about the vendor. null is a statement about us.
+  const r = computeHealth({ hasBusiness: true });
+  eq(r.score, null, "score");
+  eq(r.severity, null, "severity");
+  eq(r.coverage, 0, "coverage");
+  eq(r.unknownFactors.length, 4, "unknownFactors");
+});
+check("one known factor scores on that factor alone, not out of 100", () => {
+  // The flaw this whole change exists to fix: with the other three defaulting
+  // to 0, a blameless vendor would have been shown a red 25/100 built out of
+  // my own ignorance.
+  const r = computeHealth({ hasBusiness: true, profileCompleteness: 1 });
+  eq(r.score, 100, "score");
+  eq(r.severity, "healthy", "severity");
+  ok(Math.abs(r.coverage - 0.25) < 1e-9, `coverage ${r.coverage}`);
+  ok(r.unknownFactors.includes("responsiveness"), "names what it could not see");
+});
+check("an unknown factor is never treated as a failed one", () => {
+  // The first version of this check asserted that dropping a factor "neither
+  // helps nor hurts". That property cannot hold for a weighted average —
+  // removing a fully-earned factor must lower the mean, which is arithmetic,
+  // not a bug. The assertion was wrong, not the code.
+  //
+  // The property that actually matters is the one the change was for: an
+  // unknown must never be scored as a zero.
+  const unknown = computeHealth({ ...base, profileCompleteness: undefined });
+  const pessimistic = computeHealth({ ...base, profileCompleteness: 0 });
+  ok(unknown.score !== null && pessimistic.score !== null, "both scored");
+  ok(
+    unknown.score > pessimistic.score,
+    `unknown scored no better than a zero: ${unknown.score} vs ${pessimistic.score}`,
+  );
+  // …and it must be honest that it was excluded.
+  ok(unknown.unknownFactors.includes("listing"), "unknownFactors names it");
+  ok(unknown.coverage < 1, `coverage should drop, got ${unknown.coverage}`);
+});
+
 console.log("\nthe next action is the most recoverable one, not the ugliest");
 check("prefers availability (25pts fully unearned) over a nearly-done listing", () => {
   const r = computeHealth({ ...base, hasPublishedAvailability: false, profileCompleteness: 0.9 });

@@ -37,18 +37,32 @@ export interface HealthFactor {
   href?: string
 }
 
+/**
+ * `undefined` on any signal means NOT KNOWN YET — the endpoint that would
+ * answer it hasn't been called, or doesn't exist.
+ *
+ * This distinction is the whole reason the type is shaped this way. Wiring the
+ * first factor (profile completeness, which already has an endpoint) made the
+ * flaw obvious: with the other three defaulting to zero, a vendor who had done
+ * nothing wrong would have been shown a red 25/100 assembled almost entirely
+ * out of my own ignorance. An unknown must lower confidence, never the score.
+ *
+ * Unknown factors are dropped from the weighted average and reported in
+ * `coverage`, so a partial answer says "here is what I can see" rather than
+ * inventing the rest.
+ */
 export interface HealthSignals {
   /** Enquiries with no vendor reply, and the oldest one's age in hours. */
-  unansweredEnquiries: number
-  oldestUnansweredHours: number | null
+  unansweredEnquiries?: number
+  oldestUnansweredHours?: number | null
   /** Has the vendor published availability for any future date? */
-  hasPublishedAvailability: boolean
+  hasPublishedAvailability?: boolean
   /** 0..1 — how much of the listing is filled in. */
-  profileCompleteness: number
+  profileCompleteness?: number
   /** Confirmed bookings whose money was never recorded. */
-  bookingsMissingPayment: number
+  bookingsMissingPayment?: number
   /** Bookings sitting in a state that needs a decision (hold expiring, etc). */
-  bookingsAwaitingAction: number
+  bookingsAwaitingAction?: number
   /** Does the vendor have a business listing at all? */
   hasBusiness: boolean
 }
@@ -71,9 +85,10 @@ function severityOf(earned: number): Severity {
  * Responsiveness. The clock matters more than the count: one enquiry ignored
  * for three days is a worse signal than five that came in this morning.
  */
-function responsiveness(s: HealthSignals): HealthFactor {
+function responsiveness(s: HealthSignals): HealthFactor | null {
+  if (s.unansweredEnquiries == null) return null
   const n = Math.max(0, s.unansweredEnquiries)
-  const hours = s.oldestUnansweredHours
+  const hours = s.oldestUnansweredHours ?? null
   let earned = 1
   if (n > 0) {
     // Nothing is overdue until 24h — vendors are not a call centre and should
@@ -95,7 +110,8 @@ function responsiveness(s: HealthSignals): HealthFactor {
   }
 }
 
-function availability(s: HealthSignals): HealthFactor {
+function availability(s: HealthSignals): HealthFactor | null {
+  if (s.hasPublishedAvailability == null) return null
   const earned = s.hasPublishedAvailability ? 1 : 0
   return {
     key: "availability",
@@ -112,7 +128,8 @@ function availability(s: HealthSignals): HealthFactor {
   }
 }
 
-function listing(s: HealthSignals): HealthFactor {
+function listing(s: HealthSignals): HealthFactor | null {
+  if (s.profileCompleteness == null) return null
   const earned = clamp01(s.profileCompleteness)
   return {
     key: "listing",
@@ -128,9 +145,10 @@ function listing(s: HealthSignals): HealthFactor {
   }
 }
 
-function bookkeeping(s: HealthSignals): HealthFactor {
-  const missing = Math.max(0, s.bookingsMissingPayment)
-  const pending = Math.max(0, s.bookingsAwaitingAction)
+function bookkeeping(s: HealthSignals): HealthFactor | null {
+  if (s.bookingsMissingPayment == null && s.bookingsAwaitingAction == null) return null
+  const missing = Math.max(0, s.bookingsMissingPayment ?? 0)
+  const pending = Math.max(0, s.bookingsAwaitingAction ?? 0)
   const open = missing + pending
   // Forgiving curve: one loose end is normal bookkeeping, not a crisis.
   const earned = open === 0 ? 1 : clamp01(1 - (open - 1) / 8)
@@ -149,13 +167,25 @@ function bookkeeping(s: HealthSignals): HealthFactor {
 }
 
 export interface HealthResult {
-  score: number
-  severity: Severity
+  /** null when nothing is known yet. Render `—`, never `0`. */
+  score: number | null
+  severity: Severity | null
   /** One sentence. States the position; never lectures. */
   headline: string
   factors: HealthFactor[]
   /** The single highest-value thing to do next, or null when all clear. */
   nextAction: { label: string; href?: string } | null
+  /** 0..1 — share of total weight we actually had signals for. */
+  coverage: number
+  /** Factor keys we could not evaluate. Name them rather than hide them. */
+  unknownFactors: string[]
+}
+
+const ALL_FACTOR_WEIGHTS: Record<string, number> = {
+  responsiveness: 30,
+  availability: 25,
+  listing: 25,
+  bookkeeping: 20,
 }
 
 export function computeHealth(s: HealthSignals): HealthResult {
@@ -169,11 +199,36 @@ export function computeHealth(s: HealthSignals): HealthResult {
       headline: "Create your business listing to get started.",
       factors: [],
       nextAction: { label: "Create a business", href: "/dashboard/business/new" },
+      coverage: 1,
+      unknownFactors: [],
     }
   }
 
-  const factors = [responsiveness(s), availability(s), listing(s), bookkeeping(s)]
+  const factors = [responsiveness(s), availability(s), listing(s), bookkeeping(s)].filter(
+    (f): f is HealthFactor => f !== null,
+  )
+  const known = new Set(factors.map((f) => f.key))
+  const unknownFactors = Object.keys(ALL_FACTOR_WEIGHTS).filter((k) => !known.has(k))
+  const allWeight = Object.values(ALL_FACTOR_WEIGHTS).reduce((t, w) => t + w, 0)
   const totalWeight = factors.reduce((t, f) => t + f.weight, 0)
+  const coverage = totalWeight / allWeight
+
+  // Nothing known: say so. A 0 here would be a claim about the vendor rather
+  // than a statement about what we could see.
+  if (totalWeight === 0) {
+    return {
+      score: null,
+      severity: null,
+      headline: "Not enough information yet to assess your setup.",
+      factors: [],
+      nextAction: null,
+      coverage: 0,
+      unknownFactors,
+    }
+  }
+
+  // Averaged over KNOWN weight only, so an unmeasured factor neither helps nor
+  // hurts — it just narrows what the number is speaking for.
   const score = Math.round(
     factors.reduce((t, f) => t + f.earned * f.weight, 0) / totalWeight * 100,
   )
@@ -198,6 +253,8 @@ export function computeHealth(s: HealthSignals): HealthResult {
     headline,
     factors,
     nextAction: worst ? { label: worst.action as string, href: worst.href } : null,
+    coverage,
+    unknownFactors,
   }
 }
 
