@@ -121,6 +121,41 @@ Recording these so they are not "re-found" later.
 
 ---
 
+## BOOKINGS — audited live on production, 2026-08-11
+
+Vendor `muhammadrehmanyousaf786@gmail.com` (user 3351 · 3 businesses · 11 spaces),
+`/dashboard/bookings`, 1425×900 and 360×720.
+
+### Fixed
+
+| # | Finding | Evidence |
+|---|---|---|
+| **BK-A1** | **Clicking a booking row did nothing.** No link, no handler, `cursor: auto`. The only routes in were the two icon buttons at the far right of an 11-column row and the "balance due" panel — which lists only bookings that still owe money, so a **fully paid booking had no route to its own detail page anywhere on the screen**. `/dashboard/bookings/173` renders in full. | Clicked the customer cell: URL unchanged, no dialog, no drawer, no selection |
+| **BK-A2** | Not a Bookings bug — **38 screens use `DataTable`, 2 pass `onRowClick`.** Fixed in the primitive as `rowHref` (a real link: keyboard, ⌘-click, screen-reader), not a third click handler | `grep -rln onRowClick` → 2 files |
+| **BK-A3** | **The actions column is off-screen at ordinary laptop width.** Table is 1166px of content in a 1036px container; the "Booking actions" button's left edge is at **x = 1467** on a 1425px viewport. Reachable only by discovering the table scrolls sideways. With BK-A1 that meant a vendor could read a booking and had no visible way to act on it | `getBoundingClientRect()` at 1425×900 |
+| **BK-A4** | **`onRowClick` has never been keyboard-operable** — no `tabIndex`, no role, no Enter/Space. Receipts and Receivables have rows a keyboard cannot activate at all | Read of the primitive |
+| **BK-A5** | **The bucket filter never reaches the URL.** Cancelled shows 3 of 9 rows and the address bar still reads `/dashboard/bookings`; reload silently returns to Active. The file said so itself: "the in-page toggle still owns it afterwards" | Clicked all four buckets: 9 / 3 / 13 / 25 rows, `location.search` empty throughout |
+
+### Open — reported, not fixed
+
+| # | Finding | Why not fixed here |
+|---|---|---|
+| **BK-B1** | **Eleven columns, none sortable.** No `aria-sort`, no header buttons. A vendor cannot order 22 events by date, by amount, or by who owes the most | Sorting is a `DataTable` feature with server-side implications (the list is paged server-side at 50/page, so client-side sort would sort one page and lie about the rest) |
+| **BK-B2** | **The `Space` column is a fact nobody can act on.** 135 of 139 booking lines platform-wide have no `subVenueId` (4 do; 31 carry the legacy `resourceId`). This vendor has **11 halls and 8 of 9 bookings reading `—`**. There is no hall picker in the edit dialog, none in the row-actions menu, and `subVenueId` is **not in `allowedFields`** on the update endpoint — so there is no path, UI or API, to assign a hall after a booking exists. Unassigned bookings also downgrade every space to PARTIAL in the availability grid | Needs a backend field on the update path plus a picker in the edit dialog — a feature, not a repair |
+| **BK-B3** | **Selecting rows offers nothing.** The bulk bar reads exactly "2 selected · Clear". Selection does have one use — the Export menu scopes to it and says so well ("Selected → CSV", "All rows") — but the bar never mentions it, so the affordance that appears on selection is the one that does the least | Small; the honest fix is a scoped export action in the bulk bar |
+
+### Verified correct — no action
+
+- **Search**: 25 → 2 on "Ahmed", 0 on "zzzqqq", restores on clear. The no-match state correctly says *"No matches for …"* with a Clear button rather than the false *"No bookings yet"*.
+- **Export**: respects selection, offers Selected and All-rows variants in both CSV and Excel, and shows the count.
+- **Filters**: all four buckets return distinct, correct row counts.
+- **360px**: table swaps to a card list, no page-level horizontal scroll, **zero** tap targets under the WCAG 2.2 24px minimum.
+
+### Withdrawn — measured, then disproved
+
+- **"The two money panels disagree."** They do not. The top cards are scoped to the active filter and follow it — All gives 25 / Rs 20,117,621 collected, which matches the Receivables panel's "across all events" figure exactly. Not a finding.
+- **"The actions button is invisible."** First measured `width: 0, offsetParent: null` — but the viewport had dropped to 572px, where the desktop table is deliberately not rendered at all. Re-measured at 1425px: the button is real and rendered, just off-screen (BK-A3). The artefact was mine.
+
 ## Module status board
 
 `⬜ not started · 🔵 in progress · ✅ done to protocol`

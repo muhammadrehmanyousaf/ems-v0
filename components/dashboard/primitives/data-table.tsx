@@ -147,6 +147,29 @@ const alignCls = (a?: Column<any>["align"]) =>
  */
 const ACTION_KEYS = new Set(["actions", "action", "row-actions", "rowActions", "menu"])
 
+/**
+ * The actions column is pinned to the right edge of the horizontal scroller.
+ *
+ * Measured on production 2026-08-11, /dashboard/bookings at a 1425px viewport —
+ * an ordinary laptop, not a narrow window: the table is 1166px of content in a
+ * 1036px container, and the "Booking actions" button's left edge sits at
+ * x = 1467. Off the screen. The row's only controls were reachable only by
+ * discovering that the table scrolls sideways inside the page, and until
+ * `rowHref` the row itself did nothing — so a vendor could read a booking and
+ * had no visible way to act on it at all.
+ *
+ * `bg-card` is load-bearing, not decorative: a transparent pinned cell lets the
+ * columns scroll visibly underneath it. It stays opaque through hover and
+ * selection rather than inheriting the row's tint — inheriting a semi-
+ * transparent tint paints it twice and makes the pinned column darker than the
+ * row it belongs to. The left shadow is what says "there is more to the left of
+ * this", which is the whole reason the column is allowed to cover content.
+ *
+ * On a table that fits, `sticky` has nothing to stick to and this is inert.
+ */
+const STICKY_ACTION_CELL =
+  "sticky right-0 z-[2] bg-card shadow-[-10px_0_10px_-10px_hsl(var(--foreground)/0.18)]"
+
 function defaultCard<T>(columns: Column<T>[], row: T, index: number): React.ReactNode {
   const actions = columns.filter((c) => ACTION_KEYS.has(c.key))
   const fields = columns.filter((c) => !ACTION_KEYS.has(c.key) && c.key !== "select")
@@ -375,6 +398,7 @@ export function DataTable<T>({
                     className={cn(
                       "px-4 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground",
                       alignCls(c.align),
+                      ACTION_KEYS.has(c.key) && STICKY_ACTION_CELL,
                       c.headerClassName,
                     )}
                   >
@@ -448,7 +472,13 @@ export function DataTable<T>({
                           // own job and nothing else — without this, "Edit
                           // booking" also navigated to the booking underneath it.
                           onClick={activate && ACTION_KEYS.has(c.key) ? (e) => e.stopPropagation() : undefined}
-                          className={cn("px-4 text-foreground", rowPad, alignCls(c.align), c.cellClassName)}
+                          className={cn(
+                            "px-4 text-foreground",
+                            rowPad,
+                            alignCls(c.align),
+                            ACTION_KEYS.has(c.key) && STICKY_ACTION_CELL,
+                            c.cellClassName,
+                          )}
                         >
                           {href && c.key === primaryKey ? (
                             <Link
