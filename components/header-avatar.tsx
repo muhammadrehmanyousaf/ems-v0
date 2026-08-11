@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Spinner } from "./ui/spinner";
 import { Button } from "@/components/ui/button";
@@ -61,7 +61,7 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
     logout();
   };
 
-  const hasDashboardAccess = displayUser
+  const accessRightNow = displayUser
     ? displayUser.isVendor === true ||
       displayUser.isSuperAdmin === true ||
       displayUser.roles?.some(
@@ -73,6 +73,43 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
           role.name?.toLowerCase() === "admin"
       )
     : false;
+
+  /**
+   * Latch access ON for the life of a session, and only reset it when the user
+   * actually changes.
+   *
+   * This is what made the menu flicker. The component returns three SEPARATE
+   * <DropdownMenu> trees — one for a user with dashboard access, one for a user
+   * without, one for logged out. React does not re-render across that boundary,
+   * it unmounts one tree and mounts another, and Radix keeps `open` in internal
+   * state, so the open menu is destroyed with the tree it lived in.
+   *
+   * `accessRightNow` is derived from `displayUser.roles`. UserContext refreshes
+   * the user from /users/:id, which its own comment describes as "the plain DB
+   * user" — it does not re-compute isSuperAdmin, and roles can come back thinner
+   * than the copy in localStorage. So a routine background refresh flipped this
+   * flag, swapped the tree, and closed the menu under the cursor. The stored
+   * copy then restored it and it flipped back, which is the oscillation visible
+   * in the recording: open, closed, open, closed, roughly twice a second, while
+   * the pointer never moved.
+   *
+   * Access is not something that should appear and vanish twice a second. Once
+   * we have seen that this user has it, that is the answer until the user
+   * changes — a thinner refresh payload is missing information, not a
+   * revocation. Keyed on user id so a different account starts clean, and
+   * logout is unaffected because `displayUser` going null renders the
+   * logged-out tree regardless.
+   */
+  const accessLatch = useRef<{ userId: unknown; value: boolean }>({
+    userId: null,
+    value: false,
+  });
+  const currentUserId = displayUser?.id ?? null;
+  if (accessLatch.current.userId !== currentUserId) {
+    accessLatch.current = { userId: currentUserId, value: false };
+  }
+  if (accessRightNow) accessLatch.current.value = true;
+  const hasDashboardAccess = accessLatch.current.value;
 
   /**
    * Spin only when there is genuinely nothing to show.
