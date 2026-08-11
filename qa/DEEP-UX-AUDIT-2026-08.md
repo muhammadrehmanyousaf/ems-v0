@@ -69,6 +69,43 @@ Severity: **S1** blocks the job · **S2** forces a workaround · **S3** friction
 | A11Y-01 | **S3** | Auth | `/login` has **no `h1`** — the page's main heading is an `h2` | Live: `h1Count: 0` | Open |
 | A11Y-02 | **S3** | Auth | "Forgot password?" is 103.5×**18 px** — a standalone (non-inline) link under the 24 px minimum | Live measurement | Open |
 
+---
+
+## SLOTS — the availability model (reproduced live, customer-side)
+
+Reproduced on production at `/3358/booking` (Rehman Grand Marquee), Step 2 "When is your event?",
+date **Thu 13 Aug 2026**. This is the "dates conflict / very confusing" report.
+
+What a real customer is offered:
+
+```
+TIME OF DAY
+  Morning        10:58 – 22:58     1 of 1 left
+  Lunch event    12:00 – 16:00     1 of 1 left
+  Dinner event   19:00 – 23:00     1 of 1 left
+```
+
+| ID | Sev | Finding | Evidence |
+|---|---|---|---|
+| **SLOT-01** | **S1** | **Overlapping slots each carry independent capacity, so one physical space can be sold twice for the same wall-clock time.** "Morning" (10:58–22:58) *entirely contains* "Lunch event" and nearly all of "Dinner event", yet all three advertise "1 of 1 left" separately. Selling Morning does not decrement Dinner. | Computed overlap: Morning∩Lunch = **240 min**, Morning∩Dinner = **238 min**. Live, customer-facing |
+| **SLOT-02** | **S1** | **Slots do not scope to the chosen space.** The picker offers `Whole venue / any hall · Main Hall · afsana · Terrace Lawn · Mardana Section · Zenana Section`. Selecting **Main Hall (id 3345)** returned a byte-identical slot list and identical counts. Five halls share three counters | Live A/B on the same page |
+| **SLOT-03** | **S2** | A slot named **"Morning" running 10:58 – 22:58** — a 12-hour morning. The 10:58 start is the wall-clock time the row was created. No validation on slot label vs times, duration, or overlap | Live; matches the earlier commit `slots: "Morning 10:58-22:58 · 150 of 150 left" was three separate bugs` |
+| **SLOT-04** | **S2** | **Two slot layers are live at once with no stated precedence.** `BusinessSlotTemplate.subVenueId` is nullable — NULL means business-level (legacy), non-NULL means per-space. `ENABLE_VENUE_HIERARCHY` is in `DEFAULT_ON`, so the per-space layer is **not** dark | `businessSlotTemplate.js`; `20260701210000-venueos-slot-subvenue.js`; `flagResolverService.js:20` |
+| **SLOT-05** | **S2** | No database-level uniqueness on (space, date, slot). The model declares only `idx_slottemplate_business_active` and `idx_slottemplate_business_sort`, so the double-booking guard is application-level and can race | `businessSlotTemplate.js` indexes block |
+| **BOOK-01** | **S3** | Vendor rating renders as the raw float **`4.333333333333333`** in the booking header | Live `/3358/booking` |
+
+**Already in the schema:** `isActive` exists on `BusinessSlotTemplate` (plus `weekdayMask`,
+`bufferAfterMinutes`, `unitGuestCapacity`, `sortOrder`, `capacity`). The "vendor decides which slot
+is live" control the user asked for is **modelled but needs a vendor-facing UI** — it does not need
+a new column.
+
+**Root cause (working hypothesis, pending the forensic map):** slot templates are *named time
+windows with their own counters*, not *reservations of a resource over a time range*. Capacity is
+counted per template row rather than per (space × time-interval), so overlap is invisible to the
+system. Two templates that describe the same hours are, to this model, two independent products.
+
+---
+
 ### Withdrawn — measured, then disproved
 Recording these so they are not "re-found" later.
 
