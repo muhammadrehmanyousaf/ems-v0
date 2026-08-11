@@ -138,52 +138,138 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
   }
 
   if (displayUser) {
-    if (hasDashboardAccess) {
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="bg-gradient-to-r from-bridal-gold to-bridal-gold-dark hover:from-bridal-gold-dark hover:to-bridal-gold-dark text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold group"
-            >
-              <Crown className="w-4 h-4 mr-2 text-bridal-gold group-hover:scale-110 transition-transform duration-200" />
-              Dashboard
-              <ChevronDown className="w-4 h-4 ml-2 group-hover:scale-110 transition-transform duration-200" />
-            </Button>
-          </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56 bg-white dark:bg-neutral-900 border border-bridal-beige dark:border-neutral-800 shadow-xl rounded-xl mr-8">
-            <DropdownMenuLabel className="flex items-center gap-2 text-bridal-charcoal font-semibold">
-              <Shield className="w-4 h-4 text-bridal-gold" />
-              Admin Panel
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-            <Link href="/dashboard" className="flex items-center gap-3 w-full cursor-pointer dark:hover:bg-neutral-800">
-                <div className="w-8 h-8 bg-bridal-gold/15 rounded-lg flex items-center justify-center">
-                  <Building className="w-4 h-4 text-bridal-gold-dark" />
-                </div>
-                <div>
-                <div className="font-semibold text-neutral-900 dark:text-neutral-100">Dashboard</div>
-                  <div className="text-xs text-neutral-500">Manage platform</div>
-                </div>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-            <Link href="/dashboard/settings" className="flex items-center gap-3 w-full cursor-pointer dark:hover:bg-neutral-800">
-                <div className="w-8 h-8 bg-bridal-gold/15 rounded-lg flex items-center justify-center">
-                  <Settings className="w-4 h-4 text-bridal-gold-dark" />
-                </div>
-                <div>
-                <div className="font-semibold text-neutral-900 dark:text-neutral-100">Settings</div>
-                  <div className="text-xs text-neutral-500">Configure system</div>
-                </div>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
+    /**
+     * ONE DropdownMenu for both logged-in shapes — never two that swap.
+     *
+     * This used to be `if (hasDashboardAccess) return <DropdownMenu>… else
+     * return <DropdownMenu>…`. Two sibling trees, so when the flag changed
+     * React unmounted one and mounted the other, and Radix — which keeps `open`
+     * in internal state — lost the open menu along with the tree it lived in.
+     * That is the flicker in the recording: open, closed, open, closed, twice a
+     * second, while the pointer never moved.
+     *
+     * The latch above stops the flag flipping, which fixes the trigger. This
+     * removes the mechanism, so no future prop change can close the menu by
+     * swapping the tree out from under it. Only the trigger and the items
+     * differ now; the DropdownMenu itself is mounted once and stays.
+     */
+    const trigger = hasDashboardAccess ? (
+      <Button
+        variant="outline"
+        size="sm"
+        className="bg-gradient-to-r from-bridal-gold to-bridal-gold-dark hover:from-bridal-gold-dark hover:to-bridal-gold-dark text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold group"
+      >
+        <Crown className="w-4 h-4 mr-2 text-bridal-gold group-hover:scale-110 transition-transform duration-200" />
+        Dashboard
+        <ChevronDown className="w-4 h-4 ml-2 group-hover:scale-110 transition-transform duration-200" />
+      </Button>
+    ) : (
+      <Button
+        variant="ghost"
+        size="sm"
+      className="p-0 h-auto hover:bg-bridal-cream dark:hover:bg-neutral-800 transition-all duration-200 group"
+      >
+        <Avatar className="w-10 h-10 border-2 border-bridal-gold/45 group-hover:border-bridal-gold/55 transition-all duration-200 shadow-lg group-hover:shadow-xl">
+          <AvatarImage src={displayUser.profileImage} alt={displayUser.fullName} />
+          <AvatarFallback className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white font-semibold text-lg group-hover:scale-110 transition-transform duration-200">
+            {displayUser.fullName?.charAt(0).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+      </Button>
+    );
+
+    const items = hasDashboardAccess ? (
+      <>
+        <DropdownMenuLabel className="flex items-center gap-2 text-bridal-charcoal font-semibold">
+          <Shield className="w-4 h-4 text-bridal-gold" />
+          Admin Panel
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+        <Link href="/dashboard" className="flex items-center gap-3 w-full cursor-pointer dark:hover:bg-neutral-800">
+            <div className="w-8 h-8 bg-bridal-gold/15 rounded-lg flex items-center justify-center">
+              <Building className="w-4 h-4 text-bridal-gold-dark" />
+            </div>
+            <div>
+            <div className="font-semibold text-neutral-900 dark:text-neutral-100">Dashboard</div>
+              <div className="text-xs text-neutral-500">Manage platform</div>
+            </div>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+        <Link href="/dashboard/settings" className="flex items-center gap-3 w-full cursor-pointer dark:hover:bg-neutral-800">
+            <div className="w-8 h-8 bg-bridal-gold/15 rounded-lg flex items-center justify-center">
+              <Settings className="w-4 h-4 text-bridal-gold-dark" />
+            </div>
+            <div>
+            <div className="font-semibold text-neutral-900 dark:text-neutral-100">Settings</div>
+              <div className="text-xs text-neutral-500">Configure system</div>
+            </div>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={handleLogout}
+        className="flex items-center gap-3 cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50"
+        >
+          <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+            <LogOut className="w-4 h-4 text-red-600" />
+          </div>
+          <div>
+            <div className="font-semibold">Logout</div>
+            <div className="text-xs text-neutral-500">Sign out</div>
+          </div>
+        </DropdownMenuItem>
+      </>
+    ) : (
+      <>
+        <DropdownMenuLabel className="flex items-start gap-3 p-4 border-b border-bridal-beige dark:border-neutral-800">
+            <Avatar className="w-12 h-12 border-2 border-bridal-gold/45 flex-shrink-0">
+              <AvatarImage src={displayUser.profileImage} alt={displayUser.fullName} />
+              <AvatarFallback className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white font-semibold text-xl">
+                {displayUser.fullName?.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+            <div className="font-bold text-neutral-900 dark:text-neutral-100 text-lg truncate">{displayUser.fullName}</div>
+              <div className="text-sm text-neutral-500 break-words leading-tight">{displayUser.email}</div>
+            </div>
+          </DropdownMenuLabel>
+
+          <div className="p-2 space-y-1">
+            {[
+              { href: "/user/profile", icon: User, name: "Profile", desc: "Manage account", color: "purple" },
+              { href: "/user/bookings", icon: Calendar, name: "Bookings", desc: "Your appointments", color: "gold" },
+              { href: "/user/umbrellas", icon: Sparkles, name: "My Wedding", desc: "All your functions", color: "purple" },
+              { href: "/user/conversations", icon: MessageCircle, name: "Messages", desc: "Your conversations", color: "purple" },
+              { href: "/user/favorites", icon: Heart, name: "Favorites", desc: "Saved vendors", color: "gold" },
+              { href: "/user/reviews", icon: Star, name: "Reviews", desc: "Your feedback", color: "gold" },
+              { href: "/user/payments", icon: DollarSign, name: "Payments", desc: "Manage payments", color: "purple" },
+              { href: "/user/settings", icon: Settings, name: "Settings", desc: "Preferences", color: "gold" },
+            ].map((item) => (
+              <DropdownMenuItem key={item.href} asChild>
+                <Link
+                  href={item.href}
+                className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-bridal-cream dark:hover:bg-neutral-800 hover:text-bridal-gold-dark dark:hover:text-bridal-gold/70 transition-all duration-200"
+                >
+                  <div className={`w-8 h-8 ${item.color === "gold" ? "bg-bridal-gold/15" : "bg-bridal-gold/15"} rounded-lg flex items-center justify-center`}>
+                    <item.icon className={`w-4 h-4 ${item.color === "gold" ? "text-bridal-gold-dark" : "text-bridal-gold-dark"}`} />
+                  </div>
+                  <div>
+                  <div className="font-semibold text-neutral-900 dark:text-neutral-100">{item.name}</div>
+                    <div className="text-xs text-neutral-500">{item.desc}</div>
+                  </div>
+                </Link>
+              </DropdownMenuItem>
+            ))}
+          </div>
+
+          <DropdownMenuSeparator />
+
+          <div className="p-2">
             <DropdownMenuItem
               onClick={handleLogout}
-            className="flex items-center gap-3 cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50"
+            className="flex items-center gap-3 cursor-pointer p-3 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 transition-all duration-200"
             >
               <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
                 <LogOut className="w-4 h-4 text-red-600" />
@@ -193,89 +279,20 @@ const HeaderAvatar = ({ loading, user }: AvatarComponent) => {
                 <div className="text-xs text-neutral-500">Sign out</div>
               </div>
             </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    } else {
-      // Regular User
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-            className="p-0 h-auto hover:bg-bridal-cream dark:hover:bg-neutral-800 transition-all duration-200 group"
-            >
-              <Avatar className="w-10 h-10 border-2 border-bridal-gold/45 group-hover:border-bridal-gold/55 transition-all duration-200 shadow-lg group-hover:shadow-xl">
-                <AvatarImage src={displayUser.profileImage} alt={displayUser.fullName} />
-                <AvatarFallback className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white font-semibold text-lg group-hover:scale-110 transition-transform duration-200">
-                  {displayUser.fullName?.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-64 bg-white dark:bg-neutral-900 border border-bridal-beige dark:border-neutral-800 shadow-xl rounded-xl mr-8">
-          <DropdownMenuLabel className="flex items-start gap-3 p-4 border-b border-bridal-beige dark:border-neutral-800">
-              <Avatar className="w-12 h-12 border-2 border-bridal-gold/45 flex-shrink-0">
-                <AvatarImage src={displayUser.profileImage} alt={displayUser.fullName} />
-                <AvatarFallback className="bg-gradient-to-br from-bridal-gold to-bridal-gold-dark text-white font-semibold text-xl">
-                  {displayUser.fullName?.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-              <div className="font-bold text-neutral-900 dark:text-neutral-100 text-lg truncate">{displayUser.fullName}</div>
-                <div className="text-sm text-neutral-500 break-words leading-tight">{displayUser.email}</div>
-              </div>
-            </DropdownMenuLabel>
+          </div>
+      </>
+    );
 
-            <div className="p-2 space-y-1">
-              {[
-                { href: "/user/profile", icon: User, name: "Profile", desc: "Manage account", color: "purple" },
-                { href: "/user/bookings", icon: Calendar, name: "Bookings", desc: "Your appointments", color: "gold" },
-                { href: "/user/umbrellas", icon: Sparkles, name: "My Wedding", desc: "All your functions", color: "purple" },
-                { href: "/user/conversations", icon: MessageCircle, name: "Messages", desc: "Your conversations", color: "purple" },
-                { href: "/user/favorites", icon: Heart, name: "Favorites", desc: "Saved vendors", color: "gold" },
-                { href: "/user/reviews", icon: Star, name: "Reviews", desc: "Your feedback", color: "gold" },
-                { href: "/user/payments", icon: DollarSign, name: "Payments", desc: "Manage payments", color: "purple" },
-                { href: "/user/settings", icon: Settings, name: "Settings", desc: "Preferences", color: "gold" },
-              ].map((item) => (
-                <DropdownMenuItem key={item.href} asChild>
-                  <Link
-                    href={item.href}
-                  className="flex items-center gap-3 w-full cursor-pointer p-3 rounded-lg hover:bg-bridal-cream dark:hover:bg-neutral-800 hover:text-bridal-gold-dark dark:hover:text-bridal-gold/70 transition-all duration-200"
-                  >
-                    <div className={`w-8 h-8 ${item.color === "gold" ? "bg-bridal-gold/15" : "bg-bridal-gold/15"} rounded-lg flex items-center justify-center`}>
-                      <item.icon className={`w-4 h-4 ${item.color === "gold" ? "text-bridal-gold-dark" : "text-bridal-gold-dark"}`} />
-                    </div>
-                    <div>
-                    <div className="font-semibold text-neutral-900 dark:text-neutral-100">{item.name}</div>
-                      <div className="text-xs text-neutral-500">{item.desc}</div>
-                    </div>
-                  </Link>
-                </DropdownMenuItem>
-              ))}
-            </div>
-
-            <DropdownMenuSeparator />
-
-            <div className="p-2">
-              <DropdownMenuItem
-                onClick={handleLogout}
-              className="flex items-center gap-3 cursor-pointer p-3 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 transition-all duration-200"
-              >
-                <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-                  <LogOut className="w-4 h-4 text-red-600" />
-                </div>
-                <div>
-                  <div className="font-semibold">Logout</div>
-                  <div className="text-xs text-neutral-500">Sign out</div>
-                </div>
-              </DropdownMenuItem>
-            </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    }
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+        <DropdownMenuContent
+          className={hasDashboardAccess ? "w-56 bg-white dark:bg-neutral-900 border border-bridal-beige dark:border-neutral-800 shadow-xl rounded-xl mr-8" : "w-64 bg-white dark:bg-neutral-900 border border-bridal-beige dark:border-neutral-800 shadow-xl rounded-xl mr-8"}
+        >
+          {items}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
   }
 
   // No user logged in
