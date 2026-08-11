@@ -75,6 +75,20 @@ took the legacy branch and hit the whitelist:
 five halls**. Booking "Dinner event" in Main Hall reads "0 left" in Terrace Lawn, Mardana and
 Zenana too. This is the mechanism behind the live observation that switching halls changed nothing.
 
+### D6 — A "whole day" block runs 05:00 → 05:00 PKT *(found by the step-2 regression test)*
+
+`spaceBookingService.bookingSlotToRange` builds the whole-day branch from
+`` wholeDay(`${bookingDate}T00:00:00.000Z`) `` — **UTC** midnight. PKT is a fixed +05:00, so a
+"whole day" claim on 9 Sept actually covers **9 Sept 05:00 → 10 Sept 05:00 PKT**.
+
+**Effect:** it misses 00:00–05:00 of the day it is meant to block (a baraat running past midnight)
+and wrongly blocks 00:00–05:00 of the *following* day. Every unrecognised label takes this branch —
+which, per D1, is currently every custom slot.
+
+Pinned by a test asserting the wrong-but-current value, deliberately **not** fixed in step 2:
+moving the anchor changes what a whole-day block covers on a live booking guard and needs its own
+step with its own verification.
+
 ### D4 — The database claim is built from the wrong times
 
 `spaceBookingService.bookingSlotToRange` buckets by the hardcoded 09/14/18 boundaries and **never
@@ -156,7 +170,7 @@ Each step is independently shippable and reversible.
 | # | Change | Risk | Why this order |
 |---|---|---|---|
 | **1** | ✅ *(done)* Quick-booking sheet sends `slotTemplateId` | none | Unblocks the vendor booking their own venue |
-| **2** | `bookingSlotToRange` reads the template's real `startTime`/`endTime` instead of the 09/14/18 buckets | low | Feeds the correct guard correct data. Must precede 3 |
+| **2** | ✅ *(done)* `bookingSlotToRange` reads the template's real `startTime`/`endTime` instead of the 09/14/18 buckets | low | Feeds the correct guard correct data. Must precede 3 |
 | **3** | `slotVocabulary.clockSlotsFor` — an unambiguous `HH:MM` resolves to its own window, not the whole day. Keep whole-day for genuinely ambiguous **names** | medium — it makes the system *less* restrictive, so it lands only after the range guard in 2 is correct | Kills D1, the "dates conflict" |
 | **4** | `slotService.usedCount` adds the space term when the template is space-scoped | low | Kills D3 — halls stop cannibalising each other |
 | **5** | Backfill `subVenueId` on existing templates; repair malformed rows (the 10:58 "Morning") | low | Data hygiene before the UI exposes it |
