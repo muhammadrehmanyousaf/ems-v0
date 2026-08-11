@@ -40,6 +40,24 @@ export interface Column<T> {
    * therefore has no `sortKey` and stays unsorted rather than lying.
    */
   sortKey?: string
+  /**
+   * The value to sort this column by, WHEN the table holds the whole set.
+   *
+   * Two list shapes exist here and they need opposite answers:
+   *
+   *   • server-paged (Bookings: 50 rows a page, `filters.totalPages` from the
+   *     API) — the screen must own the sort and refetch. Give the column a
+   *     `sortKey` and the screen an `onSort`.
+   *   • fully loaded (Leads: the endpoint returns up to 500 rows in one call
+   *     and this table pages them locally) — the client already has every row,
+   *     so sorting here is the truth. Give the column a `sortValue` and no
+   *     `onSort` is needed.
+   *
+   * Getting that backwards is how a table sorts the page you are looking at and
+   * misreports everything past it, so the mode is chosen per screen by which of
+   * the two props it supplies rather than guessed.
+   */
+  sortValue?: (row: T) => string | number | null | undefined
 }
 
 export interface DataTableProps<T> {
@@ -271,10 +289,36 @@ export function DataTable<T>({
     [columns],
   )
 
+  // ── Sorting ─────────────────────────────────────────────────────────
+  // `onSort` present → the screen owns it (server-paged list, it refetches).
+  // Absent → this table holds every row, so it sorts them itself.
+  const [innerSort, setInnerSort] = React.useState<{ key: string; order: "ASC" | "DESC" } | null>(null)
+  const serverSorted = !!onSort
+  const activeSortKey = serverSorted ? sortBy : innerSort?.key
+  const activeSortOrder: "ASC" | "DESC" = serverSorted ? sortOrder : (innerSort?.order ?? "DESC")
+
+  const sortedData = React.useMemo(() => {
+    if (serverSorted || !innerSort) return data
+    const col = columns.find((c) => c.sortKey === innerSort.key && c.sortValue)
+    if (!col?.sortValue) return data
+    const dir = innerSort.order === "ASC" ? 1 : -1
+    return [...data].sort((a, b) => {
+      const av = col.sortValue!(a)
+      const bv = col.sortValue!(b)
+      // Blanks sink to the bottom in BOTH directions. A lead with no event date
+      // is not "the earliest event" — sorting by date ascending should not put
+      // every unknown at the top and bury the ones that answer the question.
+      if (av == null || av === "") return bv == null || bv === "" ? 0 : 1
+      if (bv == null || bv === "") return -1
+      if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir
+      return String(av).localeCompare(String(bv), "en", { numeric: true }) * dir
+    })
+  }, [serverSorted, innerSort, data, columns])
+
   // ── Paging ──────────────────────────────────────────────────────────
   // Shared with the card lists (holds, quotes) via the same hook, so a vendor
   // does not have to learn paging twice in one product.
-  const paged = usePagedRows(data, { pageSize, pageParam, filterKey: filterQuery })
+  const paged = usePagedRows(sortedData, { pageSize, pageParam, filterKey: filterQuery })
   const { pageRows, total, page, pageCount } = paged
 
   // Select-all covers the rows a person can actually SEE. Selecting 3,331
@@ -420,8 +464,8 @@ export function DataTable<T>({
                   </th>
                 )}
                 {columns.map((c) => {
-                  const sortable = !!c.sortKey && !!onSort
-                  const active = sortable && sortBy === c.sortKey
+                  const sortable = !!c.sortKey && (!!onSort || !!c.sortValue)
+                  const active = sortable && activeSortKey === c.sortKey
                   return (
                     <th scope="col"
                       key={c.key}
@@ -429,7 +473,7 @@ export function DataTable<T>({
                       // `aria-sort` is how a screen reader learns the table is
                       // ordered and by what. Only the active column carries it —
                       // "none" on every other column is noise, not information.
-                      aria-sort={active ? (sortOrder === "ASC" ? "ascending" : "descending") : undefined}
+                      aria-sort={active ? (activeSortOrder === "ASC" ? "ascending" : "descending") : undefined}
                       className={cn(
                         "px-4 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground",
                         alignCls(c.align),
@@ -444,7 +488,11 @@ export function DataTable<T>({
                           // largest, most owed. That is the question a vendor is
                           // asking when they click "Amount", and making them
                           // click twice to get it is a small tax on every use.
-                          onClick={() => onSort!(c.sortKey!, active && sortOrder === "DESC" ? "ASC" : "DESC")}
+                          onClick={() => {
+                            const next: "ASC" | "DESC" = active && activeSortOrder === "DESC" ? "ASC" : "DESC"
+                            if (onSort) onSort(c.sortKey!, next)
+                            else setInnerSort({ key: c.sortKey!, order: next })
+                          }}
                           className={cn(
                             "-mx-1 inline-flex items-center gap-1 rounded px-1 py-0.5 uppercase tracking-wide hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                             active && "text-foreground",
@@ -453,7 +501,7 @@ export function DataTable<T>({
                         >
                           {c.header}
                           <Icon
-                            name={active ? (sortOrder === "ASC" ? "ChevronUp" : "ChevronDown") : "ChevronsUpDown"}
+                            name={active ? (activeSortOrder === "ASC" ? "ChevronUp" : "ChevronDown") : "ChevronsUpDown"}
                             size={12}
                             className={cn(active ? "opacity-100" : "opacity-35")}
                           />

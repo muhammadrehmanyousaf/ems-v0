@@ -9,7 +9,6 @@
 import * as React from "react"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useRecordBusinessId } from "@/hooks/use-record-business-id"
-import Link from "next/link"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { LeadAPI, type Lead, type LeadStatus } from "@/lib/api/leads"
 import { BusinessesAPI } from "@/lib/api/dashboard"
@@ -138,24 +137,25 @@ export function LeadsRedesignedView() {
     {
       key: "contact",
       header: "Contact",
+      sortKey: "contact",
+      sortValue: (l) => l.contactName || "",
       // The name is the door into the lead's own page. Every other spine object
       // opens from its list this way; the lead only had inline actions, so the
       // enquiry itself — what they actually wrote, whether it converted — had
       // nowhere to be read.
-      render: (l) => (
-        <Link
-          href={`/dashboard/leads/${l.id}`}
-          className="font-medium hover:text-primary hover:underline"
-        >
-          {l.contactName || "Unknown"}
-        </Link>
-      ),
+      //
+      // The <Link> that used to be here is now the table's `rowHref`, which puts
+      // the anchor on this same first column AND makes the whole row clickable.
+      // It had to move rather than be joined: an anchor inside an anchor is
+      // invalid, and the browser resolves it by dropping the inner one — so
+      // adding a row link on top of this would have killed the working one.
+      render: (l) => <span className="font-medium">{l.contactName || "Unknown"}</span>,
     },
     { key: "phone", header: "Phone", cellClassName: "text-muted-foreground", render: (l) => l.contactPhone || "—" },
     { key: "source", header: "Source", render: (l) => <StatusPill tone="neutral">{pretty(l.source)}</StatusPill> },
     { key: "event", header: "Event", cellClassName: "text-muted-foreground", render: (l) => pretty(l.eventType) },
     {
-      key: "date", header: "Event date", cellClassName: "text-muted-foreground",
+      key: "date", header: "Event date", sortKey: "date", sortValue: (l) => l.eventDate || null, cellClassName: "text-muted-foreground",
       render: (l) => (
         <span className={cn("whitespace-nowrap", isPastDate(l.eventDate) && "text-muted-foreground/70 line-through")}
           title={isPastDate(l.eventDate) ? "This date has already passed" : undefined}>
@@ -163,8 +163,8 @@ export function LeadsRedesignedView() {
         </span>
       ),
     },
-    { key: "budget", header: "Budget", align: "right", render: (l) => <MoneyCell amount={l.estimatedBudget != null ? Number(l.estimatedBudget) || null : null} tone="muted" /> },
-    { key: "status", header: "Status", render: (l) => <StatusPill tone={TONE[l.status] ?? "neutral"}>{cap(l.status)}</StatusPill> },
+    { key: "budget", header: "Budget", align: "right", sortKey: "budget", sortValue: (l) => (l.estimatedBudget != null ? Number(l.estimatedBudget) : null), render: (l) => <MoneyCell amount={l.estimatedBudget != null ? Number(l.estimatedBudget) || null : null} tone="muted" /> },
+    { key: "status", header: "Status", sortKey: "status", sortValue: (l) => l.status || "", render: (l) => <StatusPill tone={TONE[l.status] ?? "neutral"}>{cap(l.status)}</StatusPill> },
     {
       key: "actions", header: "", align: "right",
       render: (l) => (
@@ -215,6 +215,24 @@ export function LeadsRedesignedView() {
         columns={columns}
         data={leads}
         getRowId={(l) => String(l.id)}
+        /**
+         * The whole row opens the lead, not just the name.
+         *
+         * Measured on production: the Contact cell was a link and every other
+         * cell was dead — clicking a lead's phone number, event or budget did
+         * nothing, and `cursor` stayed `auto` across the rest of the row. An
+         * inconsistent target is worse than no target: it teaches that rows are
+         * not clickable, and then one of them is.
+         *
+         * Sorting is CLIENT-side here, unlike Bookings, and that is not an
+         * inconsistency — it is the difference between the two lists. `listLeads`
+         * has no sortBy at all; it returns up to 500 rows in one call and this
+         * table pages them locally, so the client holds every row and ordering
+         * them here is the truth. Bookings is server-paged at 50, so it must ask
+         * the server. Each screen declares which by passing `sortValue` or
+         * `onSort`.
+         */
+        rowHref={(l) => `/dashboard/leads/${l.id}`}
         loading={isLoading}
         error={isError ? "Couldn't load leads." : null}
         onRetry={() => refetch()}
