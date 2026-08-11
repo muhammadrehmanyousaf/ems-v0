@@ -366,24 +366,22 @@ export function DataTable<T>({
 
   const body = (() => {
     if (error) {
+      // Was a hand-rolled copy of EmptyState with hardcoded red-50/red-600 —
+      // the one place in this file that painted outside the token system.
       return (
-        <div role="alert" className="flex flex-col items-center gap-3 px-6 py-12 text-center">
-          <span className="grid h-11 w-11 place-items-center rounded-full bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-400">
-            <Icon name="AlertTriangle" size={22} />
-          </span>
-          <p className="text-sm text-muted-foreground">
-            {typeof error === "string" ? error : "Couldn't load this list."}
-          </p>
-          {onRetry && (
-            <button
-              type="button"
-              onClick={onRetry}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-sm font-medium hover:bg-accent"
-            >
-              <Icon name="RefreshCw" size={14} /> Retry
-            </button>
-          )}
-        </div>
+        <EmptyState
+          className="border-0 bg-transparent"
+          variant="error"
+          title={typeof error === "string" ? error : "Couldn't load this list."}
+          description="Your records are safe — this is a problem loading them, not a problem with the data."
+          action={
+            onRetry ? (
+              <Button size="sm" variant="outline" onClick={onRetry}>
+                <Icon name="RefreshCw" size={14} className="mr-1.5" /> Retry
+              </Button>
+            ) : undefined
+          }
+        />
       )
     }
     if (loading) return <TableSkeleton rows={6} cols={columns.length + (selectable ? 1 : 0)} className="border-0" />
@@ -395,7 +393,7 @@ export function DataTable<T>({
         return (
           <EmptyState
             className="border-0 bg-transparent"
-            icon="Search"
+            variant="filtered"
             title={`No matches for “${q}”`}
             description="Nothing on this screen matches that search. Your records are unchanged — try a different term, or clear the search."
             action={
@@ -411,7 +409,8 @@ export function DataTable<T>({
       return (
         <EmptyState
           className="border-0 bg-transparent"
-          icon={empty?.icon ?? "Inbox"}
+          variant={empty?.variant ?? "first-run"}
+          icon={empty?.icon}
           title={empty?.title ?? "Nothing here yet"}
           description={empty?.description}
           action={empty?.action}
