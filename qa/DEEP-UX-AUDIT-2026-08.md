@@ -144,6 +144,43 @@ Vendor `muhammadrehmanyousaf786@gmail.com` (user 3351 · 3 businesses · 11 spac
 | **BK-B2** | ⚠️ **I GOT THIS WRONG, and the truth is worse.** I wrote "no hall picker anywhere, `subVenueId` not in `allowedFields`, no path UI or API". The API path exists and is mounted — `GET`/`PATCH /api/v1/bookings/:id/space` (`bookingRouter.js:61-62`). So does the client (`lib/api/bookingSpace.ts`), the dialog (`AssignSpaceDialog`), and a helper in `booking-space.ts` whose own comment calls it *"the 'Assign hall' prompt"*. I checked `updateBooking`'s `allowedFields`, found `subVenueId` missing, and concluded the capability was absent — it simply lives on its own endpoint.<br><br>**The real finding: a complete, working hall-assignment feature was reachable only through the row's ⋯ menu → "Quick view" → the sheet — and that ⋯ button sits at x = 1467 on a 1425px viewport (BK-A3).** A finished feature behind a control that was off the edge of the screen. That is why 135 of 139 booking lines carry no hall. ✅ Now also reachable directly: the `—` in the Space column is a **"Set hall"** button that opens the same dialog |
 | **BK-B3** | **Selecting rows offers nothing.** The bulk bar reads exactly "2 selected · Clear". Selection does have one use — the Export menu scopes to it and says so well ("Selected → CSV", "All rows") — but the bar never mentions it, so the affordance that appears on selection is the one that does the least | Small; the honest fix is a scoped export action in the bulk bar |
 
+### BK-C1 — the edit dialog could not show a booking's own time ✅ FIXED
+
+Opened Edit on booking #173 (Ahmed Raza, **19:00** in the database). The
+required **"Time Slot \*"** field rendered **completely blank**.
+
+The list was the three legacy periods and nothing else, so a Radix `Select`
+holding `19:00` matched no item and displayed nothing.
+
+**Measured on production: 60 of 129 live bookings — 47% — cannot be represented
+by that control.** 13:00 (8), 19:00 (8), 12:00 (6), 21:00 (4), 20:00 (3),
+18:30 (1), 00:00 (2), plus **ten distinct free-text ranges** — `06:00 PM – 11:00 PM`,
+`07:00 PM – 12:00 AM`, `08:00 PM – 01:00 AM` and so on — which three clock values
+cannot express at all.
+
+**Corrected mid-investigation.** My first reading came from the *hidden* native
+`<select>` Radix renders for form compatibility, which falls back to its first
+option and reported `09:00` / "Morning (9 AM – 12 PM)". I was about to report
+that Save silently reschedules the event to 9 AM. It does not: the payload sends
+React state, which holds the real `19:00`. **Nothing was being corrupted on
+save.**
+
+The real damage is narrower and still worth fixing: a required field looks unset
+on a booking that is perfectly fine, and the obvious response to a blank required
+field is to pick something — which is what actually moves the event. The UI was
+inviting the mistake rather than making it.
+
+Fixed by always offering the booking's current time as an option, labelled
+through the shared vocabulary. It was also the **twelfth** private copy of the
+slot list, with a third punctuation again ("Morning  (9 AM – 12 PM)", double
+space, en-dash).
+
+**Still open:** the dialog offers only the legacy three plus whatever the booking
+already has — it does not read the vendor's own slot templates the way the
+booking funnel does. A vendor with 10:58 / 12:00 / 19:00 slots still cannot pick
+one here. That needs the update endpoint to accept `slotTemplateId`, which it
+does not.
+
 ### Verified correct — no action
 
 - **Search**: 25 → 2 on "Ahmed", 0 on "zzzqqq", restores on clear. The no-match state correctly says *"No matches for …"* with a Clear button rather than the false *"No bookings yet"*.
