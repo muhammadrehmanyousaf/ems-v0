@@ -15,6 +15,8 @@ import { BusinessesAPI } from "@/lib/api/dashboard"
 import { useUser } from "@/context/UserContext"
 import { useActiveBusinessId } from "@/lib/store/active-business-store"
 import { PageHeader } from "@/components/dashboard/primitives/page-header"
+import { HealthPanel } from "@/components/dashboard/primitives/health-panel"
+import { useBusinessHealth } from "@/hooks/use-business-health"
 import { StatCard } from "@/components/dashboard/primitives/stat-card"
 import { DataTable, type Column } from "@/components/dashboard/primitives/data-table"
 import { StatusPill, type StatusTone } from "@/components/dashboard/primitives/status-pill"
@@ -179,6 +181,17 @@ function VendorOverviewRedesignedView() {
           what attracts it. A vendor who has never taken a booking should be
           looking at the chain that gets them one, not at a photo count. Both
           remove themselves once done. */}
+      {/* Setup health. Scores what the vendor CONTROLS — replies, published
+          dates, listing, bookkeeping — and never booking volume, so a quiet
+          Muharram does not read as a failing grade.
+
+          NOTE: its "listing" factor overlaps ProfileCompletionCard below, which
+          self-hides once the listing is done. While a listing is incomplete
+          both will say so. Left in deliberately rather than deleting an
+          existing card as a side effect of adding this one — worth a decision
+          about which survives. */}
+      {!hasNoBusiness && <VendorHealthPanel businessId={activeBusinessId} />}
+
       {!hasNoBusiness && <FirstBookingJourney />}
       {!hasNoBusiness && <ProfileCompletionCard />}
 
@@ -368,3 +381,12 @@ function VendorOverviewRedesignedView() {
 }
 
 export default OverviewRedesignedView
+
+/**
+ * Thin wrapper so the overview stays declarative: the hook lives here rather
+ * than adding two more queries to the page component's top scope.
+ */
+function VendorHealthPanel({ businessId }: { businessId?: number | string | null }) {
+  const { health, isLoading } = useBusinessHealth(businessId)
+  return <HealthPanel health={health} isLoading={isLoading} />
+}
