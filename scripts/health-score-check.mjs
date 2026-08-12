@@ -147,7 +147,12 @@ check("an unknown factor is never treated as a failed one", () => {
 console.log("\nthe next action is the most recoverable one, not the ugliest");
 check("prefers availability (25pts fully unearned) over a nearly-done listing", () => {
   const r = computeHealth({ ...base, hasPublishedAvailability: false, profileCompleteness: 0.9 });
-  eq(r.nextAction?.href, "/dashboard/availability", "href");
+  // Points at the Calendar, NOT /dashboard/availability. Found by walking the
+  // live portal: for a venue that page renders one sentence — "availability is
+  // managed from the Calendar" — and used to offer nothing to click. So the
+  // single highest-value recommendation on the dashboard ended at a dead end.
+  // The action has to land where the work actually happens.
+  eq(r.nextAction?.href, "/dashboard/calendar", "href");
 });
 
 console.log(failed ? `\n${failed} check(s) failed\n` : "\nall checks passed\n");
