@@ -87,27 +87,50 @@ export function formatSlotRange(start: string | null | undefined, end: string | 
  * computing what it blocks are different jobs, and this module only does the
  * first one.
  */
+/**
+ * The four slots a customer picks from when they have not chosen a specific
+ * space. Whole day / Day / Midday / Evening — three blocks plus the buyout.
+ *
+ * ── Why these exact values, and not tidier ones ───────────────────────────
+ *
+ * `value` is the booking's stored `bookingTime`. It is the IDENTITY of the
+ * slot, so two slots cannot share a start time — which is why "Whole day" and
+ * "Day" cannot both be 10:00, the obvious first choice.
+ *
+ * Checked against production before choosing (133 live bookings):
+ *
+ *   09:00   10 bookings   Morning    9-12
+ *   12:00    6 bookings   Midday    12-16
+ *   14:00   11 bookings   Afternoon 14-18
+ *   18:00   51 bookings   Evening   18-22
+ *   10:00    0 bookings   free
+ *
+ * So the hours below are the hours already stored. Nothing is re-timed and no
+ * existing booking is misrepresented: 10:00 is genuinely unused and takes the
+ * buyout, and the only change to a live row is that the 10 bookings at 09:00
+ * are now called "Day" instead of "Morning" — same hours, better name for a
+ * slot that a Pakistani venue sells as the daytime function.
+ *
+ * Making Whole day 09:00 instead would have redisplayed those 10 real bookings
+ * as running 9 AM to 10 PM, which is a lie about someone's calendar.
+ *
+ * 14:00 "Afternoon" is deliberately NOT offered as a new choice — four slots is
+ * the point — but stays in LEGACY_ALIASES so its 11 bookings still render with
+ * their real name and hours.
+ *
+ * Backend counterpart: CANONICAL_SLOTS in venueSlotService and
+ * ALLOWED_BOOKING_SLOTS in utils/constants. All three must agree.
+ */
 export const LEGACY_PERIODS = [
-  { value: "09:00", label: "Morning", startTime: "09:00", endTime: "12:00" },
-  { value: "14:00", label: "Afternoon", startTime: "14:00", endTime: "18:00" },
+  { value: "10:00", label: "Whole day", startTime: "10:00", endTime: "22:00" },
+  { value: "09:00", label: "Day", startTime: "09:00", endTime: "12:00" },
+  { value: "12:00", label: "Midday", startTime: "12:00", endTime: "16:00" },
   /**
-   * 22:00, not 23:00.
-   *
-   * This single line is where the platform's worst live booking bug came from.
-   * Wedding halls must be closed by 10 PM — Punjab writes it into law and the
-   * booking engine enforces it — but the canonical vocabulary shipped an
-   * "Evening" that ran to 23:00. Vendors read the platform's own worked example
-   * and copied it into their slot templates: 40 of 115 active slots ended after
-   * 22:00, 17 of them in Punjab cities.
-   *
-   * Nothing caught it until a CUSTOMER pressed Pay & Confirm, entered their
-   * name, phone, guest count and package, and met "Punjab enforces a 10 PM
-   * wedding-hall closure". The example was illegal, and everyone who followed
-   * it got blocked.
-   *
-   * Backend counterpart: CANONICAL_SLOTS + the SLOT_ENDS_AFTER_CLOSURE check in
-   * venueSlotService, plus migration 20260812020000 which repaired all 40 rows.
-   * This is the source that produced them.
+   * 22:00, not 23:00. This one line is where the platform's worst live booking
+   * bug came from: the canonical vocabulary shipped an "Evening" running to
+   * 23:00, vendors copied the platform's own worked example into their slot
+   * templates, and 40 of 115 active slots ended past the 10 PM closure. Nothing
+   * caught it until a CUSTOMER pressed Pay & Confirm.
    */
   { value: "18:00", label: "Evening", startTime: "18:00", endTime: "22:00" },
 ] as const;
@@ -119,7 +142,10 @@ export const LEGACY_PERIODS = [
  * nobody defined is how this mess started.
  */
 const LEGACY_ALIASES: Record<string, { label: string; startTime: string; endTime: string }> = {
-  "12:00": { label: "Midday", startTime: "12:00", endTime: "16:00" },
+  // 11 live bookings. Dropped from the picker when the vocabulary became four
+  // slots, but it must still render with its real name and hours — a stored
+  // booking does not stop being an afternoon because we stopped offering one.
+  "14:00": { label: "Afternoon", startTime: "14:00", endTime: "18:00" },
   "17:00": { label: "Evening", startTime: "17:00", endTime: "22:00" },
 };
 
