@@ -7,6 +7,7 @@
  * needs no fixed availability. Self-hides when the engine is dark (404).
  */
 import { useState } from "react";
+import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Trash2, Users, Package, ChefHat } from "lucide-react";
 import {
@@ -43,7 +44,18 @@ export function AvailabilitySetup() {
       {p === "P2_PERSON_SLOT" && <CrewSetup crews={data.crewResources} onChange={invalidate} />}
       {p === "P3_UNIT_POOL" && <SkuSetup skus={data.rentalSkus} onChange={invalidate} />}
       {p === "P4_CAPACITY" && <LineSetup lines={data.productionLines} onChange={invalidate} />}
-      {p === "P1_VENUE_LOCK" && <Note text="Venue availability is managed from the Calendar — open the Calendar to block or free dates." />}
+      {/* A venue's whole page was one sentence telling the vendor to go to the
+          Calendar — with nothing to click. Worse, the dashboard's top
+          recommendation ("Publish your available dates so customers can book")
+          linked HERE, so the single most valuable action on the portal ended at
+          a dead end. Send them on. */}
+      {p === "P1_VENUE_LOCK" && (
+        <Note text="Venue availability is managed from the Calendar — block or free dates there.">
+          <Button asChild size="sm" className="mt-3">
+            <Link href="/dashboard/calendar">Open the Calendar</Link>
+          </Button>
+        </Note>
+      )}
       {p === "P5_PIPELINE" && <Note text="Made-to-order work — no fixed availability to set; each order runs to its deadline." />}
       {!p && <Note text="No availability type is set for your vendor category yet." />}
 
@@ -55,8 +67,13 @@ export function AvailabilitySetup() {
   );
 }
 
-const Note = ({ text }: { text: string }) => (
-  <Card><CardContent className="p-4 text-sm text-muted-foreground">{text}</CardContent></Card>
+const Note = ({ text, children }: { text: string; children?: React.ReactNode }) => (
+  <Card>
+    <CardContent className="p-4 text-sm text-muted-foreground">
+      {text}
+      {children}
+    </CardContent>
+  </Card>
 );
 
 function CrewSetup({ crews, onChange }: { crews: any[]; onChange: () => void }) {

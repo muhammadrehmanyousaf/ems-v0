@@ -124,7 +124,7 @@ function availability(s: HealthSignals): HealthFactor | null {
     action: s.hasPublishedAvailability
       ? null
       : "Publish your available dates so customers can book",
-    href: "/dashboard/availability",
+    href: "/dashboard/calendar",
   }
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/utils/api-error";
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useFavorites } from "@/hooks/use-favorites";
 import { FavoritesAPI } from "@/lib/api/favorites";
@@ -32,6 +33,7 @@ export default function FavoritesPage() {
   const [vendors, setVendors] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("name");
@@ -40,14 +42,24 @@ export default function FavoritesPage() {
   const loadVendors = useCallback(async () => {
     setIsLoading(true);
     setLoadFailed(false);
+    setLoadError(null);
     try {
       const data = await FavoritesAPI.getFavoriteVendors();
       setVendors(data);
-    } catch {
+    } catch (e: unknown) {
       // WWL-019 — a failed load used to render as "No favourites yet", which is
       // a claim about the user's data rather than about the request.
+      //
+      // And every failure claimed the server was at fault. It isn't always:
+      // the API rate-limits on IP (1,000 requests / 15 min), and behind CGNAT
+      // or shared office wifi — the norm here — that budget is shared between
+      // everyone on it. Telling that customer "something went wrong on our
+      // side" sends them to support for something that clears itself in a
+      // minute. `readApiError` already words 429, 401 and offline correctly;
+      // this page was simply not asking it.
       setVendors([]);
       setLoadFailed(true);
+      setLoadError(errorMessage(e, "Something went wrong on our side — your saved vendors are still there."));
     } finally {
       setIsLoading(false);
     }
@@ -166,7 +178,7 @@ export default function FavoritesPage() {
         <EmptyState
           icon={<Heart className="size-6" />}
           title="Couldn't load your favourites"
-          description="Something went wrong on our side — your saved vendors are still there."
+          description={loadError || "Your saved vendors are still there — we just could not fetch them."}
           action={
             <Button onClick={loadVendors} size="sm">
               Try again
