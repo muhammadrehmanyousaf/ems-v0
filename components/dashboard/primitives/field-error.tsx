@@ -97,6 +97,12 @@ export function FormBlockedHint({ message }: { message?: string }) {
 // ---------------------------------------------------------------------------
 
 /** Required free text, e.g. a package or menu name. */
+// Contact-field rules live in lib/validation/pk-fields — pure, no JSX, so
+// Node can load them directly for the property checks in
+// scripts/field-validation-check.mjs. Re-exported here because every
+// existing call site imports them from this module.
+export { validatePkPhone, validateEmail, normalizePkPhone, normalizeEmail } from "@/lib/validation/pk-fields"
+
 export function validateName(
   value: string,
   { label = "Name", min = 2, max = 150 }: { label?: string; min?: number; max?: number } = {},
@@ -159,52 +165,7 @@ export function validatePkr(
   return undefined
 }
 
-/**
- * Pakistani mobile number.
- *
- * Accepts the three forms people actually type — 03001234567, +923001234567,
- * 923001234567 — plus any spacing, dashes or brackets, which are stripped
- * before checking. A PK mobile is always 3 followed by 9 more digits after the
- * country/trunk prefix (03xx-xxxxxxx = 11 digits total).
- *
- * This matters more than a generic "not empty": customers are deduped and
- * routed on phone, so a junk number silently creates a duplicate customer that
- * can never be contacted. The field previously accepted literally "abc".
- *
- * Landlines are deliberately allowed too (e.g. 042-35XXXXXX) — plenty of older
- * venues and caterers still list one.
- */
-export function validatePkPhone(
-  value: string,
-  { label = "Phone number", required = true }: { label?: string; required?: boolean } = {},
-): string | undefined {
-  const raw = (value ?? "").trim()
-  if (!raw) return required ? `${label} is required.` : undefined
-  const d = raw.replace(/[\s\-()./]/g, "")
-  // Mobile: 03XXXXXXXXX | +923XXXXXXXXX | 923XXXXXXXXX
-  const mobile = /^(?:\+92|92|0)3\d{9}$/
-  // Landline: 0 + 2-5 digit area code + 6-8 digit number
-  const landline = /^(?:\+92|92|0)\d{9,11}$/
-  if (mobile.test(d) || landline.test(d)) return undefined
-  return `Enter a valid Pakistani number, e.g. 0300 1234567.`
-}
 
-/**
- * Email. Intentionally permissive on the local part (real addresses are
- * stranger than most regexes allow) but insists on a dot-separated domain, so
- * "notanemail" and "a@b" are caught while "x+tag@sub.domain.pk" is not.
- */
-export function validateEmail(
-  value: string,
-  { label = "Email", required = false }: { label?: string; required?: boolean } = {},
-): string | undefined {
-  const v = (value ?? "").trim()
-  if (!v) return required ? `${label} is required.` : undefined
-  if (/\s/.test(v)) return `${label} cannot contain spaces.`
-  if (!/^[^@]+@[^@.]+(\.[^@.]+)+$/.test(v)) return `Enter a valid email address, e.g. name@example.com.`
-  if (v.length > 254) return `${label} is too long.`
-  return undefined
-}
 
 /**
  * Pakistani IBAN, checked properly — length, shape AND the ISO 13616 mod-97
