@@ -130,8 +130,43 @@ export function Header() {
   }, [])
 
   return (
+    <>
+    {/*
+      Spacer. `fixed` takes the header out of flow, so without this the first
+      screenful of every page slides underneath it. Height must track the
+      header's own h-16 sm:h-[72px] exactly.
+    */}
+    <div aria-hidden className="h-16 sm:h-[72px]" />
     <header
-      className={`sticky top-0 z-50 transition-all duration-500 ease-out ${
+      /*
+       * `fixed`, not `sticky` — and this is the whole bug, not a preference.
+       *
+       * Reported repeatedly: scroll down a little, click the profile avatar, and
+       * the ENTIRE navbar vanishes; click anywhere else and it comes back.
+       *
+       * Radix opens its menus modally, which locks page scroll by setting
+       * `overflow: hidden` on <body>. A `position: sticky` element sticks to its
+       * nearest SCROLLING ancestor — so the moment body stops scrolling, sticky
+       * has nothing to stick to and the header falls back to its natural
+       * position in the document, which after scrolling 400px is 400px above the
+       * viewport. Closing the menu restores overflow, and the header returns.
+       *
+       * Measured on production before changing anything (scrollY = 400):
+       *
+       *   sticky, normal              header.top =    0
+       *   sticky, scroll locked       header.top = -400   ← off screen
+       *   sticky, lock released       header.top =    0
+       *
+       *   fixed,  normal              header.top =    0
+       *   fixed,  scroll locked       header.top =    0
+       *   fixed,  body position:fixed header.top =    0
+       *
+       * `fixed` is positioned against the viewport, so no scroll-lock strategy
+       * can move it. This also makes the header immune to any FUTURE component
+       * that locks scroll — dialogs, sheets, drawers — rather than fixing only
+       * the one menu that exposed it.
+       */
+      className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ease-out ${
         scrolled
           ? "bg-bridal-ivory/95 backdrop-blur-xl border-b border-bridal-beige/80 shadow-[0_8px_28px_-22px_rgba(176,125,84,0.45)]"
           : "bg-bridal-ivory/85 backdrop-blur-md border-b border-bridal-beige/40"
@@ -667,5 +702,6 @@ export function Header() {
         </div>
       </div>
     </header>
+    </>
   )
 }
