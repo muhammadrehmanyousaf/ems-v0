@@ -7,6 +7,7 @@ import * as z from "zod"
 import axios from "axios"
 import Link from "next/link"
 import { TERMS_VERSION } from "@/lib/seo"
+import { normalizePkPhone } from "@/lib/validation/pk-fields"
 import { useRouter } from "next/navigation"
 import {
   Heart,
@@ -41,14 +42,38 @@ const formSchema = z
   .object({
     fullName: z
       .string()
-      .min(2, { message: "Name must be at least 2 characters" })
-      .refine((value) => /^[A-Z]/.test(value), {
-        message: "First letter must be capitalized",
+      .trim()
+      .min(2, { message: "Please enter your full name" })
+      // Was `/^[A-Z]/` — "First letter must be capitalized". That refuses
+      // "muhammad", every name written in Urdu script, and anyone whose name
+      // genuinely starts lowercase, to enforce a capital we can apply
+      // ourselves. Reject what is not a name instead: digits and symbols.
+      .refine((v) => !/[0-9@#$%^*_=+<>{}[\]\\/]/.test(v), {
+        message: "A name shouldn't contain numbers or symbols",
       }),
-    email: z.string().email({ message: "Invalid email address" }),
+    email: z
+      .string()
+      .trim()
+      .min(1, { message: "Email is required" })
+      .email({ message: "Enter a valid email address, e.g. name@example.com" }),
+    /**
+     * Was `.length(11)` — exactly eleven CHARACTERS, of any kind. So
+     * "aaaaaaaaaaa" was accepted as a phone number, while "0300 1234567" —
+     * how a Pakistani actually writes theirs — was refused for being
+     * thirteen. The rule managed to be both too loose and too strict.
+     *
+     * Now: strip the separators people really type, then require a genuine
+     * PK number. Mirrors validatePkPhone in the dashboard's field-error
+     * primitives so a number accepted at signup is accepted everywhere else.
+     */
     phoneNumber: z
       .string()
-      .length(11, { message: "Phone number must be exactly 11 digits" }),
+      .trim()
+      .min(1, { message: "Phone number is required" })
+      .refine(
+        (v) => /^(?:\+92|92|0)3\d{9}$/.test(v.replace(/[\s\-()./]/g, "")),
+        { message: "Enter a valid Pakistani mobile number, e.g. 0300 1234567" },
+      ),
     password: z
       .string()
       .min(8, { message: "Password must be at least 8 characters" }),
@@ -94,9 +119,13 @@ export function UserRegistrationForm() {
     setIsLoading(true)
     try {
       const formData = new globalThis.FormData()
-      formData.append("fullName", data.fullName)
-      formData.append("email", data.email)
-      formData.append("phoneNumber", data.phoneNumber)
+      // Store one canonical shape. Otherwise the same person is 03001234567,
+      // "0300 1234567" and "+92 300 1234567" in three rows, and every later
+      // lookup — dedupe, OTP, "we already have an account for this number" —
+      // silently misses. The user still types it however they like.
+      formData.append("fullName", data.fullName.trim())
+      formData.append("email", data.email.trim().toLowerCase())
+      formData.append("phoneNumber", normalizePkPhone(data.phoneNumber))
       formData.append("password", data.password)
       formData.append("roleIds", JSON.stringify([3]))
       // Record explicit T&C acceptance — required for PayFast underwriting
