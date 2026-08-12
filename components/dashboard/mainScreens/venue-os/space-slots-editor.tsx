@@ -57,7 +57,13 @@ const WHOLE_VENUE = "venue" as const;
 type Scope = typeof WHOLE_VENUE | number;
 
 function readErr(e: unknown, fallback: string): string {
-  return (e as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
+  return (
+    (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+    // Local validation throws a plain Error; without this its sentence was
+    // replaced by the generic fallback and the vendor learned nothing.
+    (e instanceof Error && e.message ? e.message : "") ||
+    fallback
+  );
 }
 function flatten(nodes: SubVenueNode[] | undefined, acc: SubVenueNode[] = []): SubVenueNode[] {
   for (const n of nodes || []) {
@@ -81,7 +87,12 @@ export function SpaceSlotsEditor(): React.ReactElement | null {
   const [editingId, setEditingId] = React.useState<number | null>(null);
   const [editDraft, setEditDraft] = React.useState<Draft>(emptyDraft);
   const [busy, setBusy] = React.useState<boolean>(false);
+  /** Has a slot fetch for the current scope actually come back? Distinct from
+   *  `busy`, which is also true for writes. Only this may unlock the empty state. */
+  const [loaded, setLoaded] = React.useState<boolean>(false);
   const [err, setErr] = React.useState<string | null>(null);
+  /** Slot id awaiting a second click to confirm removal. */
+  const [confirmRemoveId, setConfirmRemoveId] = React.useState<number | null>(null);
   const bid = Number(businessId);
 
   async function guard(fn: () => Promise<void>): Promise<void> {
@@ -103,6 +114,8 @@ export function SpaceSlotsEditor(): React.ReactElement | null {
     async (next: Scope): Promise<void> => {
       setScope(next);
       setEditingId(null);
+      setConfirmRemoveId(null);
+      setLoaded(false);
       // includeInactive: this is the editor, so a hidden slot must stay visible
       // here — otherwise switching one off removes the control that turns it
       // back on.
@@ -119,6 +132,7 @@ export function SpaceSlotsEditor(): React.ReactElement | null {
         setInherited(own.length === 0);
         setSlots(own.length ? own : all.filter((s) => s.subVenueId == null));
       }
+      setLoaded(true);
     },
     [bid],
   );
@@ -137,12 +151,19 @@ export function SpaceSlotsEditor(): React.ReactElement | null {
 
   const addSlot = (d: Draft) =>
     guard(async () => {
+      // `0` used to fall through `Number(x) || 1` and create a slot that took
+      // one booking — the vendor typed a number and silently got a different
+      // one. Say so instead of guessing what they meant.
+      const capacity = Number(d.capacity);
+      if (!Number.isFinite(capacity) || capacity < 1) {
+        throw new Error("A slot has to take at least 1 booking at once.");
+      }
       await venueSpacesApi.createSlot(bid, {
         ...scopePayload(),
         label: d.label.trim(),
         startTime: d.startTime,
         endTime: d.endTime,
-        capacity: Number(d.capacity) || 1,
+        capacity,
         ...(d.unitGuestCapacity.trim() ? { unitGuestCapacity: Number(d.unitGuestCapacity) } : {}),
       } as Partial<SlotTemplate>);
       setDraft(emptyDraft);
@@ -150,6 +171,16 @@ export function SpaceSlotsEditor(): React.ReactElement | null {
     });
 
   const scopeName = scope === WHOLE_VENUE ? "the whole venue" : nodes.find((n) => n.id === scope)?.name || "this space";
+
+  /**
+   * Why every row control is greyed out on an inheriting space. Without this
+   * the vendor sees four dead buttons and no reason — and the honest reason
+   * matters: these rows belong to the venue, so editing them here would change
+   * them for every other hall too.
+   */
+  const inheritedHint = inherited
+    ? `These are the venue's slots, not ${scopeName}'s. Add one below to give ${scopeName} its own set — then you can edit it here.`
+    : "";
 
   return (
     <Card>
@@ -217,7 +248,16 @@ export function SpaceSlotsEditor(): React.ReactElement | null {
             </p>
           )}
 
-          {slots.length === 0 ? (
+          {slots.length === 0 && !loaded ? (
+            // Never claim "nothing can be booked" before the answer has arrived.
+            // Caught live: the fetch takes ~2s on production, and for those two
+            // seconds a vendor with two working slots was told their venue was
+            // unbookable — the most alarming sentence on the screen, shown
+            // exactly when it was least true.
+            <p className="py-2 text-xs text-muted-foreground" role="status">
+              Loading slots…
+            </p>
+          ) : slots.length === 0 ? (
             <EmptyState
               size="inline"
               title="No slots yet."
@@ -276,11 +316,17 @@ export function SpaceSlotsEditor(): React.ReactElement | null {
                       disabled={busy || !editDraft.label || !editDraft.startTime || !editDraft.endTime}
                       onClick={() =>
                         void guard(async () => {
+                          // Same rule as the add form — never silently swap the
+                          // number the vendor typed for a different one.
+                          const cap = Number(editDraft.capacity);
+                          if (!Number.isFinite(cap) || cap < 1) {
+                            throw new Error("A slot has to take at least 1 booking at once.");
+                          }
                           await venueSpacesApi.updateSlot(s.id, {
                             label: editDraft.label.trim(),
                             startTime: editDraft.startTime,
                             endTime: editDraft.endTime,
-                            capacity: Number(editDraft.capacity) || 1,
+                            capacity: cap,
                             unitGuestCapacity: editDraft.unitGuestCapacity.trim()
                               ? Number(editDraft.unitGuestCapacity)
                               : null,
@@ -305,6 +351,8 @@ export function SpaceSlotsEditor(): React.ReactElement | null {
                     </span>
                     <div className="ml-auto flex items-center gap-2">
                       <Switch
+                        aria-label={`${s.label} — ${s.isActive !== false ? "visible to customers" : "hidden from customers"}`}
+                        title={inheritedHint || `Turn "${s.label}" off to hide it from customers without deleting it`}
                         checked={s.isActive !== false}
                         disabled={busy || inherited}
                         onCheckedChange={(v) =>
@@ -319,7 +367,9 @@ export function SpaceSlotsEditor(): React.ReactElement | null {
                         size="sm"
                         variant="ghost"
                         disabled={busy || inherited}
+                        title={inheritedHint || undefined}
                         onClick={() => {
+                          setConfirmRemoveId(null);
                           setEditingId(s.id);
                           setEditDraft({
                             label: s.label,
@@ -332,19 +382,31 @@ export function SpaceSlotsEditor(): React.ReactElement | null {
                       >
                         Edit
                       </Button>
+                      {/* Two-step, not a dialog. Deleting a slot is instant and
+                          irreversible, and when it is the space's last own slot
+                          the space silently drops back to inheriting the venue's
+                          set — two surprises from one mis-click. A confirm step
+                          costs one click; a dialog would inherit the shared
+                          DialogContent that sets no max-height on phones. */}
                       <Button
                         size="sm"
                         variant="ghost"
                         className="text-destructive hover:text-destructive"
                         disabled={busy || inherited}
-                        onClick={() =>
+                        title={inheritedHint || undefined}
+                        onClick={() => {
+                          if (confirmRemoveId !== s.id) {
+                            setConfirmRemoveId(s.id);
+                            return;
+                          }
                           void guard(async () => {
                             await venueSpacesApi.deleteSlot(s.id);
+                            setConfirmRemoveId(null);
                             await load(scope);
-                          })
-                        }
+                          });
+                        }}
                       >
-                        Remove
+                        {confirmRemoveId === s.id ? "Tap again to remove" : "Remove"}
                       </Button>
                     </div>
                   </div>
@@ -358,7 +420,13 @@ export function SpaceSlotsEditor(): React.ReactElement | null {
           <div className="flex flex-wrap items-center gap-1.5 border-t pt-2">
             <span className="text-xs text-muted-foreground">Start from:</span>
             {PRESETS.map((p) => {
-              const already = slots.some((s) => hhmm(s.startTime) === p.startTime && hhmm(s.endTime) === p.endTime);
+              // Only rows this scope actually OWNS can be duplicates. While a
+              // space is inheriting, `slots` holds the venue's rows — counting
+              // those blocked the single most likely action ("give this hall
+              // its own Day slot at a different capacity") behind a tooltip
+              // that claimed the slot already existed here. It did not.
+              const already =
+                !inherited && slots.some((s) => hhmm(s.startTime) === p.startTime && hhmm(s.endTime) === p.endTime);
               return (
                 <Button
                   key={p.label}
