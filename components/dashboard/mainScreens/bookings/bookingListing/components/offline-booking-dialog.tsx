@@ -1,5 +1,6 @@
 'use client';
 
+import { validatePkPhone, validateEmail, normalizePkPhone, normalizeEmail } from "@/lib/validation/pk-fields";
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -591,6 +592,28 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
             toast.error('Please fill in customer name and phone number');
             return;
         }
+        /**
+         * Until now the only rule was "not empty", so "abc" created a real
+         * booking against a customer who can never be contacted — and this is
+         * the offline path, typed by hand at an expo or over a counter, which
+         * is exactly where a slip happens and exactly where nobody notices
+         * until the shaadi is a week away.
+         *
+         * The number is also the key the whole system reconciles on: reminders,
+         * the WhatsApp follow-up, "we already have a booking for this number".
+         * So validate it here, and store the one canonical shape rather than
+         * whatever spacing the vendor happened to type.
+         */
+        const phoneProblem = validatePkPhone(customerPhone, { label: 'Customer phone' });
+        if (phoneProblem) {
+            toast.error(phoneProblem);
+            return;
+        }
+        const emailProblem = validateEmail(customerEmail, { label: 'Customer email' });
+        if (emailProblem) {
+            toast.error(emailProblem);
+            return;
+        }
         if (!bookingDate || !bookingTime) {
             toast.error('Please select a date and time');
             return;
@@ -649,8 +672,8 @@ export function OfflineBookingDialog({ open, onOpenChange, onSuccess, initialDat
                 // accepts a null/empty customerEmail (see bookingValidator.js
                 // body("customerEmail")). Send undefined when blank so the
                 // customer table doesn't fill with placeholder emails.
-                customerEmail: customerEmail.trim() || undefined,
-                customerPhone: customerPhone.trim(),
+                customerEmail: normalizeEmail(customerEmail) || undefined,
+                customerPhone: normalizePkPhone(customerPhone),
                 bookingDate: format(bookingDate, 'yyyy-MM-dd'),
                 bookingTime,
                 guestCount: showGuestCount && guestCount ? Number(guestCount) : undefined,
