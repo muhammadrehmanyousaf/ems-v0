@@ -7,6 +7,7 @@
  * self-register), so this is edit-only.
  */
 
+import { validateEmail, validatePkPhone, normalizeEmail, normalizePkPhone } from "@/lib/validation/pk-fields";
 import * as React from "react"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation } from "@tanstack/react-query"
@@ -42,15 +43,19 @@ export function VendorEditDialog({
 
   const saveMut = useMutation({
     mutationFn: () => axiosInstance.patch(`/api/v1/users?id=${vendor!.id}`, {
-      fullName: fullName.trim(), email: email.trim(), phoneNumber: phoneNumber.trim(),
+      fullName: fullName.trim(), email: normalizeEmail(email), phoneNumber: normalizePkPhone(phoneNumber),
     }),
     onSuccess: () => { showSuccessToast("Vendor updated"); onSaved?.(); onOpenChange(false) },
     onError: (e: any) => toast.error(errorMessage(e, "Couldn't update vendor")),
   })
-  const canSave = fullName.trim() && email.trim()
+  // Same presence-only rule as the user dialog. This one edits a VENDOR's
+  // contact details — the address customers and the platform both reach them on.
+  const emailProblem = validateEmail(email, { label: "Email", required: true })
+  const phoneProblem = phoneNumber.trim() ? validatePkPhone(phoneNumber) : undefined
+  const canSave = !!fullName.trim() && !emailProblem && !phoneProblem
 
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
-  const blockedReason = canSave ? undefined : "Add a full name and an email to save."
+  const blockedReason = canSave ? undefined : (emailProblem || phoneProblem || "Add a full name and an email to save.")
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -8,6 +8,7 @@
  * from RolesAPI.getAll() with "super admin" excluded, exactly like the original.
  */
 
+import { validateEmail, validatePkPhone, normalizeEmail, normalizePkPhone } from "@/lib/validation/pk-fields";
 import * as React from "react"
 import { errorMessage } from "@/lib/utils/api-error"
 import { useMutation } from "@tanstack/react-query"
@@ -73,18 +74,23 @@ export function UserFormDialog({
       const ids = Array.from(roleIds)
       if (isEdit) {
         return axiosInstance.patch(`/api/v1/users?id=${user!.id}`, {
-          fullName: fullName.trim(), email: email.trim(), phoneNumber: phoneNumber.trim(), roleIds: ids,
+          fullName: fullName.trim(), email: normalizeEmail(email), phoneNumber: normalizePkPhone(phoneNumber), roleIds: ids,
         })
       }
       return axiosInstance.post("/api/v1/users", {
-        fullName: fullName.trim(), email: email.trim(), phoneNumber: phoneNumber.trim(), password, roleIds: ids,
+        fullName: fullName.trim(), email: normalizeEmail(email), phoneNumber: normalizePkPhone(phoneNumber), password, roleIds: ids,
       })
     },
     onSuccess: () => { showSuccessToast(isEdit ? "User updated" : "User created"); onSaved?.(); onOpenChange(false) },
     onError: (e: any) => toast.error(errorMessage(e, "Couldn't save user")),
   })
 
-  const canSave = fullName.trim() && email.trim() && (isEdit || password.length >= 6)
+  // Presence was the whole rule, so "abc" saved as a user's email and phone.
+  // These are the fields every invite, reset and notification is sent to.
+  const emailProblem = validateEmail(email, { label: "Email", required: true })
+  const phoneProblem = phoneNumber.trim() ? validatePkPhone(phoneNumber) : undefined
+  const canSave =
+    !!fullName.trim() && !emailProblem && !phoneProblem && (isEdit || password.length >= 6)
 
 
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
