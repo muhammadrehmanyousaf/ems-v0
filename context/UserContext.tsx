@@ -137,7 +137,30 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           clearAuthData();
         }
       } else {
-        clearAuthData();
+        /**
+         * A valid token but no cached user is NOT a dead session — most often
+         * it is a half-written one, and tearing it down here logs the vendor
+         * out of every tab they have open.
+         *
+         * `login()` writes USER_ID, TOKEN, USER_DATA, SESSION_EXPIRY in that
+         * order. Every other tab listens for a `storage` event on TOKEN and
+         * re-initialises the moment it lands — one write BEFORE USER_DATA
+         * exists. That tab read a token with no user, called clearAuthData(),
+         * and wiped localStorage, which is shared. The tab that had just
+         * signed in was signed straight back out, and the observed wreckage
+         * was exactly this: token and user_id gone, user_data and the jti left
+         * behind by whichever write landed after the wipe.
+         *
+         * A vendor with the dashboard open in two tabs hit this every time
+         * they signed in. So: trust the token, and ask the server who it
+         * belongs to. Only a genuinely bad token clears the session, via the
+         * 401 path in verifyWithServer's caller.
+         */
+        if (validateSession()) {
+          await verifyWithServer();
+        } else {
+          clearAuthData();
+        }
       }
     } catch {
       clearAuthData();
@@ -279,7 +302,17 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
        * another tab logs in.
        */
       if (event.key === STORAGE_KEYS.TOKEN) {
-        initializeSession();
+        // A token REMOVED elsewhere is a real logout — follow it immediately.
+        // A token that just appeared is the middle of another tab's login,
+        // whose remaining keys land microseconds later. Re-initialising on
+        // that instant is what used to read a token with no user and wipe the
+        // shared session. Let the write finish first; `userLogin` already
+        // covers the same-document case with no delay.
+        if (event.newValue == null) {
+          clearAuthData();
+          return;
+        }
+        setTimeout(() => initializeSession(), 50);
       }
     };
 
