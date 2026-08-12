@@ -1,5 +1,6 @@
 'use client';
 
+import { validatePkPhone, normalizePkPhone } from "@/lib/validation/pk-fields";
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -311,6 +312,14 @@ export function EditBookingDialog({ open, onOpenChange, booking, onSuccess }: Ed
             toast.error('Customer name and phone are required');
             return;
         }
+        // Presence was the only rule, so an edit could REPLACE a good number
+        // with "abc" — losing the one field every reminder and follow-up is
+        // sent to, on a booking that already exists.
+        const phoneProblem = validatePkPhone(customerPhone, { label: 'Customer phone' });
+        if (phoneProblem) {
+            toast.error(phoneProblem);
+            return;
+        }
         if (!bookingDate || !bookingTime) {
             toast.error('Please select a date and time');
             return;
@@ -318,7 +327,7 @@ export function EditBookingDialog({ open, onOpenChange, booking, onSuccess }: Ed
 
         const payload: Record<string, unknown> = {
             customerName:  customerName.trim(),
-            customerPhone: customerPhone.trim(),
+            customerPhone: normalizePkPhone(customerPhone),
             bookingDate:   format(bookingDate, 'yyyy-MM-dd'),
             bookingTime,
             specialRequests: specialRequests.trim() || null,

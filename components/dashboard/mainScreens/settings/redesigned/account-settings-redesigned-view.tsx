@@ -10,6 +10,7 @@
  * /dashboard/settings-new. Token-only (themes).
  */
 
+import { validatePkPhone, validateEmail, normalizePkPhone, normalizeEmail } from "@/lib/validation/pk-fields";
 import * as React from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { UsersAPI, type ApiUser } from "@/lib/api/dashboard"
@@ -126,7 +127,28 @@ function EditProfileDialog({
   }, [open, user])
 
   const mutation = useMutation({
-    mutationFn: () => UsersAPI.updateMyProfile(form),
+    /**
+     * The vendor's own contact details had no rule at all — "abc" saved as the
+     * phone customers are told to ring, and as the booking email every enquiry
+     * is routed to. Nothing downstream re-checks it, so a slip here quietly
+     * takes the vendor off the air.
+     *
+     * Validate before the request, and store one canonical shape so the number
+     * a vendor saves is the number the platform dials.
+     */
+    mutationFn: () => {
+      const phoneProblem = form.phoneNumber?.trim()
+        ? validatePkPhone(form.phoneNumber)
+        : undefined
+      if (phoneProblem) return Promise.reject(new Error(phoneProblem))
+      const emailProblem = validateEmail(form.bookingEmail, { label: "Booking email" })
+      if (emailProblem) return Promise.reject(new Error(emailProblem))
+      return UsersAPI.updateMyProfile({
+        ...form,
+        phoneNumber: normalizePkPhone(form.phoneNumber ?? ""),
+        bookingEmail: normalizeEmail(form.bookingEmail ?? ""),
+      })
+    },
     onSuccess: async () => {
       showSuccessToast("Profile updated")
       qc.invalidateQueries({ queryKey: ["account-settings-redesigned"] })
