@@ -272,6 +272,9 @@ function PaymentBody({
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [paymentReady, setPaymentReady] = useState(false)
   const [stripeLoadError, setStripeLoadError] = useState<string | null>(null)
+  /** Set once a charge has actually gone through, so the cleanup path can never
+   *  re-arm the Pay button under a redirect and invite a second charge. */
+  const paidRef = useRef(false)
 
   const formatPKR = (n: number) =>
     new Intl.NumberFormat("en-PK", { style: "currency", currency: "PKR", maximumFractionDigits: 0 }).format(n)
@@ -291,34 +294,54 @@ function PaymentBody({
     // return for remaining/full-payment flows on the post-redirect screen.
     const returnUrl = `${origin}${window.location.pathname}?ps=1&bid=${bookingId}&pt=${paymentType}`
 
-    const { error, paymentIntent } = await stripe.confirmPayment({
-      elements,
-      confirmParams: { return_url: returnUrl },
-      redirect: "if_required",
-    })
+    /**
+     * `confirmPayment` REJECTS as well as resolving-with-error: a dropped
+     * connection, an element that unmounted under it, an intent that expired
+     * while the customer was typing. Without this try/catch the throw escaped
+     * `handleSubmit` and `isPaying` was never cleared — so the button sat
+     * disabled reading "Processing…" and the only way out was a page reload.
+     * That is the "sometimes I can't click Pay" report, and the customer had
+     * every reason to think their money had gone somewhere.
+     */
+    try {
+      const { error, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: { return_url: returnUrl },
+        redirect: "if_required",
+      })
 
-    if (error) {
-      setErrorMsg(error.message || "Payment failed. Please try again.")
-      setIsPaying(false)
-      return
-    }
+      if (error) {
+        setErrorMsg(error.message || "Payment failed. Please try again.")
+        return
+      }
 
-    if (paymentIntent?.status === "succeeded" || paymentIntent?.status === "processing") {
-      onSuccess()
-      return
-    }
+      if (paymentIntent?.status === "succeeded" || paymentIntent?.status === "processing") {
+        paidRef.current = true
+        onSuccess()
+        return // deliberately leaves the button disabled — we are navigating away
+      }
 
-    // Stripe didn't return an error AND didn't return a succeeded intent.
-    // Most common case: paymentIntent.status === "requires_action" and Stripe
-    // is about to redirect (handled by booking-form's URL detection on return),
-    // OR status === "requires_payment_method" which means no card was charged.
-    // Surface the actual status so users don't sit on a silent loading state.
-    if (paymentIntent && paymentIntent.status !== "requires_action") {
+      // Stripe didn't return an error AND didn't return a succeeded intent.
+      // Most common case: paymentIntent.status === "requires_action" and Stripe
+      // is about to redirect (handled by booking-form's URL detection on return),
+      // OR status === "requires_payment_method" which means no card was charged.
+      // Surface the actual status so users don't sit on a silent loading state.
+      if (paymentIntent && paymentIntent.status !== "requires_action") {
+        setErrorMsg(
+          `Payment did not complete (status: ${paymentIntent.status}). Your card was not charged. Please try again.`,
+        )
+      }
+    } catch (e: unknown) {
       setErrorMsg(
-        `Payment did not complete (status: ${paymentIntent.status}). Your card was not charged. Please try again.`,
+        `${e instanceof Error && e.message ? e.message : "Something interrupted the payment."} ` +
+          "Your card was not charged — you can try again.",
       )
+    } finally {
+      // The one path that must not re-enable is the success path above, and it
+      // returns before this runs only in the sense that `finally` still fires —
+      // so guard it: re-enabling under a redirect would invite a double charge.
+      setIsPaying((was) => (paidRef.current ? was : false))
     }
-    setIsPaying(false)
   }
 
   return (
@@ -439,9 +462,14 @@ function PaymentBody({
             variant="primary"
             size="md"
             loading={isPaying}
-            disabled={!stripe || !elements || isPaying}
+            // `stripe` and `elements` exist the moment the provider mounts —
+            // seconds before the card iframe finishes loading. Paying in that
+            // window confirms against an element that isn't there yet. Wait for
+            // the element to say it is ready.
+            disabled={!stripe || !elements || !paymentReady || isPaying}
+            title={!paymentReady && !stripeLoadError ? "Waiting for the secure card form to load" : undefined}
           >
-            {isPaying ? "Processing…" : `Pay ${formatPKR(amount)}`}
+            {isPaying ? "Processing…" : !paymentReady ? "Loading…" : `Pay ${formatPKR(amount)}`}
             {!isPaying && <ArrowRight className="h-3.5 w-3.5" />}
           </BridalButton>
         </div>
