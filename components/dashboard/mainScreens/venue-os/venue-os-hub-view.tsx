@@ -48,6 +48,7 @@ import { CapTableView } from "./cap-table-view";
 import { PartnerLedgerView } from "./partner-ledger-view";
 import { VenueSpacesManagerView } from "./venue-spaces-manager-view";
 import { SpaceSlotsEditor } from "./space-slots-editor";
+import { BookingPreflightPanel } from "@/components/dashboard/primitives/booking-preflight-panel";
 import { SpaceCalendarView } from "./space-calendar-view";
 import { BulkImportView } from "./bulk-import-view";
 import { SuccessionView } from "./succession-view";
@@ -258,6 +259,10 @@ export function VenueOsHubView(): React.ReactElement {
 
         <TabsContent value="spaces" className="mt-5">
           <Section title="Spaces & calendar" hint="Build your hall / floor / partition tree, set slots, see the availability grid, and see which space earns most.">
+            {/* Leads the tab deliberately: it reports whether the settings
+                below actually work for a customer. A vendor should not have to
+                read five cards to learn that nothing can be booked. */}
+            <BookingPreflightPanel />
             <VenueSpacesManagerView />
             <SpaceSlotsEditor />
             <SpaceCalendarView />
