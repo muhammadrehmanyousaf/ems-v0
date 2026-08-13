@@ -21,9 +21,14 @@ const buttonVariants = cva(
       },
       size: {
         default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3",
+        // `touch-40` leaves these exactly as they look and extends the hit area
+        // to 40px on touch devices only — see app/globals.css. `sm` (32px) and
+        // `icon` (36px) are the two that fall short of a finger, and between
+        // them they account for essentially every undersized target measured on
+        // production: 113 on Leads, 111 on Inventory, 110 on Staff.
+        sm: "h-8 rounded-md px-3 touch-40",
         lg: "h-11 rounded-md px-8",
-        icon: "h-9 w-9",
+        icon: "h-9 w-9 touch-40",
       },
     },
     defaultVariants: {
