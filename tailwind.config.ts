@@ -242,6 +242,54 @@ const config: Config = {
   		}
   	}
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    /**
+     * `.touch-40` — expand a control's TOUCH area to 40px without changing what
+     * it looks like.
+     *
+     * Measured on production at 1366×674: 113 controls under 36px tall on
+     * Leads, 111 on Inventory, 110 on Staff, 101 on Calendar. Apple and Google
+     * both publish 44 as the minimum; WCAG 2.5.8 sets 24 as the floor. The real
+     * user is a venue owner checking tonight's bookings one-handed at a shaadi.
+     *
+     * Making the buttons taller was the wrong fix: it would undo the fold work
+     * in the same breath — the densest screens are exactly the ones where
+     * content is already fighting for space, and a mouse does not need a 40px
+     * target. So the visual box is untouched and a transparent `::after`
+     * extends the hit area, only under `pointer: coarse`. On a laptop nothing
+     * moves at all.
+     *
+     * It lives in the Tailwind config rather than in a stylesheet because the
+     * app has TWO Tailwind entries — app/globals.css (marketing + auth) and
+     * app/styles/dashboard-styles.css (the portal) — and the dashboard tree
+     * never imports globals.css. Written in either file it would reach only
+     * half the product; written here, both entries generate it from one source.
+     * The first deploy proved this the hard way: 105 elements on
+     * /dashboard/leads carried the class and matched no rule at all.
+     */
+    require("tailwindcss/plugin")(({ addUtilities }: { addUtilities: (u: Record<string, unknown>) => void }) => {
+      addUtilities({
+        "@media (pointer: coarse)": {
+          ".touch-40": { position: "relative" },
+          ".touch-40::after": {
+            content: '""',
+            position: "absolute",
+            /* -2px each side so an icon button (36×36) clears 40 in BOTH axes,
+               not just height. A text button is already wide enough; the inset
+               is small so two adjacent row actions still cannot overlap. */
+            left: "-2px",
+            right: "-2px",
+            top: "50%",
+            transform: "translateY(-50%)",
+            minHeight: "40px",
+            /* Purely a hit area — must never paint, never trap a hover, never
+               intercept a scroll gesture that started on the row behind it. */
+            pointerEvents: "auto",
+          },
+        },
+      });
+    }),
+  ],
 };
 export default config;
