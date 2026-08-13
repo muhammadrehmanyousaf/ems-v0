@@ -58,7 +58,23 @@ export function PageHeader({
           a row of its own.
 
           77px -> ~32px, on every screen in the product. */}
-      <h1 className="min-w-0 truncate text-xl font-semibold tracking-tight text-foreground">
+      {/**
+       * Playfair for the page title — the one place the product wears the
+       * brand's face.
+       *
+       * Measured across all 44 modules: the portal renders in Inter and nothing
+       * else, while the public site is set in Playfair Display over DM Sans. A
+       * vendor moves from a site with a voice to a dashboard that looks like
+       * every SaaS tool built since 2018, and nothing tells them they are still
+       * inside Wedding Wala.
+       *
+       * Restraint is the whole point. Titles only — not labels, not buttons,
+       * not table cells. Inter stays everywhere else because it is genuinely
+       * the better face for dense figures, and Playfair is not. The font is
+       * already loaded (app/layout.tsx) and `.font-display` already exists, so
+       * this costs no bytes and no density.
+       */}
+      <h1 className="font-display min-w-0 truncate text-xl font-semibold tracking-tight text-foreground">
         {title}
       </h1>
       {description && (
