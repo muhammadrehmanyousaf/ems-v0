@@ -38,6 +38,14 @@ function getFieldValue(business: ApiBusiness, key: string): unknown {
   return (business as unknown as Record<string, unknown>)[key]
 }
 
+/**
+ * Postgres ARRAY columns the backend validates with `.isArray()`.
+ * See src/validators/vendorValidator.js — sending a bare string here is
+ * rejected with "Sub-business type must be an array" / "City covered must be
+ * an array", regardless of what the row currently holds.
+ */
+const ARRAY_BACKED_FIELDS = new Set(["subBusinessType", "cityCovered"])
+
 function initialValues(
   business: ApiBusiness,
   fields: TypeSpecificFieldDef[],
@@ -115,10 +123,26 @@ export function TypeSpecificManager({ business, config, onSaved }: Props) {
         if (field.type === "number") {
           updateData[field.key] = val === "" || val == null ? null : Number(val)
         } else if (field.type === "select") {
-          // Some fields (e.g. subBusinessType) are stored as ARRAY in PostgreSQL.
-          // If the original DB value was an array, re-wrap the selected string as an array.
+          /**
+           * Some fields are Postgres ARRAY columns and the backend validator
+           * insists on it (`body("subBusinessType").isArray()`).
+           *
+           * This used to infer the shape from the CURRENT value — wrap only if
+           * `Array.isArray(original)`. That works for a vendor who already has
+           * one and fails for everyone who does not: production has
+           * `subBusinessType: null`, `Array.isArray(null)` is false, so the
+           * form sent a bare string and the save came back "Sub-business type
+           * must be an array". A vendor who had never set a venue type could
+           * therefore never set one — the first save always failed, and only
+           * the first.
+           *
+           * Shape is a property of the COLUMN, not of whatever happens to be
+           * in it, so it is decided by field identity and a null original no
+           * longer reads as "not an array".
+           */
           const original = getFieldValue(business, field.key)
-          updateData[field.key] = Array.isArray(original)
+          const isArrayColumn = ARRAY_BACKED_FIELDS.has(field.key) || Array.isArray(original)
+          updateData[field.key] = isArrayColumn
             ? val
               ? [String(val)]
               : []

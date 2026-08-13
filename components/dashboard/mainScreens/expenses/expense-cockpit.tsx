@@ -32,7 +32,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { ExpenseFormDialog } from "@/components/dashboard/mainScreens/expenses/redesigned/expense-form-dialog"
 
-type Gran = "day" | "month" | "year" | "all"
+export type Gran = "day" | "month" | "year" | "all"
 
 const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v) || 0)
 
@@ -50,7 +50,7 @@ const pad = (n: number) => String(n).padStart(2, "0")
 const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
 /** Does this expense fall inside the anchored period at the given granularity? */
-function inPeriod(dateStr: string, gran: Gran, anchor: Date): boolean {
+export function inPeriod(dateStr: string, gran: Gran, anchor: Date): boolean {
   if (gran === "all") return true
   const d = new Date(dateStr + "T00:00:00")
   if (isNaN(d.getTime())) return false
@@ -79,11 +79,41 @@ function periodLabel(gran: Gran, anchor: Date): string {
 const fmtEventDate = (s?: string | null) =>
   s ? new Date(s).toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" }) : "—"
 
-export function ExpenseCockpit(): React.ReactElement {
+export function ExpenseCockpit({
+  /**
+   * Whether this cockpit owns the "Add expense" action.
+   *
+   * The cockpit renders in two places. On /dashboard/venue-os?tab=money it is
+   * the only way to add an expense, so it must keep the button. On
+   * /dashboard/expenses the page header already carries one — measured live,
+   * the two sat 68px apart at the same screen edge, which is what a vendor
+   * reported. That page now passes `false`.
+   *
+   * The empty-state "Add the first one" is deliberately unaffected: it appears
+   * only when there is nothing to show, so it can never be the duplicate.
+   */
+  showAddAction = true,
+  /**
+   * Reports the period the vendor is looking at, so the ledger under this
+   * cockpit can show the same window.
+   *
+   * Measured live: the toggle changed the summary (day Rs 197,200 / month
+   * Rs 655,900 / year Rs 5,586,100) while the table below stayed at
+   * "Showing 1-25 of 55" in every period, listing July rows under a "day"
+   * heading. A vendor reconciling one day's cash read a total for that day
+   * above a list of months.
+   */
+  onPeriodChange,
+}: {
+  showAddAction?: boolean
+  onPeriodChange?: (p: { gran: Gran; anchor: Date }) => void
+} = {}): React.ReactElement {
   const activeBusinessId = useActiveBusinessId()
   const [gran, setGran] = React.useState<Gran>("month")
   const [anchor, setAnchor] = React.useState<Date>(() => new Date())
   const [addOpen, setAddOpen] = React.useState(false)
+
+  React.useEffect(() => { onPeriodChange?.({ gran, anchor }) }, [gran, anchor, onPeriodChange])
 
   const { data, isLoading, refetch } = useQuery({
     // WWL-179 — shares the table's key: same endpoint, same rows, one request.
@@ -158,9 +188,11 @@ export function ExpenseCockpit(): React.ReactElement {
               </button>
             ))}
           </div>
-          <Button size="sm" onClick={() => setAddOpen(true)}>
-            <Icon name="Plus" size={15} className="mr-1" /> Add expense
-          </Button>
+          {showAddAction && (
+            <Button size="sm" onClick={() => setAddOpen(true)}>
+              <Icon name="Plus" size={15} className="mr-1" /> Add expense
+            </Button>
+          )}
         </div>
       </div>
 

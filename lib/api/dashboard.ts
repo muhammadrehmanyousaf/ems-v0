@@ -933,6 +933,34 @@ export interface CommunityTrustData {
   flags?: CommunityTrustFlag[];
 }
 
+/**
+ * A customer the vendor typed in themselves — a walk-in, a phone enquiry, an
+ * expo desk — rather than one derived from a booking made on the platform.
+ */
+export interface ApiOfflineCustomer {
+  id: number;
+  name: string | null;
+  phoneno: string | null;
+  email: string | null;
+  address?: string | null;
+}
+
+export class OfflineCustomersAPI {
+  /**
+   * GET /offlineCustomers — the vendor's own manually-added client book.
+   *
+   * The Customers screen listed only GET /customers (booking-derived) while its
+   * own "Add customer" button wrote here. Two disjoint datasets behind one
+   * screen: a vendor added a customer, it saved, and it was nowhere. Measured
+   * on production — 22 rows in one, 4 in the other, no overlap.
+   */
+  static async list(): Promise<ApiOfflineCustomer[]> {
+    const res = await axiosInstance.get("/api/v1/offlineCustomers");
+    const rows = res.data?.data;
+    return Array.isArray(rows) ? rows : [];
+  }
+}
+
 export class CommunityTrustAPI {
   /** GET /offlineCustomers/community-trust?phone=&email= */
   static async get(params: { phone?: string | null; email?: string | null }): Promise<CommunityTrustData | null> {

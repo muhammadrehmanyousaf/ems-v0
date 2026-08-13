@@ -124,20 +124,25 @@ export function SuppliersRedesignedView() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <PageHeader
-        eyebrow="Operate"
-        title="Suppliers"
-        description="Your A/P ledger and vendor network."
-      />
+      {/* Tabs share the title row — see PageHeader's `tabs` prop. Previously
+          the tablist sat on its own row directly beneath the header, spending
+          a row of the fold to say what the header had just said. */}
       <Tabs value={tab} onValueChange={setTab} className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="invoices">
-            <Icon name="FileText" size={15} className="mr-1.5" /> A/P invoices
-          </TabsTrigger>
-          <TabsTrigger value="suppliers">
-            <Icon name="Truck" size={15} className="mr-1.5" /> Suppliers
-          </TabsTrigger>
-        </TabsList>
+        <PageHeader
+          eyebrow="Operate"
+          title="Suppliers"
+          description="Your A/P ledger and vendor network."
+          tabs={
+            <TabsList>
+              <TabsTrigger value="invoices">
+                <Icon name="FileText" size={15} className="mr-1.5" /> A/P invoices
+              </TabsTrigger>
+              <TabsTrigger value="suppliers">
+                <Icon name="Truck" size={15} className="mr-1.5" /> Suppliers
+              </TabsTrigger>
+            </TabsList>
+          }
+        />
         <TabsContent value="invoices" className="space-y-6">
           <InvoicesTab businessOptions={businessOptions} />
         </TabsContent>
