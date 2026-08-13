@@ -165,3 +165,43 @@ already in the codebase — header row, KPI strip, then content. Apply it.
 | 4 | Fold fix on the five worst | five files | the screens vendors open most |
 
 One through three are three files and reach all 44 modules. Start there.
+
+---
+
+## Correction — Billing is not a fold problem
+
+The table listed at 1096 is the plan-comparison table, not the page's answer. Measured
+block by block:
+
+```
+148   "Current plan · Khata Lite · We never take a cut of your bookings"
+252   indicative-pricing disclaimer
+341   "No invoices or payment methods here yet"
+1096  plan comparison table   <- what the metric caught
+```
+
+The question a vendor opens Billing to ask — *which plan am I on* — is answered at 148px,
+comfortably above the fold. **Left unchanged.**
+
+The metric was "top of the first `<table>`", which is a good proxy on a ledger screen and a
+bad one on a page whose content is cards. Recording it because the same heuristic is what
+flagged Reviews, and there the flag was real: Reviews' first *review* genuinely sat at 1310
+behind 476px of the vendor's own averages.
+
+## Applied
+
+| # | change | files | reach |
+|---|---|---|---|
+| 1 | 40px hit area under `pointer: coarse` only | `button.tsx` + `globals.css` | **all 44 modules** |
+| 2 | Playfair on page titles | `page-header.tsx` | **every screen using PageHeader (51)** |
+| 3 | `font-medium` on money | `money-cell.tsx` | every money column |
+| 4 | Reviews: table leads, analytics collapse | `reviews-listing-view.tsx` | Reviews |
+
+Home, Suppliers and Expenses were addressed in the earlier density round (profile card
+collapses above 70, tabs moved into the header, duplicate action removed).
+
+## Not done
+
+- **Verification that the numbers moved.** Everything above is measured PRE-change; the
+  fixes are not deployed. The same 44-module sweep has to run again after merge, or none of
+  it is proven — only reasoned.

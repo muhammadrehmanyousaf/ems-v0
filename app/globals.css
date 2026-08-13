@@ -275,8 +275,11 @@ html[data-locale="ur"] body {
     .touch-40::after {
       content: "";
       position: absolute;
-      left: 0;
-      right: 0;
+      /* -2px each side so an icon button (36×36) clears 40 in BOTH axes, not
+         just height. A text button is already wide enough; the inset is small
+         so two adjacent row actions still cannot overlap each other's area. */
+      left: -2px;
+      right: -2px;
       top: 50%;
       transform: translateY(-50%);
       min-height: 40px;
