@@ -39,7 +39,16 @@ export function MoneyCell({
   return (
     <span
       className={cn(
-        "tabular-nums",
+        /**
+         * Money is what this product is for, and it was rendering at the same
+         * weight as the labels beside it. A vendor scanning a column should
+         * find "Rs 6,450,452 due" without reading a word around it.
+         *
+         * `medium` not `semibold`: a whole column at 600 stops being emphasis
+         * and becomes noise — the tone colours (overdue, paid) still carry the
+         * meaning, and this only has to lift the figure off the label.
+         */
+        "font-medium tabular-nums",
         align === "right" ? "text-right" : "text-left",
         TONE[tone],
         className,
