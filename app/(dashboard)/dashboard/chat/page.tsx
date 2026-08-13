@@ -31,6 +31,15 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-white dark:bg-gray-950 rounded-t-xl border border-gray-200 dark:border-gray-800 m-2 mt-0 shadow-sm">
+      {/*
+        Every other dashboard route has an <h1>; this one had none at all, so
+        screen-reader users landed on Messages with no page landmark and no way
+        to confirm where they were. It is visually hidden rather than drawn
+        because the chat is a full-height two-pane layout with its own header —
+        a visible title would cost a row of a screen that is already tight, and
+        the heading's job here is orientation, not decoration.
+      */}
+      <h1 className="sr-only">Messages</h1>
       {/* Conversation List Sidebar */}
       <div
         className={cn(

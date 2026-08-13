@@ -160,22 +160,33 @@ export function StaffRedesignedView() {
       }}
       className="space-y-6 p-4 md:p-6"
     >
-      <TabsList>
-        <TabsTrigger value="roster">
-          <Icon name="Users" size={15} className="mr-1.5" /> Roster
-        </TabsTrigger>
-        <TabsTrigger value="payroll">
-          <Icon name="FileText" size={15} className="mr-1.5" /> Shifts &amp; payroll
-        </TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="roster" className="space-y-6">
+      {/* One header for both tabs, with the switcher on the title's own row.
+          The tablist used to sit alone above it: measured on production it put
+          the title at 165, the first stat at 220 and the staff table at 385 of
+          a 674px viewport. It also meant Shifts & payroll had no title at all —
+          the header lived inside the roster tab only. */}
       <PageHeader
         eyebrow="Operate"
         title="Staff & payroll"
         description="Your crew, roles and pay rates."
-        actions={<Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Add staff</Button>}
+        tabs={
+          <TabsList>
+            <TabsTrigger value="roster">
+              <Icon name="Users" size={15} className="mr-1.5" /> Roster
+            </TabsTrigger>
+            <TabsTrigger value="payroll">
+              <Icon name="FileText" size={15} className="mr-1.5" /> Shifts &amp; payroll
+            </TabsTrigger>
+          </TabsList>
+        }
+        actions={
+          tab === "roster" ? (
+            <Button onClick={openCreate}><Icon name="Plus" size={16} className="mr-1.5" /> Add staff</Button>
+          ) : undefined
+        }
       />
+
+      <TabsContent value="roster" className="space-y-6">
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Total staff" value={all.length} icon="Users" />

@@ -95,16 +95,26 @@ const PRIMARY_TABS: { value: string; label: string; icon: IconName }[] = [
   { value: "advanced", label: "Accounting", icon: "Settings2" },
 ];
 
-function Section({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }): React.ReactElement {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-base font-semibold tracking-tight">{title}</h3>
-        <p className="text-sm text-muted-foreground">{hint}</p>
-      </div>
-      {children}
-    </div>
-  );
+/**
+ * Layout wrapper only — deliberately renders no heading.
+ *
+ * The page header (app/(dashboard)/dashboard/venue-os/page.tsx, TAB_HEADINGS)
+ * already titles and describes the tab in view, and this printed it a second
+ * time immediately below:
+ *
+ *   Cash & cheques   /  The galla and the cheque book — float reconciliation…
+ *   Cash & cheques   /  Close the daily galla with over/short, and chase…
+ *
+ * Two headings, two descriptions of one screen, ~48px, on every tab. `today`
+ * and `cash` repeated the title verbatim; the rest were near-synonyms
+ * ("Venue money" / "Money & expenses").
+ *
+ * `title` and `hint` are kept in the signature because they are the readable
+ * record of what each tab is, and are used by the page-level headings — but
+ * they are not drawn twice.
+ */
+function Section({ children }: { title: string; hint: string; children: React.ReactNode }): React.ReactElement {
+  return <div className="space-y-6">{children}</div>;
 }
 
 function AdvGroup({ value, title, icon, children }: { value: string; title: string; icon: IconName; children: React.ReactNode }): React.ReactElement {
@@ -172,6 +182,7 @@ export function VenueOsHubView(): React.ReactElement {
   const activeGroup = VENUE_OS_ADVANCED_GROUPS.includes(rawGroup as never) ? (rawGroup as string) : null;
   const [openGroups, setOpenGroups] = React.useState<string[]>(activeGroup ? [activeGroup] : []);
 
+
   // Follow the URL when it changes (sidebar click while already on the hub),
   // and bring the group into view once it has expanded.
   React.useEffect(() => {
@@ -191,22 +202,13 @@ export function VenueOsHubView(): React.ReactElement {
 
   return (
     <div className="space-y-5">
-      {/* One honest line so an owner is never lost about what this screen is. */}
-      <div className="rounded-xl border border-border bg-gradient-to-br from-primary/5 to-transparent p-4">
-        <div className="flex items-start gap-3">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-            <Icon name="Building2" size={18} />
-          </span>
-          <div>
-            <h3 className="text-sm font-semibold">Your venue command centre</h3>
-            <p className="text-sm text-muted-foreground">
-              Run tonight&apos;s event, see whether each shaadi made money, track every expense, chase cheques, and
-              manage your halls — all in one place. Start with <span className="font-medium text-foreground">Today</span>;
-              the deeper accounting tools sit under <span className="font-medium text-foreground">Advanced</span>.
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* The "Your venue command centre" card used to sit here: a 94px block of
+          orientation copy repeated on all seven tabs, which put tab content at
+          ~371px of a 674px laptop viewport. Removed outright rather than made
+          dismissible — a card a vendor closes on day one is still a card that
+          shipped, and the tab labels (Tonight, Event profit, Venue money…)
+          already say what each screen is. The page header carries the one line
+          that is actually specific to the tab in view. */}
 
       <Tabs value={active} onValueChange={setTab} className="w-full">
         <div className="overflow-x-auto pb-1">

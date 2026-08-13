@@ -6,6 +6,7 @@
  * customer needed). Follows the Suppliers parity recipe.
  */
 
+import { BusinessScopeField } from "@/components/dashboard/shared/business-scope-field";
 import * as React from "react"
 import { useMutation } from "@tanstack/react-query"
 import { LeadAPI, type Lead, type LeadStatus, type LeadSource, type LeadEventType } from "@/lib/api/leads"
@@ -32,8 +33,26 @@ const EVENTS: LeadEventType[] = ["mehndi", "nikah", "baraat", "walima", "engagem
 const lbl = (s: string) => s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
+/**
+ * The label WRAPS the control rather than sitting beside it.
+ *
+ * Several controls here carry no `id` — Contact name, Email, Budget (Rs) and
+ * Guests — and a `<label>` with no `htmlFor` names nothing. Verified live: they
+ * exposed no accessible name at all, so a screen reader announced a bare
+ * "textbox" and browser autofill had nothing to match on either.
+ *
+ * Wrapping associates them implicitly, which fixes every field this component
+ * renders — including the ones that already have an id, where the explicit
+ * association is simply redundant rather than wrong. Clicking the label now
+ * focuses its control too, which it never did.
+ */
 function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
-  return <div className={cn("space-y-1.5", className)}><label className={labelCls}>{label}</label>{children}</div>
+  return (
+    <label className={cn("block space-y-1.5", className)}>
+      <span className={cn(labelCls, "block")}>{label}</span>
+      {children}
+    </label>
+  )
 }
 const numOrU = (s: string) => (s.trim() === "" ? undefined : Number(s) || 0)
 
@@ -67,6 +86,25 @@ export function LeadFormDialog({
     const k = open ? (lead?.id != null ? `l${lead.id}` : prefill ? `p${JSON.stringify(prefill)}` : "new") : null
     if (open) { if (loaded.current !== k) { setForm(blank(lead, prefill)); loaded.current = k } } else { loaded.current = null }
   }, [open, lead, prefill])
+  /**
+   * Which venue this lead belongs to, when the caller could not say.
+   *
+   * `businessId` arrives as a prop from the active venue. On "All venues" —
+   * the DEFAULT for a multi-venue vendor — there is no active venue, so the
+   * prop was undefined and "Save lead" could never enable. The only clue was a
+   * status line, "This lead needs a business before it can be saved", and the
+   * dialog offered no way to choose one: the fix lived in the venue switcher,
+   * outside the dialog, and nothing said so.
+   *
+   * A vendor's first action in the Leads module was a dead button. Now they
+   * pick the venue here. BusinessScopeField renders nothing when a venue is
+   * already active, so single-venue vendors see no change at all.
+   */
+  const [pickedBusinessId, setPickedBusinessId] = React.useState<string>("")
+  React.useEffect(() => { if (!open) setPickedBusinessId("") }, [open])
+  const effectiveBusinessId =
+    lead?.businessId ?? businessId ?? (pickedBusinessId ? Number(pickedBusinessId) : undefined)
+
   const [touched, setTouched] = React.useState<Record<string, boolean>>({})
   const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }))
   const set = (k: keyof FormState, v: string) => { setForm((f) => ({ ...f, [k]: v })); touch(String(k)) }
@@ -74,7 +112,7 @@ export function LeadFormDialog({
   const saveMut = useMutation({
     mutationFn: async () => {
       const body = {
-        businessId: lead?.businessId ?? businessId!,
+        businessId: effectiveBusinessId!,
         contactName: form.contactName.trim() || undefined,
         contactPhone: form.contactPhone.trim() || undefined,
         contactWhatsapp: form.contactWhatsapp.trim() || undefined,
@@ -172,7 +210,7 @@ export function LeadFormDialog({
   ) as Record<string, string | undefined>
 
   const hasError = Object.values(errs).some(Boolean)
-  const canSave = form.contactName.trim() && !hasError && (isEdit || businessId != null)
+  const canSave = form.contactName.trim() && !hasError && (isEdit || effectiveBusinessId != null)
 
   // BUG-057 — a disabled button is not feedback. Say what it is waiting for.
   const blockedReason = canSave
@@ -181,13 +219,16 @@ export function LeadFormDialog({
       ? "Add a contact name to save."
       : hasError
         ? "Fix the highlighted fields to save."
-        : "This lead needs a business before it can be saved."
+        : "Choose which venue this lead is for."
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader><DialogTitle>{isEdit ? "Edit lead" : "Log a lead"}</DialogTitle><DialogDescription>An inquiry to follow up and convert.</DialogDescription></DialogHeader>
         <div className="space-y-4 py-1">
+          {!isEdit && businessId == null && (
+            <BusinessScopeField value={pickedBusinessId} onChange={setPickedBusinessId} label="Venue" />
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Contact name"><input className={inputCls} value={form.contactName} onChange={(e) => set("contactName", e.target.value)} autoFocus /></Field>
             <Field label="Phone">

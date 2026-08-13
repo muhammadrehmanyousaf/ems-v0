@@ -72,19 +72,50 @@ function fmtPKR(n: number | string | null | undefined): string {
 
 // ─── Log invoice ──────────────────────────────────────────────────
 
-const invoiceSchema = z.object({
-  businessId: z.coerce.number().int().positive("Pick a business"),
-  supplierId: z.coerce.number().int().positive().optional(),
-  supplierNameSnapshot: z.string().trim().max(200).optional(),
-  invoiceNumber: z.string().trim().max(60).optional(),
-  invoiceDate: z.string().trim().min(1, "Required"),
-  dueDate: z.string().trim().optional(),
-  subtotal: z.coerce.number().min(0).max(100_000_000),
-  taxAmount: z.coerce.number().min(0).max(100_000_000).optional(),
-  bookingId: z.coerce.number().int().positive().optional(),
-  description: z.string().trim().max(5000).optional(),
-  attachmentUrl: z.string().trim().max(500).optional(),
-})
+/** Money is stored to the paisa; three decimals is a typo, not a price. */
+const paisa = (label: string) =>
+  z.coerce
+    .number()
+    .max(100_000_000, `${label} looks too large — check the figure.`)
+    .refine((n) => Number.isFinite(n) && Math.round(n * 100) === n * 100, {
+      message: `${label} can have at most 2 decimal places.`,
+    })
+
+const invoiceSchema = z
+  .object({
+    businessId: z.coerce.number().int().positive("Pick a business"),
+    supplierId: z.coerce.number().int().positive().optional(),
+    supplierNameSnapshot: z.string().trim().max(200).optional(),
+    invoiceNumber: z.string().trim().max(60).optional(),
+    invoiceDate: z.string().trim().min(1, "Required"),
+    dueDate: z.string().trim().optional(),
+    /**
+     * Was `.min(0)`, which let a Rs 0 invoice into the A/P ledger — and
+     * `12.345` with it. Receipts and the cheque ledger already refuse both
+     * ("must be more than Rs 0.", "cannot be negative."); A/P simply was not
+     * using the same rule. An invoice for nothing is a typo every time.
+     */
+    subtotal: paisa("Subtotal").refine((n) => n > 0, {
+      message: "Subtotal must be more than Rs 0.",
+    }),
+    taxAmount: paisa("Sales tax")
+      .refine((n) => n >= 0, { message: "Sales tax cannot be negative." })
+      .optional(),
+    bookingId: z.coerce.number().int().positive().optional(),
+    description: z.string().trim().max(5000).optional(),
+    attachmentUrl: z.string().trim().max(500).optional(),
+  })
+  /**
+   * The server requires one of these and says so in its own words:
+   * "SupplierNameSnapshot required (or pass supplierId)". A venue owner cannot
+   * act on that — it names two internal fields and no control on screen. The
+   * form sent the request anyway, because neither field was required here.
+   * Ask for it before sending, in words that point at the picker.
+   */
+  .refine((v) => !!v.supplierId || !!(v.supplierNameSnapshot || "").trim(), {
+    message: "Choose a supplier, or type a name for a one-off supplier.",
+    path: ["supplierNameSnapshot"],
+  })
 type InvoiceFormValues = z.input<typeof invoiceSchema>
 
 export function LogInvoiceDialog({

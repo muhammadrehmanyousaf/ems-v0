@@ -15,6 +15,16 @@ export interface PageHeaderProps {
   description?: React.ReactNode
   /** Right-aligned actions (primary button, etc.). */
   actions?: React.ReactNode
+  /**
+   * View switcher for this screen — the `<TabsList>` itself, not the whole
+   * `<Tabs>`. Rendered on the title's own row rather than above it.
+   *
+   * Measured on /dashboard/staff: the tablist sat alone on a row at top 96,
+   * pushing the title to 165, the first KPI to 220 and the staff table to 385
+   * — 57% of a 674px laptop viewport spent before the first crew member.
+   * Sharing the title row gives back the 40px row plus its surrounding gap.
+   */
+  tabs?: React.ReactNode
   /** Optional breadcrumb node rendered above the eyebrow. */
   breadcrumb?: React.ReactNode
   className?: string
@@ -25,6 +35,7 @@ export function PageHeader({
   eyebrow,
   description,
   actions,
+  tabs,
   breadcrumb,
   className,
 }: PageHeaderProps) {
@@ -53,7 +64,31 @@ export function PageHeader({
       {description && (
         <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{description}</p>
       )}
-      {actions && <div className="ml-auto flex shrink-0 items-center gap-2">{actions}</div>}
+      {/* `ml-auto` on whichever of these comes first pushes the pair right; the
+          second must not claim it again or the two separate. Tabs keep their
+          own baseline (`items-center`) because a segmented control aligned on
+          a text baseline sits visibly low. */}
+      {/* On a phone the tablist takes its own full-width line and scrolls
+          sideways within itself. Without this it would be `shrink-0` next to a
+          title on a 360px screen and push the page into a horizontal scroll —
+          the one thing that must never happen, because a sticky header inside
+          a horizontally scrolling body detaches. From `sm` up it sits on the
+          title's row as intended. */}
+      {tabs && (
+        <div
+          className={cn(
+            "order-last flex w-full items-center overflow-x-auto",
+            "sm:order-none sm:ml-auto sm:w-auto sm:shrink-0 sm:self-center sm:overflow-visible",
+          )}
+        >
+          {tabs}
+        </div>
+      )}
+      {actions && (
+        <div className={cn("flex shrink-0 items-center gap-2 ml-auto", tabs && "sm:ml-2")}>
+          {actions}
+        </div>
+      )}
     </div>
   )
 }

@@ -20,7 +20,7 @@ import { DensityToggle } from "@/components/dashboard/primitives/density-toggle"
 import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { ExpenseFormDialog, type ExpensePrefill } from "@/components/dashboard/mainScreens/expenses/redesigned/expense-form-dialog"
-import { ExpenseCockpit } from "@/components/dashboard/mainScreens/expenses/expense-cockpit"
+import { ExpenseCockpit, inPeriod, type Gran } from "@/components/dashboard/mainScreens/expenses/expense-cockpit"
 import { OutboxStatus } from "@/components/dashboard/shared/outbox-status"
 import { OutboxConflicts } from "@/components/dashboard/shared/outbox-conflicts"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
@@ -117,7 +117,37 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
       ),
   })
 
-  const all = data?.expenses ?? []
+  const raw = data?.expenses ?? []
+
+  /**
+   * The ledger follows the period the cockpit is showing.
+   *
+   * The Day/Month/Year/All toggle changed the summary above and left this table
+   * alone: measured live it read "Showing 1-25 of 55" in every period, and
+   * picking "day" still listed 13-Jul-2026 rows under a total for today. A
+   * vendor closing one day's cash was reading that day's figure above months of
+   * unrelated spending.
+   */
+  const [period, setPeriod] = React.useState<{ gran: Gran; anchor: Date }>({
+    gran: "month",
+    anchor: new Date(),
+  })
+  // Identity-stable so the cockpit's effect does not fire on every render.
+  const handlePeriodChange = React.useCallback(
+    (p: { gran: Gran; anchor: Date }) => {
+      setPeriod((prev) =>
+        prev.gran === p.gran && prev.anchor.getTime() === p.anchor.getTime() ? prev : p,
+      )
+    },
+    [],
+  )
+
+  const all = React.useMemo(
+    () => raw.filter((e) => inPeriod(e.spentDate, period.gran, period.anchor)),
+    [raw, period],
+  )
+  const hiddenByPeriod = raw.length - all.length
+
   const expenses = React.useMemo(() => {
     const q = search.trim().toLowerCase()
     if (!q) return all
@@ -169,7 +199,8 @@ export function ExpensesRedesignedView({ bookingId }: { bookingId?: number } = {
 
       {/* Command-centre: day/month/year spend, category split (incl. hall rent
           & overheads), and per-function profit. The detailed ledger follows. */}
-      <ExpenseCockpit />
+      {/* The page header above already owns "Add expense". */}
+      <ExpenseCockpit showAddAction={false} onPeriodChange={handlePeriodChange} />
 
       {/*
         WWL-185 — "Spent · month stayed at Rs 745,200 while the ledger filtered

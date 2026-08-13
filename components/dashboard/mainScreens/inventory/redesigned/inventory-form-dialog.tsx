@@ -106,11 +106,40 @@ export function InventoryFormDialog({
    * negative quantity silently corrupts both tiles for every other item too.
    */
   const neg = (v: string) => String(v ?? "").trim() !== "" && Number(v) < 0
+  /**
+   * The same tiles that a negative corrupts are corrupted just as thoroughly by
+   * an absurd positive. Verified live: `1e9` was accepted as opening stock —
+   * one billion banquet chairs — with Save enabled and no error, because the
+   * only rule was "not negative". Expenses already refuses `999999999999`;
+   * this is the same rule, applied here.
+   *
+   * The ceilings are deliberately generous: a real caterer can hold 100,000
+   * plates, and a chandelier can genuinely cost Rs 10,000,000. These catch a
+   * fat finger, not a large venue.
+   */
+  const over = (v: string, max: number) =>
+    String(v ?? "").trim() !== "" && Number.isFinite(Number(v)) && Number(v) > max
   const numErrs = {
-    currentStock: neg(form.currentStock) ? "Opening stock can't be negative." : undefined,
-    lowStockThreshold: neg(form.lowStockThreshold) ? "Threshold can't be negative." : undefined,
-    lastRestockCostPerUnit: neg(form.lastRestockCostPerUnit) ? "Cost can't be negative." : undefined,
-    reorderLeadTimeDays: neg(form.reorderLeadTimeDays) ? "Lead time can't be negative." : undefined,
+    currentStock: neg(form.currentStock)
+      ? "Opening stock can't be negative."
+      : over(form.currentStock, 1_000_000)
+        ? "That's over a million units — check the figure."
+        : undefined,
+    lowStockThreshold: neg(form.lowStockThreshold)
+      ? "Threshold can't be negative."
+      : over(form.lowStockThreshold, 1_000_000)
+        ? "That threshold looks too large — check the figure."
+        : undefined,
+    lastRestockCostPerUnit: neg(form.lastRestockCostPerUnit)
+      ? "Cost can't be negative."
+      : over(form.lastRestockCostPerUnit, 100_000_000)
+        ? "That cost looks too large — check the figure."
+        : undefined,
+    reorderLeadTimeDays: neg(form.reorderLeadTimeDays)
+      ? "Lead time can't be negative."
+      : over(form.reorderLeadTimeDays, 365)
+        ? "Lead time is in days — 365 is the most we'd expect."
+        : undefined,
   }
   const hasNumErr = Object.values(numErrs).some(Boolean)
   const canSave = form.name.trim() && !hasNumErr && (isEdit || effectiveBusinessId != null)

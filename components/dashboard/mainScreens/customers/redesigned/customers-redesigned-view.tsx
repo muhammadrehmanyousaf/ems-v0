@@ -9,7 +9,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { CustomersAPI, type ApiCustomer } from "@/lib/api/dashboard"
+import { CustomersAPI, OfflineCustomersAPI, type ApiCustomer } from "@/lib/api/dashboard"
 import { AddCustomerDialog } from "@/components/dashboard/mainScreens/customers/redesigned/add-customer-dialog"
 import { ViewCustomerDialog } from "@/components/dashboard/mainScreens/customers/customersListing/components/view-customer-dialog"
 import ImportCustomersDialog from "@/components/dashboard/mainScreens/customers/customersListing/components/import-customers-dialog"
@@ -44,7 +44,56 @@ export function CustomersRedesignedView() {
     queryFn: () => CustomersAPI.getAll(1, 100),
   })
 
-  const all = data?.customers ?? []
+  /**
+   * The manually-added client book, merged in below.
+   *
+   * This screen listed GET /customers — customers derived from bookings — while
+   * its own "Add customer" button wrote to POST /offlineCustomers. Two disjoint
+   * datasets behind one screen, so a vendor added a customer, it saved, and it
+   * was nowhere: not in the table, not in the count, not findable by search.
+   * Adding them again returned "You already have a customer with this phone
+   * number" — a contradiction with no way out.
+   *
+   * Measured on production: 22 booking-derived rows, 4 offline rows, no overlap.
+   * Three of those four were the vendor's real customers, invisible to them.
+   *
+   * Its own query so a failure here cannot blank the main list — an offline
+   * book that will not load is worse as a blank screen than as a short one.
+   */
+  const offlineQ = useQuery({
+    queryKey: ["customers-redesigned", "offline"],
+    queryFn: () => OfflineCustomersAPI.list(),
+    retry: false,
+  })
+
+  const all = React.useMemo<ApiCustomer[]>(() => {
+    const derived = data?.customers ?? []
+    // Same person can exist in both — they walked in, then booked online. Match
+    // on digits so "0300 1112223" and "03001112223" are one customer, not two.
+    const digits = (v: string | null | undefined) => String(v ?? "").replace(/\D/g, "")
+    const seenPhone = new Set(derived.map((c) => digits(c.phone)).filter(Boolean))
+    const seenEmail = new Set(
+      derived.map((c) => (c.email ?? "").trim().toLowerCase()).filter(Boolean),
+    )
+    const extra: ApiCustomer[] = (offlineQ.data ?? [])
+      .filter((o) => {
+        const p = digits(o.phoneno)
+        const e = (o.email ?? "").trim().toLowerCase()
+        return !(p && seenPhone.has(p)) && !(e && seenEmail.has(e))
+      })
+      .map((o) => ({
+        _id: `offline-${o.id}`,
+        name: o.name ?? "—",
+        email: o.email ?? "",
+        phone: o.phoneno ?? "",
+        address: o.address ?? "",
+        // Genuinely zero: an offline customer has no platform booking yet. The
+        // column reads 0 rather than inventing a number.
+        total_booking: 0,
+        last_booking: "",
+      }))
+    return [...derived, ...extra]
+  }, [data?.customers, offlineQ.data])
   const customers = React.useMemo(() => {
     const q = search.trim().toLowerCase()
     if (!q) return all

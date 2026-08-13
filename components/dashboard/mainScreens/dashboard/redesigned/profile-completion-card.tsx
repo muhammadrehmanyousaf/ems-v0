@@ -123,7 +123,22 @@ export function ProfileCompletionCard() {
   const target = scoped[0]
   if (!target || target.score >= 100) return null
 
-  const isCollapsed = !!collapsed[target.businessId]
+  /**
+   * A nearly-finished listing gets the headline, not the whole checklist.
+   *
+   * Measured on the live dashboard at 1366×674: this card is 301px and sits
+   * directly under the 243px health panel, so 544px of a 674px viewport went
+   * to listing quality before the vendor saw a single booking, enquiry or
+   * rupee. The first KPI landed at 747 — off-screen on the one page every
+   * vendor opens first.
+   *
+   * Below 70 the detail earns its space: the listing is genuinely unfinished
+   * and the next-best actions are the point. At or above 70 it is a progress
+   * note, and the vendor can still open it — the chevron is right there, and
+   * an explicit choice either way is remembered.
+   */
+  const collapsePref = collapsed[target.businessId]
+  const isCollapsed = collapsePref === undefined ? target.score >= 70 : collapsePref
   const next = nextBestOf(target, 3)
   const { count, points } = remainingOf(target)
   const { title, body } = headline(target.score)
