@@ -20,7 +20,7 @@ import { useUser } from "@/context/UserContext";
 import { BlockedDatesAPI } from "@/lib/api/dashboard";
 import { useActiveBusinessId } from "@/lib/store/active-business-store";
 import { StatCard } from "@/components/dashboard/primitives/stat-card";
-import { formatPkr } from "@/components/dashboard/primitives/money-cell";
+import { formatPkr, MoneyCell } from "@/components/dashboard/primitives/money-cell";
 import { Icon } from "@/components/dashboard/shared/icon";
 import { waLink } from "@/lib/whatsapp";
 import { todayInKarachi } from "@/lib/utils/pk-date";
@@ -380,7 +380,16 @@ export function TodayBoard({ hideKpis = false }: { hideKpis?: boolean } = {}): R
                           {r.status || "Not confirmed"}
                         </span>
                       )}
-                      <div className="shrink-0 text-right text-sm tabular-nums">{r.revenue > 0 ? formatPkr(r.revenue) : "—"}</div>
+                      {/* Was `formatPkr(...)` in a bare div, so the revenue for
+                          every upcoming event rendered at 400 — the same weight
+                          as the venue name beside it — while the KPI figures at
+                          the top of the same screen sat at 600. One screen, two
+                          answers. MoneyCell is the column atom: 500, tabular,
+                          right-aligned, and an em dash for nothing, which is
+                          what the ternary was doing by hand. */}
+                      <div className="shrink-0 text-right text-sm">
+                        <MoneyCell amount={r.revenue > 0 ? r.revenue : null} />
+                      </div>
                       <Icon name="ChevronRight" size={15} className="shrink-0 text-muted-foreground" />
                     </Link>
                   </li>

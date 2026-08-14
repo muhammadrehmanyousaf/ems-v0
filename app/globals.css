@@ -249,45 +249,19 @@ html[data-locale="ur"] body {
     text-wrap: balance;
   }
 
-  /**
-   * Expand a control's TOUCH area to 40px without changing what it looks like.
-   *
-   * Measured on production at 1366×674: 113 controls under 36px tall on Leads,
-   * 111 on Inventory, 110 on Staff, 101 on Calendar. Apple and Google both
-   * publish 44 as the minimum; WCAG 2.5.8 sets 24 as the floor. The real user
-   * is a venue owner checking tonight's bookings one-handed at a shaadi.
-   *
-   * Simply making the buttons taller was the wrong fix: it would undo the fold
-   * work in the same breath — the densest screens are exactly the ones where
-   * content is already fighting for space, and a mouse does not need a 40px
-   * target.
-   *
-   * So the visual box is untouched and a transparent ::after extends the hit
-   * area, only under `pointer: coarse` — a finger. On a laptop nothing moves at
-   * all. The parent needs no `position: relative`: the pseudo-element is
-   * absolutely positioned against the button, which is already a
-   * stacking-independent inline-flex box.
-   */
-  @media (pointer: coarse) {
-    .touch-40 {
-      position: relative;
-    }
-    .touch-40::after {
-      content: "";
-      position: absolute;
-      /* -2px each side so an icon button (36×36) clears 40 in BOTH axes, not
-         just height. A text button is already wide enough; the inset is small
-         so two adjacent row actions still cannot overlap each other's area. */
-      left: -2px;
-      right: -2px;
-      top: 50%;
-      transform: translateY(-50%);
-      min-height: 40px;
-      /* Purely a hit area — must never paint, never trap a hover, never
-         intercept a scroll gesture that started on the row behind it. */
-      pointer-events: auto;
-    }
-  }
+  /* `.touch-40` (40px touch target under `pointer: coarse`) used to live here
+     as plain CSS. It is now a Tailwind plugin in tailwind.config.ts.
+
+     It had to move because this file is NOT the portal's stylesheet. The
+     dashboard tree has its own Tailwind entry — app/(dashboard)/dashboard/
+     layout.tsx imports app/styles/dashboard-styles.css and never imports this
+     file. So a rule written here reaches the marketing and auth pages only, and
+     is invisible on all 44 portal modules. Measured on production after the
+     first deploy: `.touch-40` was applied to 105 elements on /dashboard/leads
+     and matched zero rules, because the dashboard bundle did not contain it.
+
+     Anything that must apply to BOTH trees belongs in tailwind.config.ts, which
+     both entries share. */
   .secondary_button {
     @apply border border-gray-300 dark:border-gray-100 bg-white dark:bg-transparent text-black dark:text-gray-400
   }

@@ -22,9 +22,16 @@ import { BusinessesAPI } from "@/lib/api/dashboard";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { shareCard, type ShareRow } from "@/lib/whatsappShare";
+import { PageHeader } from "@/components/dashboard/primitives/page-header";
+import { formatPkr } from "@/components/dashboard/primitives/money-cell";
 
+/**
+ * Money is formatted by `formatPkr` — the same function MoneyCell uses — rather
+ * than by a second copy of `"Rs " + toLocaleString("en-PK")` that happened to
+ * agree with it. Two implementations of one format is how they drift.
+ */
 const fmt = (c: ReportCard) => {
-  if (c.format === "money") return "Rs " + Math.round(c.value).toLocaleString("en-PK");
+  if (c.format === "money") return formatPkr(Math.round(c.value));
   if (c.format === "pct") return Math.round(c.value) + "%";
   return String(Math.round(c.value));
 };
@@ -106,25 +113,30 @@ export function ReportCardsView() {
 
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Reports</h1>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={shareAllAsImage}
-            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-sm hover:bg-muted transition-colors"
-            title="Poori report ek image mein WhatsApp par bhejein"
-          >
-            <ImageIcon className="size-3.5" /> Image
-          </button>
-          <div className="inline-flex rounded-md border p-0.5 text-sm">
-            {(["month", "year"] as const).map((p) => (
-              <button key={p} onClick={() => setPeriod(p)} className={cn("px-3 py-1 rounded", period === p && "bg-primary text-primary-foreground")}>
-                {p === "month" ? "Maheena" : "Saal"}
-              </button>
-            ))}
+      {/* Was a hand-rolled `<h1>` — the only Inter/18px title left among
+          Playfair/20px ones. The share buttons move into PageHeader's `actions`
+          slot, which already lays them out on the title's baseline. */}
+      <PageHeader
+        title="Reports"
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={shareAllAsImage}
+              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-sm hover:bg-muted transition-colors"
+              title="Poori report ek image mein WhatsApp par bhejein"
+            >
+              <ImageIcon className="size-3.5" /> Image
+            </button>
+            <div className="inline-flex rounded-md border p-0.5 text-sm">
+              {(["month", "year"] as const).map((p) => (
+                <button key={p} onClick={() => setPeriod(p)} className={cn("px-3 py-1 rounded", period === p && "bg-primary text-primary-foreground")}>
+                  {p === "month" ? "Maheena" : "Saal"}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         {data.cards.map((c, i) => (
@@ -156,7 +168,13 @@ export function ReportCardsView() {
                   <MessageCircle className="size-3.5" />
                 </a>
               </div>
-              <p className={cn("text-2xl font-bold tabular-nums mt-1", VAL_TONE[c.tone])}>{fmt(c)}</p>
+              {/* 600, not 700. Measured across the portal, the KPI figure is
+                  600 on Money and on Venue-OS and 700 only here — one number
+                  in one product should not change weight depending on which
+                  screen it is read from. MoneyCell's 500 is deliberately NOT
+                  used: that is the table-column atom, and dropping a 2xl hero
+                  figure to 500 would weaken the thing the card exists to show. */}
+              <p className={cn("text-2xl font-semibold tabular-nums mt-1", VAL_TONE[c.tone])}>{fmt(c)}</p>
               <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
                 {c.delta != null && (
                   <span className={cn("inline-flex items-center", c.delta >= 0 ? "text-emerald-600" : "text-rose-600")}>

@@ -36,12 +36,41 @@ const num = (v: number | string | null | undefined) => (v == null ? 0 : Number(v
 const cap = (s?: string | null) => (s ? s[0].toUpperCase() + s.slice(1).replace(/_/g, " ") : "—")
 const initials = (name: string) => (name || "?").split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("")
 
-const rateLabel = (m: StaffMember) =>
+/** The pay figure and its unit, kept apart so each can be weighted. */
+const rateParts = (m: StaffMember): { amount: string; unit: string } | null =>
   num(m.monthlySalary) > 0
-    ? `${formatPkr(num(m.monthlySalary))} / mo`
+    ? { amount: formatPkr(num(m.monthlySalary)), unit: "/ mo" }
     : num(m.defaultDihariRate) > 0
-      ? `${formatPkr(num(m.defaultDihariRate))} / day`
-      : "—"
+      ? { amount: formatPkr(num(m.defaultDihariRate)), unit: "/ day" }
+      : null
+
+/** Plain text — for sorting, and anywhere a string is required. */
+const rateLabel = (m: StaffMember) => {
+  const p = rateParts(m)
+  return p ? `${p.amount} ${p.unit}` : "—"
+}
+
+/**
+ * Measured across the portal: money renders at 400 here, 600 on Venue-OS, 700
+ * on Reports, and MoneyCell's own 500 wherever that primitive is used — four
+ * weights for one kind of value. Staff was the weakest of them, so a vendor
+ * scanning the Rate column read pay at exactly the same weight as the role
+ * beside it.
+ *
+ * `font-medium` on the figure only, matching MoneyCell. The unit stays muted
+ * and normal: "/ mo" is not the number, and weighting it too would put the
+ * emphasis back where it started.
+ */
+const RateCell = ({ m }: { m: StaffMember }) => {
+  const p = rateParts(m)
+  if (!p) return <span className="text-muted-foreground">—</span>
+  return (
+    <span className="tabular-nums">
+      <span className="font-medium text-foreground">{p.amount}</span>{" "}
+      <span className="text-muted-foreground">{p.unit}</span>
+    </span>
+  )
+}
 
 export function StaffRedesignedView() {
   const qc = useQueryClient()
@@ -119,7 +148,8 @@ export function StaffRedesignedView() {
     { key: "space", header: "Space", cellClassName: "text-muted-foreground", render: (m) => m.defaultSubVenue?.name || "—" },
     { key: "type", header: "Type", render: (m) => <StatusPill tone="neutral">{cap(m.employmentType)}</StatusPill> },
     { key: "phone", header: "Phone", cellClassName: "text-muted-foreground", render: (m) => m.phoneNumber || "—" },
-    { key: "rate", header: "Rate", align: "right", cellClassName: "tabular-nums", sortKey: "rate", sortValue: (m) => rateLabel(m), render: (m) => rateLabel(m) },
+    // sortValue stays the plain string; only what is DRAWN changes.
+    { key: "rate", header: "Rate", align: "right", cellClassName: "tabular-nums", sortKey: "rate", sortValue: (m) => rateLabel(m), render: (m) => <RateCell m={m} /> },
     { key: "status", header: "Status", sortKey: "status", sortValue: (m) => (m.isActive ? "Active" : "Inactive"), render: (m) => <StatusPill tone={m.isActive ? "success" : "neutral"}>{m.isActive ? "Active" : "Inactive"}</StatusPill> },
     {
       key: "actions", header: "", align: "right",
