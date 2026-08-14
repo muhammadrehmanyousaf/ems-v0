@@ -338,7 +338,21 @@ function NotificationRow({
               onDelete(notification.id);
             }}
             aria-label={`Delete notification: ${notification.title}`}
-            className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-all hover:bg-bridal-coral/10 hover:text-bridal-coral focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
+            /**
+             * `coarse:opacity-100` and `touch-40` — the same button, on a phone.
+             *
+             * The note above records that a keyboard user could focus something
+             * invisible; `focus-visible:opacity-100` fixed that. Touch was never
+             * covered. A phone has no hover, so `group-hover:opacity-100` never
+             * fires and every one of these stays at `opacity-0` — measured on
+             * production: 50 invisible delete buttons on one screen, each a hard
+             * delete with no dialog, no toast and nothing to undo.
+             *
+             * Invisible is the dangerous part, not small. Showing it on touch
+             * is what makes the row honest; `touch-40` then gives the 28×28 box
+             * a 40px hit area so the tap that lands is the one intended.
+             */
+            className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-all hover:bg-bridal-coral/10 hover:text-bridal-coral focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100 coarse:opacity-100 touch-40"
           >
             <Trash2 className="size-4" />
           </button>

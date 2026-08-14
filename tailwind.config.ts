@@ -268,7 +268,21 @@ const config: Config = {
      * The first deploy proved this the hard way: 105 elements on
      * /dashboard/leads carried the class and matched no rule at all.
      */
-    require("tailwindcss/plugin")(({ addUtilities }: { addUtilities: (u: Record<string, unknown>) => void }) => {
+    require("tailwindcss/plugin")(({ addUtilities, addVariant }: { addUtilities: (u: Record<string, unknown>) => void; addVariant: (n: string, v: string) => void }) => {
+      /**
+       * `coarse:` — styles that apply only to a finger.
+       *
+       * Needed because hover does not exist on touch, and the codebase leans on
+       * `group-hover:opacity-100` to reveal row actions. On a phone those
+       * controls never appear: measured on /dashboard/notifications, 50 delete
+       * buttons sat at `opacity-0` with no hover to raise them — invisible, and
+       * a hard delete with no undo behind each one.
+       *
+       * `pointer: coarse` is the right query rather than a width breakpoint: a
+       * touchscreen laptop at 1440px still has no hover, and a narrow desktop
+       * window still does.
+       */
+      addVariant("coarse", "@media (pointer: coarse)");
       addUtilities({
         "@media (pointer: coarse)": {
           ".touch-40": { position: "relative" },
