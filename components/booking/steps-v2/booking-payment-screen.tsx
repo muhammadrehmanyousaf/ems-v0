@@ -26,7 +26,10 @@ let stripePromiseCache: Promise<Stripe | null> | null = null
 // StrictMode double-mounts effects in dev — without this map the second
 // mount races the first one's DB insert and the unique constraint on
 // stripePaymentIntentId 500s.
-const inFlightIntents = new Map<string, Promise<{ clientSecret: string } | { alreadyPaid: true }>>()
+const inFlightIntents = new Map<
+  string,
+  Promise<{ clientSecret: string; serverAmount: number | null } | { alreadyPaid: true }>
+>()
 
 /**
  * Resolve the Stripe instance lazily once the publishable key is fetched
@@ -89,6 +92,11 @@ export default function BookingPaymentScreen(props: BookingPaymentScreenProps) {
   const { bookingId, paymentType = "down_payment", customerEmail, onSuccess } = props
   const { stripe: stripePromise, error: stripeError } = useStripePromise()
   const [clientSecret, setClientSecret] = useState<string | null>(null)
+  /**
+   * What the server will actually charge, once the intent exists. Overrides the
+   * `amount` prop the browser computed — see the note where it is read.
+   */
+  const [serverAmount, setServerAmount] = useState<number | null>(null)
   const [bootstrapError, setBootstrapError] = useState<string | null>(null)
 
   // Mirror the latest onSuccess in a ref so the create-payment-intent effect
@@ -116,7 +124,25 @@ export default function BookingPaymentScreen(props: BookingPaymentScreenProps) {
           })
           const cs = r.data?.data?.clientSecret
           if (!cs) throw new Error("No clientSecret returned")
-          return { clientSecret: cs } as const
+          /**
+           * The amount the SERVER will actually charge.
+           *
+           * Measured on production, booking #193: the button read "Pay Rs
+           * 32,500" while the PaymentIntent was created for 3500000 minor units
+           * — Rs 35,000 — and the receipt then confirmed Rs 35,000. The browser
+           * had computed its own total (325,000 → 10% = 32,500); the server
+           * recomputed the booking at 350,000 and took its deposit from the
+           * persisted `booking.downPayment`. Stripe follows the server. The
+           * button was quoting a number nobody was going to charge.
+           *
+           * A customer being charged Rs 2,500 more than the button said is a
+           * chargeback, so the server figure wins from here on.
+           */
+          const serverAmount = Number(r.data?.data?.paymentDetails?.amount)
+          return {
+            clientSecret: cs,
+            serverAmount: Number.isFinite(serverAmount) && serverAmount > 0 ? serverAmount : null,
+          } as const
         } catch (e: any) {
           if (e?.response?.status === 409 && e?.response?.data?.data?.code === "already_paid") {
             return { alreadyPaid: true } as const
@@ -135,6 +161,7 @@ export default function BookingPaymentScreen(props: BookingPaymentScreenProps) {
           return
         }
         setClientSecret(res.clientSecret)
+        if (res.serverAmount != null) setServerAmount(res.serverAmount)
       })
       .catch((e: any) => {
         if (cancelled) return
@@ -250,7 +277,10 @@ export default function BookingPaymentScreen(props: BookingPaymentScreenProps) {
 
   return (
     <Elements stripe={stripePromise} options={elementsOptions}>
-      <PaymentBody {...props} />
+      {/* `serverAmount` last: the figure on the button must be the figure
+          Stripe charges. Falls back to the prop only before the intent exists,
+          and the button is not clickable until it does. */}
+      <PaymentBody {...props} amount={serverAmount ?? props.amount} />
     </Elements>
   )
 }
