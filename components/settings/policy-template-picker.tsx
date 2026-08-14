@@ -20,6 +20,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/dashboard/primitives/page-header";
 
 const rs = (n: number) => "Rs " + Math.round(n || 0).toLocaleString("en-PK");
 // Resolve the forfeit % for a cancel `days` out: largest slab.daysToEvent <= days,
@@ -147,25 +148,29 @@ export function PolicyTemplatePicker() {
 
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-5">
-      <div className="flex items-end justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-lg font-semibold">Cancellation Policy</h1>
-          {/* WWL-513 — the page is Roman-Urdu-first and carried no `lang`, so a
-              screen reader pronounced Urdu-in-Latin-script with English
-              phonology. `ur-Latn` is the tag for exactly this. And unlike
-              Business Settings, the page offered no PersonaPreference switch,
-              so a vendor who prefers Professional English had no way to get it
-              here. */}
-          <p className="text-sm text-muted-foreground" lang="ur-Latn">
-            Customer cancel kare to kitna wapas — apni policy chunein.
-          </p>
-        </div>
-        <label className="text-sm text-muted-foreground" htmlFor="policy-sample">
-          <span lang="ur-Latn">Sample raqam</span>
-          <input id="policy-sample" type="number" min={0} value={sample} onChange={(e) => setSample(Math.max(0, Number(e.target.value) || 0))}
-            className="ml-2 w-32 rounded-md border bg-transparent px-2 py-1 text-sm tabular-nums" />
-        </label>
-      </div>
+      {/* Was a hand-rolled `<h1>`, so this was one of three screens still in
+          Inter at 18px while every other title rendered in Playfair at 20px.
+          The `lang="ur-Latn"` on the description is load-bearing and survives
+          the move — see WWL-513 below. */}
+      <PageHeader
+        title="Cancellation policy"
+        description={
+          /* WWL-513 — the page is Roman-Urdu-first and carried no `lang`, so a
+             screen reader pronounced Urdu-in-Latin-script with English
+             phonology. `ur-Latn` is the tag for exactly this. And unlike
+             Business Settings, the page offered no PersonaPreference switch, so
+             a vendor who prefers Professional English had no way to get it
+             here. */
+          <span lang="ur-Latn">Customer cancel kare to kitna wapas — apni policy chunein.</span>
+        }
+        actions={
+          <label className="text-sm text-muted-foreground" htmlFor="policy-sample">
+            <span lang="ur-Latn">Sample raqam</span>
+            <input id="policy-sample" type="number" min={0} value={sample} onChange={(e) => setSample(Math.max(0, Number(e.target.value) || 0))}
+              className="ml-2 w-32 rounded-md border bg-transparent px-2 py-1 text-sm tabular-nums" />
+          </label>
+        }
+      />
 
       <PersonaPreference />
 

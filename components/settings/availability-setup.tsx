@@ -17,6 +17,7 @@ import { PRIMITIVE_LABEL } from "@/lib/availability-primitive";
 import { PrimitiveBookingPanel } from "@/components/settings/primitive-booking-panel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/dashboard/primitives/page-header";
 
 const rs = (n: number) => "Rs " + Math.round(n || 0).toLocaleString("en-PK");
 const inputCls = "rounded-md border bg-transparent px-2 py-1.5 text-sm w-full";
@@ -36,10 +37,14 @@ export function AvailabilitySetup() {
   const p = data.primitive;
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-5">
-      <div>
-        <h1 className="text-lg font-semibold">Availability Setup</h1>
-        <p className="text-sm text-muted-foreground">{p ? PRIMITIVE_LABEL[p] : "—"} — set your bookable capacity.</p>
-      </div>
+      {/* Measured on production: this screen hand-rolled its own `<h1>`, so it
+          was the only kind of title in the portal that stayed in Inter at 18px
+          while every PageHeader title rendered in Playfair at 20px. A one-off
+          title reads as a bug once the screens either side of it agree. */}
+      <PageHeader
+        title="Availability setup"
+        description={`${p ? PRIMITIVE_LABEL[p] : "—"} — set your bookable capacity.`}
+      />
 
       {p === "P2_PERSON_SLOT" && <CrewSetup crews={data.crewResources} onChange={invalidate} />}
       {p === "P3_UNIT_POOL" && <SkuSetup skus={data.rentalSkus} onChange={invalidate} />}

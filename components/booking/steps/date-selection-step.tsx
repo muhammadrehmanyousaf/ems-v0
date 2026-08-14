@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
 import type { BookingFormData, EventVenue } from "@/lib/types";
@@ -61,7 +61,33 @@ export default function DateSelectionStep({
   const [availability, setAvailability] = useState<
     Record<string, DayAvailability>
   >({});
+  /**
+   * WHICH month `availability` actually describes, and whether the fetch for it
+   * succeeded. Both are load-bearing, because the payload is SPARSE: the API
+   * returns only the notable days (6 of 31 for August on business 3358), so a
+   * missing key legitimately means "free". That is only a safe reading when we
+   * know the map is (a) for the month on screen and (b) actually loaded.
+   *
+   * Without this, "no entry" and "no data" were indistinguishable, and both
+   * resolved to bookable. Measured on production: the server blocked 6, 14, 15,
+   * 22 and 25 August while the calendar offered every one of them and greyed
+   * out 26, 28 and 29 instead — two completely disjoint sets. Picking one of
+   * the offered-but-blocked dates then failed at the very last step, after the
+   * customer had chosen a package and a menu.
+   */
+  const [availabilityMonth, setAvailabilityMonth] = useState<string | null>(null);
+  const [availabilityFailed, setAvailabilityFailed] = useState(false);
+  /**
+   * The month is unselectable until its availability lands — otherwise the
+   * calendar would be guessing. That window is short but it is not nothing, and
+   * a grid where every date is dead and nothing says why is its own bug. So it
+   * is stated: "Checking availability…".
+   */
+  const [availabilityLoading, setAvailabilityLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState<Date>(date || new Date());
+
+  const monthKey = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
   const timeSlotToHour: Record<string, number> = {
     "09:00": 9,
@@ -69,25 +95,53 @@ export default function DateSelectionStep({
     "18:00": 18,
   };
 
+  /**
+   * Tracks the newest fetch so a slow earlier one can't overwrite it.
+   *
+   * The picker fires a request per month, and the responses do not necessarily
+   * come back in order. Measured on production: two calls went out for August
+   * and September, September's landed last, and the calendar then displayed
+   * August while holding September's keys — so every visible day missed the map
+   * and fell through to "bookable". That is why the bug came and went between
+   * loads rather than failing consistently.
+   */
+  const availabilityReqId = useRef(0);
+
   // Fetch availability when month changes
   const fetchAvailability = useCallback(
     async (monthDate: Date) => {
       if (!venue?.id) return;
-      const yyyy = monthDate.getFullYear();
-      const mm = String(monthDate.getMonth() + 1).padStart(2, "0");
-      const monthStr = `${yyyy}-${mm}`;
+      const monthStr = monthKey(monthDate);
+      const reqId = ++availabilityReqId.current;
+      setAvailabilityLoading(true);
+      setAvailabilityFailed(false);
       try {
         const data = await VendorAPI.getMonthAvailability([venue.id], monthStr);
-        const venueAvail = data[venue.id] || {};
-        setAvailability(venueAvail);
+        if (reqId !== availabilityReqId.current) return; // a newer month won
+        setAvailability(data[venue.id] || {});
+        setAvailabilityMonth(monthStr);
+        setAvailabilityFailed(false);
+        setAvailabilityLoading(false);
       } catch {
-        // silently fail
+        if (reqId !== availabilityReqId.current) return;
+        setAvailabilityLoading(false);
+        /**
+         * Was `// silently fail`, which left the map `{}` — and an empty map
+         * read as "every date is free". A rate-limited or flaky response
+         * therefore opened the whole calendar, including dates the vendor had
+         * explicitly blocked. Record the failure instead and let the disabled
+         * predicate refuse to guess.
+         */
+        setAvailability({});
+        setAvailabilityMonth(null);
+        setAvailabilityFailed(true);
       }
     },
     [venue?.id],
   );
 
   useEffect(() => {
+    setAvailabilityMonth(null); // the map no longer describes what's on screen
     fetchAvailability(currentMonth);
   }, [currentMonth, fetchAvailability]);
 
@@ -239,8 +293,22 @@ export default function DateSelectionStep({
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 if (d < today) return true;
-                const key = toDateKey(d);
-                const avail = availability[key];
+                /**
+                 * Only trust the map for the month it was actually fetched for.
+                 * Until that lands — or if it failed — no day is selectable,
+                 * because we cannot tell a free date from a blocked one and
+                 * guessing "free" is how a customer reached the last step of
+                 * the booking before the server refused the date.
+                 *
+                 * This is deliberately NOT "unknown day ⇒ disabled". The
+                 * payload is sparse (6 of 31 days for August), so a missing key
+                 * means free, and refusing those would black out most of the
+                 * month. The distinction that matters is data-for-this-month
+                 * present vs absent, not key present vs absent.
+                 */
+                if (availabilityFailed) return true;
+                if (availabilityMonth !== monthKey(d)) return true;
+                const avail = availability[toDateKey(d)];
                 if (avail && (avail.isBlocked || avail.availableSlots.length === 0)) return true;
                 return false;
               }}
@@ -255,6 +323,35 @@ export default function DateSelectionStep({
                 vendorBlocked: "bg-zinc-100 text-zinc-400 line-through opacity-60",
               }}
             />
+            {/* The calendar now refuses to guess when it has no data for the
+                month on screen — so it has to say why, or it is just a dead
+                grid. Retry re-fires the same month rather than reloading the
+                page, which would lose the event already chosen. */}
+            {availabilityLoading && !availabilityFailed && (
+              <div className="mt-3 flex items-center gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-[12px] text-zinc-600">
+                <span className="inline-block h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
+                Checking this venue&apos;s availability…
+              </div>
+            )}
+            {availabilityFailed && (
+              <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <div>
+                  <p className="font-medium">We couldn&apos;t load this venue&apos;s calendar.</p>
+                  <p className="mt-0.5">
+                    Dates are hidden rather than guessed, so you don&apos;t pick one the venue
+                    can&apos;t take.{" "}
+                    <button
+                      type="button"
+                      onClick={() => fetchAvailability(currentMonth)}
+                      className="font-medium underline underline-offset-2 hover:no-underline"
+                    >
+                      Try again
+                    </button>
+                  </p>
+                </div>
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-3 mt-3 border-t border-zinc-100 text-[11px] text-zinc-600">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-amber-400" />

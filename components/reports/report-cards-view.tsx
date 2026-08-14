@@ -22,6 +22,7 @@ import { BusinessesAPI } from "@/lib/api/dashboard";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { shareCard, type ShareRow } from "@/lib/whatsappShare";
+import { PageHeader } from "@/components/dashboard/primitives/page-header";
 
 const fmt = (c: ReportCard) => {
   if (c.format === "money") return "Rs " + Math.round(c.value).toLocaleString("en-PK");
@@ -106,25 +107,30 @@ export function ReportCardsView() {
 
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Reports</h1>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={shareAllAsImage}
-            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-sm hover:bg-muted transition-colors"
-            title="Poori report ek image mein WhatsApp par bhejein"
-          >
-            <ImageIcon className="size-3.5" /> Image
-          </button>
-          <div className="inline-flex rounded-md border p-0.5 text-sm">
-            {(["month", "year"] as const).map((p) => (
-              <button key={p} onClick={() => setPeriod(p)} className={cn("px-3 py-1 rounded", period === p && "bg-primary text-primary-foreground")}>
-                {p === "month" ? "Maheena" : "Saal"}
-              </button>
-            ))}
+      {/* Was a hand-rolled `<h1>` — the only Inter/18px title left among
+          Playfair/20px ones. The share buttons move into PageHeader's `actions`
+          slot, which already lays them out on the title's baseline. */}
+      <PageHeader
+        title="Reports"
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={shareAllAsImage}
+              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-sm hover:bg-muted transition-colors"
+              title="Poori report ek image mein WhatsApp par bhejein"
+            >
+              <ImageIcon className="size-3.5" /> Image
+            </button>
+            <div className="inline-flex rounded-md border p-0.5 text-sm">
+              {(["month", "year"] as const).map((p) => (
+                <button key={p} onClick={() => setPeriod(p)} className={cn("px-3 py-1 rounded", period === p && "bg-primary text-primary-foreground")}>
+                  {p === "month" ? "Maheena" : "Saal"}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         {data.cards.map((c, i) => (
