@@ -16,6 +16,38 @@ export type VendorDocumentType =
 
 export type VendorDocumentStatus = "pending" | "approved" | "rejected" | "request_changes"
 
+// Business context joined into the admin KYC queue (see kycService.listQueue).
+// Optional because vendor-side document lists don't include it.
+export interface KycBusiness {
+  id: number
+  name: string | null
+  slug: string | null
+  city: string | null
+  subArea: string | null
+  venueType: string | null
+  subBusinessType: string[] | null
+  description: string | null
+  status: string | null
+  completenessScore: number | null
+  verificationTier: number | null
+  ntnNumber: string | null
+  ntnVerifiedAt: string | null
+  cnicVerifiedAt: string | null
+  addressVerifiedAt: string | null
+  ownerName: string | null
+  whatsappNumber: string | null
+  yearsInBusiness: number | null
+  hasInsurance: boolean | null
+  createdAt: string | null
+  vendor?: {
+    id: number
+    fullName: string | null
+    email: string | null
+    phoneE164: string | null
+    vendorType: string | null
+  } | null
+}
+
 export interface VendorDocument {
   id: number
   businessId: number
@@ -28,6 +60,7 @@ export interface VendorDocument {
   reviewedAt: string | null
   createdAt: string
   updatedAt: string
+  business?: KycBusiness | null
 }
 
 function unwrap<T>(res: any): T {
