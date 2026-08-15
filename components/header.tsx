@@ -182,6 +182,11 @@ export function Header() {
               <SheetContent
                 side="left"
                 className="w-[320px] sm:w-[380px] p-0 border-bridal-beige bg-bridal-cream"
+                // A nav drawer needs no descriptive paragraph; opt out of Radix's
+                // aria-describedby requirement explicitly so it stops warning
+                // "Missing Description or aria-describedby for DialogContent"
+                // (the title alone is the correct accessible name here).
+                aria-describedby={undefined}
               >
                 {/* BUG-010 — Radix requires a DialogTitle for the drawer to be
                     accessible; this mobile-nav sheet had none, so the "requires a

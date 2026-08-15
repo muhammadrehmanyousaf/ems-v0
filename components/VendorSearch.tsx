@@ -160,6 +160,11 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
   const [availableOn, setAvailableOn] = useState<string>("")
   // D-4 — "Verified vendors only" (KYC-verified halls).
   const [verifiedOnly, setVerifiedOnly] = useState<boolean>(false)
+  // On phones the filter panel is collapsed by default so the vendor results
+  // are visible immediately. It used to render fully expanded above the grid,
+  // pushing the first result ~1,400px (≈2 screens) down a 360px phone. A
+  // "Filters" toggle reveals it; on lg+ the sidebar is always shown.
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
   const fetchVendors = async (avail: string = availableOn, verified: boolean = verifiedOnly) => {
     setIsLoading(true)
@@ -382,8 +387,23 @@ export default function VendorSearch({ vendorType }: VendorSearchProps) {
 
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-12 py-6 sm:py-10 lg:py-14">
         <div className="flex flex-col lg:flex-row gap-5 sm:gap-6 lg:gap-8">
+          {/* Mobile-only "Filters" toggle — the sidebar below is always shown on lg+. */}
+          <button
+            type="button"
+            onClick={() => setMobileFiltersOpen((o) => !o)}
+            aria-expanded={mobileFiltersOpen}
+            className="lg:hidden inline-flex items-center justify-center gap-2 w-full h-11 rounded-md border border-bridal-beige bg-bridal-cream text-bridal-charcoal font-bridal text-[12px] uppercase tracking-[0.18em]"
+          >
+            <Filter className="w-4 h-4 text-bridal-gold" />
+            {mobileFiltersOpen ? "Hide filters" : "Filters"}
+            {activeCount > 0 && (
+              <span className="ml-1 bg-bridal-gold text-bridal-charcoal font-bridal text-[10px] font-medium tracking-[0.15em] px-1.5 py-0.5 rounded-full">
+                {activeCount}
+              </span>
+            )}
+          </button>
           {/* ── Filter Sidebar ── */}
-          <aside className="w-full lg:w-72 xl:w-80 flex-shrink-0">
+          <aside className={`w-full lg:w-72 xl:w-80 flex-shrink-0 ${mobileFiltersOpen ? "block" : "hidden lg:block"}`}>
             <div className="lg:sticky lg:top-24">
               <Card className="border border-bridal-beige bg-bridal-cream rounded-md max-h-[calc(100vh-7rem)] lg:h-[calc(100vh-7rem)] overflow-hidden flex flex-col shadow-[0_18px_40px_-32px_rgba(176,125,84,0.35)]">
                 <CardHeader className="pb-3 border-b border-bridal-beige bg-bridal-ivory flex-shrink-0">
