@@ -285,7 +285,7 @@ export default function ReviewStep({
     { icon: Calendar, label: "Event date",  value: dateLabel },
     { icon: Clock,    label: "Time of day", value: timeLabel },
   ]
-  if (showGuests) bookingRows.push({ icon: Users, label: "Guests", value: formData.guestCount ? `${formData.guestCount} guests` : "—" })
+  if (showGuests) bookingRows.push({ icon: Users, label: "Guests", value: formData.guestCount ? `${formData.guestCount} ${formData.guestCount === 1 ? "guest" : "guests"}` : "—" })
   if (selectedPackageObj) bookingRows.push({ icon: PackageIcon, label: isCarRental ? "Vehicle" : isBridalWear ? "Outfit" : "Package", value: qty > 1 ? `${selectedPackageObj.name} × ${qty}` : selectedPackageObj.name })
   if (selectedMenuObj) bookingRows.push({ icon: PackageIcon, label: "Menu", value: selectedMenuObj.title || selectedMenuObj.name })
 

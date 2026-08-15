@@ -251,68 +251,31 @@ export function HeroSection() {
 
 
 
-  // Helper function to check if vendor matches category
+  // Map the hero's category slugs to canonical vendor types.
+  const CATEGORY_TO_TYPE: Record<string, string> = {
+    'photographers': VENDOR_TYPES.PHOTOGRAPHER,
+    'makeup-artists': VENDOR_TYPES.MAKEUP_ARTIST,
+    'decor': VENDOR_TYPES.DECORATOR,
+    'catering': VENDOR_TYPES.CATERING,
+    'venues': VENDOR_TYPES.WEDDING_VENUE,
+    'car-rental': VENDOR_TYPES.CAR_RENTAL,
+    'henna-artists': VENDOR_TYPES.HENNA_ARTIST,
+    'bridal-wear': VENDOR_TYPES.BRIDAL_WEAR,
+    'wedding-stationery': VENDOR_TYPES.WEDDING_STATIONERY,
+  }
+
+  // Whether a vendor belongs to a category — for the "N vendors match" preview.
+  //
+  // This used to also match on fuzzy NAME substrings ("studio", "event",
+  // "fashion", "print"…), which over-counted wildly: makeup/recording/tailoring
+  // "studios" all counted as photographers, so the preview claimed 268 matches
+  // when the real /photographers listing (which filters by type) had 230. Match
+  // on the canonical type ONLY, so the preview number agrees with the page the
+  // user actually lands on. Unknown categories match everything (as before).
   const vendorMatchesCategory = (vendor: Vendor, category: string): boolean => {
-    const vendorName = vendor.name?.toLowerCase() || ''
-    const vendorType = vendor.type || ''
-    
-    switch (category) {
-      case 'photographers':
-        return vendorType === VENDOR_TYPES.PHOTOGRAPHER || 
-               vendorName.includes('photography') || 
-               vendorName.includes('studio') || 
-               vendorName.includes('camera')
-      
-      case 'makeup-artists':
-        return vendorType === VENDOR_TYPES.MAKEUP_ARTIST || 
-               vendorName.includes('makeup') || 
-               vendorName.includes('beauty') || 
-               vendorName.includes('glamour')
-      
-      case 'decor':
-        return vendorType === VENDOR_TYPES.DECORATOR || 
-               vendorName.includes('decor') || 
-               vendorName.includes('sajawat') || 
-               vendorName.includes('event')
-      
-      case 'catering':
-        return vendorType === VENDOR_TYPES.CATERING || 
-               vendorName.includes('catering') || 
-               vendorName.includes('food') || 
-               vendorName.includes('kitchen')
-      
-      case 'venues':
-        return vendorType === VENDOR_TYPES.WEDDING_VENUE || 
-               vendorName.includes('venue') || 
-               vendorName.includes('hall') || 
-               vendorName.includes('palace')
-      
-      case 'car-rental':
-        return vendorType === VENDOR_TYPES.CAR_RENTAL || 
-               vendorName.includes('car') || 
-               vendorName.includes('rental') || 
-               vendorName.includes('drive')
-      
-      case 'henna-artists':
-        return vendorType === VENDOR_TYPES.HENNA_ARTIST || 
-               vendorName.includes('henna') || 
-               vendorName.includes('mehndi')
-      
-      case 'bridal-wear':
-        return vendorType === VENDOR_TYPES.BRIDAL_WEAR || 
-               vendorName.includes('bridal') || 
-               vendorName.includes('couture') || 
-               vendorName.includes('fashion')
-      
-      case 'wedding-stationery':
-        return vendorType === VENDOR_TYPES.WEDDING_STATIONERY || 
-               vendorName.includes('card') || 
-               vendorName.includes('invitation') || 
-               vendorName.includes('print')
-      
-      default:
-        return true
-    }
+    const wantType = CATEGORY_TO_TYPE[category]
+    if (!wantType) return true
+    return (vendor.type || '') === wantType
   }
 
   // Helper function to check if venue matches type

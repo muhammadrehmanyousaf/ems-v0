@@ -130,20 +130,18 @@ const ProfilePage = () => {
 
   const fetchProfileFromAPI = async (userId: string) => {
     try {
-      const res = await axiosInstance.get(`${BACKEND_URL}api/v1/users?id=${userId}`);
+      // Self-scoped read. Must NOT use the admin /users?id= list endpoint
+      // (super-admin only — it 403s for a normal customer and fired two failed
+      // requests on every profile load). /users/profile/me returns the caller's
+      // own record, auth-scoped, mirroring the PATCH in handleSave below.
+      const res = await axiosInstance.get(`${BACKEND_URL}api/v1/users/profile/me`);
       const data = res.data;
-      if (data.data && Array.isArray(data.data)) {
-        const userData = data.data.find((u: any) => u.id === userId);
-        if (userData) {
-          setProfile(userData);
-          setOriginalProfile(userData);
-        }
-      } else if (data.data && data.data.fullName) {
-        setProfile(data.data);
-        setOriginalProfile(data.data);
-      } else if (data.fullName) {
-        setProfile(data);
-        setOriginalProfile(data);
+      // Tolerate the possible response shapes: { data: { user } }, { data: {...} }
+      // or a bare user object.
+      const userData = data?.data?.user ?? data?.data ?? data;
+      if (userData && userData.fullName) {
+        setProfile(userData);
+        setOriginalProfile(userData);
       }
     } catch {
       // keep context data on failure

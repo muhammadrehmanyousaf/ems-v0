@@ -2,11 +2,13 @@ import Link from "next/link"
 import Image from "next/image"
 import type { Metadata } from "next"
 import { Home, Search, MessageCircle } from "lucide-react"
-import { CITIES, VENDOR_TYPES, SITE_NAME } from "@/lib/seo"
+import { CITIES, VENDOR_TYPES } from "@/lib/seo"
 import { fetchCityVendors } from "@/lib/seo/fetch-vendors"
 
 export const metadata: Metadata = {
-  title: `Page not found | ${SITE_NAME}`,
+  // Bare title — the root layout's title template already appends "| Wedding
+  // Wala"; including it here rendered "Page not found | Wedding Wala | Wedding Wala".
+  title: "Page not found",
   description: "The page you were looking for couldn't be found. Browse vendors and venues across Pakistan, or contact our team.",
   robots: { index: false, follow: true },
 }

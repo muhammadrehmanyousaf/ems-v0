@@ -20,6 +20,12 @@ const SEGMENT_LABELS: Record<string, string> = {
   settings: "Settings",
 }
 
+// Path segments that are grouping containers with NO index page of their own.
+// `/user` is not a route — the account area starts at /user/bookings etc. — so
+// linking the "Account" crumb 404'd (and fired a failed RSC prefetch on every
+// portal page). Keep the label, drop the link, render it as plain text.
+const NON_NAVIGABLE_SEGMENTS = new Set<string>(["user"])
+
 function prettifyId(seg: string) {
   if (/^\d+$/.test(seg)) return `#${seg}`
   return seg
@@ -73,6 +79,7 @@ export function UserTopbar() {
     href: "/" + segments.slice(0, i + 1).join("/"),
     label: SEGMENT_LABELS[seg] ?? prettifyId(seg),
     isLast: i === segments.length - 1,
+    navigable: !NON_NAVIGABLE_SEGMENTS.has(seg),
   }))
 
   const messagesBadge =
@@ -101,13 +108,18 @@ export function UserTopbar() {
               <span className="font-display italic text-[15px] text-bridal-charcoal truncate max-w-[180px]">
                 {crumb.label}
               </span>
-            ) : (
+            ) : crumb.navigable ? (
               <Link
                 href={crumb.href}
                 className="font-bridal text-[11.5px] uppercase tracking-[0.18em] text-bridal-text-soft hover:text-bridal-gold-dark transition-colors"
               >
                 {crumb.label}
               </Link>
+            ) : (
+              // Container-only segment (e.g. "Account"/user): plain text, no dead link.
+              <span className="font-bridal text-[11.5px] uppercase tracking-[0.18em] text-bridal-text-soft">
+                {crumb.label}
+              </span>
             )}
             {!crumb.isLast && i < trail.length - 1 ? (
               <span aria-hidden className="text-bridal-beige">/</span>

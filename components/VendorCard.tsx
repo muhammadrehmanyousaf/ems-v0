@@ -208,10 +208,12 @@ export default function VendorCard({
 
   const formatPrice = (price: number | string | null | undefined) => {
     if (!price && price !== 0) return null;
-    if (typeof price === 'number') {
-      return price > 0 ? `Rs. ${price.toLocaleString()}` : null;
-    }
-    return `Rs. ${price}`;
+    // The API returns money as a decimal STRING ("350000.00"). Coerce to a
+    // number and group it, so it reads "Rs. 350,000" instead of the raw
+    // "Rs. 350000.00". Anything that won't parse is treated as no-price.
+    const n = typeof price === 'number' ? price : Number(price);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    return `Rs. ${Math.round(n).toLocaleString("en-PK")}`;
   }
 
   const getRatingLabel = (rating: number) => {
@@ -334,6 +336,9 @@ export default function VendorCard({
                     variant="ghost"
                     size="sm"
                     disabled={isLoading}
+                    aria-label={isFavorite ? "Remove from favourites" : "Add to favourites"}
+                    aria-pressed={isFavorite}
+                    title={isFavorite ? "Remove from favourites" : "Add to favourites"}
                     className="w-9 h-9 p-0 bg-bridal-cream/95 backdrop-blur-sm hover:bg-bridal-cream border border-bridal-beige hover:border-bridal-gold/55 shadow-sm rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50"
                     data-no-navigate
                   >
