@@ -128,7 +128,13 @@ export function AuthShell({
         </aside>
 
         {/* ── Right form panel ── */}
-        <main className="flex-1 h-full overflow-y-auto flex items-center justify-center px-4 sm:px-6 lg:px-12 py-10">
+        {/* BUG-001 — on phones the cookie consent banner is a full-width
+            fixed-bottom bar (z-60). This centred, scrollable auth column let a
+            tall form (Sign In + the links below it) sit UNDERNEATH it, so taps on
+            "Sign In" / "Forgot password?" / "Create an account" landed on the
+            banner. Extra bottom padding on mobile keeps those controls clear of
+            the banner; desktop is unaffected (there the banner is a corner card). */}
+        <main className="flex-1 h-full overflow-y-auto flex items-center justify-center px-4 sm:px-6 lg:px-12 pt-10 pb-40 sm:py-10">
           <div
             className="w-full animate-stagger-fade-up"
             style={{ maxWidth: `${formMaxWidth}px` }}

@@ -14,7 +14,14 @@
     "test:e2e": "playwright test",
     "test:e2e:public": "playwright test --project=public",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:report": "playwright show-report e2e/.report"
+    "test:e2e:report": "playwright show-report e2e/.report",
+    "cy:open": "cypress open --e2e",
+    "cy:run": "cypress run --e2e",
+    "cy:smoke": "cypress run --e2e --spec \"cypress/e2e/00-harness/**/*.cy.ts\"",
+    "cy:modules": "cypress run --e2e --spec \"cypress/e2e/10-modules/**/*.cy.ts\"",
+    "cy:regression": "cypress run --e2e --spec \"cypress/e2e/02-regression/**/*.cy.ts\"",
+    "cy:inventory": "node scripts/cypress-module-inventory.mjs",
+    "cy:generate": "node scripts/cypress-module-inventory.mjs && node scripts/cypress-generate-module-specs.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -93,6 +100,7 @@
     "@types/node": "^22",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "cypress": "^15.20.1",
     "postcss": "^8",
     "tailwindcss": "^3.4.17",
     "typescript": "^5"

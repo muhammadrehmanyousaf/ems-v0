@@ -293,7 +293,7 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
               <div className="col-span-1 sm:col-span-2 space-y-2">
                 <div className="flex flex-wrap items-center gap-3 font-bridal text-[13px] text-bridal-charcoal/85">
                   <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {previewVendorDetail.location || previewVendorDetail.city}</span>
-                  <span className="flex items-center gap-1 text-bridal-gold-dark"><Star className="w-3.5 h-3.5 fill-bridal-gold text-bridal-gold" /> {previewVendorDetail.rating || 0}</span>
+                  <span className="flex items-center gap-1 text-bridal-gold-dark"><Star className="w-3.5 h-3.5 fill-bridal-gold text-bridal-gold" /> {Number(previewVendorDetail.rating || 0).toFixed(1)}</span>
                   <Badge variant="outline" className="text-xs">Rs. {previewVendorDetail.minimumPrice || 0}</Badge>
                 </div>
                 {previewVendorDetail.description && (
@@ -375,7 +375,7 @@ export default function VendorSelectionStep({ formData, updateFormData }: Vendor
             </div>
             <div className="flex flex-wrap items-center gap-3 font-bridal text-[13px] text-bridal-charcoal/85">
               <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-bridal-gold" /> {previewVendor?.location || previewVendor?.city}</span>
-              <span className="flex items-center gap-1.5"><Star className="w-3.5 h-3.5 fill-bridal-gold text-bridal-gold" /> <span className="font-display italic text-[15px] text-bridal-charcoal">{previewVendor?.rating || 0}</span></span>
+              <span className="flex items-center gap-1.5"><Star className="w-3.5 h-3.5 fill-bridal-gold text-bridal-gold" /> <span className="font-display italic text-[15px] text-bridal-charcoal">{Number(previewVendor?.rating || 0).toFixed(1)}</span></span>
               <span className="font-display italic text-[15px] text-bridal-gold-dark">Rs. {previewVendor?.minimumPrice || previewVendor?.price || 0}</span>
             </div>
             <div className="flex justify-end gap-2">

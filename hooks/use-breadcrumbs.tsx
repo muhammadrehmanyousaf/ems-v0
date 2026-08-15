@@ -42,6 +42,12 @@ const segmentLabels: Record<string, string> = {
   'drone-noc': 'Drone NOC',
 };
 
+// BUG-017 — path segments that are grouping containers with NO index page of
+// their own. Linking them 404s (e.g. every /dashboard/admin/* breadcrumb offered
+// an "Admin" link to /dashboard/admin, which does not exist). We keep the label
+// but drop the link so it renders as plain text.
+const NON_NAVIGABLE_SEGMENTS = new Set(['admin']);
+
 export function useBreadcrumbs() {
   const pathname = usePathname();
 
@@ -59,7 +65,9 @@ export function useBreadcrumbs() {
         title:
           segmentLabels[segment] ??
           segment.charAt(0).toUpperCase() + segment.slice(1),
-        link: path
+        // BUG-017 — container-only segments get no link so the breadcrumb
+        // renders them as plain text instead of a dead 404 link.
+        link: NON_NAVIGABLE_SEGMENTS.has(segment) ? '' : path
       };
     });
   }, [pathname]);

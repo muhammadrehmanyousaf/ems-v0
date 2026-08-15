@@ -204,7 +204,11 @@ export function VendorQueueRedesignedView() {
     const kinds = actionsFor(r.status)
     if (kinds.length === 0) return <span className="text-xs text-muted-foreground">—</span>
     return (
-      <div className="flex items-center justify-end gap-1">
+      // BUG-018 — `justify-end` with no wrap pushed a multi-button action row
+      // (approve / request-changes / reject / suspend) off the LEFT edge at
+      // 360px, clipping ~19px of the first buttons. `flex-wrap` lets them wrap to
+      // a second line at narrow widths so every button stays fully on-screen.
+      <div className="flex flex-wrap items-center justify-end gap-1">
         {kinds.map((kind) => {
           const { icon, label } = ACTION_BTN[kind]
           const isReject = kind === "reject"

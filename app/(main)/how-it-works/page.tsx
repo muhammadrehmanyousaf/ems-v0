@@ -1,3 +1,4 @@
+import { safeJsonLd } from "@/lib/seo/jsonld";
 import type { Metadata } from "next"
 import Link from "next/link"
 import {
@@ -91,7 +92,7 @@ export default function HowItWorksPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(ld) }}
       />
 
       <div className="container-responsive py-10 sm:py-14">

@@ -33,11 +33,22 @@ const iconMap: Record<string, any> = {
 export default function EventSelectionStep({ selectedEvents = [], onEventToggle, setFormData, formData, venue }: EventSelectionStepProps) {
   const getAvailableEvents = () => {
     if (!venue) return []
-    if ('expertise' in venue && venue.expertise && Array.isArray(venue.expertise)) return venue.expertise
-    if ('serviceProvided' in venue && venue.serviceProvided && Array.isArray(venue.serviceProvided)) return venue.serviceProvided
-    if ('services' in venue && venue.services) {
-      if (typeof venue.services === 'string') return venue.services.split(',').map((s: string) => s.trim())
-      return venue.services
+    // venue is a loosely-typed union across booking surfaces; read these dynamic
+    // fields off an `any` alias (as the original code effectively did).
+    const v = venue as any
+    // BUG-023 — guard on LENGTH, not just presence + array-ness. An empty array
+    // is truthy and IS an array, so `expertise: []` used to be returned as the
+    // answer, making the fallback below unreachable and killing the booking page
+    // (no event options, "Continue" disabled forever). Only use a populated list.
+    if (Array.isArray(v.expertise) && v.expertise.length > 0) return v.expertise
+    if (Array.isArray(v.serviceProvided) && v.serviceProvided.length > 0) return v.serviceProvided
+    if (v.services) {
+      if (typeof v.services === 'string') {
+        const parsed = v.services.split(',').map((s: string) => s.trim()).filter(Boolean)
+        if (parsed.length > 0) return parsed
+      } else if (Array.isArray(v.services) && v.services.length > 0) {
+        return v.services
+      }
     }
     return ["Wedding", "Engagement", "Parties", "Fashion Show", "Dinner"]
   }
@@ -71,6 +82,12 @@ export default function EventSelectionStep({ selectedEvents = [], onEventToggle,
               type="button"
               variants={item}
               whileTap={{ scale: 0.97 }}
+              // BUG-024 — the selected state was carried only by border colour, so
+              // a screen-reader user (and anyone who can't tell the two browns
+              // apart) had no way to confirm their choice on this multi-select
+              // step before paying. aria-pressed exposes the toggle state.
+              aria-pressed={isSelected}
+              aria-label={`${event}${isSelected ? " (selected)" : ""}`}
               className={`group relative flex flex-col items-center gap-1.5 rounded-md border p-2.5 transition-all duration-200 ${
                 isSelected
                   ? 'border-bridal-gold-dark bg-bridal-cream shadow-[0_8px_22px_-14px_rgba(176,125,84,0.45)]'

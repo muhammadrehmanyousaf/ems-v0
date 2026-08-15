@@ -1,3 +1,4 @@
+import { safeJsonLd } from "@/lib/seo/jsonld";
 import type { Metadata, Viewport } from "next"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "sonner"
@@ -187,11 +188,11 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLD()) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(organizationLD()) }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(webSiteLD()) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(webSiteLD()) }}
         />
       </head>
       <body

@@ -19,6 +19,7 @@
  * The "Home" item is added automatically — don't pass it.
  */
 
+import { safeJsonLd } from "@/lib/seo/jsonld";
 import Link from "next/link"
 import { ChevronRight, Home } from "lucide-react"
 import { breadcrumbsLD, type BreadcrumbItem } from "@/lib/seo"
@@ -89,7 +90,7 @@ export function Breadcrumbs({ items, className = "" }: BreadcrumbsProps) {
       {/* Structured data — Google's BreadcrumbList rich result */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsLD(ldItems)) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbsLD(ldItems)) }}
       />
     </>
   )

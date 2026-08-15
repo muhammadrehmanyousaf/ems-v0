@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -183,6 +183,11 @@ export function Header() {
                 side="left"
                 className="w-[320px] sm:w-[380px] p-0 border-bridal-beige bg-bridal-cream"
               >
+                {/* BUG-010 — Radix requires a DialogTitle for the drawer to be
+                    accessible; this mobile-nav sheet had none, so the "requires a
+                    DialogTitle" error fired on every public page load. A
+                    screen-reader-only title satisfies it without changing the UI. */}
+                <SheetTitle className="sr-only">Menu</SheetTitle>
                 {/* Mobile Menu — Header band */}
                 <div className="relative px-5 pt-6 pb-5 bg-gradient-to-b from-bridal-blush via-bridal-blush/60 to-bridal-cream border-b border-bridal-beige overflow-hidden">
                   <span
