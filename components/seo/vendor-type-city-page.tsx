@@ -8,6 +8,7 @@
  * blueprint block order (B0–B13) — see seo-strategy/mega-plan-2yr/12-page-blueprint.md.
  */
 
+import { safeJsonLd } from "@/lib/seo/jsonld";
 import Link from "next/link"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
@@ -286,7 +287,7 @@ export async function VendorTypeCityPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(ld) }}
       />
       {/* Deindex only a page we KNOW is empty.
           This was `!hasListings`, and fetchCityVendors returned [] for a failed

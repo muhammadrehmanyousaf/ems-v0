@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
+import { safeJsonLd } from "@/lib/seo/jsonld";
+
 import { format } from "date-fns";
 import {
   motion,
@@ -1036,7 +1038,7 @@ export default function VendorDetailsMobile({
       {guidanceFaqLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(guidanceFaqLd) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(guidanceFaqLd) }}
         />
       )}
       {/* ===== PARALLAX HERO SECTION ===== */}

@@ -1,3 +1,4 @@
+import { safeJsonLd } from "@/lib/seo/jsonld";
 import Link from "next/link"
 import Image from "next/image"
 import type { Metadata } from "next"
@@ -77,7 +78,7 @@ export default function BlogPostPage({ params }: RouteProps) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(ld) }}
       />
 
       <article className="container-responsive max-w-5xl [&>*]:mx-auto py-10 sm:py-14">

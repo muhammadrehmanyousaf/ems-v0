@@ -16,6 +16,7 @@
  *            docs/seo/00-master-seo-playbook.md §9 schema.
  */
 
+import { safeJsonLd } from "@/lib/seo/jsonld";
 import Image from "next/image"
 import Link from "next/link"
 import type { Metadata } from "next"
@@ -238,7 +239,7 @@ export async function VendorDetailPage(input: PageInput) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(ld) }}
       />
 
       <div className="container-responsive py-8 sm:py-12">

@@ -458,3 +458,23 @@ export function combineGraph(...nodes: object[]) {
     }),
   };
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// BUG-028 — safe JSON-LD serializer.
+//
+// `<script type="application/ld+json">{JSON.stringify(ld)}</script>` is a stored
+// XSS sink: JSON.stringify does NOT escape `<`, `>` or `/`, and the HTML parser
+// ends a <script> on the literal bytes `</script>` regardless of JSON context.
+// A vendor-controlled field (e.g. business name — not server-validated, see
+// BUG-021) containing `</script><script>…</script>` therefore breaks out and
+// executes in every visitor's browser on a Google-indexed page.
+//
+// Emitting `<`, `>` and `&` as their \uXXXX escapes keeps the JSON byte-for-byte
+// valid (parsers read the escapes) while making a `</script>` breakout
+// impossible. Use this everywhere JSON-LD is injected via dangerouslySetInnerHTML.
+export function safeJsonLd(data: unknown): string {
+  return JSON.stringify(data)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026");
+}

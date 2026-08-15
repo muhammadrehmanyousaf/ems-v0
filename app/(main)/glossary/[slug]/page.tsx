@@ -1,3 +1,4 @@
+import { safeJsonLd } from "@/lib/seo/jsonld";
 import Link from "next/link"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
@@ -62,7 +63,7 @@ export default function GlossaryTermPage({ params }: RouteProps) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(ld) }}
       />
 
       <article className="container-responsive py-10 sm:py-14">

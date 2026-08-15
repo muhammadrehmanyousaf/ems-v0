@@ -15,6 +15,7 @@
  * presented as precise quotes.
  */
 
+import { safeJsonLd } from "@/lib/seo/jsonld";
 import Link from "next/link"
 import type { Metadata } from "next"
 import {
@@ -218,7 +219,7 @@ export default function WeddingCostPakistanPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(ld) }}
       />
 
       <div className="container-responsive max-w-5xl [&>*]:mx-auto py-10 sm:py-14">

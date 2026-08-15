@@ -13,6 +13,16 @@ import { cn } from '@/lib/utils';
 
 export function LanguageToggle({ className }: { className?: string }) {
   const { locale, setLocale } = useLocale();
+
+  // BUG-032 — the اردو toggle set `lang="ur"` (and persisted it) but never
+  // translated the dashboard: only ~5 of ~200 screens read the i18n dictionary,
+  // so the UI stayed English/Roman-Urdu and `dir` stayed ltr. Shipping a
+  // prominent control that does nothing misleads the Urdu-preferring vendors this
+  // product targets. Hide it until the i18n coverage is real; flip this flag on
+  // when the dictionary + RTL are wired across the portal.
+  const I18N_READY = false;
+  if (!I18N_READY) return null;
+
   return (
     <div
       className={cn(

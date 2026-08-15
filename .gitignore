@@ -44,3 +44,17 @@ next-env.d.ts
 /playwright-report/
 /blob-report/
 
+
+# Cypress
+/cypress/.artifacts/
+/cypress/screenshots/
+/cypress/videos/
+/cypress/downloads/
+# Real production logins live here. NEVER committed — see cypress/README.md.
+/cypress.env.json
+
+# Captured login sessions — contain real access tokens. Never committed.
+/cypress/.sessions/
+
+# QA harness result dumps (ephemeral test output)
+/qa-out/

@@ -1,0 +1,811 @@
+{
+  "generatedFrom": "qa/UX-INVENTORY.json",
+  "generatedBy": "scripts/cypress-module-inventory.mjs",
+  "count": 67,
+  "modules": [
+    {
+      "route": "/dashboard",
+      "name": "Home",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/admin/activity",
+      "name": "Activity",
+      "adminOnly": true,
+      "expects": {
+        "pageHeader": false,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/admin/audit-logs",
+      "name": "Audit logs",
+      "adminOnly": true,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/admin/complaints",
+      "name": "Complaints",
+      "adminOnly": true,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": true,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/admin/disputes",
+      "name": "Disputes",
+      "adminOnly": true,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/admin/documents",
+      "name": "Documents",
+      "adminOnly": true,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": true,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/admin/force-majeure",
+      "name": "Force majeure",
+      "adminOnly": true,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/admin/platform-pulse",
+      "name": "Platform pulse",
+      "adminOnly": true,
+      "expects": {
+        "pageHeader": false,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/admin/promotions",
+      "name": "Promotions",
+      "adminOnly": true,
+      "expects": {
+        "pageHeader": false,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/admin/subscriptions",
+      "name": "Subscriptions",
+      "adminOnly": true,
+      "expects": {
+        "pageHeader": false,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/admin/vendor-queue",
+      "name": "Vendor queue",
+      "adminOnly": true,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/automation",
+      "name": "Automation",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/availability",
+      "name": "Availability",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": false,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/billing",
+      "name": "Billing",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": true
+      }
+    },
+    {
+      "route": "/dashboard/bookings",
+      "name": "Bookings",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/brokers",
+      "name": "Brokers",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/business",
+      "name": "Business",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": false,
+        "dataTable": true,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/business/new",
+      "name": "New",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/businesses",
+      "name": "Businesses",
+      "adminOnly": true,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/businesses-overview",
+      "name": "Businesses overview",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": false,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/calendar",
+      "name": "Calendar",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": true
+      }
+    },
+    {
+      "route": "/dashboard/cancellation-policy",
+      "name": "Cancellation policy",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": false,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/chat",
+      "name": "Chat",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": false,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": true
+      }
+    },
+    {
+      "route": "/dashboard/claims",
+      "name": "Claims",
+      "adminOnly": true,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": true,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/collaborations",
+      "name": "Collaborations",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/customers",
+      "name": "Customers",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/drone-noc",
+      "name": "Drone noc",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/expenses",
+      "name": "Expenses",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/field",
+      "name": "Field",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/function-sheet-composer",
+      "name": "Function sheet composer",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": true
+      }
+    },
+    {
+      "route": "/dashboard/function-sheet-operations",
+      "name": "Function sheet operations",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": true
+      }
+    },
+    {
+      "route": "/dashboard/function-sheet-sign",
+      "name": "Function sheet sign",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": true
+      }
+    },
+    {
+      "route": "/dashboard/function-sheets",
+      "name": "Function sheets",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/generator-fuel",
+      "name": "Generator fuel",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/halal-certs",
+      "name": "Halal certs",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/holds",
+      "name": "Holds",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/insights",
+      "name": "Insights",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/inventory",
+      "name": "Inventory",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/kitchen-prep",
+      "name": "Kitchen prep",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/leads",
+      "name": "Leads",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/migrate",
+      "name": "Migrate",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": false,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/money",
+      "name": "Money",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/notifications",
+      "name": "Notifications",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": true,
+        "emptyState": true
+      }
+    },
+    {
+      "route": "/dashboard/onboarding",
+      "name": "Onboarding",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": true
+      }
+    },
+    {
+      "route": "/dashboard/packages",
+      "name": "Packages",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": true
+      }
+    },
+    {
+      "route": "/dashboard/payments",
+      "name": "Payments",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/pdcs",
+      "name": "Pdcs",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/profile",
+      "name": "Profile",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/promote",
+      "name": "Promote",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/quotes",
+      "name": "Quotes",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": true
+      }
+    },
+    {
+      "route": "/dashboard/receipts",
+      "name": "Receipts",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/receivables",
+      "name": "Receivables",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/reliability",
+      "name": "Reliability",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": false,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": true
+      }
+    },
+    {
+      "route": "/dashboard/reports",
+      "name": "Reports",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": false,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/revenue",
+      "name": "Revenue",
+      "adminOnly": true,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/reviews",
+      "name": "Reviews",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": false,
+        "dataTable": true,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/roles",
+      "name": "Roles",
+      "adminOnly": true,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/settings",
+      "name": "Settings",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": true
+      }
+    },
+    {
+      "route": "/dashboard/settings/security",
+      "name": "Security",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": false,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/staff",
+      "name": "Staff",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": true,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/suppliers",
+      "name": "Suppliers",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": true,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/tax",
+      "name": "Tax",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/today",
+      "name": "Today",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/trade-ops",
+      "name": "Trade ops",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": false,
+        "statCard": false,
+        "tabs": false,
+        "emptyState": true
+      }
+    },
+    {
+      "route": "/dashboard/users",
+      "name": "Users",
+      "adminOnly": true,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/vendors",
+      "name": "Vendors",
+      "adminOnly": true,
+      "expects": {
+        "pageHeader": true,
+        "dataTable": true,
+        "statCard": true,
+        "tabs": false,
+        "emptyState": false
+      }
+    },
+    {
+      "route": "/dashboard/venue-os",
+      "name": "Venue os",
+      "adminOnly": false,
+      "expects": {
+        "pageHeader": false,
+        "dataTable": false,
+        "statCard": true,
+        "tabs": true,
+        "emptyState": true
+      }
+    }
+  ]
+}

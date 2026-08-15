@@ -3,7 +3,7 @@
 // 01-VR-ENHANCE-V1-FE — Settings → Security page.
 // One place for: verification status, 2FA toggle, active sessions.
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Mail, Phone, ShieldCheck, ShieldOff } from "lucide-react"
 import { useUser } from "@/context/UserContext"
 import { Button } from "@/components/ui/button"
@@ -17,6 +17,12 @@ import { TwoFactorDisableModal } from "@/components/auth/TwoFactorDisableModal"
 import { SessionList } from "@/components/auth/SessionList"
 
 export default function SecuritySettingsPage() {
+  // BUG-007 — this is a client component, so it can't export `metadata` and was
+  // falling back to the generic "Wedding Wala — Dashboard" tab title. Set a
+  // page-specific document title, matching every other dashboard screen.
+  useEffect(() => {
+    document.title = "Dashboard : Security"
+  }, [])
   const { user, flags } = useUser()
   const [emailOpen, setEmailOpen] = useState(false)
   const [phoneOpen, setPhoneOpen] = useState(false)

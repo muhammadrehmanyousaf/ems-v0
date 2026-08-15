@@ -12,6 +12,12 @@ export default function ChatPage() {
   const { activeConversationId, setActiveConversation } = useChat();
   const [showSidebar, setShowSidebar] = useState(true);
 
+  // BUG-007 — client component can't export `metadata`, so the tab title fell
+  // back to the generic "Wedding Wala — Dashboard". Give it a specific title.
+  useEffect(() => {
+    document.title = "Dashboard : Messages";
+  }, []);
+
   // On mobile: when a conversation is selected, hide the sidebar
   useEffect(() => {
     if (activeConversationId) {

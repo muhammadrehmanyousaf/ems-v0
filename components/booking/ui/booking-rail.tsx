@@ -38,7 +38,7 @@ export default function BookingTopBar({
             {(venue as any)?.rating > 0 && (
               <span className="inline-flex items-center gap-1 text-[12px]">
                 <Star className="w-3.5 h-3.5 fill-bridal-gold text-bridal-gold" />
-                <span className="font-display italic text-bridal-charcoal tabular-nums">{(venue as any).rating}</span>
+                <span className="font-display italic text-bridal-charcoal tabular-nums">{Number((venue as any).rating).toFixed(1)}</span>
               </span>
             )}
             <span className="px-2 py-0.5 rounded-full bg-bridal-blush/55 border border-bridal-rose/40 text-bridal-mauve font-bridal text-[9.5px] uppercase tracking-[0.18em] font-medium">

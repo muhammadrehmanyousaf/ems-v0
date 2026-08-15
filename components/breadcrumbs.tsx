@@ -23,13 +23,26 @@ export function Breadcrumbs() {
           <Fragment key={item.title.replace(/-/g, ' ')}>
             {index !== items.length - 1 && (
               <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink href={item.link}>
-                  {item.title
-                    .replace(/-/g, ' ')
-                    .replace(/\b\w/g, (char, index) =>
-                      index > 0 ? char.toUpperCase() : char
-                    )}
-                </BreadcrumbLink>
+                {/* BUG-017 — a segment with no link (a grouping container like
+                    "Admin" that has no index page) renders as plain text rather
+                    than a link that 404s. */}
+                {item.link ? (
+                  <BreadcrumbLink href={item.link}>
+                    {item.title
+                      .replace(/-/g, ' ')
+                      .replace(/\b\w/g, (char, index) =>
+                        index > 0 ? char.toUpperCase() : char
+                      )}
+                  </BreadcrumbLink>
+                ) : (
+                  <span className="text-muted-foreground">
+                    {item.title
+                      .replace(/-/g, ' ')
+                      .replace(/\b\w/g, (char, index) =>
+                        index > 0 ? char.toUpperCase() : char
+                      )}
+                  </span>
+                )}
               </BreadcrumbItem>
             )}
             {index < items.length - 1 && (
