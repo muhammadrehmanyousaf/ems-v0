@@ -17,6 +17,7 @@ import { Icon } from "@/components/dashboard/shared/icon"
 import { Button } from "@/components/ui/button"
 import { ExportMenu } from "@/components/dashboard/shared/export-menu"
 import { cn } from "@/lib/utils"
+import { PnlTrendCard } from "./pnl-trend-card"
 
 type TaxMonthRow = NonNullable<AnnualTaxReport["months"]>[number]
 
@@ -223,6 +224,11 @@ export function TaxRedesignedView() {
           </div>
         )}
       />
+
+      {/* QA #20 — monthly & weekly profit-after-expenses trend. */}
+      <div className="rounded-xl border border-border bg-card p-4 shadow-sm md:p-6">
+        <PnlTrendCard />
+      </div>
     </div>
   )
 }

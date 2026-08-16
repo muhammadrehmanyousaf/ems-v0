@@ -488,6 +488,56 @@ export class AnalyticsAPI {
       return null;
     }
   }
+
+  /**
+   * QA #20 — weekly P&L. Same accrual model as getMonthlyPnl, bucketed by week
+   * (Monday-keyed). Vendor-scoped; read-only.
+   */
+  static async getWeeklyPnl(
+    weeksBack: number = 12,
+  ): Promise<WeeklyPnlData | null> {
+    try {
+      const res = await axiosInstance.get(
+        `${BACKEND_URL}api/v1/analytics/weekly-pnl?weeksBack=${weeksBack}`
+      );
+      return res.data.data;
+    } catch {
+      return null;
+    }
+  }
+}
+
+// ─── Weekly P&L types (QA #20) ─────────────────────────────────────
+export interface WeeklyPnlWeek {
+  key: string;            // week's Monday, "YYYY-MM-DD"
+  label: string;          // "12 Aug–18 Aug"
+  weekStart: string;
+  weekEnd: string;
+  revenue: number;
+  bookingCount: number;
+  costs: MonthlyPnlCosts;
+  grossProfit: number;
+  margin: number | null;
+  isCurrentWeek: boolean;
+}
+export interface WeeklyPnlData {
+  weeks: WeeklyPnlWeek[];
+  totals: {
+    revenue: number;
+    expenses: number;
+    supplierInvoices: number;
+    brokerCommissions: number;
+    staffPay: number;
+    totalCosts: number;
+    grossProfit: number;
+    margin: number | null;
+    weeksCovered: number;
+  };
+  best: MonthlyPnlSummaryMonth | null;
+  worst: MonthlyPnlSummaryMonth | null;
+  averageWeeklyProfit: number;
+  basis: "accrual";
+  generatedAt: string;
 }
 
 // ─── A/R aging types ───────────────────────────────────────────────
