@@ -188,6 +188,24 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
                   </div>
                 </div>
 
+                {/* QA #8 — package images the vendor uploaded. The card never
+                    rendered them, so "all package details" were not visible.
+                    Additive + guarded: shows only when images exist. */}
+                {Array.isArray((pkg as any).images) && (pkg as any).images.length > 0 && (
+                  <div className="px-5 pb-1 pt-1 flex gap-2 overflow-x-auto">
+                    {((pkg as any).images as string[]).slice(0, 4).map((src, i) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={i}
+                        src={src}
+                        alt={`${pkg.name} ${i + 1}`}
+                        loading="lazy"
+                        className="h-16 w-24 shrink-0 rounded-md object-cover border border-bridal-beige"
+                      />
+                    ))}
+                  </div>
+                )}
+
                 {/* Features */}
                 {features.length > 0 && (
                   <div className="px-5 pb-4 pt-2 border-t border-bridal-beige/70">
