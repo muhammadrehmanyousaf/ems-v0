@@ -123,7 +123,16 @@ export function formatSlotRange(start: string | null | undefined, end: string | 
  */
 export const LEGACY_PERIODS = [
   { value: "10:00", label: "Whole day", startTime: "10:00", endTime: "22:00" },
-  { value: "09:00", label: "Day", startTime: "09:00", endTime: "12:00" },
+  // QA #5 — this 09:00 slot IS the morning function (09:00–12:00); it was the
+  // original "Morning" and got relabeled "Day". Restoring "Morning" is accurate
+  // (9 AM–12 PM), needs no key change, and misrepresents no stored booking (the
+  // 10 live rows at "09:00" are genuinely morning functions). NOTE: a morning
+  // slot was deliberately NOT added to the backend CANONICAL_SLOTS/seed — there
+  // it would overlap the canonical "Day" (10:00–14:00), and the conflict check
+  // is per-slot-template (not whole-date), so an overlapping morning+day pair
+  // could double-book a venue 10–12. Template venues can add a non-overlapping
+  // morning slot from the vendor editor if they want one.
+  { value: "09:00", label: "Morning", startTime: "09:00", endTime: "12:00" },
   { value: "12:00", label: "Midday", startTime: "12:00", endTime: "16:00" },
   /**
    * 22:00, not 23:00. This one line is where the platform's worst live booking

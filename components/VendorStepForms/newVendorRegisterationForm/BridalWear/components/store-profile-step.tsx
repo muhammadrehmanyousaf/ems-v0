@@ -4,6 +4,7 @@ import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Info } from 'lucide-react';
 import {
     Select,
     SelectContent,
@@ -196,10 +197,18 @@ const StoreProfileStep = ({ errors, setErrors }: StoreProfileStepProps) => {
             <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-neutral-200">
                 <h3 className="text-lg font-semibold text-neutral-800 mb-4">Price Range</h3>
                 <div className="max-w-xs">
-                    <Label htmlFor="bw-min-price" className="text-sm font-medium text-neutral-700">
+                    <Label htmlFor="bw-min-price" className="text-sm font-medium text-neutral-700 flex items-center gap-1">
                         Starting Price (PKR)
+                        {/* QA #1 — info icon/message beside Starting Price. */}
+                        <span
+                            className="inline-flex cursor-help"
+                            aria-label="About starting price"
+                            title={"Shown to couples as “From Rs X” on your listing. Set the lowest real outfit price in your store."}
+                        >
+                            <Info className="w-3.5 h-3.5 text-neutral-400" aria-hidden />
+                        </span>
                     </Label>
-                    <p className="text-xs text-neutral-500 mb-1">The lowest price of outfits in your store.</p>
+                    <p className="text-xs text-neutral-500 mb-1">The lowest price of outfits in your store. Shown on your listing as &ldquo;From Rs X&rdquo;.</p>
                     <Input
                         id="bw-min-price"
                         type="number"

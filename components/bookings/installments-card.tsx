@@ -48,10 +48,14 @@ function formatPKR(amount: number): string {
 function formatDueAt(dueAt: string): string {
   try {
     const d = new Date(dueAt);
+    // QA #15 — force Pakistan time. The due instant is stored anchored to the
+    // event day; formatting in the viewer's local zone rendered the previous
+    // calendar day for anyone west of UTC (diaspora customers). Pin to PKT.
     return d.toLocaleDateString("en-PK", {
       day: "numeric",
       month: "short",
       year: "numeric",
+      timeZone: "Asia/Karachi",
     });
   } catch {
     return dueAt;

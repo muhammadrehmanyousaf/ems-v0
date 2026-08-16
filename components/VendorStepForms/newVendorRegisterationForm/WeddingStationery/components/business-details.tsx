@@ -12,6 +12,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Info } from 'lucide-react';
 import { useFormContext } from '@/lib/context/form-context';
 
 interface BusinessDetailsProps {
@@ -166,10 +167,18 @@ const BusinessDetails = ({ errors, setErrors }: BusinessDetailsProps) => {
 
                             {/* Starting Price */}
                             <div>
-                                <Label htmlFor="ws-min-price" className="text-sm font-medium text-neutral-700">
+                                <Label htmlFor="ws-min-price" className="text-sm font-medium text-neutral-700 flex items-center gap-1">
                                     Starting Price (PKR)
+                                    {/* QA #1 — info icon/message beside Starting Price. */}
+                                    <span
+                                        className="inline-flex cursor-help"
+                                        aria-label="About starting price"
+                                        title={"Shown to couples as “From Rs X” on your listing. Set your lowest real order/package price — you can add detailed packages later."}
+                                    >
+                                        <Info className="w-3.5 h-3.5 text-neutral-400" aria-hidden />
+                                    </span>
                                 </Label>
-                                <p className="text-xs text-neutral-500 mb-1">Lowest price for any order or package.</p>
+                                <p className="text-xs text-neutral-500 mb-1">Lowest price for any order or package. Shown on your listing as &ldquo;From Rs X&rdquo;.</p>
                                 <Input
                                     id="ws-min-price"
                                     type="number"
