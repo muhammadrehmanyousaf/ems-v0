@@ -40,12 +40,14 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { toast } from '@/components/ui/use-toast';
 import {
   LeadAPI,
   LEAD_STATUS_LABELS,
   LEAD_SOURCE_LABELS,
   LEAD_STATUS_TONES,
   type Lead,
+  type LeadStatus,
 } from '@/lib/api/leads';
 
 function fmtPKR(n: number | string | null | undefined): string {
@@ -101,6 +103,28 @@ export default function LeadDetailView({ leadId }: { leadId: number }) {
   const [lead, setLead] = useState<Lead | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [savingStatus, setSavingStatus] = useState(false);
+
+  // LEAD-1 — the desktop lead detail had no way to advance a lead's status
+  // (only WhatsApp/Call/Contact); the status transitions were mobile-only.
+  // Surface a status control here so a desktop vendor can move New → Qualified
+  // → Booked etc. Writes route through /transition (LeadAPI.transition).
+  const handleStatusChange = async (to: LeadStatus) => {
+    if (!lead || to === lead.status || savingStatus) return;
+    setSavingStatus(true);
+    try {
+      const updated = await LeadAPI.transition(lead.id, { to });
+      setLead(updated);
+      toast({ title: `Lead marked "${LEAD_STATUS_LABELS?.[to] ?? to}"` });
+    } catch (e: any) {
+      toast({
+        title: "Couldn't update status",
+        description: e?.response?.data?.message || "Try again.",
+      });
+    } finally {
+      setSavingStatus(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -350,7 +374,20 @@ export default function LeadDetailView({ leadId }: { leadId: number }) {
                 <span className="text-sm font-semibold text-neutral-700">Tracking</span>
               </div>
               <div className="space-y-1.5 ml-6">
-                <Row label="Status">{LEAD_STATUS_LABELS?.[lead.status] ?? lead.status}</Row>
+                <Row label="Status">
+                  <select
+                    value={lead.status}
+                    disabled={savingStatus}
+                    onChange={(e) => handleStatusChange(e.target.value as LeadStatus)}
+                    aria-label="Lead status"
+                    className="rounded-md border border-neutral-200 bg-white px-2 py-1 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-bridal-gold/40 disabled:opacity-50"
+                  >
+                    {Object.entries(LEAD_STATUS_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                  {savingStatus && <Loader2 className="inline-block ml-2 h-3.5 w-3.5 animate-spin text-neutral-400" />}
+                </Row>
                 {lead.statusReason && <Row label="Reason">{lead.statusReason}</Row>}
                 <Row label="Owner">
                   {lead.assignedTo?.fullName || lead.createdBy?.fullName || '—'}

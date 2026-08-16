@@ -2,16 +2,17 @@ import type { Metadata } from "next"
 import { DashboardShell } from "@/components/user-dashboard/dashboard-shell"
 
 // The account pages are client components, so none can export their own
-// `metadata` — they were all inheriting the homepage marketing <title>
-// ("Wedding Wala — Pakistan's Wedding & Event Marketplace"). Give the whole
-// /user segment a sensible default so a browser tab / bookmark reads "My
-// Account …" instead, and a template so any page that CAN set a title
-// (e.g. the server-rendered quotes page) gets the brand suffix consistently.
+// `metadata` — they were all inheriting the homepage marketing <title>. Give the
+// /user segment a bare default ("My Account"); the ROOT layout's title template
+// ("%s | Wedding Wala") adds the brand suffix once. A previous version set the
+// suffix here too AND kept its own template, which double-applied it and
+// rendered "My Account | Wedding Wala | Wedding Wala" (L3 regression).
 export const metadata: Metadata = {
-  title: {
-    default: "My Account | Wedding Wala",
-    template: "%s | Wedding Wala",
-  },
+  // `absolute` renders exactly this and ignores the root title template, so the
+  // brand suffix appears once. A prior version used `{ default: "… | Wedding
+  // Wala", template }` which let the root template append a SECOND suffix →
+  // "My Account | Wedding Wala | Wedding Wala" (L3 regression).
+  title: { absolute: "My Account | Wedding Wala" },
 }
 
 export default function UserDashboardLayout({

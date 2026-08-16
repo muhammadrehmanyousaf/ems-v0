@@ -825,7 +825,12 @@ export function HeroSection() {
                         </PopoverAnchor>
                         <PopoverContent className="w-[280px] p-0 rounded-[4px] bg-bridal-cream border-bridal-beige" align="start">
                           <Command className="bg-transparent">
-                            <CommandInput placeholder="Search cities..." className="font-bridal" />
+                            {/* H1 — bind the autocomplete input to `location` so a
+                                free-typed city (not picked from the list) is still
+                                captured. On focus the popover steals focus to this
+                                CommandInput; without this, typing here left the
+                                bound `location` empty and Search dropped the city. */}
+                            <CommandInput value={location} onValueChange={setLocation} placeholder="Search cities..." className="font-bridal" />
                             <CommandList>
                               <CommandEmpty className="font-bridal text-bridal-text-soft text-sm py-3">
                                 No cities found.
@@ -1078,7 +1083,8 @@ export function HeroSection() {
                         </PopoverAnchor>
                         <PopoverContent className="w-[280px] p-0 rounded-[4px] bg-bridal-cream border-bridal-beige" align="start">
                           <Command className="bg-transparent">
-                            <CommandInput placeholder="Search cities..." className="font-bridal" />
+                            {/* H1 — capture free-typed city (see Vendors tab). */}
+                            <CommandInput value={venueLocation} onValueChange={setVenueLocation} placeholder="Search cities..." className="font-bridal" />
                             <CommandList>
                               <CommandEmpty className="font-bridal text-bridal-text-soft text-sm py-3">
                                 No cities found.
