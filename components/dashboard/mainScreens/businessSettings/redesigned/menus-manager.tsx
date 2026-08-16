@@ -45,13 +45,22 @@ export function MenusManager({
   const { data: menus, isLoading } = useQuery<ApiMenu[]>({ queryKey: ["menus", businessId], queryFn: () => MenusAPI.getAll(businessId) })
   const [adding, setAdding] = React.useState(false)
   const [editingId, setEditingId] = React.useState<number | null>(null)
-  const [form, setForm] = React.useState({ title: "", price: "", items: "", minGuarantee: "" })
+  // WW-PRICING-OVERHAUL — pricingUnit is now an EXPLICIT vendor choice, not
+  // inferred from whether a guarantee was typed. "per_head" bills price × guests;
+  // "per_event" is a flat price. New menus default to per_head (the Pakistani
+  // catering norm and how this whole editor is framed); existing menus reflect
+  // their saved value (a NULL saved unit is legacy flat = per_event).
+  const [form, setForm] = React.useState<{
+    title: string; price: string; items: string; minGuarantee: string;
+    pricingUnit: "per_head" | "per_event";
+  }>({ title: "", price: "", items: "", minGuarantee: "", pricingUnit: "per_head" })
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
+  const isPerHead = form.pricingUnit === "per_head"
   // Errors show only after a field is touched, so a blank new form doesn't open
   // covered in red.
   const [touched, setTouched] = React.useState<Record<string, boolean>>({})
   const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }))
-  const reset = () => { setForm({ title: "", price: "", items: "", minGuarantee: "" }); setTouched({}); setAdding(false); setEditingId(null) }
+  const reset = () => { setForm({ title: "", price: "", items: "", minGuarantee: "", pricingUnit: "per_head" }); setTouched({}); setAdding(false); setEditingId(null) }
   const invalidate = () => qc.invalidateQueries({ queryKey: ["menus", businessId] })
 
   const itemsOf = (m: ApiMenu): string[] => {
@@ -64,6 +73,8 @@ export function MenusManager({
       price: String(m.price ?? ""),
       items: itemsOf(m).join("\n"),
       minGuarantee: m.minGuaranteeCount != null ? String(m.minGuaranteeCount) : "",
+      // A NULL saved pricingUnit is a legacy flat menu (per_event).
+      pricingUnit: String(m.pricingUnit || "").toLowerCase() === "per_head" ? "per_head" : "per_event",
     })
     setEditingId(m.id); setAdding(true)
   }
@@ -72,14 +83,17 @@ export function MenusManager({
     mutationFn: () => {
       const items = form.items.split("\n").map((s) => s.trim()).filter(Boolean)
       const guarantee = form.minGuarantee.trim()
+      const perHead = form.pricingUnit === "per_head"
       const body = {
         title: form.title.trim(),
         price: Number(form.price) || 0,
         businessId,
         data: items.length ? { items } : {},
-        // Only sent when the vendor gave one — the controller writes these
-        // fields only if defined, so an untouched menu keeps what it had.
-        ...(guarantee ? { minGuaranteeCount: Number(guarantee), pricingUnit: "per_head" as const } : {}),
+        // WW-PRICING-OVERHAUL — pricingUnit now always reflects the explicit
+        // toggle. A minimum guarantee only applies to a per-head menu; a flat
+        // menu clears it (a flat menu ignores heads anyway on the server).
+        pricingUnit: perHead ? ("per_head" as const) : ("per_event" as const),
+        minGuaranteeCount: perHead && guarantee ? Number(guarantee) : null,
       }
       return editingId ? MenusAPI.update(editingId, body) : MenusAPI.create(body)
     },
@@ -147,6 +161,38 @@ export function MenusManager({
         {adding && (
           <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
             <div className="text-xs font-semibold text-primary">{editingId ? "Edit menu" : "New menu"}</div>
+            {/* WW-PRICING-OVERHAUL — explicit pricing basis. Per head = price ×
+                guest count (with an optional minimum); Flat = one price for the
+                whole event regardless of guests. */}
+            <div className="space-y-1.5">
+              <span className={labelCls}>How is this menu priced?</span>
+              <div className="inline-flex rounded-lg border border-input p-0.5">
+                {([
+                  { key: "per_head", label: "Per head (× guests)" },
+                  { key: "per_event", label: "Flat (whole event)" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => set("pricingUnit", opt.key)}
+                    aria-pressed={form.pricingUnit === opt.key}
+                    className={cn(
+                      "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                      form.pricingUnit === opt.key
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {isPerHead
+                  ? "The customer's guest count multiplies this price (the standard catering model)."
+                  : "A single price for the event, whatever the guest count."}
+              </p>
+            </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_180px]">
               <div className="space-y-1.5">
                 <label className={labelCls} htmlFor="menu-title">Menu title</label>
@@ -156,7 +202,7 @@ export function MenusManager({
                 <FieldError id="menu-title" message={shown.title} />
               </div>
               <div className="space-y-1.5">
-                <label className={labelCls} htmlFor="menu-price">Price / head (Rs)</label>
+                <label className={labelCls} htmlFor="menu-price">{isPerHead ? "Price / head (Rs)" : "Price (whole event, Rs)"}</label>
                 <input id="menu-price" type="number" min={0} step={1} inputMode="numeric"
                   className={cn(inputCls, shown.price && ERROR_INPUT_CLS)} value={form.price}
                   onChange={(e) => { set("price", e.target.value); touch("price") }} onBlur={() => touch("price")}
@@ -164,22 +210,24 @@ export function MenusManager({
                 <FieldError id="menu-price" message={shown.price} />
               </div>
             </div>
-            <div className="space-y-1.5">
-              <label className={labelCls} htmlFor="menu-guarantee">Minimum guarantee (guests)</label>
-              <input
-                id="menu-guarantee" type="number" min={1} step={1} inputMode="numeric"
-                className={cn(inputCls, "sm:max-w-[180px]")} value={form.minGuarantee}
-                onChange={(e) => set("minGuarantee", e.target.value)}
-                placeholder="e.g. 300"
-              />
-              <p className="text-xs text-muted-foreground">
-                The smallest guest count you&apos;ll bill for on this menu, even if fewer turn up. Leave
-                blank if you don&apos;t hold one.
-              </p>
-              {guaranteeNote && (
-                <p className="text-xs text-amber-600 dark:text-amber-400">{guaranteeNote}</p>
-              )}
-            </div>
+            {isPerHead && (
+              <div className="space-y-1.5">
+                <label className={labelCls} htmlFor="menu-guarantee">Minimum guarantee (guests)</label>
+                <input
+                  id="menu-guarantee" type="number" min={1} step={1} inputMode="numeric"
+                  className={cn(inputCls, "sm:max-w-[180px]")} value={form.minGuarantee}
+                  onChange={(e) => set("minGuarantee", e.target.value)}
+                  placeholder="e.g. 300"
+                />
+                <p className="text-xs text-muted-foreground">
+                  The smallest guest count you&apos;ll bill for on this menu, even if fewer turn up. Leave
+                  blank if you don&apos;t hold one.
+                </p>
+                {guaranteeNote && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400">{guaranteeNote}</p>
+                )}
+              </div>
+            )}
             <div className="space-y-1.5"><label className={labelCls} htmlFor="menu-items">Dishes (one per line)</label><textarea id="menu-items" className={inputCls + " h-24 resize-y py-2"} value={form.items} onChange={(e) => set("items", e.target.value)} placeholder={"Chicken Biryani\nMutton Karahi\nSeekh Kebab\nZarda"} /></div>
             <div className="flex gap-2">
               <FormBlockedHint message={blockedReason} />
@@ -199,7 +247,7 @@ export function MenusManager({
               <div key={m.id} className="flex flex-col rounded-lg border border-border p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="truncate text-sm font-semibold">{m.title}</div>
-                  <div className="whitespace-nowrap text-right text-sm font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{formatPkr(m.price)}<span className="text-xs font-normal text-muted-foreground">/head</span></div>
+                  <div className="whitespace-nowrap text-right text-sm font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{formatPkr(m.price)}{String(m.pricingUnit || "").toLowerCase() === "per_head" && <span className="text-xs font-normal text-muted-foreground">/head</span>}</div>
                 </div>
                 {m.minGuaranteeCount != null && (
                   <div className="mt-1 text-xs text-muted-foreground">

@@ -142,6 +142,10 @@ export interface VendorMenu {
   title: string;
   price: number;
   data?: { items?: string[] } | null;
+  // WW-PRICING-OVERHAUL — per-head billing. "per_head" bills price × guests
+  // (floored at minGuaranteeCount); NULL / "per_event" is a flat price.
+  pricingUnit?: "per_head" | "per_event" | string | null;
+  minGuaranteeCount?: number | null;
 }
 
 export interface Venue {
@@ -372,6 +376,10 @@ export interface EventVenue {
   downPayment: number;
   downPaymentType: "Percentage" | "Fixed" | string;
   cancelationPolicy: string;
+  // WW-PRICING-OVERHAUL — vendor-declared pricing mode. NULL = legacy inferred
+  // behaviour. One of flat | per_head | package | package_plus_menu | per_unit | quote.
+  pricingMode?: string | null;
+  pricingConfigJson?: Record<string, any> | null;
   vendor?: any;
   parking: boolean;
   carParkingCapacity: number;

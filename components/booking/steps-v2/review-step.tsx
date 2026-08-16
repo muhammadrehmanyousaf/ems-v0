@@ -26,6 +26,13 @@ import {
 } from "@/lib/api/bundledServices"
 // SLOTS step 10 — the single slot vocabulary.
 import { slotText } from "@/lib/booking/slot-vocabulary"
+// WW-PRICING-OVERHAUL — single source for per-head menu math (must match server).
+import {
+  menuChargeFor,
+  menuIsPerHead,
+  menuBillableHeads,
+  menuIsAtMinGuarantee,
+} from "@/lib/pricing/menu"
 
 interface Props {
   formData: BookingFormData
@@ -93,7 +100,10 @@ export default function ReviewStep({
 
   const pkgPrice = Number(selectedPackageObj?.price) || 0
   const qty = isCarRental || isBridalWear || isWeddingStationery ? formData.vehicleQuantity || 1 : 1
-  const menuPrice = Number(selectedMenuObj?.price) || 0
+  // WW-PRICING-OVERHAUL — a per-head menu bills price × max(guests, min-pax);
+  // a flat/per_event menu is its price, unchanged. menuChargeFor is the shared
+  // helper the server mirrors, so this preview always equals the charge.
+  const menuPrice = menuChargeFor(selectedMenuObj, formData.guestCount)
   const baseTotal = pkgPrice * qty + menuPrice
 
   // BK-100.52 Layer 2c — fetch the venue's optional bundled add-ons.
@@ -287,7 +297,22 @@ export default function ReviewStep({
   ]
   if (showGuests) bookingRows.push({ icon: Users, label: "Guests", value: formData.guestCount ? `${formData.guestCount} ${formData.guestCount === 1 ? "guest" : "guests"}` : "—" })
   if (selectedPackageObj) bookingRows.push({ icon: PackageIcon, label: isCarRental ? "Vehicle" : isBridalWear ? "Outfit" : "Package", value: qty > 1 ? `${selectedPackageObj.name} × ${qty}` : selectedPackageObj.name })
-  if (selectedMenuObj) bookingRows.push({ icon: PackageIcon, label: "Menu", value: selectedMenuObj.title || selectedMenuObj.name })
+  if (selectedMenuObj) {
+    // WW-PRICING-OVERHAUL — show the per-head breakdown so the customer sees why
+    // the menu costs what it does (price × N guests), and a min-guarantee note
+    // when their guest count is lifted to the vendor's minimum.
+    const menuTitle = selectedMenuObj.title || selectedMenuObj.name
+    let menuValue = menuTitle
+    if (menuIsPerHead(selectedMenuObj)) {
+      const heads = menuBillableHeads(selectedMenuObj, formData.guestCount)
+      const perHead = Number(selectedMenuObj.price) || 0
+      menuValue = `${menuTitle} — Rs ${perHead.toLocaleString()}/plate × ${heads} ${heads === 1 ? "guest" : "guests"}`
+      if (menuIsAtMinGuarantee(selectedMenuObj, formData.guestCount)) {
+        menuValue += ` (min ${selectedMenuObj.minGuaranteeCount})`
+      }
+    }
+    bookingRows.push({ icon: PackageIcon, label: "Menu", value: menuValue })
+  }
 
   const SectionRow = ({ row }: { row: { icon: any; label: string; value: string } }) => {
     const Icon = row.icon
