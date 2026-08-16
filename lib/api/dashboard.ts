@@ -264,6 +264,9 @@ export interface ApiBusiness {
   guestCountLabel?: string | null;
   dietaryOptions?: string[] | null;
   venueType?: string | null;
+  // WW-PRICING-OVERHAUL — vendor-declared pricing mode (NULL = legacy inferred).
+  pricingMode?: string | null;
+  pricingConfigJson?: Record<string, any> | null;
   amenitiesJson?: string[] | null;
   comfortCapacity?: number | null;
   seatedCapacity?: number | null;

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import { Receipt, ChevronUp, ChevronDown } from "lucide-react"
 import type { BookingFormData, EventVenue, Vendor } from "@/lib/types"
+import { menuChargeFor, menuIsPerHead, menuBillableHeads } from "@/lib/pricing/menu"
 
 interface MobileSummaryBarProps {
   formData: BookingFormData
@@ -39,9 +40,13 @@ export default function MobileSummaryBar({
       })
     }
     if (selectedMenuObj) {
+      // WW-PRICING-OVERHAUL — per-head menu shows "×N" and bills price × guests.
+      const perHead = menuIsPerHead(selectedMenuObj)
+      const heads = menuBillableHeads(selectedMenuObj, formData.guestCount)
+      const baseLabel = selectedMenuObj.title || selectedMenuObj.name
       items.push({
-        label: selectedMenuObj.title || selectedMenuObj.name,
-        amount: Number(selectedMenuObj.price) || 0,
+        label: perHead ? `${baseLabel} ×${heads}` : baseLabel,
+        amount: menuChargeFor(selectedMenuObj, formData.guestCount),
       })
     }
     if (formData.selectedVendorPackages?.length) {
