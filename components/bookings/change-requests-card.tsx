@@ -300,7 +300,10 @@ function CreateChangeRequestForm({
         });
         return;
       }
-      diff = { newGuestCount: n };
+      // Backend (bookingChangeService) expects a { to: { … } } envelope, not a
+      // flat key — a flat `newGuestCount` was rejected as `invalid_diff` (400),
+      // which is exactly the "Change Request throws an error" ticket.
+      diff = { to: { guestCount: n } };
     }
     setSubmitting(true);
     try {
@@ -332,10 +335,12 @@ function CreateChangeRequestForm({
           onChange={(e) => setChangeType(e.target.value as ChangeRequestType)}
           className="h-9 rounded-md border border-input bg-background px-3 text-sm"
         >
+          {/* slot_swap / add_extras rendered no inputs and submitted an empty
+              diff → guaranteed 400. Hidden until their inputs exist (slot/date
+              change is handled via the Reschedule flow). guest_count + custom
+              are the two that work today. */}
           <option value="guest_count">Change guest count</option>
-          <option value="slot_swap">Change slot/time</option>
-          <option value="add_extras">Add extras</option>
-          <option value="custom">Other</option>
+          <option value="custom">Other request</option>
         </select>
       </div>
       {changeType === "guest_count" ? (

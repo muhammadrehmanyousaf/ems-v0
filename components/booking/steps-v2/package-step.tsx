@@ -56,6 +56,17 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
   const isVenueBooking = !!venue && Array.isArray((venue as any)?.menus) && ((venue as any)?.menus?.length ?? 0) > 0
   const selectedId = formData.selectedPackage ? String(formData.selectedPackage) : ""
   const qty = formData.vehicleQuantity || 1
+  // QA #17 — show "guests allowed" on the card. Guest capacity is a BUSINESS
+  // property (seated/max), NOT Package.capacity (which is a concurrent-booking
+  // cap, not a headcount). Shown only for guest-based venue bookings.
+  const venueMaxGuests = Number((venue as any)?.seatedCapacity) || Number(venue?.maxCapacity) || 0
+  const venueMinGuests = Number(venue?.minCapacity) || 0
+  const guestsLabel =
+    isVenueBooking && venueMaxGuests > 0
+      ? venueMinGuests > 0
+        ? `${venueMinGuests.toLocaleString()}–${venueMaxGuests.toLocaleString()} guests`
+        : `Up to ${venueMaxGuests.toLocaleString()} guests`
+      : ""
 
   const heading = isCarRental
     ? "Choose a vehicle"
@@ -148,6 +159,11 @@ export default function PackageStep({ formData, updateFormData, venue, vendorDet
                     </div>
                     {pkg.description && (
                       <p className="mt-1 font-bridal text-[12.5px] text-bridal-text-soft line-clamp-2">{pkg.description}</p>
+                    )}
+                    {guestsLabel && (
+                      <p className="mt-1.5 inline-flex items-center gap-1 font-bridal text-[11px] uppercase tracking-[0.14em] font-medium text-bridal-gold-dark">
+                        {guestsLabel}
+                      </p>
                     )}
                   </div>
                   <div className="flex items-start gap-3 shrink-0">

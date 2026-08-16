@@ -774,7 +774,7 @@ export default function DateTimeStep({
         {/* Which hall / lawn / partition? (BusinessResource model.) Only shown
            when the venue configured bookable resources AND is NOT using the
            canonical sub-venue tree (below). Optional — "whole venue" unpins. */}
-        {spaces.length > 0 && subVenueSpaces.length <= 1 && (
+        {spaces.length > 0 && subVenueSpaces.length === 0 && (
           <section className="space-y-2">
             <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
               Which space?
@@ -800,8 +800,10 @@ export default function DateTimeStep({
         )}
 
         {/* F-2 — canonical sub-venue picker (venue-hierarchy). Shown when the
-           venue built a multi-space tree; sends subVenueId (the per-hall path). */}
-        {subVenueSpaces.length > 1 && (
+           venue built ANY space(s); sends subVenueId (the per-hall path). Was
+           gated `> 1`, which silently hid a venue's only hall (QA #19) — now
+           `>= 1` so a single configured space is selectable. */}
+        {subVenueSpaces.length >= 1 && (
           <section className="space-y-2">
             <p className="font-bridal text-[10.5px] uppercase tracking-[0.22em] font-medium text-bridal-gold-dark">
               Which hall?

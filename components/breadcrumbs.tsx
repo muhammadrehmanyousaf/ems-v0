@@ -10,6 +10,7 @@ import {
 import { useBreadcrumbs } from '@/hooks/use-breadcrumbs';
 import { Slash } from 'lucide-react';
 import { Fragment } from 'react';
+import Link from 'next/link';
 
 export function Breadcrumbs() {
   const items = useBreadcrumbs();
@@ -27,12 +28,18 @@ export function Breadcrumbs() {
                     "Admin" that has no index page) renders as plain text rather
                     than a link that 404s. */}
                 {item.link ? (
-                  <BreadcrumbLink href={item.link}>
-                    {item.title
-                      .replace(/-/g, ' ')
-                      .replace(/\b\w/g, (char, index) =>
-                        index > 0 ? char.toUpperCase() : char
-                      )}
+                  // QA #16 — was a bare <a> (BreadcrumbLink defaults to an
+                  // anchor), so every crumb click did a full document reload and
+                  // bounced through the dashboard auth/loading shell. asChild +
+                  // next/link restores client-side SPA navigation.
+                  <BreadcrumbLink asChild>
+                    <Link href={item.link}>
+                      {item.title
+                        .replace(/-/g, ' ')
+                        .replace(/\b\w/g, (char, index) =>
+                          index > 0 ? char.toUpperCase() : char
+                        )}
+                    </Link>
                   </BreadcrumbLink>
                 ) : (
                   <span className="text-muted-foreground">
