@@ -1143,6 +1143,14 @@ export default function BookingForm() {
                 re-acquired on the next step. */}
             {pendingDraft && globalStep === 1 && events.length === 0 && (
               <DraftResumeBanner
+                // QA #3 — key on the draft identity so a newly-loaded draft
+                // always gets a FRESH banner instance. The shared banner keeps an
+                // internal `dismissed` latch (set on Resume/Discard); without a
+                // key that latch could survive a soft navigation (Home → back to
+                // vendor → Book) and leave the Resume button inert. Re-keying
+                // guarantees dismissed=false whenever a new draft appears, and
+                // changes nothing for any other form using the banner.
+                key={String(pendingDraft.savedAt)}
                 visible={true}
                 title="Resume your booking"
                 meta={`Last edited ${relativeTimeAgo(pendingDraft.savedAt)} — ${pendingDraft.events.length} event${pendingDraft.events.length === 1 ? '' : 's'} · step ${pendingDraft.globalStep}`}
