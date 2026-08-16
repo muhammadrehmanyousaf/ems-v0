@@ -24,6 +24,7 @@ import { VendorAPI } from "@/lib/api/vendors"
 // WW-PRICE0 — an unpriced vendor can't be booked (server 400s); offer the
 // inquiry instead of dead-ending the customer. This page is the choke point.
 import { isUnpricedVendor } from "@/lib/pricing/unpriced"
+import { menuChargeFor } from "@/lib/pricing/menu"
 import VendorInquiryDialog from "@/components/VendorInquiryDialog"
 import { useDateHold } from "@/hooks/use-date-hold"
 import { useBookingDraft } from "@/hooks/use-booking-draft"
@@ -351,7 +352,10 @@ export default function BookingForm() {
 
     const vehicleQty = isCarRental ? (currentForm.vehicleQuantity || 1) : 1
     const packagePrice = (Number(venuePackage?.price) || 0) * vehicleQty
-    const menuPrice = Number(venueMenu?.price) || 0
+    // WW-PRICING-OVERHAUL — a per-head menu bills price × max(guests, min-pax);
+    // a flat menu is its price (unchanged). Same helper the server mirrors, so the
+    // submitted totalAmount matches the Review the customer agreed to.
+    const menuPrice = menuChargeFor(venueMenu, currentForm.guestCount)
 
     // For car rental: service packages belong to the same business — pass as additionalPackageIds
     // so the backend can look them up from DB (avoids duplicate businessId entries)
@@ -1011,12 +1015,18 @@ export default function BookingForm() {
   //
   // Rather than dead-end the customer, offer the inquiry: the vendor replies
   // with a real price and it lands in their Leads inbox.
-  if (!loading && venue && isUnpricedVendor(venue as any)) {
+  // WW-PRICING-OVERHAUL — a vendor who declared `quote` mode is quote-only by
+  // choice (even if they carry a starting price), so route them to the same
+  // inquiry flow as an unpriced vendor.
+  const wantsQuote = (venue as any)?.pricingMode === "quote"
+  if (!loading && venue && (isUnpricedVendor(venue as any) || wantsQuote)) {
     return (
       <div className="w-full">
         <div className="mx-auto max-w-xl rounded-md bg-bridal-cream border border-bridal-beige p-6 sm:p-8 text-center shadow-[0_18px_44px_-32px_rgba(176,125,84,0.4)]">
           <h1 className="font-display italic text-[26px] sm:text-[30px] text-bridal-charcoal leading-tight">
-            {venue.name} hasn&apos;t published a price yet
+            {wantsQuote
+              ? `${venue.name} prices each event with a custom quote`
+              : `${venue.name} hasn't published a price yet`}
           </h1>
           <p className="mt-3 text-[14px] text-bridal-charcoal/75 leading-relaxed">
             Send them a quick inquiry with your date and guest count — they&apos;ll reply

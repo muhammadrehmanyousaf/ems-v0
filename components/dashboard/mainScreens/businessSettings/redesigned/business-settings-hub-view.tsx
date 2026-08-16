@@ -46,6 +46,17 @@ import { invalidateBusinessData } from "@/lib/query/business-keys"
 const numOrNull = (v: string) => (v.trim() === "" ? null : Number(v) || 0)
 
 const labelCls = "text-xs font-medium text-muted-foreground"
+
+// WW-PRICING-OVERHAUL — one-line explainer per pricing mode, shown under the picker.
+const PRICING_MODE_HINT: Record<string, string> = {
+  "": "We work it out from what you set up — a starting price, packages or menus. Pick a mode below to make it explicit.",
+  flat: "One fixed price for the whole booking, whatever the guest count. Best for small halls or a simple set fee.",
+  per_head: "Your menu price is multiplied by the guest count (with an optional minimum). The standard catering / big-venue model.",
+  package: "Customers choose a named package/tier you've created. Best for photographers, planners and décor.",
+  package_plus_menu: "Customers pick a package AND a menu together — the giant-venue hybrid (hall package + per-head food).",
+  per_unit: "Price is multiplied by quantity (and days) — e.g. cars, cakes by the pound, cards. Set the unit under packages.",
+  quote: "No self-serve price — customers send an enquiry and you reply with a quote. Best for bespoke or luxury work.",
+}
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 
 type TabKey = "profile" | "pricing" | "amenities" | "listing" | "type-specific" | "images" | "packages" | "menus" | "bank" | "team" | "availability"
@@ -253,6 +264,8 @@ export function BusinessSettingsHubView() {
         downPaymentType: biz.downPaymentType ?? "",
         downPayment: biz.downPayment ?? "",
         cancelationPolicy: biz.cancelationPolicy ?? "",
+        // WW-PRICING-OVERHAUL — vendor-declared pricing mode ("" = not set = legacy).
+        pricingMode: biz.pricingMode ?? "",
         /**
          * `Boolean(null)` is `false`, so an amenity nobody has answered loaded
          * as an explicit "we do not provide this". Kept as null here, and the
@@ -274,6 +287,7 @@ export function BusinessSettingsHubView() {
         downPaymentType: biz.downPaymentType ?? "",
         downPayment: biz.downPayment ?? "",
         cancelationPolicy: biz.cancelationPolicy ?? "",
+        pricingMode: biz.pricingMode ?? "",
         ...Object.fromEntries(BOOLS.map((b) => [b.key, biz[b.key] ?? null])),
       })
       setDirty(false)
@@ -432,6 +446,8 @@ export function BusinessSettingsHubView() {
       downPaymentType: form.downPaymentType || null,
       downPayment: numOrNull(String(form.downPayment)),
       cancelationPolicy: form.cancelationPolicy || null,
+      // WW-PRICING-OVERHAUL — "" (Auto) sends null, restoring legacy inferred pricing.
+      pricingMode: form.pricingMode || null,
       // A boolean the vendor has not touched stays null — unanswered — rather
       // than becoming an explicit "we don't provide this".
       ...Object.fromEntries(
@@ -450,6 +466,7 @@ export function BusinessSettingsHubView() {
       brandLogo: baseline.brandLogo || null,
       downPaymentType: baseline.downPaymentType || null,
       cancelationPolicy: baseline.cancelationPolicy || null,
+      pricingMode: baseline.pricingMode || null,
     }
     const patch: Record<string, any> = {}
     for (const [k, v] of Object.entries(next)) {
@@ -714,6 +731,28 @@ export function BusinessSettingsHubView() {
 
           {active === "pricing" && (
             <Section icon="DollarSign" title="Capacity & pricing" desc="Guest range, starting price and booking terms.">
+              {/* WW-PRICING-OVERHAUL — vendor chooses how they are booked. "Auto"
+                  ("" -> null) keeps the legacy inferred behaviour (byte-for-byte
+                  unchanged), so nothing changes until the vendor picks a mode. */}
+              <Row label="How you charge">
+                <select
+                  id="biz-pricingmode"
+                  className={inputCls}
+                  value={form.pricingMode ?? ""}
+                  onChange={(e) => set("pricingMode", e.target.value)}
+                >
+                  <option value="">Auto (decide from packages &amp; menus)</option>
+                  <option value="flat">Flat — one price, any guest count</option>
+                  <option value="per_head">Per head — price × guests (menus)</option>
+                  <option value="package">Packages — pick a tier</option>
+                  <option value="package_plus_menu">Package + menu (venue hybrid)</option>
+                  <option value="per_unit">Per unit — × quantity / days</option>
+                  <option value="quote">Quote — request a price</option>
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  {PRICING_MODE_HINT[form.pricingMode || ""] ?? PRICING_MODE_HINT[""]}
+                </p>
+              </Row>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <Row label="Starting price (Rs)">
                   <input

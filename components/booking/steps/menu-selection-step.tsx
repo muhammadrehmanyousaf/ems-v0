@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label"
 import type { BookingFormData, EventVenue } from "@/lib/types"
 import { Check } from "lucide-react"
 import { motion } from "framer-motion"
+import { menuChargeFor, menuIsPerHead } from "@/lib/pricing/menu"
 
 interface MenuSelectionStepProps {
   formData: BookingFormData
@@ -25,11 +26,13 @@ const item = {
 export default function MenuSelectionStep({ formData, updateFormData, venue }: MenuSelectionStepProps) {
   const handleMenuSelect = (menuId: string) => {
     const selectedMenu = venue?.menus.find((m) => m.id === menuId)
-    const menuPrice = selectedMenu ? Number(selectedMenu.price) || 0 : 0
+    // WW-PRICING-OVERHAUL — per-head menus bill price × max(guests, min-pax);
+    // flat menus are their price. menuChargeFor is the shared server-mirrored helper.
+    const menuPrice = menuChargeFor(selectedMenu, formData.guestCount)
 
     // Recalculate: remove old menu price, add new
     const oldMenu = venue?.menus.find((m) => m.id === formData.selectedMenu)
-    const oldMenuPrice = oldMenu ? Number(oldMenu.price) || 0 : 0
+    const oldMenuPrice = menuChargeFor(oldMenu, formData.guestCount)
     const currentTotal = Number(formData.totalPrice) || 0
 
     updateFormData({
@@ -96,6 +99,9 @@ export default function MenuSelectionStep({ formData, updateFormData, venue }: M
                       </Label>
                       <span className="font-display italic text-[22px] text-bridal-gold-dark leading-none shrink-0">
                         Rs. {Number(menu.price)?.toLocaleString()}
+                        {menuIsPerHead(menu) && (
+                          <span className="font-bridal not-italic text-[12px] text-bridal-text-soft"> /plate</span>
+                        )}
                       </span>
                     </div>
 
