@@ -62,6 +62,8 @@ import { PostponeBookingDialog } from "@/components/bookings/postpone-booking-di
 import { RescheduleBookingDialog } from "@/components/bookings/reschedule-booking-dialog";
 // EPIC 5 · §3 — customer "Request a refund".
 import { RefundRequestCard } from "@/components/bookings/refund-request-card";
+// QA #4 — show the refund the customer would get back inside the cancel dialog.
+import { getRefundPreview, type RefundPreview } from "@/lib/api/bookingOrder";
 import { slotText, slotFromBooking } from "@/lib/booking/slot-vocabulary";
 
 interface BookingDetail {
@@ -218,6 +220,21 @@ export default function BookingDetailPage() {
   const [isLoadingBooking, setIsLoadingBooking] = useState(true);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  // QA #4 — refund the customer would receive if they cancel now (per the
+  // vendor's policy). null when the refund engine is off (404) or nothing was
+  // paid — the dialog then shows the generic policy line instead.
+  const [refundPreview, setRefundPreview] = useState<RefundPreview | null>(null);
+  const [refundPreviewLoading, setRefundPreviewLoading] = useState(false);
+  useEffect(() => {
+    if (!cancelDialogOpen || !booking) { setRefundPreview(null); return; }
+    let cancelled = false;
+    setRefundPreviewLoading(true);
+    getRefundPreview(booking.id)
+      .then((p) => { if (!cancelled) setRefundPreview(p); })
+      .catch(() => { if (!cancelled) setRefundPreview(null); })
+      .finally(() => { if (!cancelled) setRefundPreviewLoading(false); });
+    return () => { cancelled = true; };
+  }, [cancelDialogOpen, booking]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -971,6 +988,30 @@ export default function BookingDetailPage() {
                   This action cannot be undone. Any payments made may be
                   subject to the vendor&apos;s refund policy.
                 </p>
+                {/* QA #4 — show the actual refund per the vendor's policy so the
+                    customer decides with the real number, not a vague warning.
+                    Hidden when the refund engine is off or nothing was paid. */}
+                {refundPreviewLoading && (
+                  <p className="text-xs text-bridal-text-soft">Checking your refund…</p>
+                )}
+                {refundPreview && refundPreview.totalPaid > 0 && (
+                  <div className="rounded-md border border-bridal-gold/45 bg-bridal-cream p-3 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-bridal-charcoal">You&apos;ll get back</span>
+                      <span className="font-semibold text-emerald-700">{fmt(refundPreview.preview.refund)}</span>
+                    </div>
+                    {refundPreview.preview.forfeit > 0 && (
+                      <div className="mt-1 flex items-center justify-between text-xs text-bridal-text-soft">
+                        <span>Forfeited (per {refundPreview.policy.labelEn} policy)</span>
+                        <span>{fmt(refundPreview.preview.forfeit)}</span>
+                      </div>
+                    )}
+                    <p className="mt-1.5 text-[11px] text-bridal-text-soft leading-relaxed">
+                      Cancelling {refundPreview.daysBefore} day{refundPreview.daysBefore === 1 ? "" : "s"} before the
+                      event. The refund is processed per the vendor&apos;s policy.
+                    </p>
+                  </div>
+                )}
                 {/* BK-100.2 Layer 2c — surface umbrella context when
                     the booking is part of a wedding-week umbrella. The
                     umbrella's bundle-savings tier is computed from
