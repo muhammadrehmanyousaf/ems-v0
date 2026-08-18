@@ -113,7 +113,7 @@ export function generateListicleMetadata(slug: string): Metadata {
 
   return buildPageMetadata({
     title: `Best ${vt.plural} in ${city.name} (${LISTICLE_YEAR})`,
-    description: `The best ${vt.plural.toLowerCase()} in ${city.name}, ranked by real couples. Compare ratings, packages & PKR prices, then book a verified ${vt.singular.toLowerCase()} in minutes on ${SITE_NAME}.`,
+    description: `The best ${vt.plural.toLowerCase()} in ${city.name}, ranked by real couples. Compare ratings, packages & PKR prices, then book a ${vt.singular.toLowerCase()} in minutes on ${SITE_NAME}.`,
     path: `/best/${slug}`,
     ogType: "article",
   })
@@ -179,7 +179,7 @@ export async function BestVendorListiclePage({ slug }: { slug: string }) {
     },
     {
       question: `How many ${vt.plural.toLowerCase()} are listed in ${city.name}?`,
-      answer: `${SITE_NAME} currently lists ${all.length} verified ${vt.plural.toLowerCase()} in ${city.name}${priceRangeStr ? `, priced from ${priceRangeStr}` : ""}. This guide ranks the top ${ranked.length}.`,
+      answer: `${SITE_NAME} currently lists ${all.length} ${vt.plural.toLowerCase()} in ${city.name}${priceRangeStr ? `, priced from ${priceRangeStr}` : ""}. This guide ranks the top ${ranked.length}.`,
     },
     {
       question: `When should I book a ${vt.singular.toLowerCase()} in ${city.name}?`,
@@ -263,7 +263,7 @@ export async function BestVendorListiclePage({ slug }: { slug: string }) {
             book in minutes.
           </p>
           <p className="mt-3 font-bridal text-[12px] text-bridal-text-soft">
-            Updated {LISTICLE_UPDATED_LABEL} · {all.length} verified{" "}
+            Updated {LISTICLE_UPDATED_LABEL} · {all.length} listed{" "}
             {vt.plural.toLowerCase()} compared
             {priceRangeStr ? ` · from ${priceRangeStr}` : ""}
           </p>
@@ -428,9 +428,9 @@ export async function BestVendorListiclePage({ slug }: { slug: string }) {
               </p>
             )}
             <p>
-              Every vendor in this guide is identity-verified, every review
-              comes from a real booking, and every quote is transparent before
-              you commit a deposit — so you can compare {city.name}{" "}
+              Every review in this guide comes from a real booking, and every
+              quote is transparent before you commit a deposit — so you can
+              compare {city.name}{" "}
               {vt.plural.toLowerCase()} with confidence.
             </p>
           </div>
@@ -463,7 +463,7 @@ export async function BestVendorListiclePage({ slug }: { slug: string }) {
                 See every {vt.singular.toLowerCase()} in {city.name}
               </p>
               <p className="mt-1 font-bridal text-[13px] text-bridal-text-soft">
-                Filter all {all.length} verified {vt.plural.toLowerCase()} by
+                Filter all {all.length} {vt.plural.toLowerCase()} by
                 budget, rating, and availability.
               </p>
             </div>

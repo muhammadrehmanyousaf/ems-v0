@@ -32,6 +32,14 @@ export function PremiumVendorCard({
 }) {
   const hasImage = Boolean(vendor.imageUrl)
 
+  // The badge now has to be earned. "Verified" means the ops team actually
+  // checked something — tier >= 1 is email + phone OTP, and the listing must
+  // also have cleared moderation. Everything else is an unclaimed directory
+  // record, and says so. See VendorListItem.verificationTier for why this
+  // stopped being an unconditional span.
+  const isVerified = (vendor.verificationTier ?? 0) >= 1 && vendor.status === "approved"
+
+
   // A card with no resolvable href must NOT render `href="#"` (a dead link that
   // jumps to top and pollutes the tab order). fetch-vendors now yields an href
   // for every card with an id + mapped type, so this fallback is belt-only —
@@ -74,10 +82,18 @@ export function PremiumVendorCard({
           </div>
         )}
 
-        {/* Verified badge — platform identity-verification signal (B0/E-E-A-T) */}
-        <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-bridal-ivory/90 px-2.5 py-1 font-bridal text-[10.5px] font-medium text-bridal-text shadow-sm backdrop-blur">
-          <span className="text-bridal-gold-dark">✓</span> Verified
-        </span>
+        {/* Verified when earned; honest about the listing when not. The
+            "Unclaimed" state is not an apology — it is the invitation that
+            turns an imported record into a paying vendor. */}
+        {isVerified ? (
+          <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-bridal-ivory/90 px-2.5 py-1 font-bridal text-[10.5px] font-medium text-bridal-text shadow-sm backdrop-blur">
+            <span className="text-bridal-gold-dark">✓</span> Verified
+          </span>
+        ) : (
+          <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-bridal-charcoal/70 px-2.5 py-1 font-bridal text-[10.5px] font-medium text-bridal-ivory shadow-sm backdrop-blur">
+            Unclaimed listing
+          </span>
+        )}
 
         {vendor.rating > 0 && (
           <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-bridal-charcoal/85 px-2.5 py-1 font-bridal text-[11px] font-semibold text-bridal-ivory shadow-sm">

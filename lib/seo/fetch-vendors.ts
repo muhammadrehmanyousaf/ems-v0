@@ -47,6 +47,27 @@ export interface VendorListItem {
   /** Optional enrichment — populated from backend when available, else omitted. */
   specialties?: string[]
   areaServed?: string
+  /**
+   * Real verification signal, straight from the backend.
+   *
+   * `verificationTier` ladder (utils/vendorVerificationStatus.js):
+   *   0 = an account exists and nothing more
+   *   1 = email + phone OTP completed
+   *   2 = NTN matched against the FBR ATL
+   *   3 = CNIC matched to an ID document
+   *   4 = ops physically visited the venue
+   *
+   * These exist because the card used to print "✓ Verified" unconditionally —
+   * a hardcoded span with no `if` — across ~3,270 listings, of which a live
+   * sample found 199/200 sitting at tier 0 with `status: "submitted"` and not a
+   * single NTN, CNIC, address or visit check recorded. Nearly all of those rows
+   * are imported public-directory data that no owner has ever claimed. Telling
+   * a couple those businesses were verified was simply untrue, and it is the
+   * kind of claim a payment processor reads as merchant misrepresentation.
+   */
+  verificationTier?: number
+  /** Backend moderation state: "approved" | "submitted" | "draft". */
+  status?: string
 }
 
 interface FetchOptions {
@@ -235,5 +256,9 @@ function normalize(raw: any): VendorListItem {
       ? raw.specialties.filter((s: unknown): s is string => typeof s === "string").slice(0, 4)
       : undefined,
     areaServed: typeof raw?.areaServed === "string" ? raw.areaServed : undefined,
+    verificationTier: Number.isFinite(Number(raw?.verificationTier))
+      ? Number(raw.verificationTier)
+      : 0,
+    status: typeof raw?.status === "string" ? raw.status : undefined,
   }
 }

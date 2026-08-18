@@ -57,7 +57,7 @@ export async function renderVendorOG(args: Args): Promise<ImageResponse> {
   if (!vendor) {
     return brandFallback(
       `${vt.singular} in ${city.name}`,
-      `Verified ${vt.plural.toLowerCase()} on Wedding Wala.`,
+      `${vt.plural} on Wedding Wala.`,
     )
   }
 

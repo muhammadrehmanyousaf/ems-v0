@@ -21,7 +21,16 @@ import {
   Music2,
   Pin,
 } from "lucide-react"
-import { getSocialProfiles, type SocialProfile, VENDOR_TYPES, FEATURED_CITIES } from "@/lib/seo"
+import {
+  getSocialProfiles,
+  type SocialProfile,
+  VENDOR_TYPES,
+  FEATURED_CITIES,
+  BUSINESS_ADDRESS_LINES,
+  BUSINESS_HOURS_DISPLAY,
+  LEGAL_ENTITY_LINE,
+  BUSINESS_NTN,
+} from "@/lib/seo"
 
 // Curated high-value guides for the footer internal-link spine (the cost
 // guides + flagship planning/inspiration pillars). Keep ~8 — the rest are
@@ -333,6 +342,7 @@ export function Footer() {
               <ul className="space-y-2.5">
                 {[
                   { href: "/business-registration", name: "List your business" },
+                  { href: "/pricing",               name: "Pricing & plans" },
                   { href: "/vendor-guide",          name: "Vendor guide" },
                   { href: "/vendor-success",        name: "Success stories" },
                   { href: "/careers",               name: "Join our team" },
@@ -361,6 +371,7 @@ export function Footer() {
               </h4>
               <ul className="space-y-2">
                 {[
+                  { href: "/services",                 name: "Our services" },
                   { href: "/terms",                    name: "Terms of service" },
                   { href: "/privacy",                  name: "Privacy policy" },
                   { href: "/refund-policy",            name: "Refund policy" },
@@ -445,10 +456,21 @@ export function Footer() {
                   </span>
                   <div className="min-w-0">
                     <p className="font-bridal text-[10.5px] uppercase tracking-[0.2em] text-bridal-text-label font-medium">
-                      Service area
+                      Office
                     </p>
-                    <p className="font-bridal text-[14px] text-bridal-charcoal">
-                      Pakistan-wide
+                    {/* A registered place of business, not a coverage claim.
+                        "Pakistan-wide" answered a question nobody asks of a
+                        merchant — where the money is actually being taken
+                        from. Must match the FBR registration on file. */}
+                    <address className="not-italic font-bridal text-[14px] leading-snug text-bridal-charcoal">
+                      {BUSINESS_ADDRESS_LINES.map((line) => (
+                        <span key={line} className="block">
+                          {line}
+                        </span>
+                      ))}
+                    </address>
+                    <p className="mt-1 font-bridal text-[12px] text-bridal-text-soft">
+                      {BUSINESS_HOURS_DISPLAY}
                     </p>
                   </div>
                 </li>
@@ -575,12 +597,13 @@ export function Footer() {
               {" "}· Crafted with{" "}
               <Heart className="w-3 h-3 inline-block text-bridal-rose fill-bridal-rose mx-0.5" />
               {" "}for Pakistani couples
-              {/*
-                TODO: append registered legal name + SECP # + NTN once
-                provided. Pending fields tracked in docs/company-info.md.
-                Example final shape:
-                  © 2026 Wedding Wala (Pvt) Ltd · SECP #XXXXXX · NTN XXXXXXX-X
-              */}
+              {/* The registered identity behind the brand. Wedding Wala is a
+                  sole proprietorship registered with FBR — there is no SECP
+                  number to print, and rendering "(Pvt) Ltd" would misstate the
+                  entity a payment processor verifies us as. */}
+              <span className="mt-1 block text-[11.5px] text-bridal-text-label">
+                {LEGAL_ENTITY_LINE} · NTN {BUSINESS_NTN}
+              </span>
             </p>
             <p className="font-bridal text-[12.5px] text-bridal-text-soft text-center md:text-right">
               <Link href="/contact" className="hover:text-bridal-gold transition-colors">

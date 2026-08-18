@@ -8,6 +8,19 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Mail, Phone, MapPin, Send, Clock, Loader2, CheckCircle } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import {
+  SUPPORT_EMAIL,
+  SUPPORT_PHONE_DISPLAY,
+  SUPPORT_PHONE_TEL,
+  BUSINESS_ADDRESS_LINES,
+  BUSINESS_ADDRESS_ONELINE,
+  BUSINESS_HOURS_DISPLAY,
+  LEGAL_ENTITY_LINE,
+  LEGAL_ENTITY_FORM,
+  BUSINESS_NTN,
+  TAT_FIRST_RESPONSE,
+  TAT_RESOLUTION,
+} from "@/lib/seo"
 
 export default function ContactPage() {
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" })
@@ -54,12 +67,21 @@ export default function ContactPage() {
     }
   }
 
+  // "Lahore, Pakistan" is a city, not an address. A customer disputing a charge
+  // — and the payment processor reviewing us — needs a place of business they
+  // can actually reach, matching the registration on file. Single source of
+  // truth: lib/seo/constants.ts.
   const info = [
-    { icon: Mail, label: "Email", value: "info@weddingwala.pk", href: "mailto:info@weddingwala.pk" },
-    { icon: Phone, label: "Phone", value: "+92 327 4811220", href: "tel:+923274811220" },
-    { icon: MapPin, label: "Office", value: "Lahore, Pakistan", href: null },
-    { icon: Clock, label: "Hours", value: "Mon-Sat, 9 AM - 6 PM", href: null },
-  ]
+    { icon: Mail, label: "Email", value: SUPPORT_EMAIL, href: `mailto:${SUPPORT_EMAIL}` },
+    { icon: Phone, label: "Phone & WhatsApp", value: SUPPORT_PHONE_DISPLAY, href: SUPPORT_PHONE_TEL },
+    { icon: MapPin, label: "Office", value: BUSINESS_ADDRESS_LINES, href: null },
+    { icon: Clock, label: "Hours", value: BUSINESS_HOURS_DISPLAY, href: null },
+  ] satisfies {
+    icon: typeof Mail
+    label: string
+    value: string | readonly string[]
+    href: string | null
+  }[]
 
   return (
     <div className="min-h-screen">
@@ -86,15 +108,59 @@ export default function ContactPage() {
                     <p className="text-xs text-neutral-500">{item.label}</p>
                     {item.href ? (
                       <a href={item.href} className="text-sm font-medium text-neutral-900 hover:text-bridal-gold-dark">
-                        {item.value}
+                        {item.value as string}
                       </a>
+                    ) : Array.isArray(item.value) ? (
+                      <address className="not-italic text-sm font-medium leading-snug text-neutral-900">
+                        {item.value.map((line) => (
+                          <span key={line} className="block">
+                            {line}
+                          </span>
+                        ))}
+                      </address>
                     ) : (
-                      <p className="text-sm font-medium text-neutral-900">{item.value}</p>
+                      <p className="text-sm font-medium text-neutral-900">{item.value as string}</p>
                     )}
                   </div>
                 </CardContent>
               </Card>
             ))}
+
+            {/* Registered business information. A payment processor's merchant
+                review, and any customer disputing a charge, needs to see who
+                the legal counterparty is — not just a brand name. */}
+            <Card className="border-0 shadow-sm bg-white">
+              <CardContent className="p-4">
+                <p className="text-xs text-neutral-500">Registered business</p>
+                <dl className="mt-2 space-y-1.5 text-sm">
+                  <div>
+                    <dt className="sr-only">Legal name</dt>
+                    <dd className="font-medium text-neutral-900">{LEGAL_ENTITY_LINE}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="text-neutral-500">Entity</dt>
+                    <dd className="text-neutral-900">{LEGAL_ENTITY_FORM}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="text-neutral-500">NTN</dt>
+                    <dd className="text-neutral-900 tabular-nums">{BUSINESS_NTN}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="text-neutral-500">Registered address</dt>
+                    <dd className="text-neutral-900">{BUSINESS_ADDRESS_ONELINE}</dd>
+                  </div>
+                </dl>
+                <p className="mt-3 border-t border-neutral-100 pt-3 text-xs leading-relaxed text-neutral-500">
+                  We acknowledge every message {TAT_FIRST_RESPONSE} and resolve
+                  complaints {TAT_RESOLUTION}. Payment or refund queries can also
+                  go to our{" "}
+                  <a href="/complaints" className="underline hover:text-bridal-gold-dark">
+                    complaints process
+                  </a>
+                  .
+                </p>
+              </CardContent>
+            </Card>
           </div>
 
           <div className="lg:col-span-2">

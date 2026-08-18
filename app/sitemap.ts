@@ -106,6 +106,8 @@ function buildCoreShard(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/wedding-website`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE_URL}/press`, lastModified: now, changeFrequency: "weekly", priority: 0.5 },
     { url: `${SITE_URL}/list-your-business`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${SITE_URL}/pricing`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${SITE_URL}/services`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     // Urdu scaffold — single landing for now; expands to a full /ur/ tree
     // once translations land. Reference: docs/seo/03-url-conventions-LOCKED.md §L7.
     { url: `${SITE_URL}/ur`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },

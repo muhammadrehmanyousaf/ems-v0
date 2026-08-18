@@ -78,7 +78,7 @@ const STEPS = [
 const FAQS = [
   {
     question: "How much does it cost to list?",
-    answer: `Listing on ${SITE_NAME} is free. We take a small commission only on bookings completed through the platform — there's no monthly fee, no listing fee, no charge for browsers viewing your profile.`,
+    answer: `${SITE_NAME} is a monthly subscription, starting at Rs 2,500/month — and that subscription is our only charge. We take no commission on your bookings and deduct nothing from your deposits, so what a customer pays you is what you keep. No setup fee, no listing fee, no lock-in. Full plans and prices are on our pricing page.`,
   },
   {
     question: "Who can list?",

@@ -31,7 +31,7 @@ export function generateVendorTypeHubMetadata(slug: VendorTypeSlug): Metadata {
   if (!vt) return { title: "Not Found" }
   return buildPageMetadata({
     title: `${vt.plural} in Pakistan`,
-    description: `Find and book the best ${vt.plural.toLowerCase()} across Pakistan. ${vt.description} Verified, reviewed, and ready to book on ${SITE_NAME}.`,
+    description: `Find and book the best ${vt.plural.toLowerCase()} across Pakistan. ${vt.description} Compare prices, read real reviews and book on ${SITE_NAME}.`,
     path: `/${vt.slug}`,
   })
 }
@@ -61,11 +61,16 @@ export function VendorTypeHubPage({ slug }: { slug: VendorTypeSlug }) {
   const faqs = [
     {
       question: `How do I find the right ${vt.singular.toLowerCase()} in Pakistan?`,
-      answer: `Pick your city below to see verified ${vt.plural.toLowerCase()} reviewed by real Pakistani couples. Filter by budget, style, and availability — then book directly through ${SITE_NAME}.`,
+      answer: `Pick your city below to see ${vt.plural.toLowerCase()} reviewed by real Pakistani couples. Filter by budget, style, and availability — then book directly through ${SITE_NAME}.`,
     },
     {
       question: `Are these ${vt.plural.toLowerCase()} verified?`,
-      answer: `Yes. Every ${vt.singular.toLowerCase()} listed on ${SITE_NAME} passes a portfolio + identity + reviews check before going live.`,
+      // Was: "Yes. Every ... passes a portfolio + identity + reviews check
+      // before going live." Untrue, and emitted as FAQPage JSON-LD, so Google
+      // and any reviewer read it as a formal claim. Most listings are compiled
+      // from public directories and carry no check at all until an owner claims
+      // them — say that instead.
+      answer: `Some are. A ${vt.singular.toLowerCase()} carries a Verified badge only after we have checked the owner's identity and contact details, and you will see that badge on their card. Most listings are compiled from public business directories and are marked "Unclaimed listing" until their owner takes the profile over and completes verification. Reviews are always real — a couple can only review a vendor after their wedding date has passed.`,
     },
     {
       question: `Can I book a ${vt.singular.toLowerCase()} for any city in Pakistan?`,
