@@ -36,6 +36,59 @@ export const SUPPORT_PHONE_TEL = "tel:+923274811220" as const;
 export const SUPPORT_PHONE_WHATSAPP = "https://wa.me/923274811220" as const;
 
 /**
+ * ── Merchant identity ────────────────────────────────────────────────
+ * The registered business behind Wedding Wala. These values MUST match the
+ * FBR/IRIS registration and the utility bill on file, because payment
+ * processors (PayFast / APPS) verify the published website against those
+ * documents during merchant review. Do not "tidy" the wording.
+ *
+ * Source: FBR IRIS registration 3520251550331, registered 11-MAY-2024,
+ * RTO-II Lahore. The registered address reads "office no 30-31, memoona
+ * centre, near jain mandir lahore" — the Jain Mandir landmark is kept verbatim
+ * so the site and the certificate reconcile, alongside the Farid Court Road
+ * name the office is signed with.
+ *
+ * Wedding Wala is a sole proprietorship, NOT a private limited company.
+ * Never render it as "(Pvt) Ltd".
+ */
+export const LEGAL_ENTITY_NAME = "Waheed Ul Islam" as const;
+export const LEGAL_ENTITY_FORM = "Sole proprietorship" as const;
+/** How the entity must be named in legal copy and on card statements. */
+export const LEGAL_ENTITY_LINE = `${LEGAL_ENTITY_NAME}, trading as ${SITE_NAME}` as const;
+export const BUSINESS_NTN = "3520251550331" as const;
+
+export const BUSINESS_ADDRESS_LINE1 = "Office 30-31/M, Memoona Centre" as const;
+export const BUSINESS_ADDRESS_LINE2 = "Farid Court Road (near Jain Mandir)" as const;
+export const BUSINESS_CITY = "Lahore" as const;
+export const BUSINESS_REGION = "Punjab" as const;
+export const BUSINESS_COUNTRY = "PK" as const;
+
+/** One-line form for footers, contact cards and JSON-LD fallbacks. */
+export const BUSINESS_ADDRESS_ONELINE =
+  `${BUSINESS_ADDRESS_LINE1}, ${BUSINESS_ADDRESS_LINE2}, ${BUSINESS_CITY}, ${BUSINESS_REGION}, Pakistan` as const;
+
+/** Multi-line form for the contact page and the merchant-information block. */
+export const BUSINESS_ADDRESS_LINES = [
+  BUSINESS_ADDRESS_LINE1,
+  BUSINESS_ADDRESS_LINE2,
+  `${BUSINESS_CITY}, ${BUSINESS_REGION}`,
+  "Pakistan",
+] as const;
+
+export const BUSINESS_HOURS_DISPLAY = "Monday–Saturday, 9:00 AM – 6:00 PM (PKT)" as const;
+/** schema.org openingHours form. */
+export const BUSINESS_HOURS_SCHEMA = "Mo-Sa 09:00-18:00" as const;
+
+/**
+ * Support turnaround. PayFast's chargeback rule keys off "the turnaround time
+ * mentioned on the website", so these must be published, not merely promised
+ * internally. Keep in sync with /refund-policy and /service-delivery-policy.
+ */
+export const TAT_FIRST_RESPONSE = "within 2 working days" as const;
+export const TAT_RESOLUTION = "within 14 working days" as const;
+export const TAT_REFUND_TO_CARD = "10–12 working days" as const;
+
+/**
  * Terms of Service version. Bumped whenever Terms / Privacy / Refund
  * meaningfully change. Stored on the User row when they accept (see
  * backend migration 20260507110000-user-terms-acceptance).

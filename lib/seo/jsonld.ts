@@ -19,6 +19,15 @@ import {
   SUPPORT_EMAIL,
   SUPPORT_PHONE_E164,
   ONBOARDING_EMAIL,
+  LEGAL_ENTITY_NAME,
+  LEGAL_ENTITY_LINE,
+  BUSINESS_NTN,
+  BUSINESS_ADDRESS_LINE1,
+  BUSINESS_ADDRESS_LINE2,
+  BUSINESS_CITY,
+  BUSINESS_REGION,
+  BUSINESS_COUNTRY,
+  BUSINESS_HOURS_SCHEMA,
   getSocialProfiles,
 } from "./constants";
 
@@ -37,10 +46,22 @@ export function organizationLD() {
     email: SUPPORT_EMAIL,
     telephone: SUPPORT_PHONE_E164,
     description: SITE_DESCRIPTION,
+    // A payment processor's merchant review reads this block and reconciles it
+    // against the FBR registration and the utility bill. `addressCountry: "PK"`
+    // alone was not an address — it named a country and nothing else, so the
+    // site published no verifiable place of business at all.
+    legalName: LEGAL_ENTITY_LINE,
+    founder: { "@type": "Person", name: LEGAL_ENTITY_NAME },
+    taxID: BUSINESS_NTN,
+    vatID: BUSINESS_NTN,
     address: {
       "@type": "PostalAddress",
-      addressCountry: "PK",
+      streetAddress: `${BUSINESS_ADDRESS_LINE1}, ${BUSINESS_ADDRESS_LINE2}`,
+      addressLocality: BUSINESS_CITY,
+      addressRegion: BUSINESS_REGION,
+      addressCountry: BUSINESS_COUNTRY,
     },
+    openingHours: BUSINESS_HOURS_SCHEMA,
     contactPoint: [
       {
         "@type": "ContactPoint",

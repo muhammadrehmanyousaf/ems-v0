@@ -213,7 +213,7 @@ export async function VendorDetailPage(input: PageInput) {
     },
     {
       question: `Where is ${vendor.name} based?`,
-      answer: `${vendor.name} is based in ${city.name}, ${city.region}. They list on ${SITE_NAME} as a verified ${vt.singular.toLowerCase()}.`,
+      answer: `${vendor.name} is based in ${city.name}, ${city.region}, and is listed on ${SITE_NAME} as a ${vt.singular.toLowerCase()}.`,
     },
   ]
 

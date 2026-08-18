@@ -59,7 +59,7 @@ const FAQS = [
   },
   {
     question: "What does Wedding Wala charge?",
-    answer: `Customers pay the price the vendor lists, in PKR. ${SITE_NAME}'s platform fee is included in the displayed price — no surprise charges at checkout. Vendors pay a small commission on each booking.`,
+    answer: `Customers pay the price the vendor lists, in PKR — ${SITE_NAME} adds nothing on top of it and takes nothing out of it. We earn from the monthly subscription vendors pay for the vendor portal, not from your booking. Our pricing page sets out exactly what a vendor pays.`,
   },
   {
     question: "How are vendor payouts handled?",

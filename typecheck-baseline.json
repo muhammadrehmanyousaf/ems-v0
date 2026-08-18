@@ -1,9 +1,8 @@
 {
-  "total": 123,
+  "total": 121,
   "counts": {
     "app/(main)/search/page.tsx|TS18046": 2,
     "app/(main)/search/page.tsx|TS2488": 1,
-    "app/(main)/search/page.tsx|TS7006": 1,
     "app/(main)/user/profile/page.tsx|TS2322": 1,
     "app/sitemap.ts|TS2353": 3,
     "components/homepage/featured-vendors.tsx|TS2322": 3,
@@ -41,7 +40,6 @@
     "components/VendorStepForms/newVendorRegisterationForm/BridalWear/bridal-wear-steps.tsx|TS2322": 1,
     "components/VendorStepForms/newVendorRegisterationForm/CarRental/car-rental-steps.tsx|TS2322": 1,
     "components/VendorStepForms/newVendorRegisterationForm/venueSteps/vanueComponents/business-details.tsx|TS2339": 1,
-    "components/VendorStepForms/newVendorRegisterationForm/venueSteps/vanueComponents/business-details.tsx|TS2345": 1,
     "components/VendorStepForms/newVendorRegisterationForm/venueSteps/vanueComponents/vanueValidations.tsx|TS2339": 1,
     "components/VenueDetails/AddReview.tsx|TS2322": 1,
     "components/VenueDetails/VenueDetails.tsx|TS2322": 3,

@@ -48,6 +48,11 @@ import {
   Mic,
   Video,
   ScrollText,
+  Tag,
+  Info,
+  LifeBuoy,
+  Mail,
+  Route,
 } from "lucide-react"
 import { useUser } from "@/context/UserContext"
 import { useChat } from "@/context/ChatContext"
@@ -363,6 +368,45 @@ export function Header() {
                         })}
                       </div>
                     </div>
+
+                    {/* Wedding Wala — the company pages. Footer-only until now,
+                        which meant invisible below 1400px where the desktop nav
+                        does not render. */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-3 px-1">
+                        <span className="block w-6 h-px bg-gradient-to-r from-transparent to-bridal-gold" />
+                        <span className="font-bridal text-[10px] uppercase tracking-[0.22em] font-medium text-bridal-gold">
+                          Wedding Wala
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        {[
+                          { name: "How it works",   href: "/how-it-works", icon: Route },
+                          { name: "Pricing & plans", href: "/pricing",     icon: Tag },
+                          { name: "Our services",   href: "/services",     icon: Sparkles },
+                          { name: "About us",       href: "/about",        icon: Info },
+                          { name: "Help & support", href: "/help",         icon: LifeBuoy },
+                          { name: "Contact",        href: "/contact",      icon: Mail },
+                        ].map((item) => {
+                          const Icon = item.icon
+                          return (
+                            <Link
+                              key={item.name}
+                              href={item.href}
+                              onClick={() => setIsOpen(false)}
+                              className="
+                                group flex items-center gap-3 px-3 py-2.5
+                                rounded-md font-bridal text-[14px] text-bridal-text
+                                hover:bg-bridal-blush/45 hover:text-bridal-charcoal transition-colors
+                              "
+                            >
+                              <Icon className="w-4 h-4 text-bridal-gold/70 group-hover:text-bridal-gold transition-colors" />
+                              {item.name}
+                            </Link>
+                          )
+                        })}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Mobile Auth */}
@@ -619,6 +663,7 @@ export function Header() {
                 { href: "/venues", label: "Venues" },
                 { href: "/vendors", label: "All Vendors" },
                 { href: "/real-weddings", label: "Real Weddings" },
+                { href: "/pricing", label: "Pricing" },
                 { href: "/blog", label: "Blog" },
                 { href: "/help", label: "Help" },
               ].map((link) => (

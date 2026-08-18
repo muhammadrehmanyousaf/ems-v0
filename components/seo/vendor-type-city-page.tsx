@@ -99,7 +99,7 @@ function buildAnswerLead(
 ): string {
   const driver = B2_DRIVERS[slug] ?? "the package, the season, and the vendor's experience"
   const rangePart = range ? `typically range ${range}` : "vary by package and season"
-  return `${plural} in ${cityName} ${rangePart}, depending on ${driver}. Below you'll find verified ${cityName} ${plural.toLowerCase()}, real PKR package tiers, exactly what to check before you book, and how to lock your date.`
+  return `${plural} in ${cityName} ${rangePart}, depending on ${driver}. Below you'll find ${cityName} ${plural.toLowerCase()}, real PKR package tiers, exactly what to check before you book, and how to lock your date.`
 }
 
 /** Centered crown-rule kicker + serif title — reused by every section. */
@@ -152,7 +152,7 @@ export function generateVendorTypeCityMetadata(
 
   return buildPageMetadata({
     title: `${vt.plural} in ${city.name} — Prices, Packages & FAQs`,
-    description: `Compare verified ${vt.plural.toLowerCase()} in ${city.name}. Indicative PKR prices & packages, ratings, what to check before booking & FAQs (2026) — on ${SITE_NAME}.`,
+    description: `Compare ${vt.plural.toLowerCase()} in ${city.name}. Indicative PKR prices & packages, ratings, what to check before booking & FAQs (2026) — on ${SITE_NAME}.`,
     path: `/${vt.slug}/${city.slug}`,
   })
 }
@@ -345,8 +345,8 @@ export async function VendorTypeCityPage({
               </div>
               <ul className="mt-7 flex flex-wrap gap-x-5 gap-y-2">
                 {[
-                  "Verified vendors",
-                  "Transparent PKR pricing",
+                  "Verified badge only when earned",
+                  "Vendor-set PKR pricing",
                   "Refund-protected booking",
                   "Real reviews only",
                 ].map((c) => (
@@ -377,7 +377,7 @@ export async function VendorTypeCityPage({
                     Real {city.name} weddings
                   </p>
                   <p className="font-display text-[17px] italic text-bridal-charcoal">
-                    Verified vendors only
+                    Real {city.name} venues
                   </p>
                 </div>
               </div>
@@ -389,7 +389,7 @@ export async function VendorTypeCityPage({
           <div className="container-responsive grid grid-cols-2 gap-4 py-4 sm:grid-cols-4">
             <StatItem label="Indicative range" value={range ?? "On request"} />
             <StatItem
-              label="Verified vendors"
+              label="Listed vendors"
               value={
                 hasListings
                   ? String(vendors.length)
@@ -408,7 +408,7 @@ export async function VendorTypeCityPage({
         {/* ─────────── B4 VENDOR GRID ─────────── */}
         <section id="vendors" className="mb-16 scroll-mt-24">
           <SectionHeading
-            kicker={hasListings ? `${vendors.length} verified` : genuinelyEmpty ? "Coming soon" : "Get matched"}
+            kicker={hasListings ? `${vendors.length} listed` : genuinelyEmpty ? "Coming soon" : "Get matched"}
             title={`Top ${vt.plural.toLowerCase()} in ${city.name}`}
           />
           {vendors.length === 0 ? (
@@ -424,7 +424,7 @@ export async function VendorTypeCityPage({
               <p className="mx-auto mt-4 max-w-md font-bridal text-[14px] leading-relaxed text-bridal-text-soft">
                 {genuinelyEmpty ? (
                   <>
-                    We&apos;re onboarding verified {vt.plural.toLowerCase()} in {city.name} now.
+                    We&apos;re onboarding {vt.plural.toLowerCase()} in {city.name} now.
                     Tell us what you need and we&apos;ll send you matched quotes — usually within a
                     day.
                   </>
@@ -468,9 +468,11 @@ export async function VendorTypeCityPage({
                 `${city.name} is one of Pakistan's busiest wedding destinations — whether you're planning a baraat at a banquet hall, a mehndi under string lights, or a walima at a marquee, there's a ${vt.singular.toLowerCase()} here for every style and budget.`}
             </p>
             <p>
-              {SITE_NAME} makes the {city.name} {vt.singular.toLowerCase()} search simple: every
-              vendor is identity-verified, every review comes from a real booking, and every quote
-              is transparent before you commit a deposit.
+              {SITE_NAME} makes the {city.name} {vt.singular.toLowerCase()} search simple:
+              every review comes from a real booking, every quote is transparent before you commit
+              a deposit, and a vendor only carries a Verified badge once we have actually checked
+              their identity — the rest are listings compiled from public directories, marked as
+              unclaimed until their owner takes them over.
               {editorial.peakSeason
                 ? ` Peak season here is ${editorial.peakSeason} — book ahead for those dates.`
                 : ""}
@@ -715,7 +717,7 @@ export async function VendorTypeCityPage({
                 imagery.cta ? "text-bridal-ivory/85" : "text-bridal-text-soft"
               }`}
             >
-              Compare verified {vt.plural.toLowerCase()}, see transparent PKR pricing, and get
+              Compare {vt.plural.toLowerCase()}, see transparent PKR pricing, and get
               free quotes — every booking is protected by a refund-backed deposit.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
