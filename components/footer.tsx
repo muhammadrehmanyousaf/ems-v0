@@ -341,8 +341,9 @@ export function Footer() {
               </h4>
               <ul className="space-y-2.5">
                 {[
-                  { href: "/business-registration", name: "List your business" },
+                  { href: "/list-your-business",    name: "List your business" },
                   { href: "/pricing",               name: "Pricing & plans" },
+                  { href: "/business-registration", name: "Register your business" },
                   { href: "/vendor-guide",          name: "Vendor guide" },
                   { href: "/vendor-success",        name: "Success stories" },
                   { href: "/careers",               name: "Join our team" },
@@ -367,11 +368,14 @@ export function Footer() {
             {/* Policies — required for PayFast underwriting + card-network compliance */}
             <StaggerItem className="lg:col-span-2 space-y-4">
               <h4 className="font-bridal text-[10.5px] uppercase tracking-[0.22em] text-bridal-gold font-medium">
-                Policies
+                Company &amp; policies
               </h4>
               <ul className="space-y-2">
                 {[
+                  { href: "/about",                    name: "About us" },
                   { href: "/services",                 name: "Our services" },
+                  { href: "/payments",                 name: "Payments & security" },
+                  { href: "/press",                    name: "Press" },
                   { href: "/terms",                    name: "Terms of service" },
                   { href: "/privacy",                  name: "Privacy policy" },
                   { href: "/refund-policy",            name: "Refund policy" },
