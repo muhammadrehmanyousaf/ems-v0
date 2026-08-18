@@ -273,7 +273,7 @@ export function BillingRedesignedView() {
             const isDowngrade = current ? TIER_RANK[p.tier as SubscriptionTier] < TIER_RANK[current] : false
             const priceSentence =
               p.pricePkrMonthly > 0
-                ? `${formatPkr(p.pricePkrMonthly)} per month, indicative, before tax`
+                ? `${formatPkr(p.pricePkrMonthly)} per month`
                 : "Free"
             /* WWL-440 — only the pending tier's card was disabled, so with a
                Business request outstanding the Growth card stayed live and a
@@ -378,7 +378,7 @@ export function BillingRedesignedView() {
                           )}
                           <p>
                             {p.pricePkrMonthly > 0
-                              ? `This asks us to switch you to ${p.name} at an indicative Rs ${p.pricePkrMonthly.toLocaleString()}/month before tax.`
+                              ? `This asks us to switch you to ${p.name} at Rs ${p.pricePkrMonthly.toLocaleString()}/month. Requesting a plan is not an agreement to pay — we confirm with you before anything is charged.`
                               : `This asks us to switch you to ${p.name}.`}{" "}
                             Nothing is charged now and this is not an agreement to pay — we review it
                             and contact you to confirm before anything starts.

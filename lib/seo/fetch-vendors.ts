@@ -32,6 +32,32 @@ const BACKEND_TO_SEO: Record<string, VendorTypeSlug> = {
   ...BACKEND_TYPE_ALIASES,
 }
 
+/**
+ * Is this image from the seeded stock pool rather than the vendor's own upload?
+ *
+ * Cloudinary keeps the two apart by path, and the split is clean:
+ *   vendor upload → wedding-wala/businesses/<id>/images/...
+ *   seeded stock  → wedding-wala/vendors/<type>/...
+ *
+ * The stock pool is small and heavily reused. Across a 200-listing sample of
+ * live data, 199 listings drew on just 86 distinct photos, 173 of them sharing
+ * a photo with at least one other business, and one file fronting six different
+ * venues. Every duplicate came from the stock pool; not one came from a real
+ * upload. Presenting those as photographs of a named venue is the same
+ * misrepresentation as the unconditional "Verified" badge — a couple sees the
+ * identical hall under six different names, and a payment processor reads it as
+ * fabricated listings.
+ *
+ * So a stock URL is treated as no photo at all. The card falls back to its
+ * branded monogram tile, which alongside the "Unclaimed listing" label says
+ * something true: we do not have a picture of this business yet. Real uploads
+ * are untouched and take over as vendors add them.
+ */
+export function isStockPoolImage(url: string | undefined): boolean {
+  if (!url) return false
+  return /\/wedding-wala\/vendors\//.test(url)
+}
+
 export interface VendorListItem {
   id: number | string
   name: string
@@ -215,6 +241,9 @@ function normalize(raw: any): VendorListItem {
       .filter((p: number) => Number.isFinite(p) && p > 0)
     if (prices.length > 0) priceMin = Math.min(...prices)
   }
+
+  // A stock-pool photo is not a photo of this business — see isStockPoolImage.
+  if (isStockPoolImage(imageUrl)) imageUrl = undefined
 
   const id = raw?.id ?? raw?.businessId ?? 0
   const city = raw?.city ?? raw?.location ?? vendor?.city ?? ""
