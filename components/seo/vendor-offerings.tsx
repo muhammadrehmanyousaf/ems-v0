@@ -12,9 +12,14 @@
  *     couple no dishes at all, so the one thing shaadi guests actually remember
  *     was invisible until deep inside the booking flow.
  *
- * The layout is deliberately pamphlet-shaped — the printed card a marquee hands
- * across the desk — because that is the artefact couples already compare, and
- * every venue owner asked for their packages and menus to "look like the card".
+ * This renders EVERYTHING the row carries — images, guest band, min guarantee,
+ * service style, the bundled menu, add-on extras with their prices, per-look
+ * pricing, live counters, per-head supplements — because a couple comparing
+ * three marquees is doing it on exactly these details, and anything omitted
+ * here is a question the venue has to answer again on WhatsApp.
+ *
+ * The layout is deliberately pamphlet-shaped: the printed card a marquee hands
+ * across the desk is the artefact couples already compare.
  *
  * Server component: pure render off already-fetched data, no hooks, no client JS.
  */
@@ -33,6 +38,10 @@ import {
 } from "@/lib/compliance/one-dish";
 
 const pkr = (n: number) => `Rs ${Math.round(n).toLocaleString("en-PK")}`;
+const num = (v: unknown) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
 
 /** Packages store features as a flat list or as {group: [items]}. Accept both. */
 function featureList(features: unknown): string[] {
@@ -45,13 +54,37 @@ function featureList(features: unknown): string[] {
   return [];
 }
 
-function firstImage(images: unknown): string | null {
-  if (Array.isArray(images) && images.length) {
-    const i = images[0];
-    return typeof i === "string" ? i : (i as any)?.url ?? null;
+function imageList(images: unknown): string[] {
+  const out: string[] = [];
+  if (Array.isArray(images)) {
+    for (const i of images) {
+      if (typeof i === "string" && i.trim()) out.push(i);
+      else if (i && typeof i === "object" && typeof (i as any).url === "string") out.push((i as any).url);
+    }
+  } else if (typeof images === "string" && images.trim()) {
+    out.push(images);
   }
-  if (typeof images === "string" && images.trim()) return images;
-  return null;
+  return out;
+}
+
+/** `Package.extras` — BK-075 add-ons, `{ code, label, price }`. */
+function extraList(extras: unknown): { label: string; price: number }[] {
+  if (!Array.isArray(extras)) return [];
+  return extras
+    .map((e: any) => ({ label: String(e?.label ?? e?.code ?? "").trim(), price: num(e?.price) }))
+    .filter((e) => e.label);
+}
+
+/** `Package.looksJson` — WW-252 per-look pricing, `{ key, label, price, description? }`. */
+function lookList(looks: unknown): { label: string; price: number; description?: string }[] {
+  if (!Array.isArray(looks)) return [];
+  return looks
+    .map((l: any) => ({
+      label: String(l?.label ?? l?.key ?? "").trim(),
+      price: num(l?.price),
+      description: l?.description ? String(l.description) : undefined,
+    }))
+    .filter((l) => l.label);
 }
 
 /** Menu sections in the order a Pakistani menu card is actually printed. */
@@ -69,34 +102,52 @@ function Badge({ children, tone = "plain" }: { children: React.ReactNode; tone?:
   );
 }
 
+function Rule({ label }: { label: string }) {
+  return (
+    <p className="mt-3 font-bridal text-[10.5px] uppercase tracking-[0.18em] text-bridal-gold-dark">
+      {label}
+    </p>
+  );
+}
+
 /* ── Package pamphlet ──────────────────────────────────────────────────── */
 
-function PackageCard({ pkg }: { pkg: any }) {
-  const price = Number(pkg?.price) || 0;
+function PackageCard({ pkg, menusById }: { pkg: any; menusById: Map<number, any> }) {
+  const price = num(pkg?.price);
   const perHead = packageIsPerHead(pkg);
   const basis = packagePriceBasisLabel(pkg);
   const includesFood = packageIncludesFood(pkg);
   const style = serviceStyleLabel(pkg?.serviceStyle);
-  const minGuar = Number(pkg?.minGuaranteeCount) || 0;
-  const cap = Number(pkg?.capacity) || 0;
+  const minGuar = num(pkg?.minGuaranteeCount);
+  const cap = num(pkg?.capacity);
+  const gMin = num(pkg?.guestRangeMin);
+  const gMax = num(pkg?.guestRangeMax);
   const feats = featureList(pkg?.features);
-  const img = firstImage(pkg?.images);
+  const imgs = imageList(pkg?.images);
+  const extras = extraList(pkg?.extras);
+  const looks = lookList(pkg?.looksJson);
+  const bundledMenu = pkg?.menuId != null ? menusById.get(Number(pkg.menuId)) : null;
 
   // A per-head headline means nothing without a worked example — this is the
-  // number the couple is actually trying to compute in their head.
-  const example = perHead && price > 0 ? Math.max(minGuar || 0, 300) : 0;
+  // number the couple is trying to compute in their head anyway.
+  const example = perHead && price > 0 ? Math.max(minGuar || 0, gMin || 0, 300) : 0;
 
   return (
     <li className="flex flex-col overflow-hidden rounded-lg border border-bridal-beige bg-bridal-ivory">
-      {img && (
-        <div className="relative h-40 w-full bg-bridal-cream">
+      {imgs.length > 0 && (
+        <div className="relative h-44 w-full bg-bridal-cream">
           <Image
-            src={img}
+            src={imgs[0]}
             alt={`${pkg?.name ?? "Package"} — ${basis}`}
             fill
             sizes="(max-width: 640px) 100vw, 420px"
             className="object-cover"
           />
+          {imgs.length > 1 && (
+            <span className="absolute bottom-2 right-2 rounded-full bg-bridal-charcoal/75 px-2 py-0.5 font-bridal text-[11px] text-bridal-ivory">
+              +{imgs.length - 1} photo{imgs.length - 1 === 1 ? "" : "s"}
+            </span>
+          )}
         </div>
       )}
 
@@ -133,12 +184,31 @@ function PackageCard({ pkg }: { pkg: any }) {
             ? <Badge tone="gold">Food included</Badge>
             : <Badge>Food charged separately</Badge>}
           {style && <Badge>{style}</Badge>}
+          {/* The guest BAND this package is sold for is not the same as the
+              hall's capacity, and a couple of 200 needs to know a package is
+              written for 400+ before they fall in love with it. */}
+          {(gMin > 0 || gMax > 0) && (
+            <Badge>
+              Best for {gMin > 0 ? gMin.toLocaleString("en-PK") : "any"}
+              {gMax > 0 ? `–${gMax.toLocaleString("en-PK")}` : "+"} guests
+            </Badge>
+          )}
           {minGuar > 0 && <Badge>Billed for at least {minGuar.toLocaleString("en-PK")}</Badge>}
           {cap > 0 && <Badge>Up to {cap.toLocaleString("en-PK")} guests</Badge>}
         </div>
 
+        {bundledMenu && (
+          <p className="font-bridal text-[12.5px] text-bridal-charcoal">
+            Menu included:{" "}
+            <span className="italic">{bundledMenu.title}</span>
+            {num(bundledMenu.price) > 0 && (
+              <span className="text-bridal-text-soft"> ({pkr(num(bundledMenu.price))} per head value)</span>
+            )}
+          </p>
+        )}
+
         {feats.length > 0 && (
-          <ul className="mt-1 space-y-1.5">
+          <ul className="space-y-1.5">
             {feats.map((f, i) => (
               <li key={i} className="flex items-start gap-2 font-bridal text-[13px] leading-snug text-bridal-charcoal">
                 <span aria-hidden className="mt-[6px] h-[5px] w-[5px] shrink-0 rounded-full bg-bridal-gold" />
@@ -146,6 +216,45 @@ function PackageCard({ pkg }: { pkg: any }) {
               </li>
             ))}
           </ul>
+        )}
+
+        {/* Per-look pricing (WW-252) — a salon or photographer prices by look,
+            not by event, and hiding that makes the headline price a lie. */}
+        {looks.length > 0 && (
+          <div>
+            <Rule label="Priced per look" />
+            <ul className="mt-1 space-y-1">
+              {looks.map((l, i) => (
+                <li key={i} className="flex items-baseline justify-between gap-3 font-bridal text-[13px] text-bridal-charcoal">
+                  <span>
+                    {l.label}
+                    {l.description && (
+                      <span className="ml-1 text-[12px] text-bridal-text-soft">{l.description}</span>
+                    )}
+                  </span>
+                  <span className="tabular-nums whitespace-nowrap">{pkr(l.price)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* BK-075 add-ons. Shown with prices because "generator available" and
+            "generator, Rs 45,000" are different answers. */}
+        {extras.length > 0 && (
+          <div>
+            <Rule label="Add-ons, charged separately" />
+            <ul className="mt-1 space-y-1">
+              {extras.map((e, i) => (
+                <li key={i} className="flex items-baseline justify-between gap-3 font-bridal text-[13px] text-bridal-charcoal">
+                  <span>{e.label}</span>
+                  <span className="tabular-nums whitespace-nowrap">
+                    {e.price > 0 ? `+ ${pkr(e.price)}` : "On request"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
     </li>
@@ -155,14 +264,16 @@ function PackageCard({ pkg }: { pkg: any }) {
 /* ── Menu pamphlet ─────────────────────────────────────────────────────── */
 
 function MenuCard({ menu }: { menu: any }) {
-  const price = Number(menu?.price) || 0;
+  const price = num(menu?.price);
   const perHead = String(menu?.pricingUnit || "").toLowerCase() === "per_head";
   const verdict = checkOneDish(menu?.data);
-  const minGuar = Number(menu?.minGuaranteeCount) || 0;
+  const minGuar = num(menu?.minGuaranteeCount);
 
   const grouped = SECTION_ORDER
     .map((k) => ({ key: k, dishes: verdict.items.filter((d: MenuDish) => d.countsAs === k) }))
     .filter((g) => g.dishes.length > 0);
+
+  const dishCount = verdict.items.length;
 
   return (
     <li className="flex flex-col rounded-lg border border-bridal-beige bg-bridal-ivory p-5">
@@ -178,11 +289,21 @@ function MenuCard({ menu }: { menu: any }) {
             </span>
           </p>
         )}
-        {minGuar > 0 && (
-          <p className="mt-1.5 font-bridal text-[11.5px] text-bridal-text-soft">
-            Billed for at least {minGuar.toLocaleString("en-PK")} guests
-          </p>
-        )}
+        <div className="mt-1.5 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-bridal text-[11.5px] text-bridal-text-soft">
+          {dishCount > 0 && <span>{dishCount} dish{dishCount === 1 ? "" : "es"}</span>}
+          {minGuar > 0 && (
+            <>
+              <span aria-hidden>·</span>
+              <span>Billed for at least {minGuar.toLocaleString("en-PK")} guests</span>
+            </>
+          )}
+          {perHead && price > 0 && minGuar > 0 && (
+            <>
+              <span aria-hidden>·</span>
+              <span className="tabular-nums">from {pkr(price * minGuar)}</span>
+            </>
+          )}
+        </div>
       </div>
 
       {grouped.length > 0 ? (
@@ -194,8 +315,25 @@ function MenuCard({ menu }: { menu: any }) {
               </p>
               <ul className="mt-1 space-y-0.5">
                 {g.dishes.map((d, i) => (
-                  <li key={i} className="font-bridal text-[13px] leading-snug text-bridal-charcoal">
-                    {d.name}
+                  <li
+                    key={i}
+                    className="flex items-baseline justify-between gap-2 font-bridal text-[13px] leading-snug text-bridal-charcoal"
+                  >
+                    <span>
+                      {d.name}
+                      {/* A live counter is the thing families ask about by name,
+                          and it does not count toward the one-dish limit. */}
+                      {d.isLive && (
+                        <span className="ml-1.5 rounded-full border border-bridal-gold/45 px-1.5 py-[1px] font-bridal text-[10px] text-bridal-gold-dark">
+                          live counter
+                        </span>
+                      )}
+                    </span>
+                    {num(d.supplementPerHead) > 0 && (
+                      <span className="shrink-0 tabular-nums text-[12px] text-bridal-text-soft">
+                        + {pkr(num(d.supplementPerHead))}/head
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -203,15 +341,13 @@ function MenuCard({ menu }: { menu: any }) {
           ))}
         </div>
       ) : (
-        <p className="mt-3 font-bridal text-[13px] text-bridal-text-soft">
-          Dishes on request.
-        </p>
+        <p className="mt-3 font-bridal text-[13px] text-bridal-text-soft">Dishes on request.</p>
       )}
 
       {/* The one-dish law binds the venue and the caterer, not only the host
           (Punjab Marriage Functions Act 2016 s.5) — so a couple comparing menus
-          deserves to see which ones can be served as printed. `unknown` never
-          renders as reassurance: an unclassified menu says nothing at all. */}
+          deserves to see which can be served as printed. `unknown` never renders
+          as reassurance: an unclassified menu says nothing at all. */}
       {verdict.status === "violation" && (
         <p className="mt-3 rounded border border-amber-300 bg-amber-50/60 px-2.5 py-2 font-bridal text-[11.5px] leading-snug text-amber-900">
           Where the one-dish rule applies, this menu is served in a reduced form —
@@ -229,6 +365,10 @@ export function VendorOfferings({ packages, menus }: { packages: any[]; menus: a
   const mns = Array.isArray(menus) ? menus : [];
   if (pkgs.length === 0 && mns.length === 0) return null;
 
+  const menusById = new Map<number, any>(
+    mns.filter((m) => m?.id != null).map((m) => [Number(m.id), m]),
+  );
+
   // When every package already covers catering, a separate menu section reads
   // as a second bill. Say once, plainly, that it is the same food.
   const allInclusive = pkgs.length > 0 && pkgs.every((p) => packageIncludesFood(p));
@@ -240,7 +380,7 @@ export function VendorOfferings({ packages, menus }: { packages: any[]; menus: a
           <h2 className="font-display italic text-[24px] text-bridal-charcoal mb-5">Packages</h2>
           <ul className="grid max-w-4xl grid-cols-1 gap-4 sm:grid-cols-2">
             {pkgs.map((p: any) => (
-              <PackageCard key={p?.id ?? p?.name} pkg={p} />
+              <PackageCard key={p?.id ?? p?.name} pkg={p} menusById={menusById} />
             ))}
           </ul>
         </section>
