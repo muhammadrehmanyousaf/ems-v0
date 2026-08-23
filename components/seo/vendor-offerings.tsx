@@ -269,11 +269,40 @@ function MenuCard({ menu }: { menu: any }) {
   const verdict = checkOneDish(menu?.data);
   const minGuar = num(menu?.minGuaranteeCount);
 
-  const grouped = SECTION_ORDER
-    .map((k) => ({ key: k, dishes: verdict.items.filter((d: MenuDish) => d.countsAs === k) }))
-    .filter((g) => g.dishes.length > 0);
-
   const dishCount = verdict.items.length;
+
+  /**
+   * A legacy flat menu — `{ items: ["Chicken Karahi", …] }`, which is what every
+   * menu on production still is — carries no classification, so every dish
+   * falls to `other`. `other`'s label is "Snack / live counter (not counted)",
+   * which meant a venue's Platinum menu (Mutton Raan, Fish Fry, Beef Nihari)
+   * rendered to couples under a heading calling it snacks.
+   *
+   * `checkOneDish` is deliberately honest that it does not know; the display has
+   * to be equally honest, and "we can't tell what course this is" is not the
+   * same statement as "this is a snack". So an entirely-unclassified menu is
+   * listed plainly, with no course headings at all — which is exactly how the
+   * venue printed it.
+   */
+  const allUnclassified =
+    dishCount > 0 && verdict.items.every((d: MenuDish) => d.inferred && d.countsAs === "other");
+
+  const grouped = allUnclassified
+    ? []
+    : SECTION_ORDER
+        .map((k) => ({
+          key: k,
+          // Only call something a snack / live counter when the vendor SAID so.
+          dishes: verdict.items.filter(
+            (d: MenuDish) => d.countsAs === k && !(k === "other" && d.inferred),
+          ),
+        }))
+        .filter((g) => g.dishes.length > 0);
+
+  // Dishes we could not place, on a menu where some others were classified.
+  const unplaced = allUnclassified
+    ? verdict.items
+    : verdict.items.filter((d: MenuDish) => d.countsAs === "other" && d.inferred);
 
   return (
     <li className="flex flex-col rounded-lg border border-bridal-beige bg-bridal-ivory p-5">
@@ -306,7 +335,7 @@ function MenuCard({ menu }: { menu: any }) {
         </div>
       </div>
 
-      {grouped.length > 0 ? (
+      {grouped.length > 0 || unplaced.length > 0 ? (
         <div className="mt-3 space-y-3">
           {grouped.map((g) => (
             <div key={g.key}>
@@ -339,6 +368,33 @@ function MenuCard({ menu }: { menu: any }) {
               </ul>
             </div>
           ))}
+
+          {/* Dishes with no course we can vouch for — listed as printed, under
+              no heading, rather than under a label that would misdescribe them. */}
+          {unplaced.length > 0 && (
+            <ul className="space-y-0.5">
+              {unplaced.map((d, i) => (
+                <li
+                  key={i}
+                  className="flex items-baseline justify-between gap-2 font-bridal text-[13px] leading-snug text-bridal-charcoal"
+                >
+                  <span>
+                    {d.name}
+                    {d.isLive && (
+                      <span className="ml-1.5 rounded-full border border-bridal-gold/45 px-1.5 py-[1px] font-bridal text-[10px] text-bridal-gold-dark">
+                        live counter
+                      </span>
+                    )}
+                  </span>
+                  {num(d.supplementPerHead) > 0 && (
+                    <span className="shrink-0 tabular-nums text-[12px] text-bridal-text-soft">
+                      + {pkr(num(d.supplementPerHead))}/head
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       ) : (
         <p className="mt-3 font-bridal text-[13px] text-bridal-text-soft">Dishes on request.</p>
