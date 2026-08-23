@@ -65,6 +65,7 @@ import {
 } from '@/lib/api/leads';
 import { InstallmentsCard } from '@/components/bookings/installments-card';
 import { VendorApprovalCard } from '@/components/bookings/vendor-approval-card';
+import { SettlementCard } from '@/components/bookings/settlement-card';
 import { BookingReceiptsCard, BookingDisputesCard } from '@/components/bookings/booking-related-lists';
 import { OrderBuilderCard } from '@/components/bookings/order-builder-card';
 import { BeoSheetCard } from '@/components/bookings/beo-sheet-card';
@@ -358,6 +359,12 @@ export default function BookingDetailView({
             eventDate={booking.bookingDate}
             vendorApprovedAt={(booking as any).vendorApprovedAt ?? null}
           />
+
+          {/* WW-SETTLEMENT — the final bill. settlementPolicy.js could always
+              compute it and was called from nowhere, so the night of the event
+              was settled on WhatsApp at the gate. Sits above Customer because
+              on the day of an event it is the only thing the vendor wants. */}
+          <SettlementCard bookingId={booking.id} role="vendor" />
 
           {/* Customer */}
           <Card>
