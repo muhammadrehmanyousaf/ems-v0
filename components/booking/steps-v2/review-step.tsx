@@ -33,6 +33,17 @@ import {
   menuBillableHeads,
   menuIsAtMinGuarantee,
 } from "@/lib/pricing/menu"
+// WW-PKG-UNIT — per-head packages + the includesFood rule. `composeLineTotal`
+// is the ONE place package and menu are added together, so this surface cannot
+// reintroduce the double-charge by adding them itself.
+import {
+  composeLineTotal,
+  packageIsPerHead,
+  packageBillableHeads,
+  packageIsAtMinGuarantee,
+  packagePriceBasisLabel,
+  serviceStyleLabel,
+} from "@/lib/pricing/package"
 
 interface Props {
   formData: BookingFormData
@@ -98,13 +109,42 @@ export default function ReviewStep({
   ])
   const showGuests = GUEST_COUNT_VENDOR_TYPES.has(venue?.vendor?.vendorType || "") && (venue?.maxCapacity || venue?.minCapacity)
 
+  // WW-PKG-UNIT — kept for the "Rs X per head/event" caption below; the money
+  // itself now comes from `composeLineTotal`, never from this raw figure.
   const pkgPrice = Number(selectedPackageObj?.price) || 0
   const qty = isCarRental || isBridalWear || isWeddingStationery ? formData.vehicleQuantity || 1 : 1
   // WW-PRICING-OVERHAUL — a per-head menu bills price × max(guests, min-pax);
   // a flat/per_event menu is its price, unchanged. menuChargeFor is the shared
   // helper the server mirrors, so this preview always equals the charge.
-  const menuPrice = menuChargeFor(selectedMenuObj, formData.guestCount)
-  const baseTotal = pkgPrice * qty + menuPrice
+  // WW-PKG-UNIT — the line total, composed by the shared rule.
+  //
+  // Was: `pkgPrice * qty + menuPrice`. Two defects lived in that one expression.
+  //
+  //   1. `qty` is 1 for every venue, so a package was ALWAYS a flat per-event
+  //      amount. A venue selling "Gold Rs 2,500 per head" had no way to say so:
+  //      typing 2500 billed a 500-guest wedding Rs 2,500, and pre-multiplying to
+  //      12,50,000 froze the figure when the guest count changed.
+  //
+  //   2. The package and the menu were unconditionally ADDED. A venue whose
+  //      package price already covers catering — which is most Pakistani
+  //      marquees — had no way to say so either, so a customer picking "Gold
+  //      Rs 2,500/head (food included)" and then the "Gold Menu Rs 2,500/head"
+  //      was billed Rs 5,000/head with nothing warning either party.
+  //
+  // `composeLineTotal` applies both rules once, in the same order the server's
+  // `computeVendorPrice` does, so this preview always equals the charge.
+  const menuPriceRaw = menuChargeFor(selectedMenuObj, formData.guestCount)
+  const {
+    packageCharge,
+    menuCharge: menuPrice,
+    menuIncluded,
+    baseTotal,
+  } = composeLineTotal({
+    pkg: selectedPackageObj,
+    guestCount: formData.guestCount,
+    qty,
+    menuCharge: menuPriceRaw,
+  })
 
   // BK-100.52 Layer 2c — fetch the venue's optional bundled add-ons.
   // Filter to active + non-mandatory + non-included rows (those baked
@@ -296,8 +336,35 @@ export default function ReviewStep({
     { icon: Clock,    label: "Time of day", value: timeLabel },
   ]
   if (showGuests) bookingRows.push({ icon: Users, label: "Guests", value: formData.guestCount ? `${formData.guestCount} ${formData.guestCount === 1 ? "guest" : "guests"}` : "—" })
-  if (selectedPackageObj) bookingRows.push({ icon: PackageIcon, label: isCarRental ? "Vehicle" : isBridalWear ? "Outfit" : "Package", value: qty > 1 ? `${selectedPackageObj.name} × ${qty}` : selectedPackageObj.name })
-  if (selectedMenuObj) {
+  if (selectedPackageObj) {
+    // WW-PKG-UNIT — a per-head package must show its basis, exactly as a
+    // per-head menu already does. "Gold" alone next to Rs 12,50,000 gives the
+    // customer nothing to check; "Rs 2,500/head × 500 guests" is arithmetic they
+    // can verify, and it is the same arithmetic the server ran.
+    const pkgLabel = isCarRental ? "Vehicle" : isBridalWear ? "Outfit" : "Package"
+    let pkgValue = qty > 1 ? `${selectedPackageObj.name} × ${qty}` : selectedPackageObj.name
+    if (packageIsPerHead(selectedPackageObj)) {
+      const heads = packageBillableHeads(selectedPackageObj, formData.guestCount)
+      pkgValue = `${selectedPackageObj.name} — Rs ${pkgPrice.toLocaleString()}/head × ${heads} ${heads === 1 ? "guest" : "guests"}`
+      if (packageIsAtMinGuarantee(selectedPackageObj, formData.guestCount)) {
+        pkgValue += ` (min ${selectedPackageObj.minGuaranteeCount})`
+      }
+    }
+    const style = serviceStyleLabel(selectedPackageObj.serviceStyle)
+    if (style) pkgValue += ` · ${style}`
+    bookingRows.push({ icon: PackageIcon, label: pkgLabel, value: pkgValue })
+  }
+  if (selectedMenuObj && menuIncluded) {
+    // WW-PKG-UNIT — the menu was chosen and costs nothing, because the package
+    // covers catering. Saying so beats omitting the row: the customer needs to
+    // see that their dish choice registered, and the kitchen needs it on the
+    // booking either way.
+    bookingRows.push({
+      icon: PackageIcon,
+      label: "Menu",
+      value: `${selectedMenuObj.title || selectedMenuObj.name} — included in ${selectedPackageObj?.name || "your package"}`,
+    })
+  } else if (selectedMenuObj) {
     // WW-PRICING-OVERHAUL — show the per-head breakdown so the customer sees why
     // the menu costs what it does (price × N guests), and a min-guarantee note
     // when their guest count is lifted to the vendor's minimum.

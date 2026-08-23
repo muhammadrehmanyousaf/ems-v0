@@ -11,6 +11,16 @@ interface MenuSelectionStepProps {
   formData: BookingFormData
   updateFormData: React.Dispatch<React.SetStateAction<BookingFormData>>
   venue: EventVenue | null
+  /**
+   * WW-PKG-UNIT — TRUE when the chosen package already covers catering, so this
+   * step is a CHOICE rather than a CHARGE. Prices are hidden and the running
+   * total does not move; the customer still picks their dishes, because the
+   * kitchen needs the selection either way and a package that hides its menu is
+   * worse than one that shows it. Defaults false = the legacy priced step.
+   */
+  includedInPackage?: boolean
+  /** Name of the package covering the food, for the explanatory copy. */
+  packageName?: string
 }
 
 const container = {
@@ -23,16 +33,25 @@ const item = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
 }
 
-export default function MenuSelectionStep({ formData, updateFormData, venue }: MenuSelectionStepProps) {
+export default function MenuSelectionStep({
+  formData,
+  updateFormData,
+  venue,
+  includedInPackage = false,
+  packageName,
+}: MenuSelectionStepProps) {
   const handleMenuSelect = (menuId: string) => {
     const selectedMenu = venue?.menus.find((m) => m.id === menuId)
     // WW-PRICING-OVERHAUL — per-head menus bill price × max(guests, min-pax);
     // flat menus are their price. menuChargeFor is the shared server-mirrored helper.
-    const menuPrice = menuChargeFor(selectedMenu, formData.guestCount)
+    // WW-PKG-UNIT — but when the package covers food, BOTH the old and the new
+    // menu contribute 0, so the running total must not move by a single rupee
+    // as the customer flicks between dish options.
+    const menuPrice = includedInPackage ? 0 : menuChargeFor(selectedMenu, formData.guestCount)
 
     // Recalculate: remove old menu price, add new
     const oldMenu = venue?.menus.find((m) => m.id === formData.selectedMenu)
-    const oldMenuPrice = menuChargeFor(oldMenu, formData.guestCount)
+    const oldMenuPrice = includedInPackage ? 0 : menuChargeFor(oldMenu, formData.guestCount)
     const currentTotal = Number(formData.totalPrice) || 0
 
     updateFormData({
@@ -55,11 +74,32 @@ export default function MenuSelectionStep({ formData, updateFormData, venue }: M
     <motion.div className="space-y-7" variants={container} initial="hidden" animate="visible">
       <motion.div variants={item}>
         <p className="font-bridal text-[10.5px] uppercase tracking-[0.32em] font-medium text-bridal-gold-dark mb-2">
-          Step · Menu
+          {includedInPackage ? "Step · Customise your menu" : "Step · Menu"}
         </p>
         <h2 className="font-display italic text-[28px] sm:text-[32px] text-bridal-charcoal leading-tight">Choose your menu</h2>
-        <p className="mt-2 font-bridal text-[14px] text-bridal-text-soft">Select a menu package for your event</p>
+        <p className="mt-2 font-bridal text-[14px] text-bridal-text-soft">
+          {includedInPackage
+            ? "Pick the dishes you'd like. Your food is already covered — this won't change your price."
+            : "Select a menu package for your event"}
+        </p>
       </motion.div>
+
+      {/* WW-PKG-UNIT — say it plainly, once, at the top. A customer who has just
+          agreed to a per-head package and then meets a screen full of per-head
+          menu prices reasonably assumes they are being charged again. */}
+      {includedInPackage && (
+        <motion.div
+          variants={item}
+          className="rounded-sm border border-bridal-beige bg-bridal-sand/50 px-4 py-3"
+        >
+          <p className="font-bridal text-[13px] text-bridal-text">
+            <Check className="inline-block w-3.5 h-3.5 mr-1.5 -mt-0.5 text-bridal-sage" aria-hidden="true" />
+            Food is included in
+            <strong className="not-italic text-bridal-charcoal"> {packageName || "your package"}</strong>.
+            Choosing a menu here tells the kitchen what to cook — it does not add to your total.
+          </p>
+        </motion.div>
+      )}
 
       <div className="space-y-3">
         <RadioGroup value={formData.selectedMenu} onValueChange={handleMenuSelect}>
@@ -97,12 +137,22 @@ export default function MenuSelectionStep({ formData, updateFormData, venue }: M
                       <Label htmlFor={menu.id} className="font-display italic text-[22px] cursor-pointer text-bridal-charcoal leading-tight">
                         {menu.title}
                       </Label>
-                      <span className="font-display italic text-[22px] text-bridal-gold-dark leading-none shrink-0">
-                        Rs. {Number(menu.price)?.toLocaleString()}
-                        {menuIsPerHead(menu) && (
-                          <span className="font-bridal not-italic text-[12px] text-bridal-text-soft"> /plate</span>
-                        )}
-                      </span>
+                      {/* WW-PKG-UNIT — when the package covers food, the menu's
+                          own rate is not what the customer pays, so showing it
+                          here would be quoting a number that never appears on
+                          their bill. "Included" is both true and reassuring. */}
+                      {includedInPackage ? (
+                        <span className="font-bridal text-[12px] uppercase tracking-[0.18em] font-medium text-bridal-sage leading-none shrink-0">
+                          Included
+                        </span>
+                      ) : (
+                        <span className="font-display italic text-[22px] text-bridal-gold-dark leading-none shrink-0">
+                          Rs. {Number(menu.price)?.toLocaleString()}
+                          {menuIsPerHead(menu) && (
+                            <span className="font-bridal not-italic text-[12px] text-bridal-text-soft"> /plate</span>
+                          )}
+                        </span>
+                      )}
                     </div>
 
                     <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">

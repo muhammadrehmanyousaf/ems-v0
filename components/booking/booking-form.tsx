@@ -25,12 +25,22 @@ import { VendorAPI } from "@/lib/api/vendors"
 // inquiry instead of dead-ending the customer. This page is the choke point.
 import { isUnpricedVendor } from "@/lib/pricing/unpriced"
 import { menuChargeFor } from "@/lib/pricing/menu"
+// WW-PKG-UNIT — per-head packages + the includesFood rule. The step order below
+// and the submitted payload both derive from this, so a venue whose package
+// covers food never renders a priced Menu step.
+import { composeLineTotal, packageIncludesFood } from "@/lib/pricing/package"
 import VendorInquiryDialog from "@/components/VendorInquiryDialog"
 import { useDateHold } from "@/hooks/use-date-hold"
 import { useBookingDraft } from "@/hooks/use-booking-draft"
 import PaymentSuccessScreen from "./steps/payment-success-screen"
 import BankTransferScreen from "./steps/bank-transfer-screen"
-import BookingPaymentScreen from "./steps-v2/booking-payment-screen"
+// WW-BOOKING-MODE — venues that accept a booking before asking for payment.
+import RequestSentScreen from "./steps/request-sent-screen"
+import { requiresVendorApproval } from "@/lib/booking/booking-mode"
+// WW-REQUIREMENTS — the free-text field the flow never had. Everything a family
+// actually needs to say went to WhatsApp instead.
+import RequirementsStep, { type RequirementsDraft } from "./steps/requirements-step"
+import { RequirementsAPI } from "@/lib/api/requirements"
 // 03-DRAFT-RESILIENCE — couples lose laborious vendor/package/menu
 // choices on refresh because useBookingDraft's load was never wired.
 import { DraftResumeBanner, relativeTimeAgo } from "@/components/shared/DraftResumeBanner"
@@ -95,9 +105,25 @@ export default function BookingForm() {
   const [paymentReturnBookingId, setPaymentReturnBookingId] = useState<number | null>(null)
   const [paymentReturnType, setPaymentReturnType] = useState<string>("down_payment")
   const [bankTransferData, setBankTransferData] = useState<{ bookingId: number; amount: number; paymentType: string; customerEmail?: string; bookingDate?: string } | null>(null)
+  // WW-BOOKING-MODE — set instead of bankTransferData when the venue accepts
+  // bookings before payment. Nothing is charged until they do.
+  const [requestSentData, setRequestSentData] = useState<{ bookingId: number; amount: number; bookingDate?: string; guestCount?: number } | null>(null)
   // WW-PRICE0 — drives the price-on-request inquiry dialog on this page.
   const [inquiryOpen, setInquiryOpen] = useState(false)
-  const [paymentScreenData, setPaymentScreenData] = useState<{ bookingId: number; amount: number; customerEmail: string; customerName: string; vendorName: string; bookingDate?: string } | null>(null)
+  /**
+   * WW-REQUIREMENTS — what the customer needs the venue to know.
+   *
+   * Held at the FORM level rather than per-event: a family's parda requirement,
+   * their diabetic mother-in-law and their under-fives are true of the wedding,
+   * not of the Barat specifically, and asking them three times across a
+   * multi-event booking is how a good field gets abandoned.
+   *
+   * Posted AFTER the booking is created — it needs a bookingId, and a failure
+   * here must never lose the booking.
+   */
+  const [requirements, setRequirements] = useState<RequirementsDraft>({
+    tags: [], dietary: {}, freeText: "",
+  })
   const { timeRemaining, isHolding, holdFailed, holdFailedUntil, createHold, releaseHold } = useDateHold()
   const { user, loading: userLoading } = getUser();
   const { save: saveDraft, load: loadDraft, clear: clearDraft } = useBookingDraft(venueId, user?.id ? String(user.id) : null)
@@ -351,11 +377,23 @@ export default function BookingForm() {
     const vendorsPayload: any[] = []
 
     const vehicleQty = isCarRental ? (currentForm.vehicleQuantity || 1) : 1
-    const packagePrice = (Number(venuePackage?.price) || 0) * vehicleQty
     // WW-PRICING-OVERHAUL — a per-head menu bills price × max(guests, min-pax);
     // a flat menu is its price (unchanged). Same helper the server mirrors, so the
     // submitted totalAmount matches the Review the customer agreed to.
-    const menuPrice = menuChargeFor(venueMenu, currentForm.guestCount)
+    const menuPriceRaw = menuChargeFor(venueMenu, currentForm.guestCount)
+    // WW-PKG-UNIT — and the package now honours its own pricing basis, with the
+    // menu zeroed when the package already covers catering. Composed by the same
+    // shared helper the Review step uses, so the number the customer approved is
+    // the number submitted — and the number the server independently recomputes.
+    const {
+      packageCharge: packagePrice,
+      menuCharge: menuPrice,
+    } = composeLineTotal({
+      pkg: venuePackage,
+      guestCount: currentForm.guestCount,
+      qty: vehicleQty,
+      menuCharge: menuPriceRaw,
+    })
 
     // For car rental: service packages belong to the same business — pass as additionalPackageIds
     // so the backend can look them up from DB (avoids duplicate businessId entries)
@@ -550,42 +588,87 @@ export default function BookingForm() {
           return
         }
 
-        // Bank-transfer threshold check — Stripe caps Pakistan card payments
-        // around Rs 999,999, so very large bookings get bank-transfer
-        // instructions instead of an inline payment screen.
+        // WW-RECORD-MODE — bank transfer is the DEFAULT rail, not an overflow.
+        //
+        // This branch used to fire only above Rs 999,999 ("Stripe caps Pakistan
+        // card payments"), which framed the country's most-used payment method
+        // as a fallback for bookings too large to process. The real constraint
+        // is the other way round: Stripe does not onboard Pakistani businesses
+        // at all, so a Lahore marquee cannot receive card money from this flow —
+        // while every one of them can receive a bank transfer.
+        //
+        // The threshold is gone. Every booking now goes to the transfer screen,
+        // which fetches the VENUE's own published account, shows a reference
+        // they can match against their statement, and lets the customer report
+        // the transfer in-product instead of messaging a hardcoded number.
+        // WW-REQUIREMENTS — filed against the booking that now exists.
+        //
+        // Deliberately AFTER the create and deliberately best-effort. It needs a
+        // bookingId, and a network blip filing a note must never cost the
+        // customer the booking they just made — six steps of work, a held date
+        // and a payment screen, thrown away because a textarea didn't post.
+        //
+        // If it fails they can add it from the booking page, and the venue can
+        // still be told the ordinary way. Losing the booking has no such repair.
+        const hasRequirements =
+          requirements.tags.length > 0 ||
+          requirements.freeText.trim().length > 0 ||
+          Object.keys(requirements.dietary).length > 0
+        if (hasRequirements) {
+          try {
+            await RequirementsAPI.create(realBookingId, {
+              tags: requirements.tags,
+              dietary: requirements.dietary,
+              freeText: requirements.freeText.trim() || undefined,
+              source: "booking_flow",
+            })
+          } catch (reqErr) {
+            console.error("[Requirements] post-booking save failed:", reqErr)
+            toast({
+              title: "Booking made — but your note didn't send",
+              description: "Add it again from your booking page so the venue sees it.",
+            })
+          }
+        }
+
         const summedDownPayment = vendorsPayload.reduce((s, v) => s + (v.downPayment || 0), 0)
-        if (summedDownPayment > 999999) {
-          setBankTransferData({
+
+        // WW-BOOKING-MODE — a venue that reviews first is not asking for money
+        // yet. Sending this customer to a transfer screen would have them pay
+        // for a date the venue may still decline, which then has to be refunded
+        // by hand. The server refuses a payment claim in this state too, so a
+        // customer who reaches the payment screen by URL is also stopped.
+        if (requiresVendorApproval(venue)) {
+          setRequestSentData({
             bookingId: realBookingId,
             amount: summedDownPayment,
-            paymentType: "down_payment",
-            customerEmail: currentForm.email,
             bookingDate: typeof currentForm.bookingDate === "string"
               ? currentForm.bookingDate
               : currentForm.bookingDate instanceof Date
                 ? currentForm.bookingDate.toISOString()
                 : undefined,
+            guestCount: currentForm.guestCount,
           })
           return
         }
 
-        // Render the inline bridal-themed BookingPaymentScreen instead of
-        // redirecting to Stripe-hosted Checkout. The screen creates a
-        // PaymentIntent itself, mounts <PaymentElement>, and confirms the
-        // payment client-side. Stripe webhook (PA-001 signed) marks the
-        // booking paid server-side.
-        setPaymentScreenData({
+        setBankTransferData({
           bookingId: realBookingId,
           amount: summedDownPayment,
+          paymentType: "down_payment",
           customerEmail: currentForm.email,
-          customerName: currentForm.username,
-          vendorName: venue?.name || "",
           bookingDate: typeof currentForm.bookingDate === "string"
             ? currentForm.bookingDate
             : currentForm.bookingDate instanceof Date
               ? currentForm.bookingDate.toISOString()
               : undefined,
         })
+        // The inline Stripe screen that used to run here is gone from THIS
+        // flow. It could never complete for a Pakistani venue — Stripe does not
+        // onboard Pakistani businesses, so there is no account for the money to
+        // land in. `BookingPaymentScreen` itself is untouched and still serves
+        // /user/bookings/[id]/pay and /user/plan/[id]/pay, which is where a card
+        // rail belongs if one is ever provisioned.
       } else {
         throw new Error("Unexpected response")
       }
@@ -632,6 +715,14 @@ export default function BookingForm() {
   // Vendor = everything else (photographers, decorators, caterers, etc.)
   const isVenueBooking = !!venue && Array.isArray((venue as any)?.menus) && ((venue as any)?.menus?.length ?? 0) > 0
   const hasPackages = !!venue?.packages && Array.isArray(venue.packages) && venue.packages.length > 0
+  // WW-PKG-UNIT — the Menu step's existence and its title are derived from
+  // configuration rather than hardcoded into the venue flow.
+  const hasMenus = Array.isArray((venue as any)?.menus) && ((venue as any)?.menus?.length ?? 0) > 0
+  // Reuses `selectedPackageObj` (line ~284), which already resolves against the
+  // ACTIVE event's form — the right scope, because a multi-event booking can
+  // take a food-inclusive package for the Barat and a hall-only one for the
+  // Mehndi, and the Menu step must follow whichever event is on screen.
+  const selectedPackageIncludesFood = packageIncludesFood(selectedPackageObj as any)
   const isCarRental = venue?.vendor?.vendorType === "Car rental"
   const isBridalWear = venue?.vendor?.vendorType === "Bridal wearing"
   const isWeddingStationery = venue?.vendor?.vendorType === "Wedding Invitations and Stationery"
@@ -676,18 +767,48 @@ export default function BookingForm() {
       // VENUE flow: Date → Add Vendors → Packages → Menu → Review → Success
       steps.push({ key: "vendors", title: "Additional Vendors" })
       if (hasPackages) steps.push({ key: "packages", title: "Packages" })
-      steps.push({ key: "menu", title: "Menu" })
+      // WW-PKG-UNIT — the Menu step is now derived, not hardcoded.
+      //
+      //   · venue has no menus at all      -> step does not render
+      //     (a hall-only venue whose customers bring their own caterer had a
+      //      Menu step forced on it with nothing to show)
+      //   · chosen package includes food   -> step renders as "Customise menu",
+      //     a free CHOICE. The customer still picks their dishes — the kitchen
+      //     needs to know, and a package that hides its menu is worse than one
+      //     that shows it — but the price does not move.
+      //   · otherwise                      -> priced Menu step, unchanged.
+      if (hasMenus) {
+        steps.push({
+          key: "menu",
+          title: selectedPackageIncludesFood ? "Customise menu" : "Menu",
+        })
+      }
+      // WW-REQUIREMENTS — always, and always immediately before Review, so the
+      // customer states what they need while the booking is still theirs to
+      // change. Nothing on it is required; a step that blocked on being filled
+      // in would only be filled in with a full stop.
+      steps.push({ key: "requirements", title: "Your requirements" })
       steps.push({ key: "review", title: "Review" })
       steps.push({ key: "success", title: "Success" })
     } else {
       // VENDOR flow: Date → Packages → Review → Success (NO vendor selection)
       if (hasPackages) steps.push({ key: "packages", title: "Package Selection" })
+      // WW-REQUIREMENTS — always, and always immediately before Review, so the
+      // customer states what they need while the booking is still theirs to
+      // change. Nothing on it is required; a step that blocked on being filled
+      // in would only be filled in with a full stop.
+      steps.push({ key: "requirements", title: "Your requirements" })
       steps.push({ key: "review", title: "Review" })
       steps.push({ key: "success", title: "Success" })
     }
 
     return steps
-  }, [isVenueBooking, hasPackages])
+    // WW-PKG-UNIT — `hasMenus` and `selectedPackageIncludesFood` are read inside,
+    // so they must be dependencies. Omitting the latter would freeze the step
+    // list at whatever the FIRST package selection implied, and a customer
+    // switching from a hall-only package to a food-inclusive one would keep
+    // being charged for a menu the package already covers.
+  }, [isVenueBooking, hasPackages, hasMenus, selectedPackageIncludesFood])
 
   // ── Step validation (key-based) ──
   const getIsStepValid = (): boolean => {
@@ -722,6 +843,10 @@ export default function BookingForm() {
         return true // optional step
       case 'menu':
         return true // optional step
+      case 'requirements':
+        // WW-REQUIREMENTS — never blocks. A step that demanded input would be
+        // satisfied with a full stop and teach people the field is a toll gate.
+        return true
       case 'review':
         return true
       default:
@@ -807,6 +932,24 @@ export default function BookingForm() {
             formData={activeFormData}
             updateFormData={updateCurrentForm}
             venue={venue}
+            // WW-PKG-UNIT — when the chosen package already covers catering the
+            // menu is a CHOICE, not a CHARGE. The step must say so plainly:
+            // showing per-head prices the customer will not be billed is how
+            // "you charged me twice" starts, even when the total is right.
+            includedInPackage={selectedPackageIncludesFood}
+            packageName={selectedPackageObj?.name}
+          />
+        )
+        break
+      case 'requirements':
+        stepContent = (
+          <RequirementsStep
+            value={requirements}
+            onChange={setRequirements}
+            venueName={venue?.name}
+            // The dietary counts only make sense where food is served. A
+            // photographer has no use for "how many children under 5".
+            showDietary={isVenueBooking || hasMenus}
           />
         )
         break
@@ -942,6 +1085,25 @@ export default function BookingForm() {
   }
 
   // Show bank transfer instructions for large amounts (> Rs 999,999)
+  // WW-BOOKING-MODE — the venue reviews before payment, so this replaces the
+  // transfer screen entirely. Placed FIRST so it wins if both are somehow set.
+  if (requestSentData) {
+    return (
+      <div className="w-full">
+        <div className="rounded-xl bg-white border border-zinc-200 overflow-hidden p-6 sm:p-8 lg:p-10 shadow-sm">
+          <RequestSentScreen
+            bookingId={requestSentData.bookingId}
+            venueName={venue?.name}
+            bookingDate={requestSentData.bookingDate}
+            guestCount={requestSentData.guestCount}
+            amountDue={requestSentData.amount}
+            whatsappNumber={(venue as any)?.whatsappNumber ?? null}
+          />
+        </div>
+      </div>
+    )
+  }
+
   if (bankTransferData) {
     return (
       <div className="w-full">
@@ -973,35 +1135,16 @@ export default function BookingForm() {
     )
   }
 
-  // Inline bridal-themed payment screen (replaces redirect to Stripe Checkout).
-  if (paymentScreenData) {
-    return (
-      <div className="w-full">
-        <div className="rounded-md bg-bridal-cream border border-bridal-beige overflow-hidden p-5 sm:p-6 lg:p-8 shadow-[0_18px_44px_-32px_rgba(176,125,84,0.4)]">
-          <BookingPaymentScreen
-            bookingId={paymentScreenData.bookingId}
-            amount={paymentScreenData.amount}
-            customerEmail={paymentScreenData.customerEmail}
-            customerName={paymentScreenData.customerName}
-            vendorName={paymentScreenData.vendorName}
-            bookingDate={paymentScreenData.bookingDate}
-            paymentType="down_payment"
-            onSuccess={() => {
-              setPaymentReturnBookingId(paymentScreenData.bookingId)
-              setPaymentReturnType("down_payment")
-              setPaymentScreenData(null)
-            }}
-            onCancel={() => {
-              axiosInstance
-                .delete(`${BACKEND_URL}api/v1/bookings/${paymentScreenData.bookingId}/cancel-pending`)
-                .catch(() => {})
-              setPaymentScreenData(null)
-            }}
-          />
-        </div>
-      </div>
-    )
-  }
+  // WW-RECORD-MODE — the inline Stripe payment screen that used to render here
+  // is gone. Nothing could set its state once the new-booking flow stopped
+  // routing to Stripe, and Stripe cannot onboard Pakistani businesses, so the
+  // path could never have completed for a venue on this platform.
+  //
+  // The `paymentReturnBookingId` block ABOVE deliberately stays: it is reached
+  // from the URL (`?ps=1&bid=…&redirect_status=…`, line ~222), not from here,
+  // so it still serves anyone returning from a card payment made on
+  // /user/bookings/[id]/pay. `BookingPaymentScreen` itself is untouched and
+  // still serves that page and /user/plan/[id]/pay.
 
   // WW-PRICE0 — the booking funnel's choke point.
   //

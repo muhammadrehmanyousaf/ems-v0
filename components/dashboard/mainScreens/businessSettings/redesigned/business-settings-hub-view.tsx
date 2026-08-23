@@ -57,6 +57,40 @@ const PRICING_MODE_HINT: Record<string, string> = {
   per_unit: "Price is multiplied by quantity (and days) — e.g. cars, cakes by the pound, cards. Set the unit under packages.",
   quote: "No self-serve price — customers send an enquiry and you reply with a quote. Best for bespoke or luxury work.",
 }
+/**
+ * WW-SETTLEMENT — the terms that decide the FINAL bill.
+ *
+ * A Pakistani venue booking is not settled when the advance is paid: the bill is
+ * max(guaranteed, actual) counted on the night, around a tolerance band, a
+ * walk-in rate and child/staff rates. None of it could be expressed, so every
+ * venue reconciled the real number on paper.
+ *
+ * Every field is optional and blank means "not configured", which the server
+ * resolves to the conservative reading — no band, children as adults, no
+ * deposit. That is exactly today's behaviour, so leaving them all empty changes
+ * nothing. Bounds mirror the server's, so the two can't disagree.
+ */
+const SETTLEMENT_FIELDS: {
+  key: keyof ApiBusiness
+  label: string
+  hint: string
+  suffix?: string
+  min: number
+  max: number
+}[] = [
+  { key: "securityDepositPkr", label: "Security deposit", hint: "Refundable, held separately from the advance. Never part of the quoted total.", suffix: "Rs", min: 0, max: 10000000 },
+  { key: "depositReturnDays", label: "Deposit returned within", hint: "After the post-event inspection.", suffix: "days", min: 0, max: 365 },
+  { key: "balanceDueDays", label: "Balance due before event", hint: "", suffix: "days", min: 0, max: 365 },
+  { key: "headcountLockDays", label: "Final guest count locks", hint: "After this, changes to the count or menu may cost extra.", suffix: "days before", min: 0, max: 365 },
+  { key: "toleranceBandPct", label: "Extra guests at the same rate", hint: "Over the guaranteed number. Most venues allow 10–15%.", suffix: "%", min: 0, max: 100 },
+  { key: "walkInRatePerHead", label: "Rate beyond that allowance", hint: "Per head, for guests the kitchen didn't plan for. Blank = charge your normal rate.", suffix: "Rs", min: 0, max: 1000000 },
+  { key: "serviceChargePct", label: "Service charge", hint: "Applied before tax.", suffix: "%", min: 0, max: 100 },
+  { key: "childUnder5Pct", label: "Children under 5 pay", hint: "0 = free. Blank = full adult rate.", suffix: "%", min: 0, max: 100 },
+  { key: "child5to12Pct", label: "Children 5–12 pay", hint: "50 = half rate. Blank = full adult rate.", suffix: "%", min: 0, max: 100 },
+  { key: "staffMealRatePkr", label: "Drivers & staff meals", hint: "Per head. Blank = they're billed as ordinary guests.", suffix: "Rs", min: 0, max: 1000000 },
+  { key: "advanceTransferMonths", label: "Advance transferable for", hint: "Move a cancelled booking's advance to a new date instead of forfeiting it. Blank = not transferable.", suffix: "months", min: 0, max: 60 },
+]
+
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 
 type TabKey = "profile" | "pricing" | "amenities" | "listing" | "type-specific" | "images" | "packages" | "menus" | "bank" | "team" | "availability"
@@ -266,6 +300,11 @@ export function BusinessSettingsHubView() {
         cancelationPolicy: biz.cancelationPolicy ?? "",
         // WW-PRICING-OVERHAUL — vendor-declared pricing mode ("" = not set = legacy).
         pricingMode: biz.pricingMode ?? "",
+        // WW-BOOKING-MODE — do you accept a booking before payment? "" = legacy instant.
+        bookingMode: biz.bookingMode ?? "",
+        // WW-SETTLEMENT — terms that decide the FINAL bill. "" = not
+        // configured, which every reader resolves to the conservative default.
+        ...Object.fromEntries(SETTLEMENT_FIELDS.map((f) => [f.key, biz[f.key] ?? ""])),
         /**
          * `Boolean(null)` is `false`, so an amenity nobody has answered loaded
          * as an explicit "we do not provide this". Kept as null here, and the
@@ -288,6 +327,10 @@ export function BusinessSettingsHubView() {
         downPayment: biz.downPayment ?? "",
         cancelationPolicy: biz.cancelationPolicy ?? "",
         pricingMode: biz.pricingMode ?? "",
+        bookingMode: biz.bookingMode ?? "",
+        // WW-SETTLEMENT — terms that decide the FINAL bill. "" = not
+        // configured, which every reader resolves to the conservative default.
+        ...Object.fromEntries(SETTLEMENT_FIELDS.map((f) => [f.key, biz[f.key] ?? ""])),
         ...Object.fromEntries(BOOLS.map((b) => [b.key, biz[b.key] ?? null])),
       })
       setDirty(false)
@@ -448,6 +491,13 @@ export function BusinessSettingsHubView() {
       cancelationPolicy: form.cancelationPolicy || null,
       // WW-PRICING-OVERHAUL — "" (Auto) sends null, restoring legacy inferred pricing.
       pricingMode: form.pricingMode || null,
+      // WW-BOOKING-MODE — "" sends null, which reads as the legacy `instant`.
+      bookingMode: form.bookingMode || null,
+      // WW-SETTLEMENT — "" sends null, which clears a term back to "not
+      // configured" rather than sticking at a value the vendor never meant.
+      ...Object.fromEntries(
+        SETTLEMENT_FIELDS.map((f) => [f.key, numOrNull(String(form[f.key] ?? ""))]),
+      ),
       // A boolean the vendor has not touched stays null — unanswered — rather
       // than becoming an explicit "we don't provide this".
       ...Object.fromEntries(
@@ -467,6 +517,10 @@ export function BusinessSettingsHubView() {
       downPaymentType: baseline.downPaymentType || null,
       cancelationPolicy: baseline.cancelationPolicy || null,
       pricingMode: baseline.pricingMode || null,
+      bookingMode: baseline.bookingMode || null,
+      ...Object.fromEntries(
+        SETTLEMENT_FIELDS.map((f) => [f.key, numOrNull(String(baseline[f.key] ?? ""))]),
+      ),
     }
     const patch: Record<string, any> = {}
     for (const [k, v] of Object.entries(next)) {
@@ -484,7 +538,7 @@ export function BusinessSettingsHubView() {
     const changed = Object.keys(patch).filter((k) => k !== "name" || patch.name !== baseline.name)
     const inTab: Record<string, string[]> = {
       Profile: ["name", "description", "city", "subArea", "brandLogo"],
-      "Capacity & pricing": ["minimumPrice", "minCapacity", "maxCapacity", "downPaymentType", "downPayment", "cancelationPolicy"],
+      "Capacity & pricing": ["minimumPrice", "minCapacity", "maxCapacity", "downPaymentType", "downPayment", "cancelationPolicy", "bookingMode", ...SETTLEMENT_FIELDS.map((f) => String(f.key))],
       "Amenities & services": BOOLS.map((b) => String(b.key)),
     }
     const hit = Object.entries(inTab).filter(([, keys]) => changed.some((c) => keys.includes(c)))
@@ -806,6 +860,71 @@ export function BusinessSettingsHubView() {
                 </Row>
               </div>
               <Row id="biz-cancellation" label="Cancellation policy"><textarea id="biz-cancellation" className={cn(inputCls, "h-24 resize-y py-2")} value={form.cancelationPolicy ?? ""} onChange={(e) => set("cancelationPolicy", e.target.value)} placeholder="e.g. Advance non-refundable within 30 days of event." /></Row>
+
+              {/* WW-BOOKING-MODE — the flow has been instant-book: a customer
+                  picks a date, pays, and the vendor finds out afterwards. No
+                  Pakistani marquee sells a peak Saturday that way. This lets a
+                  venue say it wants to see the request first.
+
+                  "" = the legacy instant behaviour, so nobody's venue changes
+                  on deploy — it is an opt-in, not a migration. Lives here
+                  beside the advance and cancellation terms because these are
+                  all "how you sell"; a dedicated Booking rules tab is the
+                  eventual home once the other rules land. */}
+              <Row id="biz-booking-mode" label="When a customer books">
+                <select
+                  id="biz-booking-mode"
+                  className={inputCls}
+                  value={form.bookingMode ?? ""}
+                  onChange={(e) => set("bookingMode", e.target.value)}
+                >
+                  <option value="">Confirm as soon as they pay (default)</option>
+                  <option value="request">I accept the request first, then they pay</option>
+                  <option value="inquiry_only">Enquiries only — I&apos;ll contact them</option>
+                </select>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  {form.bookingMode === "request"
+                    ? "Requests appear on the booking, with Accept and Decline. We only ask for the advance once you've accepted — good for peak dates you want to control."
+                    : form.bookingMode === "inquiry_only"
+                      ? "Your listing takes enquiries instead of bookings. Nothing is held and nothing is charged."
+                      : "Fastest for the customer, but a booking can be made without you seeing it first."}
+                </p>
+              </Row>
+
+              {/* ── WW-SETTLEMENT — what the customer is finally billed ──────
+                  Leave any of these blank and nothing changes: the booking
+                  settles the way it does today. Filled in, they are quoted to
+                  the customer BEFORE they pay and applied on the night, which
+                  is the difference between an agreed number and an argument. */}
+              <div className="pt-2">
+                <p className="text-xs font-medium text-muted-foreground">Final bill &amp; settlement</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  All optional. Customers are billed for the greater of their guaranteed
+                  count and who actually attends — these terms say what happens around that.
+                </p>
+              </div>
+              {SETTLEMENT_FIELDS.map((f) => (
+                <Row key={String(f.key)} id={`biz-${String(f.key)}`} label={f.label}>
+                  <div className="flex items-center gap-2">
+                    <input
+                      id={`biz-${String(f.key)}`}
+                      type="number"
+                      min={f.min}
+                      max={f.max}
+                      step={1}
+                      inputMode="numeric"
+                      className={inputCls}
+                      value={String(form[f.key] ?? "")}
+                      onChange={(e) => set(f.key, e.target.value)}
+                      placeholder="—"
+                    />
+                    {f.suffix && (
+                      <span className="shrink-0 text-xs text-muted-foreground">{f.suffix}</span>
+                    )}
+                  </div>
+                  {f.hint && <p className="mt-1 text-xs text-muted-foreground">{f.hint}</p>}
+                </Row>
+              ))}
             </Section>
           )}
 

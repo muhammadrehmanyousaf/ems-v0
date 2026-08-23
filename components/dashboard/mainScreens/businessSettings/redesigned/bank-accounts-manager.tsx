@@ -32,7 +32,7 @@ import {
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
-const EMPTY: UpsertBankDetailInput = { bankName: "", accountHolderName: "", accountNumber: "", iban: "", branchCode: "", isActive: false }
+const EMPTY: UpsertBankDetailInput = { bankName: "", accountHolderName: "", accountNumber: "", iban: "", branchCode: "", isActive: false, showToCustomers: false }
 
 export function BankAccountsManager() {
   const qc = useQueryClient()
@@ -66,7 +66,7 @@ export function BankAccountsManager() {
   const invalidate = () => qc.invalidateQueries({ queryKey: ["bank-accounts"] })
   // Account number is masked on read — start it blank so a blank save keeps the existing one.
   const startEdit = (a: BankDetail) => {
-    setForm({ bankName: a.bankName ?? "", accountHolderName: a.accountHolderName ?? "", accountNumber: "", iban: a.iban ?? "", branchCode: a.branchCode ?? "", isActive: a.isActive })
+    setForm({ bankName: a.bankName ?? "", accountHolderName: a.accountHolderName ?? "", accountNumber: "", iban: a.iban ?? "", branchCode: a.branchCode ?? "", isActive: a.isActive, showToCustomers: a.showToCustomers === true })
     setEditingId(a.id); setAdding(true)
   }
 
@@ -166,6 +166,29 @@ export function BankAccountsManager() {
               <div className="space-y-1.5"><label className={labelCls}>Branch code</label><input className={inputCls} value={form.branchCode ?? ""} onChange={(e) => set("branchCode", e.target.value)} placeholder="Optional" /></div>
               <label className="flex items-center gap-2 self-end pb-1.5 text-sm"><input type="checkbox" className="h-4 w-4" checked={Boolean(form.isActive)} onChange={(e) => set("isActive", e.target.checked)} /> Make this the default payout account</label>
             </div>
+
+            {/* WW-RECORD-MODE — publishing this account to customers.
+                Until now these rows existed only for payouts and no customer
+                ever saw them; the booking screen showed a hardcoded placeholder
+                IBAN instead. Customers now pay the venue directly, so a real
+                account is needed — but which one, and whether to publish it at
+                all, is the vendor's call, not an inference from a payout row. */}
+            <label className="flex items-start gap-2.5 rounded-lg border border-border p-3 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4"
+                checked={Boolean(form.showToCustomers)}
+                onChange={(e) => set("showToCustomers", e.target.checked)}
+              />
+              <span>
+                <span className="font-medium">Show this account to customers paying me</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  {form.showToCustomers
+                    ? "Customers booking you will see these details on their payment screen, with a reference to quote. Shown only once we've verified the account."
+                    : "Off — customers won't see this account. They'll be asked to contact you to arrange payment instead."}
+                </span>
+              </span>
+            </label>
             <div className="flex gap-2">
               <FormBlockedHint message={blockedReason} />
               <Button size="sm" disabled={!canSave || saveMut.isPending} onClick={() => saveMut.mutate()}>{saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={14} className="mr-1.5" /> {editingId ? "Update account" : "Save account"}</>}</Button>

@@ -17,6 +17,17 @@ import { Button } from "@/components/ui/button"
 import { showSuccessToast } from "@/lib/toast/undo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+// WW-ONE-DISH — Punjab / ICT allow one main dish and one sweet dish at a
+// marriage function, and the duty falls on the VENUE and the CATERER as much as
+// the host. Checked here, while the vendor builds, when fixing it is free.
+import {
+  checkOneDish,
+  flattenMenuItems,
+  COUNTS_AS,
+  COUNTS_AS_LABELS,
+  describeViolation,
+  type CountsAs,
+} from "@/lib/compliance/one-dish"
 import {
   FormBlockedHint,
   FieldError,
@@ -25,6 +36,15 @@ import {
   validateName,
   validatePkr,
 } from "@/components/dashboard/primitives/field-error"
+
+/**
+ * A dish row in the form. `inferred` is UI-only and never persisted: it marks a
+ * classification WE placed (from the section a legacy menu filed it under, or
+ * the "other" fallback on a bulk paste) rather than one the vendor declared, so
+ * the row can flag itself for confirmation instead of the guess being saved
+ * back as though they had chosen it.
+ */
+interface FormDish { name: string; countsAs: CountsAs; inferred: boolean }
 
 const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-ring focus-visible:ring-2"
 const labelCls = "text-xs font-medium text-muted-foreground"
@@ -51,27 +71,74 @@ export function MenusManager({
   // catering norm and how this whole editor is framed); existing menus reflect
   // their saved value (a NULL saved unit is legacy flat = per_event).
   const [form, setForm] = React.useState<{
-    title: string; price: string; items: string; minGuarantee: string;
+    title: string; price: string; dishes: FormDish[]; minGuarantee: string;
     pricingUnit: "per_head" | "per_event";
-  }>({ title: "", price: "", items: "", minGuarantee: "", pricingUnit: "per_head" })
+  }>({ title: "", price: "", dishes: [], minGuarantee: "", pricingUnit: "per_head" })
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
   const isPerHead = form.pricingUnit === "per_head"
   // Errors show only after a field is touched, so a blank new form doesn't open
   // covered in red.
   const [touched, setTouched] = React.useState<Record<string, boolean>>({})
   const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }))
-  const reset = () => { setForm({ title: "", price: "", items: "", minGuarantee: "", pricingUnit: "per_head" }); setTouched({}); setAdding(false); setEditingId(null) }
+  const reset = () => { setForm({ title: "", price: "", dishes: [], minGuarantee: "", pricingUnit: "per_head" }); setTouched({}); setAdding(false); setEditingId(null) }
+
+  // ── WW-ONE-DISH — dish rows ────────────────────────────────────────────
+  const setDish = (i: number, patch: Partial<FormDish>) =>
+    setForm((f) => ({
+      ...f,
+      // Touching a row means the vendor has looked at it, so it is no longer
+      // our inference — it is their declaration, and the badge says so.
+      dishes: f.dishes.map((d, j) => (j === i ? { ...d, ...patch, inferred: false } : d)),
+    }))
+  const addDish = () =>
+    setForm((f) => ({ ...f, dishes: [...f.dishes, { name: "", countsAs: "salan", inferred: false }] }))
+  const removeDish = (i: number) =>
+    setForm((f) => ({ ...f, dishes: f.dishes.filter((_, j) => j !== i) }))
+
+  /**
+   * Bulk paste — vendors have their menu written down and type it in one go.
+   * Each new line becomes a row defaulted to "other", which is what leaves the
+   * verdict `unknown` until they classify: an unread menu must never show green.
+   */
+  const addDishesFromText = (text: string) => {
+    const names = text.split("\n").map((s) => s.trim()).filter(Boolean)
+    if (names.length === 0) return
+    setForm((f) => ({
+      ...f,
+      dishes: [...f.dishes, ...names.map((name) => ({ name, countsAs: "other" as CountsAs, inferred: true }))],
+    }))
+  }
+
+  // Live verdict, recomputed as they type — the whole point of checking here
+  // rather than after a save round-trip.
+  const oneDish = React.useMemo(
+    () => checkOneDish({ items: form.dishes.filter((d) => d.name.trim()) }),
+    [form.dishes],
+  )
   const invalidate = () => qc.invalidateQueries({ queryKey: ["menus", businessId] })
 
-  const itemsOf = (m: ApiMenu): string[] => {
-    const it = (m.data as any)?.items
-    return Array.isArray(it) ? it.map(String) : []
-  }
+  /**
+   * WW-ONE-DISH — dishes are read through the shared flattener, so a menu saved
+   * in ANY of this column's historic shapes opens correctly: a flat string list
+   * from this form, a classified object list, or the sectioned
+   * `{ mainCourse: { items } }` shape the booking flow reads.
+   *
+   * A dish the vendor never classified comes back `inferred`, and the row's
+   * select shows what we guessed so they can correct it — rather than the
+   * guess being silently saved back as though they had declared it.
+   */
+  const dishesOf = (m: ApiMenu): FormDish[] =>
+    flattenMenuItems(m.data).map((d) => ({
+      name: d.name,
+      countsAs: d.countsAs,
+      inferred: d.inferred,
+    }))
+
   const startEdit = (m: ApiMenu) => {
     setForm({
       title: m.title ?? "",
       price: String(m.price ?? ""),
-      items: itemsOf(m).join("\n"),
+      dishes: dishesOf(m),
       minGuarantee: m.minGuaranteeCount != null ? String(m.minGuaranteeCount) : "",
       // A NULL saved pricingUnit is a legacy flat menu (per_event).
       pricingUnit: String(m.pricingUnit || "").toLowerCase() === "per_head" ? "per_head" : "per_event",
@@ -81,7 +148,12 @@ export function MenusManager({
 
   const saveMut = useMutation({
     mutationFn: () => {
-      const items = form.items.split("\n").map((s) => s.trim()).filter(Boolean)
+      // WW-ONE-DISH — dishes save as objects carrying their classification, so
+      // the rule reads a declaration rather than guessing from the name. Blank
+      // rows are dropped; `inferred` is a UI concern and is not persisted.
+      const items = form.dishes
+        .map((d) => ({ name: d.name.trim(), countsAs: d.countsAs }))
+        .filter((d) => d.name)
       const guarantee = form.minGuarantee.trim()
       const perHead = form.pricingUnit === "per_head"
       const body = {
@@ -228,7 +300,101 @@ export function MenusManager({
                 )}
               </div>
             )}
-            <div className="space-y-1.5"><label className={labelCls} htmlFor="menu-items">Dishes (one per line)</label><textarea id="menu-items" className={inputCls + " h-24 resize-y py-2"} value={form.items} onChange={(e) => set("items", e.target.value)} placeholder={"Chicken Biryani\nMutton Karahi\nSeekh Kebab\nZarda"} /></div>
+            {/* ── WW-ONE-DISH — dishes, each with what it counts as ────────
+                This was a plain textarea, which is fine for typing and useless
+                for the law: Punjab allows ONE main dish and ONE sweet dish at a
+                marriage function (Marriage Functions Act 2016 s.4), and s.5
+                puts the same duty on the VENUE and the CATERER, with s.8
+                penalties up to a month's imprisonment and Rs 20 lakh.
+
+                It cannot be inferred from the dish name — the documented
+                workaround is listing a second salan as a "special salad" — so
+                the vendor declares it and the declaration is what we count. */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className={labelCls}>Dishes</label>
+                <Button size="sm" variant="ghost" onClick={addDish}>
+                  <Icon name="Plus" size={14} className="mr-1" /> Add dish
+                </Button>
+              </div>
+
+              {form.dishes.length === 0 && (
+                <textarea
+                  className={inputCls + " h-24 resize-y py-2"}
+                  placeholder={"Paste your menu here, one dish per line —\nChicken Biryani\nMutton Karahi\nSeekh Kebab\nZarda"}
+                  onBlur={(e) => { addDishesFromText(e.target.value); e.target.value = "" }}
+                />
+              )}
+
+              {form.dishes.map((d, i) => (
+                <div key={i} className="flex flex-wrap items-center gap-2">
+                  <input
+                    className={cn(inputCls, "flex-1 min-w-[10rem]")}
+                    value={d.name}
+                    onChange={(e) => setDish(i, { name: e.target.value })}
+                    placeholder="Dish name"
+                    maxLength={120}
+                  />
+                  <select
+                    className={cn(inputCls, "w-[15rem]", d.inferred && "border-amber-400")}
+                    value={d.countsAs}
+                    onChange={(e) => setDish(i, { countsAs: e.target.value as CountsAs })}
+                    title={d.inferred ? "We guessed this — please confirm" : undefined}
+                  >
+                    {COUNTS_AS.map((c) => (
+                      <option key={c} value={c}>{COUNTS_AS_LABELS[c]}</option>
+                    ))}
+                  </select>
+                  <Button size="sm" variant="ghost" onClick={() => removeDish(i)} aria-label={`Remove ${d.name || "dish"}`}>
+                    <Icon name="Trash2" size={14} />
+                  </Button>
+                </div>
+              ))}
+
+              {/* The verdict. Three states, deliberately — a menu we cannot
+                  read is `unknown`, never green. Telling a vendor their menu is
+                  legal on the strength of a guess is how they end up relying on
+                  it in front of an inspector. */}
+              {form.dishes.some((d) => d.name.trim()) && (
+                <div
+                  className={cn(
+                    "rounded-lg border p-3 text-sm",
+                    oneDish.status === "violation"
+                      ? "border-destructive/40 bg-destructive/5"
+                      : oneDish.status === "unknown"
+                        ? "border-amber-300 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/20"
+                        : "border-emerald-300 bg-emerald-50/40 dark:border-emerald-900/50 dark:bg-emerald-950/20",
+                  )}
+                >
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums text-muted-foreground">
+                    <span>Main dishes <b className="text-foreground">{oneDish.counts.salan}</b> / 1</span>
+                    <span>Sweet dishes <b className="text-foreground">{oneDish.counts.sweet}</b> / 1</span>
+                    <span>Rice {oneDish.counts.rice}</span>
+                    <span>Salad {oneDish.counts.salad}</span>
+                  </div>
+
+                  {oneDish.status === "violation" && (
+                    <p className="mt-2 text-destructive">
+                      {oneDish.violations.map((v) => describeViolation(v)).join(" ")}{" "}
+                      Serving this at a wedding in Punjab or Islamabad puts the venue and the
+                      caterer at risk, not just the customer.
+                    </p>
+                  )}
+                  {oneDish.status === "unknown" && (
+                    <p className="mt-2 text-amber-800 dark:text-amber-300">
+                      Set what each dish counts as — {oneDish.unclassified.length} still to
+                      go. We can&apos;t tell you whether this menu is within the one-dish rule
+                      until you do.
+                    </p>
+                  )}
+                  {oneDish.status === "compliant" && (
+                    <p className="mt-2 text-emerald-800 dark:text-emerald-300">
+                      Within the one-dish rule.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
             <div className="flex gap-2">
               <FormBlockedHint message={blockedReason} />
               <Button size="sm" disabled={!canSave || saveMut.isPending} onClick={() => saveMut.mutate()}>{saveMut.isPending ? <><Spinner size={14} className="mr-1.5" /> Saving…</> : <><Icon name="CheckCircle2" size={14} className="mr-1.5" /> {editingId ? "Update menu" : "Save menu"}</>}</Button>
@@ -259,11 +425,27 @@ export function MenusManager({
                     )}
                   </div>
                 )}
-                {itemsOf(m).length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {itemsOf(m).slice(0, 8).map((d, i) => <span key={`${m.id}-${i}-${d}`} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{d}</span>)}
-                  </div>
-                )}
+                {/* WW-ONE-DISH — the saved-menu chips now read through the same
+                    flattener as the editor, so a menu in ANY of this column's
+                    historic shapes lists its dishes here. The old `itemsOf`
+                    only understood the flat string list, so a sectioned menu
+                    showed nothing at all. */}
+                {(() => {
+                  const dishes = flattenMenuItems(m.data)
+                  if (dishes.length === 0) return null
+                  return (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {dishes.slice(0, 8).map((d, i) => (
+                        <span
+                          key={`${m.id}-${i}-${d.name}`}
+                          className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                        >
+                          {d.name}
+                        </span>
+                      ))}
+                    </div>
+                  )
+                })()}
                 <div className="mt-3 flex justify-end gap-1 border-t border-border/60 pt-2">
                   <Button size="sm" variant="ghost" onClick={() => startEdit(m)}><Icon name="Pencil" size={14} className="mr-1" /> Edit</Button>
                   <Button size="sm" variant="ghost" disabled={removeMut.isPending} onClick={() => removeMut.mutate(m.id)}><Icon name="Trash2" size={14} className="mr-1 text-muted-foreground hover:text-destructive" /> Remove</Button>

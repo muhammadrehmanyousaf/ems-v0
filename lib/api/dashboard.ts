@@ -267,6 +267,32 @@ export interface ApiBusiness {
   // WW-PRICING-OVERHAUL — vendor-declared pricing mode (NULL = legacy inferred).
   pricingMode?: string | null;
   pricingConfigJson?: Record<string, any> | null;
+  /**
+   * WW-BOOKING-MODE — does this venue accept a booking before the customer is
+   * asked to pay? NULL reads as `instant`, which is what every existing venue
+   * does. One of: instant | request | inquiry_only.
+   */
+  bookingMode?: string | null;
+  /**
+   * WW-SETTLEMENT — the terms that decide the FINAL bill.
+   *
+   * A Pakistani venue bills max(guaranteed, actual), counted on the night.
+   * Every one of these is NULL on production and every reader must fall back to
+   * the conservative reading — no band, children as adults, no deposit — which
+   * is exactly today's behaviour. Resolve them through the server's
+   * `resolveSettlementPolicy` rather than reading the columns directly.
+   */
+  securityDepositPkr?: number | string | null;
+  depositReturnDays?: number | null;
+  balanceDueDays?: number | null;
+  headcountLockDays?: number | null;
+  toleranceBandPct?: number | string | null;
+  walkInRatePerHead?: number | string | null;
+  serviceChargePct?: number | string | null;
+  childUnder5Pct?: number | null;
+  child5to12Pct?: number | null;
+  staffMealRatePkr?: number | string | null;
+  advanceTransferMonths?: number | null;
   amenitiesJson?: string[] | null;
   comfortCapacity?: number | null;
   seatedCapacity?: number | null;
@@ -1296,16 +1322,61 @@ export class BookingsAPI {
     return res.data?.data;
   }
 
+  /**
+   * WW-BOOKING-MODE — the vendor accepts a booking request.
+   *
+   * `PATCH /bookings/:id/approve` has existed on the server since BK-081, with
+   * vendor-ownership checks and the state-machine transition, and has never
+   * been reachable from any interface — so a venue that wanted to review before
+   * confirming had no way to say yes. This wires it.
+   */
+  static async approveBooking(id: number) {
+    const res = await axiosInstance.patch(`/api/v1/bookings/${id}/approve`);
+    return res.data;
+  }
+
+  /**
+   * Decline one vendor's line on a booking.
+   *
+   * BK-030 is surgical by design: only this line's share is refunded and only
+   * this vendor's payouts are cancelled, and it auto-escalates to a
+   * whole-booking cancel when no active lines remain. That is the right shape
+   * for a decline — a photographer turning down a multi-vendor cart should not
+   * cancel the venue too.
+   */
+  static async declineBookingLine(
+    id: number,
+    bookingDetailsId: number,
+    reason: string,
+  ) {
+    const res = await axiosInstance.patch(
+      `/api/v1/bookings/${id}/lines/${bookingDetailsId}/decline`,
+      { reason },
+    );
+    return res.data;
+  }
+
   static async recordPayment(
     id: number,
     paymentType: PaymentType,
     paymentMethod: string,
+    /**
+     * WW-RECORD-MODE — the customer's payment claim this recording confirms.
+     *
+     * Confirming a claim IS recording a payment, so it reuses this endpoint
+     * rather than a parallel money route that would have to duplicate the
+     * status transitions, the PaymentTransaction, the receipt and the
+     * installment apply-loop — and would drift from them. The server closes
+     * the claim after the money commits.
+     */
+    claimId?: number,
   ) {
     const res = await axiosInstance.patch(
       `/api/v1/bookings/${id}/record-payment`,
       {
         paymentType,
         paymentMethod,
+        ...(claimId ? { claimId } : {}),
       },
     );
     return res.data;
@@ -1334,10 +1405,54 @@ export interface ApiPackage {
    * the 120-seat Terrace Lawn.
    */
   subVenueId?: number | null;
+  /**
+   * WW-PKG-UNIT — how this package's price is CHARGED.
+   *
+   * Menus have carried `pricingUnit` since WW-PRICING-OVERHAUL; packages did
+   * not, so the engine read every package as a flat per-event amount and
+   * "Rs 2,500 per head" — how most Pakistani venues actually sell — could not
+   * be entered. NULL / "per_event" is the legacy flat price and is unchanged.
+   * Rule: `lib/pricing/package.ts`, mirroring `src/utils/packagePricing.js`.
+   */
+  pricingUnit?: "per_head" | "per_event" | string | null;
+  /** Minimum billable heads — the Pakistani min-pax guarantee. Per-head only. */
+  minGuaranteeCount?: number | null;
+  /**
+   * TRUE = this price already covers catering, so a selected menu contributes
+   * ZERO. Without it, a venue offering "Gold Rs 2,500/head (food included)"
+   * alongside its "Gold Menu Rs 2,500/head" billed the customer Rs 5,000/head.
+   */
+  includesFood?: boolean | null;
+  /** Advisory band shown on the package card ("200–800 guests"). */
+  guestRangeMin?: number | null;
+  guestRangeMax?: number | null;
+  /** buffet | sit_down | family | hi_tea | stations. NULL = unspecified. */
+  serviceStyle?: string | null;
+  /** The menu this package bundles, when the vendor declared one. */
+  menuId?: number | null;
   createdAt: string;
   updatedAt: string;
   business?: { id: number; name: string };
   subVenue?: { id: number; name: string } | null;
+  bundledMenu?: { id: number; title: string } | null;
+}
+
+/**
+ * WW-PKG-UNIT — the pricing fields accepted by create and update.
+ *
+ * Every key is optional: an older client that sends none of them writes NULL /
+ * default and prices exactly as it does today. On the PATCH path a key that is
+ * absent leaves the stored value alone, so `null` is how a field is CLEARED —
+ * which is why the manager sends them all explicitly.
+ */
+export interface PackagePricingInput {
+  pricingUnit?: "per_head" | "per_event" | null;
+  minGuaranteeCount?: number | null;
+  includesFood?: boolean | null;
+  guestRangeMin?: number | null;
+  guestRangeMax?: number | null;
+  serviceStyle?: string | null;
+  menuId?: number | null;
 }
 
 export class PackagesAPI {
@@ -1354,7 +1469,8 @@ export class PackagesAPI {
     features?: PackageFeatures;
     images?: string[];
     businessId: number;
-  }): Promise<ApiPackage> {
+    subVenueId?: number | null;
+  } & PackagePricingInput): Promise<ApiPackage> {
     const res = await axiosInstance.post(
       "/api/v1/packages/single-package",
       data,
@@ -1371,7 +1487,8 @@ export class PackagesAPI {
       features?: PackageFeatures;
       images?: string[];
       businessId: number;
-    },
+      subVenueId?: number | null;
+    } & PackagePricingInput,
   ): Promise<ApiPackage> {
     const res = await axiosInstance.patch(`/api/v1/packages/${id}`, data);
     return res.data?.data;

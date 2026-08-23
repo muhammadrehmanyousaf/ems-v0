@@ -51,6 +51,11 @@ import {
   EmptyState,
 } from "@/components/user-dashboard";
 import { InstallmentsCard } from "@/components/bookings/installments-card";
+// WW-RECORD-MODE — status of payments the customer reported, between their
+// transfer and the venue confirming it.
+import { PaymentClaimStatusCard } from "@/components/bookings/payment-claim-status-card";
+// WW-REQUIREMENTS — what the customer asked for, and what the venue said back.
+import { RequirementsCard } from "@/components/bookings/requirements-card";
 import { ChangeRequestsCard } from "@/components/bookings/change-requests-card";
 import { DisputeCard } from "@/components/bookings/dispute-card";
 // BK-100.7 — inline review prompt. Renders only on Completed bookings;
@@ -854,6 +859,13 @@ export default function BookingDetailPage() {
               </Button>
             ) : null}
           </SectionCard>
+
+          {/* WW-RECORD-MODE — what happened to a payment the customer reported. */}
+          {/* WW-REQUIREMENTS — the customer sees the same rows the vendor does,
+              including which are still unanswered. */}
+          <RequirementsCard bookingId={booking.id} role="customer" />
+
+          <PaymentClaimStatusCard bookingId={booking.id} />
 
           {/* BK-042 — payment schedule (down + remaining; legacy bookings hide). */}
           <InstallmentsCard bookingId={booking.id} />
